@@ -3850,6 +3850,108 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger_with_underlay_and_entries_and_auto_focus_hooks(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        underlay_clicked: Model<bool>,
+        entries: Vec<ContextMenuEntry>,
+        trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+        on_close_auto_focus: Option<OnCloseAutoFocus>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-underlay-entries-autofocus",
+            move |cx| {
+                let underlay = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.left = Some(Px(0.0));
+                            layout.inset.right = Some(Px(0.0));
+                            layout.inset.top = Some(Px(60.0));
+                            layout.inset.bottom = Some(Px(0.0));
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    {
+                        let underlay_id_out = underlay_id_out.clone();
+                        move |cx, _st, id| {
+                            underlay_id_out.set(Some(id));
+                            cx.pressable_toggle_bool(&underlay_clicked);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        }
+                    },
+                );
+
+                let trigger =
+                    ContextMenu::new(open)
+                        .on_open_auto_focus(on_open_auto_focus.clone())
+                        .on_close_auto_focus(on_close_auto_focus.clone())
+                        .into_element(
+                            cx,
+                            {
+                                let trigger_id_out = trigger_id_out.clone();
+                                move |cx| {
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        move |cx, _st, id| {
+                                            trigger_id_out.set(Some(id));
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    )
+                                }
+                            },
+                            move |_cx| entries.clone(),
+                        );
+
+                vec![trigger, underlay]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_focusable_trigger_with_entries(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -4087,6 +4189,212 @@ mod tests {
         assert_eq!(
             *reason_cell.lock().unwrap(),
             Some(fret_ui::action::DismissReason::FocusOutside)
+        );
+    }
+
+    #[test]
+    fn context_menu_keyboard_open_auto_focus_can_be_prevented() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |_host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+            trigger_id_out.clone(),
+            underlay_id_out,
+            Some(handler.clone()),
+            None,
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::F10,
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked,
+            vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+            trigger_id_out,
+            Rc::new(Cell::new(None)),
+            Some(handler),
+            None,
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected preventDefault open autofocus to keep focus on trigger"
+        );
+    }
+
+    #[test]
+    fn context_menu_close_auto_focus_can_be_prevented_and_redirected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let underlay_id_out_for_handler = underlay_id_out.clone();
+        let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            if let Some(underlay) = underlay_id_out_for_handler.get() {
+                host.request_focus(underlay);
+            }
+            req.prevent_default();
+        });
+
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            None,
+            Some(handler.clone()),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        let underlay_id = underlay_id_out.get().expect("underlay element id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
+        ui.set_focus(Some(trigger_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::F10,
+                modifiers: Modifiers {
+                    shift: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            None,
+            Some(handler.clone()),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _root = render_frame_focusable_trigger_with_underlay_and_entries_and_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked,
+            vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+            trigger_id_out,
+            underlay_id_out,
+            None,
+            Some(handler),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_close_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected preventDefault close autofocus to allow redirecting focus"
         );
     }
 
