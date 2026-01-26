@@ -1369,6 +1369,7 @@ impl<H: UiHost> UiTree<H> {
                 (n.view_cache.enabled
                     && n.view_cache.contained_layout
                     && !n.view_cache.layout_definite
+                    && n.bounds.size == Size::default()
                     && (n.invalidation.layout || n.invalidation.hit_test))
                     .then_some(id)
             })
