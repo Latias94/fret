@@ -902,7 +902,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
 
                         Ok(())
-                    })();
+                    })(
+                    );
                     if let Some(started) = present_started {
                         hitch_present_ms = Some(started.elapsed().as_millis() as u64);
                     }

@@ -818,6 +818,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
                 [
                     "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                    "tools/diag-scripts/ui-gallery-table-smoke.json",
+                    "tools/diag-scripts/ui-gallery-data-table-smoke.json",
                     "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
                     "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
                     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
@@ -1944,6 +1946,7 @@ fn run_script_suite_collect_bundles(
         &paths.out_dir,
         &paths.ready_path,
         &paths.exit_path,
+        false,
         timeout_ms,
         poll_ms,
     )?;
@@ -2038,6 +2041,116 @@ fn apply_post_run_checks(
         check_report_for_hover_layout_invalidations(&report, max_allowed)?;
     }
     Ok(())
+}
+
+fn check_bundle_for_view_cache_reuse_min(
+    bundle_path: &Path,
+    min: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+
+    let mut reused_total: u64 = 0;
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+
+            let reused = s
+                .get("debug")
+                .and_then(|v| v.get("cache_roots"))
+                .and_then(|v| v.as_array())
+                .map(|roots| {
+                    roots
+                        .iter()
+                        .filter(|r| r.get("reused").and_then(|v| v.as_bool()) == Some(true))
+                        .count() as u64
+                })
+                .unwrap_or(0);
+            reused_total = reused_total.saturating_add(reused);
+        }
+    }
+
+    if reused_total >= min {
+        return Ok(());
+    }
+
+    Err(format!(
+        "view-cache reuse gate failed (expected >= {min} reused cache roots after warmup={warmup_frames} frames; got {reused_total})\n  bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_overlay_synthesis_min(
+    bundle_path: &Path,
+    min: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+
+    let mut synthesized_total: u64 = 0;
+    let mut any_overlay_synthesis = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+
+            let Some(events) = s
+                .get("debug")
+                .and_then(|v| v.get("overlay_synthesis"))
+                .and_then(|v| v.as_array())
+            else {
+                continue;
+            };
+
+            any_overlay_synthesis = true;
+            synthesized_total = synthesized_total.saturating_add(
+                events
+                    .iter()
+                    .filter(|e| e.get("outcome").and_then(|v| v.as_str()) == Some("synthesized"))
+                    .count() as u64,
+            );
+        }
+    }
+
+    if synthesized_total >= min {
+        return Ok(());
+    }
+
+    if !any_overlay_synthesis {
+        return Err(format!(
+            "overlay synthesis gate requires `debug.overlay_synthesis` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    Err(format!(
+        "overlay synthesis gate failed (expected >= {min} synthesized overlay declarations after warmup={warmup_frames} frames; got {synthesized_total})\n  bundle: {}",
+        bundle_path.display()
+    ))
 }
 
 fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {

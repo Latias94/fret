@@ -49,9 +49,9 @@ use fret_platform::open_url::OpenUrl as _;
 type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
+mod diag_bundle_screenshots;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
-mod diag_bundle_screenshots;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
