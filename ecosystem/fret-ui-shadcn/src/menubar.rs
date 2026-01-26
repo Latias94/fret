@@ -3093,6 +3093,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
     use std::sync::Arc;
+    use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[derive(Default)]
@@ -3298,6 +3299,75 @@ mod tests {
                             ]),
                         ]
                     }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_underlay_and_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        underlay_clicked: Model<bool>,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-underlay-dismiss",
+            move |cx| {
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_toggle_bool(&underlay_clicked);
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    underlay,
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
+                    ])
+                    .on_dismiss_request(on_dismiss_request)
+                    .into_element(cx),
                 ]
             },
         );
@@ -3891,6 +3961,112 @@ mod tests {
         let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(menu_trigger_expanded(snap2, "File"));
         assert!(dismiss_calls.load(Ordering::SeqCst) > 0);
+    }
+
+    #[test]
+    fn menubar_focus_outside_can_be_prevented_via_dismiss_handler() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let reason_cell: Arc<Mutex<Option<fret_ui::action::DismissReason>>> =
+            Arc::new(Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
+            if matches!(req.reason, fret_ui::action::DismissReason::FocusOutside) {
+                let mut lock = reason_cell_for_handler.lock().unwrap();
+                *lock = Some(req.reason);
+                req.prevent_default();
+            }
+        });
+
+        render_frame_with_underlay_and_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+            Some(handler.clone()),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file_node = menu_trigger_node_id(&snap0, "File");
+        let file_pos = center(menu_trigger_bounds(&snap0, "File"));
+        let underlay_node = snap0
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("underlay"))
+            .map(|n| n.id)
+            .expect("underlay node");
+
+        ui.set_focus(Some(file_node));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame_with_underlay_and_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked.clone(),
+            Some(handler.clone()),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+
+        ui.set_focus(Some(underlay_node));
+        render_frame_with_underlay_and_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            underlay_clicked,
+            Some(handler),
+        );
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            menu_trigger_expanded(snap2, "File"),
+            "expected menu to remain open when focus-outside dismissal is prevented"
+        );
+        assert_eq!(
+            *reason_cell.lock().unwrap(),
+            Some(fret_ui::action::DismissReason::FocusOutside)
+        );
     }
 
     #[test]

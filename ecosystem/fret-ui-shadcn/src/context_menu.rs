@@ -3238,6 +3238,7 @@ mod tests {
     use super::*;
 
     use std::sync::Arc;
+    use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
@@ -3740,6 +3741,93 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        underlay_clicked: Model<bool>,
+        entries: Vec<ContextMenuEntry>,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-underlay-entries-dismiss",
+            move |cx| {
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.left = Some(Px(0.0));
+                            layout.inset.right = Some(Px(0.0));
+                            layout.inset.top = Some(Px(60.0));
+                            layout.inset.bottom = Some(Px(0.0));
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_toggle_bool(&underlay_clicked);
+                        Vec::new()
+                    },
+                );
+
+                let trigger = ContextMenu::new(open)
+                    .on_dismiss_request(on_dismiss_request)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st| {
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            )
+                        },
+                        move |_cx| entries.clone(),
+                    );
+
+                vec![trigger, underlay]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_focusable_trigger_with_entries(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3853,6 +3941,131 @@ mod tests {
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
             .expect("Alpha menu item");
         assert_eq!(ui.focus(), Some(alpha.id));
+    }
+
+    #[test]
+    fn context_menu_focus_outside_can_be_prevented_via_dismiss_handler() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let reason_cell: Arc<Mutex<Option<fret_ui::action::DismissReason>>> =
+            Arc::new(Mutex::new(None));
+        let reason_cell_for_handler = reason_cell.clone();
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
+            if matches!(req.reason, fret_ui::action::DismissReason::FocusOutside) {
+                let mut lock = reason_cell_for_handler.lock().unwrap();
+                *lock = Some(req.reason);
+                req.prevent_default();
+            }
+        });
+
+        let entries = vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))];
+        let root = render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            entries,
+            Some(handler.clone()),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let underlay_node = snap0
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("underlay"))
+            .map(|n| n.id)
+            .expect("underlay node");
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let entries = vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))];
+        let _ = render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            entries,
+            Some(handler.clone()),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        ui.set_focus(Some(underlay_node));
+
+        let entries = vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))];
+        let _ = render_frame_focusable_trigger_with_underlay_and_entries_and_dismiss_handler(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked,
+            entries,
+            Some(handler),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected menu to remain open when focus-outside dismissal is prevented"
+        );
+        assert_eq!(
+            *reason_cell.lock().unwrap(),
+            Some(fret_ui::action::DismissReason::FocusOutside)
+        );
     }
 
     #[test]
