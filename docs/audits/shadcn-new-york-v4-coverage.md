@@ -30,8 +30,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `354` (`79%`)
-- Keys not referenced by tests: `94`
+- Keys referenced by tests: `371` (`82.8%`)
+- Keys not referenced by tests: `77`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -42,31 +42,31 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 At the time of writing, the largest missing groups were:
 
 - `chart` (76 variants; high surface area)
-- `date` / `field` / `kbd` (3 each), plus a few one-offs (`button-as-child`, etc.)
+- `dashboard` (1)
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
 
 - `calendar` (34)
 - `input` (27)
-- `button` (25)
+- `button` (26)
 - `form` (19)
 - `navigation` (17)
 - `sidebar` (16)
 - `typography` (14)
 - `toggle` (13)
-- `spinner` (10)
+- `field` (12)
 - `sheet` (10)
-- `dropdown` (10)
 - `scroll` (10)
 - `item` (10)
-- `menubar` (9)
-- `field` (9)
+- `spinner` (10)
+- `dropdown` (10)
 - `breadcrumb` (9)
+- `menubar` (9)
+- `textarea` (8)
+- `select` (7)
 - `combobox` (7)
 - `context` (7)
-- `select` (7)
-- `carousel` (6)
 
 Recompute locally:
 
@@ -86,17 +86,14 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## What to do next (recommended order)
 
-1. **Finish the remaining small missing families** (fast breadth gains):
-   - Recurring layout patterns (`textarea-*`, `empty-*`, `resizable-*`, `native-*`)
-2. **Fill breadth gaps**: add one golden + one gate per remaining component (default view).
+1. **Close the last one-off**: gate `dashboard` (1 key).
+2. **Chart push**: treat `chart-*` as a dedicated sprint (surface area is large; likely needs additional audit notes).
 3. **Add constrained viewport variants** early for overlay-like components:
    - menus/listboxes: max-height clamp + scroll buttons + row height (treat “menu height” as a styling outcome)
    - popovers/tooltips: flip/shift under low height
    - dialogs/sheets: insets under low height/width
-4. **DPI / font-metrics gates**: keep this dimension small and targeted until breadth is higher
+4. **DPI / font-metrics gates**: keep this dimension small and targeted until chart geometry is stable
    (recommended targets: typography + menus/listboxes).
-5. **Chart push**: treat `chart-*` as a dedicated sprint (surface area is large; likely needs additional audit
-   notes + more selective gates).
 
 ## Common “coverage smells”
 

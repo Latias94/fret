@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `354/448` (`79%`)
-- Next P0 gaps: `chart-*`; then `date-*` / `field-*` / `kbd-*` / `button-as-child`.
+- Keys referenced by tests: `371/448` (`82.8%`)
+- Next P0 gaps: `dashboard` (1), then the `chart-*` sprint (76 variants).
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,16 +38,13 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
+- Close the last one-off missing key (`dashboard`).
 - Dedicated `chart-*` alignment push (large surface area; likely needs more selective gates + audit notes).
-- Finish remaining small missing families: `date-*`, `field-*`, `kbd-*`, `button-as-child`.
-
-P1:
-
-- Gate `textarea-*`, `empty-*`, `resizable-*`, `native-*` (shared layout primitives; good breadth wins).
+- Continue layering constrained viewport variants for overlay families (menus/listboxes) where “menu height” is a styling outcome.
 
 P2:
 
-- Dedicated `chart-*` alignment push (large surface area; likely needs new audit notes + more selective gates).
+- Add targeted DPI/font-metrics gates once chart geometry is stable (typography + menus/listboxes first).
 
 ## Scope
 

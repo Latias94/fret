@@ -14,11 +14,11 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `354/448` keys referenced (`79%`)
+- shadcn-web `v4/new-york-v4`: `371/448` keys referenced (`82.8%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
-- `calendar` (34), `input` (27), `button` (25), `form` (19), `navigation` (17), `sidebar` (16)
+- `calendar` (34), `input` (27), `button` (26), `form` (19), `navigation` (17), `sidebar` (16)
 
 ## Executive summary (current status + next targets)
 
@@ -44,20 +44,21 @@ Recent breadth wins:
 - **Auth blocks**: `login-*`, `signup-*`, `otp-*` now have shell container gates; `otp-01/02/03/05` also gate the
   InputOtp row geometry (slot sizes + gaps).
 - **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
+- **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
 
 ### Largest remaining gaps (by golden family)
 
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
-- `date` / `field` / `kbd` (3 each): smaller families worth finishing for breadth.
+- `dashboard` (1): small one-off worth closing before the chart sprint.
 
 ### Recommended next alignment targets (P0 order)
 
 1. **Chart push**
    - Treat `chart-*` as a dedicated sprint (surface area is large; likely needs new audit notes + more selective gates).
-2. **Finish remaining small missing families**
-   - `date-*` / `field-*` / `kbd-*` / `button-as-child` (fast breadth wins).
+2. **Close the last one-off**
+   - `dashboard` (1) (fast breadth win; keeps the missing set “pure chart”).
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
 second wave (because we can keep the matrix small and stable).
