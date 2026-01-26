@@ -158,7 +158,7 @@ fn focus_traversal_scrolls_focused_descendant_into_view() {
 }
 
 #[test]
-fn focus_traversal_does_not_scroll_visible_virtual_list_descendant_into_view() {
+fn scroll_into_view_does_not_drift_virtual_list_when_descendant_is_already_visible() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
@@ -168,106 +168,249 @@ fn focus_traversal_does_not_scroll_visible_virtual_list_descendant_into_view() {
 
     let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
 
-    let mut first: Option<GlobalElementId> = None;
-    let mut second: Option<GlobalElementId> = None;
+    let mut target_id: Option<GlobalElementId> = None;
+    let target_index = 5usize;
 
     let mut services = FakeUiServices;
-    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
-
-    let layout = {
-        let mut layout = crate::element::LayoutStyle::default();
-        layout.size.width = crate::element::Length::Fill;
-        layout.size.height = crate::element::Length::Px(Px(80.0));
-        layout.overflow = crate::element::Overflow::Clip;
-        layout
-    };
-
-    // Frame 0: mount so VirtualList learns its final viewport.
-    let root = declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "root",
-        |cx| {
-            vec![cx.virtual_list_keyed_with_layout(
-                layout,
-                10_000,
-                crate::element::VirtualListOptions::fixed(Px(28.0), 0),
-                &scroll_handle,
-                |i| i as crate::ItemKey,
-                |cx, _i| cx.spacer(crate::element::SpacerProps::default()),
-            )]
-        },
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
     );
-    ui.set_root(root);
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-    app.advance_frame();
 
-    // Request a large scroll jump so the focused row bounds are in content space (large Y).
-    scroll_handle.scroll_to_item(9000, crate::scroll::ScrollStrategy::Start);
-
-    // Frame 1: render the new visible window and capture two adjacent focusable descendants.
+    // Frame 0: establish content/viewport sizes for the handle.
     let root = declarative::render_root(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
-        "root",
+        "virtual-list-scroll-into-view",
         |cx| {
-            vec![cx.virtual_list_keyed_with_layout(
-                layout,
-                10_000,
-                crate::element::VirtualListOptions::fixed(Px(28.0), 0),
+            vec![cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(20.0), 0),
                 &scroll_handle,
-                |i| i as crate::ItemKey,
-                |cx, index| {
-                    cx.pressable_with_id(
-                        crate::element::PressableProps {
-                            layout: {
-                                let mut layout = crate::element::LayoutStyle::default();
-                                layout.size.width = crate::element::Length::Fill;
-                                layout.size.height = crate::element::Length::Px(Px(28.0));
-                                layout
-                            },
-                            enabled: true,
-                            focusable: true,
-                            ..Default::default()
-                        },
-                        |_cx, _st, id| {
-                            if index == 9000 {
-                                first = Some(id);
-                            } else if index == 9001 {
-                                second = Some(id);
-                            }
-                            Vec::new()
-                        },
-                    )
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| {
+                            cx.keyed(item.key, |cx| {
+                                cx.pressable_with_id(
+                                    crate::element::PressableProps {
+                                        layout: {
+                                            let mut layout = crate::element::LayoutStyle::default();
+                                            layout.size.width = crate::element::Length::Fill;
+                                            layout.size.height =
+                                                crate::element::Length::Px(Px(20.0));
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        ..Default::default()
+                                    },
+                                    |_cx, _st, _id| Vec::new(),
+                                )
+                            })
+                        })
+                        .collect::<Vec<_>>()
                 },
             )]
         },
     );
+
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let first = first.expect("first pressable id");
-    let second = second.expect("second pressable id");
+    // Scroll to show `target_index` as the first visible row.
+    scroll_handle.set_offset(Point::new(Px(0.0), Px(100.0)));
 
-    let first_node = crate::elements::node_for_element(&mut app, window, first).expect("first");
-    let second_node = crate::elements::node_for_element(&mut app, window, second).expect("second");
+    // Frame 1: materialize the scrolled rows and capture the target node id.
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "virtual-list-scroll-into-view",
+        |cx| {
+            vec![cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(20.0), 0),
+                &scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| {
+                            cx.keyed(item.key, |cx| {
+                                let index = item.index;
+                                cx.pressable_with_id(
+                                    crate::element::PressableProps {
+                                        layout: {
+                                            let mut layout = crate::element::LayoutStyle::default();
+                                            layout.size.width = crate::element::Length::Fill;
+                                            layout.size.height =
+                                                crate::element::Length::Px(Px(20.0));
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        ..Default::default()
+                                    },
+                                    |_cx, _st, id| {
+                                        if index == target_index {
+                                            target_id = Some(id);
+                                        }
+                                        Vec::new()
+                                    },
+                                )
+                            })
+                        })
+                        .collect::<Vec<_>>()
+                },
+            )]
+        },
+    );
 
-    ui.set_focus(Some(first_node));
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let before = scroll_handle.offset().y.0;
-    let did_handle = ui.dispatch_command(&mut app, &mut services, &CommandId::from("focus.next"));
-    assert!(did_handle);
-    assert_eq!(ui.focus(), Some(second_node));
+    let target_id = target_id.expect("target element id");
+    let target_node = crate::elements::node_for_element(&mut app, window, target_id).expect("node");
 
-    let after = scroll_handle.offset().y.0;
+    let before = scroll_handle.offset();
     assert!(
-        (before - after).abs() <= 0.01,
-        "expected focus traversal not to scroll when the focused virtual list descendant is already visible"
+        (before.y.0 - 100.0).abs() < 0.01,
+        "expected initial scroll offset ~=100, got={:?}",
+        before
+    );
+
+    let did_scroll = ui.scroll_node_into_view(&mut app, target_node);
+    assert!(
+        !did_scroll,
+        "expected scroll_into_view to be a no-op for already-visible virtual list content"
+    );
+    assert!(
+        (scroll_handle.offset().y.0 - before.y.0).abs() < 0.01,
+        "expected scroll offset to remain stable: before={:?} after={:?}",
+        before,
+        scroll_handle.offset()
+    );
+}
+
+#[test]
+fn scroll_into_view_does_not_drift_scroll_when_descendant_is_already_visible() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let mut target_id: Option<GlobalElementId> = None;
+    let target_index = 5usize;
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(100.0)),
+    );
+
+    let root = declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "scroll-scroll-into-view",
+        |cx| {
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Fill;
+                        layout.size.height = crate::element::Length::Px(Px(100.0));
+                        layout.overflow = crate::element::Overflow::Clip;
+                        layout
+                    },
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.flex(
+                        crate::element::FlexProps {
+                            layout: crate::element::LayoutStyle::default(),
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: crate::element::MainAlign::Start,
+                            align: crate::element::CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        |cx| {
+                            (0..50)
+                                .map(|index| {
+                                    cx.keyed(index, |cx| {
+                                        cx.pressable_with_id(
+                                            crate::element::PressableProps {
+                                                layout: {
+                                                    let mut layout =
+                                                        crate::element::LayoutStyle::default();
+                                                    layout.size.width =
+                                                        crate::element::Length::Fill;
+                                                    layout.size.height =
+                                                        crate::element::Length::Px(Px(20.0));
+                                                    layout
+                                                },
+                                                enabled: true,
+                                                focusable: true,
+                                                ..Default::default()
+                                            },
+                                            |_cx, _st, id| {
+                                                if index == target_index {
+                                                    target_id = Some(id);
+                                                }
+                                                Vec::new()
+                                            },
+                                        )
+                                    })
+                                })
+                                .collect::<Vec<_>>()
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let target_id = target_id.expect("target element id");
+    let target_node = crate::elements::node_for_element(&mut app, window, target_id).expect("node");
+
+    // Scroll to show `target_index` as the first visible row.
+    scroll_handle.set_offset(Point::new(Px(0.0), Px(100.0)));
+
+    let before = scroll_handle.offset();
+    assert!(
+        (before.y.0 - 100.0).abs() < 0.01,
+        "expected initial scroll offset ~=100, got={:?}",
+        before
+    );
+
+    let did_scroll = ui.scroll_node_into_view(&mut app, target_node);
+    assert!(
+        !did_scroll,
+        "expected scroll_into_view to be a no-op for already-visible scroll content"
+    );
+    assert!(
+        (scroll_handle.offset().y.0 - before.y.0).abs() < 0.01,
+        "expected scroll offset to remain stable: before={:?} after={:?}",
+        before,
+        scroll_handle.offset()
     );
 }

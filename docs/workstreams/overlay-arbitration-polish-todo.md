@@ -1,6 +1,6 @@
 # Overlay Arbitration Polish — TODO Tracker
 
-Status: Complete (v1; keep this tracker updated if new overlay/arbitration gaps are discovered)
+Status: Active (v1; core overlay lifecycle/arbitration is stable, but view-cache/matrix regression gates are still in progress)
 
 This tracker focuses on the “editor-grade UI feel” gaps around overlays/portals (menus, popovers, dialogs),
 their lifecycle, and input arbitration — especially under view-cache reuse.
@@ -29,8 +29,7 @@ Each TODO is labeled:
 
 - Scripted UI regressions: `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
 - Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `apps/fretboard/src/diag.rs`)
-- View-cache reuse gating: `fretboard diag run/suite --check-view-cache-reuse-min <n>`
-- Bundle comparison: `fretboard diag compare <a> <b> ...` (semantics + optional scene fingerprint)
+- Planned: view-cache reuse gating (`--check-view-cache-reuse-min <n>`) and cached-vs-uncached bundle comparison.
 
 ## P0 — Lifecycle + Arbitration Correctness
 
@@ -39,26 +38,21 @@ Each TODO is labeled:
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
   - Notes: baseline lifecycle phases were documented before hover/tooltip gained authoritative presence; see OVERLAY-life-002 for the updated contract.
 - [x] OVERLAY-life-002 Introduce authoritative presence for hover/tooltip overlays.
-  - Target: make hover/tooltip behavior explicit (authoritative `open/present/interactive` + liveness gate) and keep it correct under view-cache reuse.
-    - Note: hover/tooltips are intentionally treated as per-frame requests in v1; cache-hit synthesis is deferred until the request surface is stable (see OVERLAY-life-003).
+  - Target: make hover/tooltip safe under view-cache reuse without creating “ghost overlays” (authoritative `open/present` + liveness gate).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
   - Evidence: `crates/fret-ui/src/elements/queries.rs` (`element_is_live_in_current_frame`)
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (hover/tooltip per-frame behavior + closing interactivity)
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (hover/tooltip synthesis + closing interactivity)
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`, `ecosystem/fret-ui-kit/src/primitives/hover_card.rs` (API surface)
   - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-shadcn/src/hover_card.rs` (integration)
   - Checklist:
     - [x] Add `open: Model<bool>` + `present: bool` to `HoverOverlayRequest`/`TooltipRequest`
-    - [x] Treat hover/tooltips as per-frame requests (no cache-hit synthesis yet)
+    - [x] Synthesize hover/tooltip requests from cached declarations under view-cache reuse
     - [x] Add liveness gate to prevent ghost overlays (trigger must be live in current frame)
     - [x] Update ecosystem primitives + shadcn recipes to provide `open` + `present`
-    - [x] Add regressions for per-frame behavior + close-transition interactivity
+    - [x] Add regressions for cache-hit synthesis + close-transition interactivity
   - Notes: landing this surfaced a Radix parity dependency around menu initial focus targets:
     - `DropdownMenu` pointer-open focuses the `role=menu` content (state regression: `radix_web_dropdown_menu_open_navigate_select_matches_fret`).
     - `Menubar` pointer-open keeps focus on the roving container so ArrowDown navigation can reach submenu triggers (state regression: `radix_web_menubar_submenu_keyboard_open_close_matches_fret`).
-
-- [ ] OVERLAY-life-003 Enable hover/tooltip cache-hit synthesis (deferred).
-  - Target: allow hover/tooltips to remain open under view-cache reuse when their request producer is suppressed, without creating ghost overlays.
-  - Prereqs: stabilize hover/tooltip request surfaces (likely via interaction stream / prepaint-driven policy) and define the contract in `docs/workstreams/overlay-lifecycle-phases.md`.
 - [x] OVERLAY-in-002 Specify input arbitration ordering across roots.
   - Target: consistent rules for: modal barrier, underlay click-through, escape routing, focus restore, pointer capture.
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`active_input_layers`, `topmost_pointer_occlusion_layer`, `enforce_modal_barrier_scope`)
@@ -73,6 +67,9 @@ Each TODO is labeled:
 - [x] OVERLAY-reg-010 Add a “menu stack” scripted scenario (submenu hover + outside press + focus handoff).
   - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json`, `apps/fretboard/src/diag.rs`
   - Notes: validates submenu opens on hover and that an outside press dismisses overlays and focuses the underlying target.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`render_entries` in submenu panel propagates `DropdownMenuItem.test_id`,
+    `dropdown_menu_submenu_items_propagate_test_ids`), `apps/fret-ui-gallery/src/ui.rs` (gallery dropdown uses `modal(false)` to validate
+    click-through outside press).
 - [x] OVERLAY-reg-011 Add a “nested popover + dialog” scripted scenario (focus trap + escape + underlay).
   - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json`, `apps/fretboard/src/diag.rs`
   - Notes: opens a dialog from inside a popover, asserts modal barrier blocks underlay, then verifies escape focus restore to the popover trigger.
@@ -80,16 +77,16 @@ Each TODO is labeled:
   - Touches: `apps/fret-ui-gallery/src/ui.rs`, `tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json`
   - Assertion: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`bounds_within_window` predicate)
   - Notes: opens a popover inside a scroll viewport and asserts it stays within the window before/after wheel scroll.
-- [x] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
-  - Mechanism: record cached+uncached bundles and enforce `diag compare` + `--check-view-cache-reuse-min`.
-  - Evidence: `fretboard diag matrix ui-gallery` (runs both variants and compares per-script bundles).
+- [ ] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
+  - Mechanism: record cached+uncached bundles and enforce a per-script compare (semantics + optional scene fingerprint).
+  - Status: missing `diag compare` + `diag matrix` runner wiring (tracked alongside GPUI parity harness work).
 
 ## P0 — Diagnostics (Synthesis Observability)
 
-- [x] OVERLAY-diag-014 Export cached overlay synthesis events to diagnostic bundles.
+- [ ] OVERLAY-diag-014 Export cached overlay synthesis events to diagnostic bundles.
   - Target: make it easy to assert (and debug) whether cached request synthesis happened under view-cache reuse.
   - Output: `bundle.json` includes `debug.overlay_synthesis` events for each window/frame.
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/{mod,frame,render}.rs` (recording), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (export), `apps/fretboard/src/diag.rs` (gate: `--check-overlay-synthesis-min`).
+  - Evidence (planned): record synthesis decisions in `fret-ui-kit` overlay state and export via `fret-bootstrap` diagnostics; add a `fretboard` gate (`--check-overlay-synthesis-min`).
   - Done when: scripts can gate on “at least N synthesized overlays” and report suppression reasons when synthesis does not occur.
 
 ## P1 — Ergonomics (Ecosystem Integration)

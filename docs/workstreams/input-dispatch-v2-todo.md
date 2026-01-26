@@ -48,9 +48,12 @@ Keep this list short and evidence-backed:
 
 ## MVP0.1 — Default Actions Expansion (Keep Mechanism/Policy Boundary Clean)
 
-- [ ] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
-  - Notes: keep v1 minimal to avoid smuggling Radix/shadcn policies into `crates/fret-ui`.
-- [ ] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+- [x] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
+  - Decision tracker: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
+  - Decision: keep v2 limited to `DefaultAction::FocusOnPointerDown` for now.
+- [x] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
+  - Decision: defer until we have a concrete, boundary-safe, cross-surface default.
+  - Evidence: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
 
 ## MVP1 — Action Availability (GPUI `is_action_available` Parity)
 
@@ -75,35 +78,54 @@ Keep this list short and evidence-backed:
 
 - [x] IDV2-freeze-030 Freeze command palette gating while open (editor-style discoverability).
   - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`WindowCommandGatingService::set_snapshot`)
-- [ ] IDV2-freeze-031 Support nested overlays (stackable gating snapshots per window).
-  - Notes: current `WindowCommandGatingService` is single-snapshot per window; nested menus/palettes will need a stack.
-  - Candidate: `crates/fret-runtime/src/window_command_gating.rs`
+- [x] IDV2-freeze-031 Support nested overlays (stackable gating snapshots per window).
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs` (`push_snapshot`, `remove_pushed_snapshot`),
+    `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette pushes a snapshot and stores a token; closes pop it),
+    `ecosystem/fret-ui-shadcn/src/command.rs` (gating override tests use `push_snapshot`)
 
 ## MVP4 — Coverage Targets (Keep Expanding Incrementally)
 
-- [~] IDV2-avail-040 Core text commands availability is selection/editability/capability-sensitive.
+- [x] IDV2-avail-040 Core text commands availability is selection/editability/capability-sensitive.
   - Tracker: `docs/audits/action-availability-coverage.md`
-  - Evidence anchors: `crates/fret-ui/src/text_input/*`, `crates/fret-ui/src/text_area/*`, `crates/fret-ui/src/declarative/host_widget.rs`
-- [ ] IDV2-avail-041 Define a general “copy-like” command family outside text widgets (tables/lists/node graphs).
-  - Notes: decide whether to reuse `text.copy` vs introduce `edit.copy` (audit-driven).
-- [ ] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
-  - Notes: keep it app/runner owned, but ensure it participates in the same gating surfaces.
+  - Evidence anchors: `crates/fret-ui/src/text_input/bound.rs`, `crates/fret-ui/src/text_area/bound.rs`, `crates/fret-ui/src/declarative/host_widget.rs`
+  - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`text_input_select_all_is_blocked_when_empty`, `text_area_select_all_is_blocked_when_empty`)
+- [x] IDV2-avail-041 Define a general “copy-like” command family outside text widgets (tables/lists/node graphs).
+  - Evidence: `crates/fret-app/src/core_commands.rs` (`edit.{copy,cut,paste,select_all}`),
+    `crates/fret-ui/src/text_input/widget.rs` + `crates/fret-ui/src/text_area/widget.rs` (text alias),
+    `ecosystem/fret-node/src/ui/canvas/widget.rs` (node graph availability + command routing),
+    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable`),
+    `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable`)
+  - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`text_input_supports_edit_select_all_and_copy`),
+    `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`,
+    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable_reports_availability_and_emits_clipboard_text`),
+    `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
+- [x] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
+  - Evidence: `crates/fret-runtime/src/window_menu_bar_focus.rs`, `crates/fret-ui/src/tree/commands.rs`, `ecosystem/fret-kit/src/workspace_shell.rs`
+  - Tests: `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs` (`action_availability_snapshot_publishes_focus_menu_bar_gating`)
+- [x] IDV2-avail-043 Allow declarative components to report command availability via policy hooks.
+  - Evidence: `crates/fret-ui/src/action.rs` (`OnCommandAvailability`, `CommandAvailabilityActionCx`),
+    `crates/fret-ui/src/elements/cx.rs` (`command_on_command_availability_for`),
+    `crates/fret-ui/src/declarative/host_widget.rs` (invokes hook during `command_availability`)
+  - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`declarative_command_availability_hooks_participate_in_dispatch_path_queries`)
 
 ## MVP5 — Overlay / Menu Parity (Radix-shadcn Hand Feel)
 
-- [~] IDV2-ovl-050 Normalize “present vs interactive” for overlay close transitions (click-through + no observer routing).
-  - Active branch: `feat/input-dispatch-capture-pass`
+- [x] IDV2-ovl-050 Normalize “present vs interactive” for overlay close transitions (click-through + no observer routing).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/state.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
-- [~] IDV2-ovl-051 Stabilize submenu safe-hover + timer routing (menu hover intent under caching/multi-layer routing).
-  - Active branch: `feat/input-dispatch-capture-pass`
+- [x] IDV2-ovl-051 Stabilize submenu safe-hover + timer routing (menu hover intent under caching/multi-layer routing).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/*`, shadcn tests in `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
-- [ ] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract.
-  - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers).
-- [~] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
-  - Active branch: `feat/input-dispatch-capture-pass`
+- [x] IDV2-ovl-052 Lock menu open modality + entry focus (pointer-open vs keyboard-open) as a reusable policy contract.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (`MenuInitialFocusTargets`, modality-gated `initial_focus`),
+    `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (wires focus targets).
+  - Conformance: shadcn tests cover keyboard-open entry focus and pointer-open “focus content, not first item” for
+    DropdownMenu / Menubar / ContextMenu.
+  - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers, auto-focus hooks).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (plumbs `on_open_auto_focus/on_close_auto_focus`),
+    tests `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (auto-focus preventDefault conformance).
+- [x] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
   - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
 
 ## Open Questions (Keep Short)
 
-- Should `WindowCommandGatingService` become stack-based now (nested overlays), or do we gate nesting at the UI-kit level?
+- Resolved: `WindowCommandGatingService` is stack-based per window so nested overlays can publish gating snapshots without clobbering each other (IDV2-freeze-031).
 - Do we want a “diagnostic availability trace” (which node blocked / which node provided available) for debugging complex shells?

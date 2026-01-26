@@ -27,8 +27,35 @@ pnpm install
 pnpm dev
 ```
 
+## Build / Preview
+
+```powershell
+cd tools/fret-bundle-viewer
+
+pnpm build
+pnpm preview
+```
+
+The viewer is a static Vite app (no server required for production hosting).
+
+## Inputs
+
+- `bundle.json`: a diagnostics export produced by `fretboard diag pack`.
+- `bundle.zip`: zipped bundle export (optionally includes `_root/*.json` artifacts).
+- Screenshots: if the zip contains `*/_root/screenshots/*.png` (recommended) or `*/screenshots/*.png`, the `Overlay` tab can show them as a background under semantics bounds.
+- If a screenshots `manifest.json` is present, the viewer can auto-select the matching screenshot for the currently selected snapshot.
+
+## Exports
+
+- Markdown summary (`*-summary.md`) — intentionally kept in English for sharing in issues/PRs.
+- `triage.json` (`*.triage.json`) — machine-friendly summary for automation and quick triage.
+
 ## Notes
 
 - Designed to run fully offline after install; no telemetry is enabled by default.
 - `bundle.json` format is treated as best-effort / forward-compatible (unknown fields are ignored).
 
+## Dev notes
+
+- UI text is fully localizable (English/Chinese) via `tools/fret-bundle-viewer/lib/i18n.ts`.
+- The Details panel includes an `Overlay` tab that visualizes semantics bounds and debug signals (hit chain, layer roots, barrier root, pointer).

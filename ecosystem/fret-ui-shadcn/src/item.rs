@@ -103,10 +103,13 @@ impl ItemGroup {
     }
 }
 
-pub fn item_group<H: UiHost>(
+pub fn item_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     ItemGroup::new(f(cx)).into_element(cx)
 }
 
@@ -123,12 +126,8 @@ impl ItemSeparator {
         let border = theme
             .color_by_key("border")
             .unwrap_or_else(|| theme.color_required("border"));
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(1.0))),
-        );
+        let layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_px(Px(1.0)));
         cx.container(
             ContainerProps {
                 layout,

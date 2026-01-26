@@ -40,6 +40,9 @@ Preview (Observer)  ->  Capture  ->  Bubble  ->  DefaultActions
 
 This keeps policy-heavy crates out of runtime internals while still enabling editor-grade overrides.
 
+Implementation note: component-owned pointer hooks can call `host.prevent_default(DefaultAction::FocusOnPointerDown)`
+to suppress focus shifts without blocking propagation (avoids coupling to widget-private `SkipDefault` protocols).
+
 ### 3) Action availability is a pure query with tri-state semantics
 
 Widget-scoped commands need a pure query surface:
@@ -94,6 +97,14 @@ shortcuts scoped to itself via its own keymap/handlers.
 
 This requires a stable, explicit integration seam (either a dedicated service snapshot, or a “command target” concept).
 
+Implementation notes:
+
+- `WindowCommandGatingService` supports a per-window override stack so nested overlays can publish gating snapshots
+  without clobbering each other.
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs`
+- The ui-app command palette pushes a snapshot on open and pops it when closed (including “close via UI” paths).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+
 ### Overlay + Pointer Occlusion (P0, ui-kit policy)
 
 See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed overlay arbitration plan.
@@ -114,12 +125,20 @@ See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed
     `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
     `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_by_default`,
     `tooltip_does_not_request_observers_while_closing`, `hover_overlay_is_click_through_while_closing`)
+- Pointer capture hides hover overlays and tooltips in the same window to avoid showing incidental
+  overlays while drags/capture sessions are active.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
+    `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`pointer_capture_hides_hover_overlays_in_same_window`,
+    `pointer_capture_hides_tooltips_in_same_window`)
 - Overlay request caching: hover overlays + tooltips remain per-frame and are not stored/synthesized
   from cached declarations (avoids stale incidental overlays and removes unused cache growth).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/{frame.rs,render.rs,state.rs}`
 - Menu ergonomics: ensure submenu timers (open/close/focus delay) and safe-hover pointer-move outcomes
   are routed consistently by installing timer + pointer-move handlers on the submenu trigger path.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/{root.rs,sub_trigger.rs}`
+- Menu open modality: pointer-open focuses content and prevents entry focus; keyboard-open allows entry focus (Radix `onOpenAutoFocus` outcomes).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`,
+    `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}`
 
 ## Compatibility with “per-frame rebuilt” UI
 

@@ -16,6 +16,11 @@ pub const FOCUS_NEXT: &str = "focus.next";
 pub const FOCUS_PREVIOUS: &str = "focus.previous";
 pub const FOCUS_MENU_BAR: &str = "focus.menu_bar";
 
+pub const EDIT_COPY: &str = "edit.copy";
+pub const EDIT_CUT: &str = "edit.cut";
+pub const EDIT_PASTE: &str = "edit.paste";
+pub const EDIT_SELECT_ALL: &str = "edit.select_all";
+
 pub const TEXT_COPY: &str = "text.copy";
 pub const TEXT_CUT: &str = "text.cut";
 pub const TEXT_PASTE: &str = "text.paste";
@@ -200,7 +205,7 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
     let when_text = WhenExpr::parse("focus.is_text_input").expect("valid when expression");
 
     registry.register(
-        CommandId::new(TEXT_COPY),
+        CommandId::new(EDIT_COPY),
         CommandMeta::new("Copy")
             .with_category("Edit")
             .with_keywords(["copy", "clipboard"])
@@ -226,13 +231,12 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(TEXT_CUT),
+        CommandId::new(EDIT_CUT),
         CommandMeta::new("Cut")
             .with_category("Edit")
             .with_keywords(["cut", "clipboard"])
             .with_scope(CommandScope::Widget)
             .with_os_action(OsAction::Cut)
-            .with_when(when_text.clone())
             .with_default_keybindings([
                 DefaultKeybinding {
                     platform: PlatformFilter::Windows,
@@ -253,13 +257,12 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(TEXT_PASTE),
+        CommandId::new(EDIT_PASTE),
         CommandMeta::new("Paste")
             .with_category("Edit")
             .with_keywords(["paste", "clipboard"])
             .with_scope(CommandScope::Widget)
             .with_os_action(OsAction::Paste)
-            .with_when(when_text.clone())
             .with_default_keybindings([
                 DefaultKeybinding {
                     platform: PlatformFilter::Windows,
@@ -280,7 +283,7 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
-        CommandId::new(TEXT_SELECT_ALL),
+        CommandId::new(EDIT_SELECT_ALL),
         CommandMeta::new("Select All")
             .with_category("Edit")
             .with_keywords(["select", "all"])
@@ -303,6 +306,49 @@ pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
                     when: None,
                 },
             ]),
+    );
+
+    // Legacy `text.*` commands: keep for compatibility, but prefer `edit.*` for cross-surface copy.
+    registry.register(
+        CommandId::new(TEXT_COPY),
+        CommandMeta::new("Copy")
+            .with_category("Edit")
+            .with_keywords(["copy", "clipboard"])
+            .with_scope(CommandScope::Widget)
+            .with_os_action(OsAction::Copy)
+            .hidden(),
+    );
+
+    registry.register(
+        CommandId::new(TEXT_CUT),
+        CommandMeta::new("Cut")
+            .with_category("Edit")
+            .with_keywords(["cut", "clipboard"])
+            .with_scope(CommandScope::Widget)
+            .with_os_action(OsAction::Cut)
+            .with_when(when_text.clone())
+            .hidden(),
+    );
+
+    registry.register(
+        CommandId::new(TEXT_PASTE),
+        CommandMeta::new("Paste")
+            .with_category("Edit")
+            .with_keywords(["paste", "clipboard"])
+            .with_scope(CommandScope::Widget)
+            .with_os_action(OsAction::Paste)
+            .with_when(when_text.clone())
+            .hidden(),
+    );
+
+    registry.register(
+        CommandId::new(TEXT_SELECT_ALL),
+        CommandMeta::new("Select All")
+            .with_category("Edit")
+            .with_keywords(["select", "all"])
+            .with_scope(CommandScope::Widget)
+            .with_os_action(OsAction::SelectAll)
+            .hidden(),
     );
 
     registry.register(

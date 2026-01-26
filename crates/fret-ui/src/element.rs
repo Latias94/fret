@@ -1575,6 +1575,64 @@ pub trait IntoElement {
     fn into_element(self, id: GlobalElementId) -> AnyElement;
 }
 
+/// A small owned collection wrapper for element lists.
+///
+/// This is intended for authoring-facing APIs that want an "iterator-friendly" return type without
+/// forcing callers into `Vec<AnyElement>` as the only option.
+#[derive(Debug, Clone, Default)]
+pub struct Elements(pub Vec<AnyElement>);
+
+impl Elements {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self(children.into_iter().collect())
+    }
+
+    pub fn into_vec(self) -> Vec<AnyElement> {
+        self.0
+    }
+}
+
+impl From<Vec<AnyElement>> for Elements {
+    fn from(value: Vec<AnyElement>) -> Self {
+        Self(value)
+    }
+}
+
+impl<const N: usize> From<[AnyElement; N]> for Elements {
+    fn from(value: [AnyElement; N]) -> Self {
+        Self::new(value)
+    }
+}
+
+impl std::iter::FromIterator<AnyElement> for Elements {
+    fn from_iter<T: IntoIterator<Item = AnyElement>>(iter: T) -> Self {
+        Self::new(iter)
+    }
+}
+
+impl std::ops::Deref for Elements {
+    type Target = Vec<AnyElement>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Elements {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl IntoIterator for Elements {
+    type Item = AnyElement;
+    type IntoIter = std::vec::IntoIter<AnyElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 /// Authoring helper for collecting iterator-produced child elements.
 ///
 /// This exists to reduce boilerplate after switching common `children: Vec<AnyElement>` APIs to

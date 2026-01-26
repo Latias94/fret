@@ -1353,6 +1353,18 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
+                if let Some(window) = self.window {
+                    for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
+                        let (Some(element), Some(node)) = (element, node) else {
+                            continue;
+                        };
+                        let Some(bounds) = self.node_bounds(node) else {
+                            continue;
+                        };
+                        crate::elements::record_bounds_for_element(app, window, element, bounds);
+                    }
+                }
+
                 if let Some(element) = prev_element
                     && prev_node.is_some()
                 {

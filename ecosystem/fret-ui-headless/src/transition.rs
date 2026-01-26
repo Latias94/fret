@@ -155,6 +155,150 @@ impl TransitionTimeline {
             }
         }
     }
+
+    pub fn update_with_cubic_bezier(
+        &mut self,
+        open: bool,
+        tick: u64,
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+    ) -> TransitionOutput {
+        if open {
+            match self.phase {
+                Phase::Hidden | Phase::Closing { .. } => {
+                    self.phase = Phase::Opening { start_tick: tick };
+                }
+                Phase::Opening { .. } | Phase::Open => {}
+            }
+        } else {
+            match self.phase {
+                Phase::Open | Phase::Opening { .. } => {
+                    self.phase = Phase::Closing { start_tick: tick };
+                }
+                Phase::Closing { .. } | Phase::Hidden => {}
+            }
+        }
+
+        match self.phase {
+            Phase::Hidden => TransitionOutput {
+                present: false,
+                linear: 0.0,
+                progress: 0.0,
+                animating: false,
+            },
+            Phase::Open => TransitionOutput {
+                present: true,
+                linear: 1.0,
+                progress: 1.0,
+                animating: false,
+            },
+            Phase::Opening { start_tick } => {
+                let duration = self.open_ticks.max(1);
+                let elapsed = tick.saturating_sub(start_tick).saturating_add(1);
+                let t = (elapsed as f32 / duration as f32).clamp(0.0, 1.0);
+                let linear = t;
+                let progress = cubic_bezier_ease(x1, y1, x2, y2, linear).clamp(0.0, 1.0);
+                if t >= 1.0 {
+                    self.phase = Phase::Open;
+                    TransitionOutput {
+                        present: true,
+                        linear: 1.0,
+                        progress: 1.0,
+                        animating: false,
+                    }
+                } else {
+                    TransitionOutput {
+                        present: true,
+                        linear,
+                        progress,
+                        animating: true,
+                    }
+                }
+            }
+            Phase::Closing { start_tick } => {
+                let duration = self.close_ticks.max(1);
+                let elapsed = tick.saturating_sub(start_tick).saturating_add(1);
+                let t = (elapsed as f32 / duration as f32).clamp(0.0, 1.0);
+                let linear = (1.0 - t).clamp(0.0, 1.0);
+                let progress = cubic_bezier_ease(x1, y1, x2, y2, linear).clamp(0.0, 1.0);
+                if t >= 1.0 {
+                    self.phase = Phase::Hidden;
+                    TransitionOutput {
+                        present: false,
+                        linear: 0.0,
+                        progress: 0.0,
+                        animating: false,
+                    }
+                } else {
+                    TransitionOutput {
+                        present: true,
+                        linear,
+                        progress,
+                        animating: true,
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn cubic_bezier_ease(x1: f32, y1: f32, x2: f32, y2: f32, t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+
+    if (x1, y1, x2, y2) == (0.0, 0.0, 1.0, 1.0) {
+        return t;
+    }
+
+    let mut u = t;
+    for _ in 0..8 {
+        let x = cubic_bezier_x(x1, x2, u);
+        let dx = cubic_bezier_x_derivative(x1, x2, u);
+        if dx.abs() < 1e-6 {
+            break;
+        }
+        u = (u - (x - t) / dx).clamp(0.0, 1.0);
+    }
+
+    let mut lo = 0.0;
+    let mut hi = 1.0;
+    for _ in 0..12 {
+        let x = cubic_bezier_x(x1, x2, u);
+        if (x - t).abs() < 1e-4 {
+            break;
+        }
+        if x < t {
+            lo = u;
+        } else {
+            hi = u;
+        }
+        u = (lo + hi) * 0.5;
+    }
+
+    cubic_bezier_y(y1, y2, u).clamp(0.0, 1.0)
+}
+
+fn cubic_bezier_x(p1: f32, p2: f32, u: f32) -> f32 {
+    cubic_bezier_component(u, p1, p2)
+}
+
+fn cubic_bezier_y(p1: f32, p2: f32, u: f32) -> f32 {
+    cubic_bezier_component(u, p1, p2)
+}
+
+fn cubic_bezier_x_derivative(p1: f32, p2: f32, u: f32) -> f32 {
+    cubic_bezier_component_derivative(u, p1, p2)
+}
+
+fn cubic_bezier_component(u: f32, p1: f32, p2: f32) -> f32 {
+    let inv = 1.0 - u;
+    3.0 * inv * inv * u * p1 + 3.0 * inv * u * u * p2 + u * u * u
+}
+
+fn cubic_bezier_component_derivative(u: f32, p1: f32, p2: f32) -> f32 {
+    let inv = 1.0 - u;
+    3.0 * inv * inv * p1 + 6.0 * inv * u * (p2 - p1) + 3.0 * u * u * (1.0 - p2)
 }
 
 #[cfg(test)]
@@ -198,5 +342,15 @@ mod tests {
         assert!(out.present);
         assert!(out.animating);
         assert!(out.progress >= 0.0 && out.progress <= 1.0);
+    }
+
+    #[test]
+    fn cubic_bezier_transition_matches_linear_for_linear_curve() {
+        let mut t = TransitionTimeline::default();
+        t.set_durations(4, 4);
+        let out = t.update_with_cubic_bezier(true, 0, 0.0, 0.0, 1.0, 1.0);
+        assert!(out.present);
+        assert!(out.animating);
+        assert!((out.progress - out.linear).abs() <= 1e-3);
     }
 }

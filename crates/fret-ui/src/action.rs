@@ -4,8 +4,8 @@ use fret_core::{
     PointerId, PointerType,
 };
 use fret_runtime::{
-    CommandId, DragHost, DragKindId, DragSession, Effect, Model, ModelStore, TickId, TimerToken,
-    WeakModel,
+    CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, Model, ModelStore, TickId,
+    TimerToken, WeakModel,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -320,6 +320,12 @@ pub trait UiPointerActionHost: UiFocusActionHost + UiDragActionHost {
     fn capture_pointer(&mut self);
     fn release_pointer_capture(&mut self);
     fn set_cursor_icon(&mut self, icon: CursorIcon);
+    /// Suppress a runtime default action for the current event dispatch.
+    ///
+    /// This is primarily used to prevent "focus on pointer down" while still allowing propagation
+    /// and other policies (overlays, global shortcuts, outside-press) to observe the event.
+    fn prevent_default(&mut self, action: DefaultAction);
+
     /// Request a node-level invalidation for the current pointer region / pressable.
     ///
     /// This is intentionally separate from `notify()`: it enables paint-only updates (e.g. hover
@@ -496,6 +502,34 @@ pub type OnCommand = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, CommandId)
 #[derive(Default)]
 pub(crate) struct CommandActionHooks {
     pub on_command: Option<OnCommand>,
+}
+
+pub trait UiCommandAvailabilityActionHost {
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore;
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandAvailabilityActionCx {
+    pub window: fret_core::AppWindowId,
+    pub target: crate::GlobalElementId,
+    pub node: fret_core::NodeId,
+    pub focus: Option<fret_core::NodeId>,
+    pub focus_in_subtree: bool,
+    pub input_ctx: fret_runtime::InputContext,
+}
+
+pub type OnCommandAvailability = Arc<
+    dyn Fn(
+            &mut dyn UiCommandAvailabilityActionHost,
+            CommandAvailabilityActionCx,
+            CommandId,
+        ) -> crate::widget::CommandAvailability
+        + 'static,
+>;
+
+#[derive(Default)]
+pub(crate) struct CommandAvailabilityActionHooks {
+    pub on_command_availability: Option<OnCommandAvailability>,
 }
 
 pub type OnTimer = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;

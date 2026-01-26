@@ -12,6 +12,7 @@ pub mod focus_scope;
 pub mod form;
 #[cfg(feature = "recipes")]
 pub mod glass;
+pub mod global_watch;
 pub mod hover_intent;
 pub mod list;
 pub mod model_watch;
@@ -35,6 +36,7 @@ pub mod visually_hidden;
 pub mod windowed_rows_surface;
 
 pub use cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
+pub use global_watch::GlobalWatchExt;
 pub use model_watch::ModelWatchExt;
 
 #[cfg(test)]

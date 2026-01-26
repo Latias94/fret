@@ -4,6 +4,29 @@ export type Locale = 'en' | 'zh'
 
 export const translations = {
   en: {
+    // Common
+    'common.unknown': 'Unknown',
+    'common.loading': 'Loading...',
+    'common.loadingAria': 'Loading',
+    'common.loadingTree': 'Loading tree...',
+    'common.loadingSnapshots': 'Loading snapshots...',
+    'common.loadingDetails': 'Loading details...',
+    'common.close': 'Close',
+
+    // Errors
+    'error.unknownParse': 'Unknown parse error',
+    'error.jsonParse': 'JSON parse error',
+    'error.bundleRootNotObject': 'Bundle root is not an object',
+    'error.zipNoBundleJson': 'No bundle.json found in zip',
+    'error.zipMissingEntry': 'Missing zip entry: {path}',
+
+    // Warnings
+    'warn.semanticsNodeParseFailed': 'Failed to parse semantics node',
+    'warn.semanticsNodeMissingId': 'Semantics node missing id',
+    'warn.cannotFindWindowsOrSnapshots': 'Could not find windows or snapshots in bundle',
+    'warn.noWindows': 'No windows found in bundle',
+    'warn.noSnapshots': 'No snapshots found in any window',
+
     // App
     'app.title': 'Fret Bundle Viewer',
     'app.description': 'Offline diagnostics bundle inspector',
@@ -11,12 +34,17 @@ export const translations = {
 
     // Header
     'header.open': 'Open',
-    'header.openTooltip': 'Open bundle.json (Ctrl+O)',
+    'header.openTooltip': 'Open bundle.json or bundle.zip (Ctrl+O)',
+    'header.paste': 'Paste',
+    'header.pasteTooltip': 'Paste raw bundle.json text',
     'header.sample': 'Sample',
     'header.sampleSimple': 'Simple (3 snapshots)',
     'header.sampleMultiWindow': 'Multi-window (2 windows)',
     'header.export': 'Export',
     'header.exportTooltip': 'Export Markdown summary',
+    'header.exportMore': 'More',
+    'header.exportMarkdown': 'Export summary (Markdown)',
+    'header.exportTriage': 'Export triage.json',
     'header.redact': 'Redact',
     'header.compare': 'Compare',
     'header.searchCommands': 'Search commands...',
@@ -27,14 +55,22 @@ export const translations = {
     // Empty State
     'empty.title': 'No Bundle Loaded',
     'empty.description': 'Open a Fret diagnostics bundle.json file to inspect snapshots, semantics trees, events, and performance data.',
-    'empty.openButton': 'Open bundle.json',
+    'empty.openButton': 'Open bundle.json / bundle.zip',
     'empty.loadSample': 'Load sample',
     'empty.recentFiles': 'Recent Files',
     'empty.recentFilesNote': "Note: Recent files list is stored locally. You'll need to re-select the file to open it.",
     'empty.clear': 'Clear',
 
+    // Paste Dialog
+    'paste.title': 'Paste bundle.json',
+    'paste.description': 'Paste the JSON text to load a diagnostics bundle. Nothing is uploaded.',
+    'paste.placeholder': 'Paste JSON here…',
+    'paste.cancel': 'Cancel',
+    'paste.load': 'Load',
+
     // Error State
     'error.title': 'Parse Error',
+    'error.details': 'Details:',
     'error.rawPreview': 'Raw text preview (truncated):',
     'error.tryAnother': 'Try another file',
 
@@ -49,6 +85,8 @@ export const translations = {
     'tree.previousMatch': 'Previous match (Shift+Enter)',
     'tree.nextMatch': 'Next match (Enter)',
     'tree.closeSearch': 'Close search (Esc)',
+    'tree.depth': 'Depth',
+    'tree.levelPrefix': 'L',
 
     // Context Menu
     'context.copySelector': 'Copy selector JSON',
@@ -65,14 +103,44 @@ export const translations = {
     'snapshots.noMatch': 'No snapshots match the current filter',
     'snapshots.frameTiming': 'Frame timing (first {count})',
     'snapshots.of': 'of',
+    'snapshots.tick': 'tick:{id}',
+    'snapshots.frame': 'frame:{id}',
+    'snapshots.noSemanticsShort': 'no sem',
 
     // Details Panel Tabs
     'details.summary': 'Summary',
     'details.node': 'Node',
     'details.events': 'Events',
     'details.performance': 'Perf',
+    'details.overlay': 'Overlay',
     'details.diff': 'Diff',
     'details.raw': 'Raw',
+
+    // Overlay
+    'overlay.title': 'Overlay',
+    'overlay.noSnapshot': 'No snapshot selected',
+    'overlay.noSemantics': 'No semantics data in the selected snapshot',
+    'overlay.noBounds': 'No bounds data available in this snapshot',
+    'overlay.fit': 'Fit',
+    'overlay.fitSelected': 'Fit selected',
+    'overlay.hint': 'Scroll to zoom • Drag to pan • Click to select',
+    'overlay.showSemantics': 'Semantics',
+    'overlay.showSelectedPath': 'Selected path',
+    'overlay.showHitChain': 'Hit chain',
+    'overlay.showPointer': 'Pointer',
+    'overlay.showHitChainPath': 'Hit path',
+    'overlay.showLayerRoots': 'Layer roots',
+    'overlay.showBlocksUnderlay': 'Blocks underlay',
+    'overlay.onlySelectedSubtree': 'Selected subtree only',
+    'overlay.hover': 'Hover',
+    'overlay.none': 'none',
+    'overlay.bgShow': 'Background',
+    'overlay.bgImage': 'Image',
+    'overlay.bgOpacity': 'Opacity',
+    'overlay.bgScale': 'Scale',
+    'overlay.bgOffset': 'Offset',
+    'overlay.bgReset': 'Reset',
+    'overlay.bgFollow': 'Follow snapshot',
 
     // Summary Tab
     'summary.noSnapshot': 'No snapshot selected',
@@ -90,11 +158,36 @@ export const translations = {
     'summary.overlayRouting': 'Overlay Routing',
     'summary.barrierRoot': 'Barrier Root',
     'summary.topLayerRoots': 'Top Layer Roots:',
+    'summary.blocksUnderlayShort': 'block',
+    'summary.noHitShort': 'no-hit',
     'summary.layerRoots': 'Layer Roots',
     'summary.hitTest': 'Hit Test',
     'summary.pointer': 'Pointer',
     'summary.hitChain': 'Hit Chain:',
     'summary.missing': 'Missing',
+    'summary.triage': 'Triage',
+    'summary.bundle': 'Bundle',
+    'summary.bundleSchema': 'Schema',
+    'summary.exported': 'Exported (ms)',
+    'summary.outDir': 'Out dir',
+    'summary.outDirContext': 'Out dir context',
+    'summary.copy': 'Copy',
+    'summary.download': 'Download',
+    'summary.sourceZip': 'Source zip',
+    'summary.bundlePathInZip': 'bundle.json path in zip',
+    'summary.zipArtifacts': 'Zip artifacts',
+    'summary.truncated': 'truncated',
+
+    'triage.noSignals': 'No obvious signals in this snapshot',
+    'triage.frameTime': 'Frame time: {us}μs',
+    'triage.slowFrameTime': 'Slow frame: {us}μs',
+    'triage.severeFrameTime': 'Severe slow frame: {us}μs',
+    'triage.dominantPhase': 'Dominant phase: {phase} ({us}μs)',
+    'triage.invalidation': 'Invalidation walks: calls={calls}, nodes={nodes}',
+    'triage.barrierActive': 'Barrier root active: {id}',
+    'triage.blocksUnderlay': 'Underlay input may be blocked (blocking roots: {count})',
+    'triage.paintCache': 'Paint cache: hits={hits}, misses={misses}',
+    'triage.paintCacheMisses': 'Paint cache misses high: hits={hits}, misses={misses}',
 
     // Node Tab
     'node.noSelection': 'Select a node in the tree to view details',
@@ -119,14 +212,22 @@ export const translations = {
     'events.noEvents': 'No events in this snapshot',
     'events.searchPlaceholder': 'Search events...',
     'events.noMatch': 'No matching events',
+    'events.scopeAll': 'All',
+    'events.scopeUpTo': '≤ tick',
+    'events.scopeTick': 'This tick',
+    'events.tick': 'tick',
+    'events.frame': 'frame',
 
     // Performance Tab
     'perf.noData': 'No performance data in this snapshot',
     'perf.timing': 'Timing',
     'perf.total': 'Total',
     'perf.layout': 'Layout',
+    'perf.layoutShort': 'L',
     'perf.prepaint': 'Prepaint',
+    'perf.prepaintShort': 'P',
     'perf.paint': 'Paint',
+    'perf.paintShort': 'R',
     'perf.timingBreakdown': 'Timing Breakdown',
     'perf.cache': 'Cache',
     'perf.hits': 'Hits',
@@ -134,7 +235,29 @@ export const translations = {
     'perf.hitRate': 'Hit Rate',
     'perf.invalidations': 'Invalidations',
     'perf.count': 'Count',
+    'perf.nodes': 'Nodes',
     'perf.sources': 'Sources:',
+    'perf.invalidationWalks': 'Invalidation Walks (debug)',
+    'perf.walkedNodes': 'Walked Nodes',
+    'perf.topKinds': 'Top kinds',
+    'perf.topSources': 'Top sources',
+    'perf.topWalks': 'Top walks',
+    'perf.truncated': 'truncated',
+    'perf.layoutSolves': 'Layout Engine Solves (debug)',
+    'perf.rootNode': 'Root node',
+    'perf.solveUs': 'Solve (μs)',
+    'perf.measureUs': 'Measure (μs)',
+    'perf.measureCalls': 'Measure calls',
+    'perf.measureCacheHits': 'Measure cache hits',
+    'perf.topMeasures': 'Top measures',
+    'perf.calls': 'calls',
+    'perf.cacheHits': 'cache hits',
+    'perf.cacheRoots': 'Cache Roots (debug)',
+    'perf.reused': 'Reused',
+    'perf.reusedYes': 'reused',
+    'perf.reusedNo': 'new',
+    'perf.replayedOps': 'replayed_ops',
+    'perf.subtreeNodes': 'subtree_nodes',
 
     // Diff Tab
     'diff.title': 'Snapshot Diff',
@@ -142,6 +265,7 @@ export const translations = {
     'diff.enableCompare': 'Enable Compare Mode',
     'diff.comparing': 'Comparing',
     'diff.noChanges': 'No changes detected',
+    'diff.unableCompute': 'Unable to compute diff',
     'diff.added': 'Added',
     'diff.removed': 'Removed',
     'diff.changed': 'Changed',
@@ -151,6 +275,10 @@ export const translations = {
     'raw.rawJson': 'Raw JSON',
     'raw.normalized': 'Normalized',
     'raw.copyAll': 'Copy all',
+
+    // JSON View
+    'json.null': 'null',
+    'json.undefined': 'undefined',
 
     // Command Palette
     'cmd.placeholder': 'Type a command or search...',
@@ -184,13 +312,44 @@ export const translations = {
     'theme.system': 'System',
     'theme.toggle': 'Toggle theme',
 
+    // Language
+    'lang.switchLanguage': 'Switch language',
+
     // Time
     'time.justNow': 'just now',
     'time.minutesAgo': '{count}m ago',
     'time.hoursAgo': '{count}h ago',
     'time.daysAgo': '{count}d ago',
+
+    // Phases
+    'phase.layout': 'Layout',
+    'phase.prepaint': 'Prepaint',
+    'phase.paint': 'Paint',
   },
   zh: {
+    // Common
+    'common.unknown': '未知',
+    'common.loading': '加载中...',
+    'common.loadingAria': '加载中',
+    'common.loadingTree': '正在加载语义树...',
+    'common.loadingSnapshots': '正在加载快照列表...',
+    'common.loadingDetails': '正在加载详情...',
+    'common.close': '关闭',
+
+    // Errors
+    'error.unknownParse': '未知解析错误',
+    'error.jsonParse': 'JSON 解析错误',
+    'error.bundleRootNotObject': 'Bundle 根不是对象',
+    'error.zipNoBundleJson': 'Zip 中未找到 bundle.json',
+    'error.zipMissingEntry': 'Zip 缺少条目：{path}',
+
+    // Warnings
+    'warn.semanticsNodeParseFailed': '解析语义节点失败',
+    'warn.semanticsNodeMissingId': '语义节点缺少 id',
+    'warn.cannotFindWindowsOrSnapshots': 'Bundle 中未找到 windows 或 snapshots',
+    'warn.noWindows': 'Bundle 中没有窗口',
+    'warn.noSnapshots': '所有窗口都没有快照',
+
     // App
     'app.title': 'Fret Bundle 查看器',
     'app.description': '离线诊断包检查工具',
@@ -198,12 +357,17 @@ export const translations = {
 
     // Header
     'header.open': '打开',
-    'header.openTooltip': '打开 bundle.json (Ctrl+O)',
+    'header.openTooltip': '打开 bundle.json 或 bundle.zip (Ctrl+O)',
+    'header.paste': '粘贴',
+    'header.pasteTooltip': '粘贴 bundle.json 的原始 JSON 文本',
     'header.sample': '示例',
     'header.sampleSimple': '简单 (3 个快照)',
     'header.sampleMultiWindow': '多窗口 (2 个窗口)',
     'header.export': '导出',
     'header.exportTooltip': '导出 Markdown 摘要',
+    'header.exportMore': '更多',
+    'header.exportMarkdown': '导出摘要（Markdown）',
+    'header.exportTriage': '导出 triage.json',
     'header.redact': '脱敏',
     'header.compare': '对比',
     'header.searchCommands': '搜索命令...',
@@ -214,14 +378,22 @@ export const translations = {
     // Empty State
     'empty.title': '未加载 Bundle',
     'empty.description': '打开 Fret 诊断 bundle.json 文件以检查快照、语义树、事件和性能数据。',
-    'empty.openButton': '打开 bundle.json',
+    'empty.openButton': '打开 bundle.json / bundle.zip',
     'empty.loadSample': '加载示例',
     'empty.recentFiles': '最近打开',
     'empty.recentFilesNote': '注意：最近文件列表存储在本地。您需要重新选择文件才能打开。',
     'empty.clear': '清空',
 
+    // Paste Dialog
+    'paste.title': '粘贴 bundle.json',
+    'paste.description': '粘贴 JSON 文本以加载诊断 bundle；不会上传任何数据。',
+    'paste.placeholder': '在此粘贴 JSON…',
+    'paste.cancel': '取消',
+    'paste.load': '加载',
+
     // Error State
     'error.title': '解析错误',
+    'error.details': '详情：',
     'error.rawPreview': '原始文本预览（已截断）：',
     'error.tryAnother': '尝试其他文件',
 
@@ -236,6 +408,8 @@ export const translations = {
     'tree.previousMatch': '上一个匹配 (Shift+Enter)',
     'tree.nextMatch': '下一个匹配 (Enter)',
     'tree.closeSearch': '关闭搜索 (Esc)',
+    'tree.depth': '深度',
+    'tree.levelPrefix': '层',
 
     // Context Menu
     'context.copySelector': '复制选择器 JSON',
@@ -252,14 +426,44 @@ export const translations = {
     'snapshots.noMatch': '没有匹配当前筛选条件的快照',
     'snapshots.frameTiming': '帧耗时 (前 {count} 个)',
     'snapshots.of': '/',
+    'snapshots.tick': 'tick:{id}',
+    'snapshots.frame': '帧:{id}',
+    'snapshots.noSemanticsShort': '无语义',
 
     // Details Panel Tabs
     'details.summary': '摘要',
     'details.node': '节点',
     'details.events': '事件',
     'details.performance': '性能',
+    'details.overlay': '叠加',
     'details.diff': '对比',
     'details.raw': '原始',
+
+    // Overlay
+    'overlay.title': '叠加层',
+    'overlay.noSnapshot': '未选择快照',
+    'overlay.noSemantics': '所选快照中没有语义数据',
+    'overlay.noBounds': '该快照缺少 bounds 数据',
+    'overlay.fit': '适配',
+    'overlay.fitSelected': '适配选中',
+    'overlay.hint': '滚轮缩放 · 拖拽平移 · 点击选中',
+    'overlay.showSemantics': '语义框',
+    'overlay.showSelectedPath': '选中路径',
+    'overlay.showHitChain': '命中链',
+    'overlay.showPointer': '指针',
+    'overlay.showHitChainPath': '命中路径',
+    'overlay.showLayerRoots': '层根节点',
+    'overlay.showBlocksUnderlay': '阻挡下层',
+    'overlay.onlySelectedSubtree': '仅选中子树',
+    'overlay.hover': '悬停',
+    'overlay.none': '无',
+    'overlay.bgShow': '背景',
+    'overlay.bgImage': '图片',
+    'overlay.bgOpacity': '透明度',
+    'overlay.bgScale': '缩放',
+    'overlay.bgOffset': '偏移',
+    'overlay.bgReset': '重置',
+    'overlay.bgFollow': '跟随快照',
 
     // Summary Tab
     'summary.noSnapshot': '未选择快照',
@@ -277,11 +481,36 @@ export const translations = {
     'summary.overlayRouting': '覆盖层路由',
     'summary.barrierRoot': '屏障根',
     'summary.topLayerRoots': '顶层根节点：',
+    'summary.blocksUnderlayShort': '阻挡',
+    'summary.noHitShort': '无命中',
     'summary.layerRoots': '层根节点',
     'summary.hitTest': '命中测试',
     'summary.pointer': '指针',
     'summary.hitChain': '命中链：',
     'summary.missing': '缺失',
+    'summary.triage': '快速结论',
+    'summary.bundle': 'Bundle',
+    'summary.bundleSchema': 'Schema',
+    'summary.exported': '导出时间（ms）',
+    'summary.outDir': 'Out dir',
+    'summary.outDirContext': 'Out dir 上下文',
+    'summary.copy': '复制',
+    'summary.download': '下载',
+    'summary.sourceZip': '来源 zip',
+    'summary.bundlePathInZip': 'zip 内 bundle.json 路径',
+    'summary.zipArtifacts': 'Zip artifacts',
+    'summary.truncated': '已截断',
+
+    'triage.noSignals': '此快照未发现明显信号',
+    'triage.frameTime': '帧耗时：{us}μs',
+    'triage.slowFrameTime': '慢帧：{us}μs',
+    'triage.severeFrameTime': '严重慢帧：{us}μs',
+    'triage.dominantPhase': '主要阶段：{phase}（{us}μs）',
+    'triage.invalidation': '失效遍历：calls={calls}, nodes={nodes}',
+    'triage.barrierActive': '屏障根生效：{id}',
+    'triage.blocksUnderlay': '可能阻塞下层输入（阻塞根数量：{count}）',
+    'triage.paintCache': '绘制缓存：命中={hits}，未命中={misses}',
+    'triage.paintCacheMisses': '绘制缓存未命中过多：命中={hits}，未命中={misses}',
 
     // Node Tab
     'node.noSelection': '在树中选择一个节点以查看详情',
@@ -306,14 +535,22 @@ export const translations = {
     'events.noEvents': '此快照中没有事件',
     'events.searchPlaceholder': '搜索事件...',
     'events.noMatch': '没有匹配的事件',
+    'events.scopeAll': '全部',
+    'events.scopeUpTo': '≤ tick',
+    'events.scopeTick': '本 tick',
+    'events.tick': 'tick',
+    'events.frame': '帧',
 
     // Performance Tab
     'perf.noData': '此快照中没有性能数据',
     'perf.timing': '耗时',
     'perf.total': '总计',
     'perf.layout': '布局',
+    'perf.layoutShort': '布',
     'perf.prepaint': '预绘制',
+    'perf.prepaintShort': '预',
     'perf.paint': '绘制',
+    'perf.paintShort': '绘',
     'perf.timingBreakdown': '耗时分解',
     'perf.cache': '缓存',
     'perf.hits': '命中',
@@ -321,7 +558,29 @@ export const translations = {
     'perf.hitRate': '命中率',
     'perf.invalidations': '失效',
     'perf.count': '次数',
+    'perf.nodes': '节点数',
     'perf.sources': '来源：',
+    'perf.invalidationWalks': '失效遍历（调试）',
+    'perf.walkedNodes': '遍历节点数',
+    'perf.topKinds': 'Top 类型',
+    'perf.topSources': 'Top 来源',
+    'perf.topWalks': 'Top 遍历',
+    'perf.truncated': '被截断',
+    'perf.layoutSolves': '布局求解（调试）',
+    'perf.rootNode': '根节点',
+    'perf.solveUs': '求解（μs）',
+    'perf.measureUs': '测量（μs）',
+    'perf.measureCalls': '测量调用数',
+    'perf.measureCacheHits': '测量缓存命中',
+    'perf.topMeasures': 'Top 测量',
+    'perf.calls': '调用',
+    'perf.cacheHits': '缓存命中',
+    'perf.cacheRoots': '缓存根（调试）',
+    'perf.reused': '复用数',
+    'perf.reusedYes': '复用',
+    'perf.reusedNo': '新建',
+    'perf.replayedOps': '回放 ops',
+    'perf.subtreeNodes': '子树节点数',
 
     // Diff Tab
     'diff.title': '快照对比',
@@ -329,6 +588,7 @@ export const translations = {
     'diff.enableCompare': '启用对比模式',
     'diff.comparing': '正在对比',
     'diff.noChanges': '未检测到变化',
+    'diff.unableCompute': '无法计算快照差异',
     'diff.added': '新增',
     'diff.removed': '删除',
     'diff.changed': '修改',
@@ -338,6 +598,10 @@ export const translations = {
     'raw.rawJson': '原始 JSON',
     'raw.normalized': '标准化',
     'raw.copyAll': '复制全部',
+
+    // JSON View
+    'json.null': '空',
+    'json.undefined': '未定义',
 
     // Command Palette
     'cmd.placeholder': '输入命令或搜索...',
@@ -371,11 +635,19 @@ export const translations = {
     'theme.system': '跟随系统',
     'theme.toggle': '切换主题',
 
+    // Language
+    'lang.switchLanguage': '切换语言',
+
     // Time
     'time.justNow': '刚刚',
     'time.minutesAgo': '{count} 分钟前',
     'time.hoursAgo': '{count} 小时前',
     'time.daysAgo': '{count} 天前',
+
+    // Phases
+    'phase.layout': '布局',
+    'phase.prepaint': '预绘制',
+    'phase.paint': '绘制',
   },
 } as const
 

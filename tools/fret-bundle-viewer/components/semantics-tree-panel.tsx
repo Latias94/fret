@@ -174,7 +174,7 @@ function TreeNode({
                     {/* Depth indicator for deeply nested nodes */}
                     {depth > MAX_INDENT_DEPTH && (
                       <Badge variant="outline" className="h-4 shrink-0 px-1 py-0 text-[9px] text-muted-foreground">
-                        L{depth}
+                        {t('tree.levelPrefix')}{depth}
                       </Badge>
                     )}
                   </div>
@@ -187,12 +187,12 @@ function TreeNode({
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-xs">
                 <div className="space-y-1 text-xs">
-                  <div><span className="text-muted-foreground">ID:</span> <span className="font-mono">{node.id}</span></div>
-                  {node.role && <div><span className="text-muted-foreground">Role:</span> {node.role}</div>}
-                  {node.testId && <div><span className="text-muted-foreground">Test ID:</span> {node.testId}</div>}
-                  {displayLabel && <div><span className="text-muted-foreground">Label:</span> {displayLabel}</div>}
-                  <div><span className="text-muted-foreground">Depth:</span> {depth}</div>
-                  {node.children.length > 0 && <div><span className="text-muted-foreground">Children:</span> {node.children.length}</div>}
+                  <div><span className="text-muted-foreground">{t('node.id')}:</span> <span className="font-mono">{node.id}</span></div>
+                  {node.role && <div><span className="text-muted-foreground">{t('node.role')}:</span> {node.role}</div>}
+                  {node.testId && <div><span className="text-muted-foreground">{t('node.testId')}:</span> {node.testId}</div>}
+                  {displayLabel && <div><span className="text-muted-foreground">{t('node.label')}:</span> {displayLabel}</div>}
+                  <div><span className="text-muted-foreground">{t('tree.depth')}:</span> {depth}</div>
+                  {node.children.length > 0 && <div><span className="text-muted-foreground">{t('node.children')}:</span> {node.children.length}</div>}
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -430,6 +430,7 @@ export function SemanticsTreePanel() {
             variant={showSearch ? 'secondary' : 'ghost'}
             size="icon"
             className="h-6 w-6"
+            data-search-tree-button
             onClick={() => {
               setShowSearch(!showSearch)
               if (!showSearch) {

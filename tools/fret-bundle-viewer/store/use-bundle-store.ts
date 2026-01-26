@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import type { BundleModel, SnapshotModel, SemanticsNodeModel } from '@/lib/types'
+import type { BundleModel, SnapshotModel, SemanticsNodeModel, UiMessage, ZipImportMeta } from '@/lib/types'
 import { parseBundle } from '@/lib/parser'
 import { simpleSampleBundle, multiWindowSampleBundle } from '@/lib/sample-bundles'
+import { isLocalizedErrorLike } from '@/lib/localized-error'
 
 // Callback for when a file is loaded (to track recent files)
 type OnFileLoadedCallback = (fileName: string, fileSize: number, content: string) => void
@@ -11,11 +12,24 @@ export function setOnFileLoadedCallback(callback: OnFileLoadedCallback | null) {
   onFileLoadedCallback = callback
 }
 
+function revokeZipObjectUrls(zip?: ZipImportMeta) {
+  if (!zip?.screenshots?.length) return
+  if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return
+  for (const s of zip.screenshots) {
+    if (!s?.objectUrl) continue
+    try {
+      URL.revokeObjectURL(s.objectUrl)
+    } catch {
+      // ignore
+    }
+  }
+}
+
 interface BundleState {
   // Bundle data
   bundle: BundleModel | null
   rawText: string | null
-  parseError: string | null
+  parseError: UiMessage | null
 
   // Selection state
   selectedWindowIndex: number
@@ -37,7 +51,11 @@ interface BundleState {
   getSelectedNode: () => SemanticsNodeModel | null
 
   // Actions
-  loadBundle: (text: string, fileName?: string) => void
+  loadBundle: (
+    text: string,
+    fileNameOrOptions?: string | { fileName?: string; fileSize?: number; recordRecent?: boolean; zip?: ZipImportMeta }
+  ) => void
+  setParseError: (error: UiMessage | null, rawText?: string | null) => void
   loadSampleBundle: (type: 'simple' | 'multi-window') => void
   clearBundle: () => void
 
@@ -105,9 +123,40 @@ export const useBundleStore = create<BundleState>((set, get) => ({
   },
 
   // Actions
-  loadBundle: (text, fileName) => {
+  loadBundle: (text, fileNameOrOptions) => {
+    revokeZipObjectUrls(get().bundle?.meta.zip)
+
+    const options =
+      typeof fileNameOrOptions === 'string'
+        ? { fileName: fileNameOrOptions }
+        : fileNameOrOptions ?? {}
+    const fileName = options.fileName
+    const recordRecent = options.recordRecent ?? true
     try {
       const bundle = parseBundle(text, fileName)
+
+      // Treat "can't parse JSON" as a fatal error (show the error UI), but keep other warnings non-fatal.
+      const fatalWarning =
+        bundle.windows.length === 0
+          ? bundle.warnings.find(
+              (w) => w.key === 'error.jsonParse' || w.key === 'error.bundleRootNotObject'
+            )
+          : undefined
+      if (fatalWarning) {
+        set({
+          bundle: null,
+          rawText: text,
+          parseError: fatalWarning,
+        })
+        return
+      }
+
+      if (typeof options.fileSize === 'number') {
+        bundle.meta.fileSize = options.fileSize
+      }
+      if (options.zip) {
+        bundle.meta.zip = options.zip
+      }
       
       // Auto-expand root nodes
       const expandedNodes = new Set<string>()
@@ -133,16 +182,45 @@ export const useBundleStore = create<BundleState>((set, get) => ({
       })
 
       // Notify callback for recent files tracking (only for user-loaded files, not samples)
-      if (onFileLoadedCallback && fileName && !fileName.startsWith('sample-')) {
-        onFileLoadedCallback(fileName, text.length, text)
+      if (onFileLoadedCallback && recordRecent && fileName && !fileName.startsWith('sample-')) {
+        onFileLoadedCallback(fileName, typeof options.fileSize === 'number' ? options.fileSize : text.length, text)
       }
     } catch (error) {
+      if (isLocalizedErrorLike(error)) {
+        set({
+          bundle: null,
+          rawText: text,
+          parseError: {
+            key: error.key,
+            params: error.params,
+            detail: error.detail,
+          },
+        })
+        return
+      }
       set({
         bundle: null,
         rawText: text,
-        parseError: error instanceof Error ? error.message : 'Unknown parse error',
+        parseError: {
+          key: 'error.unknownParse',
+          detail: error instanceof Error ? error.message : String(error),
+        },
       })
     }
+  },
+
+  setParseError: (error, rawText = null) => {
+    revokeZipObjectUrls(get().bundle?.meta.zip)
+    set({
+      bundle: null,
+      rawText,
+      parseError: error,
+      selectedWindowIndex: 0,
+      selectedSnapshotAIndex: 0,
+      selectedSnapshotBIndex: null,
+      selectedNodeId: null,
+      expandedNodes: new Set<string>(),
+    })
   },
 
   loadSampleBundle: (type) => {
@@ -152,6 +230,7 @@ export const useBundleStore = create<BundleState>((set, get) => ({
   },
 
   clearBundle: () => {
+    revokeZipObjectUrls(get().bundle?.meta.zip)
     set({
       bundle: null,
       rawText: null,

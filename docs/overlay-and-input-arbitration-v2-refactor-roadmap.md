@@ -6,6 +6,10 @@ This document is a concrete, test-driven refactor plan for Fret’s overlay subs
 arbitration, targeting editor-grade interaction **and** a general-purpose application framework
 baseline.
 
+Progress log (keep updated during implementation):
+
+- `docs/workstreams/overlay-input-arbitration-v2.md`
+
 It is aligned with the existing contract split:
 
 - Runtime substrate (mechanisms): `crates/fret-ui`

@@ -48,6 +48,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             CMD_NODE_GRAPH_DUPLICATE => self.cmd_duplicate(cx, snapshot),
             CMD_NODE_GRAPH_DELETE_SELECTION => self.cmd_delete_selection(cx, snapshot),
 
+            "edit.select_all" => self.cmd_select_all(cx, snapshot),
+            "edit.copy" => self.cmd_copy(cx, snapshot),
+            "edit.cut" => self.cmd_cut(cx, snapshot),
+            "edit.paste" => self.cmd_paste(cx, snapshot),
+
             CMD_NODE_GRAPH_NUDGE_LEFT => {
                 self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: -1.0, y: 0.0 })
             }

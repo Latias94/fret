@@ -36,7 +36,7 @@ fn submenu_content_semantics_id_in_scope<H: UiHost>(
         // Compute the id via the same call path used by the actual mounted submenu panel
         // (`submenu_panel_for_value_at` -> `submenu_panel_at` -> `menu_panel_at`), so callsite-based
         // element ids stay aligned.
-        content_panel::menu_panel_at_with_labelled_by_element::<H>(
+        content_panel::menu_panel_at_with_labelled_by_element(
             cx,
             Rect::new(
                 fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
@@ -77,13 +77,16 @@ pub fn submenu_content_semantics_id<H: UiHost>(
 /// This keeps wrappers from duplicating the "role=menu + absolute positioned panel container"
 /// skeleton while still allowing each wrapper (DropdownMenu, Menubar, etc) to provide its own
 /// styling and inner content structure.
-pub fn submenu_panel_at<H: UiHost>(
+pub fn submenu_panel_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     labelled_by_element: Option<GlobalElementId>,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     content_panel::menu_panel_at_with_labelled_by_element(
         cx,
         placed,
@@ -97,23 +100,29 @@ pub fn submenu_panel_at<H: UiHost>(
 ///
 /// This ensures the submenu content element id is stable and can be referenced by the trigger via
 /// `submenu_content_semantics_id`.
-pub fn submenu_panel_for_value_at<H: UiHost>(
+pub fn submenu_panel_for_value_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     open_value: Arc<str>,
     placed: Rect,
     labelled_by_element: Option<GlobalElementId>,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     with_submenu_value_scope(cx, &open_value, |cx| {
         submenu_panel_at(cx, placed, labelled_by_element, build_container, f)
     })
 }
 
-fn submenu_scroll_y_fill<H: UiHost>(
+fn submenu_scroll_y_fill<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let scroll_layout = LayoutStyle {
         size: SizeStyle {
             width: Length::Fill,
@@ -137,14 +146,17 @@ fn submenu_scroll_y_fill<H: UiHost>(
 ///
 /// This matches the Radix Menu pattern of sizing the panel viewport to the available height and
 /// scrolling the internal list when content exceeds that viewport.
-pub fn submenu_panel_scroll_y_for_value_at<H: UiHost>(
+pub fn submenu_panel_scroll_y_for_value_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     open_value: Arc<str>,
     placed: Rect,
     labelled_by_element: Option<GlobalElementId>,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     submenu_panel_for_value_at(
         cx,
         open_value,
@@ -156,14 +168,17 @@ pub fn submenu_panel_scroll_y_for_value_at<H: UiHost>(
 }
 
 /// Render a submenu roving group with APG-aligned keyboard navigation and prefix typeahead.
-pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost>(
+pub fn submenu_roving_group_apg_prefix_typeahead<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: RovingFlexProps,
     labels: Arc<[Arc<str>]>,
     timeout_ticks: u64,
     models: sub::MenuSubmenuModels,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let dir = direction_prim::use_direction_in_scope(cx, None);
     content::menu_roving_group_apg(
         cx,

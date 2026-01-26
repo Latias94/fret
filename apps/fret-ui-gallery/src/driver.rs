@@ -128,6 +128,21 @@ struct UiGalleryWindowState {
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
+    material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
+    material3_list_value: Model<Arc<str>>,
+    material3_expressive: Model<bool>,
+    material3_navigation_bar_value: Model<Arc<str>>,
+    material3_navigation_rail_value: Model<Arc<str>>,
+    material3_navigation_drawer_value: Model<Arc<str>>,
+    material3_modal_navigation_drawer_open: Model<bool>,
+    material3_dialog_open: Model<bool>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+    material3_text_field_error: Model<bool>,
+    material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
     dropdown_open: Model<bool>,
@@ -396,6 +411,21 @@ impl UiGalleryDriver {
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
         let switch = app.models_mut().insert(true);
+        let material3_checkbox = app.models_mut().insert(false);
+        let material3_switch = app.models_mut().insert(false);
+        let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
+        let material3_tabs_value = app.models_mut().insert(Arc::<str>::from("overview"));
+        let material3_list_value = app.models_mut().insert(Arc::<str>::from("alpha"));
+        let material3_expressive = app.models_mut().insert(false);
+        let material3_navigation_bar_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_navigation_rail_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_navigation_drawer_value = app.models_mut().insert(Arc::<str>::from("search"));
+        let material3_modal_navigation_drawer_open = app.models_mut().insert(false);
+        let material3_dialog_open = app.models_mut().insert(false);
+        let material3_text_field_value = app.models_mut().insert(String::new());
+        let material3_text_field_disabled = app.models_mut().insert(false);
+        let material3_text_field_error = app.models_mut().insert(false);
+        let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
@@ -500,6 +530,21 @@ impl UiGalleryDriver {
             progress,
             checkbox,
             switch,
+            material3_checkbox,
+            material3_switch,
+            material3_radio_value,
+            material3_tabs_value,
+            material3_list_value,
+            material3_expressive,
+            material3_navigation_bar_value,
+            material3_navigation_rail_value,
+            material3_navigation_drawer_value,
+            material3_modal_navigation_drawer_open,
+            material3_dialog_open,
+            material3_text_field_value,
+            material3_text_field_disabled,
+            material3_text_field_error,
+            material3_menu_open,
             text_input,
             text_area,
             dropdown_open,
@@ -832,6 +877,29 @@ impl UiGalleryDriver {
         };
 
         shadcn::shadcn_themes::apply_shadcn_new_york_v4(app, base, scheme);
+
+        // Inject Material 3 v30 motion/state/typography tokens on top of the active theme preset.
+        //
+        // This keeps the gallery's base theme selection (shadcn light/dark) intact while enabling
+        // Material components to query their extra token kinds via the shared theme system.
+        fret_ui::Theme::with_global_mut(app, |theme| {
+            let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
+                fret_ui_material3::tokens::v30::TypographyOptions::default(),
+                fret_ui_material3::tokens::v30::ColorSchemeOptions {
+                    mode: match scheme {
+                        shadcn::shadcn_themes::ShadcnColorScheme::Light => {
+                            fret_ui_material3::tokens::v30::SchemeMode::Light
+                        }
+                        shadcn::shadcn_themes::ShadcnColorScheme::Dark => {
+                            fret_ui_material3::tokens::v30::SchemeMode::Dark
+                        }
+                    },
+                    ..Default::default()
+                },
+            );
+            theme.extend_tokens_from_config(&cfg);
+        });
+
         state.applied_theme_preset = Some(preset);
     }
 
@@ -916,6 +984,22 @@ impl UiGalleryDriver {
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
+        let material3_checkbox = state.material3_checkbox.clone();
+        let material3_switch = state.material3_switch.clone();
+        let material3_radio_value = state.material3_radio_value.clone();
+        let material3_tabs_value = state.material3_tabs_value.clone();
+        let material3_list_value = state.material3_list_value.clone();
+        let material3_expressive = state.material3_expressive.clone();
+        let material3_navigation_bar_value = state.material3_navigation_bar_value.clone();
+        let material3_navigation_rail_value = state.material3_navigation_rail_value.clone();
+        let material3_navigation_drawer_value = state.material3_navigation_drawer_value.clone();
+        let material3_modal_navigation_drawer_open =
+            state.material3_modal_navigation_drawer_open.clone();
+        let material3_dialog_open = state.material3_dialog_open.clone();
+        let material3_text_field_value = state.material3_text_field_value.clone();
+        let material3_text_field_disabled = state.material3_text_field_disabled.clone();
+        let material3_text_field_error = state.material3_text_field_error.clone();
+        let material3_menu_open = state.material3_menu_open.clone();
         let text_input = state.text_input.clone();
         let text_area = state.text_area.clone();
         let dropdown_open = state.dropdown_open.clone();
@@ -1156,7 +1240,7 @@ impl UiGalleryDriver {
                                                 .bg(ColorRef::Color(theme.color_required("muted")))
                                                 .p(Space::N4),
                                             LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(280.0)))
+                                                .w_px(Px(280.0))
                                                 .h_full(),
                                         ),
                                         |cx| vec![cx.text("Sidebar (disabled)")],
@@ -1191,7 +1275,7 @@ impl UiGalleryDriver {
                                             .bg(ColorRef::Color(theme.color_required("muted")))
                                             .p(Space::N4),
                                         LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(280.0)))
+                                            .w_px(Px(280.0))
                                             .h_full(),
                                     ),
                                     |cx| vec![cx.text("Sidebar (disabled)")],
@@ -1278,6 +1362,21 @@ impl UiGalleryDriver {
                                             progress.clone(),
                                             checkbox.clone(),
                                             switch.clone(),
+                                            material3_checkbox.clone(),
+                                            material3_switch.clone(),
+                                            material3_radio_value.clone(),
+                                            material3_tabs_value.clone(),
+                                            material3_list_value.clone(),
+                                            material3_expressive.clone(),
+                                            material3_navigation_bar_value.clone(),
+                                            material3_navigation_rail_value.clone(),
+                                            material3_navigation_drawer_value.clone(),
+                                            material3_modal_navigation_drawer_open.clone(),
+                                            material3_dialog_open.clone(),
+                                            material3_text_field_value.clone(),
+                                            material3_text_field_disabled.clone(),
+                                            material3_text_field_error.clone(),
+                                            material3_menu_open.clone(),
                                             text_input.clone(),
                                             text_area.clone(),
                                             dropdown_open.clone(),
@@ -1351,6 +1450,21 @@ impl UiGalleryDriver {
                                         progress.clone(),
                                         checkbox.clone(),
                                         switch.clone(),
+                                        material3_checkbox.clone(),
+                                        material3_switch.clone(),
+                                        material3_radio_value.clone(),
+                                        material3_tabs_value.clone(),
+                                        material3_list_value.clone(),
+                                        material3_expressive.clone(),
+                                        material3_navigation_bar_value.clone(),
+                                        material3_navigation_rail_value.clone(),
+                                        material3_navigation_drawer_value.clone(),
+                                        material3_modal_navigation_drawer_open.clone(),
+                                        material3_dialog_open.clone(),
+                                        material3_text_field_value.clone(),
+                                        material3_text_field_disabled.clone(),
+                                        material3_text_field_error.clone(),
+                                        material3_menu_open.clone(),
                                         text_input.clone(),
                                         text_area.clone(),
                                         dropdown_open.clone(),
@@ -1746,7 +1860,7 @@ impl UiGalleryDriver {
                                                     overflow: TextOverflow::Clip,
                                                 })
                                             })
-                                            .collect()
+                                            .collect::<Vec<_>>()
                                     },
                                 );
 
@@ -1917,10 +2031,10 @@ pub fn build_app() -> App {
     cmds.save = Some(CommandId::new(CMD_APP_SAVE));
     cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
     cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
-    cmds.cut = Some(CommandId::new(fret_app::core_commands::TEXT_CUT));
-    cmds.copy = Some(CommandId::new(fret_app::core_commands::TEXT_COPY));
-    cmds.paste = Some(CommandId::new(fret_app::core_commands::TEXT_PASTE));
-    cmds.select_all = Some(CommandId::new(fret_app::core_commands::TEXT_SELECT_ALL));
+    cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
+    cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
+    cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
+    cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
     cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
 
     if Platform::current() == Platform::Macos {

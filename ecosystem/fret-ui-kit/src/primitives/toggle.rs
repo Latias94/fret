@@ -121,12 +121,15 @@ impl ToggleRoot {
     /// - Activation toggles the boolean model (disabled guards apply).
     /// - This does not apply any visual skin. Pass the desired `PressableProps`.
     #[track_caller]
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         mut props: PressableProps,
-        f: impl FnOnce(&mut ElementContext<'_, H>, PressableState, bool) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        f: impl FnOnce(&mut ElementContext<'_, H>, PressableState, bool) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         let model = self.pressed_model(cx);
         let disabled = self.disabled;
         let label = self.a11y_label.clone();

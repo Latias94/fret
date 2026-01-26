@@ -130,6 +130,25 @@ pub(crate) const PAGE_PROGRESS: &str = "progress";
 pub(crate) const PAGE_MENUS: &str = "menus";
 pub(crate) const PAGE_COMMAND: &str = "command";
 pub(crate) const PAGE_TOAST: &str = "toast";
+pub(crate) const PAGE_MATERIAL3_GALLERY: &str = "material3_gallery";
+pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
+pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
+pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
+pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
+pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
+pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
+pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
+pub(crate) const PAGE_MATERIAL3_NAVIGATION_BAR: &str = "material3_navigation_bar";
+pub(crate) const PAGE_MATERIAL3_NAVIGATION_RAIL: &str = "material3_navigation_rail";
+pub(crate) const PAGE_MATERIAL3_NAVIGATION_DRAWER: &str = "material3_navigation_drawer";
+pub(crate) const PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str = "material3_modal_navigation_drawer";
+pub(crate) const PAGE_MATERIAL3_DIALOG: &str = "material3_dialog";
+pub(crate) const PAGE_MATERIAL3_MENU: &str = "material3_menu";
+pub(crate) const PAGE_MATERIAL3_LIST: &str = "material3_list";
+pub(crate) const PAGE_MATERIAL3_SNACKBAR: &str = "material3_snackbar";
+pub(crate) const PAGE_MATERIAL3_TOOLTIP: &str = "material3_tooltip";
+pub(crate) const PAGE_MATERIAL3_STATE_MATRIX: &str = "material3_state_matrix";
+pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
 
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
@@ -170,6 +189,32 @@ pub(crate) const CMD_NAV_PROGRESS: &str = "ui_gallery.nav.select.progress";
 pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
 pub(crate) const CMD_NAV_COMMAND: &str = "ui_gallery.nav.select.command";
 pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
+pub(crate) const CMD_NAV_MATERIAL3_GALLERY: &str = "ui_gallery.nav.select.material3_gallery";
+pub(crate) const CMD_NAV_MATERIAL3_BUTTON: &str = "ui_gallery.nav.select.material3_button";
+pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
+    "ui_gallery.nav.select.material3_icon_button";
+pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
+pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
+pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
+pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
+pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
+pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_BAR: &str =
+    "ui_gallery.nav.select.material3_navigation_bar";
+pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_RAIL: &str =
+    "ui_gallery.nav.select.material3_navigation_rail";
+pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_DRAWER: &str =
+    "ui_gallery.nav.select.material3_navigation_drawer";
+pub(crate) const CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER: &str =
+    "ui_gallery.nav.select.material3_modal_navigation_drawer";
+pub(crate) const CMD_NAV_MATERIAL3_DIALOG: &str = "ui_gallery.nav.select.material3_dialog";
+pub(crate) const CMD_NAV_MATERIAL3_MENU: &str = "ui_gallery.nav.select.material3_menu";
+pub(crate) const CMD_NAV_MATERIAL3_LIST: &str = "ui_gallery.nav.select.material3_list";
+pub(crate) const CMD_NAV_MATERIAL3_SNACKBAR: &str = "ui_gallery.nav.select.material3_snackbar";
+pub(crate) const CMD_NAV_MATERIAL3_TOOLTIP: &str = "ui_gallery.nav.select.material3_tooltip";
+pub(crate) const CMD_NAV_MATERIAL3_STATE_MATRIX: &str =
+    "ui_gallery.nav.select.material3_state_matrix";
+pub(crate) const CMD_NAV_MATERIAL3_TOUCH_TARGETS: &str =
+    "ui_gallery.nav.select.material3_touch_targets";
 
 pub(crate) const CMD_PROGRESS_INC: &str = "ui_gallery.progress.inc";
 pub(crate) const CMD_PROGRESS_DEC: &str = "ui_gallery.progress.dec";
@@ -678,6 +723,256 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["dialog", "popover"],
                 docs::DOC_OVERLAY,
                 docs::USAGE_OVERLAY,
+            ),
+        ],
+    },
+    PageGroupSpec {
+        title: "Material 3",
+        items: &[
+            PageSpec::new(
+                PAGE_MATERIAL3_GALLERY,
+                "Gallery",
+                "Material 3 Gallery (outcomes-first snapshot surface)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_GALLERY,
+                &["material3", "gallery", "regression", "outcomes"],
+                docs::DOC_MATERIAL3_GALLERY,
+                docs::USAGE_MATERIAL3_GALLERY,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_STATE_MATRIX,
+                "State Matrix",
+                "Material 3 State Matrix (manual regression harness)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_STATE_MATRIX,
+                &["material3", "states", "regression", "matrix"],
+                docs::DOC_MATERIAL3_STATE_MATRIX,
+                docs::USAGE_MATERIAL3_STATE_MATRIX,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TOUCH_TARGETS,
+                "Touch Targets",
+                "Material 3 Touch Targets (minimum interactive size)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TOUCH_TARGETS,
+                &[
+                    "material3",
+                    "touch-target",
+                    "interactive-size",
+                    "regression",
+                ],
+                docs::DOC_MATERIAL3_TOUCH_TARGETS,
+                docs::USAGE_MATERIAL3_TOUCH_TARGETS,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_BUTTON,
+                "Button",
+                "Material 3 Button (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_BUTTON,
+                &["material3", "button", "state-layer", "ripple", "motion"],
+                docs::DOC_MATERIAL3_BUTTON,
+                docs::USAGE_MATERIAL3_BUTTON,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_ICON_BUTTON,
+                "Icon Button",
+                "Material 3 Icon Button (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_ICON_BUTTON,
+                &[
+                    "material3",
+                    "icon-button",
+                    "state-layer",
+                    "ripple",
+                    "motion",
+                ],
+                docs::DOC_MATERIAL3_ICON_BUTTON,
+                docs::USAGE_MATERIAL3_ICON_BUTTON,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_CHECKBOX,
+                "Checkbox",
+                "Material 3 Checkbox (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_CHECKBOX,
+                &["material3", "checkbox", "state-layer", "ripple", "forms"],
+                docs::DOC_MATERIAL3_CHECKBOX,
+                docs::USAGE_MATERIAL3_CHECKBOX,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SWITCH,
+                "Switch",
+                "Material 3 Switch (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SWITCH,
+                &["material3", "switch", "state-layer", "ripple", "forms"],
+                docs::DOC_MATERIAL3_SWITCH,
+                docs::USAGE_MATERIAL3_SWITCH,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_RADIO,
+                "Radio",
+                "Material 3 Radio (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_RADIO,
+                &["material3", "radio", "state-layer", "ripple", "forms"],
+                docs::DOC_MATERIAL3_RADIO,
+                docs::USAGE_MATERIAL3_RADIO,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TEXT_FIELD,
+                "Text Field",
+                "Material 3 Text Field (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TEXT_FIELD,
+                &["material3", "text-field", "forms"],
+                docs::DOC_MATERIAL3_TEXT_FIELD,
+                docs::USAGE_MATERIAL3_TEXT_FIELD,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TABS,
+                "Tabs",
+                "Material 3 Tabs (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TABS,
+                &["material3", "tabs", "state-layer", "ripple", "roving-focus"],
+                docs::DOC_MATERIAL3_TABS,
+                docs::USAGE_MATERIAL3_TABS,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_NAVIGATION_BAR,
+                "Navigation Bar",
+                "Material 3 Navigation Bar (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_NAVIGATION_BAR,
+                &[
+                    "material3",
+                    "navigation-bar",
+                    "state-layer",
+                    "ripple",
+                    "roving-focus",
+                    "motion",
+                ],
+                docs::DOC_MATERIAL3_NAVIGATION_BAR,
+                docs::USAGE_MATERIAL3_NAVIGATION_BAR,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_NAVIGATION_RAIL,
+                "Navigation Rail",
+                "Material 3 Navigation Rail (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_NAVIGATION_RAIL,
+                &[
+                    "material3",
+                    "navigation-rail",
+                    "state-layer",
+                    "ripple",
+                    "roving-focus",
+                    "motion",
+                ],
+                docs::DOC_MATERIAL3_NAVIGATION_RAIL,
+                docs::USAGE_MATERIAL3_NAVIGATION_RAIL,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_NAVIGATION_DRAWER,
+                "Navigation Drawer",
+                "Material 3 Navigation Drawer (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_NAVIGATION_DRAWER,
+                &[
+                    "material3",
+                    "navigation-drawer",
+                    "state-layer",
+                    "ripple",
+                    "roving-focus",
+                ],
+                docs::DOC_MATERIAL3_NAVIGATION_DRAWER,
+                docs::USAGE_MATERIAL3_NAVIGATION_DRAWER,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER,
+                "Modal Navigation Drawer",
+                "Material 3 Modal Navigation Drawer (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_MODAL_NAVIGATION_DRAWER,
+                &[
+                    "material3",
+                    "navigation-drawer",
+                    "modal",
+                    "overlay",
+                    "scrim",
+                    "focus-trap",
+                    "motion",
+                ],
+                docs::DOC_MATERIAL3_MODAL_NAVIGATION_DRAWER,
+                docs::USAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_DIALOG,
+                "Dialog",
+                "Material 3 Dialog (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_DIALOG,
+                &[
+                    "material3",
+                    "dialog",
+                    "modal",
+                    "overlay",
+                    "scrim",
+                    "focus-trap",
+                    "motion",
+                ],
+                docs::DOC_MATERIAL3_DIALOG,
+                docs::USAGE_MATERIAL3_DIALOG,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_MENU,
+                "Menu",
+                "Material 3 Menu (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_MENU,
+                &[
+                    "material3",
+                    "menu",
+                    "list",
+                    "state-layer",
+                    "ripple",
+                    "roving-focus",
+                    "typeahead",
+                ],
+                docs::DOC_MATERIAL3_MENU,
+                docs::USAGE_MATERIAL3_MENU,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_LIST,
+                "List",
+                "Material 3 List (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_LIST,
+                &["material3", "list", "roving-focus", "selection"],
+                docs::DOC_MATERIAL3_LIST,
+                docs::USAGE_MATERIAL3_LIST,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SNACKBAR,
+                "Snackbar",
+                "Material 3 Snackbar (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SNACKBAR,
+                &["material3", "snackbar", "toast-layer"],
+                docs::DOC_MATERIAL3_SNACKBAR,
+                docs::USAGE_MATERIAL3_SNACKBAR,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TOOLTIP,
+                "Tooltip",
+                "Material 3 Tooltip (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TOOLTIP,
+                &["material3", "tooltip", "overlay", "motion"],
+                docs::DOC_MATERIAL3_TOOLTIP,
+                docs::USAGE_MATERIAL3_TOOLTIP,
             ),
         ],
     },

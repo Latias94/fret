@@ -13,17 +13,14 @@
 use std::collections::BTreeMap;
 
 use fret_ui::UiHost;
-use fret_ui::element::AnyElement;
+use fret_ui::element::Elements;
 use fret_ui::elements::ElementContext;
 
 use crate::core::{Graph, NodeKindKey};
 use crate::ui::portal::NodeGraphPortalNodeLayout;
 
-pub type NodeGraphNodeRenderer<H> = dyn for<'a> FnMut(
-    &mut ElementContext<'a, H>,
-    &Graph,
-    NodeGraphPortalNodeLayout,
-) -> Vec<AnyElement>;
+pub type NodeGraphNodeRenderer<H> =
+    dyn for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> Elements;
 
 /// ReactFlow-style `nodeTypes` mapping (via the canvas portal escape hatch).
 ///
@@ -48,41 +45,49 @@ impl<H: UiHost> NodeGraphNodeTypes<H> {
         }
     }
 
-    pub fn with_fallback(
+    pub fn with_fallback<R>(
         mut self,
-        renderer: impl for<'a> FnMut(
+        mut renderer: impl for<'a> FnMut(
             &mut ElementContext<'a, H>,
             &Graph,
             NodeGraphPortalNodeLayout,
-        ) -> Vec<AnyElement>
+        ) -> R
         + 'static,
-    ) -> Self {
-        self.fallback = Some(Box::new(renderer));
+    ) -> Self
+    where
+        R: Into<Elements> + 'static,
+    {
+        self.fallback = Some(Box::new(move |cx, graph, layout| {
+            renderer(cx, graph, layout).into()
+        }));
         self
     }
 
-    pub fn register(
+    pub fn register<R>(
         mut self,
         kind: NodeKindKey,
-        renderer: impl for<'a> FnMut(
+        mut renderer: impl for<'a> FnMut(
             &mut ElementContext<'a, H>,
             &Graph,
             NodeGraphPortalNodeLayout,
-        ) -> Vec<AnyElement>
+        ) -> R
         + 'static,
-    ) -> Self {
-        self.node_types.insert(kind, Box::new(renderer));
+    ) -> Self
+    where
+        R: Into<Elements> + 'static,
+    {
+        self.node_types.insert(
+            kind,
+            Box::new(move |cx, graph, layout| renderer(cx, graph, layout).into()),
+        );
         self
     }
 
     /// Converts this registry into a portal renderer closure for [`crate::ui::portal::NodeGraphPortalHost`].
     pub fn into_portal_renderer(
         mut self,
-    ) -> impl for<'a> FnMut(
-        &mut ElementContext<'a, H>,
-        &Graph,
-        NodeGraphPortalNodeLayout,
-    ) -> Vec<AnyElement> {
+    ) -> impl for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> Elements
+    {
         move |ecx, graph, layout| self.render(ecx, graph, layout)
     }
 
@@ -91,9 +96,9 @@ impl<H: UiHost> NodeGraphNodeTypes<H> {
         ecx: &mut ElementContext<'_, H>,
         graph: &Graph,
         layout: NodeGraphPortalNodeLayout,
-    ) -> Vec<AnyElement> {
+    ) -> Elements {
         let Some(node) = graph.nodes.get(&layout.node) else {
-            return Vec::new();
+            return Elements::default();
         };
 
         if let Some(renderer) = self.node_types.get_mut(&node.kind) {
@@ -104,6 +109,6 @@ impl<H: UiHost> NodeGraphNodeTypes<H> {
             return fallback(ecx, graph, layout);
         }
 
-        Vec::new()
+        Elements::default()
     }
 }

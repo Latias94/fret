@@ -10,7 +10,8 @@ pub use crate::resizable_panel_group::{ResizablePanelGroupLayout, ResizablePanel
 pub use crate::resize_handle::ResizeHandle;
 pub use crate::text_input::{BoundTextInput, TextInput};
 pub use crate::widget::{
-    CommandCx, EventCx, Invalidation, LayoutCx, MeasureCx, PaintCx, PrepaintCx, SemanticsCx, Widget,
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, Invalidation, LayoutCx,
+    MeasureCx, PaintCx, PrepaintCx, SemanticsCx, Widget,
 };
 
 /// Extension trait that exposes a feature-gated node creation API for retained widgets.

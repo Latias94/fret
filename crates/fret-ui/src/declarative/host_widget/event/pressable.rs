@@ -26,6 +26,7 @@ pub(super) fn handle_pressable<H: UiHost>(
         node: NodeId,
         bounds: Rect,
         input_ctx: &'a fret_runtime::InputContext,
+        prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
         requested_focus: &'a mut Option<NodeId>,
         requested_capture: &'a mut Option<Option<NodeId>>,
         requested_cursor: &'a mut Option<fret_core::CursorIcon>,
@@ -104,6 +105,10 @@ pub(super) fn handle_pressable<H: UiHost>(
                 return;
             }
             *self.requested_cursor = Some(icon);
+        }
+
+        fn prevent_default(&mut self, action: fret_runtime::DefaultAction) {
+            self.prevented_default_actions.insert(action);
         }
 
         fn invalidate(&mut self, invalidation: Invalidation) {
@@ -198,6 +203,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         node: cx.node,
                         bounds: cx.bounds,
                         input_ctx: &cx.input_ctx,
+                        prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
@@ -253,6 +259,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         node: cx.node,
                         bounds: cx.bounds,
                         input_ctx: &cx.input_ctx,
+                        prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
@@ -335,6 +342,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         node: cx.node,
                         bounds: cx.bounds,
                         input_ctx: &cx.input_ctx,
+                        prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,

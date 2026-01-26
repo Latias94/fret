@@ -45,6 +45,20 @@ Web/wasm quick start (tooling):
 - default keybindings installation,
 - file-backed settings/keymap loading helpers.
 
+### Background work (portable)
+
+Keep the UI/runtime deterministic by treating `App`/`ModelStore` as main-thread only (ADR 0008).
+
+Recommended patterns:
+
+- **Portable default**: background producers send **data-only** messages into an inbox; the UI thread drains the inbox at a driver boundary and schedules redraw (ADR 0112, ADR 0190).
+- **Heavy apps**: run an external runtime (e.g. Tokio) on a dedicated thread, send results into an inbox, and `wake()` the runner to reach the next driver boundary promptly (ADR 0190).
+
+Dependency guidance:
+
+- **Reusable ecosystem crates** SHOULD depend on portable surfaces only (`fret-core` / `fret-runtime` / `fret-ui`) and use the inbox/dispatcher surface (ADR 0113, ADR 0190).
+- **Apps** may use `fret-bootstrap` (or `fret-kit`) to get the golden-path wiring so they do not need to hand-roll channels + timers + wake logic.
+
 ## Features (Cargo)
 
 Cargo features are widely used in Rust UI ecosystems to keep “small apps small” while allowing optional integrations.

@@ -161,6 +161,16 @@ impl CodeBlockHeaderSlots {
         self
     }
 
+    pub fn left(mut self, els: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.left.extend(els);
+        self
+    }
+
+    pub fn right(mut self, els: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.right.extend(els);
+        self
+    }
+
     pub fn push_left(mut self, el: AnyElement) -> Self {
         self.left.push(el);
         self

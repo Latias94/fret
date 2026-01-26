@@ -11,7 +11,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::headless::transition::TransitionOutput;
-use crate::{LayoutRefinement, MetricRef, Space};
+use crate::{LayoutRefinement, Space};
 
 /// Output describing how to render a collapsible-style measured-height wrapper for the current
 /// element root.
@@ -176,12 +176,12 @@ pub fn collapsible_height_wrapper_refinement(
     let mut wrapper = LayoutRefinement::default()
         .w_full()
         .min_w_0()
-        .min_h(MetricRef::Px(Px(0.0)))
+        .min_h(Px(0.0))
         .overflow_hidden();
     if wants_height_animation {
-        wrapper = wrapper.h_px(MetricRef::Px(Px(measured_height.0 * progress)));
+        wrapper = wrapper.h_px(Px(measured_height.0 * progress));
     } else if !open && force_mount {
-        wrapper = wrapper.h_px(MetricRef::Px(Px(0.0)));
+        wrapper = wrapper.h_px(Px(0.0));
     }
 
     (should_render, wrapper)

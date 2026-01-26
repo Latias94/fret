@@ -14,10 +14,13 @@ pub use fret_ui::element::FocusScopeProps;
 
 /// Convenience helper for building a trapped focus scope (Tab/Shift+Tab loops within the subtree).
 #[track_caller]
-pub fn focus_trap<H: UiHost>(
+pub fn focus_trap<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.focus_scope(
         FocusScopeProps {
             trap_focus: true,
@@ -29,10 +32,13 @@ pub fn focus_trap<H: UiHost>(
 
 /// Like `focus_trap`, but also exposes the scope element ID.
 #[track_caller]
-pub fn focus_trap_with_id<H: UiHost>(
+pub fn focus_trap_with_id<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>, fret_ui::elements::GlobalElementId) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>, fret_ui::elements::GlobalElementId) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.focus_scope_with_id(
         FocusScopeProps {
             trap_focus: true,

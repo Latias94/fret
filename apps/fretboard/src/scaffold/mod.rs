@@ -13,7 +13,8 @@ use fs::{
 use templates::{
     empty_template_cargo_toml, empty_template_main_rs, empty_template_readme_md,
     hello_template_cargo_toml, hello_template_main_rs, hello_template_readme_md,
-    template_gitignore, todo_template_cargo_toml, todo_template_main_rs, todo_template_readme_md,
+    template_gitignore, todo_mvu_template_main_rs, todo_mvu_template_readme_md,
+    todo_template_cargo_toml, todo_template_main_rs, todo_template_readme_md,
 };
 
 pub(crate) fn init_cmd(args: Vec<String>) -> Result<(), String> {
@@ -42,6 +43,7 @@ fn new_template_cmd(invoked_as: &str, args: Vec<String>) -> Result<(), String> {
     match template.as_str() {
         "empty" => init_empty(it.collect()),
         "todo" => init_todo(it.collect()),
+        "todo-mvu" | "todo_mvu" => init_todo_mvu(it.collect()),
         "hello" | "hello-world" => init_hello(it.collect()),
         other => Err(format!("unknown template for {invoked_as}: {other}")),
     }
@@ -52,6 +54,7 @@ enum NewTemplate {
     Empty,
     Hello,
     Todo,
+    TodoMvu,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -174,6 +177,59 @@ fn init_todo(args: Vec<String>) -> Result<(), String> {
     )
 }
 
+fn init_todo_mvu(args: Vec<String>) -> Result<(), String> {
+    let root = workspace_root()?;
+
+    let mut out_path: Option<PathBuf> = None;
+    let mut name: Option<String> = None;
+    let mut ui_assets = false;
+    let mut icon_pack = IconPack::Lucide;
+    let mut command_palette = false;
+
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--path" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--path requires a value".to_string())?;
+                out_path = Some(PathBuf::from(raw));
+            }
+            "--name" => {
+                name = Some(
+                    it.next()
+                        .ok_or_else(|| "--name requires a value".to_string())?,
+                );
+            }
+            "--ui-assets" => ui_assets = true,
+            "--icons" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--icons requires a value".to_string())?;
+                icon_pack = IconPack::parse(&raw)?;
+            }
+            "--no-icons" => icon_pack = IconPack::None,
+            "--command-palette" => command_palette = true,
+            "--help" | "-h" => return help(),
+            other => return Err(format!("unknown argument for init todo-mvu: {other}")),
+        }
+    }
+
+    let package_name = sanitize_package_name(name.as_deref().unwrap_or("todo-mvu-app"))?;
+
+    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
+    init_todo_mvu_at(
+        &root,
+        &out_dir,
+        &package_name,
+        ScaffoldOptions {
+            icon_pack,
+            command_palette,
+            ui_assets,
+        },
+    )
+}
+
 fn init_todo_at(
     workspace_root: &Path,
     out_dir: &Path,
@@ -200,6 +256,40 @@ fn init_todo_at(
     )?;
 
     println!("Initialized todo template at: {}", out_dir.display());
+    println!("Next:");
+    println!(
+        "  cargo run --manifest-path {}",
+        out_dir.join("Cargo.toml").display()
+    );
+    Ok(())
+}
+
+fn init_todo_mvu_at(
+    workspace_root: &Path,
+    out_dir: &Path,
+    package_name: &str,
+    opts: ScaffoldOptions,
+) -> Result<(), String> {
+    ensure_dir_is_new_or_empty(out_dir)?;
+
+    let workspace_prefix = workspace_prefix_from_out_dir(workspace_root, out_dir)?;
+
+    let cargo_toml = todo_template_cargo_toml(package_name, opts, &workspace_prefix);
+    write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+    write_file_if_missing(&out_dir.join(".gitignore"), template_gitignore())?;
+
+    let src_dir = out_dir.join("src");
+    std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
+    write_new_file(
+        &src_dir.join("main.rs"),
+        &todo_mvu_template_main_rs(package_name, opts),
+    )?;
+    write_new_file(
+        &out_dir.join("README.md"),
+        &todo_mvu_template_readme_md(package_name, opts),
+    )?;
+
+    println!("Initialized todo-mvu template at: {}", out_dir.display());
     println!("Next:");
     println!(
         "  cargo run --manifest-path {}",

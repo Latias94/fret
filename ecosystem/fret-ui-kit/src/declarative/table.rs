@@ -1,5 +1,5 @@
 use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole};
-use fret_runtime::{CommandId, Effect, Model, TimerToken};
+use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
     PressableProps, ScrollAxis, ScrollProps, SemanticsProps,
@@ -227,6 +227,15 @@ pub struct TableViewOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, SvgId, SvgService, TextBlobId, TextConstraints, TextInput,
+        TextMetrics, TextService,
+    };
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{Point, Px, Rect};
+    use fret_ui::ThemeConfig;
+    use fret_ui::{Theme, UiTree, VirtualListScrollHandle};
 
     #[test]
     fn single_sort_toggle_cycles_and_resets_page_index() {
@@ -259,16 +268,19 @@ mod tests {
             TableNavRowMeta {
                 row_key: RowKey(1),
                 kind: TableNavRowKind::Leaf,
+                data_index: Some(0),
                 label: Arc::from("Alpha"),
             },
             TableNavRowMeta {
                 row_key: RowKey(2),
                 kind: TableNavRowKind::Group,
+                data_index: None,
                 label: Arc::from("Group"),
             },
             TableNavRowMeta {
                 row_key: RowKey(3),
                 kind: TableNavRowKind::Leaf,
+                data_index: Some(1),
                 label: Arc::from("Beta"),
             },
         ];
@@ -285,6 +297,155 @@ mod tests {
         assert_eq!(
             table_collect_leaf_keys_in_range(&meta, 99, 100),
             vec![RowKey(3)]
+        );
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn table_virtualized_copyable_reports_availability_and_emits_clipboard_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut caps = fret_runtime::PlatformCapabilities::default();
+        caps.clipboard.text = true;
+        app.set_global(caps);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let state = app.models_mut().insert(TableState::default());
+        let data = vec![0u32, 1u32, 2u32];
+        let columns = vec![ColumnDef::new("col")];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_copyable(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    TableViewProps::default(),
+                    Arc::new(|_models, i| Some(format!("Row {i}"))),
+                    |_row| None,
+                    |cx, _col, _sort| vec![cx.text("Header")],
+                    |cx, row, _col| vec![cx.text(format!("Cell {}", row.index))],
+                    None,
+                )]
+            })
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        let mut root = fret_core::NodeId::default();
+        for _ in 0..2 {
+            root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let table_node = ui.children(root)[0];
+        ui.set_focus(Some(table_node));
+
+        let copy = CommandId::from("edit.copy");
+        assert!(
+            !ui.is_command_available(&mut app, &copy),
+            "expected edit.copy to be unavailable when selection is empty"
+        );
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &copy),
+            "expected edit.copy to be handled by the table surface"
+        );
+        let effects = app.flush_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, fret_runtime::Effect::ClipboardSetText { .. })),
+            "expected edit.copy to not emit ClipboardSetText when selection is empty"
+        );
+
+        let _ = app.models_mut().update(&state, |st| {
+            st.row_selection.insert(RowKey::from_index(1));
+        });
+
+        assert!(
+            ui.is_command_available(&mut app, &copy),
+            "expected edit.copy to be available when selection is non-empty"
+        );
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &copy),
+            "expected edit.copy to be handled by the table surface"
+        );
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|e| {
+                matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "Row 1")
+            }),
+            "expected edit.copy to emit ClipboardSetText for the selected row"
         );
     }
 }
@@ -395,6 +556,7 @@ enum TableNavRowKind {
 struct TableNavRowMeta {
     row_key: RowKey,
     kind: TableNavRowKind,
+    data_index: Option<usize>,
     label: Arc<str>,
 }
 
@@ -461,6 +623,95 @@ pub fn table_virtualized<H: UiHost, TData>(
     row_key_at: &dyn Fn(&TData, usize) -> RowKey,
     typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
     props: TableViewProps,
+    on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
+    render_header_cell: impl FnMut(
+        &mut ElementContext<'_, H>,
+        &ColumnDef<TData>,
+        Option<bool>,
+    ) -> Vec<AnyElement>,
+    render_cell: impl FnMut(
+        &mut ElementContext<'_, H>,
+        &Row<'_, TData>,
+        &ColumnDef<TData>,
+    ) -> Vec<AnyElement>,
+    output: Option<Model<TableViewOutput>>,
+) -> AnyElement {
+    table_virtualized_impl(
+        cx,
+        data,
+        columns,
+        state,
+        vertical_scroll,
+        items_revision,
+        row_key_at,
+        typeahead_label_at,
+        props,
+        None,
+        on_row_activate,
+        render_header_cell,
+        render_cell,
+        output,
+    )
+}
+
+/// Virtualized table helper that participates in cross-surface clipboard commands (`edit.copy`).
+///
+/// `copy_text_at` receives the data index for the selected/active leaf row.
+#[allow(clippy::too_many_arguments)]
+pub fn table_virtualized_copyable<H: UiHost, TData>(
+    cx: &mut ElementContext<'_, H>,
+    data: &[TData],
+    columns: &[ColumnDef<TData>],
+    state: Model<TableState>,
+    vertical_scroll: &VirtualListScrollHandle,
+    items_revision: u64,
+    row_key_at: &dyn Fn(&TData, usize) -> RowKey,
+    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
+    props: TableViewProps,
+    copy_text_at: Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>,
+    on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
+    render_header_cell: impl FnMut(
+        &mut ElementContext<'_, H>,
+        &ColumnDef<TData>,
+        Option<bool>,
+    ) -> Vec<AnyElement>,
+    render_cell: impl FnMut(
+        &mut ElementContext<'_, H>,
+        &Row<'_, TData>,
+        &ColumnDef<TData>,
+    ) -> Vec<AnyElement>,
+    output: Option<Model<TableViewOutput>>,
+) -> AnyElement {
+    table_virtualized_impl(
+        cx,
+        data,
+        columns,
+        state,
+        vertical_scroll,
+        items_revision,
+        row_key_at,
+        typeahead_label_at,
+        props,
+        Some(copy_text_at),
+        on_row_activate,
+        render_header_cell,
+        render_cell,
+        output,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn table_virtualized_impl<H: UiHost, TData>(
+    cx: &mut ElementContext<'_, H>,
+    data: &[TData],
+    columns: &[ColumnDef<TData>],
+    state: Model<TableState>,
+    vertical_scroll: &VirtualListScrollHandle,
+    items_revision: u64,
+    row_key_at: &dyn Fn(&TData, usize) -> RowKey,
+    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
+    props: TableViewProps,
+    copy_text_at: Option<Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>>,
     on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
     mut render_header_cell: impl FnMut(
         &mut ElementContext<'_, H>,
@@ -1022,12 +1273,14 @@ pub fn table_virtualized<H: UiHost, TData>(
                     TableNavRowMeta {
                         row_key: *row_key,
                         kind: TableNavRowKind::Leaf,
+                        data_index: Some(*data_index),
                         label,
                     }
                 }
                 DisplayRow::Group { row_key, label, .. } => TableNavRowMeta {
                     row_key: *row_key,
                     kind: TableNavRowKind::Group,
+                    data_index: None,
                     label: label.clone(),
                 },
             })
@@ -1308,6 +1561,84 @@ pub fn table_virtualized<H: UiHost, TData>(
         },
         |cx, list_id| {
             cx.key_on_key_down_for(list_id, key_handler.clone());
+            if let Some(copy_text_at) = copy_text_at.clone() {
+                let copy_text_for_command = copy_text_at.clone();
+                let state_for_command = state.clone();
+                let row_meta_for_command = row_meta.clone();
+                cx.command_on_command_for(
+                    list_id,
+                    Arc::new(move |host, _acx, command| {
+                        if command.as_str() != "edit.copy" {
+                            return false;
+                        }
+                        let meta = row_meta_for_command.borrow().clone();
+                        let selected_keys = host
+                            .models_mut()
+                            .read(&state_for_command, |st| st.row_selection.clone())
+                            .ok()
+                            .unwrap_or_default();
+                        let models = host.models_mut();
+                        let mut lines = Vec::new();
+                        if !selected_keys.is_empty() {
+                            for m in meta.iter() {
+                                if m.kind != TableNavRowKind::Leaf {
+                                    continue;
+                                }
+                                if !selected_keys.contains(&m.row_key) {
+                                    continue;
+                                }
+                                if let Some(data_index) = m.data_index
+                                    && let Some(text) = (copy_text_for_command)(&*models, data_index)
+                                {
+                                    lines.push(text);
+                                }
+                            }
+                        }
+
+                        if lines.is_empty() {
+                            return true;
+                        }
+                        host.push_effect(Effect::ClipboardSetText {
+                            text: lines.join("\n"),
+                        });
+                        true
+                    }),
+                );
+
+                let state_for_availability = state.clone();
+                let row_meta_for_availability = row_meta.clone();
+                cx.command_on_command_availability_for(
+                    list_id,
+                    Arc::new(move |host, acx, command| {
+                        if command.as_str() != "edit.copy" {
+                            return fret_ui::CommandAvailability::NotHandled;
+                        }
+                        if !acx.focus_in_subtree {
+                            return fret_ui::CommandAvailability::NotHandled;
+                        }
+                        if !acx.input_ctx.caps.clipboard.text {
+                            return fret_ui::CommandAvailability::Blocked;
+                        }
+
+                        let meta = row_meta_for_availability.borrow().clone();
+                        let selected_keys = host
+                            .models_mut()
+                            .read(&state_for_availability, |st| st.row_selection.clone())
+                            .ok()
+                            .unwrap_or_default();
+                        if !selected_keys.is_empty() {
+                            for m in meta.iter() {
+                                if m.kind == TableNavRowKind::Leaf && selected_keys.contains(&m.row_key) {
+                                    return fret_ui::CommandAvailability::Available;
+                                }
+                            }
+                            return fret_ui::CommandAvailability::Blocked;
+                        }
+
+                        fret_ui::CommandAvailability::Blocked
+                    }),
+                );
+            }
             {
                 let typeahead = typeahead.clone();
                 let typeahead_timer = typeahead_timer.clone();

@@ -17,6 +17,9 @@ pub(super) struct InteractionRecord {
     pub(super) children_render_transform_inv: Option<Transform2D>,
     pub(super) clips_hit_test: bool,
     pub(super) clip_hit_test_corner_radii: Option<Corners>,
+    pub(super) is_focusable: bool,
+    pub(super) focus_traversal_children: bool,
+    pub(super) can_scroll_descendant_into_view: bool,
 }
 
 #[derive(Debug, Default)]
@@ -64,6 +67,9 @@ impl<H: UiHost> UiTree<H> {
             children_render_transform_inv: record.children_render_transform_inv,
             clips_hit_test: record.clips_hit_test,
             clip_hit_test_corner_radii: record.clip_hit_test_corner_radii,
+            is_focusable: record.is_focusable,
+            focus_traversal_children: record.focus_traversal_children,
+            can_scroll_descendant_into_view: record.can_scroll_descendant_into_view,
         });
         n.invalidation.hit_test = false;
     }
@@ -226,6 +232,18 @@ impl<H: UiHost> UiTree<H> {
                 }
                 None => (None, None, true, None),
             };
+        let (is_focusable, focus_traversal_children, can_scroll_descendant_into_view) = self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .map(|w| {
+                (
+                    w.is_focusable(),
+                    w.focus_traversal_children(),
+                    w.can_scroll_descendant_into_view(),
+                )
+            })
+            .unwrap_or((false, true, false));
 
         let record = InteractionRecord {
             node,
@@ -234,6 +252,9 @@ impl<H: UiHost> UiTree<H> {
             children_render_transform_inv: children_render_transform,
             clips_hit_test,
             clip_hit_test_corner_radii: corner_radii,
+            is_focusable,
+            focus_traversal_children,
+            can_scroll_descendant_into_view,
         };
         self.interaction_cache.records.push(record);
         self.apply_interaction_record(&record);

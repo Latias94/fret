@@ -12,7 +12,7 @@ use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::CommandId;
 use fret_runtime::Model;
 use fret_ui::declarative::RenderRootContext;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, Elements};
 use fret_ui::elements::{ElementContext, GlobalElementId, bounds_for_element};
 use fret_ui::{UiHost, retained_bridge::*};
 use uuid::Uuid;
@@ -349,13 +349,10 @@ impl<P, C> NodeGraphPortalHost<P, C> {
     }
 }
 
-impl<H: UiHost, P, C> Widget<H> for NodeGraphPortalHost<P, C>
+impl<H: UiHost, P, C, R> Widget<H> for NodeGraphPortalHost<P, C>
 where
-    P: for<'a> FnMut(
-        &mut ElementContext<'a, H>,
-        &Graph,
-        NodeGraphPortalNodeLayout,
-    ) -> Vec<AnyElement>,
+    P: for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> R,
+    R: Into<Elements>,
     C: NodeGraphPortalCommandHandler<H>,
 {
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
@@ -484,7 +481,8 @@ where
                             kind_hash: fnv1a_64_bytes(node.kind.0.as_bytes()),
                             kind_version: node.kind_version,
                         };
-                        let children = ecx.keyed(key, |ecx| render(ecx, &graph_snapshot, layout));
+                        let children =
+                            ecx.keyed(key, |ecx| render(ecx, &graph_snapshot, layout).into());
                         if children.is_empty() {
                             continue;
                         }

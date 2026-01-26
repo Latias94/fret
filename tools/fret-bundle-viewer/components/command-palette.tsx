@@ -159,7 +159,7 @@ export function CommandPalette({ open, onOpenChange, onOpenFile }: CommandPalett
             // Trigger search in semantics tree
             setSearchQuery('')
             setTimeout(() => {
-              const searchBtn = document.querySelector('[title="Search tree (Ctrl+F)"]') as HTMLButtonElement
+              const searchBtn = document.querySelector('[data-search-tree-button]') as HTMLButtonElement
               searchBtn?.click()
             }, 50)
           }}>

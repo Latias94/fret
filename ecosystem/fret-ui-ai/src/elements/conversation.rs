@@ -23,9 +23,9 @@ pub struct Conversation {
 }
 
 impl Conversation {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
-            children,
+            children: children.into_iter().collect(),
             layout: LayoutRefinement::default(),
             content_padding: Space::N4,
             content_gap: Space::N8,

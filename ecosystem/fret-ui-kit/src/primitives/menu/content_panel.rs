@@ -18,11 +18,14 @@ use fret_ui::{ElementContext, UiHost};
 /// Render a menu content semantics wrapper (`role=menu`) and return its stable element id.
 ///
 /// This is intended for `aria-controls`-style trigger relationships (`controls_element`).
-pub fn menu_content_semantics_with_id<H: UiHost>(
+pub fn menu_content_semantics_with_id<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutStyle,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> (GlobalElementId, AnyElement) {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> (GlobalElementId, AnyElement)
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     menu_content_semantics_with_id_props(
         cx,
         SemanticsProps {
@@ -38,11 +41,14 @@ pub fn menu_content_semantics_with_id<H: UiHost>(
 ///
 /// Callers may set relationship fields like `labelled_by_element` to mirror Radix `aria-*`
 /// outcomes, while `role` is forced to `SemanticsRole::Menu`.
-pub fn menu_content_semantics_with_id_props<H: UiHost>(
+pub fn menu_content_semantics_with_id_props<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     mut props: SemanticsProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> (GlobalElementId, AnyElement) {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> (GlobalElementId, AnyElement)
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     props.role = SemanticsRole::Menu;
     let element = cx.semantics_with_id(props, move |cx, _id| f(cx));
     (element.id, element)
@@ -57,7 +63,7 @@ pub fn menu_content_semantics_id<H: UiHost>(
     overlay_root_name: &str,
 ) -> GlobalElementId {
     cx.with_root_name(overlay_root_name, |cx| {
-        menu_content_semantics_with_id::<H>(cx, LayoutStyle::default(), |_cx| Vec::new()).0
+        menu_content_semantics_with_id(cx, LayoutStyle::default(), |_cx| Vec::new()).0
     })
 }
 
@@ -65,12 +71,15 @@ pub fn menu_content_semantics_id<H: UiHost>(
 ///
 /// This is useful when a wrapper already provides a `SemanticsRole::Menu` element and only wants
 /// to reuse the absolute-positioned container layout.
-pub fn menu_panel_container_at<H: UiHost>(
+pub fn menu_panel_container_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let layout = LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {
@@ -90,12 +99,15 @@ pub fn menu_panel_container_at<H: UiHost>(
 }
 
 /// Render a menu panel at `placed` with `role=menu` semantics.
-pub fn menu_panel_at<H: UiHost>(
+pub fn menu_panel_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let layout = LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {
@@ -126,13 +138,16 @@ pub fn menu_panel_at<H: UiHost>(
 
 /// Render a menu panel at `placed` with `role=menu` semantics and an optional `labelled_by`
 /// relationship.
-pub fn menu_panel_at_with_labelled_by_element<H: UiHost>(
+pub fn menu_panel_at_with_labelled_by_element<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     labelled_by_element: Option<GlobalElementId>,
     build_container: impl FnOnce(LayoutStyle) -> ContainerProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let layout = LayoutStyle {
         position: PositionStyle::Absolute,
         inset: InsetStyle {

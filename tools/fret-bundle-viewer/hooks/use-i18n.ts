@@ -29,7 +29,7 @@ export function useTranslation() {
     
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
-        text = text.replace(`{${k}}`, String(v))
+        text = text.replaceAll(`{${k}}`, String(v))
       })
     }
     

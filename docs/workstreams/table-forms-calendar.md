@@ -7,6 +7,7 @@ This document tracks the implementation plan and progress for:
 - Headless Table / DataGrid (align ADR 0101; remove long-lived feature gate if no heavy deps)
 - Forms (headless form state + validation)
 - Calendar / Date Picker (date math + interactions; shadcn-aligned recipes)
+ - Diagnostics for “table not visible” regressions (bundle semantics + optional screenshot)
 
 It is intentionally non-normative: do not treat this as a contract. For contracts, see ADRs in `docs/adr/`.
 
@@ -88,6 +89,9 @@ TLS handshake error. If needed, retry with an explicit proxy or alternate SSL ba
 
 As of the initial audit:
 
+- Diagnostics:
+  - The UI gallery exposes stable `test_id` anchors for Table/DataTable and ships smoke scripts under `tools/diag-scripts/*`.
+  - If semantics + bounds look correct but pixels look blank, run with `FRET_DIAG_SCREENSHOT=1` and inspect `frame.bmp` in the dumped bundle directory.
 - `ecosystem/fret-ui-shadcn`
   - `Table` primitives exist and are always available: `ecosystem/fret-ui-shadcn/src/table.rs` (shadcn taxonomy).
   - `DataTable` is headless-backed (ADR 0101) and rendered via the shared declarative table view:

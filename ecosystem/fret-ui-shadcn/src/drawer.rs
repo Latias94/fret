@@ -934,13 +934,12 @@ mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
     use fret_ui::elements::{GlobalElementId, visual_bounds_for_element};
-    use fret_ui_kit::MetricRef;
     use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
@@ -1639,8 +1638,8 @@ mod tests {
                                 .refine_layout(
                                     LayoutRefinement::default()
                                         .relative()
-                                        .w_px(MetricRef::Px(Px(24.0)))
-                                        .h_px(MetricRef::Px(Px(24.0))),
+                                        .w_px(Px(24.0))
+                                        .h_px(Px(24.0)),
                                 )
                                 .into_element(cx);
                             close_id_out.set(Some(close.id));

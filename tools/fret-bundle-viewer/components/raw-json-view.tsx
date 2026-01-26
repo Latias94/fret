@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/hooks/use-i18n'
 import { ChevronRight, ChevronDown, Search } from 'lucide-react'
 
 interface JsonNodeProps {
@@ -15,6 +16,7 @@ interface JsonNodeProps {
 }
 
 function JsonNode({ keyName, value, depth, searchQuery, defaultExpanded = false }: JsonNodeProps) {
+  const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || depth < 2)
 
   const isObject = value !== null && typeof value === 'object'
@@ -29,13 +31,13 @@ function JsonNode({ keyName, value, depth, searchQuery, defaultExpanded = false 
   }, [keyName, value, isObject, searchQuery])
 
   const renderValue = useCallback(() => {
-    if (value === null) return <span className="text-muted-foreground">null</span>
-    if (value === undefined) return <span className="text-muted-foreground">undefined</span>
+    if (value === null) return <span className="text-muted-foreground">{t('json.null')}</span>
+    if (value === undefined) return <span className="text-muted-foreground">{t('json.undefined')}</span>
     if (typeof value === 'boolean') return <span className="text-chart-5">{String(value)}</span>
     if (typeof value === 'number') return <span className="text-chart-3">{value}</span>
     if (typeof value === 'string') return <span className="text-chart-2">{'"'}{value}{'"'}</span>
     return null
-  }, [value])
+  }, [t, value])
 
   if (!isObject) {
     return (

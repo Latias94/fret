@@ -39,11 +39,14 @@ impl Default for PixelatePanelProps {
     }
 }
 
-pub fn pixelate_panel<H: UiHost>(
+pub fn pixelate_panel<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: PixelatePanelProps,
-    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let theme = Theme::global(&*cx.app);
     let chrome = resolve_pixelate_chrome(theme, &props.chrome, props.chrome_keys);
     let effect = resolve_pixelate_effect(theme, &props.effect, props.effect_keys);

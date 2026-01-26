@@ -32,7 +32,7 @@ pub fn set_value_text(
     value: &str,
 ) {
     ui.set_focus(Some(target));
-    let _ = ui.dispatch_command(app, services, &CommandId::from("text.select_all"));
+    let _ = ui.dispatch_command(app, services, &CommandId::from("edit.select_all"));
     ui.dispatch_event(app, services, &Event::TextInput(value.to_string()));
 }
 

@@ -10,6 +10,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
+use fret_ui_kit::primitives::tooltip_provider;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space, ui,
 };
@@ -143,19 +144,22 @@ impl TooltipProvider {
         self
     }
 
-    pub fn with<H: UiHost>(
+    pub fn with<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> Vec<AnyElement> {
-        radix_tooltip::with_tooltip_provider(
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        tooltip_provider::with_tooltip_provider(
             cx,
             radix_tooltip::TooltipProviderConfig::new(
                 self.delay_duration_frames as u64,
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            f,
+            |cx| f(cx).into_iter().collect::<Vec<_>>(),
         )
     }
 }
@@ -699,7 +703,7 @@ mod tests {
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
