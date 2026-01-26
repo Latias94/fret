@@ -48,6 +48,16 @@ Related ADRs:
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
+## Optional: dump a frame screenshot alongside the bundle
+
+If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
+enable per-bundle screenshots:
+
+- `FRET_DIAG_SCREENSHOT=1`
+
+When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
+`bundle.json`).
+
 ## Offline bundle viewer (optional)
 
 This repo includes an offline web viewer for `bundle.json` at `tools/fret-bundle-viewer`.
