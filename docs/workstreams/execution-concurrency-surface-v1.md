@@ -50,7 +50,7 @@ Status legend:
 
 - `[x]` wasm impl: define `dispatch_on_main_thread`/`dispatch_after`/`wake` mapping (timeout + runner proxy wake; implementation in `crates/fret-launch/src/runner/web/dispatcher.rs`)
 - `[x]` wasm "background": define cooperative/best-effort behavior (no threads; `spawn_local`-based)
-- `[ ]` Portability docs: explicitly document degraded guarantees and recommended patterns
+- `[x]` Portability docs: explicitly document degraded guarantees and recommended patterns
 
 ### Phase 3 (ecosystem validation)
 

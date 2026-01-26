@@ -86,6 +86,25 @@ Important invariants:
 - On wasm, "background" may be best-effort (no threads); the API remains, but implementations may
   execute work cooperatively and MUST still preserve the main-thread mutation invariant.
 
+#### Portability and degraded guarantees (required guidance)
+
+The runner MUST surface execution capabilities via `PlatformCapabilities.exec` (ADR 0054). Ecosystem
+crates SHOULD avoid forking on capabilities unless absolutely necessary, but these keys exist to make
+degradation explicit and diagnosable:
+
+- Native (typical): `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable`
+- wasm (typical): `exec.background_work=cooperative`, `exec.wake=best_effort`, `exec.timers=best_effort`
+
+Implications for authors:
+
+- Do not assume background work implies a separate OS thread. On wasm without threads, "background"
+  work may run cooperatively on the same thread and can still block the UI if it is CPU-heavy.
+- Treat `wake()` as a request to reach the next driver boundary, not a precise scheduling guarantee.
+  On wasm it may be delayed or coalesced.
+- Prefer the runner-owned effect pipeline for UI-visible timing (`Effect::SetTimer` / RAF). Treat
+  `dispatch_after` as a low-level primitive for executors/harnesses, and expect timer throttling on
+  constrained platforms.
+
 #### Placement and stability rules
 
 To preserve long-term flexibility while still enabling third-party ecosystems:
