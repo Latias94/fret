@@ -15,7 +15,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `385/448` keys referenced (`85.9%`)
+- shadcn-web `v4/new-york-v4`: `386/448` keys referenced (`86.2%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -56,7 +56,7 @@ Recent breadth wins:
 
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
-- `chart` (63 variants): large surface area; likely needs a dedicated alignment push.
+- `chart` (62 variants): large surface area; likely needs a dedicated alignment push.
 
 ### Recommended next alignment targets (P0 order)
 

@@ -29,8 +29,11 @@ Current:
   `chart-*-legend` geometry gates (min width + padding/border + line-height outcomes).
   - Tooltip variants gated so far: `chart-tooltip-default`, `chart-tooltip-indicator-line`, `chart-tooltip-indicator-none`,
     `chart-tooltip-label-none`, `chart-tooltip-icons`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`,
-    `chart-tooltip-formatter`, `chart-tooltip-advanced`.
+    `chart-tooltip-formatter`, `chart-tooltip-advanced`, `chart-tooltip-demo`.
   - Legend variants gated so far: `chart-area-legend`, `chart-bar-demo-legend`, `chart-radar-legend`, `chart-pie-legend`.
+- Known gap: `chart-tooltip-advanced` currently needs a small height shim on the “Total” row to match web output.
+  This likely points to a line-height / box-model mismatch that should be fixed at the text/layout layer instead of
+  per-component adjustments.
 - No chart rendering backend is wired for shadcn parity yet (axes/series/tooltip hit-testing, etc).
 
 As a result, most of the `chart-*` golden family is still ungated; only tooltip-panel pages are referenced today.
