@@ -111,7 +111,7 @@ pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardT
 pub use carousel::{Carousel, CarouselOrientation};
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
-    ChartTooltipIndicator, ChartTooltipItem,
+    ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,
 };
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{

@@ -27,6 +27,9 @@ Current:
   mirroring the upstream `ChartLegendContent` surface.
 - Golden gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` includes initial `chart-tooltip-*` and
   `chart-*-legend` geometry gates (min width + padding/border + line-height outcomes).
+  - Tooltip variants gated so far: `chart-tooltip-default`, `chart-tooltip-indicator-line`, `chart-tooltip-indicator-none`,
+    `chart-tooltip-label-none`, `chart-tooltip-icons`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`,
+    `chart-tooltip-formatter`, `chart-tooltip-advanced`.
 - No chart rendering backend is wired for shadcn parity yet (axes/series/tooltip hit-testing, etc).
 
 As a result, most of the `chart-*` golden family is still ungated; only tooltip-panel pages are referenced today.

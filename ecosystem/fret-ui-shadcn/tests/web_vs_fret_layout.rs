@@ -24076,6 +24076,8 @@ fn assert_chart_tooltip_rect_matches_web(
     indicator: fret_ui_shadcn::ChartTooltipIndicator,
     hide_indicator: bool,
     hide_label: bool,
+    kind: fret_ui_shadcn::ChartTooltipContentKind,
+    fixed_width_border_box: Option<Px>,
 ) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
@@ -24097,16 +24099,21 @@ fn assert_chart_tooltip_rect_matches_web(
     let label = Arc::<str>::from(format!("Golden:{web_name}:tooltip"));
 
     let snap = run_fret_root(bounds, |cx| {
-        let tooltip = fret_ui_shadcn::ChartTooltipContent::new()
+        let mut tooltip = fret_ui_shadcn::ChartTooltipContent::new()
             .label("Tue")
             .indicator(indicator)
             .hide_indicator(hide_indicator)
             .hide_label(hide_label)
+            .kind(kind)
             .items([
                 fret_ui_shadcn::ChartTooltipItem::new("Running", "380"),
                 fret_ui_shadcn::ChartTooltipItem::new("Swimming", "420"),
-            ])
-            .into_element(cx);
+            ]);
+        if let Some(width) = fixed_width_border_box {
+            tooltip = tooltip.fixed_width_border_box(width);
+        }
+
+        let tooltip = tooltip.into_element(cx);
 
         let tooltip = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -24202,6 +24209,8 @@ fn web_vs_fret_layout_chart_tooltip_default_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         false,
         false,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
     );
 }
 
@@ -24212,6 +24221,8 @@ fn web_vs_fret_layout_chart_tooltip_indicator_line_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Line,
         false,
         false,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
     );
 }
 
@@ -24222,6 +24233,8 @@ fn web_vs_fret_layout_chart_tooltip_indicator_none_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         true,
         false,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
     );
 }
 
@@ -24232,6 +24245,8 @@ fn web_vs_fret_layout_chart_tooltip_label_none_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
     );
 }
 
@@ -24242,6 +24257,8 @@ fn web_vs_fret_layout_chart_tooltip_icons_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         false,
         true,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
     );
 }
 
@@ -24252,6 +24269,8 @@ fn web_vs_fret_layout_chart_tooltip_label_custom_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         false,
         false,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
     );
 }
 
@@ -24262,6 +24281,32 @@ fn web_vs_fret_layout_chart_tooltip_label_formatter_geometry_matches_web() {
         fret_ui_shadcn::ChartTooltipIndicator::Dot,
         false,
         false,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_formatter_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-formatter",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        true,
+        fret_ui_shadcn::ChartTooltipContentKind::FormatterKcal,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_tooltip_advanced_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-advanced",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        true,
+        fret_ui_shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
+        Some(Px(180.0)),
     );
 }
 
