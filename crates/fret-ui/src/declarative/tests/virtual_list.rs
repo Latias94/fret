@@ -522,7 +522,7 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
         let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
         options.axis = fret_core::Axis::Horizontal;
 
-        let list_a = cx.virtual_list(100, options, scroll_handle, |cx, items| {
+        let list_a = cx.virtual_list(100, options.clone(), scroll_handle, |cx, items| {
             items
                 .iter()
                 .copied()
@@ -1219,7 +1219,14 @@ fn virtual_list_fixed_scroll_to_item_does_not_force_layout_invalidation() {
     let scroll_walks: Vec<_> = ui
         .debug_invalidation_walks()
         .iter()
-        .filter(|w| w.detail == crate::tree::UiDebugInvalidationDetail::ScrollHandle)
+        .filter(|w| {
+            matches!(
+                w.detail,
+                crate::tree::UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+                    | crate::tree::UiDebugInvalidationDetail::ScrollHandleLayout
+                    | crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+            )
+        })
         .collect();
     assert!(
         !scroll_walks.is_empty(),

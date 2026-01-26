@@ -390,7 +390,7 @@ impl DialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(512.0)))
+            .max_w(Px(512.0))
             .merge(self.layout);
 
         if let Some(max_w) = layout

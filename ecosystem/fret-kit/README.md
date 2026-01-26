@@ -37,7 +37,7 @@ use fret_kit::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     fret_kit::run("hello", |_app, _window| (), |cx, _st| {
-        vec![shadcn::Label::new("Hello from Fret!").into_element(cx)]
+        vec![shadcn::Label::new("Hello from Fret!").into_element(cx)].into()
     })?;
     Ok(())
 }

@@ -41,6 +41,7 @@ fret-ui = { path = "../../crates/fret-ui", features = ["compat-retained-widgets"
 fret-markdown = { path = "../../ecosystem/fret-markdown" }
 fret-node = { path = "../../ecosystem/fret-node" }
 fret-editor = { path = "../fret-editor" }
+fret-executor = { path = "../../ecosystem/fret-executor" }
 bytemuck.workspace = true
 glam.workspace = true
 serde_json.workspace = true

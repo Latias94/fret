@@ -319,7 +319,9 @@ pub enum UiDebugInvalidationDetail {
     NotifyCall,
     HoverEvent,
     FocusEvent,
-    ScrollHandle,
+    ScrollHandleHitTestOnly,
+    ScrollHandleLayout,
+    ScrollHandleWindowUpdate,
     FocusVisiblePolicy,
     InputModalityPolicy,
     AnimationFrameRequest,
@@ -345,7 +347,9 @@ impl UiDebugInvalidationDetail {
             Self::NotifyCall => Some("notify_call"),
             Self::HoverEvent => Some("hover_event"),
             Self::FocusEvent => Some("focus_event"),
-            Self::ScrollHandle => Some("scroll_handle"),
+            Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
+            Self::ScrollHandleLayout => Some("scroll_handle_layout"),
+            Self::ScrollHandleWindowUpdate => Some("scroll_handle_window_update"),
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),
             Self::InputModalityPolicy => Some("input_modality_policy"),
             Self::AnimationFrameRequest => Some("animation_frame_request"),
@@ -435,6 +439,55 @@ pub struct UiDebugCacheRootStats {
     pub reuse_reason: UiDebugCacheRootReuseReason,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugVirtualListWindow {
+    pub node: NodeId,
+    pub element: GlobalElementId,
+    pub axis: fret_core::Axis,
+    pub is_probe_layout: bool,
+    pub items_len: usize,
+    pub items_revision: u64,
+    pub prev_items_revision: u64,
+    pub measure_mode: crate::element::VirtualListMeasureMode,
+    pub overscan: usize,
+    pub viewport: Px,
+    pub prev_viewport: Px,
+    pub offset: Px,
+    pub prev_offset: Px,
+    pub window_range: Option<crate::virtual_list::VirtualRange>,
+    pub prev_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub render_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub deferred_scroll_to_item: bool,
+    pub deferred_scroll_consumed: bool,
+    pub window_mismatch: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugScrollHandleChangeKind {
+    Layout,
+    HitTestOnly,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugScrollHandleChange {
+    pub handle_key: usize,
+    pub kind: UiDebugScrollHandleChangeKind,
+    pub revision: u64,
+    pub prev_revision: Option<u64>,
+    pub offset: fret_core::Point,
+    pub prev_offset: Option<fret_core::Point>,
+    pub viewport: fret_core::Size,
+    pub prev_viewport: Option<fret_core::Size>,
+    pub content: fret_core::Size,
+    pub prev_content: Option<fret_core::Size>,
+    pub offset_changed: bool,
+    pub viewport_changed: bool,
+    pub content_changed: bool,
+    pub bound_elements: u32,
+    pub bound_nodes_sample: Vec<NodeId>,
+    pub upgraded_to_layout_bindings: u32,
+}
+
 #[cfg(feature = "diagnostics")]
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugSetChildrenWrite {
@@ -442,9 +495,73 @@ pub struct UiDebugSetChildrenWrite {
     pub frame_id: FrameId,
     pub old_len: u32,
     pub new_len: u32,
+    pub old_elements_head: [Option<GlobalElementId>; 4],
+    pub new_elements_head: [Option<GlobalElementId>; 4],
     pub file: &'static str,
     pub line: u32,
     pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugParentSeverWrite {
+    pub child: NodeId,
+    pub parent: NodeId,
+    pub frame_id: FrameId,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugSetLayerVisibleWrite {
+    pub layer: UiLayerId,
+    pub frame_id: FrameId,
+    pub prev_visible: Option<bool>,
+    pub visible: bool,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugOverlayPolicyDecisionWrite {
+    pub layer: UiLayerId,
+    pub frame_id: FrameId,
+    pub kind: &'static str,
+    pub present: bool,
+    pub interactive: bool,
+    pub wants_timer_events: bool,
+    pub reason: &'static str,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugRemoveSubtreeFrameContext {
+    pub parent_frame_children_len: Option<u32>,
+    pub parent_frame_children_contains_root: Option<bool>,
+    pub root_frame_instance_present: bool,
+    pub root_frame_children_len: Option<u32>,
+    pub root_reachable_from_view_cache_roots: Option<bool>,
+    pub liveness_layer_roots_len: u32,
+    pub view_cache_reuse_roots_len: u32,
+    pub view_cache_reuse_root_nodes_len: u32,
+    pub trigger_element: Option<GlobalElementId>,
+    pub trigger_element_root: Option<GlobalElementId>,
+    pub trigger_element_in_view_cache_keep_alive: Option<bool>,
+    pub trigger_element_listed_under_reuse_root: Option<GlobalElementId>,
+    pub path_edge_len: u8,
+    /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
+    /// contains the child node:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing frame edge capture)
+    pub path_edge_frame_contains_child: [u8; 16],
 }
 
 #[cfg(feature = "diagnostics")]
@@ -466,11 +583,40 @@ pub struct UiDebugRemoveSubtreeRecord {
     pub root_parent_element: Option<GlobalElementId>,
     pub root_root: Option<NodeId>,
     pub root_layer: Option<UiLayerId>,
+    pub root_layer_visible: Option<bool>,
+    pub reachable_from_layer_roots: bool,
+    pub reachable_from_view_cache_roots: Option<bool>,
+    pub unreachable_from_liveness_roots: bool,
+    pub liveness_layer_roots_len: Option<u32>,
+    pub view_cache_reuse_roots_len: Option<u32>,
+    pub view_cache_reuse_root_nodes_len: Option<u32>,
+    pub trigger_element: Option<GlobalElementId>,
+    pub trigger_element_root: Option<GlobalElementId>,
+    pub trigger_element_in_view_cache_keep_alive: Option<bool>,
+    pub trigger_element_listed_under_reuse_root: Option<GlobalElementId>,
     pub root_children_len: u32,
     pub root_parent_children_len: Option<u32>,
+    pub root_parent_children_contains_root: Option<bool>,
+    pub root_parent_frame_children_len: Option<u32>,
+    pub root_parent_frame_children_contains_root: Option<bool>,
+    pub root_frame_instance_present: Option<bool>,
+    pub root_frame_children_len: Option<u32>,
     pub root_path_len: u8,
     pub root_path: [u64; 16],
     pub root_path_truncated: bool,
+    pub root_path_edge_len: u8,
+    /// For each `root_path` edge (`child -> parent`), whether `UiTree` currently has the
+    /// corresponding `parent.children` edge:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing node entry)
+    pub root_path_edge_ui_contains_child: [u8; 16],
+    /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
+    /// contains the child node:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing frame edge capture)
+    pub root_path_edge_frame_contains_child: [u8; 16],
     pub removed_nodes: u32,
     pub removed_head_len: u8,
     pub removed_head: [u64; 16],
@@ -518,6 +664,7 @@ pub enum UiDebugCacheRootReuseReason {
     MarkedReuseRoot,
     NotMarkedReuseRoot,
     CacheKeyMismatch,
+    ManualCacheRoot,
 }
 
 impl UiDebugCacheRootReuseReason {
@@ -528,6 +675,7 @@ impl UiDebugCacheRootReuseReason {
             Self::MarkedReuseRoot => "marked_reuse_root",
             Self::NotMarkedReuseRoot => "not_marked_reuse_root",
             Self::CacheKeyMismatch => "cache_key_mismatch",
+            Self::ManualCacheRoot => "manual_cache_root",
         }
     }
 }
@@ -828,10 +976,22 @@ pub struct UiTree<H: UiHost> {
     debug_hover_declarative_invalidations:
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
+    debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
+    debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
     #[cfg(feature = "diagnostics")]
+    debug_parent_sever_writes: HashMap<NodeId, UiDebugParentSeverWrite>,
+    #[cfg(feature = "diagnostics")]
+    debug_layer_visible_writes: Vec<UiDebugSetLayerVisibleWrite>,
+    #[cfg(feature = "diagnostics")]
+    debug_overlay_policy_decisions: Vec<UiDebugOverlayPolicyDecisionWrite>,
+    #[cfg(feature = "diagnostics")]
+    debug_remove_subtree_frame_context: HashMap<NodeId, UiDebugRemoveSubtreeFrameContext>,
+    #[cfg(feature = "diagnostics")]
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
+    #[cfg(feature = "diagnostics")]
+    debug_reachable_from_layer_roots: Option<(FrameId, HashSet<NodeId>)>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -908,10 +1068,22 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_edge_this_frame: false,
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
+            debug_virtual_list_windows: Vec::new(),
+            debug_scroll_handle_changes: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
+            debug_parent_sever_writes: HashMap::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_layer_visible_writes: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_overlay_policy_decisions: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_remove_subtree_frame_context: HashMap::new(),
+            #[cfg(feature = "diagnostics")]
             debug_removed_subtrees: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_reachable_from_layer_roots: None,
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -975,6 +1147,18 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    #[cfg(feature = "diagnostics")]
+    fn debug_sample_child_elements_head(
+        &self,
+        children: &[NodeId],
+    ) -> [Option<GlobalElementId>; 4] {
+        let mut out: [Option<GlobalElementId>; 4] = [None; 4];
+        for (i, &child) in children.iter().take(out.len()).enumerate() {
+            out[i] = self.nodes.get(child).and_then(|n| n.element);
+        }
+        out
+    }
+
     fn invalidation_marks_view_dirty(
         source: UiDebugInvalidationSource,
         inv: Invalidation,
@@ -985,7 +1169,12 @@ impl<H: UiHost> UiTree<H> {
             UiDebugInvalidationSource::Notify
                 | UiDebugInvalidationSource::ModelChange
                 | UiDebugInvalidationSource::GlobalChange
-        ) || (detail == UiDebugInvalidationDetail::ScrollHandle && inv == Invalidation::Layout)
+        ) || (inv != Invalidation::Paint
+            && matches!(
+                detail,
+                UiDebugInvalidationDetail::ScrollHandleLayout
+                    | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+            ))
     }
 
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
@@ -1067,10 +1256,25 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_edge_this_frame = false;
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
+        self.debug_virtual_list_windows.clear();
+        self.debug_scroll_handle_changes.clear();
         #[cfg(feature = "diagnostics")]
-        self.debug_set_children_writes.clear();
+        {
+            // Keep `debug_set_children_writes` and `debug_parent_sever_writes` across frames so
+            // GC sweep records can point back to the structural operation that detached an island.
+        }
+        #[cfg(feature = "diagnostics")]
+        self.debug_layer_visible_writes.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_overlay_policy_decisions.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_remove_subtree_frame_context.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_removed_subtrees.clear();
+        #[cfg(feature = "diagnostics")]
+        {
+            self.debug_reachable_from_layer_roots = None;
+        }
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
         for root in dirty_roots {
@@ -1203,6 +1407,18 @@ impl<H: UiHost> UiTree<H> {
         });
     }
 
+    pub(crate) fn debug_record_virtual_list_window(&mut self, record: UiDebugVirtualListWindow) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many virtual surfaces.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_virtual_list_windows.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_virtual_list_windows.push(record);
+    }
+
     pub(crate) fn debug_record_paint_cache_replay(&mut self, node: NodeId, replayed_ops: u32) {
         if !self.debug_enabled {
             return;
@@ -1275,6 +1491,88 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "diagnostics")]
+    pub fn debug_parent_sever_write_for(&self, child: NodeId) -> Option<UiDebugParentSeverWrite> {
+        if !self.debug_enabled {
+            return None;
+        }
+        self.debug_parent_sever_writes.get(&child).copied()
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_layer_visible_writes(&self) -> &[UiDebugSetLayerVisibleWrite] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layer_visible_writes.as_slice()
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_overlay_policy_decisions(&self) -> &[UiDebugOverlayPolicyDecisionWrite] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_overlay_policy_decisions.as_slice()
+    }
+
+    #[track_caller]
+    pub fn debug_record_overlay_policy_decision(
+        &mut self,
+        frame_id: FrameId,
+        layer: UiLayerId,
+        kind: &'static str,
+        present: bool,
+        interactive: bool,
+        wants_timer_events: bool,
+        reason: &'static str,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if !self.debug_enabled {
+                return;
+            }
+            let caller = std::panic::Location::caller();
+            self.debug_overlay_policy_decisions
+                .push(UiDebugOverlayPolicyDecisionWrite {
+                    layer,
+                    frame_id,
+                    kind,
+                    present,
+                    interactive,
+                    wants_timer_events,
+                    reason,
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+        }
+
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (
+                frame_id,
+                layer,
+                kind,
+                present,
+                interactive,
+                wants_timer_events,
+                reason,
+            );
+        }
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub(crate) fn debug_set_remove_subtree_frame_context(
+        &mut self,
+        root: NodeId,
+        ctx: UiDebugRemoveSubtreeFrameContext,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_remove_subtree_frame_context.insert(root, ctx);
+    }
+
+    #[cfg(feature = "diagnostics")]
     pub fn debug_removed_subtrees(&self) -> &[UiDebugRemoveSubtreeRecord] {
         if !self.debug_enabled {
             return &[];
@@ -1325,7 +1623,12 @@ impl<H: UiHost> UiTree<H> {
         !n.invalidation.layout
     }
 
-    pub(crate) fn set_node_view_cache_flags(
+    /// Configure view-cache behavior for a specific node.
+    ///
+    /// This is an advanced/low-level knob. Most applications should prefer declarative
+    /// view-cache boundaries, but retained widgets (and diagnostics harnesses) may need to enable
+    /// view caching explicitly on a node.
+    pub fn set_node_view_cache_flags(
         &mut self,
         node: NodeId,
         enabled: bool,
@@ -1348,6 +1651,43 @@ impl<H: UiHost> UiTree<H> {
         if !needs {
             self.dirty_cache_roots.remove(&node);
             self.dirty_cache_root_reasons.remove(&node);
+        }
+    }
+
+    /// Mark the nearest view-cache root as "needs rerender" without forcing a layout invalidation walk.
+    ///
+    /// This is intended for barrier-driven widgets (virtual lists, scroll content, etc.) that can
+    /// detect a logical "window mismatch" during layout and need the *next frame* to rerun the
+    /// declarative render closure to rebuild children, but do not benefit from triggering an
+    /// additional contained relayout pass in the *current* frame.
+    pub(crate) fn mark_nearest_view_cache_root_needs_rerender(
+        &mut self,
+        node: NodeId,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        if !self.view_cache_active() {
+            return;
+        }
+
+        if !Self::invalidation_marks_view_dirty(source, Invalidation::HitTestOnly, detail) {
+            return;
+        }
+
+        let Some(root) = self.nearest_view_cache_root(node) else {
+            return;
+        };
+
+        let mut current: Option<NodeId> = Some(root);
+        while let Some(id) = current {
+            let next_parent = self.nodes.get(id).and_then(|n| n.parent);
+            if let Some(n) = self.nodes.get_mut(id)
+                && n.view_cache.enabled
+            {
+                n.view_cache_needs_rerender = true;
+                self.mark_cache_root_dirty(id, source, detail);
+            }
+            current = next_parent;
         }
     }
 
@@ -1505,6 +1845,20 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_dirty_views.as_slice()
+    }
+
+    pub fn debug_virtual_list_windows(&self) -> &[UiDebugVirtualListWindow] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_virtual_list_windows.as_slice()
+    }
+
+    pub fn debug_scroll_handle_changes(&self) -> &[UiDebugScrollHandleChange] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scroll_handle_changes.as_slice()
     }
 
     pub fn debug_model_change_hotspots(&self) -> &[UiDebugModelChangeHotspot] {
@@ -1990,6 +2344,12 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         if self.debug_enabled {
             let location = std::panic::Location::caller();
+            let old_elements_head = self
+                .nodes
+                .get(parent)
+                .map(|n| self.debug_sample_child_elements_head(&n.children))
+                .unwrap_or([None; 4]);
+            let new_elements_head = self.debug_sample_child_elements_head(&children);
             self.debug_set_children_writes.insert(
                 parent,
                 UiDebugSetChildrenWrite {
@@ -1997,6 +2357,8 @@ impl<H: UiHost> UiTree<H> {
                     frame_id: self.debug_stats.frame_id,
                     old_len: _old_len.min(u32::MAX as usize) as u32,
                     new_len: children.len().min(u32::MAX as usize) as u32,
+                    old_elements_head,
+                    new_elements_head,
                     file: location.file(),
                     line: location.line(),
                     column: location.column(),
@@ -2016,6 +2378,149 @@ impl<H: UiHost> UiTree<H> {
             if let Some(n) = self.nodes.get_mut(old)
                 && n.parent == Some(parent)
             {
+                #[cfg(feature = "diagnostics")]
+                if self.debug_enabled {
+                    let location = std::panic::Location::caller();
+                    self.debug_parent_sever_writes.insert(
+                        old,
+                        UiDebugParentSeverWrite {
+                            child: old,
+                            parent,
+                            frame_id: self.debug_stats.frame_id,
+                            file: location.file(),
+                            line: location.line(),
+                            column: location.column(),
+                        },
+                    );
+                }
+                n.parent = None;
+            }
+        }
+
+        for &child in &children {
+            if let Some(n) = self.nodes.get_mut(child) {
+                n.parent = Some(parent);
+            }
+        }
+
+        let mut propagate = false;
+        if let Some(n) = self.nodes.get_mut(parent) {
+            n.children = children;
+            n.invalidation.hit_test = true;
+            n.invalidation.layout = true;
+            n.invalidation.paint = true;
+            propagate = true;
+        }
+
+        if propagate {
+            // Structural changes must invalidate ancestors so the next layout pass walks far
+            // enough to place newly mounted subtrees, even when view-cache invalidation
+            // truncation is enabled.
+            self.mark_invalidation_with_source(
+                parent,
+                Invalidation::HitTest,
+                UiDebugInvalidationSource::Other,
+            );
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn debug_sever_child_edge_without_invalidation(
+        &mut self,
+        parent: NodeId,
+        child: NodeId,
+    ) {
+        let Some(parent_node) = self.nodes.get_mut(parent) else {
+            return;
+        };
+        parent_node.children.retain(|&c| c != child);
+        if let Some(child_node) = self.nodes.get_mut(child) {
+            if child_node.parent == Some(parent) {
+                child_node.parent = None;
+            }
+        }
+    }
+
+    #[track_caller]
+    pub(crate) fn set_children_in_mount(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        if self.nodes.get(parent).is_none() {
+            return;
+        };
+
+        // Keep parent pointers consistent even when the child list is unchanged.
+        let same_children = self
+            .nodes
+            .get(parent)
+            .is_some_and(|n| n.children.as_slice() == children.as_slice());
+        if same_children {
+            for &child in &children {
+                if let Some(n) = self.nodes.get_mut(child) {
+                    n.parent = Some(parent);
+                }
+            }
+            return;
+        }
+
+        #[cfg(feature = "diagnostics")]
+        if self.debug_enabled {
+            let location = std::panic::Location::caller();
+            let old_len = self
+                .nodes
+                .get(parent)
+                .map(|n| n.children.len())
+                .unwrap_or_default();
+            let old_elements_head = self
+                .nodes
+                .get(parent)
+                .map(|n| self.debug_sample_child_elements_head(&n.children))
+                .unwrap_or([None; 4]);
+            let new_elements_head = self.debug_sample_child_elements_head(&children);
+            self.debug_set_children_writes.insert(
+                parent,
+                UiDebugSetChildrenWrite {
+                    parent,
+                    frame_id: self.debug_stats.frame_id,
+                    old_len: old_len.min(u32::MAX as usize) as u32,
+                    new_len: children.len().min(u32::MAX as usize) as u32,
+                    old_elements_head,
+                    new_elements_head,
+                    file: location.file(),
+                    line: location.line(),
+                    column: location.column(),
+                },
+            );
+        }
+
+        let Some(old_children) = self
+            .nodes
+            .get_mut(parent)
+            .map(|n| std::mem::take(&mut n.children))
+        else {
+            return;
+        };
+
+        for old in old_children {
+            if children.contains(&old) {
+                continue;
+            }
+            if let Some(n) = self.nodes.get_mut(old)
+                && n.parent == Some(parent)
+            {
+                #[cfg(feature = "diagnostics")]
+                if self.debug_enabled {
+                    let location = std::panic::Location::caller();
+                    self.debug_parent_sever_writes.insert(
+                        old,
+                        UiDebugParentSeverWrite {
+                            child: old,
+                            parent,
+                            frame_id: self.debug_stats.frame_id,
+                            file: location.file(),
+                            line: location.line(),
+                            column: location.column(),
+                        },
+                    );
+                }
                 n.parent = None;
             }
         }
@@ -2057,7 +2562,7 @@ impl<H: UiHost> UiTree<H> {
     /// The tree will schedule a contained relayout for `parent` during the next layout pass.
     #[track_caller]
     pub(crate) fn set_children_barrier(&mut self, parent: NodeId, children: Vec<NodeId>) {
-        let Some(_old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
+        if self.nodes.get(parent).is_none() {
             return;
         };
 
@@ -2078,13 +2583,26 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         if self.debug_enabled {
             let location = std::panic::Location::caller();
+            let old_len = self
+                .nodes
+                .get(parent)
+                .map(|n| n.children.len())
+                .unwrap_or_default();
+            let old_elements_head = self
+                .nodes
+                .get(parent)
+                .map(|n| self.debug_sample_child_elements_head(&n.children))
+                .unwrap_or([None; 4]);
+            let new_elements_head = self.debug_sample_child_elements_head(&children);
             self.debug_set_children_writes.insert(
                 parent,
                 UiDebugSetChildrenWrite {
                     parent,
                     frame_id: self.debug_stats.frame_id,
-                    old_len: _old_len.min(u32::MAX as usize) as u32,
+                    old_len: old_len.min(u32::MAX as usize) as u32,
                     new_len: children.len().min(u32::MAX as usize) as u32,
+                    old_elements_head,
+                    new_elements_head,
                     file: location.file(),
                     line: location.line(),
                     column: location.column(),
@@ -2112,9 +2630,27 @@ impl<H: UiHost> UiTree<H> {
         };
 
         for old in old_children {
+            if children.contains(&old) {
+                continue;
+            }
             if let Some(n) = self.nodes.get_mut(old)
                 && n.parent == Some(parent)
             {
+                #[cfg(feature = "diagnostics")]
+                if self.debug_enabled {
+                    let location = std::panic::Location::caller();
+                    self.debug_parent_sever_writes.insert(
+                        old,
+                        UiDebugParentSeverWrite {
+                            child: old,
+                            parent,
+                            frame_id: self.debug_stats.frame_id,
+                            file: location.file(),
+                            line: location.line(),
+                            column: location.column(),
+                        },
+                    );
+                }
                 n.parent = None;
             }
         }
@@ -2141,6 +2677,39 @@ impl<H: UiHost> UiTree<H> {
         );
 
         self.pending_barrier_relayouts.push(parent);
+    }
+
+    #[cfg(feature = "diagnostics")]
+    fn debug_is_reachable_from_layer_roots(&mut self, node: NodeId) -> bool {
+        if !self.debug_enabled {
+            return false;
+        }
+
+        if let Some((frame_id, reachable)) = &self.debug_reachable_from_layer_roots
+            && *frame_id == self.debug_stats.frame_id
+        {
+            return reachable.contains(&node);
+        }
+
+        let roots = self.all_layer_roots();
+        let mut reachable: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = roots;
+        while let Some(id) = stack.pop() {
+            if !reachable.insert(id) {
+                continue;
+            }
+            let Some(entry) = self.nodes.get(id) else {
+                continue;
+            };
+            for &child in &entry.children {
+                stack.push(child);
+            }
+        }
+
+        self.debug_reachable_from_layer_roots = Some((self.debug_stats.frame_id, reachable));
+        self.debug_reachable_from_layer_roots
+            .as_ref()
+            .is_some_and(|(_, reachable)| reachable.contains(&node))
     }
 
     pub(crate) fn debug_record_virtual_list_visible_range_check(
@@ -2178,6 +2747,10 @@ impl<H: UiHost> UiTree<H> {
                 root_parent.and_then(|p| self.nodes.get(p).and_then(|n| n.element));
             let root_root = self.node_root(root);
             let root_layer = self.node_layer(root);
+            let root_layer_visible =
+                root_layer.and_then(|layer| self.layers.get(layer).map(|l| l.visible));
+            let reachable_from_layer_roots =
+                pre_exists && self.debug_is_reachable_from_layer_roots(root);
             let root_children_len = self
                 .nodes
                 .get(root)
@@ -2188,7 +2761,11 @@ impl<H: UiHost> UiTree<H> {
                     .get(p)
                     .map(|n| n.children.len().min(u32::MAX as usize) as u32)
             });
+            let root_parent_children_contains_root =
+                root_parent.and_then(|p| self.nodes.get(p).map(|n| n.children.contains(&root)));
+            let frame_context = self.debug_remove_subtree_frame_context.remove(&root);
             let mut root_path: [u64; 16] = [0u64; 16];
+            let mut root_path_nodes: [Option<NodeId>; 16] = [None; 16];
             let mut root_path_len: u8 = 0;
             let mut root_path_truncated = false;
             let mut current = Some(root);
@@ -2197,9 +2774,27 @@ impl<H: UiHost> UiTree<H> {
                     root_path_truncated = true;
                     break;
                 }
+                root_path_nodes[root_path_len as usize] = Some(id);
                 root_path[root_path_len as usize] = id.data().as_ffi();
                 root_path_len = root_path_len.saturating_add(1);
                 current = self.nodes.get(id).and_then(|n| n.parent);
+            }
+            let root_path_edge_len = root_path_len.saturating_sub(1);
+            let mut root_path_edge_ui_contains_child: [u8; 16] = [2u8; 16];
+            for idx in 0..(root_path_edge_len as usize).min(root_path_edge_ui_contains_child.len())
+            {
+                let Some(child) = root_path_nodes[idx] else {
+                    continue;
+                };
+                let Some(parent) = root_path_nodes[idx + 1] else {
+                    continue;
+                };
+                let contains = self.nodes.get(parent).map(|n| n.children.contains(&child));
+                root_path_edge_ui_contains_child[idx] = match contains {
+                    Some(true) => 1,
+                    Some(false) => 0,
+                    None => 2,
+                };
             }
             Some((
                 location.file(),
@@ -2211,11 +2806,17 @@ impl<H: UiHost> UiTree<H> {
                 root_parent_element,
                 root_root,
                 root_layer,
+                root_layer_visible,
+                reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
+                root_parent_children_contains_root,
+                frame_context,
                 root_path_len,
                 root_path,
                 root_path_truncated,
+                root_path_edge_len,
+                root_path_edge_ui_contains_child,
             ))
         } else {
             None
@@ -2233,13 +2834,55 @@ impl<H: UiHost> UiTree<H> {
                 root_parent_element,
                 root_root,
                 root_layer,
+                root_layer_visible,
+                reachable_from_layer_roots,
                 root_children_len,
                 root_parent_children_len,
+                root_parent_children_contains_root,
+                frame_context,
                 root_path_len,
                 root_path,
                 root_path_truncated,
+                root_path_edge_len,
+                root_path_edge_ui_contains_child,
             )) = remove_record
             {
+                let root_path_edge_frame_contains_child = frame_context
+                    .map(|ctx| ctx.path_edge_frame_contains_child)
+                    .unwrap_or([2u8; 16]);
+                let reachable_from_view_cache_roots =
+                    frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
+                let unreachable_from_liveness_roots = !reachable_from_layer_roots
+                    && !matches!(reachable_from_view_cache_roots, Some(true));
+                let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
+                let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
+                let trigger_element_in_view_cache_keep_alive =
+                    frame_context.and_then(|ctx| ctx.trigger_element_in_view_cache_keep_alive);
+                let trigger_element_listed_under_reuse_root =
+                    frame_context.and_then(|ctx| ctx.trigger_element_listed_under_reuse_root);
+                let liveness_layer_roots_len =
+                    frame_context.map(|ctx| ctx.liveness_layer_roots_len);
+                let view_cache_reuse_roots_len =
+                    frame_context.map(|ctx| ctx.view_cache_reuse_roots_len);
+                let view_cache_reuse_root_nodes_len =
+                    frame_context.map(|ctx| ctx.view_cache_reuse_root_nodes_len);
+                let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
+                    frame_context
+                        .map(|ctx| {
+                            (
+                                ctx.parent_frame_children_len,
+                                ctx.parent_frame_children_contains_root,
+                            )
+                        })
+                        .unwrap_or((None, None));
+                let (root_frame_instance_present, root_frame_children_len) = frame_context
+                    .map(|ctx| {
+                        (
+                            Some(ctx.root_frame_instance_present),
+                            ctx.root_frame_children_len,
+                        )
+                    })
+                    .unwrap_or((None, None));
                 self.debug_removed_subtrees
                     .push(UiDebugRemoveSubtreeRecord {
                         outcome: UiDebugRemoveSubtreeOutcome::SkippedLayerRoot,
@@ -2250,11 +2893,30 @@ impl<H: UiHost> UiTree<H> {
                         root_parent_element,
                         root_root,
                         root_layer,
+                        root_layer_visible,
+                        reachable_from_layer_roots,
+                        reachable_from_view_cache_roots,
+                        unreachable_from_liveness_roots,
+                        liveness_layer_roots_len,
+                        view_cache_reuse_roots_len,
+                        view_cache_reuse_root_nodes_len,
+                        trigger_element,
+                        trigger_element_root,
+                        trigger_element_in_view_cache_keep_alive,
+                        trigger_element_listed_under_reuse_root,
                         root_children_len,
                         root_parent_children_len,
+                        root_parent_children_contains_root,
+                        root_parent_frame_children_len,
+                        root_parent_frame_children_contains_root,
+                        root_frame_instance_present,
+                        root_frame_children_len,
                         root_path_len,
                         root_path,
                         root_path_truncated,
+                        root_path_edge_len,
+                        root_path_edge_ui_contains_child,
+                        root_path_edge_frame_contains_child,
                         removed_nodes: 0,
                         removed_head_len: 0,
                         removed_head: [0u64; 16],
@@ -2281,13 +2943,54 @@ impl<H: UiHost> UiTree<H> {
             root_parent_element,
             root_root,
             root_layer,
+            root_layer_visible,
+            reachable_from_layer_roots,
             root_children_len,
             root_parent_children_len,
+            root_parent_children_contains_root,
+            frame_context,
             root_path_len,
             root_path,
             root_path_truncated,
+            root_path_edge_len,
+            root_path_edge_ui_contains_child,
         )) = remove_record
         {
+            let root_path_edge_frame_contains_child = frame_context
+                .map(|ctx| ctx.path_edge_frame_contains_child)
+                .unwrap_or([2u8; 16]);
+            let reachable_from_view_cache_roots =
+                frame_context.and_then(|ctx| ctx.root_reachable_from_view_cache_roots);
+            let unreachable_from_liveness_roots = !reachable_from_layer_roots
+                && !matches!(reachable_from_view_cache_roots, Some(true));
+            let trigger_element = frame_context.and_then(|ctx| ctx.trigger_element);
+            let trigger_element_root = frame_context.and_then(|ctx| ctx.trigger_element_root);
+            let trigger_element_in_view_cache_keep_alive =
+                frame_context.and_then(|ctx| ctx.trigger_element_in_view_cache_keep_alive);
+            let trigger_element_listed_under_reuse_root =
+                frame_context.and_then(|ctx| ctx.trigger_element_listed_under_reuse_root);
+            let liveness_layer_roots_len = frame_context.map(|ctx| ctx.liveness_layer_roots_len);
+            let view_cache_reuse_roots_len =
+                frame_context.map(|ctx| ctx.view_cache_reuse_roots_len);
+            let view_cache_reuse_root_nodes_len =
+                frame_context.map(|ctx| ctx.view_cache_reuse_root_nodes_len);
+            let (root_parent_frame_children_len, root_parent_frame_children_contains_root) =
+                frame_context
+                    .map(|ctx| {
+                        (
+                            ctx.parent_frame_children_len,
+                            ctx.parent_frame_children_contains_root,
+                        )
+                    })
+                    .unwrap_or((None, None));
+            let (root_frame_instance_present, root_frame_children_len) = frame_context
+                .map(|ctx| {
+                    (
+                        Some(ctx.root_frame_instance_present),
+                        ctx.root_frame_children_len,
+                    )
+                })
+                .unwrap_or((None, None));
             let outcome = if pre_exists {
                 UiDebugRemoveSubtreeOutcome::Removed
             } else {
@@ -2318,11 +3021,30 @@ impl<H: UiHost> UiTree<H> {
                     root_parent_element,
                     root_root,
                     root_layer,
+                    root_layer_visible,
+                    reachable_from_layer_roots,
+                    reachable_from_view_cache_roots,
+                    unreachable_from_liveness_roots,
+                    liveness_layer_roots_len,
+                    view_cache_reuse_roots_len,
+                    view_cache_reuse_root_nodes_len,
+                    trigger_element,
+                    trigger_element_root,
+                    trigger_element_in_view_cache_keep_alive,
+                    trigger_element_listed_under_reuse_root,
                     root_children_len,
                     root_parent_children_len,
+                    root_parent_children_contains_root,
+                    root_parent_frame_children_len,
+                    root_parent_frame_children_contains_root,
+                    root_frame_instance_present,
+                    root_frame_children_len,
                     root_path_len,
                     root_path,
                     root_path_truncated,
+                    root_path_edge_len,
+                    root_path_edge_ui_contains_child,
+                    root_path_edge_frame_contains_child,
                     removed_nodes: removed.len().min(u32::MAX as usize) as u32,
                     removed_head_len,
                     removed_head,

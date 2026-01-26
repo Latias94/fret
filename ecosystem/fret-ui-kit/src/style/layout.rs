@@ -411,8 +411,8 @@ impl LayoutRefinement {
         self.flex_item.as_mut().expect("flex_item exists")
     }
 
-    pub fn min_w(mut self, width: MetricRef) -> Self {
-        self.ensure_size_mut().min_width = Some(width);
+    pub fn min_w(mut self, width: impl Into<MetricRef>) -> Self {
+        self.ensure_size_mut().min_width = Some(width.into());
         self
     }
 
@@ -420,8 +420,8 @@ impl LayoutRefinement {
         self.min_w(MetricRef::space(width))
     }
 
-    pub fn min_h(mut self, height: MetricRef) -> Self {
-        self.ensure_size_mut().min_height = Some(height);
+    pub fn min_h(mut self, height: impl Into<MetricRef>) -> Self {
+        self.ensure_size_mut().min_height = Some(height.into());
         self
     }
 
@@ -430,7 +430,7 @@ impl LayoutRefinement {
     }
 
     pub fn min_w_0(self) -> Self {
-        self.min_w(MetricRef::Px(Px(0.0)))
+        self.min_w(Px(0.0))
     }
 
     pub fn w(mut self, width: LengthRefinement) -> Self {
@@ -443,16 +443,16 @@ impl LayoutRefinement {
         self
     }
 
-    pub fn w_px(self, width: MetricRef) -> Self {
-        self.w(LengthRefinement::Px(width))
+    pub fn w_px(self, width: impl Into<MetricRef>) -> Self {
+        self.w(LengthRefinement::Px(width.into()))
     }
 
     pub fn w_space(self, width: Space) -> Self {
         self.w_px(MetricRef::space(width))
     }
 
-    pub fn h_px(self, height: MetricRef) -> Self {
-        self.h(LengthRefinement::Px(height))
+    pub fn h_px(self, height: impl Into<MetricRef>) -> Self {
+        self.h(LengthRefinement::Px(height.into()))
     }
 
     pub fn h_space(self, height: Space) -> Self {
@@ -471,8 +471,8 @@ impl LayoutRefinement {
         self.w_full().h_full()
     }
 
-    pub fn max_w(mut self, width: MetricRef) -> Self {
-        self.ensure_size_mut().max_width = Some(width);
+    pub fn max_w(mut self, width: impl Into<MetricRef>) -> Self {
+        self.ensure_size_mut().max_width = Some(width.into());
         self
     }
 
@@ -480,8 +480,8 @@ impl LayoutRefinement {
         self.max_w(MetricRef::space(width))
     }
 
-    pub fn max_h(mut self, height: MetricRef) -> Self {
-        self.ensure_size_mut().max_height = Some(height);
+    pub fn max_h(mut self, height: impl Into<MetricRef>) -> Self {
+        self.ensure_size_mut().max_height = Some(height.into());
         self
     }
 
@@ -494,8 +494,12 @@ impl LayoutRefinement {
         self
     }
 
+    pub fn basis_px(self, basis: impl Into<MetricRef>) -> Self {
+        self.basis(LengthRefinement::Px(basis.into()))
+    }
+
     pub fn basis_0(self) -> Self {
-        self.basis(LengthRefinement::Px(MetricRef::Px(Px(0.0))))
+        self.basis_px(Px(0.0))
     }
 
     pub fn flex_grow(mut self, grow: f32) -> Self {
@@ -518,7 +522,7 @@ impl LayoutRefinement {
             let f = self.ensure_flex_item_mut();
             f.grow = Some(1.0);
             f.shrink = Some(1.0);
-            f.basis = Some(LengthRefinement::Px(MetricRef::Px(Px(0.0))));
+            f.basis = Some(LengthRefinement::Px(Px(0.0).into()));
         }
         self
     }

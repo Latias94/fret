@@ -127,7 +127,7 @@ impl EmojiConformanceDriver {
                 )
                 .into_element(cx);
 
-                let header = shadcn::CardHeader::new(vec![title, subtitle]).into_element(cx);
+                let header = shadcn::CardHeader::new([title, subtitle]).into_element(cx);
 
                 let status_line = {
                     let has_known_color_emoji_font = ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"]
@@ -156,32 +156,27 @@ impl EmojiConformanceDriver {
                     })
                 };
 
-                let controls = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .gap(Space::N3)
-                        .items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Select::new(
-                                emoji_font_override.clone(),
-                                emoji_font_override_open.clone(),
-                            )
-                            .placeholder("Force emoji font (optional)")
-                            .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(280.0))),
-                            )
-                            .items(items)
+                let controls = ui::h_flex(cx, |cx| {
+                    [
+                        shadcn::Select::new(
+                            emoji_font_override.clone(),
+                            emoji_font_override_open.clone(),
+                        )
+                        .placeholder("Force emoji font (optional)")
+                        .items(items)
+                        .ui()
+                        .w_px(Px(280.0))
+                        .into_element(cx),
+                        shadcn::Button::new("Reset")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .on_click(CommandId::new(CMD_EMOJI_FONT_RESET))
                             .into_element(cx),
-                            shadcn::Button::new("Reset")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .on_click(CommandId::new(CMD_EMOJI_FONT_RESET))
-                                .into_element(cx),
-                        ]
-                    },
-                );
+                    ]
+                })
+                .w_full()
+                .gap(Space::N3)
+                .items_center()
+                .into_element(cx);
 
                 let label_style = TextStyle {
                     size: Px(12.0),
@@ -242,46 +237,39 @@ impl EmojiConformanceDriver {
                     }));
                 }
 
-                let scroll = shadcn::ScrollArea::new(vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
+                let scroll = shadcn::ScrollArea::new([
+                    ui::v_flex(cx, |_cx| rows)
+                        .w_full()
                         .gap(Space::N2)
-                        .items_start(),
-                    |_cx| rows,
-                )])
-                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                        .items_start()
+                        .into_element(cx),
+                ])
+                .ui()
+                .w_full()
+                .h_full()
                 .into_element(cx);
 
-                let content = shadcn::CardContent::new(vec![scroll]).into_element(cx);
-                let card = shadcn::Card::new(vec![header, content])
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_full()
-                            .max_w(MetricRef::Px(Px(960.0))),
-                    )
+                let content = shadcn::CardContent::new([scroll]).into_element(cx);
+                let card = shadcn::Card::new([header, content])
+                    .ui()
+                    .w_full()
+                    .h_full()
+                    .max_w(Px(960.0))
                     .into_element(cx);
 
-                let page = {
-                    let props = decl_style::container_props(
-                        &theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(theme.color_required("muted")))
-                            .p(Space::N6),
-                        LayoutRefinement::default().w_full().h_full(),
-                    );
-                    cx.container(props, |cx| {
-                        vec![stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .layout(LayoutRefinement::default().w_full().h_full())
-                                .justify_center()
-                                .items_center(),
-                            |_cx| vec![card],
-                        )]
-                    })
-                };
+                let page = ui::container(cx, |cx| {
+                    [ui::v_flex(cx, |_cx| [card])
+                        .w_full()
+                        .h_full()
+                        .justify_center()
+                        .items_center()
+                        .into_element(cx)]
+                })
+                .bg(ColorRef::Color(theme.color_required("muted")))
+                .p(Space::N6)
+                .w_full()
+                .h_full()
+                .into_element(cx);
 
                 vec![page]
             });

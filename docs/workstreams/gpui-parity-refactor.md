@@ -19,6 +19,7 @@ Tracking:
   - Dirty views + notify: `docs/adr/0180-dirty-views-and-notify-gpui-aligned.md`
   - Interactivity pseudoclasses + structural stability: `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
   - Prepaint + interaction stream range reuse: `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
+  - Prepaint-windowed virtual surfaces: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md`
 
 ---
 
@@ -86,6 +87,178 @@ This plan focuses on refactoring Fret to gain:
 - Preserve ordering semantics (ADR 0002 / ADR 0009).
 - Keep portability boundaries (`fret-runtime` effects, no `wgpu` types in UI runtime).
 
+### 1.5 Rebuild vs Retain (GPUI-aligned mental model)
+
+When we say “GPUI parity”, the goal is **not** “everything is rebuilt every frame” and also not “a traditional retained
+widget tree”. It is a split:
+
+- **Rebuilt each frame (per dirty view/cache root)**:
+  - Declarative element tree (structure, props, style) is rebuilt on demand (dirty views), with explicit cross-frame
+    state living outside the tree (`ElementRuntime`).
+  - Hover/focus/pressed/capture-derived chrome should be *paint-only by default* (ADR 0181), i.e. it should not
+    change the layout tree shape in steady state.
+- **Ephemeral per frame (derived during prepaint, not a retained subtree)**:
+  - Large “virtual surfaces” should derive their visible window during prepaint and emit per-frame items without
+    forcing a rerender of the entire view-cache root for small scroll deltas.
+  - Reference pattern: gpui-component’s `VirtualList` derives visible range + consumes `scroll_to_item` in `prepaint`
+    and only lays out/prepaints the visible items (`repo-ref/gpui-component/crates/ui/src/virtual_list.rs`).
+- **Retained across frames (keyed caches, not implicit state)**:
+  - `ElementRuntime` state, view-cache recorded ranges, prepaint interaction caches, layout engine solves, text shaping
+    caches, and GPU resources must remain retained and reused behind explicit “dirty + cache key” gates (ADR 0180/0182).
+
+Candidate migrations (v1; performance-first):
+
+- Virtual surfaces (prepaint-driven window + per-frame items):
+  - `VirtualList` (`crates/fret-ui`, plus `ecosystem/fret-ui-kit` table/tree/list helpers).
+  - Table/tree windows built on top of virtualization primitives (row/section windowing).
+  - Text/code/markdown windows (e.g. visible line windows; long documents and code blocks).
+  - Canvas/node graph culling windows (visible nodes/edges derived from viewport).
+  - Large chart/plot surfaces (data sampling windows derived from viewport/time range).
+- Chrome derived from interaction (paint-only; structural stability):
+  - Scrollbar visibility/fade, hover toolbars, selection highlights, focus rings, cursor affordances.
+
+The refactor strategy is to introduce a reusable “prepaint-driven ephemeral subtree/items” primitive, migrate
+`VirtualList` first (largest multiplier), then apply the same primitive to tables/trees/code views/canvas surfaces.
+
+Alignment checklist (v1; what must be derived per frame / per dirty view):
+
+- View rebuild boundaries:
+  - Dirty views/cache roots decide *whether we rebuild*; rebuilding should be the default authoring model, not a special-case.
+- Interaction-derived visuals (should not force structural/layout churn):
+  - Hover/pressed/focus/capture states (ADR 0181).
+  - Scrollbar visibility, opacity fades, thumb geometry.
+  - Cursor icon and caret/selection visuals.
+- Virtualization windows (should not require rerender on small deltas):
+  - Visible-range windows for lists/tables/trees.
+  - Visible-line windows for text/code surfaces.
+  - Viewport-culling windows for canvas/node graph surfaces.
+  - Data-window/sampling windows for charts/plots (avoid rebuilding full series on pan/zoom).
+
+Audit heuristic: if a component’s child set (or a large portion of its render work) depends on scroll offset / viewport
+and the current implementation rebuilds that structure in the declarative render pass, it is a prime candidate for
+prepaint-driven windows + per-frame ephemeral items.
+
+### 1.5.1 Remaining gaps vs Zed/GPUI (what still blocks the “stable feel” loop)
+
+Even with dirty views + cache roots in place, “stable feel + stable perf” requires closing a few practical gaps:
+
+- **Windowed surfaces beyond VirtualList**: code/text/markdown surfaces and 2D canvas/node graphs must be able to update
+  their visible window (scroll/camera) without forcing cache-root rerenders for small deltas (ADR 0190, MVP5).
+- **Nested-cache composition**: our v1 cache-root model is subtree-replay-based, which tends to “bubble dirtiness” to
+  ancestor cache roots. If we want GPUI-like “local dirtiness, stable outer shells”, we likely need a more composable
+  recording boundary (e.g. prepaint/paint range reuse that can tolerate dirty descendants) or better cache-root
+  placement guidance in ecosystem surfaces.
+- **Cache key precision**: view-cache reuse must remain gated by explicit cache keys, but we should gradually refine the
+  recommended key inputs toward GPUI’s `bounds/content_mask/text_style` model (ADR 1152 §7).
+- **Explainability under reuse**: diagnostics bundles should make it obvious whether we missed reuse due to dirtiness vs
+  key mismatch vs inspection mode, so “why didn’t this update?” questions have a single-run answer.
+
+### 1.6 Ecosystem adoption patterns (how we get ROI beyond a single widget)
+
+To avoid a second “big rewrite” later, we should treat the v1 primitive as an ecosystem-facing building block, not as a
+one-off VirtualList optimization.
+
+Recommended patterns:
+
+- **`fret-ui` provides the mechanism**: a small contract for prepaint-driven windowing and per-frame ephemeral items
+  (e.g. “windowed surfaces”), plus diagnostics hooks to make it explainable.
+- **`fret-ui-kit` provides policy + convenience**:
+  - a `windowed_list` helper that can back lists, tables, and trees,
+  - a `windowed_text_lines` helper for code/text views,
+  - a `windowed_canvas_cull` helper for node graphs/canvas scenes.
+- **`fret-ui-shadcn` and apps consume the helpers**: demos and policy-heavy components migrate first to validate
+  real-world ergonomics and performance.
+
+This keeps `crates/fret-ui` mechanism-only (ADR 0066) while enabling multiple ecosystem crates to benefit from the same
+closed-loop caching and invalidation semantics.
+
+Concrete ecosystem entry points (current state):
+
+- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs`: a Scroll + Canvas pattern that paints only the
+  visible row window while keeping the element tree structurally stable (good for huge simple lists/inspectors).
+  - UI Gallery harness: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WINDOWED_ROWS_SURFACE_TORTURE`) and
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_windowed_rows_surface_torture`).
+  - Scripted scroll capture: `tools/diag-scripts/ui-gallery-windowed-rows-surface-scroll-refresh.json` (run via
+    `cargo run -p fretboard -- diag run ...`).
+
+### 1.6.1 Retained vs. “Rebuilt Each Frame” (GPUI-style hybrid)
+
+It is easy to talk about “retain vs rebuild” as a binary. GPUI (and our target) is a **hybrid**:
+
+- **Retained** (cross-frame, must be reused):
+  - stateful view/controller entities and models,
+  - text buffers, syntax state, selection/cursor state,
+  - layout caches (text shaping, line-breaking, row measurement),
+  - GPU resources (atlases, pipelines, bind groups),
+  - stable identity paths / element state (ADR 0028 / ADR 1151).
+- **Per-frame rebuilt** (ephemeral, derived from retained state + viewport):
+  - the declarative element tree for dirty views (ADR 0028),
+  - “visible window” item sets for large virtual surfaces (ADR 0190),
+  - interaction chrome that should normally be paint-only (ADR 0181): hover/pressed/focus rings, selection highlights,
+    caret blink, drag previews, scrollbars.
+
+The goal is not “rebuild everything always”. The goal is: **rebuild only when a view is dirty**, and for “windowed
+surfaces”, let small scroll/camera deltas update via **prepaint-driven windows** instead of forcing cache-root rerender.
+
+Current vs target (VirtualList example):
+
+- **Current** (Fret v1): `VirtualList` computes `visible_items` during the declarative render pass
+  (`crates/fret-ui/src/elements/cx.rs`), so when the visible window leaves the last rendered overscan window we must
+  mark the nearest cache root dirty on the next tick to rebuild the item subtree
+  (`crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`).
+- **Target** (GPUI-aligned): derive the visible window during `prepaint` (ADR 0190) so that scroll-driven window
+  changes can be applied as “ephemeral items” without requiring a full cache-root rerender/relayout for small deltas.
+
+Concrete alignment targets (beyond VirtualList):
+
+- **Windowed 1D surfaces (rows/lines)**:
+  - code/text views (`ecosystem/fret-code-view`, editor surfaces): visible line windows,
+  - long documents (`ecosystem/fret-markdown`, logs/traces): visible line/row windows,
+  - tables/trees/lists (via `ecosystem/fret-ui-kit` helpers): row windows + stable item keys,
+  - command/search surfaces (palette, search results, outline): list-of-rows windows under rapid updates.
+- **Windowed 2D surfaces (viewport culling)**:
+  - node graphs/canvas scenes (`ecosystem/fret-node`, `ecosystem/fret-canvas`): world-space culling windows,
+  - gizmos/viewport overlays (`ecosystem/fret-gizmo`, `ecosystem/fret-viewport-tooling`): cull + paint-only chrome.
+- **Sampling surfaces**:
+  - plots/charts (`ecosystem/fret-chart`, `ecosystem/fret-plot`, `ecosystem/fret-plot3d`, `ecosystem/delinea`):
+    pan/zoom adjusts a data window / sampling window without rebuilding full series.
+
+- **Paint-only chrome surfaces** (should avoid rerender by default; ADR 0181):
+  - hover/focus/pressed style refinements across common controls,
+  - caret blink + selection highlights in text/code views,
+  - scrollbars and drag/drop indicators.
+  - Harness: UI Gallery `PAGE_CHROME_TORTURE` + `tools/diag-scripts/ui-gallery-chrome-torture.json`.
+  - Pattern: prefer pointer-hook `invalidate(Paint)` and schedule frames via `request_animation_frame_paint_only()` when
+    only visuals change; reserve `notify()` (or `request_animation_frame()`) for structural/state changes that must rerender.
+
+What should be “per-frame rebuilt” (and where):
+
+- **Declarative render (structural)**: should be as stable as possible; this is where we pay the “rerender/relayout” cost.
+  - Allowed: changing subtree shape due to real state/data changes.
+  - Avoid: hover/pressed toggles, caret blink, transient chrome.
+- **Prepaint (ephemeral windows; ADR 0190)**: compute the visible window from viewport/scroll/camera and emit ephemeral items.
+  - Examples: list row windows, code/text visible line windows, markdown long-doc windows, node graph viewport culling windows, plot sampling windows.
+  - Goal: small scroll/pan deltas should not force a cache-root rerender when the view is otherwise clean.
+- **Paint-only (chrome; ADR 0181)**: pointer-driven visuals that refine style without structural changes.
+  - Examples: hover highlight, focus ring, pressed state, selection rectangles, scrollbar fade/hover, drag/drop indicators.
+  - Goal: update via paint invalidation + redraw under view-cache reuse (no rerender unless the component explicitly opts in).
+
+Fearless refactor tactic:
+
+1) Keep the *retained* state stable (data revisions, selection, scroll/camera state).
+2) Move “what’s visible” derivation into `prepaint` (ADR 0190), and make it explainable via diagnostics bundles.
+3) Ensure out-of-band commands (e.g. `scroll_to_item`, `ensure_line_visible`, `zoom_to_fit`) deterministically schedule
+   a redraw and invalidate the right cache boundary (ADR 0180 / ADR 0190).
+4) Migrate surfaces one-by-one via ecosystem helpers (`fret-ui-kit`), so multiple crates get the same perf/correctness
+   loop without duplicating invalidation logic.
+
+Recommended migration order (maximize ROI, minimize churn):
+
+1) **1D line windows** (code/text/markdown): the “editor core” payoff and easiest to validate with scroll harnesses.
+2) **Row windows** (lists/inspectors/palettes): broad ecosystem reuse via `fret-ui-kit` helper patterns.
+3) **2D culling windows** (node graph/canvas): unlock stable perf under pan/zoom with a single stress harness.
+4) **Sampling windows** (charts/plots): separate “sampling math” from rendering and make it explainable in bundles.
+
 ### 1.4 Contract gates (ADRs)
 
 This workstream is “fearless” in implementation scope, but not in contract hygiene. Any meaningful shifts to
@@ -128,6 +301,8 @@ We should define explicit acceptance thresholds (initial proposal):
   - `UiDebugFrameStats.paint_cache_hits/misses/replayed_ops` trend upward on stable scenes (`crates/fret-ui/src/tree/mod.rs:110`).
 - Large UI surfaces remain stable:
   - 10k-row virtual list: scrolling does not trigger full relayout of unrelated subtree.
+  - Virtualized surfaces do not require “input-driven notify” as a hidden dependency for correctness (e.g. `scroll_to_item`
+    must schedule a redraw + invalidate the right cache root deterministically).
 
 ### 2.3 Definition of Done (workstream-level)
 
@@ -158,6 +333,12 @@ The refactor should always move these metrics in the right direction, as reporte
 These commands exist to make A/B perf and correctness regressions easy to reproduce locally.
 
 Prefer `diag run` for a fast pass/fail signal, and `diag perf` when you want the per-frame counters in the exported bundle.
+
+When using `diag perf`, inspect these exported debug surfaces to decide which parts should become prepaint-windowed:
+
+- `windows[].snapshots[].debug.dirty_views` (why a view/cache root was marked dirty, including `notify_call` callsites).
+- `windows[].snapshots[].debug.cache_roots[].contained_relayout_time_us` (which cache roots dominate layout time).
+- `windows[].snapshots[].debug.cache_roots[].reuse_reason` (whether we are missing reuse due to dirtiness vs cache-key gates).
 
 Run a script without view cache (baseline):
 
@@ -341,11 +522,14 @@ We implement a “cached subtree” primitive that:
 
 Implementation note (current state):
 
-- The declarative element GC in `render_root`/`render_dismissible_root_impl` is keyed off “was this element mounted
-  recently” (`last_seen_frame`), which conflicts with view-cache reuse (cached subtrees can remain present and
-  interactive while skipping re-mounting for many frames).
-- Until we have GPUI-style “view liveness” represented explicitly (dirty views + notify), stale-node sweeping is
-  disabled when `UiTree::view_cache_enabled()` is on to avoid deleting live cached subtrees.
+- The declarative element GC now treats view-cache reuse as a performance optimization only: cache-hit frames MUST NOT
+  change lifetime semantics (ADR 0191).
+- The previous global stopgap (“skip sweep while any reuse roots exist”) has been removed as part of MVP2-cache-005 by
+  making liveness explicit under reuse:
+  - reachability roots include installed layer roots + view-cache reuse roots,
+  - cache-hit frames refresh liveness via per-root subtree membership lists,
+  - diagnostics attribute structural detaches (e.g. `set_children`) so “why was this swept?” is explainable from a
+    single failing bundle.
 
 Proposed ecosystem-facing API surface (runtime internal may differ):
 
@@ -530,7 +714,7 @@ Behavior:
    - `cx.cached(key_inputs, |cx| children)`
 2) The runtime creates/uses a dedicated `NodeId` boundary for the cached subtree root.
 3) Cache key includes:
-   - v1: `hash(theme_revision, scale_factor, window_bounds, explicit_cache_key)` (implemented as `ViewCacheProps.cache_key`)
+   - v1: `hash(theme_revision, scale_factor, cache_root_bounds.size, explicit_cache_key)` (implemented as `ViewCacheProps.cache_key`; currently width/height only)
    - v2+: extend toward GPUI’s `bounds/content_mask/text_style` key as those inputs become explicit at the cache boundary.
    - Helpers: `fret_ui::cache_key::{CacheKeyBuilder, text_style_key, rect_key, corners_key}` (ecosystem sugar: `CachedSubtreeProps::{cache_key_text_style, cache_key_clip_rect, cache_key_clip_rrect}`).
 4) Dependency sets:

@@ -25,6 +25,7 @@ pub(super) fn handle_timer_event<H: UiHost>(
             window: AppWindowId,
             element: crate::GlobalElementId,
             requested_focus: &'a mut Option<NodeId>,
+            notify_requested: &'a mut bool,
         }
 
         impl<H: UiHost> action::UiActionHost for TimerHookHost<'_, H> {
@@ -61,6 +62,10 @@ pub(super) fn handle_timer_event<H: UiHost>(
             fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                 self.app.next_timer_token()
             }
+
+            fn notify(&mut self, _cx: action::ActionCx) {
+                *self.notify_requested = true;
+            }
         }
 
         impl<H: UiHost> action::UiFocusActionHost for TimerHookHost<'_, H> {
@@ -81,6 +86,7 @@ pub(super) fn handle_timer_event<H: UiHost>(
             window,
             element: this.element,
             requested_focus: &mut cx.requested_focus,
+            notify_requested: &mut cx.notify_requested,
         };
         let handled = h(
             &mut host,
@@ -123,6 +129,7 @@ pub(super) fn try_key_hook<H: UiHost>(
             window: AppWindowId,
             element: crate::GlobalElementId,
             requested_focus: &'a mut Option<NodeId>,
+            notify_requested: &'a mut bool,
         }
 
         impl<H: UiHost> action::UiActionHost for KeyHookHost<'_, H> {
@@ -159,6 +166,10 @@ pub(super) fn try_key_hook<H: UiHost>(
             fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                 self.app.next_timer_token()
             }
+
+            fn notify(&mut self, _cx: action::ActionCx) {
+                *self.notify_requested = true;
+            }
         }
 
         impl<H: UiHost> action::UiFocusActionHost for KeyHookHost<'_, H> {
@@ -179,6 +190,7 @@ pub(super) fn try_key_hook<H: UiHost>(
             window,
             element: this.element,
             requested_focus: &mut cx.requested_focus,
+            notify_requested: &mut cx.notify_requested,
         };
         let handled = h(
             &mut host,

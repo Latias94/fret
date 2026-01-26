@@ -44,8 +44,9 @@ pub fn wire<H: UiHost>(
     }
 
     if has_submenu {
-        // The open-delay timer is recorded against the submenu trigger element id (the pressable),
-        // so install the timer handler on this element as well as the menu root.
+        // Submenu open/focus/close timers are emitted from submenu-trigger interactions (hover,
+        // arrow keys). Install a timer handler on the trigger element so timer routing remains
+        // stable even when the overlay root is not the timer event target.
         sub::install_timer_handler(cx, item_id, models.clone(), cfg);
 
         let models_for_hover = models.clone();

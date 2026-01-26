@@ -22,6 +22,10 @@ pub use fret_workspace as workspace;
 /// Re-export the `IconRegistry` type for app code that wants to install a custom icon pack.
 pub use fret_icons::IconRegistry;
 
+/// Re-export `ViewElements` so app code can stay on the `fret-kit` surface.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub use fret_bootstrap::ui_app_driver::ViewElements;
+
 #[cfg(feature = "workspace-shell")]
 pub mod pending_shortcut_overlay;
 pub mod workspace_menu;
@@ -58,15 +62,24 @@ pub mod prelude {
         menubar_from_runtime_with_focus_handle,
     };
 
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::ViewElements;
     pub use fret_app::App;
     pub use fret_app::Effect;
     pub use fret_core::{AppWindowId, Event, Px, SemanticsRole, UiServices};
     pub use fret_runtime::CommandId;
     pub use fret_runtime::Model;
     pub use fret_ui::element::{
-        AnyElement, AnyElementIterExt, HoverRegionProps, Length, SemanticsProps, TextProps,
+        AnyElement, AnyElementIterExt, Elements, HoverRegionProps, Length, SemanticsProps,
+        TextProps,
     };
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+    pub use fret_ui_kit::declarative::ModelWatchExt;
+    #[cfg(not(feature = "shadcn"))]
+    pub use fret_ui_kit::{
+        UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome,
+        UiSupportsLayout, ui,
+    };
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::mvu::{MessageRouter, Program as MvuProgram};
@@ -407,10 +420,7 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
 pub fn app_with_hooks<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
     configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
 ) -> Result<UiAppBuilder<S>> {
     let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
@@ -448,10 +458,7 @@ pub fn app_with_hooks<S: 'static>(
 pub fn app<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
 ) -> Result<UiAppBuilder<S>> {
     app_with_hooks(root_name, init_window, view, |d| d)
 }
@@ -461,10 +468,7 @@ pub fn app<S: 'static>(
 pub fn run_with_hooks<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
     configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
 ) -> Result<()> {
     app_with_hooks(root_name, init_window, view, configure)?
@@ -477,10 +481,7 @@ pub fn run_with_hooks<S: 'static>(
 pub fn run<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut App, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(
-        &mut fret_ui::ElementContext<'a, App>,
-        &mut S,
-    ) -> Vec<fret_ui::element::AnyElement>,
+    view: for<'a> fn(&mut fret_ui::ElementContext<'a, App>, &mut S) -> ViewElements,
 ) -> Result<()> {
     run_with_hooks(root_name, init_window, view, |d| d)
 }

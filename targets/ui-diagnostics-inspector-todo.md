@@ -82,8 +82,10 @@ Related docs:
    - Support “patch by match” (find first step where selector matches old value).
 
 3. **Sharing**
-   - Bundle compression option (zip) with stable naming.
+   - Bundle compression option (zip) with stable naming. (done: `fretboard diag pack`, plus `--include-triage`)
+   - Optional screenshot packaging for visual overlay debugging. (done: `FRET_DIAG_SCREENSHOTS=1` writes `target/fret-diag/screenshots/<bundle>/...` + `manifest.json`; `fretboard diag pack --include-screenshots` packs them; viewer can auto-select by manifest and render as an overlay background; scripts can also `capture_screenshot` and wait on `screenshots.result.json`)
    - Simple bug template: attach `bundle.json` + optional `script.json`.
+   - Offline bundle viewer: `tools/fret-bundle-viewer` (supports semantics tree, perf panels, `triage.json` export, and `.zip`/paste import).
 
 ## CI / automation strategy (open questions)
 

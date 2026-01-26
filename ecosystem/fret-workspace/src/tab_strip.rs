@@ -608,6 +608,9 @@ impl WorkspaceTabStrip {
                                                                                 acx.window,
                                                                             );
                                                                         }
+                                                                        host.prevent_default(
+                                                                            fret_runtime::DefaultAction::FocusOnPointerDown,
+                                                                        );
                                                                         return PressablePointerDownResult::SkipDefaultAndStopPropagation;
                                                                     }
                                                                     MouseButton::Right => {
@@ -627,6 +630,9 @@ impl WorkspaceTabStrip {
                                                                         );
                                                                         host.request_redraw(
                                                                             acx.window,
+                                                                        );
+                                                                        host.prevent_default(
+                                                                            fret_runtime::DefaultAction::FocusOnPointerDown,
                                                                         );
                                                                         return PressablePointerDownResult::SkipDefault;
                                                                     }

@@ -1057,6 +1057,65 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
 }
 
 #[test]
+fn declarative_command_availability_hooks_participate_in_dispatch_path_queries() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "command-availability-hooks",
+        |cx| {
+            vec![
+                cx.container(crate::element::ContainerProps::default(), |cx| {
+                    let id = cx.root_id();
+                    cx.command_on_command_availability_for(
+                        id,
+                        Arc::new(|_host, acx, command| {
+                            if command.as_str() != "edit.copy" {
+                                return crate::widget::CommandAvailability::NotHandled;
+                            }
+                            if !acx.focus_in_subtree {
+                                return crate::widget::CommandAvailability::NotHandled;
+                            }
+                            crate::widget::CommandAvailability::Available
+                        }),
+                    );
+                    vec![cx.text("child")]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let container_node = ui.children(root)[0];
+    let child_node = ui.children(container_node)[0];
+    ui.set_focus(Some(child_node));
+
+    let copy = CommandId::from("edit.copy");
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be available via declarative availability hook"
+    );
+
+    ui.set_focus(None);
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be unavailable when no dispatch path exists"
+    );
+}
+
+#[test]
 fn text_input_cut_updates_model_and_availability() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());
@@ -1178,6 +1237,190 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
             .iter()
             .any(|e| matches!(e, fret_runtime::Effect::ClipboardGetText { .. })),
         "expected text.paste to request ClipboardGetText"
+    );
+}
+
+#[test]
+fn text_input_select_all_is_blocked_when_empty() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-select-all-empty",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let select_all = CommandId::from("text.select_all");
+    let edit_select_all = CommandId::from("edit.select_all");
+    let clear = CommandId::from("text.clear");
+    let edit_copy = CommandId::from("edit.copy");
+    let edit_cut = CommandId::from("edit.cut");
+    let unknown = CommandId::from("text.unknown");
+
+    assert!(
+        !ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_select_all),
+        "expected edit.select_all to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected text.clear to be unavailable for empty text input"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_copy),
+        "expected edit.copy to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_cut),
+        "expected edit.cut to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &unknown),
+        "expected unknown text.* commands to be NotHandled for availability"
+    );
+}
+
+#[test]
+fn text_area_select_all_is_blocked_when_empty() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-select-all-empty",
+        |cx| vec![cx.text_area(crate::element::TextAreaProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let area_node = ui.children(root)[0];
+    ui.set_focus(Some(area_node));
+
+    let select_all = CommandId::from("text.select_all");
+    let edit_select_all = CommandId::from("edit.select_all");
+    let clear = CommandId::from("text.clear");
+    let edit_copy = CommandId::from("edit.copy");
+    let edit_cut = CommandId::from("edit.cut");
+    let unknown = CommandId::from("text.unknown");
+
+    assert!(
+        !ui.is_command_available(&mut app, &select_all),
+        "expected text.select_all to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_select_all),
+        "expected edit.select_all to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &clear),
+        "expected text.clear to be unavailable for empty text area"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_copy),
+        "expected edit.copy to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &edit_cut),
+        "expected edit.cut to be unavailable without a selection"
+    );
+    assert!(
+        !ui.is_command_available(&mut app, &unknown),
+        "expected unknown text.* commands to be NotHandled for availability"
+    );
+}
+
+#[test]
+fn text_input_supports_edit_select_all_and_copy() {
+    let mut app = TestHost::new();
+    let mut caps = fret_runtime::PlatformCapabilities::default();
+    caps.clipboard.text = true;
+    app.set_global(caps);
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-edit-select-all-copy",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let select_all = CommandId::from("edit.select_all");
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &select_all),
+        "expected edit.select_all to be handled by text input"
+    );
+
+    let copy = CommandId::from("edit.copy");
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be available after select_all"
+    );
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &copy),
+        "expected edit.copy to be handled by text input"
+    );
+    assert!(
+        app.take_effects().iter().any(
+            |e| matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "hello")
+        ),
+        "expected edit.copy to emit ClipboardSetText for the selected text"
     );
 }
 

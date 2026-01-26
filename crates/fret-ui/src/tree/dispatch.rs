@@ -286,8 +286,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_with_source_and_detail(
                 notify_target,
                 Invalidation::Paint,
-                UiDebugInvalidationSource::Notify,
-                UiDebugInvalidationDetail::ScrollHandle,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
             );
         }
         *needs_redraw = true;

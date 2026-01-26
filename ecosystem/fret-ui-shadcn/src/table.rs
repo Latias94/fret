@@ -4,7 +4,7 @@ use fret_core::geometry::Edges;
 use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
+    AnyElement, CrossAlign, Elements, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -321,13 +321,18 @@ impl TableRow {
                 };
 
                 let cells = assign_grid_column_starts(row_children.clone());
-                vec![cx.grid(grid, move |_cx| cells)]
+                vec![cx.grid(grid, move |_cx| cells.clone())]
             })]
         })
     }
 }
 
-fn assign_grid_column_starts(mut cells: Vec<AnyElement>) -> Vec<AnyElement> {
+fn assign_grid_column_starts<I>(cells: I) -> Elements
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    let mut cells: Vec<AnyElement> = cells.into_iter().collect();
+
     fn grid_span(cell: &AnyElement) -> u16 {
         match &cell.kind {
             fret_ui::element::ElementKind::Container(props) => {
@@ -365,7 +370,7 @@ fn assign_grid_column_starts(mut cells: Vec<AnyElement>) -> Vec<AnyElement> {
         col = col.saturating_add(span as i16);
     }
 
-    cells
+    cells.into()
 }
 
 /// shadcn/ui `TableHead` (`th`).

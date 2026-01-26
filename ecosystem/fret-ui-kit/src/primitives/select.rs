@@ -1448,6 +1448,8 @@ mod tests {
 
         fn release_pointer_capture(&mut self) {}
 
+        fn prevent_default(&mut self, _action: fret_runtime::DefaultAction) {}
+
         fn set_cursor_icon(&mut self, _icon: fret_core::CursorIcon) {}
     }
 

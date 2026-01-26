@@ -37,7 +37,9 @@ pub use names::{
 };
 pub use render::render;
 pub use requests::{
-    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
+    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastButtonStyle,
+    ToastIconButtonStyle, ToastLayerRequest, ToastLayerStyle, ToastTextStyle, ToastVariantColors,
+    ToastVariantPalette, TooltipRequest,
 };
 pub use toast::{
     DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX, DEFAULT_SWIPE_MAX_DRAG_PX,

@@ -4,6 +4,7 @@ pub mod commands;
 pub mod docking_settings;
 pub mod drag;
 pub mod effect;
+pub mod execution;
 pub mod font_bootstrap;
 pub mod font_catalog;
 pub mod font_catalog_cache;
@@ -23,10 +24,12 @@ pub mod window_command_enabled;
 pub mod window_command_gating;
 pub mod window_input_arbitration;
 pub mod window_input_context;
+pub mod window_menu_bar_focus;
 pub mod window_metrics;
 
 pub use capabilities::{
-    ExternalDragPayloadKind, ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
+    ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
+    ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
 };
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
@@ -36,6 +39,10 @@ pub use docking_settings::{
 };
 pub use drag::{DRAG_KIND_DOCK_PANEL, DragKindId, DragPhase, DragSession, DragSessionId};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+pub use execution::{
+    DispatchPriority, Dispatcher, DispatcherHandle, InboxDrain, InboxDrainHost, InboxDrainRegistry,
+    Runnable,
+};
 pub use font_bootstrap::{FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font_catalog_update};
 pub use font_catalog::{FontCatalog, TextFontStackKey};
 pub use font_catalog_cache::FontCatalogCache;
@@ -72,8 +79,8 @@ pub use window_command_availability::{
 };
 pub use window_command_enabled::WindowCommandEnabledService;
 pub use window_command_gating::{
-    WindowCommandGatingService, WindowCommandGatingSnapshot, best_effort_snapshot_for_window,
-    best_effort_snapshot_for_window_with_input_ctx_fallback,
+    WindowCommandGatingHandle, WindowCommandGatingService, WindowCommandGatingSnapshot,
+    best_effort_snapshot_for_window, best_effort_snapshot_for_window_with_input_ctx_fallback,
     command_is_enabled_for_window_with_input_ctx_fallback, snapshot_for_window,
     snapshot_for_window_with_input_ctx_fallback,
 };
@@ -81,4 +88,5 @@ pub use window_input_arbitration::{
     WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
 };
 pub use window_input_context::WindowInputContextService;
+pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;

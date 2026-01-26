@@ -62,6 +62,20 @@ impl EffectSink for App {
     }
 }
 
+impl fret_runtime::InboxDrainHost for App {
+    fn request_redraw(&mut self, window: AppWindowId) {
+        App::request_redraw(self, window);
+    }
+
+    fn push_effect(&mut self, effect: Effect) {
+        App::push_effect(self, effect);
+    }
+
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+        App::models_mut(self)
+    }
+}
+
 impl TimeHost for App {
     fn tick_id(&self) -> fret_runtime::TickId {
         App::tick_id(self)

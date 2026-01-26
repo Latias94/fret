@@ -817,7 +817,6 @@ impl ElementHostWidget {
                 }
 
                 cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
-
                 let children_transform = cx.children_render_transform;
                 if let Some(transform) = children_transform {
                     cx.scene.push(SceneOp::PushTransform { transform });

@@ -33,6 +33,7 @@ Related ADRs:
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
 
    - `FRET_DIAG=1`
+   - (Optional) `FRET_DIAG_SCREENSHOTS=1` to request a GPU readback screenshot alongside each bundle dump (written under `target/fret-diag/screenshots/<bundle_timestamp>/` with a `manifest.json`).
 
 2. Reproduce the issue.
 
@@ -50,12 +51,37 @@ By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-dia
 ## Optional: dump a frame screenshot alongside the bundle
 
 If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
-enable bundle screenshots:
+enable per-bundle screenshots:
 
 - `FRET_DIAG_SCREENSHOT=1`
 
 When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
 `bundle.json`).
+
+## Offline bundle viewer (optional)
+
+This repo includes an offline web viewer for `bundle.json` at `tools/fret-bundle-viewer`.
+
+```powershell
+$env:HTTP_PROXY='http://127.0.0.1:10809'
+$env:HTTPS_PROXY='http://127.0.0.1:10809'
+
+pnpm -C tools/fret-bundle-viewer install
+pnpm -C tools/fret-bundle-viewer dev
+```
+
+Workflow tip:
+
+- Drag the `bundle.json` file from `target/fret-diag/.../bundle.json` into the viewer (or use the file picker).
+- You can also open a `.zip` that contains a `bundle.json` anywhere inside it (handy for sharing a full repro directory).
+- To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
+- To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
+- The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
+- To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json>`
+- To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
+- To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
+- If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
+- Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
 
 ## Quick Start (scripted repro)
 
@@ -78,7 +104,8 @@ When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory
     { "type": "type_text", "text": "hello" },
     { "type": "press_key", "key": "enter" },
     { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "role_and_name", "role": "text_field", "name": "Search" } } },
-    { "type": "capture_bundle", "label": "after-typing" }
+    { "type": "capture_bundle", "label": "after-typing" },
+    { "type": "capture_screenshot", "label": "after-typing" }
   ]
 }
 ```
@@ -90,6 +117,7 @@ When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory
    Or run it and wait for a pass/fail result (CI-friendly):
 
    - `cargo run -p fretboard -- diag run .\\script.json`
+   - To also pack the most recent bundle (plus optional artifacts) into a shareable `.zip`: `cargo run -p fretboard -- diag run .\\script.json --pack --include-all`
 
    Or run a pre-defined suite (the app must be running):
 
@@ -264,6 +292,16 @@ Script harness:
 - `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
 
+Screenshot capture:
+
+- `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
+- `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
+- `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
+- `FRET_DIAG_SCREENSHOT_RESULT_PATH=...`: screenshot completion log JSON path (default `<dir>/screenshots.result.json`).
+- `FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH=...`: screenshot completion trigger file (default `<dir>/screenshots.result.touch`).
+
+The screenshot completion log is append-only (bounded) and includes a `request_id` that scripted steps can wait on.
+
 Picking:
 
 - `FRET_DIAG_PICK_TRIGGER_PATH=...`: pick trigger file (default `<dir>/pick.touch`).
@@ -292,6 +330,7 @@ Supported selectors (v1 MVP):
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`)
 - `move_pointer`
+- `drag_pointer` (optional `button`, `steps`)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
@@ -301,6 +340,16 @@ Supported selectors (v1 MVP):
 - `wait_until`
 - `assert`
 - `capture_bundle`
+- `capture_screenshot` (optional `label`, optional `timeout_frames`)
+
+Notes:
+
+- `capture_bundle` always writes a new `bundle.json` directory. When `FRET_DIAG_SCREENSHOTS=1`, the step waits until the corresponding screenshot has been written (so downstream automation can rely on it deterministically).
+- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`). It also waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness will create one first.
+
+Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
+useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
+diagnostics runs, and is ignored unless a matching cross-window drag session is active.
 
 Example: right click a context menu trigger
 
@@ -357,7 +406,8 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
-- `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}`
+ - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
+ - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}` (target bounds must be fully contained within the window, optionally padded inward)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

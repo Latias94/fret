@@ -4,7 +4,8 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SpacerProps,
+    AnyElement, ContainerProps, Elements, LayoutStyle, Length, PressableA11y, PressableProps,
+    SpacerProps,
 };
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -67,8 +68,8 @@ impl<H: UiHost> TreeRowRenderer<H> for DefaultTreeRowRenderer {
         cx: &mut ElementContext<'_, H>,
         entry: &TreeEntry,
         _state: TreeRowState,
-    ) -> Vec<AnyElement> {
-        vec![cx.text(entry.label.as_ref())]
+    ) -> Elements {
+        vec![cx.text(entry.label.as_ref())].into()
     }
 }
 

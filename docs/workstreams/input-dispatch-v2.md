@@ -1,6 +1,8 @@
 # Input Dispatch v2 Workstream (Phases, Default Actions, and Action Availability)
 
 This document is a **workstream note** that complements ADR 1157 (`docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`).
+
+- TODO tracker (keep updated during implementation): `docs/workstreams/input-dispatch-v2-todo.md`
 It captures the concrete “editor-grade” ergonomics goals, cross-crate integration seams, and the remaining decision points
 needed to avoid a large late-stage rewrite.
 
@@ -37,6 +39,9 @@ Preview (Observer)  ->  Capture  ->  Bubble  ->  DefaultActions
 - `prevent_default(DefaultAction)`: suppress a specific runtime default behavior while still allowing propagation.
 
 This keeps policy-heavy crates out of runtime internals while still enabling editor-grade overrides.
+
+Implementation note: component-owned pointer hooks can call `host.prevent_default(DefaultAction::FocusOnPointerDown)`
+to suppress focus shifts without blocking propagation (avoids coupling to widget-private `SkipDefault` protocols).
 
 ### 3) Action availability is a pure query with tri-state semantics
 
@@ -92,6 +97,49 @@ shortcuts scoped to itself via its own keymap/handlers.
 
 This requires a stable, explicit integration seam (either a dedicated service snapshot, or a “command target” concept).
 
+Implementation notes:
+
+- `WindowCommandGatingService` supports a per-window override stack so nested overlays can publish gating snapshots
+  without clobbering each other.
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs`
+- The ui-app command palette pushes a snapshot on open and pops it when closed (including “close via UI” paths).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+
+### Overlay + Pointer Occlusion (P0, ui-kit policy)
+
+See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed overlay arbitration plan.
+
+- Popovers use `PointerOcclusion::BlockMouseExceptScroll` for Radix `disableOutsidePointerEvents`.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- Dock-drag overlay hygiene does not assume `PointerId(0)`; it scopes to active drag sessions (ADR 0072).
+  - Evidence: `crates/fret-runtime/src/ui_host.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- Desktop runner internal-drag routing uses the active drag session's `PointerId` for cross-window docking tear-off.
+  - Evidence: `crates/fret-launch/src/runner/desktop/{mod.rs,app_handler.rs}`
+- Policy normalization: factor non-modal dismissible overlay input policy (outside-press branches, consume-outside flags,
+  and pointer occlusion) into shared helpers to keep `present` vs `interactive` invariants consistent across overlays.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- Policy normalization: tooltip + hover overlay layers respect `present` vs `interactive` (close
+  transitions stay painted but become click-through / observer-inert), and tooltips only request
+  outside-press / pointer-move observers when explicitly opted in.
+  - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs`,
+    `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
+    `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_by_default`,
+    `tooltip_does_not_request_observers_while_closing`, `hover_overlay_is_click_through_while_closing`)
+- Pointer capture hides hover overlays and tooltips in the same window to avoid showing incidental
+  overlays while drags/capture sessions are active.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
+    `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`pointer_capture_hides_hover_overlays_in_same_window`,
+    `pointer_capture_hides_tooltips_in_same_window`)
+- Overlay request caching: hover overlays + tooltips remain per-frame and are not stored/synthesized
+  from cached declarations (avoids stale incidental overlays and removes unused cache growth).
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/{frame.rs,render.rs,state.rs}`
+- Menu ergonomics: ensure submenu timers (open/close/focus delay) and safe-hover pointer-move outcomes
+  are routed consistently by installing timer + pointer-move handlers on the submenu trigger path.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/{root.rs,sub_trigger.rs}`
+- Menu open modality: pointer-open focuses content and prevents entry focus; keyboard-open allows entry focus (Radix `onOpenAutoFocus` outcomes).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`,
+    `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}`
+
 ## Compatibility with “per-frame rebuilt” UI
 
 Fret can migrate from a retained `UiTree` to a per-frame rebuilt element tree over time, but this contract remains valid
@@ -103,10 +151,13 @@ That keeps runner/menus/palette gating consistent even as the internal authoring
 
 ## Next steps (recommended order)
 
+See the TODO tracker for current status and evidence: `docs/workstreams/input-dispatch-v2-todo.md`.
+
+Overlay arbitration follow-ups are tracked separately in `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`.
+
 1) Lock the tri-state semantics in docs and tests (availability snapshot uses `None` for unknown).
 2) Ensure command palette gating uses `WindowCommandGatingSnapshot` consistently across all entry builders.
 3) Promote a single “frozen gating snapshot while overlay is open” pattern that other overlays can reuse.
 4) Extend availability coverage for core text commands (`text.copy/cut/paste/select_all/clear/delete*`) across
    text widgets and read-only selection surfaces.
 5) Expand menu/OS runner gating to use the same aggregated snapshot (no divergent heuristics).
-

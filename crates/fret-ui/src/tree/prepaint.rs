@@ -99,7 +99,7 @@ impl<H: UiHost> UiTree<H> {
             .map(|layer| self.layers[layer].root)
             .collect();
         for root in roots {
-            self.prepaint_interaction_node(root, scale_factor, theme_revision);
+            self.prepaint_interaction_node(app, root, scale_factor, theme_revision);
         }
 
         self.interaction_cache.finish_frame();
@@ -115,26 +115,64 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn prepaint_interaction_node(&mut self, node: NodeId, scale_factor: f32, theme_revision: u64) {
+    fn prepaint_interaction_node(
+        &mut self,
+        app: &mut H,
+        node: NodeId,
+        scale_factor: f32,
+        theme_revision: u64,
+    ) {
         if self.debug_enabled {
             self.debug_stats.prepaint_nodes_visited =
                 self.debug_stats.prepaint_nodes_visited.saturating_add(1);
         }
 
-        let (bounds, invalidation, is_view_cache_root, prev_cache) = match self.nodes.get(node) {
-            Some(n) => (
-                n.bounds,
-                n.invalidation,
-                self.view_cache_active() && n.view_cache.enabled,
-                n.interaction_cache,
-            ),
-            None => return,
-        };
+        let (bounds, invalidation, is_view_cache_root, prev_cache, is_manual_cache_root) =
+            match self.nodes.get(node) {
+                Some(n) => (
+                    n.bounds,
+                    n.invalidation,
+                    self.view_cache_active() && n.view_cache.enabled,
+                    n.interaction_cache,
+                    n.view_cache.enabled && n.element.is_none(),
+                ),
+                None => return,
+            };
 
         let child_transform = self
             .node_children_render_transform(node)
             .unwrap_or(Transform2D::IDENTITY);
         let key = PaintCacheKey::new(bounds, scale_factor, theme_revision, child_transform);
+
+        if is_view_cache_root && is_manual_cache_root {
+            let contained_layout = self
+                .nodes
+                .get(node)
+                .map(|n| n.view_cache.contained_layout)
+                .unwrap_or(false);
+            self.debug_record_view_cache_root(
+                node,
+                self.should_reuse_view_cache_node(node),
+                contained_layout,
+                crate::tree::UiDebugCacheRootReuseReason::ManualCacheRoot,
+            );
+        }
+
+        if is_view_cache_root {
+            let window = self.window;
+            let sf = scale_factor;
+            self.with_widget_mut(node, |widget, tree| {
+                let mut cx = crate::widget::PrepaintCx {
+                    app,
+                    tree,
+                    node,
+                    window,
+                    bounds,
+                    scale_factor: sf,
+                };
+                widget.prepaint(&mut cx);
+            });
+        }
 
         let can_reuse =
             is_view_cache_root && self.should_reuse_view_cache_node(node) && !invalidation.hit_test;
@@ -226,7 +264,7 @@ impl<H: UiHost> UiTree<H> {
             children_buf.set(children);
         }
         for &child in children_buf.as_slice() {
-            self.prepaint_interaction_node(child, scale_factor, theme_revision);
+            self.prepaint_interaction_node(app, child, scale_factor, theme_revision);
         }
 
         let end = self.interaction_cache.records.len();

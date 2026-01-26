@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+use zip::write::FileOptions;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 enum BundleStatsSort {
     #[default]
@@ -31,6 +33,12 @@ impl BundleStatsSort {
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
+    let mut pack_out: Option<PathBuf> = None;
+    let mut pack_include_root_artifacts: bool = false;
+    let mut pack_include_triage: bool = false;
+    let mut pack_include_screenshots: bool = false;
+    let mut pack_after_run: bool = false;
+    let mut triage_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
     let mut script_result_path: Option<PathBuf> = None;
@@ -54,7 +62,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_wheel_scroll_test_id: Option<String> = None;
+    let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut compare_eps_px: f32 = 0.5;
@@ -84,6 +94,36 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --trigger-path".to_string());
                 };
                 trigger_path = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--pack-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --pack-out".to_string());
+                };
+                pack_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--include-root-artifacts" => {
+                pack_include_root_artifacts = true;
+                i += 1;
+            }
+            "--include-all" => {
+                pack_include_root_artifacts = true;
+                pack_include_triage = true;
+                pack_include_screenshots = true;
+                i += 1;
+            }
+            "--include-triage" => {
+                pack_include_triage = true;
+                i += 1;
+            }
+            "--include-screenshots" => {
+                pack_include_screenshots = true;
+                i += 1;
+            }
+            "--pack" => {
+                pack_after_run = true;
                 i += 1;
             }
             "--script-path" => {
@@ -163,7 +203,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let Some(v) = args.get(i).cloned() else {
                     return Err("missing value for --out".to_string());
                 };
-                pick_apply_out = Some(PathBuf::from(v));
+                let p = PathBuf::from(v);
+                pick_apply_out = Some(p.clone());
+                triage_out = Some(p);
                 i += 1;
             }
             "--inspect-path" => {
@@ -277,6 +319,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_wheel_scroll_test_id = Some(v);
                 i += 1;
             }
+            "--check-drag-cache-root-paint-only" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-drag-cache-root-paint-only".to_string());
+                };
+                check_drag_cache_root_paint_only_test_id = Some(v);
+                i += 1;
+            }
             "--check-hover-layout" => {
                 check_hover_layout_max = Some(0);
                 i += 1;
@@ -290,6 +340,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u32>()
                         .map_err(|_| "invalid value for --check-hover-layout-max".to_string())?,
                 );
+                i += 1;
+            }
+            "--check-gc-sweep-liveness" => {
+                check_gc_sweep_liveness = true;
                 i += 1;
             }
             "--check-view-cache-reuse-min" => {
@@ -527,6 +581,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
     match sub.as_str() {
         "path" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -534,6 +591,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "poke" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -542,6 +602,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "latest" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -556,7 +619,102 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 resolved_out_dir.display()
             ))
         }
+        "pack" => {
+            if rest.len() > 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let bundle_dir = match rest.first() {
+                Some(src) => {
+                    let src = resolve_path(&workspace_root, PathBuf::from(src));
+                    resolve_bundle_root_dir(&src)?
+                }
+                None => read_latest_pointer(&resolved_out_dir)
+                    .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                    .ok_or_else(|| {
+                        format!(
+                            "no diagnostics bundle found under {} (try: fretboard diag pack ./target/fret-diag/<timestamp>)",
+                            resolved_out_dir.display()
+                        )
+                    })?,
+            };
+
+            let bundle_dir = resolve_bundle_root_dir(&bundle_dir)?;
+            let out = pack_out
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
+
+            let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                resolved_out_dir.clone()
+            } else {
+                bundle_dir
+                    .parent()
+                    .unwrap_or(&resolved_out_dir)
+                    .to_path_buf()
+            };
+
+            pack_bundle_dir_to_zip(
+                &bundle_dir,
+                &out,
+                pack_include_root_artifacts,
+                pack_include_triage,
+                pack_include_screenshots,
+                &artifacts_root,
+                stats_top,
+                sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                warmup_frames,
+            )?;
+            println!("{}", out.display());
+            Ok(())
+        }
+        "triage" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
+            let Some(src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
+                        .to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+
+            let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let bundle_path = resolve_bundle_json_path(&src);
+            let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+
+            let report = bundle_stats_from_path(
+                &bundle_path,
+                stats_top,
+                sort,
+                BundleStatsOptions { warmup_frames },
+            )?;
+            let payload = triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+
+            let out = triage_out
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| default_triage_out_path(&bundle_path));
+
+            if let Some(parent) = out.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+
+            if stats_json {
+                println!("{pretty}");
+            } else {
+                println!("{}", out.display());
+            }
+            Ok(())
+        }
         "script" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing script path (try: fretboard diag script ./script.json)".to_string(),
@@ -582,6 +740,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
             }
 
+            let wants_pack = pack_after_run
+                || pack_out.is_some()
+                || pack_include_root_artifacts
+                || pack_include_triage
+                || pack_include_screenshots;
+
+            let mut pack_defaults = (
+                pack_include_root_artifacts,
+                pack_include_triage,
+                pack_include_screenshots,
+            );
+            if pack_after_run && !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
+                pack_defaults = (true, true, true);
+            }
+
             let src = resolve_path(&workspace_root, PathBuf::from(src));
             let mut child = maybe_launch_demo(
                 &launch,
@@ -590,6 +763,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
+                pack_defaults.2,
                 timeout_ms,
                 poll_ms,
             )?;
@@ -619,7 +793,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if result.stage.as_deref() == Some("passed") {
                 if check_stale_paint_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
+                    || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
+                    || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                 {
@@ -639,17 +815,78 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
                         warmup_frames,
                     )?;
                 }
             }
+
+            if wants_pack {
+                let mut bundle_path = wait_for_bundle_json_from_script_result(
+                    &resolved_out_dir,
+                    &result,
+                    timeout_ms,
+                    poll_ms,
+                );
+                if bundle_path.is_none() {
+                    let _ = touch(&resolved_trigger_path);
+                    bundle_path = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    );
+                }
+
+                if let Some(bundle_path) = bundle_path {
+                    let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+                    let out = pack_out
+                        .clone()
+                        .map(|p| resolve_path(&workspace_root, p))
+                        .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
+
+                    let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                        resolved_out_dir.clone()
+                    } else {
+                        bundle_dir
+                            .parent()
+                            .unwrap_or(&resolved_out_dir)
+                            .to_path_buf()
+                    };
+
+                    if let Err(err) = pack_bundle_dir_to_zip(
+                        &bundle_dir,
+                        &out,
+                        pack_defaults.0,
+                        pack_defaults.1,
+                        pack_defaults.2,
+                        &artifacts_root,
+                        stats_top,
+                        sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                        warmup_frames,
+                    ) {
+                        eprintln!("PACK-ERROR {err}");
+                    } else {
+                        println!("PACK {}", out.display());
+                    }
+                } else {
+                    eprintln!(
+                        "PACK-ERROR no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
+                    );
+                }
+            }
+
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             report_result_and_exit(&result);
         }
         "suite" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if rest.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag suite ui-gallery)"
@@ -677,6 +914,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    false,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -692,6 +930,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &resolved_out_dir,
                         &resolved_ready_path,
                         &resolved_exit_path,
+                        false,
                         timeout_ms,
                         poll_ms,
                     )?;
@@ -759,7 +998,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if result.stage.as_deref() == Some("passed")
                     && (check_stale_paint_test_id.is_some()
                         || check_wheel_scroll_test_id.is_some()
+                        || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
+                        || check_gc_sweep_liveness
                         || check_view_cache_reuse_min.is_some()
                         || check_overlay_synthesis_min.is_some())
                 {
@@ -780,7 +1021,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
                         warmup_frames,
@@ -796,6 +1039,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             std::process::exit(0);
         }
         "perf" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if rest.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag perf ui-gallery)"
@@ -832,6 +1078,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    false,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -853,6 +1100,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             &resolved_out_dir,
                             &resolved_ready_path,
                             &resolved_exit_path,
+                            false,
                             timeout_ms,
                             poll_ms,
                         )?;
@@ -1046,6 +1294,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             &resolved_out_dir,
                             &resolved_ready_path,
                             &resolved_exit_path,
+                            false,
                             timeout_ms,
                             poll_ms,
                         )?;
@@ -1394,8 +1643,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
                 check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
             }
+            if let Some(test_id) = check_drag_cache_root_paint_only_test_id.as_deref() {
+                check_bundle_for_drag_cache_root_paint_only(&bundle_path, test_id, warmup_frames)?;
+            }
             if let Some(max_allowed) = check_hover_layout_max {
                 check_report_for_hover_layout_invalidations(&report, max_allowed)?;
+            }
+            if check_gc_sweep_liveness {
+                check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
+            }
+            if let Some(min) = check_view_cache_reuse_min
+                && min > 0
+            {
+                check_bundle_for_view_cache_reuse_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
+            if let Some(min) = check_overlay_synthesis_min
+                && min > 0
+            {
+                check_bundle_for_overlay_synthesis_min(bundle_path.as_path(), min, warmup_frames)?;
             }
             Ok(())
         }
@@ -1753,6 +2018,371 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     }
 }
 
+fn resolve_bundle_root_dir(path: &Path) -> Result<PathBuf, String> {
+    if path.is_dir() {
+        return Ok(path.to_path_buf());
+    }
+    let Some(parent) = path.parent() else {
+        return Err(format!("invalid bundle path: {}", path.display()));
+    };
+    Ok(parent.to_path_buf())
+}
+
+fn default_pack_out_path(out_dir: &Path, bundle_dir: &Path) -> PathBuf {
+    let name = bundle_dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+    if bundle_dir.starts_with(out_dir) {
+        out_dir.join("share").join(format!("{name}.zip"))
+    } else {
+        bundle_dir.with_extension("zip")
+    }
+}
+
+fn default_triage_out_path(bundle_path: &Path) -> PathBuf {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    dir.join("triage.json")
+}
+
+fn pack_bundle_dir_to_zip(
+    bundle_dir: &Path,
+    out_path: &Path,
+    include_root_artifacts: bool,
+    include_triage: bool,
+    include_screenshots: bool,
+    artifacts_root: &Path,
+    stats_top: usize,
+    sort: BundleStatsSort,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    if !bundle_dir.is_dir() {
+        return Err(format!(
+            "bundle_dir is not a directory: {}",
+            bundle_dir.display()
+        ));
+    }
+
+    let bundle_json = bundle_dir.join("bundle.json");
+    if !bundle_json.is_file() {
+        return Err(format!(
+            "bundle_dir does not contain bundle.json: {}",
+            bundle_dir.display()
+        ));
+    }
+
+    if let Some(parent) = out_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let bundle_name = bundle_dir
+        .file_name()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("bundle");
+
+    let file = std::fs::File::create(out_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+
+    zip_add_dir(
+        &mut zip,
+        bundle_dir,
+        bundle_dir,
+        bundle_name,
+        out_path,
+        options,
+    )?;
+
+    if include_root_artifacts {
+        let root_prefix = format!("{bundle_name}/_root");
+        zip_add_root_artifacts(&mut zip, artifacts_root, &root_prefix, options)?;
+    }
+
+    if include_screenshots {
+        let screenshots_dir = artifacts_root.join("screenshots").join(bundle_name);
+        if screenshots_dir.is_dir() {
+            let screenshots_prefix = format!("{bundle_name}/_root/screenshots");
+            zip_add_screenshots(&mut zip, &screenshots_dir, &screenshots_prefix, options)?;
+        }
+    }
+
+    if include_triage {
+        use std::io::Write;
+
+        let report = bundle_stats_from_path(
+            &bundle_json,
+            stats_top,
+            sort,
+            BundleStatsOptions { warmup_frames },
+        )?;
+        let payload = triage_json_from_stats(&bundle_json, &report, sort, warmup_frames);
+        let bytes = serde_json::to_vec_pretty(&payload).map_err(|e| e.to_string())?;
+        let dst = format!("{bundle_name}/_root/triage.json");
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        zip.write_all(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn triage_json_from_stats(
+    bundle_path: &Path,
+    report: &BundleStatsReport,
+    sort: BundleStatsSort,
+    warmup_frames: u64,
+) -> serde_json::Value {
+    use serde_json::json;
+
+    let generated_unix_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis() as u64);
+
+    let file_size_bytes = std::fs::metadata(bundle_path).ok().map(|m| m.len());
+
+    let worst = report.top.first().map(|row| {
+        json!({
+            "window": row.window,
+            "tick_id": row.tick_id,
+            "frame_id": row.frame_id,
+            "timestamp_unix_ms": row.timestamp_unix_ms,
+            "total_time_us": row.total_time_us,
+            "layout_time_us": row.layout_time_us,
+            "prepaint_time_us": row.prepaint_time_us,
+            "paint_time_us": row.paint_time_us,
+            "invalidation_walk_calls": row.invalidation_walk_calls,
+            "invalidation_walk_nodes": row.invalidation_walk_nodes,
+            "cache_roots": row.cache_roots,
+            "cache_roots_reused": row.cache_roots_reused,
+            "cache_replayed_ops": row.cache_replayed_ops,
+            "top_invalidation_walks": row.top_invalidation_walks.iter().take(10).map(|w| {
+                json!({
+                    "root_node": w.root_node,
+                    "root_element": w.root_element,
+                    "walked_nodes": w.walked_nodes,
+                    "kind": w.kind,
+                    "source": w.source,
+                    "detail": w.detail,
+                    "truncated_at": w.truncated_at,
+                    "root_role": w.root_role,
+                    "root_test_id": w.root_test_id,
+                })
+            }).collect::<Vec<_>>(),
+            "top_cache_roots": row.top_cache_roots.iter().take(10).map(|r| {
+                json!({
+                    "root_node": r.root_node,
+                    "element": r.element,
+                    "reused": r.reused,
+                    "contained_layout": r.contained_layout,
+                    "paint_replayed_ops": r.paint_replayed_ops,
+                    "reuse_reason": r.reuse_reason,
+                    "root_role": r.root_role,
+                    "root_test_id": r.root_test_id,
+                })
+            }).collect::<Vec<_>>(),
+            "top_layout_engine_solves": row.top_layout_engine_solves.iter().take(4).map(|s| {
+                json!({
+                    "root_node": s.root_node,
+                    "solve_time_us": s.solve_time_us,
+                    "measure_calls": s.measure_calls,
+                    "measure_cache_hits": s.measure_cache_hits,
+                    "measure_time_us": s.measure_time_us,
+                    "root_role": s.root_role,
+                    "root_test_id": s.root_test_id,
+                    "top_measures": s.top_measures.iter().take(10).map(|m| {
+                        json!({
+                            "node": m.node,
+                            "measure_time_us": m.measure_time_us,
+                            "calls": m.calls,
+                            "cache_hits": m.cache_hits,
+                            "element": m.element,
+                            "element_kind": m.element_kind,
+                            "role": m.role,
+                            "test_id": m.test_id,
+                        })
+                    }).collect::<Vec<_>>(),
+                })
+            }).collect::<Vec<_>>(),
+        })
+    });
+
+    json!({
+        "schema_version": 1,
+        "generated_unix_ms": generated_unix_ms,
+        "bundle": {
+            "bundle_path": bundle_path.display().to_string(),
+            "bundle_dir": bundle_path.parent().map(|p| p.display().to_string()),
+            "bundle_file_size_bytes": file_size_bytes,
+        },
+        "params": {
+            "sort": sort.as_str(),
+            "top": report.top.len(),
+            "warmup_frames": warmup_frames,
+        },
+        "stats": report.to_json(),
+        "worst": worst,
+    })
+}
+
+fn zip_add_root_artifacts(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    artifacts_root: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    let candidates = [
+        "script.json",
+        "script.result.json",
+        "pick.result.json",
+        "screenshots.result.json",
+        "triage.json",
+        "picked.script.json",
+    ];
+
+    for name in candidates {
+        let src = artifacts_root.join(name);
+        if !src.is_file() {
+            continue;
+        }
+        let dst = format!("{zip_prefix}/{name}");
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn zip_add_screenshots(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    zip_add_screenshot_dir(zip, dir, dir, zip_prefix, options)
+}
+
+fn zip_add_screenshot_dir(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    base_dir: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    let mut entries: Vec<std::fs::DirEntry> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+        if meta.file_type().is_symlink() {
+            continue;
+        }
+
+        if meta.is_dir() {
+            zip_add_screenshot_dir(zip, &path, base_dir, zip_prefix, options)?;
+            continue;
+        }
+
+        if !meta.is_file() {
+            continue;
+        }
+
+        let name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_default();
+
+        // Keep this conservative to avoid exploding zip sizes accidentally.
+        let should_include = matches!(ext.as_str(), "png") || name == "manifest.json";
+        if !should_include {
+            continue;
+        }
+
+        let rel = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "failed to compute zip relative path".to_string())?;
+
+        let dst = format!("{}/{}", zip_prefix, zip_name(rel));
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn zip_add_dir(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    base_dir: &Path,
+    prefix: &str,
+    out_path: &Path,
+    options: FileOptions,
+) -> Result<(), String> {
+    let mut entries: Vec<std::fs::DirEntry> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        if path == out_path {
+            continue;
+        }
+
+        let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+        if meta.file_type().is_symlink() {
+            continue;
+        }
+
+        if meta.is_dir() {
+            zip_add_dir(zip, &path, base_dir, prefix, out_path, options)?;
+            continue;
+        }
+
+        if !meta.is_file() {
+            continue;
+        }
+
+        let rel = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "failed to compute zip relative path".to_string())?;
+
+        let name = format!("{}/{}", prefix, zip_name(rel));
+        zip.start_file(name, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn zip_name(path: &Path) -> String {
+    let mut out = String::new();
+    for (i, c) in path.components().enumerate() {
+        if i > 0 {
+            out.push('/');
+        }
+        out.push_str(&c.as_os_str().to_string_lossy());
+    }
+    out
+}
+
 fn parse_bool(s: &str) -> Result<bool, ()> {
     match s {
         "1" | "true" | "True" | "TRUE" => Ok(true),
@@ -1966,6 +2596,7 @@ fn run_script_suite_collect_bundles(
         &paths.out_dir,
         &paths.ready_path,
         &paths.exit_path,
+        false,
         timeout_ms,
         poll_ms,
     )?;
@@ -2041,7 +2672,9 @@ fn apply_post_run_checks(
     check_stale_paint_test_id: Option<&str>,
     check_stale_paint_eps: f32,
     check_wheel_scroll_test_id: Option<&str>,
+    check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
+    check_gc_sweep_liveness: bool,
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     warmup_frames: u64,
@@ -2051,6 +2684,9 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
+    }
+    if let Some(test_id) = check_drag_cache_root_paint_only_test_id {
+        check_bundle_for_drag_cache_root_paint_only(bundle_path, test_id, warmup_frames)?;
     }
     if let Some(max_allowed) = check_hover_layout_max {
         let report = bundle_stats_from_path(
@@ -2070,6 +2706,9 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_overlay_synthesis_min(bundle_path, min, warmup_frames)?;
+    }
+    if check_gc_sweep_liveness {
+        check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
     }
     Ok(())
 }
@@ -2631,6 +3270,7 @@ fn maybe_launch_demo(
     out_dir: &Path,
     ready_path: &Path,
     exit_path: &Path,
+    wants_screenshots: bool,
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<Option<Child>, String> {
@@ -2653,6 +3293,9 @@ fn maybe_launch_demo(
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
     cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
+    if wants_screenshots {
+        cmd.env("FRET_DIAG_SCREENSHOTS", "1");
+    }
     for (key, value) in launch_env {
         match key.as_str() {
             "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" | "FRET_DIAG_EXIT_PATH" => {
@@ -4511,6 +5154,266 @@ fn check_bundle_for_wheel_scroll_json(
     msg.push_str("wheel scroll check failed (expected hit-test result to move after wheel)\n");
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+fn check_bundle_for_drag_cache_root_paint_only(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut good_frames: u64 = 0;
+    let mut bad_frames: Vec<String> = Vec::new();
+    let mut missing_target_count: u64 = 0;
+    let mut any_view_cache_active = false;
+    let mut seen_good = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if !view_cache_active {
+                continue;
+            }
+
+            let Some(target_node_id) = semantics_node_id_for_test_id(s, test_id) else {
+                missing_target_count = missing_target_count.saturating_add(1);
+                continue;
+            };
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .ok_or_else(|| "invalid bundle.json: missing debug.semantics.nodes".to_string())?;
+            let mut parents: std::collections::HashMap<u64, u64> = std::collections::HashMap::new();
+            for n in nodes {
+                let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                if let Some(parent) = n.get("parent").and_then(|v| v.as_u64()) {
+                    parents.insert(id, parent);
+                }
+            }
+
+            let roots = s
+                .get("debug")
+                .and_then(|v| v.get("cache_roots"))
+                .and_then(|v| v.as_array())
+                .ok_or_else(|| "invalid bundle.json: missing debug.cache_roots".to_string())?;
+            let mut cache_roots: std::collections::HashMap<u64, &serde_json::Value> =
+                std::collections::HashMap::new();
+            for r in roots {
+                if let Some(root) = r.get("root").and_then(|v| v.as_u64()) {
+                    cache_roots.insert(root, r);
+                }
+            }
+
+            let mut current = target_node_id;
+            let mut cache_root_node: Option<u64> = None;
+            loop {
+                if cache_roots.contains_key(&current) {
+                    cache_root_node = Some(current);
+                    break;
+                }
+                let Some(parent) = parents.get(&current).copied() else {
+                    break;
+                };
+                current = parent;
+            }
+            let Some(cache_root_node) = cache_root_node else {
+                return Err(format!(
+                    "could not resolve a cache root ancestor for test_id={test_id} (node_id={target_node_id}) in bundle: {}",
+                    bundle_path.display()
+                ));
+            };
+
+            let root = cache_roots
+                .get(&cache_root_node)
+                .ok_or_else(|| "internal error: cache root missing".to_string())?;
+
+            let reused = root
+                .get("reused")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let contained_relayout_in_frame = root
+                .get("contained_relayout_in_frame")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let dirty = s
+                .get("debug")
+                .and_then(|v| v.get("dirty_views"))
+                .and_then(|v| v.as_array())
+                .map_or(false, |dirty| {
+                    dirty.iter().any(|d| {
+                        d.get("root_node")
+                            .and_then(|v| v.as_u64())
+                            .is_some_and(|n| n == cache_root_node)
+                    })
+                });
+
+            let ok = reused && !contained_relayout_in_frame && !dirty;
+            if ok {
+                good_frames = good_frames.saturating_add(1);
+                seen_good = true;
+                continue;
+            }
+
+            if seen_good {
+                bad_frames.push(format!(
+                    "window={window_id} frame_id={frame_id} cache_root={cache_root_node} reused={reused} contained_relayout_in_frame={contained_relayout_in_frame} dirty={dirty}"
+                ));
+            }
+        }
+    }
+
+    if !bad_frames.is_empty() {
+        let mut msg = String::new();
+        msg.push_str("expected paint-only drag indicator updates (cache-root reuse, no contained relayout, no dirty view), but found violations after reuse began\n");
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        msg.push_str(&format!("test_id: {test_id}\n"));
+        for line in bad_frames.into_iter().take(10) {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    if good_frames == 0 {
+        return Err(format!(
+            "did not observe any cache-root-reuse paint-only frames for test_id={test_id} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}, missing_target_count={missing_target_count}) \
+in bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+fn check_bundle_for_gc_sweep_liveness(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut offenders: Vec<String> = Vec::new();
+    let mut examined_snapshots: u64 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let Some(removed) = s
+                .get("debug")
+                .and_then(|v| v.get("removed_subtrees"))
+                .and_then(|v| v.as_array())
+            else {
+                continue;
+            };
+
+            for r in removed {
+                let unreachable = r
+                    .get("unreachable_from_liveness_roots")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                let reachable_from_layer_roots = r
+                    .get("reachable_from_layer_roots")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let reachable_from_view_cache_roots = r
+                    .get("reachable_from_view_cache_roots")
+                    .and_then(|v| v.as_bool());
+                let root_layer_visible = r.get("root_layer_visible").and_then(|v| v.as_bool());
+
+                if !unreachable
+                    || reachable_from_layer_roots
+                    || reachable_from_view_cache_roots == Some(true)
+                    || root_layer_visible == Some(true)
+                {
+                    let root = r.get("root").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let root_element_path = r
+                        .get("root_element_path")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<none>");
+                    let trigger_path = r
+                        .get("trigger_element_path")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<none>");
+                    offenders.push(format!(
+                        "window={window_id} frame_id={frame_id} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} root_element_path={root_element_path} trigger_element_path={trigger_path}"
+                    ));
+                }
+            }
+        }
+    }
+
+    if offenders.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("GC sweep liveness violation: removed_subtrees contains entries that appear live (reachable/visible)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    msg.push_str(&format!(
+        "warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
+    ));
+    for line in offenders.into_iter().take(10) {
         msg.push_str("  ");
         msg.push_str(&line);
         msg.push('\n');

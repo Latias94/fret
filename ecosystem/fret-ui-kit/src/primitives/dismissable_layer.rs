@@ -25,15 +25,18 @@ pub use fret_ui::action::{OnDismissiblePointerMove, PointerMoveCx};
 ///
 /// This is a Radix-aligned naming alias for `render_dismissible_root_with_hooks`.
 #[allow(clippy::too_many_arguments)]
-pub fn render_dismissable_root_with_hooks<H: UiHost>(
+pub fn render_dismissable_root_with_hooks<H: UiHost, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> fret_core::NodeId {
+    render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> fret_core::NodeId
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     crate::declarative::dismissible::render_dismissible_root_with_hooks(
         ui, app, services, window, bounds, root_name, render,
     )

@@ -17,7 +17,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         fret_core::PointerEvent::Wheel {
             delta, modifiers, ..
         } => {
-            let (consumed, needs_visible_range_refresh) = crate::elements::with_element_state(
+            let (consumed, needs_visible_range_rerender) = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
                 this.element,
@@ -35,6 +35,9 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                         fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
                         fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
                     };
+                    if viewport.0 <= 0.0 || props.len == 0 {
+                        return (false, false);
+                    }
 
                     let prev = props.scroll_handle.offset();
                     let prev_offset = match axis {
@@ -55,6 +58,24 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                     };
                     let next = state.metrics.clamp_offset(Px(offset.0 - delta.0), viewport);
                     if (prev_offset.0 - next.0).abs() > SCROLL_CONSUMED_EPS {
+                        let visible_range = state.metrics.visible_range(next, viewport, 0);
+                        let needs_visible_range_rerender =
+                            visible_range.is_some_and(|visible| match state.render_window_range {
+                                None => visible.count > 0,
+                                Some(rendered) => {
+                                    if rendered.count == 0 {
+                                        visible.count > 0
+                                    } else {
+                                        let rendered_start =
+                                            rendered.start_index.saturating_sub(rendered.overscan);
+                                        let rendered_end = (rendered.end_index + rendered.overscan)
+                                            .min(rendered.count.saturating_sub(1));
+                                        visible.start_index < rendered_start
+                                            || visible.end_index > rendered_end
+                                    }
+                                }
+                            });
+
                         match axis {
                             fret_core::Axis::Vertical => {
                                 props
@@ -67,37 +88,26 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                                     .set_offset(fret_core::Point::new(next, prev.y));
                             }
                         }
-                        let needs_refresh = state
-                            .metrics
-                            .visible_range(next, viewport, props.overscan)
-                            .is_some_and(|range| {
-                                crate::virtual_list::virtual_list_needs_visible_range_refresh(
-                                    &props.visible_items,
-                                    range,
-                                )
-                            });
-                        (true, needs_refresh)
+                        (true, needs_visible_range_rerender)
                     } else {
                         (false, false)
                     }
                 },
             );
+
             if consumed {
+                let inv = Invalidation::HitTestOnly;
                 super::invalidate_scroll_handle_bindings(
                     cx,
                     window,
                     props.scroll_handle.base_handle().binding_key(),
-                    Invalidation::HitTestOnly,
+                    inv,
                 );
                 // VirtualList scrolling is applied via a children-only render transform, so
-                // hit-testing must be invalidated to refresh coordinate mapping under the
-                // updated offset. This does not force a layout pass.
-                cx.invalidate_self(Invalidation::HitTestOnly);
-                if needs_visible_range_refresh {
-                    // In view-cache mode, per-frame VirtualList `visible_items` are computed during
-                    // the declarative render pass. If the scroll delta escapes the currently
-                    // mounted range, force a one-shot rerender of the nearest cache root so the
-                    // visible range can be rebuilt.
+                // hit-testing must be invalidated to refresh coordinate mapping under the updated
+                // offset. This does not force a layout pass.
+                cx.invalidate_self(inv);
+                if needs_visible_range_rerender {
                     cx.notify();
                 }
                 cx.request_redraw();

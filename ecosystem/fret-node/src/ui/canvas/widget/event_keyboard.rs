@@ -47,7 +47,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             match key {
                 fret_core::KeyCode::KeyA => {
-                    cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_SELECT_ALL));
+                    cx.dispatch_command(CommandId::from("edit.select_all"));
                     cx.stop_propagation();
                     return;
                 }
@@ -67,17 +67,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     return;
                 }
                 fret_core::KeyCode::KeyC => {
-                    cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_COPY));
+                    cx.dispatch_command(CommandId::from("edit.copy"));
                     cx.stop_propagation();
                     return;
                 }
                 fret_core::KeyCode::KeyX => {
-                    cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_CUT));
+                    cx.dispatch_command(CommandId::from("edit.cut"));
                     cx.stop_propagation();
                     return;
                 }
                 fret_core::KeyCode::KeyV => {
-                    cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_PASTE));
+                    cx.dispatch_command(CommandId::from("edit.paste"));
                     cx.stop_propagation();
                     return;
                 }

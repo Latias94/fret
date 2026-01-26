@@ -2,6 +2,7 @@ use super::*;
 
 use fret_runtime::{
     CommandMeta, CommandScope, InputDispatchPhase, WindowCommandActionAvailabilityService,
+    WindowMenuBarFocusService,
 };
 
 #[derive(Debug, Default)]
@@ -179,6 +180,55 @@ fn action_availability_snapshot_publishes_focus_traversal_gating() {
     );
     assert_eq!(
         svc.available(window, &CommandId::from("focus.previous")),
+        Some(true)
+    );
+}
+
+#[test]
+fn action_availability_snapshot_publishes_focus_menu_bar_gating() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("focus.menu_bar"),
+        widget_command_meta("Focus Menu Bar"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(FocusableLeaf::default());
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+    ui.set_focus(Some(leaf));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.menu_bar")),
+        Some(false)
+    );
+
+    let mut focus_svc = WindowMenuBarFocusService::default();
+    focus_svc.set_present(window, true);
+    app.set_global(focus_svc);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.menu_bar")),
         Some(true)
     );
 }

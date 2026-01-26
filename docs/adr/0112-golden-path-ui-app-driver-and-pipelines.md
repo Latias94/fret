@@ -117,6 +117,9 @@ prefer indirection via IDs/registries (ADR 0074).
 Fret’s `App` and `ModelStore` are main-thread oriented; background threads must not mutate `App` directly.
 We standardize two patterns:
 
+The user-facing execution and wake surface that supports these patterns is locked in
+`docs/adr/0190-execution-and-concurrency-surface-v1.md`.
+
 **A) “Inbox + timer/RAF” (portable, minimal)**
 
 - background work sends pure data messages into a `std::sync::mpsc`/`crossbeam_channel` sender,
@@ -188,6 +191,7 @@ The golden path must support:
 - Crate layering: `docs/adr/0093-crate-structure-core-backends-apps.md`
 - Bootstrap/tools story: `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - Dev hotpatch boundaries: `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+- Execution and concurrency surface: `docs/adr/0190-execution-and-concurrency-surface-v1.md`
 - Resource handles + flush point: `docs/adr/0004-resource-handles.md`
 - Editor project assets (out of scope): `docs/adr/0026-asset-database-and-import-pipeline.md`
 - Action hooks registries (policy in components): `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`

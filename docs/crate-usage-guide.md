@@ -45,6 +45,28 @@ Web/wasm quick start (tooling):
 - default keybindings installation,
 - file-backed settings/keymap loading helpers.
 
+### Background work (portable)
+
+Keep the UI/runtime deterministic by treating `App`/`ModelStore` as main-thread only (ADR 0008).
+
+Recommended patterns:
+
+- **Portable default**: background producers send **data-only** messages into an inbox; the UI thread drains the inbox at a driver boundary and schedules redraw (ADR 0112, ADR 0190).
+- **Heavy apps**: run an external runtime (e.g. Tokio) on a dedicated thread, send results into an inbox, and `wake()` the runner to reach the next driver boundary promptly (ADR 0190).
+
+Portability notes (native vs wasm):
+
+- On native backends, background work is typically available (`exec.background_work=threads`).
+- On wasm backends, "background" work is best-effort and may run cooperatively on the same thread (`exec.background_work=cooperative`).
+  - Do not assume CPU-heavy work will not block UI; keep tasks short or move heavy work to a non-portable adapter (worker/thread/runtime) at the app boundary.
+- `wake()` may be coalesced on all platforms; on wasm it may also be degraded (`exec.wake=best_effort`), so treat it as a hint to reach the next driver boundary, not a precise scheduling guarantee.
+- Timers may be throttled on wasm (`exec.timers=best_effort`). Use runner-owned effects (`Effect::SetTimer`, RAF) for UI-visible timing and avoid relying on precise intervals.
+
+Dependency guidance:
+
+- **Reusable ecosystem crates** SHOULD depend on portable surfaces only (`fret-core` / `fret-runtime` / `fret-ui`) and use the inbox/dispatcher surface (ADR 0113, ADR 0190).
+- **Apps** may use `fret-bootstrap` (or `fret-kit`) to get the golden-path wiring so they do not need to hand-roll channels + timers + wake logic.
+
 ## Features (Cargo)
 
 Cargo features are widely used in Rust UI ecosystems to keep “small apps small” while allowing optional integrations.

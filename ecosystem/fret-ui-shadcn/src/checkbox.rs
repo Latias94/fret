@@ -18,7 +18,10 @@ use fret_ui_kit::primitives::checkbox::{
     toggle_optional_bool,
 };
 use fret_ui_kit::primitives::controllable_state;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, WidgetState,
+    WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt,
+};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -56,6 +59,43 @@ fn checkbox_ring_color(theme: &Theme) -> Color {
     theme.color_required("ring")
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct CheckboxStyle {
+    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+}
+
+impl CheckboxStyle {
+    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.foreground = Some(foreground);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        if other.foreground.is_some() {
+            self.foreground = other.foreground;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Checkbox {
     checked: CheckboxCheckedModel,
@@ -65,6 +105,7 @@ pub struct Checkbox {
     on_click: Option<CommandId>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: CheckboxStyle,
 }
 
 #[derive(Debug, Clone)]
@@ -84,6 +125,7 @@ impl Checkbox {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: CheckboxStyle::default(),
         }
     }
 
@@ -96,6 +138,7 @@ impl Checkbox {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: CheckboxStyle::default(),
         }
     }
 
@@ -111,6 +154,7 @@ impl Checkbox {
             on_click: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: CheckboxStyle::default(),
         }
     }
 
@@ -181,6 +225,11 @@ impl Checkbox {
         self
     }
 
+    pub fn style(mut self, style: CheckboxStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -198,8 +247,17 @@ impl Checkbox {
             let bg_on = checkbox_bg_checked(&theme);
             let fg_on = checkbox_fg_checked(&theme);
 
+            let ring_border = checkbox_ring_color(&theme);
             let mut ring = decl_style::focus_ring(&theme, radius);
-            ring.color = alpha_mul(checkbox_ring_color(&theme), 0.5);
+            ring.color = alpha_mul(ring_border, 0.5);
+
+            let default_background = WidgetStateProperty::new(None)
+                .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)));
+            let default_border_color = WidgetStateProperty::new(ColorRef::Color(border))
+                .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
+                .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
+            let default_foreground = WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
+                .when(WidgetStates::SELECTED, ColorRef::Color(fg_on));
 
             let layout = LayoutRefinement::default()
                 .w_px(MetricRef::Px(size))
@@ -216,6 +274,7 @@ impl Checkbox {
                     .as_ref()
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let chrome = self.chrome.clone();
+            let style_override = self.style.clone();
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
                 cx.key_add_on_key_down_for(
@@ -251,15 +310,29 @@ impl Checkbox {
                 let is_checked = state.is_checked();
                 let is_indeterminate = state.is_indeterminate();
 
-                let bg = if is_on { bg_on } else { Color::TRANSPARENT };
-                let border_color = if st.focused {
-                    checkbox_ring_color(&theme)
-                } else if is_on {
-                    bg_on
-                } else {
-                    border
-                };
-                let fg = if is_on { fg_on } else { Color::TRANSPARENT };
+                let mut states = WidgetStates::from_pressable(cx, st, !disabled);
+                states.set(WidgetState::Selected, is_on);
+
+                let bg = resolve_override_slot_opt(
+                    style_override.background.as_ref(),
+                    &default_background,
+                    states,
+                )
+                .map(|bg| bg.resolve(&theme))
+                .unwrap_or(Color::TRANSPARENT);
+
+                let border_color = resolve_override_slot(
+                    style_override.border_color.as_ref(),
+                    &default_border_color,
+                    states,
+                )
+                .resolve(&theme);
+                let fg = resolve_override_slot(
+                    style_override.foreground.as_ref(),
+                    &default_foreground,
+                    states,
+                )
+                .resolve(&theme);
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,
@@ -358,7 +431,7 @@ mod tests {
     use fret_core::{
         AppWindowId, Modifiers, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
         PathService, PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService,
-        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{
         CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
@@ -898,7 +971,7 @@ mod tests {
             let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
             let mut availability: HashMap<CommandId, bool> = HashMap::new();
             availability.insert(cmd.clone(), false);
-            svc.set_snapshot(
+            let _token = svc.push_snapshot(
                 window,
                 WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
                     .with_action_availability(Some(Arc::new(availability))),

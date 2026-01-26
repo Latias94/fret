@@ -7,11 +7,11 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
-use fret_ui::action::OnDismissRequest;
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
+    MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -30,7 +30,7 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, ui,
+    Radius, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::overlay_motion;
@@ -564,7 +564,7 @@ fn menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_style: TextStyle,
-) -> Vec<AnyElement> {
+) -> Elements {
     vec![cx.container(
         ContainerProps {
             layout: LayoutStyle::default(),
@@ -673,6 +673,7 @@ fn menu_row_children<H: UiHost>(
             )]
         },
     )]
+    .into()
 }
 
 fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {
@@ -756,6 +757,8 @@ pub struct Menubar {
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -767,6 +770,8 @@ impl std::fmt::Debug for Menubar {
             .field("disabled", &self.disabled)
             .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -779,6 +784,8 @@ impl Menubar {
             typeahead_timeout_ticks: 30,
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -805,6 +812,18 @@ impl Menubar {
     /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    /// Sets an optional open autofocus handler (Radix `onOpenAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Sets an optional close autofocus handler (Radix `onCloseAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -864,6 +883,8 @@ impl Menubar {
             let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
             let align_leading_icons = self.align_leading_icons;
             let on_dismiss_request = self.on_dismiss_request.clone();
+            let on_open_auto_focus = self.on_open_auto_focus.clone();
+            let on_close_auto_focus = self.on_close_auto_focus.clone();
 
             let trigger_labels: Arc<[Arc<str>]> = Arc::from(
                 menus
@@ -882,7 +903,11 @@ impl Menubar {
 
             let menus: Vec<MenubarMenuEntries> = menus
                 .into_iter()
-                .map(|menu| menu.on_dismiss_request(on_dismiss_request.clone()))
+                .map(|menu| {
+                    menu.on_dismiss_request(on_dismiss_request.clone())
+                        .on_open_auto_focus(on_open_auto_focus.clone())
+                        .on_close_auto_focus(on_close_auto_focus.clone())
+                })
                 .collect();
 
             cx.semantics(
@@ -939,7 +964,7 @@ impl Menubar {
                                             m.align_leading_icons(align_leading_icons)
                                                 .into_element(cx)
                                         })
-                                        .collect()
+                                        .collect::<Vec<_>>()
                                 },
                             )]
                         },
@@ -1000,6 +1025,8 @@ impl MenubarMenu {
             entries: Arc::from(entries.into_boxed_slice()),
             align_leading_icons: true,
             on_dismiss_request: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -1030,6 +1057,8 @@ pub struct MenubarMenuEntries {
     entries: Arc<[MenubarEntry]>,
     align_leading_icons: bool,
     on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for MenubarMenuEntries {
@@ -1039,6 +1068,8 @@ impl std::fmt::Debug for MenubarMenuEntries {
             .field("disabled", &self.menu.disabled)
             .field("entries_len", &self.entries.len())
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -1054,12 +1085,24 @@ impl MenubarMenuEntries {
         self
     }
 
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let group = cx.root_id();
         let key = self.menu.label.clone();
         let entries = self.entries.clone();
         let align_leading_icons = self.align_leading_icons;
         let on_dismiss_request = self.on_dismiss_request.clone();
+        let on_open_auto_focus = self.on_open_auto_focus.clone();
+        let on_close_auto_focus = self.on_close_auto_focus.clone();
         cx.keyed(key, |cx| {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
             let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
@@ -1154,13 +1197,17 @@ impl MenubarMenuEntries {
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                     menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
                 });
-                let trigger_bg = if is_open {
-                    Some(bg_open)
-                } else if st.hovered || st.pressed || st.focused {
-                    Some(alpha_mul(bg_hover, 0.8))
-                } else {
-                    None
-                };
+                let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                states.set(WidgetState::Open, is_open);
+
+                let trigger_bg_prop = WidgetStateProperty::new(None)
+                    .when(WidgetStates::HOVERED, Some(alpha_mul(bg_hover, 0.8)))
+                    .when(WidgetStates::ACTIVE, Some(alpha_mul(bg_hover, 0.8)))
+                    .when(WidgetStates::FOCUSED, Some(alpha_mul(bg_hover, 0.8)))
+                    .when(WidgetStates::OPEN, Some(bg_open))
+                    .when(WidgetStates::DISABLED, None);
+
+                let trigger_bg = *trigger_bg_prop.resolve(states);
 
                 let props = PressableProps {
                     layout: trigger_layout,
@@ -1194,6 +1241,12 @@ impl MenubarMenuEntries {
                         content_focus_id_for_children.clone();
                     let content_focus_id_for_children_for_submenu =
                         content_focus_id_for_children.clone();
+                    let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> =
+                        Rc::new(Cell::new(None));
+                    let first_item_focus_id_for_request = first_item_focus_id.clone();
+                    let first_item_focus_id_for_children = first_item_focus_id.clone();
+                    let first_item_focus_id_for_children_for_content =
+                        first_item_focus_id_for_children.clone();
                     let direction = direction_prim::use_direction_in_scope(cx, None);
 
                     let (overlay_children, dismissible_on_pointer_move) =
@@ -1521,14 +1574,22 @@ impl MenubarMenuEntries {
                                                                 submenu_for_content.clone();
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay_for_content.clone();
+                                                            let first_item_focus_id_for_items =
+                                                                first_item_focus_id_for_children_for_content.clone();
 
-                                                            let theme = theme.clone();
+                                                            let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let checked_now = cx
                                                                         .watch_model(&checked)
                                                                         .copied()
                                                                         .unwrap_or(false);
+                                                                    if item_enabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
+                                                                    }
 
                                                                     let _ = menu::sub_trigger::wire(
                                                                         cx,
@@ -1569,18 +1630,35 @@ impl MenubarMenuEntries {
                                                                         }
                                                                     }
 
-                                                                    let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
+                                                                    let mut states =
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
                                                                         );
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        fg
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                    states.set(WidgetState::Open, false);
+
+                                                                    let highlight_bg =
+                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -1670,8 +1748,10 @@ impl MenubarMenuEntries {
                                                                 submenu_for_content.clone();
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay_for_content.clone();
+                                                            let first_item_focus_id_for_items =
+                                                                first_item_focus_id_for_children_for_content.clone();
 
-                                                            let theme = theme.clone();
+                                                            let _theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let selected = cx
@@ -1682,6 +1762,12 @@ impl MenubarMenuEntries {
                                                                         selected.as_ref(),
                                                                         &value,
                                                                     );
+                                                                    if item_enabled {
+                                                                        if first_item_focus_id_for_items.get().is_none() {
+                                                                            first_item_focus_id_for_items
+                                                                                .set(Some(item_id));
+                                                                        }
+                                                                    }
 
                                                                     let _ = menu::sub_trigger::wire(
                                                                         cx,
@@ -1723,18 +1809,35 @@ impl MenubarMenuEntries {
                                                                         }
                                                                     }
 
-                                                                    let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
+                                                                    let mut states =
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
                                                                         );
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        fg
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                    states.set(WidgetState::Open, false);
+
+                                                                    let highlight_bg =
+                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -1880,16 +1983,24 @@ impl MenubarMenuEntries {
                                                               let test_id = item.test_id.clone();
                                                                let pad_left =
                                                                    if item.inset { pad_x_inset } else { pad_x };
-                                                               let theme = theme.clone();
-                                                               let overlay_root_name_for_controls =
-                                                                   overlay_root_name_for_controls.clone();
-                                                              out.push(cx.keyed(value.clone(), move |cx| {
-                                                                  cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                    let geometry_hint = submenu_desired_for_hint.map(|desired| {
-                                                                        menu::sub_trigger::MenuSubTriggerGeometryHint {
-                                                                            outer,
-                                                                            desired,
-                                                                        }
+                                                            let _theme = theme.clone();
+                                                                let overlay_root_name_for_controls =
+                                                                    overlay_root_name_for_controls.clone();
+                                                                let first_item_focus_id_for_items =
+                                                                    first_item_focus_id_for_children_for_content.clone();
+                                                               out.push(cx.keyed(value.clone(), move |cx| {
+                                                                   cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                     if item_enabled {
+                                                                         if first_item_focus_id_for_items.get().is_none() {
+                                                                             first_item_focus_id_for_items
+                                                                                 .set(Some(item_id));
+                                                                         }
+                                                                     }
+                                                                     let geometry_hint = submenu_desired_for_hint.map(|desired| {
+                                                                         menu::sub_trigger::MenuSubTriggerGeometryHint {
+                                                                             outer,
+                                                                             desired,
+                                                                         }
                                                                     });
                                                                     let expanded = menu::sub_trigger::wire(
                                                                         cx,
@@ -1926,34 +2037,50 @@ impl MenubarMenuEntries {
                                                                         }
                                                                      }
 
-                                                                    let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                        || expanded.unwrap_or(false)
-                                                                    {
-                                                                        bg = if variant
-                                                                            == MenubarItemVariant::Destructive
-                                                                        {
+                                                                    let mut states =
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
+                                                                        );
+                                                                    states.set(
+                                                                        WidgetState::Open,
+                                                                        expanded.unwrap_or(false),
+                                                                    );
+
+                                                                    let highlight_bg =
+                                                                        if variant == MenubarItemVariant::Destructive {
                                                                             destructive_bg
                                                                         } else {
-                                                                            alpha_mul(
-                                                                                theme.color_required("accent"),
-                                                                                0.9,
-                                                                            )
+                                                                            alpha_mul(bg_hover, 0.9)
                                                                         };
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        if variant
-                                                                            == MenubarItemVariant::Destructive
-                                                                        {
+                                                                    let base_fg =
+                                                                        if variant == MenubarItemVariant::Destructive {
                                                                             destructive_fg
                                                                         } else {
                                                                             fg
-                                                                        }
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                        };
+
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(WidgetStates::OPEN, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(base_fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     let props = PressableProps {
                                                                         layout: {
@@ -2073,19 +2200,35 @@ impl MenubarMenuEntries {
                                                                         }),
                                                                     );
 
-                                                                    let mut bg =
-                                                                        Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
+                                                                    let mut states =
+                                                                        WidgetStates::from_pressable(
+                                                                            cx,
+                                                                            st,
+                                                                            item_enabled,
                                                                         );
-                                                                    }
-                                                                    let fg = if item_enabled {
-                                                                        fg
-                                                                    } else {
-                                                                        alpha_mul(fg_muted, 0.85)
-                                                                    };
+                                                                    states.set(WidgetState::Open, false);
+
+                                                                    let highlight_bg =
+                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let bg_prop = WidgetStateProperty::new(
+                                                                        Color::TRANSPARENT,
+                                                                    )
+                                                                    .when(WidgetStates::HOVERED, highlight_bg)
+                                                                    .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                    .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                    .when(
+                                                                        WidgetStates::DISABLED,
+                                                                        Color::TRANSPARENT,
+                                                                    );
+                                                                    let fg_prop =
+                                                                        WidgetStateProperty::new(fg)
+                                                                            .when(
+                                                                                WidgetStates::DISABLED,
+                                                                                alpha_mul(fg_muted, 0.85),
+                                                                            );
+
+                                                                    let bg = *bg_prop.resolve(states);
+                                                                    let fg = *fg_prop.resolve(states);
 
                                                                     vec![cx.container(
                                                                         ContainerProps {
@@ -2563,18 +2706,32 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 }
 
-                                                                                let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed || st.focused {
-                                                                                    bg = alpha_mul(
-                                                                                        theme.color_required("accent"),
-                                                                                        0.9,
+                                                                                let mut states =
+                                                                                    WidgetStates::from_pressable(
+                                                                                        cx,
+                                                                                        st,
+                                                                                        item_enabled,
                                                                                     );
-                                                                                }
-                                                                                let fg = if item_enabled {
-                                                                                    fg
-                                                                                } else {
-                                                                                    alpha_mul(fg_muted, 0.85)
-                                                                                };
+                                                                                states.set(WidgetState::Open, false);
+
+                                                                                let highlight_bg = alpha_mul(
+                                                                                    theme.color_required("accent"),
+                                                                                    0.9,
+                                                                                );
+                                                                                let bg_prop =
+                                                                                    WidgetStateProperty::new(Color::TRANSPARENT)
+                                                                                        .when(WidgetStates::HOVERED, highlight_bg)
+                                                                                        .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                                        .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                                        .when(WidgetStates::DISABLED, Color::TRANSPARENT);
+                                                                                let fg_prop =
+                                                                                    WidgetStateProperty::new(fg).when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        alpha_mul(fg_muted, 0.85),
+                                                                                    );
+
+                                                                                let bg = *bg_prop.resolve(states);
+                                                                                let fg = *fg_prop.resolve(states);
 
                                                                                 let trailing = trailing.clone().or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
@@ -2704,18 +2861,32 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 }
 
-                                                                                let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed || st.focused {
-                                                                                    bg = alpha_mul(
-                                                                                        theme.color_required("accent"),
-                                                                                        0.9,
+                                                                                let mut states =
+                                                                                    WidgetStates::from_pressable(
+                                                                                        cx,
+                                                                                        st,
+                                                                                        item_enabled,
                                                                                     );
-                                                                                }
-                                                                                let fg = if item_enabled {
-                                                                                    fg
-                                                                                } else {
-                                                                                    alpha_mul(fg_muted, 0.85)
-                                                                                };
+                                                                                states.set(WidgetState::Open, false);
+
+                                                                                let highlight_bg = alpha_mul(
+                                                                                    theme.color_required("accent"),
+                                                                                    0.9,
+                                                                                );
+                                                                                let bg_prop =
+                                                                                    WidgetStateProperty::new(Color::TRANSPARENT)
+                                                                                        .when(WidgetStates::HOVERED, highlight_bg)
+                                                                                        .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                                        .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                                        .when(WidgetStates::DISABLED, Color::TRANSPARENT);
+                                                                                let fg_prop =
+                                                                                    WidgetStateProperty::new(fg).when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        alpha_mul(fg_muted, 0.85),
+                                                                                    );
+
+                                                                                let bg = *bg_prop.resolve(states);
+                                                                                let fg = *fg_prop.resolve(states);
 
                                                                                 let trailing = trailing.clone().or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
@@ -2835,11 +3006,16 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 }
 
-                                                                                let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed || st.focused {
-                                                                                    bg = if variant
-                                                                                        == MenubarItemVariant::Destructive
-                                                                                    {
+                                                                                let mut states =
+                                                                                    WidgetStates::from_pressable(
+                                                                                        cx,
+                                                                                        st,
+                                                                                        item_enabled,
+                                                                                    );
+                                                                                states.set(WidgetState::Open, false);
+
+                                                                                let highlight_bg =
+                                                                                    if variant == MenubarItemVariant::Destructive {
                                                                                         destructive_bg
                                                                                     } else {
                                                                                         alpha_mul(
@@ -2847,18 +3023,27 @@ impl MenubarMenuEntries {
                                                                                             0.9,
                                                                                         )
                                                                                     };
-                                                                                }
-                                                                                let fg = if item_enabled {
-                                                                                    if variant
-                                                                                        == MenubarItemVariant::Destructive
-                                                                                    {
+                                                                                let base_fg =
+                                                                                    if variant == MenubarItemVariant::Destructive {
                                                                                         destructive_fg
                                                                                     } else {
                                                                                         fg
-                                                                                    }
-                                                                                } else {
-                                                                                    alpha_mul(fg_muted, 0.85)
-                                                                                };
+                                                                                    };
+
+                                                                                let bg_prop =
+                                                                                    WidgetStateProperty::new(Color::TRANSPARENT)
+                                                                                        .when(WidgetStates::HOVERED, highlight_bg)
+                                                                                        .when(WidgetStates::ACTIVE, highlight_bg)
+                                                                                        .when(WidgetStates::FOCUSED, highlight_bg)
+                                                                                        .when(WidgetStates::DISABLED, Color::TRANSPARENT);
+                                                                                let fg_prop =
+                                                                                    WidgetStateProperty::new(base_fg).when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        alpha_mul(fg_muted, 0.85),
+                                                                                    );
+
+                                                                                let bg = *bg_prop.resolve(states);
+                                                                                let fg = *fg_prop.resolve(states);
 
                                                                                 let trailing = trailing.clone().or_else(|| {
                                                                                     command.as_ref().and_then(|cmd| {
@@ -2994,7 +3179,11 @@ impl MenubarMenuEntries {
                         overlay_presence,
                         overlay_children,
                         overlay_root_name,
-                        content_focus_id.get(),
+                        menu::root::MenuInitialFocusTargets::new()
+                            .pointer_content_focus(content_focus_id.get())
+                            .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                        on_open_auto_focus.clone(),
+                        on_close_auto_focus.clone(),
                         on_dismiss_request.clone(),
                         dismissible_on_pointer_move,
                         false,
@@ -3050,6 +3239,8 @@ pub fn menubar<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
@@ -3058,6 +3249,7 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::FrameId;
+    use fret_ui::action::OnOpenAutoFocus;
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -3162,6 +3354,215 @@ mod tests {
                     ]
                 })]
             });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_open_auto_focus(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
+                    ])
+                    .on_open_auto_focus(on_open_auto_focus)
+                    .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "menubar", |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
+                    ])
+                    .on_dismiss_request(on_dismiss_request)
+                    .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_underlay(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        underlay_clicked: Model<bool>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-underlay",
+            move |cx| {
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_toggle_bool(&underlay_clicked);
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    underlay,
+                    menubar(cx, |_cx| {
+                        vec![
+                            MenubarMenu::new("File").entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                                MenubarEntry::Item(MenubarItem::new("Exit")),
+                            ]),
+                            MenubarMenu::new("Edit").entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("Undo")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Redo")),
+                            ]),
+                        ]
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_frame_with_underlay_and_dismiss_handler(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        underlay_clicked: Model<bool>,
+        on_dismiss_request: Option<OnDismissRequest>,
+    ) {
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "menubar-underlay-dismiss",
+            move |cx| {
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from("Underlay")),
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_toggle_bool(&underlay_clicked);
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    underlay,
+                    Menubar::new(vec![
+                        MenubarMenu::new("File").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("New")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Open")),
+                            MenubarEntry::Item(MenubarItem::new("Exit")),
+                        ]),
+                        MenubarMenu::new("Edit").entries(vec![
+                            MenubarEntry::Item(MenubarItem::new("Undo")),
+                            MenubarEntry::Separator,
+                            MenubarEntry::Item(MenubarItem::new("Redo")),
+                        ]),
+                    ])
+                    .on_dismiss_request(on_dismiss_request)
+                    .into_element(cx),
+                ]
+            },
+        );
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
@@ -3375,6 +3776,80 @@ mod tests {
                 n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New")
             }),
             "menu items should render after ArrowDown opens the menubar menu"
+        );
+
+        let first_item = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New"))
+            .expect("New menu item");
+        let focus = ui.focus().expect("expected focus after keyboard-open");
+        assert!(
+            ui.debug_node_path(focus).contains(&first_item.id),
+            "keyboard-open should move focus into the first menu item (Radix entry focus)"
+        );
+    }
+
+    #[test]
+    fn menubar_keyboard_open_auto_focus_can_be_prevented() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |_host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        render_frame_with_open_auto_focus(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(handler.clone()),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let file = menu_trigger_node_id(snap0, "File");
+        ui.set_focus(Some(file));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame_with_open_auto_focus(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(handler),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(file),
+            "expected preventDefault open autofocus to keep focus on trigger"
         );
     }
 

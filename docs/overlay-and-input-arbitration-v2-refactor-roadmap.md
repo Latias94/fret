@@ -6,6 +6,10 @@ This document is a concrete, test-driven refactor plan for Fret’s overlay subs
 arbitration, targeting editor-grade interaction **and** a general-purpose application framework
 baseline.
 
+Progress log (keep updated during implementation):
+
+- `docs/workstreams/overlay-input-arbitration-v2.md`
+
 It is aligned with the existing contract split:
 
 - Runtime substrate (mechanisms): `crates/fret-ui`
@@ -216,6 +220,12 @@ Implementation strategy:
 - Keep `present/interactive` in policy, but enforce the resulting runtime configuration via a single
   helper that sets all relevant runtime knobs consistently (visibility, hit-testability, observer flags, occlusion).
 - Prefer “one helper per overlay kind” in `fret-ui-kit`, but backed by runtime-level invariants and tests.
+   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`apply_non_modal_dismissible_layer_policy`),
+     `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_while_closing`).
+   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`apply_tooltip_layer_policy`,
+     `apply_hover_layer_policy`), `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+     (`tooltip_does_not_request_observers_by_default`, `tooltip_does_not_request_observers_while_closing`,
+     `hover_overlay_is_click_through_while_closing`).
 
 ### 3) Policy: Normalize Overlay Kinds + Capabilities (P0)
 

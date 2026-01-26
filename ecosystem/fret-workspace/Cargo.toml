@@ -22,3 +22,6 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["dnd"] }
 fret-ui-shadcn = { path = "../fret-ui-shadcn", optional = true }
 serde = { workspace = true, optional = true, features = ["rc"] }
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }

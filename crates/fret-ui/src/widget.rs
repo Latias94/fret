@@ -506,6 +506,71 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     }
 }
 
+/// Prepaint context invoked after layout, before paint.
+///
+/// This is intentionally narrow: it exists to support GPUI-aligned "ephemeral prepaint items"
+/// workflows (ADR 0182 / ADR 0190) without forcing a full rerender/relayout of a cache root.
+///
+/// Notes:
+/// - Prepaint runs after layout bounds are known.
+/// - Prepaint may request redraw/animation frames, but should avoid structural tree mutations.
+pub struct PrepaintCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub tree: &'a mut crate::tree::UiTree<H>,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub bounds: Rect,
+    pub scale_factor: f32,
+}
+
+impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    /// Mark an invalidation on `node` for the next frame.
+    ///
+    /// Prefer `Invalidation::Paint` / `Invalidation::HitTest` here. Invalidating `Layout` from
+    /// prepaint is allowed but can easily introduce avoidable churn.
+    pub fn invalidate(&mut self, node: NodeId, kind: Invalidation) {
+        self.tree.invalidate_with_detail(
+            node,
+            kind,
+            crate::tree::UiDebugInvalidationDetail::Unknown,
+        );
+    }
+
+    /// Mark an invalidation on the current node for the next frame.
+    pub fn invalidate_self(&mut self, kind: Invalidation) {
+        self.invalidate(self.node, kind);
+    }
+
+    /// Request a window redraw (one-shot).
+    ///
+    /// Use this for one-shot updates after prepaint-driven state changes.
+    pub fn request_redraw(&mut self) {
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.request_redraw(window);
+    }
+
+    /// Request the next animation frame for this window.
+    ///
+    /// Prefer this over `request_redraw()` when you need frame-driven progression (animations,
+    /// progressive rendering). This also sets `Invalidation::Paint` for the current node so paint
+    /// caching cannot skip widget `paint()` on the next frame.
+    pub fn request_animation_frame(&mut self) {
+        // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
+        self.tree.invalidate_with_source_and_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationSource::Notify,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+}
+
 pub struct PaintCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub tree: &'a mut crate::tree::UiTree<H>,
@@ -554,6 +619,24 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
             self.node,
             Invalidation::Paint,
             crate::tree::UiDebugInvalidationSource::Notify,
+            crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
+        );
+        let Some(window) = self.window else {
+            return;
+        };
+        self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    /// Request the next animation frame for this window without marking the nearest cache root as
+    /// dirty.
+    ///
+    /// This is intended for paint-only chrome (hover fades, drag indicators, caret blink) that
+    /// must repaint every frame but should remain structurally reusable under view caching.
+    pub fn request_animation_frame_paint_only(&mut self) {
+        self.tree.invalidate_with_source_and_detail(
+            self.node,
+            Invalidation::Paint,
+            crate::tree::UiDebugInvalidationSource::Other,
             crate::tree::UiDebugInvalidationDetail::AnimationFrameRequest,
         );
         let Some(window) = self.window else {
@@ -922,6 +1005,10 @@ pub trait Widget<H: UiHost> {
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::default()
     }
+    /// Prepaint hook invoked after layout, before paint.
+    ///
+    /// Default is no-op so existing widgets keep their current behavior.
+    fn prepaint(&mut self, _cx: &mut PrepaintCx<'_, H>) {}
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.paint_children();
     }

@@ -1,6 +1,6 @@
 # Overlay Arbitration Polish — TODO Tracker
 
-Status: Complete (v1; keep this tracker updated if new overlay/arbitration gaps are discovered)
+Status: Active (v1; core overlay lifecycle/arbitration is stable, but view-cache/matrix regression gates are still in progress)
 
 This tracker focuses on the “editor-grade UI feel” gaps around overlays/portals (menus, popovers, dialogs),
 their lifecycle, and input arbitration — especially under view-cache reuse.
@@ -29,8 +29,7 @@ Each TODO is labeled:
 
 - Scripted UI regressions: `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
 - Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `apps/fretboard/src/diag.rs`)
-- View-cache reuse gating: `fretboard diag run/suite --check-view-cache-reuse-min <n>`
-- Bundle comparison: `fretboard diag compare <a> <b> ...` (semantics + optional scene fingerprint)
+- Planned: view-cache reuse gating (`--check-view-cache-reuse-min <n>`) and cached-vs-uncached bundle comparison.
 
 ## P0 — Lifecycle + Arbitration Correctness
 
@@ -79,15 +78,19 @@ Each TODO is labeled:
   - Assertion: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`bounds_within_window` predicate)
   - Notes: opens a popover inside a scroll viewport and asserts it stays within the window before/after wheel scroll.
 - [x] OVERLAY-reg-013 Add a cache-hit bundle comparison baseline for overlay scenarios.
-  - Mechanism: record cached+uncached bundles and enforce `diag compare` + `--check-view-cache-reuse-min`.
-  - Evidence: `fretboard diag matrix ui-gallery` (runs both variants and compares per-script bundles).
+  - Mechanism: record cached+uncached bundles and enforce a per-script compare (semantics + optional scene fingerprint).
+  - Evidence:
+    - `fretboard diag matrix ui-gallery` runs cached+uncached variants and compares each script via `diag compare`:
+      `apps/fretboard/src/cli.rs`, `apps/fretboard/src/diag.rs`, `docs/ui-diagnostics-and-scripted-tests.md`.
 
 ## P0 — Diagnostics (Synthesis Observability)
 
 - [x] OVERLAY-diag-014 Export cached overlay synthesis events to diagnostic bundles.
   - Target: make it easy to assert (and debug) whether cached request synthesis happened under view-cache reuse.
   - Output: `bundle.json` includes `debug.overlay_synthesis` events for each window/frame.
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/{mod,frame,render}.rs` (recording), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (export), `apps/fretboard/src/diag.rs` (gate: `--check-overlay-synthesis-min`).
+  - Evidence:
+    - Bundles export `debug.overlay_synthesis`: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+    - `fretboard` gates on synthesized outcomes via `--check-overlay-synthesis-min`: `apps/fretboard/src/diag.rs`, `docs/ui-diagnostics-and-scripted-tests.md`.
   - Done when: scripts can gate on “at least N synthesized overlays” and report suppression reasons when synthesis does not occur.
 
 ## P1 — Ergonomics (Ecosystem Integration)

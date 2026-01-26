@@ -385,11 +385,14 @@ pub mod primitives {
             self
         }
 
-        pub fn into_element<H: UiHost>(
+        pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
-            children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-        ) -> AnyElement {
+            children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+        ) -> AnyElement
+        where
+            I: IntoIterator<Item = AnyElement>,
+        {
             let theme = Theme::global(&*cx.app).clone();
             cx.container(
                 decl_style::container_props(&theme, self.chrome, self.layout),
@@ -419,11 +422,14 @@ pub mod primitives {
             self
         }
 
-        pub fn into_element<H: UiHost>(
+        pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
-            children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-        ) -> AnyElement {
+            children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+        ) -> AnyElement
+        where
+            I: IntoIterator<Item = AnyElement>,
+        {
             let theme = Theme::global(&*cx.app).clone();
             let (_fg, muted) = colors(&theme);
             let style = text_style(&theme);
@@ -450,7 +456,7 @@ pub mod primitives {
                         move |cx| {
                             // Apply the list-level muted foreground by default; individual children
                             // (BreadcrumbLink/Page) can override it.
-                            let mut out = children(cx);
+                            let mut out: Vec<AnyElement> = children(cx).into_iter().collect();
                             for el in &mut out {
                                 // Best-effort: only text nodes support local color overrides.
                                 if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
@@ -491,11 +497,14 @@ pub mod primitives {
             self
         }
 
-        pub fn into_element<H: UiHost>(
+        pub fn into_element<H: UiHost, I>(
             self,
             cx: &mut ElementContext<'_, H>,
-            children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-        ) -> AnyElement {
+            children: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+        ) -> AnyElement
+        where
+            I: IntoIterator<Item = AnyElement>,
+        {
             let theme = Theme::global(&*cx.app).clone();
             let item_gap = theme
                 .metric_by_key("component.breadcrumb.item_gap")

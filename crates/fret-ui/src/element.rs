@@ -480,7 +480,7 @@ impl Default for ViewCacheProps {
     fn default() -> Self {
         Self {
             layout: LayoutStyle::default(),
-            contained_layout: true,
+            contained_layout: false,
             cache_key: 0,
         }
     }
@@ -1346,6 +1346,14 @@ pub enum VirtualListMeasureMode {
     /// Skips the measurement pass and assumes all items have the estimated size.
     /// Intended for fixed-height lists/tables.
     Fixed,
+    /// Skips the measurement pass and uses caller-provided per-index row heights.
+    ///
+    /// This mode is intended for “known-height” virtualization (e.g. fixed-height rows with
+    /// occasional deterministic height changes like group headers), where measuring each visible
+    /// row would be wasted work.
+    ///
+    /// Correctness requires that the provided height function matches the rendered row layout.
+    Known,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -1362,7 +1370,7 @@ pub enum VirtualListKeyCacheMode {
     VisibleOnly,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct VirtualListOptions {
     pub axis: fret_core::Axis,
     pub items_revision: u64,
@@ -1372,6 +1380,7 @@ pub struct VirtualListOptions {
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
+    pub known_row_height_at: Option<Arc<dyn Fn(usize) -> Px + Send + Sync>>,
 }
 
 impl VirtualListOptions {
@@ -1385,6 +1394,7 @@ impl VirtualListOptions {
             overscan,
             scroll_margin: Px(0.0),
             gap: Px(0.0),
+            known_row_height_at: None,
         }
     }
 
@@ -1393,6 +1403,33 @@ impl VirtualListOptions {
             measure_mode: VirtualListMeasureMode::Fixed,
             ..Self::new(estimate_row_height, overscan)
         }
+    }
+
+    pub fn known(
+        estimate_row_height: Px,
+        overscan: usize,
+        height_at: impl Fn(usize) -> Px + Send + Sync + 'static,
+    ) -> Self {
+        let mut options = Self::new(estimate_row_height, overscan);
+        options.measure_mode = VirtualListMeasureMode::Known;
+        options.known_row_height_at = Some(Arc::new(height_at));
+        options
+    }
+}
+
+impl std::fmt::Debug for VirtualListOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VirtualListOptions")
+            .field("axis", &self.axis)
+            .field("items_revision", &self.items_revision)
+            .field("estimate_row_height", &self.estimate_row_height)
+            .field("measure_mode", &self.measure_mode)
+            .field("key_cache", &self.key_cache)
+            .field("overscan", &self.overscan)
+            .field("scroll_margin", &self.scroll_margin)
+            .field("gap", &self.gap)
+            .field("known_row_height_at", &self.known_row_height_at.is_some())
+            .finish()
     }
 }
 
@@ -1403,6 +1440,10 @@ pub struct VirtualListState {
     pub offset_y: Px,
     pub viewport_w: Px,
     pub viewport_h: Px,
+    pub(crate) window_range: Option<crate::virtual_list::VirtualRange>,
+    pub(crate) render_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub(crate) has_final_viewport: bool,
+    pub(crate) deferred_scroll_offset_hint: Option<Px>,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
     pub(crate) items_revision: u64,
     pub(crate) items_len: usize,
@@ -1532,6 +1573,64 @@ pub struct ScrollbarState {
 /// Authoring conversion boundary (ADR 0039).
 pub trait IntoElement {
     fn into_element(self, id: GlobalElementId) -> AnyElement;
+}
+
+/// A small owned collection wrapper for element lists.
+///
+/// This is intended for authoring-facing APIs that want an "iterator-friendly" return type without
+/// forcing callers into `Vec<AnyElement>` as the only option.
+#[derive(Debug, Clone, Default)]
+pub struct Elements(pub Vec<AnyElement>);
+
+impl Elements {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self(children.into_iter().collect())
+    }
+
+    pub fn into_vec(self) -> Vec<AnyElement> {
+        self.0
+    }
+}
+
+impl From<Vec<AnyElement>> for Elements {
+    fn from(value: Vec<AnyElement>) -> Self {
+        Self(value)
+    }
+}
+
+impl<const N: usize> From<[AnyElement; N]> for Elements {
+    fn from(value: [AnyElement; N]) -> Self {
+        Self::new(value)
+    }
+}
+
+impl std::iter::FromIterator<AnyElement> for Elements {
+    fn from_iter<T: IntoIterator<Item = AnyElement>>(iter: T) -> Self {
+        Self::new(iter)
+    }
+}
+
+impl std::ops::Deref for Elements {
+    type Target = Vec<AnyElement>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Elements {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl IntoIterator for Elements {
+    type Item = AnyElement;
+    type IntoIter = std::vec::IntoIter<AnyElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
 }
 
 /// Authoring helper for collecting iterator-produced child elements.

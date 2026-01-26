@@ -244,6 +244,7 @@ fn theme_with_metrics(metrics: &[(&str, f32)]) -> Theme {
             url: theme.url.clone(),
             colors: HashMap::new(),
             metrics: HashMap::new(),
+            ..ThemeConfig::default()
         };
         for (k, v) in metrics {
             cfg.metrics.insert((*k).to_string(), *v);

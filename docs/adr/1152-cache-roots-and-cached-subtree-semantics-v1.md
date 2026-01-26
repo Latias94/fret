@@ -81,6 +81,19 @@ This flag:
   layout pass.
 - MUST NOT be used to suppress correctness-critical invalidation propagation across cache roots.
 
+Additional contract constraints:
+
+- `contained_layout` MUST be treated as **opt-in**. A cache root MUST NOT assume that an out-of-band
+  “contained relayout” pass can safely run unless the parent provides a stable, correct placement
+  bounds for the cache root in the same frame.
+- Barrier-driven placement (virtualization, scroll content, split panes, etc.) MUST NOT enable
+  contained relayout by default for nested cache roots. These subtrees are placed by an explicit
+  barrier bridge and their coordinate space can be incorrect if a contained relayout runs against
+  default/stale bounds (e.g. relayout at the origin).
+- When a cache root is placed by a barrier, it SHOULD be treated as a pass-through boundary:
+  its bounds must be authored by the barrier layout pass, and any “contained” solve must be
+  performed by the barrier itself (not by a generic view-cache contained relayout pass).
+
 ### 6) Inspection/probe modes disable view caching by default
 
 When the UI runtime is in an inspection/probe mode (picking, semantics inspection), view caching

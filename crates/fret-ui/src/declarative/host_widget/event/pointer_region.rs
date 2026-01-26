@@ -26,9 +26,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         node: NodeId,
         bounds: Rect,
         input_ctx: &'a fret_runtime::InputContext,
+        prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
         requested_focus: &'a mut Option<NodeId>,
         requested_capture: &'a mut Option<Option<NodeId>>,
         requested_cursor: &'a mut Option<fret_core::CursorIcon>,
+        notify_requested: &'a mut bool,
+        invalidations: &'a mut Vec<(NodeId, Invalidation)>,
     }
 
     impl<H: UiHost> action::UiActionHost for PointerHookHost<'_, H> {
@@ -65,6 +68,10 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
         }
+
+        fn notify(&mut self, _cx: action::ActionCx) {
+            *self.notify_requested = true;
+        }
     }
 
     impl<H: UiHost> action::UiFocusActionHost for PointerHookHost<'_, H> {
@@ -98,6 +105,14 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 return;
             }
             *self.requested_cursor = Some(icon);
+        }
+
+        fn prevent_default(&mut self, action: fret_runtime::DefaultAction) {
+            self.prevented_default_actions.insert(action);
+        }
+
+        fn invalidate(&mut self, invalidation: Invalidation) {
+            self.invalidations.push((self.node, invalidation));
         }
     }
 
@@ -202,9 +217,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 node: cx.node,
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
+                prevented_default_actions: cx.prevented_default_actions,
                 requested_focus: &mut cx.requested_focus,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
+                notify_requested: &mut cx.notify_requested,
+                invalidations: &mut cx.invalidations,
             };
             let handled = h(
                 &mut host,
@@ -256,9 +274,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 node: cx.node,
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
+                prevented_default_actions: cx.prevented_default_actions,
                 requested_focus: &mut cx.requested_focus,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
+                notify_requested: &mut cx.notify_requested,
+                invalidations: &mut cx.invalidations,
             };
             let handled = h(
                 &mut host,
@@ -310,9 +331,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 node: cx.node,
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
+                prevented_default_actions: cx.prevented_default_actions,
                 requested_focus: &mut cx.requested_focus,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
+                notify_requested: &mut cx.notify_requested,
+                invalidations: &mut cx.invalidations,
             };
             let handled = h(
                 &mut host,
@@ -364,9 +388,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 node: cx.node,
                 bounds: cx.bounds,
                 input_ctx: &cx.input_ctx,
+                prevented_default_actions: cx.prevented_default_actions,
                 requested_focus: &mut cx.requested_focus,
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
+                notify_requested: &mut cx.notify_requested,
+                invalidations: &mut cx.invalidations,
             };
             let handled = h(
                 &mut host,
@@ -421,9 +448,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     node: cx.node,
                     bounds: cx.bounds,
                     input_ctx: &cx.input_ctx,
+                    prevented_default_actions: cx.prevented_default_actions,
                     requested_focus: &mut cx.requested_focus,
                     requested_capture: &mut cx.requested_capture,
                     requested_cursor: &mut cx.requested_cursor,
+                    notify_requested: &mut cx.notify_requested,
+                    invalidations: &mut cx.invalidations,
                 };
                 let handled = h(
                     &mut host,
@@ -473,9 +503,12 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     node: cx.node,
                     bounds: cx.bounds,
                     input_ctx: &cx.input_ctx,
+                    prevented_default_actions: cx.prevented_default_actions,
                     requested_focus: &mut cx.requested_focus,
                     requested_capture: &mut cx.requested_capture,
                     requested_cursor: &mut cx.requested_cursor,
+                    notify_requested: &mut cx.notify_requested,
+                    invalidations: &mut cx.invalidations,
                 };
                 let handled = h(
                     &mut host,

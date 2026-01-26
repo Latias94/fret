@@ -3,6 +3,9 @@
 use super::*;
 use std::sync::OnceLock;
 
+#[cfg(feature = "diag-screenshots")]
+use slotmap::Key as _;
+
 #[derive(Debug, Clone, Copy)]
 struct RedrawHitchConfig {
     hitch_ms: u64,
@@ -682,6 +685,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 // requests apply deterministically to the frame being drawn (ADR 0013).
                 self.drain_effects(event_loop);
 
+                #[cfg(feature = "diag-screenshots")]
+                if let Some(diag) = self.diag_screenshots.as_mut() {
+                    diag.poll();
+                }
+
                 {
                     let (Some(context), Some(renderer)) =
                         (self.context.as_ref(), self.renderer.as_mut())
@@ -810,14 +818,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     let present_started = hitch_config.map(|_| Instant::now());
                     let present_span = tracing::info_span!("fret.runner.present");
                     let _present_guard = present_span.enter();
-                    let draw_result = (|| -> Result<(), fret_render::RenderError> {
+                    let draw_result: Result<(), fret_render::RenderError> = (|| {
                         let (frame, view) =
                             state.surface.get_current_frame_view().map_err(|source| {
                                 fret_render::RenderError::SurfaceAcquireFailed { source }
                             })?;
 
                         let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
-
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
                         let ui_cmd = renderer.render_scene(
@@ -836,7 +843,26 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         let mut cmd_buffers = engine_frame.command_buffers;
                         cmd_buffers.push(ui_cmd);
 
-                        let mut pending_screenshot = None;
+                        #[cfg(feature = "diag-screenshots")]
+                        let mut screenshot_inflight: Option<
+                            diag_screenshots::InFlightCapture,
+                        > = None;
+                        #[cfg(feature = "diag-screenshots")]
+                        if let Some(diag) = self.diag_screenshots.as_mut() {
+                            let window_ffi = app_window.data().as_ffi();
+                            if let Some((cmd, inflight)) = diag.begin_capture_for_window(
+                                &context.device,
+                                window_ffi,
+                                &frame.texture,
+                                state.surface.format(),
+                                state.surface.size(),
+                            ) {
+                                cmd_buffers.push(cmd);
+                                screenshot_inflight = Some(inflight);
+                            }
+                        }
+
+                        let mut pending_bundle_screenshot = None;
                         if let Some(dir) = screenshot_dir
                             && let Some((pending, copy_cmd)) =
                                 self.diag_bundle_screenshots.begin_readback(
@@ -847,13 +873,26 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 )
                         {
                             cmd_buffers.push(copy_cmd);
-                            pending_screenshot = Some((pending, dir));
+                            pending_bundle_screenshot = Some((pending, dir));
                         }
 
                         context.queue.submit(cmd_buffers);
                         frame.present();
 
-                        if let Some((pending, dir)) = pending_screenshot {
+                        #[cfg(feature = "diag-screenshots")]
+                        if let (Some(diag), Some(inflight)) =
+                            (self.diag_screenshots.as_mut(), screenshot_inflight)
+                        {
+                            if let Err(err) = diag.finish_capture(&context.device, inflight) {
+                                tracing::warn!(
+                                    error = %err,
+                                    window = ?app_window,
+                                    "diag screenshot: capture failed"
+                                );
+                            }
+                        }
+
+                        if let Some((pending, dir)) = pending_bundle_screenshot {
                             let _ = self.diag_bundle_screenshots.finish_and_write_bmp(
                                 &context.device,
                                 pending,
@@ -863,7 +902,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
 
                         Ok(())
-                    })();
+                    })(
+                    );
                     if let Some(started) = present_started {
                         hitch_present_ms = Some(started.elapsed().as_millis() as u64);
                     }
@@ -909,6 +949,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             fret_render::RenderError::SurfaceAcquireFailed {
                                 source: wgpu::SurfaceError::OutOfMemory,
                             } => {
+                                self.dispatcher.shutdown();
                                 event_loop.exit();
                                 return;
                             }
@@ -1153,6 +1194,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             next_deadline = Some(match next_deadline {
                 Some(cur) => cur.min(entry.deadline),
                 None => entry.deadline,
+            });
+        }
+
+        if let Some(deadline) = self.dispatcher.next_deadline() {
+            next_deadline = Some(match next_deadline {
+                Some(cur) => cur.min(deadline),
+                None => deadline,
             });
         }
 

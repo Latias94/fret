@@ -27,3 +27,4 @@ time.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
+slotmap.workspace = true

@@ -110,23 +110,35 @@ impl InputGroup {
         self.control(InputGroupControlKind::Textarea)
     }
 
-    pub fn leading(mut self, children: Vec<AnyElement>) -> Self {
-        self.leading = children;
+    pub fn leading<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.leading = children.into_iter().collect();
         self
     }
 
-    pub fn trailing(mut self, children: Vec<AnyElement>) -> Self {
-        self.trailing = children;
+    pub fn trailing<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.trailing = children.into_iter().collect();
         self
     }
 
-    pub fn block_start(mut self, children: Vec<AnyElement>) -> Self {
-        self.block_start = children;
+    pub fn block_start<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.block_start = children.into_iter().collect();
         self
     }
 
-    pub fn block_end(mut self, children: Vec<AnyElement>) -> Self {
-        self.block_end = children;
+    pub fn block_end<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.block_end = children.into_iter().collect();
         self
     }
 
@@ -747,8 +759,11 @@ impl InputGroupButton {
         }
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.children = children.into_iter().collect();
         self
     }
 

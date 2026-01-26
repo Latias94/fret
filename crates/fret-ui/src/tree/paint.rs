@@ -268,6 +268,51 @@ impl<H: UiHost> UiTree<H> {
                         n.invalidation.paint = false;
                     }
 
+                    if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
+                        // Paint-cache replay translates recorded draw ops by `delta` without visiting
+                        // descendants. Keep hit-testing and semantics consistent by translating the
+                        // retained subtree bounds too (mirrors the layout-only translation fast path).
+                        //
+                        // Without this, cached subtrees that move (e.g. due to parent layout changes)
+                        // can render correctly while their descendant bounds remain stale, causing
+                        // incorrect pointer routing and stale semantics geometry.
+                        let window = self.window;
+                        let mut stack: Vec<NodeId> = Vec::new();
+                        let mut i = 0usize;
+                        loop {
+                            let child = self
+                                .nodes
+                                .get(node)
+                                .and_then(|n| n.children.get(i))
+                                .copied();
+                            let Some(child) = child else {
+                                break;
+                            };
+                            stack.push(child);
+                            i += 1;
+                        }
+
+                        while let Some(id) = stack.pop() {
+                            let Some(n) = self.nodes.get_mut(id) else {
+                                continue;
+                            };
+                            n.bounds.origin = Point::new(
+                                n.bounds.origin.x + delta.x,
+                                n.bounds.origin.y + delta.y,
+                            );
+                            if let Some(window) = window
+                                && let Some(element) = n.element
+                            {
+                                crate::elements::record_bounds_for_element(
+                                    app, window, element, n.bounds,
+                                );
+                            }
+                            for &child in &n.children {
+                                stack.push(child);
+                            }
+                        }
+                    }
+
                     self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);
                     self.paint_cache.replayed_ops = self
                         .paint_cache
