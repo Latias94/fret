@@ -644,6 +644,7 @@ topics (if/when we implement them):
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that still force a cache-root rerender in cache+shell mode.
 
 - [ ] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
+  - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
   - Goal: allow scroll/window membership updates to attach/detach item subtrees without rerendering the parent cache root.
   - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Proposed).
   - Done when:
