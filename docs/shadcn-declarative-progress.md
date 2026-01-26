@@ -19,8 +19,8 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `338/448` (`75.4%`)
-- Next P0 gaps: `textarea/empty/resizable/native`; then `chart`.
+- Keys referenced by tests: `354/448` (`79%`)
+- Next P0 gaps: `chart-*`; then `date-*` / `field-*` / `kbd-*` / `button-as-child`.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,7 +38,8 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
-- Gate recurring layout patterns: `textarea-*`, `empty-*`, `resizable-*`, `native-*`.
+- Dedicated `chart-*` alignment push (large surface area; likely needs more selective gates + audit notes).
+- Finish remaining small missing families: `date-*`, `field-*`, `kbd-*`, `button-as-child`.
 
 P1:
 

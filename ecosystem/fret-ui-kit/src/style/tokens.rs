@@ -26,6 +26,7 @@ pub enum Space {
     N8,
     N10,
     N11,
+    N12,
 }
 
 impl Space {
@@ -45,6 +46,7 @@ impl Space {
             Self::N8 => "component.space.8",
             Self::N10 => "component.space.10",
             Self::N11 => "component.space.11",
+            Self::N12 => "component.space.12",
         }
     }
 
@@ -66,6 +68,7 @@ impl Space {
             Self::N8 => MetricFallback::ThemePaddingSmMulDiv { mul: 4, div: 1 },
             Self::N10 => MetricFallback::ThemePaddingSmMulDiv { mul: 5, div: 1 },
             Self::N11 => MetricFallback::ThemePaddingSmMulDiv { mul: 11, div: 2 },
+            Self::N12 => MetricFallback::ThemePaddingSmMulDiv { mul: 6, div: 1 },
         }
     }
 }

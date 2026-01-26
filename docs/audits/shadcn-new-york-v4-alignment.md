@@ -14,7 +14,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `338/448` keys referenced (`75.4%`)
+- shadcn-web `v4/new-york-v4`: `354/448` keys referenced (`79%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -43,20 +43,21 @@ Recent breadth wins:
 
 - **Auth blocks**: `login-*`, `signup-*`, `otp-*` now have shell container gates; `otp-01/02/03/05` also gate the
   InputOtp row geometry (slot sizes + gaps).
+- **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
 
 ### Largest remaining gaps (by golden family)
 
 From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
 
 - `chart` (76 variants): large surface area; likely needs a dedicated alignment push.
-- `textarea` / `empty` / `resizable` / `native` (4 each): recurring layout patterns.
+- `date` / `field` / `kbd` (3 each): smaller families worth finishing for breadth.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Textarea / empty / resizable / native**
-   - Gate these recurring layout patterns (they tend to expose flex/grid/overflow edge cases).
-2. **Chart push**
+1. **Chart push**
    - Treat `chart-*` as a dedicated sprint (surface area is large; likely needs new audit notes + more selective gates).
+2. **Finish remaining small missing families**
+   - `date-*` / `field-*` / `kbd-*` / `button-as-child` (fast breadth wins).
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
 second wave (because we can keep the matrix small and stable).

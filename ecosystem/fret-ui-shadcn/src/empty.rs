@@ -38,8 +38,16 @@ impl Empty {
         let border = theme.color_required("border");
         let fg = theme.color_required("foreground");
 
+        // Tailwind `md:` breakpoints apply at the viewport level. For `new-york-v4` we mirror
+        // `p-6 md:p-12` by inspecting the root bounds.
+        let padding = if cx.bounds.size.width.0 >= 768.0 {
+            Space::N12
+        } else {
+            Space::N6
+        };
+
         let chrome = ChromeRefinement::default()
-            .p(Space::N6)
+            .p(padding)
             .rounded(Radius::Lg)
             .border_1()
             .border_color(ColorRef::Color(border))
@@ -48,14 +56,15 @@ impl Empty {
 
         let layout = LayoutRefinement::default()
             .min_w_0()
-            .flex_1()
+            .w_full()
             .merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
 
         cx.container(props, move |cx| {
-            let layout = decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+            let layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
             let gap = MetricRef::space(Space::N6).resolve(&theme);
             vec![cx.flex(
                 FlexProps {

@@ -52,6 +52,7 @@ pub mod kbd;
 pub mod label;
 mod layout;
 pub mod menubar;
+pub mod native_select;
 pub mod navigation_menu;
 mod overlay_motion;
 pub mod pagination;
@@ -186,6 +187,7 @@ pub use menubar::{
     MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
     MenubarShortcut, menubar,
 };
+pub use native_select::{NativeSelect, NativeSelectSize, native_select};
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,

@@ -242,6 +242,28 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.label.line_height".to_string())
         .or_insert(14.0);
 
+    // new-york-v4 `Empty` defaults:
+    // - Title uses `text-lg` (18px) and Tailwind default leading (28px).
+    // - Description uses `text-sm/relaxed` (14px, 22.75px line-height).
+    metrics
+        .entry("component.empty.title_px".to_string())
+        .or_insert(18.0);
+    metrics
+        .entry("component.empty.title_line_height".to_string())
+        .or_insert(28.0);
+    metrics
+        .entry("component.empty.description_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.empty.description_line_height".to_string())
+        .or_insert(22.75);
+
+    // new-york-v4 `Resizable` defaults:
+    // - Handle uses `w-px` / `h-px` (1px layout gap), with a larger hit area.
+    metrics
+        .entry("component.resizable.gap".to_string())
+        .or_insert(1.0);
+
     // new-york-v4 `Field` defaults:
     // - `FieldGroup` uses `gap-7` (28px).
     // - `FieldLabel` uses `text-sm` with `leading-snug` (14px * 1.375 = 19.25px).
