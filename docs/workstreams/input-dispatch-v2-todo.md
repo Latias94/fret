@@ -109,7 +109,9 @@ Keep this list short and evidence-backed:
     `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (wires focus targets).
   - Conformance: shadcn tests cover keyboard-open entry focus and pointer-open “focus content, not first item” for
     DropdownMenu / Menubar / ContextMenu.
-  - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers).
+  - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers, auto-focus hooks).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (plumbs `on_open_auto_focus/on_close_auto_focus`),
+    tests `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs}` (auto-focus preventDefault conformance).
 - [x] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
   - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
 
