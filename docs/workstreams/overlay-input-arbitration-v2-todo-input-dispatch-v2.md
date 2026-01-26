@@ -213,6 +213,16 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/popover.rs` (`modal_popover_close_transition_restores_trigger_focus_while_barrier_blocks_underlay_pointer`)
 
+- [x] OIA2-test-037 Dialog close transition supports `onCloseAutoFocus` preventDefault + custom focus restore.
+  - Target: ensure recipes can take responsibility for focus restore during close transitions without weakening the modal barrier.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`dialog_close_transition_on_close_auto_focus_can_prevent_default_and_restore_focus`)
+
+- [x] OIA2-test-038 Modal popover close transition supports `onCloseAutoFocus` preventDefault + custom focus restore.
+  - Target: same handler semantics as modal overlays, but for modal popovers (separate code path).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/popover.rs` (`modal_popover_close_transition_on_close_auto_focus_can_prevent_default_and_restore_focus`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
