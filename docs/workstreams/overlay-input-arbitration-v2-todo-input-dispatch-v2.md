@@ -182,6 +182,26 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (`alert_dialog_open_auto_focus_can_be_redirected`)
 
+- [x] OIA2-test-031 Dialog open autofocus redirect to underlay is clamped by focus containment.
+  - Target: ensure modal open hooks cannot focus outside the modal layer.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dialog.rs` (`dialog_open_auto_focus_redirect_to_trigger_is_clamped_to_modal_layer`)
+
+- [x] OIA2-test-032 Sheet open autofocus redirect to underlay is clamped by focus containment.
+  - Target: ensure modal open hooks cannot focus outside the modal layer.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/sheet.rs` (`sheet_open_auto_focus_redirect_to_underlay_is_clamped_to_modal_layer`)
+
+- [x] OIA2-test-033 Drawer open autofocus redirect to underlay is clamped by focus containment.
+  - Target: ensure modal open hooks cannot focus outside the modal layer.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/drawer.rs` (`drawer_open_auto_focus_redirect_to_underlay_is_clamped_to_modal_layer`)
+
+- [x] OIA2-test-034 AlertDialog open autofocus redirect to underlay is clamped by focus containment.
+  - Target: ensure modal open hooks cannot focus outside the modal layer.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/alert_dialog.rs` (`alert_dialog_open_auto_focus_redirect_to_underlay_is_clamped_to_modal_layer`)
+
 ## Notes
 
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
