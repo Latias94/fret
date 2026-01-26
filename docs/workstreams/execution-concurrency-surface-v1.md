@@ -62,6 +62,7 @@ Status legend:
 
 - `[x]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
 - `[x]` Replace remaining bespoke channel+wake utilities in templates/examples
+- `[x]` Guardrails: add CI check that rejects raw `std::thread::{spawn,sleep}` usage outside runner/CLI wiring (`tools/check_execution_surface.ps1`)
 
 ## Proposed public surface (API sketch, non-binding)
 
