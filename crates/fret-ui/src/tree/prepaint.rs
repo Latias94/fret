@@ -121,8 +121,7 @@ impl<H: UiHost> UiTree<H> {
                 _ => None,
             },
         )
-        .flatten()
-        else {
+        .flatten() else {
             return;
         };
 
