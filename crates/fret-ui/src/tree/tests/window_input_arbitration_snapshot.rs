@@ -169,11 +169,14 @@ fn modal_barrier_hides_pointer_occlusion_layers_below_barrier_in_arbitration_sna
         }),
     );
 
-    let arbitration = app
-        .global::<fret_runtime::WindowInputArbitrationService>()
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window))
-        .copied()
-        .expect("expected a window input arbitration snapshot");
+        .cloned()
+        .expect("expected a window input context snapshot");
+    let arbitration = input_ctx
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
 
     assert_eq!(arbitration.modal_barrier_root, Some(modal_root));
     assert_eq!(
@@ -225,11 +228,14 @@ fn pointer_occlusion_above_modal_barrier_is_reported_in_arbitration_snapshot() {
         }),
     );
 
-    let arbitration = app
-        .global::<fret_runtime::WindowInputArbitrationService>()
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window))
-        .copied()
-        .expect("expected a window input arbitration snapshot");
+        .cloned()
+        .expect("expected a window input context snapshot");
+    let arbitration = input_ctx
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
 
     assert_eq!(arbitration.modal_barrier_root, Some(modal_root));
     assert_eq!(
@@ -307,11 +313,14 @@ fn modal_barrier_scopes_pointer_capture_to_active_roots() {
         }),
     );
 
-    let arbitration = app
-        .global::<fret_runtime::WindowInputArbitrationService>()
+    let input_ctx = app
+        .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window))
-        .copied()
-        .expect("expected a window input arbitration snapshot");
+        .cloned()
+        .expect("expected a window input context snapshot");
+    let arbitration = input_ctx
+        .window_arbitration
+        .expect("expected `InputContext.window_arbitration` to be populated");
 
     assert_eq!(arbitration.modal_barrier_root, Some(modal_root));
     assert_eq!(ui.captured_for(fret_core::PointerId(0)), None);
