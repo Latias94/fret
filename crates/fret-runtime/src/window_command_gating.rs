@@ -13,7 +13,16 @@ use crate::{WindowCommandEnabledService, WindowInputContextService};
 /// The intent is to allow nested overlays (command palette -> menu -> sub-menu, etc.) to publish
 /// independent gating snapshots without clobbering each other.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct WindowCommandGatingToken(u64);
+struct WindowCommandGatingToken(u64);
+
+/// Handle identifying a pushed, overlay-scoped gating override.
+///
+/// Returned by `push_snapshot` so overlays can remove or update only their own snapshot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WindowCommandGatingHandle {
+    window: AppWindowId,
+    token: WindowCommandGatingToken,
+}
 
 #[derive(Debug, Default)]
 struct WindowCommandGatingWindowState {
@@ -54,32 +63,31 @@ impl WindowCommandGatingService {
         self.gc_window(window);
     }
 
-    /// Pushes an overlay-scoped gating snapshot and returns a token that can later remove it.
+    /// Pushes an overlay-scoped gating snapshot and returns a handle that can later remove it.
     ///
     /// The most recently pushed snapshot wins (`snapshot()` returns the stack top).
     pub fn push_snapshot(
         &mut self,
         window: AppWindowId,
         snapshot: WindowCommandGatingSnapshot,
-    ) -> WindowCommandGatingToken {
+    ) -> WindowCommandGatingHandle {
         let token = WindowCommandGatingToken(self.next_token.max(1));
         self.next_token = token.0.saturating_add(1);
         let state = self.by_window.entry(window).or_default();
         state.stack.push((token, snapshot));
-        token
+        WindowCommandGatingHandle { window, token }
     }
 
     pub fn update_pushed_snapshot(
         &mut self,
-        window: AppWindowId,
-        token: WindowCommandGatingToken,
+        handle: WindowCommandGatingHandle,
         snapshot: WindowCommandGatingSnapshot,
     ) -> bool {
-        let Some(state) = self.by_window.get_mut(&window) else {
+        let Some(state) = self.by_window.get_mut(&handle.window) else {
             return false;
         };
         for (t, s) in &mut state.stack {
-            if *t == token {
+            if *t == handle.token {
                 *s = snapshot;
                 return true;
             }
@@ -87,15 +95,14 @@ impl WindowCommandGatingService {
         false
     }
 
-    pub fn remove_pushed_snapshot(
+    pub fn pop_snapshot(
         &mut self,
-        window: AppWindowId,
-        token: WindowCommandGatingToken,
+        handle: WindowCommandGatingHandle,
     ) -> Option<WindowCommandGatingSnapshot> {
-        let state = self.by_window.get_mut(&window)?;
-        let idx = state.stack.iter().position(|(t, _)| *t == token)?;
+        let state = self.by_window.get_mut(&handle.window)?;
+        let idx = state.stack.iter().position(|(t, _)| *t == handle.token)?;
         let (_, snapshot) = state.stack.remove(idx);
-        self.gc_window(window);
+        self.gc_window(handle.window);
         Some(snapshot)
     }
 
@@ -294,7 +301,7 @@ mod tests {
         let mut overlay_ctx = InputContext::default();
         overlay_ctx.ui_has_modal = true;
         overlay_ctx.focus_is_text_input = false;
-        let token = svc.push_snapshot(
+        let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
         );
@@ -304,8 +311,7 @@ mod tests {
             "expected stack top snapshot to win"
         );
 
-        svc.remove_pushed_snapshot(window, token)
-            .expect("remove pushed snapshot");
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
         assert!(
             svc.snapshot(window)
                 .is_some_and(|s| s.input_ctx().focus_is_text_input && !s.input_ctx().ui_has_modal),
@@ -346,8 +352,7 @@ mod tests {
             crate::InputDispatchPhase::Capture
         );
 
-        svc.remove_pushed_snapshot(window, outer)
-            .expect("remove outer");
+        svc.pop_snapshot(outer).expect("remove outer");
         assert_eq!(
             svc.snapshot(window)
                 .expect("snapshot")
@@ -357,8 +362,7 @@ mod tests {
             "expected inner snapshot to remain effective"
         );
 
-        svc.remove_pushed_snapshot(window, inner)
-            .expect("remove inner");
+        svc.pop_snapshot(inner).expect("remove inner");
         assert!(
             svc.snapshot(window).is_none(),
             "expected all snapshots removed"
@@ -379,7 +383,7 @@ mod tests {
 
         let mut overlay_ctx = InputContext::default();
         overlay_ctx.ui_has_modal = true;
-        let token = svc.push_snapshot(
+        let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
         );
@@ -391,8 +395,7 @@ mod tests {
             "expected overlay snapshot to remain effective after clearing base"
         );
 
-        svc.remove_pushed_snapshot(window, token)
-            .expect("remove pushed snapshot");
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
         assert!(
             svc.snapshot(window).is_none(),
             "expected window to be cleared after removing the last overlay snapshot"
@@ -407,7 +410,7 @@ mod tests {
         let mut overlay_ctx = InputContext::default();
         overlay_ctx.ui_has_modal = true;
         overlay_ctx.focus_is_text_input = false;
-        let token = svc.push_snapshot(
+        let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
         );
@@ -427,8 +430,7 @@ mod tests {
             "expected stack top snapshot to remain effective after set_snapshot"
         );
 
-        svc.remove_pushed_snapshot(window, token)
-            .expect("remove pushed snapshot");
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
         assert!(
             svc.snapshot(window)
                 .is_some_and(|s| !s.input_ctx().ui_has_modal && s.input_ctx().focus_is_text_input),
@@ -459,7 +461,6 @@ mod tests {
         updated_outer_ctx.dispatch_phase = crate::InputDispatchPhase::Preview;
         assert!(
             svc.update_pushed_snapshot(
-                window,
                 outer,
                 WindowCommandGatingSnapshot::new(updated_outer_ctx, HashMap::new())
             ),
@@ -475,8 +476,7 @@ mod tests {
             "expected inner snapshot to remain effective"
         );
 
-        svc.remove_pushed_snapshot(window, inner)
-            .expect("remove inner");
+        svc.pop_snapshot(inner).expect("remove inner");
         assert_eq!(
             svc.snapshot(window)
                 .expect("snapshot")
@@ -506,16 +506,14 @@ mod tests {
             WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
         );
 
-        svc.remove_pushed_snapshot(window, inner)
-            .expect("remove inner");
+        svc.pop_snapshot(inner).expect("remove inner");
         assert!(
             svc.snapshot(window)
                 .is_some_and(|s| s.input_ctx().ui_has_modal),
             "expected outer snapshot to become effective after popping inner"
         );
 
-        svc.remove_pushed_snapshot(window, outer)
-            .expect("remove outer");
+        svc.pop_snapshot(outer).expect("remove outer");
         assert!(
             svc.snapshot(window).is_none(),
             "expected all snapshots removed"
@@ -536,7 +534,7 @@ mod tests {
 
         let mut overlay_ctx = InputContext::default();
         overlay_ctx.ui_has_modal = true;
-        let token = svc.push_snapshot(
+        let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
         );
@@ -548,8 +546,7 @@ mod tests {
             "expected pushed override to remain after clearing base snapshot"
         );
 
-        svc.remove_pushed_snapshot(window, token)
-            .expect("remove pushed snapshot");
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
         assert!(
             svc.snapshot(window).is_none(),
             "expected window to be cleared after removing last pushed override and base"
