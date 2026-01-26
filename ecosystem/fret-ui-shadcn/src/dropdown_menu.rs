@@ -3023,22 +3023,23 @@ impl DropdownMenu {
                                                                     )
                                                                 }));
                                                             }
-                                                            DropdownMenuEntry::Item(item) => {
-                                                                let collection_index = *item_ix;
-                                                                *item_ix = (*item_ix).saturating_add(1);
+                                                    DropdownMenuEntry::Item(item) => {
+                                                        let collection_index = *item_ix;
+                                                        *item_ix = (*item_ix).saturating_add(1);
 
-                                                                let label = item.label.clone();
-                                                                let value = item.value.clone();
-                                                                let a11y_label = item
-                                                                    .a11y_label
-                                                                    .clone()
-                                                                    .or_else(|| Some(label.clone()));
-                                                                let close_on_select = item.close_on_select;
-                                                                let command = item.command;
-                                                                let disabled = item.disabled
-                                                                    || crate::command_gating::command_is_disabled_by_gating(
-                                                                        &*cx.app,
-                                                                        &gating,
+                                                        let label = item.label.clone();
+                                                        let value = item.value.clone();
+                                                        let a11y_label = item
+                                                            .a11y_label
+                                                            .clone()
+                                                            .or_else(|| Some(label.clone()));
+                                                        let test_id = item.test_id.clone();
+                                                        let close_on_select = item.close_on_select;
+                                                        let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
                                                                         command.as_ref(),
                                                                     );
                                                                 let leading = item.leading.clone();
@@ -3065,6 +3066,8 @@ impl DropdownMenu {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
 
+                                                                            let mut a11y = menu::item::menu_item_a11y(a11y_label, None);
+                                                                            a11y.test_id = test_id.clone();
                                                                             let props = PressableProps {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
@@ -3075,11 +3078,7 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_a11y(
-                                                                                    a11y_label,
-                                                                                    None,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
                                                                                 ),
@@ -5976,6 +5975,90 @@ mod tests {
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
             "submenu items should render after ArrowRight opens the submenu"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_items_propagate_test_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha").test_id("sub-alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha submenu item");
+        assert_eq!(
+            sub_alpha.test_id.as_deref(),
+            Some("sub-alpha"),
+            "expected submenu item test_id to be preserved for deterministic automation"
         );
     }
 
