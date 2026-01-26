@@ -574,6 +574,9 @@ topics (if/when we implement them):
   - Current (v1): `VirtualList`’s `visible_items` are computed during declarative render (`crates/fret-ui/src/elements/cx.rs`), so changing the
     visible window requires a cache-root rerender to rebuild the item subtree. The v2 goal is to move “window derivation + ephemeral items”
     into prepaint (ADR 0190), so scroll-driven window updates do not necessarily imply a cache-root rerender.
+  - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
+    row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
+    (tracked in ADR 0192).
   - Progress (v1):
     - VirtualList rerender frames now compute `render_window_range` against the latest scroll-handle offset (including out-of-band `set_offset`),
       reducing “window jump -> layout updates -> next frame rerender” one-frame lag.
@@ -619,6 +622,13 @@ topics (if/when we implement them):
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that still force a cache-root rerender in cache+shell mode.
+
+- [ ] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
+  - Goal: allow scroll/window membership updates to attach/detach item subtrees without rerendering the parent cache root.
+  - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Proposed).
+  - Done when:
+    - A prototype host can drive a fixed-height “composable rows” list without forcing a parent cache-root rerender when crossing a window boundary (attach/detach delta only).
+    - A scripted harness bundle can prove: no stale paint, stable hit-testing, and bounded attach/detach work.
 
 - [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
   - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
