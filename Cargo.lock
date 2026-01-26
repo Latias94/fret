@@ -1095,6 +1095,7 @@ dependencies = [
  "fret-core",
  "fret-docking",
  "fret-editor",
+ "fret-executor",
  "fret-gizmo",
  "fret-icons",
  "fret-kit",
