@@ -2193,18 +2193,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     where
         F: FnOnce() -> PlatformCompletion + Send + 'static,
     {
-        let Some(proxy) = self.event_loop_proxy.clone() else {
+        let Some(_proxy) = self.event_loop_proxy.clone() else {
             return false;
         };
         let events = self.proxy_events.clone();
 
-        std::thread::spawn(move || {
-            let completion = task();
-            if let Ok(mut queue) = events.lock() {
-                queue.push(RunnerUserEvent::PlatformCompletion { window, completion });
-            }
-            proxy.wake_up();
-        });
+        let dispatcher = self.dispatcher.handle();
+        let wake_dispatcher = dispatcher.clone();
+        dispatcher.dispatch_background(
+            Box::new(move || {
+                let completion = task();
+                if let Ok(mut queue) = events.lock() {
+                    queue.push(RunnerUserEvent::PlatformCompletion { window, completion });
+                }
+                wake_dispatcher.wake(Some(window));
+            }),
+            fret_runtime::DispatchPriority::High,
+        );
 
         true
     }
