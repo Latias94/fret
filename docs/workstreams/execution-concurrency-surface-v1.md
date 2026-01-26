@@ -43,7 +43,7 @@ Status legend:
 - `[x]` Driver boundary: drain inboxes at runner flush points via `InboxDrainRegistry` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`, web: `crates/fret-launch/src/runner/web.rs`)
 - `[ ]` Observability: add tracing spans for dispatch/wake/drain points
 - `[x]` Safety: fence dispatcher on shutdown (desktop + wasm), plus basic unit tests
-- `[ ]` Safety: cancellation baseline (task handles; no post-cancel enqueue/wake)
+- `[x]` Safety: cancellation baseline (ecosystem task handles; no post-cancel enqueue/wake)
 - `[ ]` Safety: hot reload boundary (no stale callbacks after teardown)
 
 ### Phase 2 (wasm mapping)

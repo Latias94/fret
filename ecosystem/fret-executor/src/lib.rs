@@ -6,11 +6,78 @@
 
 use std::{
     collections::VecDeque,
+    marker::PhantomData,
+    rc::Rc,
+    sync::atomic::{AtomicBool, Ordering},
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use fret_core::AppWindowId;
 use fret_runtime::{DispatchPriority, DispatcherHandle, InboxDrain, InboxDrainHost, Runnable};
+
+#[derive(Debug, Clone)]
+pub struct CancellationToken {
+    cancelled: Arc<AtomicBool>,
+}
+
+impl CancellationToken {
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Relaxed)
+    }
+
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+    }
+}
+
+#[derive(Debug)]
+pub struct BackgroundTask {
+    token: CancellationToken,
+    cancel_on_drop: bool,
+}
+
+impl BackgroundTask {
+    pub fn cancel(&self) {
+        self.token.cancel();
+    }
+
+    pub fn token(&self) -> CancellationToken {
+        self.token.clone()
+    }
+
+    pub fn detach(mut self) {
+        self.cancel_on_drop = false;
+    }
+}
+
+impl Drop for BackgroundTask {
+    fn drop(&mut self) {
+        if self.cancel_on_drop {
+            self.token.cancel();
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ForegroundTask {
+    inner: BackgroundTask,
+    _not_send: PhantomData<Rc<()>>,
+}
+
+impl ForegroundTask {
+    pub fn cancel(&self) {
+        self.inner.cancel();
+    }
+
+    pub fn token(&self) -> CancellationToken {
+        self.inner.token()
+    }
+
+    pub fn detach(mut self) {
+        self.inner.cancel_on_drop = false;
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InboxOverflowStrategy {
@@ -192,11 +259,11 @@ impl Executors {
     }
 
     pub fn dispatch_on_main_thread(&self, task: Runnable) {
-        self.dispatcher.dispatch_on_main_thread(task);
+        self.spawn_on_main_thread(move |_| task()).detach();
     }
 
     pub fn dispatch_background(&self, task: Runnable, priority: DispatchPriority) {
-        self.dispatcher.dispatch_background(task, priority);
+        self.spawn_background(priority, move |_| task()).detach();
     }
 
     pub fn dispatch_background_to_inbox<M: Send + 'static>(
@@ -205,21 +272,208 @@ impl Executors {
         inbox: InboxSender<M>,
         task: impl FnOnce() -> M + Send + 'static,
     ) {
-        let dispatcher = self.dispatcher.clone();
+        self.spawn_background_to_inbox(window, inbox, move |_| task())
+            .detach();
+    }
+
+    pub fn spawn_on_main_thread(
+        &self,
+        task: impl FnOnce(CancellationToken) + Send + 'static,
+    ) -> ForegroundTask {
+        let token = CancellationToken {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        };
+        let task_token = token.clone();
+        self.dispatcher.dispatch_on_main_thread(Box::new(move || {
+            if task_token.is_cancelled() {
+                return;
+            }
+            task(task_token);
+        }));
+
+        ForegroundTask {
+            inner: BackgroundTask {
+                token,
+                cancel_on_drop: true,
+            },
+            _not_send: PhantomData,
+        }
+    }
+
+    pub fn spawn_background(
+        &self,
+        priority: DispatchPriority,
+        task: impl FnOnce(CancellationToken) + Send + 'static,
+    ) -> BackgroundTask {
+        let token = CancellationToken {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        };
+        let task_token = token.clone();
         self.dispatcher.dispatch_background(
             Box::new(move || {
-                let msg = task();
-                let _ = inbox.send(msg);
-                dispatcher.wake(window);
+                if task_token.is_cancelled() {
+                    return;
+                }
+                task(task_token);
+            }),
+            priority,
+        );
+
+        BackgroundTask {
+            token,
+            cancel_on_drop: true,
+        }
+    }
+
+    pub fn spawn_after(
+        &self,
+        delay: Duration,
+        task: impl FnOnce(CancellationToken) + Send + 'static,
+    ) -> ForegroundTask {
+        let token = CancellationToken {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        };
+        let task_token = token.clone();
+        self.dispatcher.dispatch_after(
+            delay,
+            Box::new(move || {
+                if task_token.is_cancelled() {
+                    return;
+                }
+                task(task_token);
+            }),
+        );
+
+        ForegroundTask {
+            inner: BackgroundTask {
+                token,
+                cancel_on_drop: true,
+            },
+            _not_send: PhantomData,
+        }
+    }
+
+    pub fn spawn_background_to_inbox<M: Send + 'static>(
+        &self,
+        window: Option<AppWindowId>,
+        inbox: InboxSender<M>,
+        task: impl FnOnce(CancellationToken) -> M + Send + 'static,
+    ) -> BackgroundTask {
+        let token = CancellationToken {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        };
+        let task_token = token.clone();
+        let dispatcher = self.dispatcher.clone();
+
+        self.dispatcher.dispatch_background(
+            Box::new(move || {
+                if task_token.is_cancelled() {
+                    return;
+                }
+
+                let msg = task(task_token.clone());
+
+                if task_token.is_cancelled() {
+                    return;
+                }
+
+                if inbox.send(msg) {
+                    dispatcher.wake(window);
+                }
             }),
             DispatchPriority::Normal,
         );
+
+        BackgroundTask {
+            token,
+            cancel_on_drop: true,
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
+
+    use fret_runtime::{Dispatcher, ExecCapabilities};
+
+    #[derive(Default)]
+    struct TestDispatcher {
+        main: Mutex<Vec<Runnable>>,
+        background: Mutex<Vec<Runnable>>,
+        after: Mutex<Vec<(Duration, Runnable)>>,
+        wakes: AtomicUsize,
+    }
+
+    impl TestDispatcher {
+        fn drain_main(&self) {
+            let tasks = {
+                let Ok(mut guard) = self.main.lock() else {
+                    return;
+                };
+                std::mem::take(&mut *guard)
+            };
+            for task in tasks {
+                task();
+            }
+        }
+
+        fn drain_background(&self) {
+            let tasks = {
+                let Ok(mut guard) = self.background.lock() else {
+                    return;
+                };
+                std::mem::take(&mut *guard)
+            };
+            for task in tasks {
+                task();
+            }
+        }
+
+        fn drain_after(&self) {
+            let tasks = {
+                let Ok(mut guard) = self.after.lock() else {
+                    return;
+                };
+                std::mem::take(&mut *guard)
+            };
+            for (_delay, task) in tasks {
+                task();
+            }
+        }
+    }
+
+    impl Dispatcher for TestDispatcher {
+        fn dispatch_on_main_thread(&self, task: Runnable) {
+            let Ok(mut guard) = self.main.lock() else {
+                return;
+            };
+            guard.push(task);
+        }
+
+        fn dispatch_background(&self, task: Runnable, _priority: DispatchPriority) {
+            let Ok(mut guard) = self.background.lock() else {
+                return;
+            };
+            guard.push(task);
+        }
+
+        fn dispatch_after(&self, delay: Duration, task: Runnable) {
+            let Ok(mut guard) = self.after.lock() else {
+                return;
+            };
+            guard.push((delay, task));
+        }
+
+        fn wake(&self, _window: Option<AppWindowId>) {
+            self.wakes.fetch_add(1, AtomicOrdering::Relaxed);
+        }
+
+        fn exec_capabilities(&self) -> ExecCapabilities {
+            ExecCapabilities::default()
+        }
+    }
 
     #[test]
     fn inbox_drop_newest_rejects_when_full() {
@@ -263,5 +517,99 @@ mod tests {
                 dropped_oldest: 1
             }
         );
+    }
+
+    #[test]
+    fn dropped_background_task_suppresses_inbox_and_wake() {
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let ex = Executors::new(dispatcher.clone());
+
+        let inbox = Inbox::new(InboxConfig {
+            capacity: 4,
+            overflow: InboxOverflowStrategy::DropOldest,
+        });
+        let sender = inbox.sender();
+
+        let ran = Arc::new(AtomicUsize::new(0));
+        {
+            let ran = ran.clone();
+            let task = ex.spawn_background_to_inbox(None, sender, move |_| {
+                ran.fetch_add(1, AtomicOrdering::Relaxed);
+                123
+            });
+            drop(task);
+        }
+
+        dispatcher.drain_background();
+
+        assert_eq!(ran.load(AtomicOrdering::Relaxed), 0);
+        assert!(inbox.drain().is_empty());
+        assert_eq!(dispatcher.wakes.load(AtomicOrdering::Relaxed), 0);
+    }
+
+    #[test]
+    fn detached_background_task_runs_and_wakes() {
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let ex = Executors::new(dispatcher.clone());
+
+        let inbox = Inbox::new(InboxConfig {
+            capacity: 4,
+            overflow: InboxOverflowStrategy::DropOldest,
+        });
+        let sender = inbox.sender();
+
+        let ran = Arc::new(AtomicUsize::new(0));
+        {
+            let ran = ran.clone();
+            ex.spawn_background_to_inbox(None, sender, move |_| {
+                ran.fetch_add(1, AtomicOrdering::Relaxed);
+                456
+            })
+            .detach();
+        }
+
+        dispatcher.drain_background();
+
+        assert_eq!(ran.load(AtomicOrdering::Relaxed), 1);
+        assert_eq!(inbox.drain(), vec![456]);
+        assert_eq!(dispatcher.wakes.load(AtomicOrdering::Relaxed), 1);
+    }
+
+    #[test]
+    fn cancelled_after_task_suppresses_callback() {
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let ex = Executors::new(dispatcher.clone());
+
+        let ran = Arc::new(AtomicUsize::new(0));
+        let task = {
+            let ran = ran.clone();
+            ex.spawn_after(Duration::from_secs(1), move |_| {
+                ran.fetch_add(1, AtomicOrdering::Relaxed);
+            })
+        };
+
+        task.cancel();
+        dispatcher.drain_after();
+
+        assert_eq!(ran.load(AtomicOrdering::Relaxed), 0);
+    }
+
+    #[test]
+    fn dropped_foreground_task_suppresses_callback() {
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let ex = Executors::new(dispatcher.clone());
+
+        let ran = Arc::new(AtomicUsize::new(0));
+        {
+            let ran = ran.clone();
+            let task = ex.spawn_on_main_thread(move |_| {
+                ran.fetch_add(1, AtomicOrdering::Relaxed);
+            });
+            drop(task);
+        }
+
+        dispatcher.drain_main();
+
+        assert_eq!(ran.load(AtomicOrdering::Relaxed), 0);
     }
 }
