@@ -1,6 +1,6 @@
 # Overlay Arbitration Polish — TODO Tracker
 
-Status: Active (v1; core overlay lifecycle/arbitration is stable, but view-cache/matrix regression gates are still in progress)
+Status: Complete (v1; keep this tracker updated if new overlay/arbitration gaps are discovered)
 
 This tracker focuses on the “editor-grade UI feel” gaps around overlays/portals (menus, popovers, dialogs),
 their lifecycle, and input arbitration — especially under view-cache reuse.
@@ -29,7 +29,9 @@ Each TODO is labeled:
 
 - Scripted UI regressions: `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`, `docs/ui-diagnostics-and-scripted-tests.md`
 - Default suite entrypoint: `cargo run -p fretboard -- diag suite ui-gallery` (script list lives in `apps/fretboard/src/diag.rs`)
-- Planned: view-cache reuse gating (`--check-view-cache-reuse-min <n>`) and cached-vs-uncached bundle comparison.
+- View-cache reuse gating: `--check-view-cache-reuse-min <n>`
+- Bundle comparison: `fretboard diag compare <a> <b> ...` (semantics + optional scene fingerprint)
+- Matrix runner: `fretboard diag matrix ui-gallery` (runs cached+uncached variants and compares per-script bundles)
 
 ## P0 — Lifecycle + Arbitration Correctness
 
