@@ -30,6 +30,8 @@ pub(super) fn handle_pressable<H: UiHost>(
         requested_focus: &'a mut Option<NodeId>,
         requested_capture: &'a mut Option<Option<NodeId>>,
         requested_cursor: &'a mut Option<fret_core::CursorIcon>,
+        notify_requested: &'a mut bool,
+        invalidations: &'a mut Vec<(NodeId, Invalidation)>,
     }
 
     impl<H: UiHost> action::UiActionHost for PressablePointerHookHost<'_, H> {
@@ -65,6 +67,10 @@ pub(super) fn handle_pressable<H: UiHost>(
 
         fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
+        }
+
+        fn notify(&mut self, _cx: action::ActionCx) {
+            *self.notify_requested = true;
         }
     }
 
@@ -103,6 +109,10 @@ pub(super) fn handle_pressable<H: UiHost>(
 
         fn prevent_default(&mut self, action: fret_runtime::DefaultAction) {
             self.prevented_default_actions.insert(action);
+        }
+
+        fn invalidate(&mut self, invalidation: Invalidation) {
+            self.invalidations.push((self.node, invalidation));
         }
     }
 
@@ -197,6 +207,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_focus: &mut cx.requested_focus,
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
+                        notify_requested: &mut cx.notify_requested,
+                        invalidations: &mut cx.invalidations,
                     };
 
                     if h(
@@ -251,6 +263,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_focus: &mut cx.requested_focus,
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
+                        notify_requested: &mut cx.notify_requested,
+                        invalidations: &mut cx.invalidations,
                     };
 
                     match h(
@@ -332,6 +346,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_focus: &mut cx.requested_focus,
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
+                        notify_requested: &mut cx.notify_requested,
+                        invalidations: &mut cx.invalidations,
                     };
 
                     skip_activate = matches!(
@@ -370,6 +386,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                             app: &'a mut H,
                             window: AppWindowId,
                             element: crate::GlobalElementId,
+                            notify_requested: &'a mut bool,
                         }
 
                         impl<H: UiHost> action::UiActionHost for PressableActivateHookHost<'_, H> {
@@ -410,12 +427,17 @@ pub(super) fn handle_pressable<H: UiHost>(
                             fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                                 self.app.next_timer_token()
                             }
+
+                            fn notify(&mut self, _cx: action::ActionCx) {
+                                *self.notify_requested = true;
+                            }
                         }
 
                         let mut host = PressableActivateHookHost {
                             app: &mut *cx.app,
                             window,
                             element: this.element,
+                            notify_requested: &mut cx.notify_requested,
                         };
                         h(
                             &mut host,
@@ -425,7 +447,6 @@ pub(super) fn handle_pressable<H: UiHost>(
                             },
                             ActivateReason::Pointer,
                         );
-                        cx.notify();
                     }
                 }
                 cx.invalidate_self(Invalidation::Paint);
@@ -484,6 +505,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     app: &'a mut H,
                     window: AppWindowId,
                     element: crate::GlobalElementId,
+                    notify_requested: &'a mut bool,
                 }
 
                 impl<H: UiHost> action::UiActionHost for PressableActivateHookHost<'_, H> {
@@ -524,12 +546,17 @@ pub(super) fn handle_pressable<H: UiHost>(
                     fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                         self.app.next_timer_token()
                     }
+
+                    fn notify(&mut self, _cx: action::ActionCx) {
+                        *self.notify_requested = true;
+                    }
                 }
 
                 let mut host = PressableActivateHookHost {
                     app: &mut *cx.app,
                     window,
                     element: this.element,
+                    notify_requested: &mut cx.notify_requested,
                 };
                 h(
                     &mut host,
@@ -539,7 +566,6 @@ pub(super) fn handle_pressable<H: UiHost>(
                     },
                     ActivateReason::Keyboard,
                 );
-                cx.notify();
             }
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();

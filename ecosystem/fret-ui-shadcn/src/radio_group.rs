@@ -14,7 +14,10 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, WidgetState,
+    WidgetStateProperty, WidgetStates, resolve_override_slot,
+};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -120,6 +123,49 @@ impl RadioGroupItem {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct RadioGroupStyle {
+    pub icon_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub label_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub indicator_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+}
+
+impl RadioGroupStyle {
+    pub fn icon_border_color(
+        mut self,
+        icon_border_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.icon_border_color = Some(icon_border_color);
+        self
+    }
+
+    pub fn label_color(mut self, label_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.label_color = Some(label_color);
+        self
+    }
+
+    pub fn indicator_color(
+        mut self,
+        indicator_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.indicator_color = Some(indicator_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.icon_border_color.is_some() {
+            self.icon_border_color = other.icon_border_color;
+        }
+        if other.label_color.is_some() {
+            self.label_color = other.label_color;
+        }
+        if other.indicator_color.is_some() {
+            self.indicator_color = other.indicator_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct RadioGroup {
     model: Option<Model<Option<Arc<str>>>>,
@@ -131,6 +177,7 @@ pub struct RadioGroup {
     loop_navigation: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: RadioGroupStyle,
 }
 
 impl RadioGroup {
@@ -145,6 +192,7 @@ impl RadioGroup {
             loop_navigation: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: RadioGroupStyle::default(),
         }
     }
 
@@ -160,6 +208,7 @@ impl RadioGroup {
             loop_navigation: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: RadioGroupStyle::default(),
         }
     }
 
@@ -207,6 +256,11 @@ impl RadioGroup {
         self
     }
 
+    pub fn style(mut self, style: RadioGroupStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Self {
             model,
@@ -218,6 +272,7 @@ impl RadioGroup {
             loop_navigation,
             chrome,
             layout,
+            style,
         } = self;
 
         cx.scope(|cx| {
@@ -229,14 +284,29 @@ impl RadioGroup {
 
             let text_style = radio_text_style(&theme);
             let fg = radio_fg(&theme);
-            let fg_disabled = alpha_mul(fg, 0.5);
             let border = radio_border(&theme);
             let ring = radio_ring(&theme);
             let dot = radio_indicator(&theme);
 
+            let default_icon_border_color = WidgetStateProperty::new(ColorRef::Color(border))
+                .when(WidgetStates::HOVERED, ColorRef::Color(alpha_mul(ring, 0.8)))
+                .when(WidgetStates::ACTIVE, ColorRef::Color(alpha_mul(ring, 0.8)))
+                .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring))
+                .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(border, 0.5)));
+
+            let default_label_color =
+                WidgetStateProperty::new(ColorRef::Color(fg)).when(
+                    WidgetStates::DISABLED,
+                    ColorRef::Color(alpha_mul(alpha_mul(fg, 0.5), 0.8)),
+                );
+
+            let default_indicator_color = WidgetStateProperty::new(ColorRef::Color(dot))
+                .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(dot, 0.8)));
+
             let group_disabled = disabled;
             let group_label = a11y_label.clone();
             let items = items.clone();
+            let style_override = style.clone();
             let model = radio_group_prim::radio_group_use_model(
                 cx,
                 model.clone(),
@@ -308,6 +378,10 @@ impl RadioGroup {
                         let item_children = item.children.clone();
                         let text_style = text_style.clone();
                         let root_for_item = root_for_items.clone();
+                        let style_override = style_override.clone();
+                        let default_icon_border_color = default_icon_border_color.clone();
+                        let default_label_color = default_label_color.clone();
+                        let default_indicator_color = default_indicator_color.clone();
                         out.push(cx.keyed(value.clone(), move |cx| {
                             radio_group_prim::RadioGroupItem::new(value)
                                 .label(a11y_label.clone())
@@ -332,20 +406,28 @@ impl RadioGroup {
                                     move |cx, st, checked| {
                                         let theme = Theme::global(&*cx.app).clone();
 
-                                        let mut border_color = border;
-                                        if item_enabled && st.focused {
-                                            border_color = ring;
-                                        } else if item_enabled && (st.hovered || st.pressed) {
-                                            border_color = alpha_mul(ring, 0.8);
-                                        }
+                                        let mut states =
+                                            WidgetStates::from_pressable(cx, st, item_enabled);
+                                        states.set(WidgetState::Selected, checked);
 
-                                        let mut fg = if item_enabled { fg } else { fg_disabled };
-                                        let mut dot = dot;
-                                        if !item_enabled {
-                                            border_color = alpha_mul(border_color, 0.5);
-                                            fg = alpha_mul(fg, 0.8);
-                                            dot = alpha_mul(dot, 0.8);
-                                        }
+                                        let border_color = resolve_override_slot(
+                                            style_override.icon_border_color.as_ref(),
+                                            &default_icon_border_color,
+                                            states,
+                                        )
+                                        .resolve(&theme);
+                                        let fg = resolve_override_slot(
+                                            style_override.label_color.as_ref(),
+                                            &default_label_color,
+                                            states,
+                                        )
+                                        .resolve(&theme);
+                                        let dot = resolve_override_slot(
+                                            style_override.indicator_color.as_ref(),
+                                            &default_indicator_color,
+                                            states,
+                                        )
+                                        .resolve(&theme);
 
                                         let icon_layout = decl_style::layout_style(
                                             &theme,
@@ -494,7 +576,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, PathCommand, SemanticsRole, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle,
+        TextConstraints, TextMetrics, TextService,
     };
     use fret_core::{Event, KeyCode};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};

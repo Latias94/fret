@@ -3,6 +3,7 @@ use std::any::{Any, TypeId};
 use fret_core::{AppWindowId, NodeId};
 
 use crate::UiHost;
+use crate::action::DismissibleActionHooks;
 use crate::widget::Invalidation;
 
 use fret_runtime::{ModelId, TimerToken};
@@ -37,24 +38,6 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
         window_state.insert_state_box(key, value);
         out
     })
-}
-
-/// Returns `true` if the given element currently has an `on_pointer_move` hook installed for
-/// `DismissibleLayer`.
-///
-/// This is intended for diagnostics and cross-crate UI policy tests.
-pub fn dismissible_has_pointer_move_handler<H: UiHost>(
-    app: &mut H,
-    window: AppWindowId,
-    element: GlobalElementId,
-) -> bool {
-    with_element_state(
-        app,
-        window,
-        element,
-        crate::action::DismissibleActionHooks::default,
-        |hooks| hooks.on_pointer_move.is_some(),
-    )
 }
 
 pub(crate) fn observed_models_for_element<H: UiHost>(
@@ -210,5 +193,22 @@ pub fn take_element_state<H: UiHost, S: Any>(
             .take_state_box(&key)
             .and_then(|e| e.downcast::<S>().ok())
             .map(|b| *b)
+    })
+}
+
+/// Returns `true` if the given element currently has an `on_pointer_move` hook installed for
+/// `DismissibleLayer`.
+///
+/// This is intended for diagnostics and cross-crate UI policy tests.
+pub fn dismissible_has_pointer_move_handler<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    with_window_state(app, window, |st| {
+        let key = (element, TypeId::of::<DismissibleActionHooks>());
+        st.state_any_ref(&key)
+            .and_then(|any| any.downcast_ref::<DismissibleActionHooks>())
+            .is_some_and(|hooks| hooks.on_pointer_move.is_some())
     })
 }

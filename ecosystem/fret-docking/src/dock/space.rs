@@ -36,7 +36,9 @@ const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
 
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
+    semantics_test_id: Option<&'static str>,
     last_bounds: Rect,
+    prepaint_wants_animation_frames: bool,
     divider_drag: Option<DividerDragSession>,
     floating_drag: Option<FloatingDragState>,
     pending_dock_drags: HashMap<fret_core::PointerId, PendingDockDrag>,
@@ -97,7 +99,9 @@ impl DockSpace {
     pub fn new(window: fret_core::AppWindowId) -> Self {
         Self {
             window,
+            semantics_test_id: None,
             last_bounds: Rect::default(),
+            prepaint_wants_animation_frames: false,
             divider_drag: None,
             floating_drag: None,
             pending_dock_drags: HashMap::new(),
@@ -134,6 +138,11 @@ impl DockSpace {
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
         }
+    }
+
+    pub fn with_semantics_test_id(mut self, id: &'static str) -> Self {
+        self.semantics_test_id = Some(id);
+        self
     }
 
     pub fn with_panel_content(mut self, panel: PanelKey, root: NodeId) -> Self {
@@ -475,6 +484,50 @@ impl DockSpace {
 impl<H: UiHost> Widget<H> for DockSpace {
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Panel);
+        if let Some(id) = self.semantics_test_id {
+            cx.set_test_id(id);
+        }
+    }
+
+    fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        // Keep the dock host "alive" as a stable internal drag route target.
+        //
+        // This must be refreshed during paint/layout, not only during event handling, because
+        // cross-window drag routing needs a reliable per-window anchor even when hit-testing is
+        // over unrelated UI (ADR 0072) and even when no events have fired this frame.
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
+
+        let is_dock_dragging = cx
+            .app
+            .drag(fret_core::PointerId(0))
+            .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
+        let wants_animation_frames = is_dock_dragging
+            || self.divider_drag.is_some()
+            || self.floating_drag.is_some()
+            || self.viewport_capture.is_some();
+
+        // If the node is a view-cache root and paint caching is active, a "no-op" frame can
+        // replay the previous paint ops and skip `Widget::paint()`. This makes it easy to miss
+        // frame-driven UI (dragging, capture, resize).
+        //
+        // Keep paint invalidated while the chrome is active so cached replay cannot suppress
+        // per-frame indicator updates. On transitions, request a redraw to ensure we get at least
+        // one paint pass to establish/tear down the frame loop.
+        if wants_animation_frames {
+            cx.invalidate_self(Invalidation::Paint);
+            if !self.prepaint_wants_animation_frames {
+                cx.request_redraw();
+            }
+        } else if self.prepaint_wants_animation_frames {
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
+        self.prepaint_wants_animation_frames = wants_animation_frames;
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
@@ -2352,10 +2405,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
             || self.divider_drag.is_some()
             || self.floating_drag.is_some()
             || self.viewport_capture.is_some();
-        if wants_animation_frames && let Some(window) = cx.window {
-            cx.app.push_effect(Effect::RequestAnimationFrame(window));
+        if wants_animation_frames {
+            cx.request_animation_frame_paint_only();
         }
-
         if cx.app.global::<DockManager>().is_none() {
             self.paint_empty_state(cx);
             return;

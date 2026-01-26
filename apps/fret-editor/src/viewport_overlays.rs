@@ -334,16 +334,19 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
     );
 
     let shadow = fret_ui::element::ShadowStyle {
-        color: Color {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.35,
+        primary: fret_ui::element::ShadowLayerStyle {
+            color: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.35,
+            },
+            offset_x: Px(1.0),
+            offset_y: Px(1.0),
+            blur: Px(0.0),
+            spread: Px(0.0),
         },
-        offset_x: Px(1.0),
-        offset_y: Px(1.0),
-        spread: Px(0.0),
-        softness: 0,
+        secondary: None,
         corner_radii: Corners::all(Px(0.0)),
     };
     fret_ui::paint::paint_shadow(scene, DrawOrder(10), h, shadow);

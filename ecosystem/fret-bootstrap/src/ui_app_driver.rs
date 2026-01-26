@@ -13,7 +13,7 @@ use fret_launch::{
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
 use fret_ui::declarative::RenderRootContext;
-use fret_ui::element::AnyElement;
+use fret_ui::element::Elements;
 use fret_ui::overlay_placement::LayoutDirection;
 use fret_ui::{ElementContext, Invalidation, Theme, UiFrameCx, UiTree};
 use fret_ui_kit::OverlayController;
@@ -29,7 +29,9 @@ use fret_core::time::Instant;
 #[cfg(feature = "diagnostics")]
 use crate::ui_diagnostics::UiDiagnosticsService;
 
-type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> Vec<AnyElement>;
+pub type ViewElements = Elements;
+
+type ViewFn<S> = for<'a> fn(&mut ElementContext<'a, App>, &mut S) -> ViewElements;
 
 type EventHookFn<S> =
     fn(&mut App, &mut dyn UiServices, AppWindowId, &mut UiTree<App>, &mut S, &Event);
@@ -1872,10 +1874,14 @@ fn ui_app_render<S>(
         let _diag_guard = diag_span.enter();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.drive_script_for_window(app, window, semantics_snapshot, element_runtime)
+            svc.drive_script_for_window(app, window, bounds, semantics_snapshot, element_runtime)
         });
         if drive.request_redraw {
             app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
         let mut injected_any = false;

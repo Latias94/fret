@@ -2008,6 +2008,93 @@ fn dock_space_clears_hover_on_drop_without_drag_session() {
 }
 
 #[test]
+fn dock_space_kicks_paint_cache_on_drag_transition_for_cache_root() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+    ui.set_paint_cache_enabled(true);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_node_view_cache_flags(root, true, false, false);
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+
+    // Frame 0: establish a paint cache entry while no drag is active.
+    app.advance_frame();
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+    let effects = app.take_effects();
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::RequestAnimationFrame(_))),
+        "expected no animation-frame requests when no drag is active"
+    );
+
+    // Start a cross-window dock drag between frames, without dispatching any events to the dock.
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.position = Point::new(Px(48.0), Px(22.0));
+    }
+
+    // Frame 1: prepaint should kick the paint cache so `DockSpace::paint()` runs and can
+    // establish the animation-frame loop.
+    app.advance_frame();
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let effects = app.take_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+        "expected DockSpace to request animation frames during a dock drag"
+    );
+    assert_eq!(
+        ui.debug_stats().paint_cache_hits,
+        0,
+        "expected DockSpace paint to run (not replay) on drag transition"
+    );
+}
+
+#[test]
 fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
     let mut harness = DockViewportHarness::new();
     harness.layout();

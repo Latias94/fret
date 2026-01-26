@@ -80,10 +80,13 @@ impl Card {
     }
 }
 
-pub fn card<H: UiHost>(
+pub fn card<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Card::new(f(cx)).into_element(cx)
 }
 

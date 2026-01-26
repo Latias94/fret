@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-open" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-open" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-modal-barrier-underlay-block" }
+  ]
+}

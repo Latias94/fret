@@ -5764,6 +5764,238 @@ fn dock_drag_cross_window_closes_dismissible_popovers_in_source_and_current_wind
 }
 
 #[test]
+fn dock_drag_cross_window_closes_menu_like_overlays_and_clears_occlusion() {
+    use slotmap::KeyData;
+
+    let window_a = AppWindowId::from(KeyData::from_ffi(1));
+    let window_b = AppWindowId::from(KeyData::from_ffi(2));
+
+    let mut app = App::new();
+
+    let mut ui_a: UiTree<App> = UiTree::new();
+    ui_a.set_window(window_a);
+    let mut ui_b: UiTree<App> = UiTree::new();
+    ui_b.set_window(window_b);
+
+    let open_a = app.models_mut().insert(false);
+    let open_b = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Frame 1: establish stable trigger ids.
+    let trigger_a = render_base_with_trigger(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds,
+        open_a.clone(),
+    );
+    ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let trigger_b = render_base_with_trigger(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds,
+        open_b.clone(),
+    );
+    ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Frame 2: open menu-like overlays in both windows (pointer occlusion).
+    let _ = app.models_mut().update(&open_a, |v| *v = true);
+    let _ = app.models_mut().update(&open_b, |v| *v = true);
+
+    begin_frame(&mut app, window_a);
+    let _ = render_base_with_trigger(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds,
+        open_a.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_a,
+        DismissiblePopoverRequest {
+            id: trigger_a,
+            root_name: popover_root_name(trigger_a),
+            trigger: trigger_a,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_a.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_a, &mut app, &mut services, window_a, bounds);
+    ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    begin_frame(&mut app, window_b);
+    let _ = render_base_with_trigger(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds,
+        open_b.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_b,
+        DismissiblePopoverRequest {
+            id: trigger_b,
+            root_name: popover_root_name(trigger_b),
+            trigger: trigger_b,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_b.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_b, &mut app, &mut services, window_b, bounds);
+    ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap_a = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui_a, &mut app, window_a,
+    );
+    let snap_b = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui_b, &mut app, window_b,
+    );
+    assert_eq!(app.models().get_copied(&open_a), Some(true));
+    assert_eq!(app.models().get_copied(&open_b), Some(true));
+    assert_eq!(
+        snap_a.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+    );
+    assert_eq!(
+        snap_b.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+    );
+
+    // Frame 3: start a cross-window dock drag and enter window B; both windows should drop occlusion.
+    app.begin_cross_window_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window_a,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+    let drag = app.drag_mut(PointerId(7)).expect("drag session");
+    drag.current_window = window_b;
+
+    begin_frame(&mut app, window_a);
+    let _ = render_base_with_trigger(
+        &mut ui_a,
+        &mut app,
+        &mut services,
+        window_a,
+        bounds,
+        open_a.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_a,
+        DismissiblePopoverRequest {
+            id: trigger_a,
+            root_name: popover_root_name(trigger_a),
+            trigger: trigger_a,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_a.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_a, &mut app, &mut services, window_a, bounds);
+    ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    begin_frame(&mut app, window_b);
+    let _ = render_base_with_trigger(
+        &mut ui_b,
+        &mut app,
+        &mut services,
+        window_b,
+        bounds,
+        open_b.clone(),
+    );
+    request_dismissible_popover_for_window(
+        &mut app,
+        window_b,
+        DismissiblePopoverRequest {
+            id: trigger_b,
+            root_name: popover_root_name(trigger_b),
+            trigger: trigger_b,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open_b.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui_b, &mut app, &mut services, window_b, bounds);
+    ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap_a = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui_a, &mut app, window_a,
+    );
+    let snap_b = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui_b, &mut app, window_b,
+    );
+    assert_eq!(app.models().get_copied(&open_a), Some(false));
+    assert_eq!(app.models().get_copied(&open_b), Some(false));
+    assert_eq!(
+        snap_a.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert_eq!(
+        snap_b.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert_eq!(snap_a.topmost_pointer_occluding_overlay, None);
+    assert_eq!(snap_b.topmost_pointer_occluding_overlay, None);
+}
+
+#[test]
 fn dock_drag_cross_window_leaving_current_window_does_not_restore_closed_popovers() {
     use slotmap::KeyData;
 
@@ -6374,6 +6606,161 @@ fn dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing() 
     assert_eq!(snap.topmost_pointer_occluding_overlay, None);
 }
 
+#[test]
+fn dock_drag_closes_menu_like_overlay_and_disables_pointer_move_observers() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Second frame: open a menu-like overlay that requests pointer-move observers (submenu safe-corridor).
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
+        Arc::new(|_host, _cx, _mv| false);
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: Some(on_pointer_move),
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays.popovers.get(&(window, trigger)).map(|p| p.layer)
+    });
+    let layer = layer.expect("popover layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("popover debug layer info");
+    assert!(info.visible);
+    assert!(info.wants_pointer_move_events);
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+        "expected menu-like overlay to enable pointer occlusion while open"
+    );
+
+    // Start a dock drag session for a *different* pointer id (window-global suppression).
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    // Third frame: re-request the overlay; policy should force it closed and drop occlusion.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
+        Arc::new(|_host, _cx, _mv| false);
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            disable_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: Some(on_pointer_move),
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = crate::overlay_controller::OverlayController::stack_snapshot_for_window(
+        &ui, &mut app, window,
+    );
+    assert_eq!(app.models().get_copied(&open), Some(false));
+    assert_eq!(
+        snap.arbitration.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert_eq!(snap.topmost_pointer_occluding_overlay, None);
+
+    // If the overlay remains present for a close transition, it must not keep requesting observers.
+    if let Some(info) = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+    {
+        assert!(!info.hit_testable);
+        assert!(!info.wants_pointer_move_events);
+        assert!(!info.wants_pointer_down_outside_events);
+    }
+}
+
 fn render_base_with_trigger_and_capture_underlay(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -6887,6 +7274,176 @@ fn dock_drag_restores_focus_when_focus_is_missing_on_drag_end() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     assert_eq!(ui.focus(), Some(trigger_node));
+}
+
+#[test]
+fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Frame 1: render base + show a hover overlay.
+    let (trigger, _underlay) = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .hover_overlays
+            .get(&(window, trigger))
+            .map(|h| h.layer)
+    });
+    let layer = layer.expect("hover overlay layer");
+    assert!(ui.is_layer_visible(layer));
+
+    // Frame 2: capture the pointer (viewport-like capture) and start a dock drag session.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    assert!(ui.captured().is_some(), "expected pointer capture");
+
+    app.begin_drag_with_kind(
+        PointerId(7),
+        fret_runtime::DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(10.0), Px(10.0)),
+        (),
+    );
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected hover overlay to be hidden during capture + dock drag"
+    );
+
+    // Frame 3: release capture; dock drag remains active so overlays should stay hidden.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: false,
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    assert!(ui.captured().is_none(), "expected capture release");
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected hover overlay to remain hidden while dock drag is active"
+    );
+
+    // Frame 4: end the drag; overlays can become visible again when re-requested.
+    app.cancel_drag(PointerId(7));
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_capture_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open,
+    );
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: trigger,
+            root_name: hover_overlay_root_name(trigger),
+            interactive: true,
+            trigger,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        ui.is_layer_visible(layer),
+        "expected hover overlay to become visible again after dock drag ends"
+    );
 }
 
 #[test]

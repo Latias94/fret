@@ -14,13 +14,53 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size, Space, WidgetState,
+    WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+};
 
 use crate::{CommandItem, CommandList, CommandPalette, Popover, PopoverContent};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ComboboxStyle {
+    pub trigger_background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub trigger_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+}
+
+impl ComboboxStyle {
+    pub fn trigger_background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.trigger_background = Some(background);
+        self
+    }
+
+    pub fn trigger_foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.trigger_foreground = Some(foreground);
+        self
+    }
+
+    pub fn trigger_border_color(mut self, border: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.trigger_border_color = Some(border);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.trigger_background.is_some() {
+            self.trigger_background = other.trigger_background;
+        }
+        if other.trigger_foreground.is_some() {
+            self.trigger_foreground = other.trigger_foreground;
+        }
+        if other.trigger_border_color.is_some() {
+            self.trigger_border_color = other.trigger_border_color;
+        }
+        self
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +107,7 @@ pub struct Combobox {
     consume_outside_pointer_events: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: ComboboxStyle,
 }
 
 impl Combobox {
@@ -88,6 +129,7 @@ impl Combobox {
             consume_outside_pointer_events: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: ComboboxStyle::default(),
         }
     }
 
@@ -179,6 +221,11 @@ impl Combobox {
         self
     }
 
+    pub fn style(mut self, style: ComboboxStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         combobox_with_patch(
             cx,
@@ -196,6 +243,7 @@ impl Combobox {
             self.consume_outside_pointer_events,
             self.chrome,
             self.layout,
+            self.style,
         )
     }
 }
@@ -232,6 +280,7 @@ pub fn combobox<H: UiHost>(
         consume_outside_pointer_events,
         ChromeRefinement::default(),
         LayoutRefinement::default(),
+        ComboboxStyle::default(),
     )
 }
 
@@ -252,6 +301,7 @@ fn combobox_with_patch<H: UiHost>(
     consume_outside_pointer_events: bool,
     chrome_patch: ChromeRefinement,
     layout_patch: LayoutRefinement,
+    style_override: ComboboxStyle,
 ) -> AnyElement {
     cx.scope(|cx| {
         let theme = Theme::global(&*cx.app).clone();
@@ -333,7 +383,7 @@ fn combobox_with_patch<H: UiHost>(
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(min_h);
 
-        let bg = chrome_patch
+        let bg_base = chrome_patch
             .background
             .as_ref()
             .map(|c| c.resolve(&theme))
@@ -347,7 +397,7 @@ fn combobox_with_patch<H: UiHost>(
             .or_else(|| theme.color_by_key("accent.background"))
             .unwrap_or_else(|| theme.color_required("accent"));
         let bg_pressed = theme.color_required("accent");
-        let fg = chrome_patch
+        let fg_base = chrome_patch
             .text_color
             .as_ref()
             .map(|c| c.resolve(&theme))
@@ -359,8 +409,8 @@ fn combobox_with_patch<H: UiHost>(
         let fg_hover = theme
             .color_by_key("accent-foreground")
             .or_else(|| theme.color_by_key("accent.foreground"))
-            .unwrap_or(fg);
-        let border = chrome_patch
+            .unwrap_or(fg_base);
+        let border_base = chrome_patch
             .border_color
             .as_ref()
             .map(|c| c.resolve(&theme))
@@ -370,6 +420,14 @@ fn combobox_with_patch<H: UiHost>(
                     .or_else(|| theme.color_by_key("border"))
                     .unwrap_or_else(|| theme.color_required("border"))
             });
+
+        let default_trigger_bg = WidgetStateProperty::new(ColorRef::Color(bg_base))
+            .when(WidgetStates::HOVERED, ColorRef::Color(bg_hover))
+            .when(WidgetStates::ACTIVE, ColorRef::Color(bg_pressed));
+        let default_trigger_fg = WidgetStateProperty::new(ColorRef::Color(fg_base))
+            .when(WidgetStates::HOVERED, ColorRef::Color(fg_hover))
+            .when(WidgetStates::ACTIVE, ColorRef::Color(fg_hover));
+        let default_trigger_border = WidgetStateProperty::new(ColorRef::Color(border_base));
 
         let enabled = !disabled;
         let items: Vec<ComboboxItem> = items.to_vec();
@@ -383,6 +441,8 @@ fn combobox_with_patch<H: UiHost>(
         let pad_bottom = padding.bottom.map(|m| m.resolve(&theme)).unwrap_or(pad_y);
         let pad_left = padding.left.map(|m| m.resolve(&theme)).unwrap_or(pad_x);
 
+        let theme_for_trigger = theme.clone();
+
         Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
@@ -390,13 +450,28 @@ fn combobox_with_patch<H: UiHost>(
                 cx,
                 move |cx| {
                     cx.pressable_with_id_props(|cx, st, _trigger_id| {
-                        let (bg, fg) = if st.pressed {
-                            (bg_pressed, fg_hover)
-                        } else if st.hovered {
-                            (bg_hover, fg_hover)
-                        } else {
-                            (bg, fg)
-                        };
+                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                        states.set(WidgetState::Open, is_open);
+
+                        let bg_ref = resolve_override_slot(
+                            style_override.trigger_background.as_ref(),
+                            &default_trigger_bg,
+                            states,
+                        );
+                        let fg_ref = resolve_override_slot(
+                            style_override.trigger_foreground.as_ref(),
+                            &default_trigger_fg,
+                            states,
+                        );
+                        let border_ref = resolve_override_slot(
+                            style_override.trigger_border_color.as_ref(),
+                            &default_trigger_border,
+                            states,
+                        );
+
+                        let bg = bg_ref.resolve(&theme_for_trigger);
+                        let fg = fg_ref.resolve(&theme_for_trigger);
+                        let border = border_ref.resolve(&theme_for_trigger);
                         let icon_fg = alpha_mul(fg, 0.5);
 
                         cx.pressable_toggle_bool(&open_for_trigger);
@@ -453,7 +528,7 @@ fn combobox_with_patch<H: UiHost>(
                                                         .w_full()
                                                         .text_size_px(label_style.size)
                                                         .font_weight(label_style.weight)
-                                                        .text_color(ColorRef::Color(fg))
+                                                        .text_color(fg_ref.clone())
                                                         .truncate();
                                                 if let Some(line_height) = label_style.line_height {
                                                     label = label.line_height_px(line_height);
@@ -662,7 +737,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle, UiServices,
+        TextConstraints, TextMetrics, TextService, UiServices,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::FrameId;

@@ -50,9 +50,9 @@ Keep this list short and evidence-backed:
 
 - [x] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
   - Decision tracker: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
-  - Notes: keep v1 minimal to avoid smuggling Radix/shadcn policies into `crates/fret-ui`.
+  - Notes: keep v2 limited to `DefaultAction::FocusOnPointerDown` for now to avoid smuggling Radix/shadcn policies into `crates/fret-ui`.
 - [x] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
-  - Decision: keep v2 limited to `DefaultAction::FocusOnPointerDown` until we have a concrete, boundary-safe candidate.
+  - Decision: defer until we have a concrete, boundary-safe, cross-surface default.
   - Evidence: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
 
 ## MVP1 — Action Availability (GPUI `is_action_available` Parity)
@@ -92,12 +92,21 @@ Keep this list short and evidence-backed:
 - [x] IDV2-avail-041 Define a general “copy-like” command family outside text widgets (tables/lists/node graphs).
   - Evidence: `crates/fret-app/src/core_commands.rs` (`edit.{copy,cut,paste,select_all}`),
     `crates/fret-ui/src/text_input/widget.rs` + `crates/fret-ui/src/text_area/widget.rs` (text alias),
-    `ecosystem/fret-node/src/ui/canvas/widget.rs` (node graph availability + command routing)
+    `ecosystem/fret-node/src/ui/canvas/widget.rs` (node graph availability + command routing),
+    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable`),
+    `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable`)
   - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`text_input_supports_edit_select_all_and_copy`),
-    `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`
+    `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`,
+    `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable_reports_availability_and_emits_clipboard_text`),
+    `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
 - [x] IDV2-avail-042 Define `focus.menu_bar` contract between runner shells and UI-kit.
   - Evidence: `crates/fret-runtime/src/window_menu_bar_focus.rs`, `crates/fret-ui/src/tree/commands.rs`, `ecosystem/fret-kit/src/workspace_shell.rs`
   - Tests: `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs` (`action_availability_snapshot_publishes_focus_menu_bar_gating`)
+- [x] IDV2-avail-043 Allow declarative components to report command availability via policy hooks.
+  - Evidence: `crates/fret-ui/src/action.rs` (`OnCommandAvailability`, `CommandAvailabilityActionCx`),
+    `crates/fret-ui/src/elements/cx.rs` (`command_on_command_availability_for`),
+    `crates/fret-ui/src/declarative/host_widget.rs` (invokes hook during `command_availability`)
+  - Tests: `crates/fret-ui/src/declarative/tests/interactions.rs` (`declarative_command_availability_hooks_participate_in_dispatch_path_queries`)
 
 ## MVP5 — Overlay / Menu Parity (Radix-shadcn Hand Feel)
 

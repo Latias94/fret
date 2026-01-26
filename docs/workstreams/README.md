@@ -13,7 +13,11 @@ Active workstreams:
 - `docs/workstreams/text-system-v2-parley.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
+- `docs/workstreams/state-driven-style-resolution-v1.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
+- `docs/workstreams/overlay-arbitration-polish-todo.md` (v1 complete)
+- `docs/workstreams/overlay-lifecycle-phases.md`
+- `docs/workstreams/execution-concurrency-surface-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1-todo.md`

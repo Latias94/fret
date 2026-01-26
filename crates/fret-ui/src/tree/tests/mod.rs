@@ -200,11 +200,13 @@ impl<H: UiHost> Widget<H> for ClickCounter {
 mod children;
 mod command_availability;
 mod command_enabled_service;
+mod cursor_icon_query;
 mod dispatch_phase;
 mod dock_drag;
 mod escape_dismiss;
 mod focus_scope;
 mod focus_traversal_availability;
+mod focus_traversal_prepaint_cache;
 mod globals;
 mod hit_test;
 mod interactivity_gate;

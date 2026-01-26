@@ -105,10 +105,28 @@ export interface ZipArtifact {
   text: string
 }
 
+export interface ZipScreenshot {
+  path: string
+  fileName: string
+  sizeBytes: number
+  objectUrl: string
+  meta?: ZipScreenshotMeta
+}
+
+export interface ZipScreenshotMeta {
+  windowId?: string
+  tickId?: string
+  frameId?: string
+  scaleFactor?: number
+  widthPx?: number
+  heightPx?: number
+}
+
 export interface ZipImportMeta {
   zipFileName?: string
   bundlePathInZip?: string
   artifacts?: ZipArtifact[]
+  screenshots?: ZipScreenshot[]
 }
 
 export interface BundleModel {

@@ -8,9 +8,9 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model, ModelId, WindowCommandGatingSnapshot};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle, RovingFlexProps,
-    RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
+    MainAlign, Overflow, PointerRegionProps, PositionStyle, PressableProps, RingStyle,
+    RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -516,11 +516,14 @@ fn find_submenu_entries_by_value(
     None
 }
 
-fn menu_structural_group<H: UiHost>(
+fn menu_structural_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     role: fret_core::SemanticsRole,
-    children: Vec<AnyElement>,
-) -> AnyElement {
+    children: I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.semantic_flex(
         fret_ui::element::SemanticFlexProps {
             role,
@@ -573,7 +576,7 @@ impl ContextMenuRenderEnv {
         cx: &mut ElementContext<'_, H>,
         entries: &[ContextMenuEntry],
         item_ix: &mut usize,
-    ) -> Vec<AnyElement> {
+    ) -> Elements {
         let mut out: Vec<AnyElement> = Vec::with_capacity(entries.len());
 
         for entry in entries {
@@ -615,7 +618,7 @@ impl ContextMenuRenderEnv {
             }
         }
 
-        out
+        out.into()
     }
 
     fn render_label<H: UiHost>(
@@ -1067,7 +1070,7 @@ impl ContextMenuContentRenderEnv {
         cx: &mut ElementContext<'_, H>,
         entries: &[ContextMenuEntry],
         item_ix: &mut usize,
-    ) -> Vec<AnyElement> {
+    ) -> Elements {
         let mut out: Vec<AnyElement> = Vec::with_capacity(entries.len());
 
         for entry in entries {
@@ -1109,7 +1112,7 @@ impl ContextMenuContentRenderEnv {
             }
         }
 
-        out
+        out.into()
     }
 
     fn render_label<H: UiHost>(
@@ -1588,7 +1591,7 @@ fn menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_disabled: fret_core::Color,
-) -> Vec<AnyElement> {
+) -> Elements {
     vec![cx.container(
         ContainerProps {
             layout: LayoutStyle::default(),
@@ -1703,6 +1706,7 @@ fn menu_row_children<H: UiHost>(
             )]
         },
     )]
+    .into()
 }
 
 fn submenu_chevron_right_icon<H: UiHost>(
@@ -3264,12 +3268,12 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
+    use fret_core::UiServices;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, PathCommand, PathConstraints, PathId, PathMetrics,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_core::{TextStyle, UiServices};
     use fret_runtime::FrameId;
     use fret_ui::element::PressableA11y;
     use fret_ui::tree::UiTree;

@@ -1095,6 +1095,7 @@ dependencies = [
  "fret-core",
  "fret-docking",
  "fret-editor",
+ "fret-executor",
  "fret-gizmo",
  "fret-icons",
  "fret-kit",
@@ -1120,6 +1121,16 @@ dependencies = [
  "ureq",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "fret-executor"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1193,6 +1204,7 @@ dependencies = [
  "fret-render",
  "fret-runner-winit",
  "fret-runtime",
+ "image",
  "objc",
  "pollster",
  "renderdog",
@@ -1216,6 +1228,7 @@ version = "0.1.0"
 dependencies = [
  "fret-code-view",
  "fret-core",
+ "fret-executor",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
@@ -1471,8 +1484,12 @@ name = "fret-ui-gallery"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "delinea",
  "fret-app",
  "fret-bootstrap",
+ "fret-canvas",
+ "fret-chart",
+ "fret-code-view",
  "fret-core",
  "fret-icons",
  "fret-kit",
@@ -1483,6 +1500,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-headless",
  "fret-ui-kit",
+ "fret-ui-material3",
  "fret-ui-shadcn",
  "fret-undo",
  "fret-workspace",
@@ -1536,9 +1554,24 @@ dependencies = [
  "serde",
  "serde_json",
  "slotmap",
+ "smallvec",
  "time",
  "tracing",
  "virtualizer",
+]
+
+[[package]]
+name = "fret-ui-material3"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-icons",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+ "material-colors",
+ "serde",
 ]
 
 [[package]]
@@ -1564,6 +1597,7 @@ dependencies = [
  "fret-ui-kit",
  "serde",
  "serde_json",
+ "slotmap",
  "time",
 ]
 
@@ -1587,6 +1621,7 @@ dependencies = [
 name = "fret-workspace"
 version = "0.1.0"
 dependencies = [
+ "fret-app",
  "fret-core",
  "fret-runtime",
  "fret-ui",
@@ -2329,6 +2364,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
 dependencies = [
  "regex-automata",
+]
+
+[[package]]
+name = "material-colors"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e226ffda362d5bc26bb8f730d637a0851eedfb05e35d92108c9d8b48d2e47941"
+dependencies = [
+ "ahash",
+ "indexmap",
+ "serde",
 ]
 
 [[package]]

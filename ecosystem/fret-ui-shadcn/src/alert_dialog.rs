@@ -360,7 +360,7 @@ impl AlertDialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(512.0)))
+            .max_w(Px(512.0))
             .merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
@@ -531,6 +531,7 @@ pub struct AlertDialogAction {
     open: Model<bool>,
     variant: ButtonVariant,
     disabled: bool,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for AlertDialogAction {
@@ -551,7 +552,14 @@ impl AlertDialogAction {
             open,
             variant: ButtonVariant::Default,
             disabled: false,
+            test_id: None,
         }
+    }
+
+    /// Sets a `test_id` for deterministic automation (diagnostics/testing hook).
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
@@ -565,11 +573,14 @@ impl AlertDialogAction {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        Button::new(self.label)
+        let mut button = Button::new(self.label)
             .variant(self.variant)
             .disabled(self.disabled)
-            .toggle_model(self.open)
-            .into_element(cx)
+            .toggle_model(self.open);
+        if let Some(test_id) = self.test_id {
+            button = button.test_id(test_id);
+        }
+        button.into_element(cx)
     }
 }
 
@@ -581,6 +592,7 @@ pub struct AlertDialogCancel {
     label: Arc<str>,
     open: Model<bool>,
     disabled: bool,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for AlertDialogCancel {
@@ -599,7 +611,14 @@ impl AlertDialogCancel {
             label: label.into(),
             open,
             disabled: false,
+            test_id: None,
         }
+    }
+
+    /// Sets a `test_id` for deterministic automation (diagnostics/testing hook).
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -609,11 +628,14 @@ impl AlertDialogCancel {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open_id = self.open.id();
-        let element = Button::new(self.label)
+        let mut button = Button::new(self.label)
             .variant(ButtonVariant::Outline)
             .disabled(self.disabled)
-            .toggle_model(self.open)
-            .into_element(cx);
+            .toggle_model(self.open);
+        if let Some(test_id) = self.test_id {
+            button = button.test_id(test_id);
+        }
+        let element = button.into_element(cx);
 
         radix_alert_dialog::register_cancel_for_open_model(cx, open_id, element.id);
 

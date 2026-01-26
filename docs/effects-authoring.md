@@ -15,6 +15,13 @@ For the recommended user-facing story (Tier A vs Tier B) and the recipe authorin
   instead of trying to expose `wgpu` to components (ADR 0125).
   - Declarative helper: `cx.viewport_surface(...)` (`crates/fret-ui/src/elements/cx.rs`)
 
+## Scheduling and timers (avoid split-brain)
+
+Keep timing-driven behavior aligned with Fret's runner-owned scheduling model:
+
+- UI-visible timers/animation ticks SHOULD be scheduled via effects (e.g. `Effect::SetTimer`, `Effect::RequestAnimationFrame`) so they participate in the Effect pipeline and runner flush points (ADR 0034, ADR 0112).
+- The execution `Dispatcher` may expose a low-level `dispatch_after` primitive, but this is primarily for executor utilities/harnesses; user-facing UI timing should not depend on runner-specific scheduling hooks directly (ADR 0190).
+
 ## Declarative usage (recommended)
 
 `EffectLayer` lives in `crates/fret-ui` and is available via `ElementContext`:

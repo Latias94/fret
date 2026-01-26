@@ -130,6 +130,8 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
 
 - Run one script:
   - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json`
+- Run one script and auto-pack a shareable zip (bundle + `_root/` artifacts):
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json --pack --include-all`
 - Run the baseline suite:
   - `cargo run -p fretboard -- diag suite ui-gallery`
 
@@ -140,6 +142,15 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
 - Use `wait_until`/`assert` instead of fixed delays when testing overlay open/close and focus restore.
 - When UI structure changes, update selectors using:
   - `cargo run -p fretboard -- diag pick-apply <script> --ptr <json-pointer>`
+
+### Visual overlay debugging (optional screenshots)
+
+If a bug is “bounds look right but pixels look wrong”, enable GPU-readback screenshots and author scripts with
+`capture_screenshot`. The bundle viewer can then render screenshots as a background overlay (auto-matched by
+`manifest.json`):
+
+- Enable screenshots: `FRET_DIAG_SCREENSHOTS=1` (see `docs/ui-diagnostics-and-scripted-tests.md`)
+- Offline viewer: `tools/fret-bundle-viewer`
 
 ## Accessibility (a11y) notes
 

@@ -1057,6 +1057,65 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
 }
 
 #[test]
+fn declarative_command_availability_hooks_participate_in_dispatch_path_queries() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "command-availability-hooks",
+        |cx| {
+            vec![
+                cx.container(crate::element::ContainerProps::default(), |cx| {
+                    let id = cx.root_id();
+                    cx.command_on_command_availability_for(
+                        id,
+                        Arc::new(|_host, acx, command| {
+                            if command.as_str() != "edit.copy" {
+                                return crate::widget::CommandAvailability::NotHandled;
+                            }
+                            if !acx.focus_in_subtree {
+                                return crate::widget::CommandAvailability::NotHandled;
+                            }
+                            crate::widget::CommandAvailability::Available
+                        }),
+                    );
+                    vec![cx.text("child")]
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let container_node = ui.children(root)[0];
+    let child_node = ui.children(container_node)[0];
+    ui.set_focus(Some(child_node));
+
+    let copy = CommandId::from("edit.copy");
+    assert!(
+        ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be available via declarative availability hook"
+    );
+
+    ui.set_focus(None);
+    assert!(
+        !ui.is_command_available(&mut app, &copy),
+        "expected edit.copy to be unavailable when no dispatch path exists"
+    );
+}
+
+#[test]
 fn text_input_cut_updates_model_and_availability() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());

@@ -232,6 +232,15 @@ pub trait UiActionHost {
     fn request_redraw(&mut self, window: AppWindowId);
     fn next_timer_token(&mut self) -> TimerToken;
 
+    /// Mark the nearest view-cache root for `cx.target` as dirty (GPUI-style `notify`).
+    ///
+    /// Notes:
+    /// - This is intentionally optional: hosts that are not running inside a UI tree event
+    ///   dispatch can leave this as a no-op.
+    /// - When view caching is enabled, this forces a rerender (skips reuse) for the nearest cache
+    ///   root so declarative UI that depends on non-model state can still update deterministically.
+    fn notify(&mut self, _cx: ActionCx) {}
+
     fn dispatch_command(&mut self, window: Option<AppWindowId>, command: CommandId) {
         self.push_effect(Effect::Command { window, command });
     }
@@ -316,6 +325,12 @@ pub trait UiPointerActionHost: UiFocusActionHost + UiDragActionHost {
     /// This is primarily used to prevent "focus on pointer down" while still allowing propagation
     /// and other policies (overlays, global shortcuts, outside-press) to observe the event.
     fn prevent_default(&mut self, action: DefaultAction);
+
+    /// Request a node-level invalidation for the current pointer region / pressable.
+    ///
+    /// This is intentionally separate from `notify()`: it enables paint-only updates (e.g. hover
+    /// chrome) under view-cache reuse without forcing a rerender.
+    fn invalidate(&mut self, _invalidation: crate::widget::Invalidation) {}
 }
 
 pub struct UiActionHostAdapter<'a, H: UiHost> {
@@ -487,6 +502,34 @@ pub type OnCommand = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, CommandId)
 #[derive(Default)]
 pub(crate) struct CommandActionHooks {
     pub on_command: Option<OnCommand>,
+}
+
+pub trait UiCommandAvailabilityActionHost {
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore;
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandAvailabilityActionCx {
+    pub window: fret_core::AppWindowId,
+    pub target: crate::GlobalElementId,
+    pub node: fret_core::NodeId,
+    pub focus: Option<fret_core::NodeId>,
+    pub focus_in_subtree: bool,
+    pub input_ctx: fret_runtime::InputContext,
+}
+
+pub type OnCommandAvailability = Arc<
+    dyn Fn(
+            &mut dyn UiCommandAvailabilityActionHost,
+            CommandAvailabilityActionCx,
+            CommandId,
+        ) -> crate::widget::CommandAvailability
+        + 'static,
+>;
+
+#[derive(Default)]
+pub(crate) struct CommandAvailabilityActionHooks {
+    pub on_command_availability: Option<OnCommandAvailability>,
 }
 
 pub type OnTimer = Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, TimerToken) -> bool + 'static>;

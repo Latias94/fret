@@ -584,10 +584,13 @@ impl ScrollArea {
     }
 }
 
-pub fn scroll_area<H: UiHost>(
+pub fn scroll_area<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     ScrollArea::new(f(cx)).into_element(cx)
 }
 
@@ -599,7 +602,7 @@ mod tests {
         AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::TickId;
     use fret_ui::element::{ColumnProps, ContainerProps, LayoutStyle, Length};
     use fret_ui::tree::UiTree;
@@ -655,26 +658,34 @@ mod tests {
         )
     }
 
-    fn render_with(
+    fn render_with<C, I>(
         ui: &mut UiTree<App>,
         app: &mut App,
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         ty: ScrollAreaType,
-        content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-    ) -> fret_core::NodeId {
+        content: C,
+    ) -> fret_core::NodeId
+    where
+        C: FnOnce(&mut ElementContext<'_, App>) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         render_with_axis(ui, app, services, window, ScrollAxis::Y, ty, content)
     }
 
-    fn render_with_axis(
+    fn render_with_axis<C, I>(
         ui: &mut UiTree<App>,
         app: &mut App,
         services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         axis: ScrollAxis,
         ty: ScrollAreaType,
-        content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-    ) -> fret_core::NodeId {
+        content: C,
+    ) -> fret_core::NodeId
+    where
+        C: FnOnce(&mut ElementContext<'_, App>) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
                 vec![

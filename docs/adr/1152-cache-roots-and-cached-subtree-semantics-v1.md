@@ -81,6 +81,19 @@ This flag:
   layout pass.
 - MUST NOT be used to suppress correctness-critical invalidation propagation across cache roots.
 
+Additional contract constraints:
+
+- `contained_layout` MUST be treated as **opt-in**. A cache root MUST NOT assume that an out-of-band
+  “contained relayout” pass can safely run unless the parent provides a stable, correct placement
+  bounds for the cache root in the same frame.
+- Barrier-driven placement (virtualization, scroll content, split panes, etc.) MUST NOT enable
+  contained relayout by default for nested cache roots. These subtrees are placed by an explicit
+  barrier bridge and their coordinate space can be incorrect if a contained relayout runs against
+  default/stale bounds (e.g. relayout at the origin).
+- When a cache root is placed by a barrier, it SHOULD be treated as a pass-through boundary:
+  its bounds must be authored by the barrier layout pass, and any “contained” solve must be
+  performed by the barrier itself (not by a generic view-cache contained relayout pass).
+
 ### 6) Inspection/probe modes disable view caching by default
 
 When the UI runtime is in an inspection/probe mode (picking, semantics inspection), view caching
@@ -139,6 +152,9 @@ This is the v1 bridge toward GPUI's `ViewCacheKey` checks (`bounds/content_mask/
    - Nested cache roots: inner model change must invalidate outer cache root (no stale replay).
    - Observation uplift: model change invalidates cache root even if only leaf observed.
    - Inspection mode: caching disabled; subtree executed.
+   - Behavioral equivalence: cache-hit frames produce the same painted scene as uncached frames (`crates/fret-ui/src/declarative/tests/view_cache.rs`).
+   - Semantics and hit testing: cache-hit frames preserve semantics output and high-level hit targets (`crates/fret-ui/src/declarative/tests/view_cache.rs`).
+   - Modal overlays: cache-hit frames preserve modal barrier gating and underlay blocking (`crates/fret-ui/src/declarative/tests/view_cache.rs`).
 
 ## Rollout Plan
 

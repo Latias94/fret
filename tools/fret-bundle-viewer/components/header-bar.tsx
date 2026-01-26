@@ -79,7 +79,7 @@ export function HeaderBar() {
           if (isZip) {
             try {
               const { extractBundleAndArtifactsFromZipFile } = await import('@/lib/zip')
-              const { bundleText, bundlePathInZip, artifacts } = await extractBundleAndArtifactsFromZipFile(file)
+              const { bundleText, bundlePathInZip, artifacts, screenshots } = await extractBundleAndArtifactsFromZipFile(file)
               const derivedName = `${file.name.replace(/\.zip$/i, '')}.bundle.json`
               loadBundle(bundleText, {
                 fileName: derivedName,
@@ -89,6 +89,7 @@ export function HeaderBar() {
                   zipFileName: file.name,
                   bundlePathInZip,
                   artifacts,
+                  screenshots,
                 },
               })
             } catch (err) {

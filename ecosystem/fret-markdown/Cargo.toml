@@ -22,6 +22,7 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-code-view = { path = "../fret-code-view", default-features = false }
+fret-executor = { path = "../fret-executor" }
 pulldown-cmark.workspace = true
 mdstream = { workspace = true, features = ["pulldown"] }
 mathjax_svg = { workspace = true, optional = true }

@@ -13,6 +13,8 @@ Scope: this document focuses on `CommandScope::Widget` commands and the question
 
 - `UiTree::command_availability` and `UiTree::is_command_available`
 - GPUI naming parity aliases: `UiTree::action_availability` and `UiTree::is_action_available`
+- Declarative policy hook: `ElementContext::command_on_command_availability_for` (lets component-layer
+  surfaces participate in dispatch-path availability without adding new core widget types).
 
 ### Snapshot API (runner / menus / command palette)
 
@@ -63,6 +65,12 @@ Source of truth: `crates/fret-app/src/core_commands.rs` (Widget scope)
     - `NodeGraphCanvas` (non-text selection)
       - Evidence: `ecosystem/fret-node/src/ui/canvas/widget.rs`
       - Tests: `ecosystem/fret-node/src/ui/canvas/widget/tests/edit_command_availability_conformance.rs`
+    - `fret-ui-kit` list surfaces (non-text selection)
+      - Evidence: `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable`)
+      - Tests: `ecosystem/fret-ui-kit/src/declarative/list.rs` (`list_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
+    - `fret-ui-kit` table surfaces (non-text selection)
+      - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable`)
+      - Tests: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_copyable_reports_availability_and_emits_clipboard_text`)
   - Notes:
     - `text.copy` remains as a legacy alias for text-focused surfaces.
 - `edit.cut`

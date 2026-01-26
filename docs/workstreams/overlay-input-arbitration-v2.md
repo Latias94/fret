@@ -10,7 +10,8 @@ progress here to avoid document ownership conflicts.
 Primary roadmap document:
 
 - `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
-- Worktree tracker (this branch): `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md`
+- TODO tracker (main): `docs/workstreams/overlay-input-arbitration-v2-todo.md`
+- Worktree tracker (input-dispatch-v2 branches): `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md`
 
 Related ADRs:
 
@@ -143,19 +144,7 @@ Related ADRs:
 
 ## Next (P0 follow-ups)
 
-- Expand the arbitration conformance suite:
-  - dock drag closes/hides non-modal overlays (ADR 0072) (covered by `dock_drag_closes_non_modal_overlays_for_entire_window`,
-    `dock_drag_closes_dismissible_popovers_only_in_affected_window`, `dock_drag_does_not_restore_closed_non_modal_overlays_on_drag_end`,
-    `dock_drag_forces_menu_like_overlay_to_drop_pointer_occlusion_while_closing`, `dock_drag_hides_hover_overlays_in_affected_window`,
-    `dock_drag_hides_tooltips_in_affected_window`, `dock_drag_restores_focus_when_focus_is_missing_on_drag_end`,
-    `dock_drag_cross_window_hides_overlays_in_source_and_current_window`,
-    `dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_window`,
-    `dock_drag_cross_window_leaving_current_window_does_not_restore_closed_popovers`,
-    `dock_drag_cross_window_closes_dismissible_popovers_in_source_and_current_window`),
-  - docking drag + overlay hygiene (ADR 0072 edges),
-  - viewport tool capture vs hover overlays/tooltips (ADR 0049 follow-up).
-- Diagnostics: pointer/wheel scope roots are exposed via `UiTree::debug_hit_test` (includes modal barrier and pointer occlusion roots) and exported via `fret-bootstrap` hit-test snapshots.
-  - Evidence: `crates/fret-ui/src/tree/mod.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fret-ui-gallery/src/driver.rs`
-- Policy normalization: continue consolidating overlay "menu-like" invariants (visibility,
-  hit-testability, observer flags, and occlusion) beyond dismissible popovers (tooltips, hover
-  overlays, and future menu surfaces).
+See the TODO trackers for current status and evidence:
+
+- `docs/workstreams/overlay-input-arbitration-v2-todo.md` (main)
+- `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md` (input-dispatch-v2 branches)

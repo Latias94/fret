@@ -199,6 +199,100 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn maybe_schedule_virtual_list_visible_range_refresh_for_pending_invalidations(
+        &mut self,
+        app: &mut H,
+        pending: &HashMap<NodeId, PendingInvalidation>,
+        needs_redraw: &mut bool,
+    ) {
+        if !self.view_cache_active() {
+            return;
+        }
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let mut notify_targets: HashMap<NodeId, ()> = HashMap::new();
+        for (&node, entry) in pending {
+            if entry.inv != Invalidation::HitTestOnly {
+                continue;
+            }
+
+            let Some(record) =
+                crate::declarative::frame::element_record_for_node(app, window, node)
+            else {
+                continue;
+            };
+            let crate::declarative::frame::ElementInstance::VirtualList(props) = record.instance
+            else {
+                continue;
+            };
+
+            let requested_refresh = crate::elements::with_element_state(
+                &mut *app,
+                window,
+                record.element,
+                crate::element::VirtualListState::default,
+                |state| {
+                    state.metrics.ensure_with_mode(
+                        props.measure_mode,
+                        props.len,
+                        props.estimate_row_height,
+                        props.gap,
+                        props.scroll_margin,
+                    );
+
+                    let viewport_size = props.scroll_handle.viewport_size();
+                    let viewport = match props.axis {
+                        fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
+                        fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
+                    };
+                    if viewport.0 <= 0.0 || props.len == 0 {
+                        return false;
+                    }
+
+                    let handle_offset = match props.axis {
+                        fret_core::Axis::Vertical => props.scroll_handle.offset().y,
+                        fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                    };
+                    let offset = state.metrics.clamp_offset(handle_offset, viewport);
+                    let Some(range) = state
+                        .metrics
+                        .visible_range(offset, viewport, props.overscan)
+                    else {
+                        return false;
+                    };
+                    crate::virtual_list::virtual_list_needs_visible_range_refresh(
+                        &props.visible_items,
+                        range,
+                    )
+                },
+            );
+
+            self.debug_record_virtual_list_visible_range_check(requested_refresh);
+            if !requested_refresh {
+                continue;
+            }
+
+            let notify_target = self.notify_target_for_node(node);
+            notify_targets.insert(notify_target, ());
+        }
+
+        if notify_targets.is_empty() {
+            return;
+        }
+
+        for (notify_target, ()) in notify_targets {
+            self.invalidate_with_source_and_detail(
+                notify_target,
+                Invalidation::Paint,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+            );
+        }
+        *needs_redraw = true;
+    }
+
     fn dismiss_topmost_overlay_on_escape(
         &mut self,
         app: &mut H,
@@ -446,9 +540,10 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    let notify_target = self.notify_target_for_node(node_id);
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
-                        node_id,
+                        notify_target,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Notify,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -579,9 +674,10 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                let notify_target = self.notify_target_for_node(node_id);
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
-                    node_id,
+                    notify_target,
                     Invalidation::Paint,
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -629,6 +725,11 @@ impl<H: UiHost> UiTree<H> {
 
             let captured_now = pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
             if captured_now.is_some() || stop_propagation {
+                self.maybe_schedule_virtual_list_visible_range_refresh_for_pending_invalidations(
+                    app,
+                    &pending_invalidations,
+                    needs_redraw,
+                );
                 self.apply_pending_invalidations(
                     std::mem::take(&mut pending_invalidations),
                     invalidation_visited,
@@ -642,6 +743,11 @@ impl<H: UiHost> UiTree<H> {
             };
         }
 
+        self.maybe_schedule_virtual_list_visible_range_refresh_for_pending_invalidations(
+            app,
+            &pending_invalidations,
+            needs_redraw,
+        );
         self.apply_pending_invalidations(
             std::mem::take(&mut pending_invalidations),
             invalidation_visited,
@@ -1247,6 +1353,18 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
 
+                if let Some(window) = self.window {
+                    for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
+                        let (Some(element), Some(node)) = (element, node) else {
+                            continue;
+                        };
+                        let Some(bounds) = self.node_bounds(node) else {
+                            continue;
+                        };
+                        crate::elements::record_bounds_for_element(app, window, element, bounds);
+                    }
+                }
+
                 if let Some(element) = prev_element
                     && prev_node.is_some()
                 {
@@ -1597,8 +1715,9 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            node_id,
+                            notify_target,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -1660,6 +1779,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_focus,
                         requested_capture,
                         requested_cursor,
+                        cursor_query,
                         notify_requested,
                         stop_propagation,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -1689,12 +1809,15 @@ impl<H: UiHost> UiTree<H> {
                             notify_requested: false,
                             stop_propagation: false,
                         };
+                        let cursor_query = event_position(&event_for_node)
+                            .and_then(|pos| widget.cursor_icon_at(bounds, pos, &cx.input_ctx));
                         widget.event(&mut cx, &event_for_node);
                         (
                             cx.invalidations,
                             cx.requested_focus,
                             cx.requested_capture,
                             cx.requested_cursor,
+                            cursor_query,
                             cx.notify_requested,
                             cx.stop_propagation,
                         )
@@ -1712,8 +1835,9 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            node_id,
+                            notify_target,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -1752,6 +1876,9 @@ impl<H: UiHost> UiTree<H> {
 
                     if requested_cursor.is_some() && cursor_choice.is_none() {
                         cursor_choice = requested_cursor;
+                    }
+                    if cursor_choice.is_none() && cursor_query.is_some() {
+                        cursor_choice = cursor_query;
                     }
 
                     if stop_propagation {
@@ -1840,8 +1967,9 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            let notify_target = self.notify_target_for_node(node_id);
                             self.mark_invalidation_with_source(
-                                node_id,
+                                notify_target,
                                 Invalidation::Paint,
                                 UiDebugInvalidationSource::Notify,
                             );
@@ -1958,8 +2086,9 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            let notify_target = self.notify_target_for_node(node_id);
                             self.mark_invalidation_with_source(
-                                node_id,
+                                notify_target,
                                 Invalidation::Paint,
                                 UiDebugInvalidationSource::Notify,
                             );
@@ -2072,8 +2201,9 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        let notify_target = self.notify_target_for_node(node_id);
                         self.mark_invalidation_with_source(
-                            node_id,
+                            notify_target,
                             Invalidation::Paint,
                             UiDebugInvalidationSource::Notify,
                         );
@@ -2615,9 +2745,10 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    let notify_target = self.notify_target_for_node(node_id);
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
-                        node_id,
+                        notify_target,
                         Invalidation::Paint,
                         UiDebugInvalidationSource::Notify,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),
@@ -2674,9 +2805,10 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                let notify_target = self.notify_target_for_node(node_id);
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
-                    node_id,
+                    notify_target,
                     Invalidation::Paint,
                     UiDebugInvalidationSource::Notify,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Notify),

@@ -20,13 +20,18 @@ fret-launch = { path = "../../crates/fret-launch" }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
+fret-code-view = { path = "../../ecosystem/fret-code-view" }
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-kit = { path = "../../ecosystem/fret-kit" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "icons-lucide", "diagnostics", "ui-app-driver"] }
 fret-undo = { path = "../../ecosystem/fret-undo" }
+delinea = { path = "../../ecosystem/delinea" }
+fret-chart = { path = "../../ecosystem/fret-chart" }
+fret-canvas = { path = "../../ecosystem/fret-canvas", features = ["ui"] }
 time.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

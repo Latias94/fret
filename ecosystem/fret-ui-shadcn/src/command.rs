@@ -499,11 +499,14 @@ impl std::fmt::Debug for Command {
 }
 
 impl Command {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new<I>(children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            children,
+            children: children.into_iter().collect(),
         }
     }
 
@@ -822,8 +825,11 @@ impl CommandItem {
         self
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.children = children.into_iter().collect();
         self
     }
 }
@@ -1006,7 +1012,7 @@ impl CommandList {
             empty_text: Arc::from("No results."),
             highlight_query: None,
             scroll: LayoutRefinement::default()
-                .max_h(MetricRef::Px(Px(300.0)))
+                .max_h(Px(300.0))
                 .w_full()
                 .min_w_0(),
         }
@@ -1467,7 +1473,7 @@ impl CommandPalette {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
-                .max_h(MetricRef::Px(Px(300.0)))
+                .max_h(Px(300.0))
                 .w_full()
                 .min_w_0(),
         }
@@ -2558,10 +2564,13 @@ struct CommandPaletteState {
     items_fingerprint: u64,
 }
 
-pub fn command<H: UiHost>(
+pub fn command<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Command::new(f(cx)).into_element(cx)
 }
 
@@ -2577,7 +2586,7 @@ mod tests {
         SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{
         CommandScope, WindowCommandActionAvailabilityService, WindowCommandEnabledService,
     };
@@ -3375,9 +3384,7 @@ mod tests {
                     vec![
                         CommandPalette::new(model, items)
                             .refine_scroll_layout(
-                                LayoutRefinement::default()
-                                    .h_px(MetricRef::Px(Px(40.0)))
-                                    .max_h(MetricRef::Px(Px(40.0))),
+                                LayoutRefinement::default().h_px(Px(40.0)).max_h(Px(40.0)),
                             )
                             .into_element(cx),
                     ]

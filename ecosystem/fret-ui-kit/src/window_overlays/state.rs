@@ -138,6 +138,7 @@ impl OverlayLayerState {
             wants_timer_events: present && interactive,
         }
     }
+
     fn toast(present: bool, wants_timer_events: bool) -> Self {
         Self {
             present,

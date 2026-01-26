@@ -9,9 +9,9 @@ use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
+    MainAlign, Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -28,7 +28,8 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::overlay_motion;
@@ -614,7 +615,7 @@ fn find_submenu_entries_by_value(
 fn menu_structural_group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     role: fret_core::SemanticsRole,
-    children: Vec<AnyElement>,
+    children: Elements,
 ) -> AnyElement {
     cx.semantic_flex(
         fret_ui::element::SemanticFlexProps {
@@ -633,7 +634,7 @@ fn menu_structural_group<H: UiHost>(
                 wrap: false,
             },
         },
-        move |_cx| children.clone(),
+        move |_cx| children,
     )
 }
 
@@ -807,7 +808,7 @@ fn checkable_menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_disabled: fret_core::Color,
-) -> Vec<AnyElement> {
+) -> Elements {
     let indicator_fg = if disabled { text_disabled } else { row_fg };
 
     vec![cx.container(
@@ -949,6 +950,7 @@ fn checkable_menu_row_children<H: UiHost>(
             vec![content, indicator]
         },
     )]
+    .into()
 }
 
 fn submenu_chevron_right_text<H: UiHost>(
@@ -1569,6 +1571,10 @@ impl DropdownMenu {
                                                         icon_muted_fg: fret_core::Color,
                                                         destructive_fg: fret_core::Color,
                                                         destructive_bg: fret_core::Color,
+                                                        item_bg: WidgetStateProperty<ColorRef>,
+                                                        item_fg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_bg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_fg: WidgetStateProperty<ColorRef>,
                                                         row_height: Px,
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
@@ -1583,10 +1589,11 @@ impl DropdownMenu {
 
                                                     fn render_entries<H: UiHost>(
                                                         cx: &mut ElementContext<'_, H>,
+                                                        theme: &Theme,
                                                         entries: &[DropdownMenuEntry],
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
-                                                    ) -> Vec<AnyElement> {
+                                                    ) -> Elements {
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
@@ -1602,12 +1609,18 @@ impl DropdownMenu {
                                                         let text_style = env.text_style.clone();
                                                         let text_disabled = env.text_disabled;
                                                         let label_fg = env.label_fg;
-                                                        let accent = env.accent;
-                                                        let accent_fg = env.accent_fg;
-                                                        let fg = env.fg;
+                                                        let _accent = env.accent;
+                                                        let _accent_fg = env.accent_fg;
+                                                        let _fg = env.fg;
                                                         let icon_muted_fg = env.icon_muted_fg;
-                                                        let destructive_fg = env.destructive_fg;
-                                                        let destructive_bg = env.destructive_bg;
+                                                        let _destructive_fg = env.destructive_fg;
+                                                        let _destructive_bg = env.destructive_bg;
+                                                        let item_bg = env.item_bg.clone();
+                                                        let item_fg = env.item_fg.clone();
+                                                        let destructive_item_bg =
+                                                            env.destructive_item_bg.clone();
+                                                        let destructive_item_fg =
+                                                            env.destructive_item_fg.clone();
                                                         let row_height = env.row_height;
                                                         let window_margin = env.window_margin;
                                                         let submenu_min_width = env.submenu_min_width;
@@ -1658,7 +1671,7 @@ impl DropdownMenu {
                                                     }
                                                     DropdownMenuEntry::Group(group) => {
                                                         let children =
-                                                            render_entries(cx, &group.entries, item_ix, env);
+                                                            render_entries(cx, theme, &group.entries, item_ix, env);
                                                         out.push(menu_structural_group(
                                                             cx,
                                                             fret_core::SemanticsRole::Group,
@@ -1677,7 +1690,7 @@ impl DropdownMenu {
                                                             })
                                                             .collect();
                                                         let children =
-                                                            render_entries(cx, &items, item_ix, env);
+                                                            render_entries(cx, theme, &items, item_ix, env);
                                                         out.push(menu_structural_group(
                                                             cx,
                                                             fret_core::SemanticsRole::Group,
@@ -1800,16 +1813,22 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     };
 
-                                                                    let mut row_bg =
-                                                                        fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
+                                                                    let states = WidgetStates::from_pressable(
+                                                                        cx,
+                                                                        st,
+                                                                        !disabled,
+                                                                    );
+
+                                                                    let row_bg_ref = item_bg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_fg_ref = item_fg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_bg =
+                                                                        row_bg_ref.resolve(theme);
+                                                                    let row_fg =
+                                                                        row_fg_ref.resolve(theme);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -1938,16 +1957,22 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     };
 
-                                                                    let mut row_bg =
-                                                                        fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = fg;
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                    {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
+                                                                    let states = WidgetStates::from_pressable(
+                                                                        cx,
+                                                                        st,
+                                                                        !disabled,
+                                                                    );
+
+                                                                    let row_bg_ref = item_bg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_fg_ref = item_fg
+                                                                        .resolve(states)
+                                                                        .clone();
+                                                                    let row_bg =
+                                                                        row_bg_ref.resolve(theme);
+                                                                    let row_fg =
+                                                                        row_fg_ref.resolve(theme);
 
                                                                     let trailing = trailing.clone().or_else(|| {
                                                                         command.as_ref().and_then(|cmd| {
@@ -2106,27 +2131,35 @@ impl DropdownMenu {
                                                                     ..Default::default()
                                                                 };
 
-                                                                let mut row_bg = fret_core::Color::TRANSPARENT;
-                                                                let mut row_fg = if variant == DropdownMenuItemVariant::Destructive {
-                                                                    destructive_fg
-                                                                } else {
-                                                                    fg
-                                                                };
-                                                                if st.hovered
-                                                                    || st.pressed
-                                                                    || st.focused
-                                                                    || is_open_submenu
-                                                                {
+                                                                let mut states =
+                                                                    WidgetStates::from_pressable(
+                                                                        cx,
+                                                                        st,
+                                                                        !disabled,
+                                                                    );
+                                                                states.set(
+                                                                    WidgetState::Open,
+                                                                    is_open_submenu,
+                                                                );
+
+                                                                let (bg_prop, fg_prop) =
                                                                     if variant
                                                                         == DropdownMenuItemVariant::Destructive
                                                                     {
-                                                                        row_bg = destructive_bg;
-                                                                        row_fg = destructive_fg;
+                                                                        (
+                                                                            &destructive_item_bg,
+                                                                            &destructive_item_fg,
+                                                                        )
                                                                     } else {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
-                                                                }
+                                                                        (&item_bg, &item_fg)
+                                                                    };
+
+                                                                let row_bg_ref =
+                                                                    bg_prop.resolve(states).clone();
+                                                                let row_fg_ref =
+                                                                    fg_prop.resolve(states).clone();
+                                                                let row_bg =
+                                                                    row_bg_ref.resolve(theme);
 
                                                                 let trailing = if has_submenu {
                                                                     trailing.clone()
@@ -2165,13 +2198,14 @@ impl DropdownMenu {
                                                                         } else if reserve_leading_slot_enabled {
                                                                             row.push(menu_icon_slot_empty(cx));
                                                                         }
+                                                                        let row_fg_ref = row_fg_ref.clone();
                                                                         let style = text_style.clone();
                                                                         let mut text = ui::text(cx, label.clone())
                                                                             .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
                                                                             .text_size_px(style.size)
                                                                             .font_weight(style.weight)
                                                                             .nowrap()
-                                                                            .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                            .text_color(row_fg_ref);
 
                                                                         if let Some(line_height) = style.line_height {
                                                                             text = text.line_height_px(line_height);
@@ -2226,7 +2260,7 @@ impl DropdownMenu {
                                                     }
 
 
-                                                            out
+                                                            out.into()
                                                     }
 
                                                     let env = RenderEnv {
@@ -2250,6 +2284,84 @@ impl DropdownMenu {
                                                         icon_muted_fg,
                                                         destructive_fg,
                                                         destructive_bg,
+                                                        item_bg: WidgetStateProperty::new(ColorRef::Color(
+                                                            fret_core::Color::TRANSPARENT,
+                                                        ))
+                                                        .when(WidgetStates::HOVERED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::ACTIVE, ColorRef::Color(accent))
+                                                        .when(WidgetStates::FOCUSED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::OPEN, ColorRef::Color(accent))
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        item_fg: WidgetStateProperty::new(ColorRef::Color(fg))
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
+                                                        destructive_item_bg: WidgetStateProperty::new(
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        destructive_item_fg: WidgetStateProperty::new(
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
                                                         row_height,
                                                         window_margin,
                                                         submenu_min_width,
@@ -2272,6 +2384,7 @@ impl DropdownMenu {
 
                                                     render_entries(
                                                         cx,
+                                                        &theme,
                                                         entries.as_ref(),
                                                         &mut item_ix,
                                                         &env,
@@ -2294,7 +2407,9 @@ impl DropdownMenu {
                             )]
                         },
                     );
-                    content_focus_id_for_children.set(Some(content_id));
+                    if content_focus_id_for_children.get().is_none() {
+                        content_focus_id_for_children.set(Some(content_id));
+                    }
                     cx.key_on_key_down_for(
                         content_id,
                         Arc::new({
@@ -2409,6 +2524,10 @@ impl DropdownMenu {
                         let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
                             return (children, Some(dismissible_on_pointer_move));
                         };
+
+                        // Keep submenu geometry up to date so pointer-grace / safe-hover policies
+                        // can arm close timers when the pointer leaves the submenu corridor.
+                        menu::sub::set_geometry_if_changed(cx, geometry, &submenu_for_panel.geometry);
 
                         let submenu_entries = find_submenu_entries_by_value(
                             entries_for_submenu.as_ref(),
@@ -2526,6 +2645,10 @@ impl DropdownMenu {
                                                         fg: fret_core::Color,
                                                         destructive_fg: fret_core::Color,
                                                         destructive_bg: fret_core::Color,
+                                                        item_bg: WidgetStateProperty<ColorRef>,
+                                                        item_fg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_bg: WidgetStateProperty<ColorRef>,
+                                                        destructive_item_fg: WidgetStateProperty<ColorRef>,
                                                         row_height: Px,
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
@@ -2538,10 +2661,11 @@ impl DropdownMenu {
 
                                                     fn render_entries<H: UiHost>(
                                                         cx: &mut ElementContext<'_, H>,
+                                                        theme: &Theme,
                                                         entries: &[DropdownMenuEntry],
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
-                                                    ) -> Vec<AnyElement> {
+                                                    ) -> Elements {
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
@@ -2557,11 +2681,17 @@ impl DropdownMenu {
                                                         let text_style = env.text_style.clone();
                                                         let text_disabled = env.text_disabled;
                                                         let label_fg = env.label_fg;
-                                                        let accent = env.accent;
-                                                        let accent_fg = env.accent_fg;
-                                                        let fg = env.fg;
-                                                        let destructive_fg = env.destructive_fg;
-                                                        let destructive_bg = env.destructive_bg;
+                                                        let _accent = env.accent;
+                                                        let _accent_fg = env.accent_fg;
+                                                        let _fg = env.fg;
+                                                        let _destructive_fg = env.destructive_fg;
+                                                        let _destructive_bg = env.destructive_bg;
+                                                        let item_bg = env.item_bg.clone();
+                                                        let item_fg = env.item_fg.clone();
+                                                        let destructive_item_bg =
+                                                            env.destructive_item_bg.clone();
+                                                        let destructive_item_fg =
+                                                            env.destructive_item_fg.clone();
                                                         let _row_height = env.row_height;
                                                         let _window_margin = env.window_margin;
                                                         let _submenu_min_width = env.submenu_min_width;
@@ -2611,6 +2741,7 @@ impl DropdownMenu {
                                                             DropdownMenuEntry::Group(group) => {
                                                                 let children = render_entries(
                                                                     cx,
+                                                                    theme,
                                                                     &group.entries,
                                                                     item_ix,
                                                                     env,
@@ -2633,7 +2764,7 @@ impl DropdownMenu {
                                                                     })
                                                                     .collect();
                                                                 let children =
-                                                                    render_entries(cx, &items, item_ix, env);
+                                                                    render_entries(cx, theme, &items, item_ix, env);
                                                                 rows.push(menu_structural_group(
                                                                     cx,
                                                                     fret_core::SemanticsRole::Group,
@@ -2748,13 +2879,23 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut row_bg =
-                                                                                fret_core::Color::TRANSPARENT;
-                                                                            let mut row_fg = fg;
-                                                                            if st.hovered || st.pressed || st.focused {
-                                                                                row_bg = accent;
-                                                                                row_fg = accent_fg;
-                                                                            }
+                                                                            let states =
+                                                                                WidgetStates::from_pressable(
+                                                                                    cx,
+                                                                                    st,
+                                                                                    !disabled,
+                                                                                );
+
+                                                                            let row_bg_ref = item_bg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_fg_ref = item_fg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_bg =
+                                                                                row_bg_ref.resolve(theme);
+                                                                            let row_fg =
+                                                                                row_fg_ref.resolve(theme);
 
                                                                             let trailing = trailing.clone().or_else(|| {
                                                                                 command.as_ref().and_then(|cmd| {
@@ -2866,13 +3007,23 @@ impl DropdownMenu {
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut row_bg =
-                                                                                fret_core::Color::TRANSPARENT;
-                                                                            let mut row_fg = fg;
-                                                                            if st.hovered || st.pressed || st.focused {
-                                                                                row_bg = accent;
-                                                                                row_fg = accent_fg;
-                                                                            }
+                                                                            let states =
+                                                                                WidgetStates::from_pressable(
+                                                                                    cx,
+                                                                                    st,
+                                                                                    !disabled,
+                                                                                );
+
+                                                                            let row_bg_ref = item_bg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_fg_ref = item_fg
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_bg =
+                                                                                row_bg_ref.resolve(theme);
+                                                                            let row_fg =
+                                                                                row_fg_ref.resolve(theme);
 
                                                                             let trailing = trailing.clone().or_else(|| {
                                                                                 command.as_ref().and_then(|cmd| {
@@ -2907,22 +3058,23 @@ impl DropdownMenu {
                                                                     )
                                                                 }));
                                                             }
-                                                            DropdownMenuEntry::Item(item) => {
-                                                                let collection_index = *item_ix;
-                                                                *item_ix = (*item_ix).saturating_add(1);
+                                                    DropdownMenuEntry::Item(item) => {
+                                                        let collection_index = *item_ix;
+                                                        *item_ix = (*item_ix).saturating_add(1);
 
-                                                                let label = item.label.clone();
-                                                                let value = item.value.clone();
-                                                                let a11y_label = item
-                                                                    .a11y_label
-                                                                    .clone()
-                                                                    .or_else(|| Some(label.clone()));
-                                                                let close_on_select = item.close_on_select;
-                                                                let command = item.command;
-                                                                let disabled = item.disabled
-                                                                    || crate::command_gating::command_is_disabled_by_gating(
-                                                                        &*cx.app,
-                                                                        &gating,
+                                                        let label = item.label.clone();
+                                                        let value = item.value.clone();
+                                                        let a11y_label = item
+                                                            .a11y_label
+                                                            .clone()
+                                                            .or_else(|| Some(label.clone()));
+                                                        let test_id = item.test_id.clone();
+                                                        let close_on_select = item.close_on_select;
+                                                        let command = item.command;
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
                                                                         command.as_ref(),
                                                                     );
                                                                 let leading = item.leading.clone();
@@ -2949,6 +3101,8 @@ impl DropdownMenu {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
 
+                                                                            let mut a11y = menu::item::menu_item_a11y(a11y_label, None);
+                                                                            a11y.test_id = test_id.clone();
                                                                             let props = PressableProps {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
@@ -2959,37 +3113,40 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_a11y(
-                                                                                    a11y_label,
-                                                                                    None,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
                                                                                 ),
                                                                                 ..Default::default()
                                                                             };
 
-                                                                            let mut row_bg =
-                                                                                fret_core::Color::TRANSPARENT;
-                                                                            let mut row_fg = if variant
-                                                                                == DropdownMenuItemVariant::Destructive
-                                                                            {
-                                                                                destructive_fg
-                                                                            } else {
-                                                                                fg
-                                                                            };
-                                                                            if st.hovered || st.pressed || st.focused {
+                                                                            let states =
+                                                                                WidgetStates::from_pressable(
+                                                                                    cx,
+                                                                                    st,
+                                                                                    !disabled,
+                                                                                );
+
+                                                                            let (bg_prop, fg_prop) =
                                                                                 if variant
                                                                                     == DropdownMenuItemVariant::Destructive
                                                                                 {
-                                                                                    row_bg = destructive_bg;
-                                                                                    row_fg = destructive_fg;
+                                                                                    (
+                                                                                        &destructive_item_bg,
+                                                                                        &destructive_item_fg,
+                                                                                    )
                                                                                 } else {
-                                                                                    row_bg = accent;
-                                                                                    row_fg = accent_fg;
-                                                                                }
-                                                                            }
+                                                                                    (&item_bg, &item_fg)
+                                                                                };
+
+                                                                            let row_bg_ref = bg_prop
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_fg_ref = fg_prop
+                                                                                .resolve(states)
+                                                                                .clone();
+                                                                            let row_bg =
+                                                                                row_bg_ref.resolve(theme);
 
                                                                             let trailing = trailing.clone().or_else(|| {
                                                                                 command.as_ref().and_then(|cmd| {
@@ -3023,13 +3180,14 @@ impl DropdownMenu {
                                                                                     } else if reserve_leading_slot_enabled {
                                                                                         row.push(menu_icon_slot_empty(cx));
                                                                                     }
+                                                                                    let row_fg_ref = row_fg_ref.clone();
                                                                                     let style = text_style.clone();
                                                                                     let mut text = ui::text(cx, label.clone())
                                                                                         .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
                                                                                         .text_size_px(style.size)
                                                                                         .font_weight(style.weight)
                                                                                         .nowrap()
-                                                                                        .text_color(ColorRef::Color(if disabled { text_disabled } else { row_fg }));
+                                                                                        .text_color(row_fg_ref);
 
                                                                                     if let Some(line_height) = style.line_height {
                                                                                         text = text.line_height_px(line_height);
@@ -3072,7 +3230,7 @@ impl DropdownMenu {
                                                         }
                                                     }
 
-                                                    rows
+                                                    rows.into()
                                                     }
 
                                                     let env = RenderEnv {
@@ -3095,6 +3253,84 @@ impl DropdownMenu {
                                                         fg,
                                                         destructive_fg,
                                                         destructive_bg,
+                                                        item_bg: WidgetStateProperty::new(ColorRef::Color(
+                                                            fret_core::Color::TRANSPARENT,
+                                                        ))
+                                                        .when(WidgetStates::HOVERED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::ACTIVE, ColorRef::Color(accent))
+                                                        .when(WidgetStates::FOCUSED, ColorRef::Color(accent))
+                                                        .when(WidgetStates::OPEN, ColorRef::Color(accent))
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        item_fg: WidgetStateProperty::new(ColorRef::Color(fg))
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(accent_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
+                                                        destructive_item_bg: WidgetStateProperty::new(
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_bg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(fret_core::Color::TRANSPARENT),
+                                                        ),
+                                                        destructive_item_fg: WidgetStateProperty::new(
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::HOVERED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::ACTIVE,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::FOCUSED,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::OPEN,
+                                                            ColorRef::Color(destructive_fg),
+                                                        )
+                                                        .when(
+                                                            WidgetStates::DISABLED,
+                                                            ColorRef::Color(text_disabled),
+                                                        ),
                                                         row_height,
                                                         window_margin,
                                                         submenu_min_width,
@@ -3112,6 +3348,7 @@ impl DropdownMenu {
 
                                                     let rows = render_entries(
                                                         cx,
+                                                        &theme,
                                                         submenu_entries.as_ref(),
                                                         &mut item_ix,
                                                         &env,
@@ -3217,9 +3454,7 @@ mod tests {
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
-    use fret_core::{
-        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
-    };
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
@@ -3649,7 +3884,9 @@ mod tests {
             let mut services = FakeServices::default();
 
             let open = app.models_mut().insert(true);
-            let trigger_id_out = app.models_mut().insert(None);
+            let trigger_id_out = app
+                .models_mut()
+                .insert(None::<fret_ui::elements::GlobalElementId>);
 
             let entries = vec![DropdownMenuEntry::Item(
                 DropdownMenuItem::new("Alpha").value("alpha"),
@@ -4176,9 +4413,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4307,9 +4541,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4384,9 +4615,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5656,9 +5884,6 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app
-            .models_mut()
-            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5686,8 +5911,8 @@ mod tests {
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
         let position = rect_center(trigger_bounds);
 
-        // shadcn `DropdownMenu` uses a caller-owned open model; treat this pointer interaction as
-        // the "open reason" and flip the open model like a trigger would.
+        // shadcn `DropdownMenu` uses a caller-owned open model; treat this click interaction as
+        // the "open reason" and flip the open model like a trigger would (on pointer-up activate).
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -5696,6 +5921,19 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -5974,7 +6212,6 @@ mod tests {
         } else {
             Point::new(more_center.x, Px(bounds.size.height.0 + 100.0))
         };
-
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -6749,7 +6986,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app.models_mut().insert(None);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -7161,6 +7400,90 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_submenu_items_propagate_test_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha").test_id("sub-alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha submenu item");
+        assert_eq!(
+            sub_alpha.test_id.as_deref(),
+            Some("sub-alpha"),
+            "expected submenu item test_id to be preserved for deterministic automation"
+        );
+    }
+
+    #[test]
     fn dropdown_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus() {
         use std::time::Duration;
 
@@ -7302,5 +7625,328 @@ mod tests {
             Some(more_after_close.id),
             "ArrowLeft should restore focus to the submenu trigger"
         );
+    }
+
+    #[test]
+    fn dropdown_menu_dock_drag_closes_menu_while_submenu_is_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "expected submenu to be open before starting dock drag"
+        );
+
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll,
+            "expected open dropdown-menu to install pointer occlusion"
+        );
+
+        app.begin_drag_with_kind(
+            fret_core::PointerId(7),
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            window,
+            Point::new(Px(10.0), Px(10.0)),
+            (),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected dock drag to close the open dropdown menu"
+        );
+
+        let occlusion = fret_ui_kit::OverlayController::arbitration_snapshot(&ui).pointer_occlusion;
+        assert_eq!(
+            occlusion,
+            fret_ui::tree::PointerOcclusion::None,
+            "expected dock drag closed menu to drop pointer occlusion"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "expected submenu items to be removed after dock drag closes the menu"
+        );
+
+        app.cancel_drag(fret_core::PointerId(7));
+    }
+
+    #[test]
+    fn dropdown_menu_cross_window_dock_drag_closes_open_menus_and_submenus() {
+        use slotmap::KeyData;
+
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+
+        let mut app = App::new();
+
+        let mut ui_a: UiTree<App> = UiTree::new();
+        ui_a.set_window(window_a);
+        let mut ui_b: UiTree<App> = UiTree::new();
+        ui_b.set_window(window_b);
+
+        let open_a = app.models_mut().insert(false);
+        let open_b = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        // Frame 1: closed, establish stable trigger bounds for both windows.
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let _ = render_frame(
+            &mut ui_b,
+            &mut app,
+            &mut services,
+            window_b,
+            bounds,
+            open_b.clone(),
+            entries.clone(),
+        );
+
+        // Frame 2: open both menus.
+        let _ = app.models_mut().update(&open_a, |v| *v = true);
+        let _ = app.models_mut().update(&open_b, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let _ = render_frame(
+            &mut ui_b,
+            &mut app,
+            &mut services,
+            window_b,
+            bounds,
+            open_b.clone(),
+            entries.clone(),
+        );
+
+        // Open the submenu in window A (keyboard).
+        let snap = ui_a.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui_a.set_focus(Some(more.id));
+
+        ui_a.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let snap = ui_a.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "expected submenu to be open before starting cross-window dock drag"
+        );
+
+        // Sanity: both open menus should install pointer occlusion.
+        let occlusion_a =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_a).pointer_occlusion;
+        let occlusion_b =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_b).pointer_occlusion;
+        assert_eq!(
+            occlusion_a,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+        );
+        assert_eq!(
+            occlusion_b,
+            fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll
+        );
+
+        // Frame 3: begin a cross-window dock drag in window A and enter window B.
+        app.begin_cross_window_drag_with_kind(
+            fret_core::PointerId(7),
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            window_a,
+            Point::new(Px(10.0), Px(10.0)),
+            (),
+        );
+        let drag = app.drag_mut(fret_core::PointerId(7)).expect("drag session");
+        drag.current_window = window_b;
+
+        let _ = render_frame(
+            &mut ui_a,
+            &mut app,
+            &mut services,
+            window_a,
+            bounds,
+            open_a.clone(),
+            entries.clone(),
+        );
+        let _ = render_frame(
+            &mut ui_b,
+            &mut app,
+            &mut services,
+            window_b,
+            bounds,
+            open_b.clone(),
+            entries.clone(),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open_a),
+            Some(false),
+            "expected source window menu to close during dock drag"
+        );
+        assert_eq!(
+            app.models().get_copied(&open_b),
+            Some(false),
+            "expected current window menu to close during dock drag"
+        );
+
+        let occlusion_a =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_a).pointer_occlusion;
+        let occlusion_b =
+            fret_ui_kit::OverlayController::arbitration_snapshot(&ui_b).pointer_occlusion;
+        assert_eq!(
+            occlusion_a,
+            fret_ui::tree::PointerOcclusion::None,
+            "expected dock drag to clear pointer occlusion in source window"
+        );
+        assert_eq!(
+            occlusion_b,
+            fret_ui::tree::PointerOcclusion::None,
+            "expected dock drag to clear pointer occlusion in current window"
+        );
+
+        let snap = ui_a.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "expected submenu items to be removed after dock drag closes the menu"
+        );
+
+        app.cancel_drag(fret_core::PointerId(7));
     }
 }

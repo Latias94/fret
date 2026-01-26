@@ -8,7 +8,70 @@ use crate::layout_engine::build_viewport_flow_subtree;
 use crate::layout_pass::LayoutPassKind;
 
 impl<H: UiHost> UiTree<H> {
-    pub(super) fn invalidate_scroll_handle_bindings_for_changed_handles(
+    fn virtual_list_scroll_handle_requires_layout(
+        app: &mut H,
+        window: AppWindowId,
+        element: GlobalElementId,
+        props: &crate::element::VirtualListProps,
+    ) -> bool {
+        crate::elements::with_element_state(
+            &mut *app,
+            window,
+            element,
+            crate::element::VirtualListState::default,
+            |state| {
+                state.metrics.ensure_with_mode(
+                    props.measure_mode,
+                    props.len,
+                    props.estimate_row_height,
+                    props.gap,
+                    props.scroll_margin,
+                );
+
+                let viewport = match props.axis {
+                    fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                    fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                };
+                if viewport.0 <= 0.0 || props.len == 0 {
+                    return false;
+                }
+
+                let offset_point = props.scroll_handle.offset();
+                let offset_axis = match props.axis {
+                    fret_core::Axis::Vertical => offset_point.y,
+                    fret_core::Axis::Horizontal => offset_point.x,
+                };
+                let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+
+                let Some(visible) = state.metrics.visible_range(offset_axis, viewport, 0) else {
+                    return false;
+                };
+
+                let Some(window_range) =
+                    state
+                        .render_window_range
+                        .or(state.window_range)
+                        .filter(|r| {
+                            r.count == props.len
+                                && r.overscan == props.overscan
+                                && r.start_index <= r.end_index
+                                && r.end_index < r.count
+                        })
+                else {
+                    return false;
+                };
+
+                let window_start = window_range
+                    .start_index
+                    .saturating_sub(window_range.overscan);
+                let window_end = (window_range.end_index + window_range.overscan)
+                    .min(window_range.count.saturating_sub(1));
+                window_start > visible.start_index || window_end < visible.end_index
+            },
+        )
+    }
+
+    pub(crate) fn invalidate_scroll_handle_bindings_for_changed_handles(
         &mut self,
         app: &mut H,
         pass_kind: LayoutPassKind,
@@ -27,12 +90,6 @@ impl<H: UiHost> UiTree<H> {
 
         let mut visited = HashMap::<NodeId, u8>::new();
         for change in changed {
-            let inv = match change.kind {
-                crate::declarative::frame::ScrollHandleChangeKind::Layout => Invalidation::Layout,
-                crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
-                    Invalidation::HitTestOnly
-                }
-            };
             let handle_key = change.handle_key;
             let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
                 &mut *app, window, handle_key,
@@ -40,18 +97,286 @@ impl<H: UiHost> UiTree<H> {
             if bound.is_empty() {
                 continue;
             }
+
+            let mut change_kind = change.kind;
+
+            // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
+            // when offset/viewport/content are unchanged, which makes the change appear as
+            // "layout-affecting". For fixed-size virtual lists, we can consume the deferred
+            // request up-front (using cached metrics + viewport) and convert it into a simple
+            // offset update, avoiding a layout-driven consumption path.
+            if change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout {
+                let mut consumed_scroll_to_item = false;
+                for element in &bound {
+                    if consumed_scroll_to_item {
+                        break;
+                    }
+                    let Some(node) = crate::declarative::node_for_element_in_window_frame(
+                        &mut *app, window, *element,
+                    ) else {
+                        continue;
+                    };
+                    let Some(record) =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                    else {
+                        continue;
+                    };
+                    let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                        record.instance
+                    else {
+                        continue;
+                    };
+                    if props.measure_mode != crate::element::VirtualListMeasureMode::Fixed {
+                        continue;
+                    }
+                    let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
+                    else {
+                        continue;
+                    };
+
+                    let applied = crate::elements::with_element_state(
+                        &mut *app,
+                        window,
+                        record.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+
+                            let viewport_size = props.scroll_handle.viewport_size();
+                            let viewport = match props.axis {
+                                fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return None;
+                            }
+
+                            let current = match props.axis {
+                                fret_core::Axis::Vertical => props.scroll_handle.offset().y,
+                                fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                            };
+                            let desired = state
+                                .metrics
+                                .scroll_offset_for_item(index, viewport, current, strategy);
+                            let desired = state.metrics.clamp_offset(desired, viewport);
+
+                            match props.axis {
+                                fret_core::Axis::Vertical => state.offset_y = desired,
+                                fret_core::Axis::Horizontal => state.offset_x = desired,
+                            }
+
+                            Some(desired)
+                        },
+                    );
+
+                    let Some(applied) = applied else {
+                        continue;
+                    };
+
+                    let prev = props.scroll_handle.offset();
+                    match props.axis {
+                        fret_core::Axis::Vertical => {
+                            props
+                                .scroll_handle
+                                .set_offset(fret_core::Point::new(prev.x, applied));
+                        }
+                        fret_core::Axis::Horizontal => {
+                            props
+                                .scroll_handle
+                                .set_offset(fret_core::Point::new(applied, prev.y));
+                        }
+                    }
+                    props.scroll_handle.clear_deferred_scroll_to_item();
+
+                    consumed_scroll_to_item = true;
+                    change_kind = crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly;
+                    self.request_redraw_coalesced(app);
+                }
+            }
+
+            if self.debug_enabled && self.debug_scroll_handle_changes.len() < 256 {
+                let mut upgraded_to_layout_bindings = 0u32;
+                let mut bound_nodes_sample = Vec::new();
+                for element in &bound {
+                    if let Some(node) = crate::declarative::node_for_element_in_window_frame(
+                        &mut *app, window, *element,
+                    ) {
+                        if bound_nodes_sample.len() < 8 {
+                            bound_nodes_sample.push(node);
+                        }
+
+                        if change_kind
+                            == crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly
+                            && let Some(record) = crate::declarative::frame::element_record_for_node(
+                                &mut *app, window, node,
+                            )
+                            && let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                                &record.instance
+                            && Self::virtual_list_scroll_handle_requires_layout(
+                                &mut *app,
+                                window,
+                                record.element,
+                                props,
+                            )
+                        {
+                            upgraded_to_layout_bindings =
+                                upgraded_to_layout_bindings.saturating_add(1);
+                        }
+                    }
+                }
+
+                self.debug_scroll_handle_changes
+                    .push(crate::tree::UiDebugScrollHandleChange {
+                        handle_key,
+                        kind: match change_kind {
+                            crate::declarative::frame::ScrollHandleChangeKind::Layout => {
+                                crate::tree::UiDebugScrollHandleChangeKind::Layout
+                            }
+                            crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                                crate::tree::UiDebugScrollHandleChangeKind::HitTestOnly
+                            }
+                        },
+                        revision: change.revision,
+                        prev_revision: change.prev_revision,
+                        offset: change.offset,
+                        prev_offset: change.prev_offset,
+                        viewport: change.viewport,
+                        prev_viewport: change.prev_viewport,
+                        content: change.content,
+                        prev_content: change.prev_content,
+                        offset_changed: change.offset_changed,
+                        viewport_changed: change.viewport_changed,
+                        content_changed: change.content_changed,
+                        bound_elements: bound.len() as u32,
+                        bound_nodes_sample,
+                        upgraded_to_layout_bindings,
+                    });
+            }
+
             for element in bound {
                 let Some(node) = crate::declarative::node_for_element_in_window_frame(
                     &mut *app, window, element,
                 ) else {
                     continue;
                 };
+
+                let mut inv = match change_kind {
+                    crate::declarative::frame::ScrollHandleChangeKind::Layout => {
+                        Invalidation::Layout
+                    }
+                    crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                        Invalidation::HitTestOnly
+                    }
+                };
+                let mut detail = match change_kind {
+                    crate::declarative::frame::ScrollHandleChangeKind::Layout => {
+                        UiDebugInvalidationDetail::ScrollHandleLayout
+                    }
+                    crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly => {
+                        UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+                    }
+                };
+
+                // A scroll handle can see multiple updates during a single layout pass when the
+                // same handle is (incorrectly) shared across multiple scroll surfaces (e.g. a
+                // horizontal scroll handle reused per-row in a table). This can bump the handle
+                // revision even when the final observed offset/viewport/content are unchanged.
+                //
+                // Treat these "revision-only" changes as HitTestOnly by default. Upgrade to
+                // Layout only for VirtualList cases where we must consume a deferred scroll
+                // request, or when the visible window leaves the last rendered overscan window.
+                if inv == Invalidation::Layout
+                    && !change.offset_changed
+                    && !change.viewport_changed
+                    && !change.content_changed
+                {
+                    inv = Invalidation::HitTestOnly;
+                    detail = UiDebugInvalidationDetail::ScrollHandleHitTestOnly;
+                }
+
+                if inv == Invalidation::HitTestOnly
+                    && let Some(record) =
+                        crate::declarative::frame::element_record_for_node(&mut *app, window, node)
+                    && let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                        &record.instance
+                {
+                    let requires_deferred_consumption =
+                        props.scroll_handle.deferred_scroll_to_item().is_some();
+                    let requires_window_update = Self::virtual_list_scroll_handle_requires_layout(
+                        &mut *app,
+                        window,
+                        record.element,
+                        props,
+                    );
+
+                    // Keep element-local scroll state in sync for scroll-handle changes that are
+                    // treated as HitTestOnly (wheel/inertial/transform-only updates). This avoids
+                    // a "layout-or-nothing" coupling for consumers that observe `VirtualListState`.
+                    crate::elements::with_element_state(
+                        &mut *app,
+                        window,
+                        record.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+
+                            let viewport = match props.axis {
+                                fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return;
+                            }
+
+                            let offset_point = props.scroll_handle.offset();
+                            let offset_axis = match props.axis {
+                                fret_core::Axis::Vertical => offset_point.y,
+                                fret_core::Axis::Horizontal => offset_point.x,
+                            };
+                            let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+                            match props.axis {
+                                fret_core::Axis::Vertical => state.offset_y = offset_axis,
+                                fret_core::Axis::Horizontal => state.offset_x = offset_axis,
+                            }
+                        },
+                    );
+
+                    if requires_deferred_consumption {
+                        inv = Invalidation::Layout;
+                        detail = UiDebugInvalidationDetail::ScrollHandleLayout;
+                    } else if requires_window_update {
+                        // Do not force a layout pass just to discover that the visible window is
+                        // outside the previously rendered overscan window. Instead, treat it as a
+                        // prepaint-windowed "ephemeral update" signal (ADR 0190): mark the nearest
+                        // view-cache root dirty and request a redraw so the next frame rerenders
+                        // the virtual surface children.
+                        self.mark_nearest_view_cache_root_needs_rerender(
+                            node,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                        );
+                        self.request_redraw_coalesced(app);
+                    }
+                }
+
                 self.mark_invalidation_dedup_with_detail(
                     node,
                     inv,
                     &mut visited,
                     UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::ScrollHandle,
+                    detail,
                 );
             }
         }
@@ -128,6 +453,16 @@ impl<H: UiHost> UiTree<H> {
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
 
             self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                &mut viewport_cursor,
+            );
+        }
+
+        if pass_kind == LayoutPassKind::Final {
+            self.layout_pending_barrier_relayouts_if_needed(
                 app,
                 services,
                 scale_factor,
@@ -258,6 +593,82 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn layout_pending_barrier_relayouts_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        viewport_cursor: &mut usize,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+
+        let pending = self.take_pending_barrier_relayouts();
+        if pending.is_empty() {
+            return;
+        }
+
+        let mut unique = HashSet::<NodeId>::with_capacity(pending.len());
+        let mut targets: Vec<NodeId> = Vec::with_capacity(pending.len());
+        for node in pending {
+            if unique.insert(node) {
+                targets.push(node);
+            }
+        }
+
+        for root in targets {
+            let Some(node) = self.nodes.get(root) else {
+                continue;
+            };
+            if !node.invalidation.layout {
+                continue;
+            }
+
+            // Barrier relayouts intentionally do not invalidate ancestors. Prefer the retained
+            // bounds (stable barrier viewport), but fall back to resolving bounds from the parent
+            // layout-engine rect when needed (e.g. newly mounted nodes with default bounds).
+            let mut bounds = node.bounds;
+            if (bounds.size == Size::default() || bounds.origin == Point::default())
+                && let Some(parent) = node.parent
+                && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
+                && let Some(local) = self.layout_engine_child_local_rect(parent, root)
+            {
+                let resolved = Rect::new(
+                    Point::new(
+                        Px(parent_bounds.origin.x.0 + local.origin.x.0),
+                        Px(parent_bounds.origin.y.0 + local.origin.y.0),
+                    ),
+                    local.size,
+                );
+                if resolved.size != Size::default() {
+                    bounds = resolved;
+                }
+            }
+
+            if bounds.size == Size::default() {
+                continue;
+            }
+
+            let _ =
+                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+            if self.debug_enabled {
+                self.debug_stats.barrier_relayouts_performed = self
+                    .debug_stats
+                    .barrier_relayouts_performed
+                    .saturating_add(1);
+            }
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                viewport_cursor,
+            );
+        }
+    }
+
     pub fn layout(
         &mut self,
         app: &mut H,
@@ -298,6 +709,7 @@ impl<H: UiHost> UiTree<H> {
         );
 
         self.layout_engine.end_frame();
+        self.sync_element_bounds_cache_after_layout(app);
         size
     }
 
@@ -335,6 +747,7 @@ impl<H: UiHost> UiTree<H> {
             &mut viewport_cursor,
         );
         self.layout_engine.end_frame();
+        self.sync_element_bounds_cache_after_layout(app);
         size
     }
 
@@ -349,6 +762,26 @@ impl<H: UiHost> UiTree<H> {
         pass_kind: LayoutPassKind,
     ) -> Size {
         self.layout_node(app, services, root, bounds, scale_factor, pass_kind)
+    }
+
+    fn sync_element_bounds_cache_after_layout(&mut self, app: &mut H) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let element_nodes =
+            crate::elements::with_window_state(app, window, |st| st.element_nodes());
+
+        let bounds: Vec<(GlobalElementId, Rect)> = element_nodes
+            .into_iter()
+            .filter_map(|(element, node)| self.node_bounds(node).map(|rect| (element, rect)))
+            .collect();
+
+        crate::elements::with_window_state(app, window, |st| {
+            for (element, rect) in bounds {
+                st.record_bounds(element, rect);
+            }
+        })
     }
 
     pub fn measure_in(
@@ -423,6 +856,7 @@ impl<H: UiHost> UiTree<H> {
                     .debug_stats
                     .view_cache_contained_relayouts
                     .saturating_add(1);
+                self.debug_view_cache_contained_relayout_roots.push(root);
             }
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);

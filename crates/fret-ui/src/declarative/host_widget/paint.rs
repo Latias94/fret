@@ -768,38 +768,88 @@ impl ElementHostWidget {
                 group.paint(cx);
             }
             ElementInstance::VirtualList(props) => {
-                cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                if cx.tree.view_cache_enabled()
+                    && !cx.tree.inspection_active()
+                    && let Some(window) = cx.window
+                {
+                    let requested_refresh = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            let axis = props.axis;
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+                            let viewport = match axis {
+                                fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return false;
+                            }
 
-                let offset_y = props.scroll_handle.offset().y;
-                let metrics = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::element::VirtualListState::default,
-                    |state| {
-                        state.metrics.ensure_with_mode(
-                            props.measure_mode,
-                            props.len,
-                            props.estimate_row_height,
-                            props.gap,
-                            props.scroll_margin,
-                        );
-                        state.metrics.clone()
-                    },
-                );
-
-                for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
-                    let idx = item.index;
-                    let y = cx.bounds.origin.y.0 + metrics.offset_for_index(idx).0 - offset_y.0;
-                    let row_h = metrics.height_at(idx);
-                    let child_bounds = Rect::new(
-                        fret_core::Point::new(cx.bounds.origin.x, Px(y)),
-                        Size::new(cx.bounds.size.width, row_h),
+                            let handle_offset = match axis {
+                                fret_core::Axis::Vertical => props.scroll_handle.offset().y,
+                                fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                            };
+                            let offset = state.metrics.clamp_offset(handle_offset, viewport);
+                            let Some(range) =
+                                state
+                                    .metrics
+                                    .visible_range(offset, viewport, props.overscan)
+                            else {
+                                return false;
+                            };
+                            crate::virtual_list::virtual_list_needs_visible_range_refresh(
+                                &props.visible_items,
+                                range,
+                            )
+                        },
                     );
+                    cx.tree
+                        .debug_record_virtual_list_visible_range_check(requested_refresh);
+                }
 
-                    cx.scene.push(SceneOp::PushClipRect { rect: child_bounds });
-                    cx.paint(child, child_bounds);
+                cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                let children_transform = cx.children_render_transform;
+                if let Some(transform) = children_transform {
+                    cx.scene.push(SceneOp::PushTransform { transform });
+                }
+                let accumulated = children_transform
+                    .map(|t| cx.accumulated_transform.compose(t))
+                    .unwrap_or(cx.accumulated_transform);
+
+                for &child in cx.children {
+                    let Some(child_bounds) = cx.child_bounds(child) else {
+                        continue;
+                    };
+                    // Clip rects live in the current transform space at push time (see
+                    // `fret-render`'s affine clip conformance tests). Since we push the scroll
+                    // translation before painting the children, the per-row clip rect must be
+                    // specified in the same pre-transform/content coordinate space as
+                    // `child_bounds`.
+                    let clip_rect = child_bounds;
+                    cx.scene.push(SceneOp::PushClipRect { rect: clip_rect });
+                    cx.tree.paint_node(
+                        cx.app,
+                        cx.services,
+                        child,
+                        child_bounds,
+                        cx.scene,
+                        cx.scale_factor,
+                        accumulated,
+                    );
                     cx.scene.push(SceneOp::PopClip);
+                }
+
+                if children_transform.is_some() {
+                    cx.scene.push(SceneOp::PopTransform);
                 }
 
                 cx.scene.push(SceneOp::PopClip);

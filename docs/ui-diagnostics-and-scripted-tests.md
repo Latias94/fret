@@ -33,6 +33,7 @@ Related ADRs:
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
 
    - `FRET_DIAG=1`
+   - (Optional) `FRET_DIAG_SCREENSHOTS=1` to request a GPU readback screenshot alongside each bundle dump (written under `target/fret-diag/screenshots/<bundle_timestamp>/` with a `manifest.json`).
 
 2. Reproduce the issue.
 
@@ -46,6 +47,16 @@ Related ADRs:
    - The bundle file is `bundle.json` under that directory.
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
+
+## Optional: dump a frame screenshot alongside the bundle
+
+If you suspect a **rendering** regression (e.g. semantics + layout look correct but pixels look blank),
+enable per-bundle screenshots:
+
+- `FRET_DIAG_SCREENSHOT=1`
+
+When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
+`bundle.json`).
 
 ## Offline bundle viewer (optional)
 
@@ -64,10 +75,11 @@ Workflow tip:
 - Drag the `bundle.json` file from `target/fret-diag/.../bundle.json` into the viewer (or use the file picker).
 - You can also open a `.zip` that contains a `bundle.json` anywhere inside it (handy for sharing a full repro directory).
 - To generate a shareable `.zip` for the latest bundle: `cargo run -p fretboard -- diag pack`
-- To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`) and `triage.json`: `cargo run -p fretboard -- diag pack --include-all`
+- To include nearby artifacts (`script.json`, `script.result.json`, `pick.result.json`), `triage.json`, and screenshots (when present): `cargo run -p fretboard -- diag pack --include-all`
 - The bundle viewer surfaces these zip artifacts (and lets you copy/download them) when they are present under `_root/`.
 - To generate a machine-readable `triage.json` next to a bundle: `cargo run -p fretboard -- diag triage <bundle_dir|bundle.json>`
 - To include `triage.json` in a share zip: `cargo run -p fretboard -- diag pack --include-triage`
+- To include screenshots in a share zip: `cargo run -p fretboard -- diag pack --include-screenshots` (packs `target/fret-diag/screenshots/<bundle_timestamp>/` into `_root/screenshots/` when available)
 - If you’re sharing via chat, “Paste JSON” is a fast way to load a copied `bundle.json` payload without files.
 - Use “Export triage.json” when you want a small, machine-readable artifact for AI triage (selection + bounded debug artifacts).
 
@@ -92,7 +104,8 @@ Workflow tip:
     { "type": "type_text", "text": "hello" },
     { "type": "press_key", "key": "enter" },
     { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "role_and_name", "role": "text_field", "name": "Search" } } },
-    { "type": "capture_bundle", "label": "after-typing" }
+    { "type": "capture_bundle", "label": "after-typing" },
+    { "type": "capture_screenshot", "label": "after-typing" }
   ]
 }
 ```
@@ -104,6 +117,7 @@ Workflow tip:
    Or run it and wait for a pass/fail result (CI-friendly):
 
    - `cargo run -p fretboard -- diag run .\\script.json`
+   - To also pack the most recent bundle (plus optional artifacts) into a shareable `.zip`: `cargo run -p fretboard -- diag run .\\script.json --pack --include-all`
 
    Or run a pre-defined suite (the app must be running):
 
@@ -122,17 +136,21 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
 
 2. Run a predefined suite and report the slowest frames:
 
-   - Reuse an already-running app:
+    - Reuse an already-running app:
 
-     - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
+      - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
 
-     - Machine-readable JSON:
+      - Machine-readable JSON:
 
-       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
+        - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
 
-   - Or launch a fresh process per script (clean state, slower):
+      - Repeatable perf summary (helps reduce noise; nearest-rank p50/p95 across N runs):
 
-     - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+        - `cargo run -p fretboard -- diag perf ui-gallery --repeat 7 --warmup-frames 5 --sort time --json`
+
+    - Or launch a fresh process per script (clean state, slower):
+
+      - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
@@ -230,7 +248,8 @@ At a high level:
   - `debug.stats`: layout/paint timings and counters
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
-  - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, with optional `reuse_reason`)
+  - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
+  - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
     - `debug.hit_test.scope_roots[]` includes stable `label` strings plus occlusion/hit-test metadata (prefer this over raw node ids).
@@ -277,6 +296,16 @@ Script harness:
 - `FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH=...`: script result trigger file (default `<dir>/script.result.touch`).
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
 
+Screenshot capture:
+
+- `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
+- `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
+- `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
+- `FRET_DIAG_SCREENSHOT_RESULT_PATH=...`: screenshot completion log JSON path (default `<dir>/screenshots.result.json`).
+- `FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH=...`: screenshot completion trigger file (default `<dir>/screenshots.result.touch`).
+
+The screenshot completion log is append-only (bounded) and includes a `request_id` that scripted steps can wait on.
+
 Picking:
 
 - `FRET_DIAG_PICK_TRIGGER_PATH=...`: pick trigger file (default `<dir>/pick.touch`).
@@ -304,13 +333,27 @@ Supported selectors (v1 MVP):
 ## Supported scripted steps (v1 MVP)
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`)
+- `move_pointer`
+- `drag_pointer` (optional `button`, `steps`)
+- `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
+- `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`
 - `wait_until`
 - `assert`
 - `capture_bundle`
+- `capture_screenshot` (optional `label`, optional `timeout_frames`)
+
+Notes:
+
+- `capture_bundle` always writes a new `bundle.json` directory. When `FRET_DIAG_SCREENSHOTS=1`, the step waits until the corresponding screenshot has been written (so downstream automation can rely on it deterministically).
+- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`). It also waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness will create one first.
+
+Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
+useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
+diagnostics runs, and is ignored unless a matching cross-window drag session is active.
 
 Example: right click a context menu trigger
 
@@ -367,6 +410,8 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
+ - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
+ - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}` (target bounds must be fully contained within the window, optionally padded inward)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
@@ -458,6 +503,70 @@ The `tools/diag-scripts/` directory contains curated scripts intended to become 
 For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
+
+The UI gallery suite includes lightweight smoke checks for table/grid surfaces:
+
+- `tools/diag-scripts/ui-gallery-table-smoke.json`
+- `tools/diag-scripts/ui-gallery-data-table-smoke.json`
+
+These scripts assert that stable semantics anchors exist *and* that their bounds are within the
+window (`bounds_within_window`), which is a fast way to catch “layout is broken / clipped to zero”
+regressions when a table suddenly “disappears”.
+
+### View-cache regression gating
+
+Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
+you can enforce a minimum number of cache-root reuse events observed in the exported `bundle.json`.
+
+Example (UI gallery):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events in snapshots after `--warmup-frames`.
+- If `view_cache_active` is false for all snapshots (or `cache_roots` are not exported), the check will fail by design.
+
+### Overlay synthesis regression gating
+
+Some overlay regressions only show up when overlay requests must be synthesized from cached declarations
+(because view caching skipped rerendering the producer subtree). To avoid "it passed but never tested
+the synthesis seam", you can gate on synthesis events exported in `bundle.json`:
+
+- `--check-overlay-synthesis-min N` counts `debug.overlay_synthesis[].outcome == "synthesized"` events in snapshots after `--warmup-frames`.
+
+### Matrix runner (uncached vs cached)
+
+To automate the “view-cache is behavior preserving” check across the UI gallery suite, run the matrix:
+
+- `cargo run -p fretboard -- diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- Requires `--launch` so the runner can control `FRET_UI_GALLERY_VIEW_CACHE` (0 vs 1) per run.
+- Writes bundles under `--dir/uncached` and `--dir/cached`, then compares each script pair via `diag compare` semantics.
+- Default reuse gate is `--check-view-cache-reuse-min 1` (pass `--check-view-cache-reuse-min 0` to disable the gate).
+- If `--env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1` is set, the matrix run also defaults to `--check-overlay-synthesis-min 1` for the cached variant (pass `--check-overlay-synthesis-min 0` to disable). The gate is only enforced for overlay-centric scripts (non-overlay scripts in the suite are exempt).
+
+Recommended (CI/automation):
+
+- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+
+### Bundle comparison (cached vs uncached)
+
+To build confidence that view-cache is "behavior preserving", compare two captured bundles.
+`fretboard diag compare` focuses on stable `debug.semantics.nodes[].test_id` anchors and can also compare
+`scene_fingerprint` (paint output fingerprint) for the selected snapshots.
+
+Example:
+
+- `cargo run -p fretboard -- diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json`
+
+Notes:
+
+- By default, the command compares the last snapshot after `--warmup-frames` (per bundle, first window).
+- Use `--compare-ignore-bounds` if you only want structural semantics checks (role/flags/actions).
+- Use `--compare-ignore-scene-fingerprint` if the scene fingerprint is expected to differ (e.g. non-deterministic content).
 
 ## Troubleshooting
 

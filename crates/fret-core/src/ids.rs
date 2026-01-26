@@ -12,6 +12,25 @@ new_key_type! {
     pub struct RenderTargetId;
 }
 
+/// Window-scoped view identifier used for "dirty view" tracking (GPUI-aligned).
+///
+/// v1: a view is defined at cache boundary granularity (a `ViewCache` root), so `ViewId` wraps the
+/// runtime `NodeId` for that cache root.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ViewId(pub NodeId);
+
+impl From<NodeId> for ViewId {
+    fn from(value: NodeId) -> Self {
+        Self(value)
+    }
+}
+
+impl From<ViewId> for NodeId {
+    fn from(value: ViewId) -> Self {
+        value.0
+    }
+}
+
 /// Stable, portable font identifier used by the UI/runtime.
 ///
 /// This is intentionally a semantic identifier (not a font database index) so that it remains

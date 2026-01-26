@@ -11,7 +11,7 @@ pub use crate::resize_handle::ResizeHandle;
 pub use crate::text_input::{BoundTextInput, TextInput};
 pub use crate::widget::{
     CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, Invalidation, LayoutCx,
-    MeasureCx, PaintCx, SemanticsCx, Widget,
+    MeasureCx, PaintCx, PrepaintCx, SemanticsCx, Widget,
 };
 
 /// Extension trait that exposes a feature-gated node creation API for retained widgets.

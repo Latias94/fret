@@ -235,7 +235,7 @@ References: `docs/adr/0006-text-system.md`, `docs/adr/0012-keyboard-ime-and-text
 - Default scheduling is event-driven (idle when nothing is dirty), with explicit continuous mode when requested.
 - Side effects are drained centrally in a bounded loop to keep multi-window behavior deterministic.
 
-References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
+References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0190-execution-and-concurrency-surface-v1.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
 ## Settings & Configuration (settings-ui-inspired)
 

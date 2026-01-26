@@ -40,7 +40,9 @@ pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
-    MetricRef, OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space,
+    MetricRef, OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space, WidgetState,
+    WidgetStateProperty, WidgetStates, merge_override_slot, resolve_override_slot,
+    resolve_override_slot_opt,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
@@ -52,10 +54,19 @@ pub use overlay_controller::{
     OverlayStackEntryKind, ToastLayerSpec, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
 };
 pub use window_overlays::{
-    DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
+    DEFAULT_MAX_TOASTS, ToastAction, ToastButtonStyle, ToastIconButtonStyle, ToastId,
+    ToastLayerStyle, ToastPosition, ToastRequest, ToastStore, ToastTextStyle, ToastVariant,
+    ToastVariantColors, ToastVariantPalette,
 };
 
 pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
+
+// Diagnostics-only exports: used by `fret-bootstrap` to export bundle.json fields.
+#[doc(hidden)]
+pub use window_overlays::{
+    OverlaySynthesisEvent, OverlaySynthesisKind, OverlaySynthesisOutcome, OverlaySynthesisSource,
+    WindowOverlaySynthesisDiagnosticsStore,
+};
 
 /// Common imports for component/app code using `fret-ui-kit`.
 ///
@@ -75,6 +86,8 @@ pub mod prelude {
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge,
         MetricRef, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+        WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, resolve_override_slot,
+        resolve_override_slot_opt,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};
@@ -82,7 +95,7 @@ pub mod prelude {
 
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_runtime::{CommandId, Model};
-    pub use fret_ui::element::{AnyElement, TextProps};
+    pub use fret_ui::element::{AnyElement, AnyElementIterExt as _, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
 }
 

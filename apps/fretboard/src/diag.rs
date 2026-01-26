@@ -36,6 +36,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_out: Option<PathBuf> = None;
     let mut pack_include_root_artifacts: bool = false;
     let mut pack_include_triage: bool = false;
+    let mut pack_include_screenshots: bool = false;
+    let mut pack_after_run: bool = false;
     let mut triage_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
     let mut script_trigger_path: Option<PathBuf> = None;
@@ -56,10 +58,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut sort_override: Option<BundleStatsSort> = None;
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
+    let mut perf_repeat: u64 = 1;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_wheel_scroll_test_id: Option<String> = None;
+    let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_gc_sweep_liveness: bool = false;
+    let mut check_view_cache_reuse_min: Option<u64> = None;
+    let mut check_overlay_synthesis_min: Option<u64> = None;
+    let mut compare_eps_px: f32 = 0.5;
+    let mut compare_ignore_bounds: bool = false;
+    let mut compare_ignore_scene_fingerprint: bool = false;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
 
@@ -101,10 +111,19 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             "--include-all" => {
                 pack_include_root_artifacts = true;
                 pack_include_triage = true;
+                pack_include_screenshots = true;
                 i += 1;
             }
             "--include-triage" => {
                 pack_include_triage = true;
+                i += 1;
+            }
+            "--include-screenshots" => {
+                pack_include_screenshots = true;
+                i += 1;
+            }
+            "--pack" => {
+                pack_after_run = true;
                 i += 1;
             }
             "--script-path" => {
@@ -263,6 +282,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .map_err(|_| "invalid value for --warmup-frames".to_string())?;
                 i += 1;
             }
+            "--repeat" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --repeat".to_string());
+                };
+                perf_repeat = v
+                    .parse::<u64>()
+                    .map_err(|_| "invalid value for --repeat".to_string())?
+                    .max(1);
+                i += 1;
+            }
             "--check-stale-paint" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -289,6 +319,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_wheel_scroll_test_id = Some(v);
                 i += 1;
             }
+            "--check-drag-cache-root-paint-only" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-drag-cache-root-paint-only".to_string());
+                };
+                check_drag_cache_root_paint_only_test_id = Some(v);
+                i += 1;
+            }
             "--check-hover-layout" => {
                 check_hover_layout_max = Some(0);
                 i += 1;
@@ -302,6 +340,50 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u32>()
                         .map_err(|_| "invalid value for --check-hover-layout-max".to_string())?,
                 );
+                i += 1;
+            }
+            "--check-gc-sweep-liveness" => {
+                check_gc_sweep_liveness = true;
+                i += 1;
+            }
+            "--check-view-cache-reuse-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-view-cache-reuse-min".to_string());
+                };
+                check_view_cache_reuse_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-view-cache-reuse-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-overlay-synthesis-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-overlay-synthesis-min".to_string());
+                };
+                check_overlay_synthesis_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-overlay-synthesis-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--compare-eps-px" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --compare-eps-px".to_string());
+                };
+                compare_eps_px = v
+                    .parse::<f32>()
+                    .map_err(|_| "invalid value for --compare-eps-px".to_string())?;
+                i += 1;
+            }
+            "--compare-ignore-bounds" => {
+                compare_ignore_bounds = true;
+                i += 1;
+            }
+            "--compare-ignore-scene-fingerprint" => {
+                compare_ignore_scene_fingerprint = true;
                 i += 1;
             }
             "--json" => {
@@ -499,6 +581,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
     match sub.as_str() {
         "path" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -506,6 +591,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "poke" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -514,6 +602,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "latest" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if !rest.is_empty() {
                 return Err(format!("unexpected arguments: {}", rest.join(" ")));
             }
@@ -567,6 +658,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &out,
                 pack_include_root_artifacts,
                 pack_include_triage,
+                pack_include_screenshots,
                 &artifacts_root,
                 stats_top,
                 sort_override.unwrap_or(BundleStatsSort::Invalidation),
@@ -576,6 +668,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "triage" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing bundle path (try: fretboard diag triage ./target/fret-diag/1234/bundle.json)"
@@ -617,6 +712,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "script" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             let Some(src) = rest.first().cloned() else {
                 return Err(
                     "missing script path (try: fretboard diag script ./script.json)".to_string(),
@@ -642,6 +740,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
             }
 
+            let wants_pack = pack_after_run
+                || pack_out.is_some()
+                || pack_include_root_artifacts
+                || pack_include_triage
+                || pack_include_screenshots;
+
+            let mut pack_defaults = (
+                pack_include_root_artifacts,
+                pack_include_triage,
+                pack_include_screenshots,
+            );
+            if pack_after_run && !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
+                pack_defaults = (true, true, true);
+            }
+
             let src = resolve_path(&workspace_root, PathBuf::from(src));
             let mut child = maybe_launch_demo(
                 &launch,
@@ -650,6 +763,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
+                pack_defaults.2,
                 timeout_ms,
                 poll_ms,
             )?;
@@ -679,7 +793,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if result.stage.as_deref() == Some("passed") {
                 if check_stale_paint_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
+                    || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
+                    || check_gc_sweep_liveness
+                    || check_view_cache_reuse_min.is_some()
+                    || check_overlay_synthesis_min.is_some()
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -697,15 +815,78 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_gc_sweep_liveness,
+                        check_view_cache_reuse_min,
+                        check_overlay_synthesis_min,
                         warmup_frames,
                     )?;
                 }
             }
+
+            if wants_pack {
+                let mut bundle_path = wait_for_bundle_json_from_script_result(
+                    &resolved_out_dir,
+                    &result,
+                    timeout_ms,
+                    poll_ms,
+                );
+                if bundle_path.is_none() {
+                    let _ = touch(&resolved_trigger_path);
+                    bundle_path = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    );
+                }
+
+                if let Some(bundle_path) = bundle_path {
+                    let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+                    let out = pack_out
+                        .clone()
+                        .map(|p| resolve_path(&workspace_root, p))
+                        .unwrap_or_else(|| default_pack_out_path(&resolved_out_dir, &bundle_dir));
+
+                    let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                        resolved_out_dir.clone()
+                    } else {
+                        bundle_dir
+                            .parent()
+                            .unwrap_or(&resolved_out_dir)
+                            .to_path_buf()
+                    };
+
+                    if let Err(err) = pack_bundle_dir_to_zip(
+                        &bundle_dir,
+                        &out,
+                        pack_defaults.0,
+                        pack_defaults.1,
+                        pack_defaults.2,
+                        &artifacts_root,
+                        stats_top,
+                        sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                        warmup_frames,
+                    ) {
+                        eprintln!("PACK-ERROR {err}");
+                    } else {
+                        println!("PACK {}", out.display());
+                    }
+                } else {
+                    eprintln!(
+                        "PACK-ERROR no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
+                    );
+                }
+            }
+
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             report_result_and_exit(&result);
         }
         "suite" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if rest.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag suite ui-gallery)"
@@ -714,18 +895,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
 
             let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
-                [
-                    "tools/diag-scripts/ui-gallery-overlay-torture.json",
-                    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-                    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-                    "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
-                    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
+                ui_gallery_suite_scripts()
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
             } else {
                 rest.into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -741,6 +914,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    false,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -756,6 +930,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &resolved_out_dir,
                         &resolved_ready_path,
                         &resolved_exit_path,
+                        false,
                         timeout_ms,
                         poll_ms,
                     )?;
@@ -823,7 +998,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if result.stage.as_deref() == Some("passed")
                     && (check_stale_paint_test_id.is_some()
                         || check_wheel_scroll_test_id.is_some()
-                        || check_hover_layout_max.is_some())
+                        || check_drag_cache_root_paint_only_test_id.is_some()
+                        || check_hover_layout_max.is_some()
+                        || check_gc_sweep_liveness
+                        || check_view_cache_reuse_min.is_some()
+                        || check_overlay_synthesis_min.is_some())
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -842,7 +1021,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
+                        check_gc_sweep_liveness,
+                        check_view_cache_reuse_min,
+                        check_overlay_synthesis_min,
                         warmup_frames,
                     )?;
                 }
@@ -856,6 +1039,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             std::process::exit(0);
         }
         "perf" => {
+            if pack_after_run {
+                return Err("--pack is only supported with `diag run`".to_string());
+            }
             if rest.is_empty() {
                 return Err(
                     "missing suite name or script paths (try: fretboard diag perf ui-gallery)"
@@ -882,6 +1068,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             };
 
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
+            let repeat = perf_repeat.max(1) as usize;
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
                 maybe_launch_demo(
@@ -891,6 +1078,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
+                    false,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -903,85 +1091,310 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let stats_opts = BundleStatsOptions { warmup_frames };
 
             for src in scripts {
-                if !reuse_process {
-                    child = maybe_launch_demo(
-                        &launch,
-                        &launch_env,
-                        &workspace_root,
-                        &resolved_out_dir,
-                        &resolved_ready_path,
-                        &resolved_exit_path,
-                        timeout_ms,
-                        poll_ms,
-                    )?;
-                }
+                if repeat == 1 {
+                    if !reuse_process {
+                        child = maybe_launch_demo(
+                            &launch,
+                            &launch_env,
+                            &workspace_root,
+                            &resolved_out_dir,
+                            &resolved_ready_path,
+                            &resolved_exit_path,
+                            false,
+                            timeout_ms,
+                            poll_ms,
+                        )?;
+                    }
 
-                let mut result = run_script_and_wait(
-                    &src,
-                    &resolved_script_path,
-                    &resolved_script_trigger_path,
-                    &resolved_script_result_path,
-                    &resolved_script_result_trigger_path,
-                    timeout_ms,
-                    poll_ms,
-                );
-                if let Ok(summary) = &result
-                    && summary.stage.as_deref() == Some("failed")
-                {
-                    if let Some(dir) = wait_for_failure_dump_bundle(
-                        &resolved_out_dir,
-                        summary,
+                    if !reuse_process {
+                        clear_script_result_files(
+                            &resolved_script_result_path,
+                            &resolved_script_result_trigger_path,
+                        );
+                    }
+
+                    let mut result = run_script_and_wait(
+                        &src,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
                         timeout_ms,
                         poll_ms,
-                    ) {
-                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
-                            if let Ok(summary) = result.as_mut() {
-                                summary.last_bundle_dir = Some(name.to_string());
+                    );
+                    if let Ok(summary) = &result
+                        && summary.stage.as_deref() == Some("failed")
+                    {
+                        if let Some(dir) = wait_for_failure_dump_bundle(
+                            &resolved_out_dir,
+                            summary,
+                            timeout_ms,
+                            poll_ms,
+                        ) {
+                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                if let Ok(summary) = result.as_mut() {
+                                    summary.last_bundle_dir = Some(name.to_string());
+                                }
                             }
                         }
                     }
+                    let result = match result {
+                        Ok(v) => v,
+                        Err(e) => {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            return Err(e);
+                        }
+                    };
+
+                    match result.stage.as_deref() {
+                        Some("passed") => {}
+                        Some("failed") => {
+                            eprintln!(
+                                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                src.display(),
+                                result.run_id,
+                                result.step_index.unwrap_or(0),
+                                result.reason.as_deref().unwrap_or("unknown"),
+                                result.last_bundle_dir.as_deref().unwrap_or("")
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                        _ => {
+                            eprintln!(
+                                "unexpected script stage for {}: {:?}",
+                                src.display(),
+                                result
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                    }
+
+                    let bundle_dir = result
+                        .last_bundle_dir
+                        .as_deref()
+                        .filter(|s| !s.trim().is_empty())
+                        .map(PathBuf::from);
+
+                    if let Some(bundle_dir) = bundle_dir {
+                        let bundle_path =
+                            resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
+                        let mut report = bundle_stats_from_path(
+                            &bundle_path,
+                            stats_top.max(1),
+                            sort,
+                            stats_opts,
+                        )?;
+                        if warmup_frames > 0 && report.top.is_empty() {
+                            report = bundle_stats_from_path(
+                                &bundle_path,
+                                stats_top.max(1),
+                                sort,
+                                BundleStatsOptions::default(),
+                            )?;
+                        }
+                        let top = report.top.first();
+                        let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
+                        let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                        let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
+                        let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
+                        let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
+                        let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+                        let top_view_cache_contained_relayouts =
+                            top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                        let top_cache_roots_contained_relayout =
+                            top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
+                        let top_set_children_barrier_writes =
+                            top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
+                        let top_barrier_relayouts_scheduled =
+                            top.map(|r| r.barrier_relayouts_scheduled).unwrap_or(0);
+                        let top_barrier_relayouts_performed =
+                            top.map(|r| r.barrier_relayouts_performed).unwrap_or(0);
+                        let top_virtual_list_visible_range_checks = top
+                            .map(|r| r.virtual_list_visible_range_checks)
+                            .unwrap_or(0);
+                        let top_virtual_list_visible_range_refreshes = top
+                            .map(|r| r.virtual_list_visible_range_refreshes)
+                            .unwrap_or(0);
+
+                        if stats_json {
+                            perf_json_rows.push(serde_json::json!({
+                                "script": src.display().to_string(),
+                                "sort": sort.as_str(),
+                                "top_total_time_us": top_total,
+                                "top_layout_time_us": top_layout,
+                                "top_prepaint_time_us": top_prepaint,
+                                "top_paint_time_us": top_paint,
+                                "top_tick_id": top_tick,
+                                "top_frame_id": top_frame,
+                                "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                                "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
+                                "top_set_children_barrier_writes": top_set_children_barrier_writes,
+                                "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
+                                "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
+                                "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
+                                "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
+                                "bundle": bundle_path.display().to_string(),
+                            }));
+                        } else {
+                            println!(
+                                "PERF {} sort={} top.us(total/layout/prepaint/paint)={}/{}/{}/{} top.tick={} top.frame={} bundle={}",
+                                src.display(),
+                                sort.as_str(),
+                                top_total,
+                                top_layout,
+                                top_prepaint,
+                                top_paint,
+                                top_tick,
+                                top_frame,
+                                bundle_path.display(),
+                            );
+                        }
+
+                        match &overall_worst {
+                            Some((prev_us, _, _)) if *prev_us >= top_total => {}
+                            _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
+                        }
+                    } else {
+                        if stats_json {
+                            perf_json_rows.push(serde_json::json!({
+                                "script": src.display().to_string(),
+                                "sort": sort.as_str(),
+                                "error": "no_last_bundle_dir",
+                            }));
+                        } else {
+                            println!(
+                                "PERF {} sort={} (no last_bundle_dir recorded)",
+                                src.display(),
+                                sort.as_str()
+                            );
+                        }
+                    }
+
+                    if !reuse_process {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    }
+                    continue;
                 }
-                let result = match result {
-                    Ok(v) => v,
-                    Err(e) => {
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        return Err(e);
-                    }
-                };
 
-                match result.stage.as_deref() {
-                    Some("passed") => {}
-                    Some("failed") => {
-                        eprintln!(
-                            "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
-                            src.display(),
-                            result.run_id,
-                            result.step_index.unwrap_or(0),
-                            result.reason.as_deref().unwrap_or("unknown"),
-                            result.last_bundle_dir.as_deref().unwrap_or("")
+                let mut runs_total: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_layout: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_prepaint: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
+                let mut script_worst: Option<(u64, PathBuf)> = None;
+
+                for run_index in 0..repeat {
+                    if !reuse_process {
+                        child = maybe_launch_demo(
+                            &launch,
+                            &launch_env,
+                            &workspace_root,
+                            &resolved_out_dir,
+                            &resolved_ready_path,
+                            &resolved_exit_path,
+                            false,
+                            timeout_ms,
+                            poll_ms,
+                        )?;
+                    }
+
+                    if !reuse_process {
+                        clear_script_result_files(
+                            &resolved_script_result_path,
+                            &resolved_script_result_trigger_path,
                         );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
                     }
-                    _ => {
-                        eprintln!(
-                            "unexpected script stage for {}: {:?}",
-                            src.display(),
-                            result
-                        );
-                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
-                        std::process::exit(1);
+
+                    let mut result = run_script_and_wait(
+                        &src,
+                        &resolved_script_path,
+                        &resolved_script_trigger_path,
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                        timeout_ms,
+                        poll_ms,
+                    );
+                    if let Ok(summary) = &result
+                        && summary.stage.as_deref() == Some("failed")
+                    {
+                        if let Some(dir) = wait_for_failure_dump_bundle(
+                            &resolved_out_dir,
+                            summary,
+                            timeout_ms,
+                            poll_ms,
+                        ) {
+                            if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                                if let Ok(summary) = result.as_mut() {
+                                    summary.last_bundle_dir = Some(name.to_string());
+                                }
+                            }
+                        }
                     }
-                }
+                    let result = match result {
+                        Ok(v) => v,
+                        Err(e) => {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            return Err(e);
+                        }
+                    };
 
-                let bundle_dir = result
-                    .last_bundle_dir
-                    .as_deref()
-                    .filter(|s| !s.trim().is_empty())
-                    .map(PathBuf::from);
+                    match result.stage.as_deref() {
+                        Some("passed") => {}
+                        Some("failed") => {
+                            eprintln!(
+                                "FAIL {} (run_id={}) step={} reason={} last_bundle_dir={}",
+                                src.display(),
+                                result.run_id,
+                                result.step_index.unwrap_or(0),
+                                result.reason.as_deref().unwrap_or("unknown"),
+                                result.last_bundle_dir.as_deref().unwrap_or("")
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                        _ => {
+                            eprintln!(
+                                "unexpected script stage for {}: {:?}",
+                                src.display(),
+                                result
+                            );
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                            std::process::exit(1);
+                        }
+                    }
 
-                if let Some(bundle_dir) = bundle_dir {
-                    let bundle_path = resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
+                    let bundle_dir = result
+                        .last_bundle_dir
+                        .as_deref()
+                        .filter(|s| !s.trim().is_empty())
+                        .map(PathBuf::from);
+
+                    let Some(bundle_dir) = bundle_dir else {
+                        if stats_json {
+                            perf_json_rows.push(serde_json::json!({
+                                "script": src.display().to_string(),
+                                "sort": sort.as_str(),
+                                "repeat": repeat,
+                                "error": "no_last_bundle_dir",
+                            }));
+                        } else {
+                            println!(
+                                "PERF {} sort={} repeat={} (no last_bundle_dir recorded)",
+                                src.display(),
+                                sort.as_str(),
+                                repeat
+                            );
+                        }
+                        if !reuse_process {
+                            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        }
+                        break;
+                    };
+
+                    let bundle_path =
+                        resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir.clone()));
                     let mut report =
                         bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
                     if warmup_frames > 0 && report.top.is_empty() {
@@ -999,56 +1412,160 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
+                    let top_view_cache_contained_relayouts =
+                        top.map(|r| r.view_cache_contained_relayouts).unwrap_or(0);
+                    let top_cache_roots_contained_relayout =
+                        top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
+                    let top_set_children_barrier_writes =
+                        top.map(|r| r.set_children_barrier_writes).unwrap_or(0);
+                    let top_barrier_relayouts_scheduled =
+                        top.map(|r| r.barrier_relayouts_scheduled).unwrap_or(0);
+                    let top_barrier_relayouts_performed =
+                        top.map(|r| r.barrier_relayouts_performed).unwrap_or(0);
+                    let top_virtual_list_visible_range_checks = top
+                        .map(|r| r.virtual_list_visible_range_checks)
+                        .unwrap_or(0);
+                    let top_virtual_list_visible_range_refreshes = top
+                        .map(|r| r.virtual_list_visible_range_refreshes)
+                        .unwrap_or(0);
 
-                    if stats_json {
-                        perf_json_rows.push(serde_json::json!({
-                            "script": src.display().to_string(),
-                            "sort": sort.as_str(),
-                            "top_total_time_us": top_total,
-                            "top_layout_time_us": top_layout,
-                            "top_prepaint_time_us": top_prepaint,
-                            "top_paint_time_us": top_paint,
-                            "top_tick_id": top_tick,
-                            "top_frame_id": top_frame,
-                            "bundle": bundle_path.display().to_string(),
-                        }));
-                    } else {
-                        println!(
-                            "PERF {} sort={} top.us(total/layout/prepaint/paint)={}/{}/{}/{} top.tick={} top.frame={} bundle={}",
-                            src.display(),
-                            sort.as_str(),
-                            top_total,
-                            top_layout,
-                            top_prepaint,
-                            top_paint,
-                            top_tick,
-                            top_frame,
-                            bundle_path.display(),
-                        );
+                    runs_total.push(top_total);
+                    runs_layout.push(top_layout);
+                    runs_prepaint.push(top_prepaint);
+                    runs_paint.push(top_paint);
+                    runs_json.push(serde_json::json!({
+                        "run_index": run_index,
+                        "top_total_time_us": top_total,
+                        "top_layout_time_us": top_layout,
+                        "top_prepaint_time_us": top_prepaint,
+                        "top_paint_time_us": top_paint,
+                        "top_tick_id": top_tick,
+                        "top_frame_id": top_frame,
+                        "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
+                        "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
+                        "top_set_children_barrier_writes": top_set_children_barrier_writes,
+                        "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
+                        "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
+                        "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
+                        "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
+                        "bundle": bundle_path.display().to_string(),
+                    }));
+
+                    match &script_worst {
+                        Some((prev_us, _)) if *prev_us >= top_total => {}
+                        _ => script_worst = Some((top_total, bundle_path.clone())),
                     }
 
                     match &overall_worst {
                         Some((prev_us, _, _)) if *prev_us >= top_total => {}
-                        _ => overall_worst = Some((top_total, src.clone(), bundle_path)),
+                        _ => overall_worst = Some((top_total, src.clone(), bundle_path.clone())),
                     }
-                } else {
-                    if stats_json {
-                        perf_json_rows.push(serde_json::json!({
-                            "script": src.display().to_string(),
-                            "sort": sort.as_str(),
-                            "error": "no_last_bundle_dir",
-                        }));
-                    } else {
-                        println!(
-                            "PERF {} sort={} (no last_bundle_dir recorded)",
-                            src.display(),
-                            sort.as_str()
-                        );
+
+                    if !reuse_process {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
                     }
                 }
 
-                if !reuse_process {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                if runs_total.len() == repeat {
+                    if stats_json {
+                        let mut top_view_cache_contained_relayouts: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_cache_roots_contained_relayout: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_set_children_barrier_writes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_barrier_relayouts_scheduled: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_barrier_relayouts_performed: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_virtual_list_visible_range_checks: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_virtual_list_visible_range_refreshes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        for run in &runs_json {
+                            top_view_cache_contained_relayouts.push(
+                                run.get("top_view_cache_contained_relayouts")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_cache_roots_contained_relayout.push(
+                                run.get("top_cache_roots_contained_relayout")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_set_children_barrier_writes.push(
+                                run.get("top_set_children_barrier_writes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_barrier_relayouts_scheduled.push(
+                                run.get("top_barrier_relayouts_scheduled")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_barrier_relayouts_performed.push(
+                                run.get("top_barrier_relayouts_performed")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_virtual_list_visible_range_checks.push(
+                                run.get("top_virtual_list_visible_range_checks")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_virtual_list_visible_range_refreshes.push(
+                                run.get("top_virtual_list_visible_range_refreshes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                        }
+                        perf_json_rows.push(serde_json::json!({
+                            "script": src.display().to_string(),
+                            "sort": sort.as_str(),
+                            "repeat": repeat,
+                            "runs": runs_json,
+                            "stats": {
+                                "total_time_us": summarize_times_us(&runs_total),
+                                "layout_time_us": summarize_times_us(&runs_layout),
+                                "prepaint_time_us": summarize_times_us(&runs_prepaint),
+                                "paint_time_us": summarize_times_us(&runs_paint),
+                                "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
+                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
+                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
+                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
+                                "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
+                                "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
+                                "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
+                            },
+                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+                                "top_total_time_us": us,
+                                "bundle": bundle.display().to_string(),
+                            })),
+                        }));
+                    } else {
+                        let total = summarize_times_us(&runs_total);
+                        let layout = summarize_times_us(&runs_layout);
+                        let prepaint = summarize_times_us(&runs_prepaint);
+                        let paint = summarize_times_us(&runs_paint);
+                        println!(
+                            "PERF {} sort={} repeat={} p50.us(total/layout/prepaint/paint)={}/{}/{}/{} p95.us(total/layout/prepaint/paint)={}/{}/{}/{} max.us(total/layout/prepaint/paint)={}/{}/{}/{}",
+                            src.display(),
+                            sort.as_str(),
+                            repeat,
+                            total.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            layout.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            prepaint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            paint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            total.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            layout.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            prepaint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            paint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            total.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            layout.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            prepaint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            paint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                        );
+                    }
                 }
             }
 
@@ -1065,6 +1582,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let payload = serde_json::json!({
                     "schema_version": 1,
                     "sort": sort.as_str(),
+                    "repeat": repeat,
                     "rows": perf_json_rows,
                     "worst_overall": worst,
                 });
@@ -1125,10 +1643,241 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
                 check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
             }
+            if let Some(test_id) = check_drag_cache_root_paint_only_test_id.as_deref() {
+                check_bundle_for_drag_cache_root_paint_only(&bundle_path, test_id, warmup_frames)?;
+            }
             if let Some(max_allowed) = check_hover_layout_max {
                 check_report_for_hover_layout_invalidations(&report, max_allowed)?;
             }
+            if check_gc_sweep_liveness {
+                check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
+            }
+            if let Some(min) = check_view_cache_reuse_min
+                && min > 0
+            {
+                check_bundle_for_view_cache_reuse_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
+            if let Some(min) = check_overlay_synthesis_min
+                && min > 0
+            {
+                check_bundle_for_overlay_synthesis_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
             Ok(())
+        }
+        "matrix" => {
+            let Some(target) = rest.first().cloned() else {
+                return Err(
+                    "missing matrix target (try: fretboard diag matrix ui-gallery)".to_string(),
+                );
+            };
+            if rest.len() != 1 {
+                return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
+            }
+            if target != "ui-gallery" {
+                return Err(format!("unknown matrix target: {target}"));
+            }
+
+            let Some(launch) = &launch else {
+                return Err(
+                    "diag matrix requires --launch to run uncached/cached variants (for env control)"
+                        .to_string(),
+                );
+            };
+
+            let scripts: Vec<PathBuf> = ui_gallery_suite_scripts()
+                .into_iter()
+                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                .collect();
+
+            let compare_opts = CompareOptions {
+                warmup_frames,
+                eps_px: compare_eps_px,
+                ignore_bounds: compare_ignore_bounds,
+                ignore_scene_fingerprint: compare_ignore_scene_fingerprint,
+            };
+
+            // In matrix mode, treat `--check-view-cache-reuse-min 0` as “disabled”.
+            let reuse_gate = match check_view_cache_reuse_min {
+                Some(0) => None,
+                Some(v) => Some(v),
+                None => Some(1),
+            };
+
+            // In matrix mode, treat `--check-overlay-synthesis-min 0` as “disabled”.
+            //
+            // Default behavior:
+            //
+            // - If the caller enables shell reuse (`FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`), also
+            //   enable a minimal overlay synthesis gate by default. This helps ensure the
+            //   cached-synthesis seam is actually exercised (rather than “view cache enabled but
+            //   overlay producers always rerendered”).
+            // - Otherwise, leave the gate off by default to avoid forcing overlay-specific
+            //   assumptions onto non-overlay scripts (e.g. virtual-list torture).
+            let shell_reuse_enabled = launch_env.iter().any(|(k, v)| {
+                (k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                    && !v.trim().is_empty()
+                    && (v.as_str() != "0")
+            });
+            let overlay_synthesis_gate = match check_overlay_synthesis_min {
+                Some(0) => None,
+                Some(v) => Some(v),
+                None => shell_reuse_enabled.then_some(1),
+            };
+
+            let uncached_out_dir = resolved_out_dir.join("uncached");
+            let cached_out_dir = resolved_out_dir.join("cached");
+
+            let uncached_paths =
+                ResolvedScriptPaths::for_out_dir(&workspace_root, &uncached_out_dir);
+            let cached_paths = ResolvedScriptPaths::for_out_dir(&workspace_root, &cached_out_dir);
+
+            let uncached_env = matrix_launch_env(&launch_env, false)?;
+            let cached_env = matrix_launch_env(&launch_env, true)?;
+
+            let uncached_bundles = run_script_suite_collect_bundles(
+                &scripts,
+                &uncached_paths,
+                launch,
+                &uncached_env,
+                &workspace_root,
+                timeout_ms,
+                poll_ms,
+                warmup_frames,
+                None,
+                None,
+                None,
+            )?;
+            let cached_bundles = run_script_suite_collect_bundles(
+                &scripts,
+                &cached_paths,
+                launch,
+                &cached_env,
+                &workspace_root,
+                timeout_ms,
+                poll_ms,
+                warmup_frames,
+                reuse_gate,
+                overlay_synthesis_gate,
+                overlay_synthesis_gate.map(|_| {
+                    ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool
+                }),
+            )?;
+
+            let mut ok = true;
+            let mut comparisons: Vec<(PathBuf, CompareReport)> = Vec::new();
+            for (idx, script) in scripts.iter().enumerate() {
+                let a = uncached_bundles.get(idx).cloned().ok_or_else(|| {
+                    format!("missing uncached bundle for script: {}", script.display())
+                })?;
+                let b = cached_bundles.get(idx).cloned().ok_or_else(|| {
+                    format!("missing cached bundle for script: {}", script.display())
+                })?;
+                let report = compare_bundles(&a, &b, compare_opts)?;
+                ok &= report.ok;
+                comparisons.push((script.clone(), report));
+            }
+
+            if stats_json {
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "ok": ok,
+                    "out_dir_uncached": uncached_paths.out_dir.display().to_string(),
+                    "out_dir_cached": cached_paths.out_dir.display().to_string(),
+                    "options": {
+                        "warmup_frames": compare_opts.warmup_frames,
+                        "eps_px": compare_opts.eps_px,
+                        "ignore_bounds": compare_opts.ignore_bounds,
+                        "ignore_scene_fingerprint": compare_opts.ignore_scene_fingerprint,
+                        "check_view_cache_reuse_min": reuse_gate,
+                        "check_overlay_synthesis_min": overlay_synthesis_gate,
+                    },
+                    "comparisons": comparisons.iter().map(|(script, report)| serde_json::json!({
+                        "script": script.display().to_string(),
+                        "report": report.to_json(),
+                    })).collect::<Vec<_>>(),
+                });
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+                );
+                if !ok {
+                    std::process::exit(1);
+                }
+                Ok(())
+            } else if ok {
+                println!(
+                    "matrix: ok (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?})",
+                    scripts.len(),
+                    warmup_frames,
+                    reuse_gate,
+                    overlay_synthesis_gate
+                );
+                Ok(())
+            } else {
+                println!(
+                    "matrix: failed (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?})",
+                    scripts.len(),
+                    warmup_frames,
+                    reuse_gate,
+                    overlay_synthesis_gate
+                );
+                for (script, report) in comparisons {
+                    if report.ok {
+                        continue;
+                    }
+                    println!("\nscript: {}", script.display());
+                    report.print_human();
+                }
+                Err("matrix compare failed".to_string())
+            }
+        }
+        "compare" => {
+            let Some(a_src) = rest.first().cloned() else {
+                return Err(
+                    "missing bundle A path (try: fretboard diag compare ./a/bundle.json ./b/bundle.json)".to_string(),
+                );
+            };
+            let Some(b_src) = rest.get(1).cloned() else {
+                return Err(
+                    "missing bundle B path (try: fretboard diag compare ./a/bundle.json ./b/bundle.json)".to_string(),
+                );
+            };
+            if rest.len() != 2 {
+                return Err(format!("unexpected arguments: {}", rest[2..].join(" ")));
+            }
+
+            let a_src = resolve_path(&workspace_root, PathBuf::from(a_src));
+            let b_src = resolve_path(&workspace_root, PathBuf::from(b_src));
+            let a_bundle_path = resolve_bundle_json_path(&a_src);
+            let b_bundle_path = resolve_bundle_json_path(&b_src);
+
+            let report = compare_bundles(
+                &a_bundle_path,
+                &b_bundle_path,
+                CompareOptions {
+                    warmup_frames,
+                    eps_px: compare_eps_px,
+                    ignore_bounds: compare_ignore_bounds,
+                    ignore_scene_fingerprint: compare_ignore_scene_fingerprint,
+                },
+            )?;
+
+            if stats_json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&report.to_json())
+                        .unwrap_or_else(|_| "{}".to_string())
+                );
+                if !report.ok {
+                    std::process::exit(1);
+                }
+                Ok(())
+            } else if report.ok {
+                report.print_human();
+                Ok(())
+            } else {
+                Err(report.to_human_error())
+            }
         }
         "inspect" => {
             let Some(action) = rest.first().cloned() else {
@@ -1302,6 +2051,7 @@ fn pack_bundle_dir_to_zip(
     out_path: &Path,
     include_root_artifacts: bool,
     include_triage: bool,
+    include_screenshots: bool,
     artifacts_root: &Path,
     stats_top: usize,
     sort: BundleStatsSort,
@@ -1350,6 +2100,14 @@ fn pack_bundle_dir_to_zip(
     if include_root_artifacts {
         let root_prefix = format!("{bundle_name}/_root");
         zip_add_root_artifacts(&mut zip, artifacts_root, &root_prefix, options)?;
+    }
+
+    if include_screenshots {
+        let screenshots_dir = artifacts_root.join("screenshots").join(bundle_name);
+        if screenshots_dir.is_dir() {
+            let screenshots_prefix = format!("{bundle_name}/_root/screenshots");
+            zip_add_screenshots(&mut zip, &screenshots_dir, &screenshots_prefix, options)?;
+        }
     }
 
     if include_triage {
@@ -1481,6 +2239,7 @@ fn zip_add_root_artifacts(
         "script.json",
         "script.result.json",
         "pick.result.json",
+        "screenshots.result.json",
         "triage.json",
         "picked.script.json",
     ];
@@ -1493,6 +2252,73 @@ fn zip_add_root_artifacts(
         let dst = format!("{zip_prefix}/{name}");
         zip.start_file(dst, options).map_err(|e| e.to_string())?;
         let mut f = std::fs::File::open(&src).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn zip_add_screenshots(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    zip_add_screenshot_dir(zip, dir, dir, zip_prefix, options)
+}
+
+fn zip_add_screenshot_dir(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    base_dir: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+) -> Result<(), String> {
+    let mut entries: Vec<std::fs::DirEntry> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+        if meta.file_type().is_symlink() {
+            continue;
+        }
+
+        if meta.is_dir() {
+            zip_add_screenshot_dir(zip, &path, base_dir, zip_prefix, options)?;
+            continue;
+        }
+
+        if !meta.is_file() {
+            continue;
+        }
+
+        let name = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_default();
+
+        // Keep this conservative to avoid exploding zip sizes accidentally.
+        let should_include = matches!(ext.as_str(), "png") || name == "manifest.json";
+        if !should_include {
+            continue;
+        }
+
+        let rel = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "failed to compute zip relative path".to_string())?;
+
+        let dst = format!("{}/{}", zip_prefix, zip_name(rel));
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
         std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
     }
 
@@ -1612,11 +2438,23 @@ fn resolve_path(workspace_root: &Path, path: PathBuf) -> PathBuf {
 }
 
 fn resolve_bundle_json_path(path: &Path) -> PathBuf {
-    if path.is_dir() {
-        path.join("bundle.json")
-    } else {
-        path.to_path_buf()
+    if !path.is_dir() {
+        return path.to_path_buf();
     }
+
+    let direct = path.join("bundle.json");
+    if direct.is_file() {
+        return direct;
+    }
+
+    if let Some(dir) = read_latest_pointer(path).or_else(|| find_latest_export_dir(path)) {
+        let nested = dir.join("bundle.json");
+        if nested.is_file() {
+            return nested;
+        }
+    }
+
+    direct
 }
 
 fn wait_for_bundle_json_from_script_result(
@@ -1646,12 +2484,199 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
+fn ui_gallery_suite_scripts() -> [&'static str; 13] {
+    [
+        "tools/diag-scripts/ui-gallery-overlay-torture.json",
+        "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
+        "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
+        "tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json",
+        "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+        "tools/diag-scripts/ui-gallery-dropdown-submenu-underlay-dismiss.json",
+        "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+        "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+        "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+        "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
+        "tools/diag-scripts/ui-gallery-table-smoke.json",
+        "tools/diag-scripts/ui-gallery-data-table-smoke.json",
+        "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+    ]
+}
+
+fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    // These scripts are expected to exercise the cached overlay synthesis seam when view-cache
+    // shell reuse is enabled.
+    matches!(
+        name,
+        "ui-gallery-overlay-torture.json"
+            | "ui-gallery-modal-barrier-underlay-block.json"
+            | "ui-gallery-popover-dialog-escape-underlay.json"
+            | "ui-gallery-portal-geometry-scroll-clamp.json"
+            | "ui-gallery-dropdown-open-select.json"
+            | "ui-gallery-dropdown-submenu-underlay-dismiss.json"
+            | "ui-gallery-context-menu-right-click.json"
+            | "ui-gallery-dialog-escape-focus-restore.json"
+            | "ui-gallery-menubar-keyboard-nav.json"
+    )
+}
+
+#[derive(Debug, Clone)]
+struct ResolvedScriptPaths {
+    out_dir: PathBuf,
+    ready_path: PathBuf,
+    exit_path: PathBuf,
+    script_path: PathBuf,
+    script_trigger_path: PathBuf,
+    script_result_path: PathBuf,
+    script_result_trigger_path: PathBuf,
+}
+
+impl ResolvedScriptPaths {
+    fn for_out_dir(workspace_root: &Path, out_dir: &Path) -> Self {
+        let out_dir = resolve_path(workspace_root, out_dir.to_path_buf());
+        Self {
+            ready_path: resolve_path(workspace_root, out_dir.join("ready.touch")),
+            exit_path: resolve_path(workspace_root, out_dir.join("exit.touch")),
+            script_path: resolve_path(workspace_root, out_dir.join("script.json")),
+            script_trigger_path: resolve_path(workspace_root, out_dir.join("script.touch")),
+            script_result_path: resolve_path(workspace_root, out_dir.join("script.result.json")),
+            script_result_trigger_path: resolve_path(
+                workspace_root,
+                out_dir.join("script.result.touch"),
+            ),
+            out_dir,
+        }
+    }
+}
+
+fn matrix_launch_env(
+    base: &[(String, String)],
+    view_cache_enabled: bool,
+) -> Result<Vec<(String, String)>, String> {
+    if base
+        .iter()
+        .any(|(k, _)| k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE")
+    {
+        return Err(
+            "--env cannot override reserved var for diag matrix: FRET_UI_GALLERY_VIEW_CACHE"
+                .to_string(),
+        );
+    }
+    let mut env = base.to_vec();
+    env.push((
+        "FRET_UI_GALLERY_VIEW_CACHE".to_string(),
+        if view_cache_enabled { "1" } else { "0" }.to_string(),
+    ));
+    Ok(env)
+}
+
+fn run_script_suite_collect_bundles(
+    scripts: &[PathBuf],
+    paths: &ResolvedScriptPaths,
+    launch: &[String],
+    launch_env: &[(String, String)],
+    workspace_root: &Path,
+    timeout_ms: u64,
+    poll_ms: u64,
+    warmup_frames: u64,
+    check_view_cache_reuse_min: Option<u64>,
+    check_overlay_synthesis_min: Option<u64>,
+    overlay_synthesis_gate_predicate: Option<fn(&Path) -> bool>,
+) -> Result<Vec<PathBuf>, String> {
+    std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
+
+    let launch = Some(launch.to_vec());
+    let mut child = maybe_launch_demo(
+        &launch,
+        launch_env,
+        workspace_root,
+        &paths.out_dir,
+        &paths.ready_path,
+        &paths.exit_path,
+        false,
+        timeout_ms,
+        poll_ms,
+    )?;
+
+    let mut bundle_paths: Vec<PathBuf> = Vec::new();
+    for src in scripts {
+        let mut result = run_script_and_wait(
+            src,
+            &paths.script_path,
+            &paths.script_trigger_path,
+            &paths.script_result_path,
+            &paths.script_result_trigger_path,
+            timeout_ms,
+            poll_ms,
+        );
+        if let Ok(summary) = &result
+            && summary.stage.as_deref() == Some("failed")
+        {
+            if let Some(dir) =
+                wait_for_failure_dump_bundle(&paths.out_dir, summary, timeout_ms, poll_ms)
+            {
+                if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                    if let Ok(summary) = result.as_mut() {
+                        summary.last_bundle_dir = Some(name.to_string());
+                    }
+                }
+            }
+        }
+        let result = result?;
+        if result.stage.as_deref() != Some("passed") {
+            stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+            return Err(format!(
+                "unexpected script stage for {}: {:?}",
+                src.display(),
+                result.stage
+            ));
+        }
+
+        let bundle_path =
+            wait_for_bundle_json_from_script_result(&paths.out_dir, &result, timeout_ms, poll_ms)
+                .ok_or_else(|| {
+                format!(
+                    "script passed but no bundle.json was found (required for matrix): {}",
+                    src.display()
+                )
+            })?;
+
+        if let Some(min) = check_view_cache_reuse_min
+            && min > 0
+        {
+            check_bundle_for_view_cache_reuse_min(&bundle_path, min, warmup_frames)?;
+        }
+        if let Some(min) = check_overlay_synthesis_min
+            && min > 0
+        {
+            let should_gate = overlay_synthesis_gate_predicate
+                .map(|pred| pred(src))
+                .unwrap_or(true);
+            if should_gate {
+                check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
+            }
+        }
+
+        bundle_paths.push(bundle_path);
+    }
+
+    stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+    Ok(bundle_paths)
+}
+
 fn apply_post_run_checks(
     bundle_path: &Path,
     check_stale_paint_test_id: Option<&str>,
     check_stale_paint_eps: f32,
     check_wheel_scroll_test_id: Option<&str>,
+    check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
+    check_gc_sweep_liveness: bool,
+    check_view_cache_reuse_min: Option<u64>,
+    check_overlay_synthesis_min: Option<u64>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -1659,6 +2684,9 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
+    }
+    if let Some(test_id) = check_drag_cache_root_paint_only_test_id {
+        check_bundle_for_drag_cache_root_paint_only(bundle_path, test_id, warmup_frames)?;
     }
     if let Some(max_allowed) = check_hover_layout_max {
         let report = bundle_stats_from_path(
@@ -1669,7 +2697,536 @@ fn apply_post_run_checks(
         )?;
         check_report_for_hover_layout_invalidations(&report, max_allowed)?;
     }
+    if let Some(min) = check_view_cache_reuse_min
+        && min > 0
+    {
+        check_bundle_for_view_cache_reuse_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_overlay_synthesis_min
+        && min > 0
+    {
+        check_bundle_for_overlay_synthesis_min(bundle_path, min, warmup_frames)?;
+    }
+    if check_gc_sweep_liveness {
+        check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
+    }
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CompareOptions {
+    warmup_frames: u64,
+    eps_px: f32,
+    ignore_bounds: bool,
+    ignore_scene_fingerprint: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CompareReport {
+    ok: bool,
+    a_path: PathBuf,
+    b_path: PathBuf,
+    a_frame_id: Option<u64>,
+    b_frame_id: Option<u64>,
+    a_scene_fingerprint: Option<u64>,
+    b_scene_fingerprint: Option<u64>,
+    opts: CompareOptions,
+    diffs: Vec<CompareDiff>,
+}
+
+#[derive(Debug, Clone)]
+struct CompareDiff {
+    kind: &'static str,
+    key: Option<String>,
+    field: Option<&'static str>,
+    a: Option<serde_json::Value>,
+    b: Option<serde_json::Value>,
+}
+
+impl CompareReport {
+    fn print_human(&self) {
+        println!("bundle_a: {}", self.a_path.display());
+        println!("bundle_b: {}", self.b_path.display());
+        if let (Some(a), Some(b)) = (self.a_frame_id, self.b_frame_id) {
+            println!("frame_id: a={a} b={b}");
+        }
+        if let (Some(a), Some(b)) = (self.a_scene_fingerprint, self.b_scene_fingerprint) {
+            println!("scene_fingerprint: a=0x{a:016x} b=0x{b:016x}");
+        }
+        if self.ok {
+            println!(
+                "compare: ok (diffs=0, warmup_frames={}, eps_px={}, ignore_bounds={}, ignore_scene_fingerprint={})",
+                self.opts.warmup_frames,
+                self.opts.eps_px,
+                self.opts.ignore_bounds,
+                self.opts.ignore_scene_fingerprint
+            );
+            return;
+        }
+        println!(
+            "compare: failed (diffs={}, warmup_frames={}, eps_px={}, ignore_bounds={}, ignore_scene_fingerprint={})",
+            self.diffs.len(),
+            self.opts.warmup_frames,
+            self.opts.eps_px,
+            self.opts.ignore_bounds,
+            self.opts.ignore_scene_fingerprint
+        );
+        for d in self.diffs.iter().take(20) {
+            let key = d.key.as_deref().unwrap_or("<none>");
+            let field = d.field.unwrap_or("<none>");
+            println!("  - {} key={} field={}", d.kind, key, field);
+        }
+        if self.diffs.len() > 20 {
+            println!("  ... ({} more)", self.diffs.len() - 20);
+        }
+    }
+
+    fn to_human_error(&self) -> String {
+        let mut msg = String::new();
+        msg.push_str("bundle compare failed\n");
+        msg.push_str(&format!("bundle_a: {}\n", self.a_path.display()));
+        msg.push_str(&format!("bundle_b: {}\n", self.b_path.display()));
+        if let (Some(a), Some(b)) = (self.a_frame_id, self.b_frame_id) {
+            msg.push_str(&format!("frame_id: a={a} b={b}\n"));
+        }
+        if let (Some(a), Some(b)) = (self.a_scene_fingerprint, self.b_scene_fingerprint) {
+            msg.push_str(&format!("scene_fingerprint: a=0x{a:016x} b=0x{b:016x}\n"));
+        }
+        msg.push_str(&format!(
+            "diffs: {} (warmup_frames={}, eps_px={}, ignore_bounds={}, ignore_scene_fingerprint={})\n",
+            self.diffs.len(),
+            self.opts.warmup_frames,
+            self.opts.eps_px,
+            self.opts.ignore_bounds,
+            self.opts.ignore_scene_fingerprint
+        ));
+        for d in self.diffs.iter().take(20) {
+            let key = d.key.as_deref().unwrap_or("<none>");
+            let field = d.field.unwrap_or("<none>");
+            msg.push_str(&format!("  - {} key={} field={}\n", d.kind, key, field));
+        }
+        if self.diffs.len() > 20 {
+            msg.push_str(&format!("  ... ({} more)\n", self.diffs.len() - 20));
+        }
+        msg
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        let diffs = self
+            .diffs
+            .iter()
+            .map(|d| {
+                serde_json::json!({
+                    "kind": d.kind,
+                    "key": d.key,
+                    "field": d.field,
+                    "a": d.a,
+                    "b": d.b,
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::json!({
+            "schema_version": 1,
+            "ok": self.ok,
+            "bundle_a": self.a_path.display().to_string(),
+            "bundle_b": self.b_path.display().to_string(),
+            "a_frame_id": self.a_frame_id,
+            "b_frame_id": self.b_frame_id,
+            "a_scene_fingerprint": self.a_scene_fingerprint,
+            "b_scene_fingerprint": self.b_scene_fingerprint,
+            "options": {
+                "warmup_frames": self.opts.warmup_frames,
+                "eps_px": self.opts.eps_px,
+                "ignore_bounds": self.opts.ignore_bounds,
+                "ignore_scene_fingerprint": self.opts.ignore_scene_fingerprint,
+            },
+            "diffs": diffs,
+        })
+    }
+}
+
+fn compare_bundles(
+    a_bundle_path: &Path,
+    b_bundle_path: &Path,
+    opts: CompareOptions,
+) -> Result<CompareReport, String> {
+    let a_bytes = std::fs::read(a_bundle_path).map_err(|e| e.to_string())?;
+    let b_bytes = std::fs::read(b_bundle_path).map_err(|e| e.to_string())?;
+    let a_bundle: serde_json::Value =
+        serde_json::from_slice(&a_bytes).map_err(|e| e.to_string())?;
+    let b_bundle: serde_json::Value =
+        serde_json::from_slice(&b_bytes).map_err(|e| e.to_string())?;
+    compare_bundles_json(&a_bundle, a_bundle_path, &b_bundle, b_bundle_path, opts)
+}
+
+fn compare_bundles_json(
+    a_bundle: &serde_json::Value,
+    a_bundle_path: &Path,
+    b_bundle: &serde_json::Value,
+    b_bundle_path: &Path,
+    opts: CompareOptions,
+) -> Result<CompareReport, String> {
+    let a_window = first_window_from_bundle(a_bundle)?;
+    let b_window = first_window_from_bundle(b_bundle)?;
+
+    let (a_snapshot, a_selected) = select_snapshot_for_compare(a_window, opts.warmup_frames);
+    let (b_snapshot, b_selected) = select_snapshot_for_compare(b_window, opts.warmup_frames);
+
+    let mut diffs: Vec<CompareDiff> = Vec::new();
+
+    let a_fp = a_snapshot
+        .and_then(|s| s.get("scene_fingerprint"))
+        .and_then(|v| v.as_u64());
+    let b_fp = b_snapshot
+        .and_then(|s| s.get("scene_fingerprint"))
+        .and_then(|v| v.as_u64());
+    if !opts.ignore_scene_fingerprint {
+        if let (Some(a_fp), Some(b_fp)) = (a_fp, b_fp) {
+            if a_fp != b_fp {
+                diffs.push(CompareDiff {
+                    kind: "scene_fingerprint_mismatch",
+                    key: None,
+                    field: Some("scene_fingerprint"),
+                    a: Some(serde_json::Value::from(a_fp)),
+                    b: Some(serde_json::Value::from(b_fp)),
+                });
+            }
+        }
+    }
+
+    if let (Some(a_snapshot), Some(b_snapshot)) = (a_snapshot, b_snapshot) {
+        compare_semantics_by_test_id(&mut diffs, a_snapshot, b_snapshot, opts)?;
+    }
+
+    Ok(CompareReport {
+        ok: diffs.is_empty(),
+        a_path: a_bundle_path.to_path_buf(),
+        b_path: b_bundle_path.to_path_buf(),
+        a_frame_id: a_selected.frame_id,
+        b_frame_id: b_selected.frame_id,
+        a_scene_fingerprint: a_fp,
+        b_scene_fingerprint: b_fp,
+        opts,
+        diffs,
+    })
+}
+
+fn first_window_from_bundle(bundle: &serde_json::Value) -> Result<&serde_json::Value, String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    windows
+        .first()
+        .ok_or_else(|| "bundle.json contains no windows".to_string())
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct SelectedSnapshotInfo {
+    frame_id: Option<u64>,
+}
+
+fn select_snapshot_for_compare<'a>(
+    window: &'a serde_json::Value,
+    warmup_frames: u64,
+) -> (Option<&'a serde_json::Value>, SelectedSnapshotInfo) {
+    let snaps = window
+        .get("snapshots")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    if snaps.is_empty() {
+        return (None, SelectedSnapshotInfo::default());
+    }
+
+    let mut selected: Option<&serde_json::Value> = None;
+    for s in snaps {
+        let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        if frame_id >= warmup_frames {
+            selected = Some(s);
+        }
+    }
+    let selected = selected.or_else(|| snaps.last());
+    let info = SelectedSnapshotInfo {
+        frame_id: selected.and_then(|s| s.get("frame_id").and_then(|v| v.as_u64())),
+    };
+    (selected, info)
+}
+
+#[derive(Debug, Clone)]
+struct SemanticsNodeSummary {
+    role: String,
+    flags: serde_json::Value,
+    actions: serde_json::Value,
+    bounds: Option<(f64, f64, f64, f64)>,
+}
+
+fn compare_semantics_by_test_id(
+    diffs: &mut Vec<CompareDiff>,
+    a_snapshot: &serde_json::Value,
+    b_snapshot: &serde_json::Value,
+    opts: CompareOptions,
+) -> Result<(), String> {
+    let a_sem = a_snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .ok_or_else(|| {
+            "bundle snapshot missing debug.semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
+        })?;
+    let b_sem = b_snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .ok_or_else(|| {
+            "bundle snapshot missing debug.semantics (ensure FRET_DIAG_SEMANTICS=1)".to_string()
+        })?;
+
+    let (a_by_test_id, a_id_to_test_id) = semantics_nodes_by_test_id(a_sem);
+    let (b_by_test_id, b_id_to_test_id) = semantics_nodes_by_test_id(b_sem);
+
+    for test_id in a_by_test_id.keys() {
+        if !b_by_test_id.contains_key(test_id) {
+            diffs.push(CompareDiff {
+                kind: "missing_test_id",
+                key: Some(test_id.clone()),
+                field: None,
+                a: Some(serde_json::Value::from("present")),
+                b: Some(serde_json::Value::Null),
+            });
+        }
+    }
+    for test_id in b_by_test_id.keys() {
+        if !a_by_test_id.contains_key(test_id) {
+            diffs.push(CompareDiff {
+                kind: "extra_test_id",
+                key: Some(test_id.clone()),
+                field: None,
+                a: Some(serde_json::Value::Null),
+                b: Some(serde_json::Value::from("present")),
+            });
+        }
+    }
+
+    for (test_id, a_node) in a_by_test_id.iter() {
+        let Some(b_node) = b_by_test_id.get(test_id) else {
+            continue;
+        };
+        if a_node.role != b_node.role {
+            diffs.push(CompareDiff {
+                kind: "node_field_mismatch",
+                key: Some(test_id.clone()),
+                field: Some("role"),
+                a: Some(serde_json::Value::from(a_node.role.clone())),
+                b: Some(serde_json::Value::from(b_node.role.clone())),
+            });
+        }
+        if a_node.flags != b_node.flags {
+            diffs.push(CompareDiff {
+                kind: "node_field_mismatch",
+                key: Some(test_id.clone()),
+                field: Some("flags"),
+                a: Some(a_node.flags.clone()),
+                b: Some(b_node.flags.clone()),
+            });
+        }
+        if a_node.actions != b_node.actions {
+            diffs.push(CompareDiff {
+                kind: "node_field_mismatch",
+                key: Some(test_id.clone()),
+                field: Some("actions"),
+                a: Some(a_node.actions.clone()),
+                b: Some(b_node.actions.clone()),
+            });
+        }
+        if !opts.ignore_bounds {
+            if let (Some(a), Some(b)) = (a_node.bounds, b_node.bounds) {
+                if !rect_eq_eps(a, b, opts.eps_px) {
+                    diffs.push(CompareDiff {
+                        kind: "node_field_mismatch",
+                        key: Some(test_id.clone()),
+                        field: Some("bounds"),
+                        a: Some(serde_json::json!({ "x": a.0, "y": a.1, "w": a.2, "h": a.3 })),
+                        b: Some(serde_json::json!({ "x": b.0, "y": b.1, "w": b.2, "h": b.3 })),
+                    });
+                }
+            }
+        }
+    }
+
+    compare_semantics_root_distribution(diffs, a_sem, b_sem);
+    compare_focus_and_capture_by_test_id(diffs, a_sem, b_sem, &a_id_to_test_id, &b_id_to_test_id);
+
+    Ok(())
+}
+
+fn semantics_nodes_by_test_id(
+    semantics: &serde_json::Value,
+) -> (
+    std::collections::BTreeMap<String, SemanticsNodeSummary>,
+    std::collections::HashMap<u64, String>,
+) {
+    let mut by_test_id: std::collections::BTreeMap<String, SemanticsNodeSummary> =
+        std::collections::BTreeMap::new();
+    let mut id_to_test_id: std::collections::HashMap<u64, String> =
+        std::collections::HashMap::new();
+
+    let nodes = semantics
+        .get("nodes")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    for node in nodes {
+        let Some(test_id) = node.get("test_id").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let test_id = test_id.to_string();
+        let role = node
+            .get("role")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let flags = node
+            .get("flags")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        let actions = node
+            .get("actions")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+        let bounds = node.get("bounds").and_then(rect_xywh_from_json);
+        by_test_id.insert(
+            test_id.clone(),
+            SemanticsNodeSummary {
+                role,
+                flags,
+                actions,
+                bounds,
+            },
+        );
+        if let Some(id) = node.get("id").and_then(|v| v.as_u64()) {
+            id_to_test_id.insert(id, test_id);
+        }
+    }
+
+    (by_test_id, id_to_test_id)
+}
+
+fn rect_xywh_from_json(bounds: &serde_json::Value) -> Option<(f64, f64, f64, f64)> {
+    let x = bounds.get("x").and_then(|v| v.as_f64())?;
+    let y = bounds.get("y").and_then(|v| v.as_f64())?;
+    let w = bounds.get("w").and_then(|v| v.as_f64())?;
+    let h = bounds.get("h").and_then(|v| v.as_f64())?;
+    Some((x, y, w, h))
+}
+
+fn rect_eq_eps(a: (f64, f64, f64, f64), b: (f64, f64, f64, f64), eps_px: f32) -> bool {
+    let eps = eps_px as f64;
+    (a.0 - b.0).abs() <= eps
+        && (a.1 - b.1).abs() <= eps
+        && (a.2 - b.2).abs() <= eps
+        && (a.3 - b.3).abs() <= eps
+}
+
+fn compare_semantics_root_distribution(
+    diffs: &mut Vec<CompareDiff>,
+    a_sem: &serde_json::Value,
+    b_sem: &serde_json::Value,
+) {
+    let a = semantics_root_distribution(a_sem);
+    let b = semantics_root_distribution(b_sem);
+    if a != b {
+        diffs.push(CompareDiff {
+            kind: "semantics_roots_mismatch",
+            key: None,
+            field: Some("roots"),
+            a: Some(semantics_root_distribution_to_json(&a)),
+            b: Some(semantics_root_distribution_to_json(&b)),
+        });
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct SemanticsRootSummary {
+    visible: bool,
+    blocks_underlay_input: bool,
+    hit_testable: bool,
+    z_index: u32,
+}
+
+fn semantics_root_distribution(sem: &serde_json::Value) -> Vec<SemanticsRootSummary> {
+    let roots = sem
+        .get("roots")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    let mut out: Vec<SemanticsRootSummary> = roots
+        .iter()
+        .map(|r| SemanticsRootSummary {
+            visible: r.get("visible").and_then(|v| v.as_bool()).unwrap_or(false),
+            blocks_underlay_input: r
+                .get("blocks_underlay_input")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            hit_testable: r
+                .get("hit_testable")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            z_index: r.get("z_index").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+fn semantics_root_distribution_to_json(dist: &[SemanticsRootSummary]) -> serde_json::Value {
+    serde_json::Value::Array(
+        dist.iter()
+            .map(|r| {
+                serde_json::json!({
+                    "visible": r.visible,
+                    "blocks_underlay_input": r.blocks_underlay_input,
+                    "hit_testable": r.hit_testable,
+                    "z_index": r.z_index,
+                })
+            })
+            .collect(),
+    )
+}
+
+fn compare_focus_and_capture_by_test_id(
+    diffs: &mut Vec<CompareDiff>,
+    a_sem: &serde_json::Value,
+    b_sem: &serde_json::Value,
+    a_id_to_test_id: &std::collections::HashMap<u64, String>,
+    b_id_to_test_id: &std::collections::HashMap<u64, String>,
+) {
+    let a_focus = a_sem.get("focus").and_then(|v| v.as_u64());
+    let b_focus = b_sem.get("focus").and_then(|v| v.as_u64());
+    let a_focus_tid = a_focus.and_then(|id| a_id_to_test_id.get(&id).cloned());
+    let b_focus_tid = b_focus.and_then(|id| b_id_to_test_id.get(&id).cloned());
+    if a_focus_tid.is_some() || b_focus_tid.is_some() {
+        if a_focus_tid != b_focus_tid {
+            diffs.push(CompareDiff {
+                kind: "focus_mismatch",
+                key: None,
+                field: Some("focus.test_id"),
+                a: a_focus_tid.map(serde_json::Value::from),
+                b: b_focus_tid.map(serde_json::Value::from),
+            });
+        }
+    }
+
+    let a_captured = a_sem.get("captured").and_then(|v| v.as_u64());
+    let b_captured = b_sem.get("captured").and_then(|v| v.as_u64());
+    let a_captured_tid = a_captured.and_then(|id| a_id_to_test_id.get(&id).cloned());
+    let b_captured_tid = b_captured.and_then(|id| b_id_to_test_id.get(&id).cloned());
+    if a_captured_tid.is_some() || b_captured_tid.is_some() {
+        if a_captured_tid != b_captured_tid {
+            diffs.push(CompareDiff {
+                kind: "captured_mismatch",
+                key: None,
+                field: Some("captured.test_id"),
+                a: a_captured_tid.map(serde_json::Value::from),
+                b: b_captured_tid.map(serde_json::Value::from),
+            });
+        }
+    }
 }
 
 fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
@@ -1713,6 +3270,7 @@ fn maybe_launch_demo(
     out_dir: &Path,
     ready_path: &Path,
     exit_path: &Path,
+    wants_screenshots: bool,
     timeout_ms: u64,
     poll_ms: u64,
 ) -> Result<Option<Child>, String> {
@@ -1735,6 +3293,9 @@ fn maybe_launch_demo(
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
     cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
+    if wants_screenshots {
+        cmd.env("FRET_DIAG_SCREENSHOTS", "1");
+    }
     for (key, value) in launch_env {
         match key.as_str() {
             "FRET_DIAG" | "FRET_DIAG_DIR" | "FRET_DIAG_READY_PATH" | "FRET_DIAG_EXIT_PATH" => {
@@ -1957,8 +3518,16 @@ struct BundleStatsSnapshotRow {
     top_hover_declarative_invalidations: Vec<BundleStatsHoverDeclarativeInvalidationHotspot>,
     cache_roots: u32,
     cache_roots_reused: u32,
+    cache_roots_contained_relayout: u32,
     cache_replayed_ops: u64,
+    view_cache_contained_relayouts: u32,
+    set_children_barrier_writes: u32,
+    barrier_relayouts_scheduled: u32,
+    barrier_relayouts_performed: u32,
+    virtual_list_visible_range_checks: u32,
+    virtual_list_visible_range_refreshes: u32,
     top_cache_roots: Vec<BundleStatsCacheRoot>,
+    top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
     top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
     model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
@@ -2003,10 +3572,13 @@ struct BundleStatsInvalidationWalk {
 struct BundleStatsCacheRoot {
     root_node: u64,
     element: Option<u64>,
+    element_path: Option<String>,
     reused: bool,
     contained_layout: bool,
+    contained_relayout_in_frame: bool,
     paint_replayed_ops: u32,
     reuse_reason: Option<String>,
+    root_in_semantics: Option<bool>,
     root_role: Option<String>,
     root_test_id: Option<String>,
 }
@@ -2176,7 +3748,7 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
@@ -2192,6 +3764,13 @@ impl BundleStatsReport {
                 row.cache_roots,
                 row.cache_roots_reused,
                 row.cache_replayed_ops,
+                row.view_cache_contained_relayouts,
+                row.cache_roots_contained_relayout,
+                row.set_children_barrier_writes,
+                row.barrier_relayouts_scheduled,
+                row.barrier_relayouts_performed,
+                row.virtual_list_visible_range_checks,
+                row.virtual_list_visible_range_refreshes,
                 row.invalidation_walk_calls,
                 row.invalidation_walk_nodes,
                 row.invalidation_walk_calls_hover,
@@ -2279,10 +3858,60 @@ impl BundleStatsReport {
                         if let Some(el) = c.element {
                             s.push_str(&format!(" element={el}"));
                         }
+                        if let Some(path) = c.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            s.push_str(&format!(" path={path}"));
+                        }
+                        if let Some(in_sem) = c.root_in_semantics {
+                            s.push_str(&format!(" root_in_semantics={in_sem}"));
+                        }
                         s
                     })
                     .collect();
                 println!("    top_cache_roots: {}", items.join(" | "));
+            }
+            if !row.top_contained_relayout_cache_roots.is_empty() {
+                let items: Vec<String> = row
+                    .top_contained_relayout_cache_roots
+                    .iter()
+                    .take(3)
+                    .map(|c| {
+                        let mut s = format!(
+                            "ops={} reused={} root={} reason={}",
+                            c.paint_replayed_ops,
+                            c.reused,
+                            c.root_node,
+                            c.reuse_reason.as_deref().unwrap_or("?")
+                        );
+                        if let Some(test_id) = c.root_test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            s.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = c.root_role.as_deref()
+                            && !role.is_empty()
+                        {
+                            s.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(el) = c.element {
+                            s.push_str(&format!(" element={el}"));
+                        }
+                        if let Some(path) = c.element_path.as_deref()
+                            && !path.is_empty()
+                        {
+                            s.push_str(&format!(" path={path}"));
+                        }
+                        if let Some(in_sem) = c.root_in_semantics {
+                            s.push_str(&format!(" root_in_semantics={in_sem}"));
+                        }
+                        s
+                    })
+                    .collect();
+                println!(
+                    "    top_contained_relayout_cache_roots: {}",
+                    items.join(" | ")
+                );
             }
             if row.hover_declarative_layout_invalidations > 0
                 && !row.top_hover_declarative_invalidations.is_empty()
@@ -2674,6 +4303,10 @@ impl BundleStatsReport {
                     Value::from(row.cache_roots_reused),
                 );
                 obj.insert(
+                    "cache_roots_contained_relayout".to_string(),
+                    Value::from(row.cache_roots_contained_relayout),
+                );
+                obj.insert(
                     "cache_replayed_ops".to_string(),
                     Value::from(row.cache_replayed_ops),
                 );
@@ -2885,10 +4518,21 @@ impl BundleStatsReport {
                             "element".to_string(),
                             c.element.map(Value::from).unwrap_or(Value::Null),
                         );
+                        c_obj.insert(
+                            "element_path".to_string(),
+                            c.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
                         c_obj.insert("reused".to_string(), Value::from(c.reused));
                         c_obj.insert(
                             "contained_layout".to_string(),
                             Value::from(c.contained_layout),
+                        );
+                        c_obj.insert(
+                            "contained_relayout_in_frame".to_string(),
+                            Value::from(c.contained_relayout_in_frame),
                         );
                         c_obj.insert(
                             "paint_replayed_ops".to_string(),
@@ -2900,6 +4544,10 @@ impl BundleStatsReport {
                                 .clone()
                                 .map(Value::from)
                                 .unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_in_semantics".to_string(),
+                            c.root_in_semantics.map(Value::from).unwrap_or(Value::Null),
                         );
                         c_obj.insert(
                             "root_role".to_string(),
@@ -2916,6 +4564,66 @@ impl BundleStatsReport {
                     })
                     .collect::<Vec<_>>();
                 obj.insert("top_cache_roots".to_string(), Value::Array(top_cache_roots));
+
+                let top_contained_relayout_cache_roots = row
+                    .top_contained_relayout_cache_roots
+                    .iter()
+                    .map(|c| {
+                        let mut c_obj = Map::new();
+                        c_obj.insert("root_node".to_string(), Value::from(c.root_node));
+                        c_obj.insert(
+                            "element".to_string(),
+                            c.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "element_path".to_string(),
+                            c.element_path
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        c_obj.insert("reused".to_string(), Value::from(c.reused));
+                        c_obj.insert(
+                            "contained_layout".to_string(),
+                            Value::from(c.contained_layout),
+                        );
+                        c_obj.insert(
+                            "contained_relayout_in_frame".to_string(),
+                            Value::from(c.contained_relayout_in_frame),
+                        );
+                        c_obj.insert(
+                            "paint_replayed_ops".to_string(),
+                            Value::from(c.paint_replayed_ops),
+                        );
+                        c_obj.insert(
+                            "reuse_reason".to_string(),
+                            c.reuse_reason
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_in_semantics".to_string(),
+                            c.root_in_semantics.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_role".to_string(),
+                            c.root_role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        c_obj.insert(
+                            "root_test_id".to_string(),
+                            c.root_test_id
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        Value::Object(c_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "top_contained_relayout_cache_roots".to_string(),
+                    Value::Array(top_contained_relayout_cache_roots),
+                );
 
                 let top_layout_engine_solves = row
                     .top_layout_engine_solves
@@ -3453,6 +5161,459 @@ fn check_bundle_for_wheel_scroll_json(
     Err(msg)
 }
 
+fn check_bundle_for_drag_cache_root_paint_only(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut good_frames: u64 = 0;
+    let mut bad_frames: Vec<String> = Vec::new();
+    let mut missing_target_count: u64 = 0;
+    let mut any_view_cache_active = false;
+    let mut seen_good = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if !view_cache_active {
+                continue;
+            }
+
+            let Some(target_node_id) = semantics_node_id_for_test_id(s, test_id) else {
+                missing_target_count = missing_target_count.saturating_add(1);
+                continue;
+            };
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .ok_or_else(|| "invalid bundle.json: missing debug.semantics.nodes".to_string())?;
+            let mut parents: std::collections::HashMap<u64, u64> = std::collections::HashMap::new();
+            for n in nodes {
+                let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                if let Some(parent) = n.get("parent").and_then(|v| v.as_u64()) {
+                    parents.insert(id, parent);
+                }
+            }
+
+            let roots = s
+                .get("debug")
+                .and_then(|v| v.get("cache_roots"))
+                .and_then(|v| v.as_array())
+                .ok_or_else(|| "invalid bundle.json: missing debug.cache_roots".to_string())?;
+            let mut cache_roots: std::collections::HashMap<u64, &serde_json::Value> =
+                std::collections::HashMap::new();
+            for r in roots {
+                if let Some(root) = r.get("root").and_then(|v| v.as_u64()) {
+                    cache_roots.insert(root, r);
+                }
+            }
+
+            let mut current = target_node_id;
+            let mut cache_root_node: Option<u64> = None;
+            loop {
+                if cache_roots.contains_key(&current) {
+                    cache_root_node = Some(current);
+                    break;
+                }
+                let Some(parent) = parents.get(&current).copied() else {
+                    break;
+                };
+                current = parent;
+            }
+            let Some(cache_root_node) = cache_root_node else {
+                return Err(format!(
+                    "could not resolve a cache root ancestor for test_id={test_id} (node_id={target_node_id}) in bundle: {}",
+                    bundle_path.display()
+                ));
+            };
+
+            let root = cache_roots
+                .get(&cache_root_node)
+                .ok_or_else(|| "internal error: cache root missing".to_string())?;
+
+            let reused = root
+                .get("reused")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let contained_relayout_in_frame = root
+                .get("contained_relayout_in_frame")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let dirty = s
+                .get("debug")
+                .and_then(|v| v.get("dirty_views"))
+                .and_then(|v| v.as_array())
+                .map_or(false, |dirty| {
+                    dirty.iter().any(|d| {
+                        d.get("root_node")
+                            .and_then(|v| v.as_u64())
+                            .is_some_and(|n| n == cache_root_node)
+                    })
+                });
+
+            let ok = reused && !contained_relayout_in_frame && !dirty;
+            if ok {
+                good_frames = good_frames.saturating_add(1);
+                seen_good = true;
+                continue;
+            }
+
+            if seen_good {
+                bad_frames.push(format!(
+                    "window={window_id} frame_id={frame_id} cache_root={cache_root_node} reused={reused} contained_relayout_in_frame={contained_relayout_in_frame} dirty={dirty}"
+                ));
+            }
+        }
+    }
+
+    if !bad_frames.is_empty() {
+        let mut msg = String::new();
+        msg.push_str("expected paint-only drag indicator updates (cache-root reuse, no contained relayout, no dirty view), but found violations after reuse began\n");
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        msg.push_str(&format!("test_id: {test_id}\n"));
+        for line in bad_frames.into_iter().take(10) {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    if good_frames == 0 {
+        return Err(format!(
+            "did not observe any cache-root-reuse paint-only frames for test_id={test_id} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}, missing_target_count={missing_target_count}) \
+in bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+fn check_bundle_for_gc_sweep_liveness(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut offenders: Vec<String> = Vec::new();
+    let mut examined_snapshots: u64 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let Some(removed) = s
+                .get("debug")
+                .and_then(|v| v.get("removed_subtrees"))
+                .and_then(|v| v.as_array())
+            else {
+                continue;
+            };
+
+            for r in removed {
+                let unreachable = r
+                    .get("unreachable_from_liveness_roots")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(true);
+                let reachable_from_layer_roots = r
+                    .get("reachable_from_layer_roots")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let reachable_from_view_cache_roots = r
+                    .get("reachable_from_view_cache_roots")
+                    .and_then(|v| v.as_bool());
+                let root_layer_visible = r.get("root_layer_visible").and_then(|v| v.as_bool());
+
+                if !unreachable
+                    || reachable_from_layer_roots
+                    || reachable_from_view_cache_roots == Some(true)
+                    || root_layer_visible == Some(true)
+                {
+                    let root = r.get("root").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let root_element_path = r
+                        .get("root_element_path")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<none>");
+                    let trigger_path = r
+                        .get("trigger_element_path")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<none>");
+                    offenders.push(format!(
+                        "window={window_id} frame_id={frame_id} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} root_element_path={root_element_path} trigger_element_path={trigger_path}"
+                    ));
+                }
+            }
+        }
+    }
+
+    if offenders.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("GC sweep liveness violation: removed_subtrees contains entries that appear live (reachable/visible)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    msg.push_str(&format!(
+        "warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
+    ));
+    for line in offenders.into_iter().take(10) {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+fn check_bundle_for_view_cache_reuse_min(
+    bundle_path: &Path,
+    min_reuse_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_view_cache_reuse_min_json(
+        &bundle,
+        bundle_path,
+        min_reuse_events,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_view_cache_reuse_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_reuse_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut reuse_events: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if !view_cache_active {
+                continue;
+            }
+
+            let roots = s
+                .get("debug")
+                .and_then(|v| v.get("cache_roots"))
+                .and_then(|v| v.as_array());
+            let Some(roots) = roots else {
+                continue;
+            };
+
+            for r in roots {
+                if r.get("reused").and_then(|v| v.as_bool()) == Some(true) {
+                    reuse_events = reuse_events.saturating_add(1);
+                    if reuse_events >= min_reuse_events {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_reuse_events} view-cache reuse events, got {reuse_events} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+in bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_overlay_synthesis_min(
+    bundle_path: &Path,
+    min_synthesized_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_overlay_synthesis_min_json(
+        &bundle,
+        bundle_path,
+        min_synthesized_events,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_overlay_synthesis_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_synthesized_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut synthesized_events: u64 = 0;
+    let mut suppression_counts: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+
+            let Some(events) = s
+                .get("debug")
+                .and_then(|v| v.get("overlay_synthesis"))
+                .and_then(|v| v.as_array())
+            else {
+                continue;
+            };
+
+            for e in events {
+                let kind = e.get("kind").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let outcome = e
+                    .get("outcome")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                if outcome == "synthesized" {
+                    synthesized_events = synthesized_events.saturating_add(1);
+                    if synthesized_events >= min_synthesized_events {
+                        return Ok(());
+                    }
+                } else {
+                    let key = format!("{kind}/{outcome}");
+                    *suppression_counts.entry(key).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    let mut suppressions: Vec<(String, u64)> = suppression_counts.into_iter().collect();
+    suppressions.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    suppressions.truncate(12);
+    let suppressions = if suppressions.is_empty() {
+        String::new()
+    } else {
+        let mut msg = String::new();
+        msg.push_str(" suppressions=[");
+        for (idx, (k, c)) in suppressions.into_iter().enumerate() {
+            if idx > 0 {
+                msg.push_str(", ");
+            }
+            msg.push_str(&format!("{k}:{c}"));
+        }
+        msg.push(']');
+        msg
+    };
+
+    Err(format!(
+        "expected at least {min_synthesized_events} overlay synthesis events, got {synthesized_events} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}).{suppressions} \
+bundle: {}",
+        bundle_path.display()
+    ))
+}
+
 fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
     top: usize,
@@ -3590,6 +5751,36 @@ fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let view_cache_contained_relayouts = stats
+                .and_then(|m| m.get("view_cache_contained_relayouts"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let set_children_barrier_writes = stats
+                .and_then(|m| m.get("set_children_barrier_writes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let barrier_relayouts_scheduled = stats
+                .and_then(|m| m.get("barrier_relayouts_scheduled"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let barrier_relayouts_performed = stats
+                .and_then(|m| m.get("barrier_relayouts_performed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let virtual_list_visible_range_checks = stats
+                .and_then(|m| m.get("virtual_list_visible_range_checks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let virtual_list_visible_range_refreshes = stats
+                .and_then(|m| m.get("virtual_list_visible_range_refreshes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
 
             let propagated_model_change_models = stats
                 .and_then(|m| m.get("model_change_models"))
@@ -3746,8 +5937,14 @@ fn bundle_stats_from_json_with_options(
                 as u32;
             let top_hover_declarative_invalidations =
                 snapshot_top_hover_declarative_invalidations(s, 3);
-            let (cache_roots, cache_roots_reused, cache_replayed_ops, top_cache_roots) =
-                snapshot_cache_root_stats(s, 3);
+            let (
+                cache_roots,
+                cache_roots_reused,
+                cache_roots_contained_relayout,
+                cache_replayed_ops,
+                top_cache_roots,
+                top_contained_relayout_cache_roots,
+            ) = snapshot_cache_root_stats(s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
@@ -3860,8 +6057,16 @@ fn bundle_stats_from_json_with_options(
                 top_hover_declarative_invalidations,
                 cache_roots,
                 cache_roots_reused,
+                cache_roots_contained_relayout,
                 cache_replayed_ops,
+                view_cache_contained_relayouts,
+                set_children_barrier_writes,
+                barrier_relayouts_scheduled,
+                barrier_relayouts_performed,
+                virtual_list_visible_range_checks,
+                virtual_list_visible_range_refreshes,
                 top_cache_roots,
+                top_contained_relayout_cache_roots,
                 top_layout_engine_solves,
                 model_change_hotspots,
                 model_change_unobserved,
@@ -3979,7 +6184,14 @@ fn snapshot_top_invalidation_walks(
 fn snapshot_cache_root_stats(
     snapshot: &serde_json::Value,
     max: usize,
-) -> (u32, u32, u64, Vec<BundleStatsCacheRoot>) {
+) -> (
+    u32,
+    u32,
+    u32,
+    u64,
+    Vec<BundleStatsCacheRoot>,
+    Vec<BundleStatsCacheRoot>,
+) {
     let roots = snapshot
         .get("debug")
         .and_then(|v| v.get("cache_roots"))
@@ -3988,11 +6200,14 @@ fn snapshot_cache_root_stats(
         .unwrap_or(&[]);
 
     if roots.is_empty() {
-        return (0, 0, 0, Vec::new());
+        return (0, 0, 0, 0, Vec::new(), Vec::new());
     }
 
     let mut reused: u32 = 0;
+    let mut contained_relayout: u32 = 0;
     let mut replayed_ops_sum: u64 = 0;
+
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
 
     let mut out: Vec<BundleStatsCacheRoot> = roots
         .iter()
@@ -4007,22 +6222,35 @@ fn snapshot_cache_root_stats(
             if reused_flag {
                 reused = reused.saturating_add(1);
             }
+            let contained_relayout_in_frame = r
+                .get("contained_relayout_in_frame")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if contained_relayout_in_frame {
+                contained_relayout = contained_relayout.saturating_add(1);
+            }
             replayed_ops_sum = replayed_ops_sum.saturating_add(paint_replayed_ops as u64);
 
-            let (role, test_id) = snapshot_lookup_semantics(snapshot, root_node);
+            let (role, test_id) = semantics_index.lookup_for_cache_root(root_node);
             BundleStatsCacheRoot {
                 root_node,
                 element: r.get("element").and_then(|v| v.as_u64()),
+                element_path: r
+                    .get("element_path")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
                 reused: reused_flag,
                 contained_layout: r
                     .get("contained_layout")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false),
+                contained_relayout_in_frame,
                 paint_replayed_ops,
                 reuse_reason: r
                     .get("reuse_reason")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string()),
+                root_in_semantics: r.get("root_in_semantics").and_then(|v| v.as_bool()),
                 root_role: role,
                 root_test_id: test_id,
             }
@@ -4030,13 +6258,21 @@ fn snapshot_cache_root_stats(
         .collect();
 
     out.sort_by(|a, b| b.paint_replayed_ops.cmp(&a.paint_replayed_ops));
-    out.truncate(max);
+    let top_cache_roots: Vec<BundleStatsCacheRoot> = out.iter().take(max).cloned().collect();
+    let top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot> = out
+        .iter()
+        .filter(|r| r.contained_relayout_in_frame)
+        .take(max)
+        .cloned()
+        .collect();
 
     (
         roots.len().min(u32::MAX as usize) as u32,
         reused,
+        contained_relayout,
         replayed_ops_sum,
-        out,
+        top_cache_roots,
+        top_contained_relayout_cache_roots,
     )
 }
 
@@ -4434,6 +6670,107 @@ fn snapshot_lookup_semantics(
 }
 
 #[derive(Debug, Clone)]
+struct SemanticsNodeLite {
+    id: u64,
+    parent: Option<u64>,
+    role: Option<String>,
+    test_id: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct SemanticsIndex {
+    by_id: std::collections::HashMap<u64, SemanticsNodeLite>,
+    best_descendant_with_test_id: std::collections::HashMap<u64, (Option<String>, Option<String>)>,
+}
+
+impl SemanticsIndex {
+    fn from_snapshot(snapshot: &serde_json::Value) -> Self {
+        let nodes = snapshot
+            .get("debug")
+            .and_then(|v| v.get("semantics"))
+            .and_then(|v| v.get("nodes"))
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+
+        let mut by_id: std::collections::HashMap<u64, SemanticsNodeLite> =
+            std::collections::HashMap::new();
+        by_id.reserve(nodes.len());
+
+        for n in nodes {
+            let Some(id) = n.get("id").and_then(|v| v.as_u64()) else {
+                continue;
+            };
+
+            let parent = n.get("parent").and_then(|v| v.as_u64());
+            let role = n
+                .get("role")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let test_id = n
+                .get("test_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            by_id.insert(
+                id,
+                SemanticsNodeLite {
+                    id,
+                    parent,
+                    role,
+                    test_id,
+                },
+            );
+        }
+
+        let mut best_descendant_with_test_id: std::collections::HashMap<
+            u64,
+            (Option<String>, Option<String>),
+        > = std::collections::HashMap::new();
+
+        for node in by_id.values() {
+            let Some(test_id) = node.test_id.as_deref() else {
+                continue;
+            };
+            if test_id.is_empty() {
+                continue;
+            }
+
+            let mut cursor: Option<u64> = Some(node.id);
+            let mut seen: std::collections::HashSet<u64> = std::collections::HashSet::new();
+            while let Some(id) = cursor {
+                if !seen.insert(id) {
+                    break;
+                }
+
+                best_descendant_with_test_id
+                    .entry(id)
+                    .or_insert_with(|| (node.role.clone(), node.test_id.clone()));
+
+                cursor = by_id.get(&id).and_then(|n| n.parent);
+            }
+        }
+
+        Self {
+            by_id,
+            best_descendant_with_test_id,
+        }
+    }
+
+    fn lookup_for_cache_root(&self, root_node: u64) -> (Option<String>, Option<String>) {
+        if let Some(node) = self.by_id.get(&root_node) {
+            return (node.role.clone(), node.test_id.clone());
+        }
+
+        if let Some((role, test_id)) = self.best_descendant_with_test_id.get(&root_node) {
+            return (role.clone(), test_id.clone());
+        }
+
+        (None, None)
+    }
+}
+
+#[derive(Debug, Clone)]
 struct ScriptResultSummary {
     run_id: u64,
     stage: Option<String>,
@@ -4511,6 +6848,11 @@ fn run_script_and_wait(
 
         std::thread::sleep(Duration::from_millis(poll_ms.max(1)));
     }
+}
+
+fn clear_script_result_files(script_result_path: &Path, script_result_trigger_path: &Path) {
+    let _ = std::fs::remove_file(script_result_path);
+    let _ = std::fs::remove_file(script_result_trigger_path);
 }
 
 fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
@@ -4859,10 +7201,47 @@ fn unescape_json_pointer_token(raw: &str) -> String {
     out
 }
 
+fn summarize_times_us(values: &[u64]) -> serde_json::Value {
+    if values.is_empty() {
+        return serde_json::json!({
+            "min": 0,
+            "p50": 0,
+            "p95": 0,
+            "max": 0,
+        });
+    }
+
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    let min = *sorted.first().unwrap_or(&0);
+    let max = *sorted.last().unwrap_or(&0);
+    let p50 = percentile_nearest_rank_sorted(&sorted, 0.50);
+    let p95 = percentile_nearest_rank_sorted(&sorted, 0.95);
+
+    serde_json::json!({
+        "min": min,
+        "p50": p50,
+        "p95": p95,
+        "max": max,
+    })
+}
+
+fn percentile_nearest_rank_sorted(sorted: &[u64], percentile: f64) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    let percentile = percentile.clamp(0.0, 1.0);
+    let n = sorted.len();
+    let rank_1_based = (percentile * n as f64).ceil().max(1.0) as usize;
+    let idx = rank_1_based.saturating_sub(1).min(n - 1);
+    sorted[idx]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::path::Path;
 
     #[test]
     fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {
@@ -4984,6 +7363,19 @@ mod tests {
     }
 
     #[test]
+    fn perf_percentile_nearest_rank_is_stable() {
+        let values = vec![10u64, 20, 30, 40, 50, 60, 70];
+        let mut sorted = values.clone();
+        sorted.sort_unstable();
+        assert_eq!(percentile_nearest_rank_sorted(&sorted, 0.50), 40);
+        assert_eq!(percentile_nearest_rank_sorted(&sorted, 0.95), 70);
+        assert_eq!(
+            summarize_times_us(&values),
+            json!({"min":10,"p50":40,"p95":70,"max":70})
+        );
+    }
+
+    #[test]
     fn bundle_stats_tracks_hover_declarative_layout_invalidations() {
         let bundle = json!({
             "schema_version": 1,
@@ -5091,5 +7483,245 @@ mod tests {
         )
         .unwrap();
         assert_eq!(v["steps"][0]["predicate"]["target"]["id"], "open");
+    }
+
+    #[test]
+    fn check_bundle_for_view_cache_reuse_min_counts_reused_cache_roots() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 1, "reused": true },
+                                    { "root": 2, "reused": false }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 3, "reused": true }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_view_cache_reuse_min_json(&bundle, Path::new("bundle.json"), 2, 0)
+            .expect("expected reuse>=2");
+    }
+
+    #[test]
+    fn check_bundle_for_view_cache_reuse_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 1, "reused": true }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "cache_roots": [
+                                    { "root": 2, "reused": true }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_view_cache_reuse_min_json(&bundle, Path::new("bundle.json"), 2, 1)
+                .expect_err("expected reuse<2 due to warmup");
+        assert!(err.contains("expected at least 2 view-cache reuse events"));
+        assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn check_bundle_for_overlay_synthesis_min_counts_synthesized_events() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "popover", "id": 101, "source": "cached_declaration", "outcome": "synthesized" },
+                                    { "kind": "tooltip", "id": 202, "source": "cached_declaration", "outcome": "suppressed_missing_trigger" }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "tooltip", "id": 303, "source": "cached_declaration", "outcome": "synthesized" }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_overlay_synthesis_min_json(&bundle, Path::new("bundle.json"), 2, 0)
+            .expect("expected synthesized>=2");
+    }
+
+    #[test]
+    fn check_bundle_for_overlay_synthesis_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "tooltip", "id": 1, "source": "cached_declaration", "outcome": "synthesized" }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "overlay_synthesis": [
+                                    { "kind": "hover", "id": 2, "source": "cached_declaration", "outcome": "suppressed_trigger_not_live_in_current_frame" }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_overlay_synthesis_min_json(&bundle, Path::new("bundle.json"), 1, 1)
+                .expect_err("expected synthesized<1 due to warmup");
+        assert!(err.contains("expected at least 1 overlay synthesis events"));
+        assert!(err.contains("got 0"));
+        assert!(err.contains("suppressions=["));
+    }
+
+    #[test]
+    fn compare_bundles_passes_when_test_id_semantics_match() {
+        let a = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "scene_fingerprint": 42,
+                    "debug": {
+                        "semantics": {
+                            "roots": [{ "root": 1, "visible": true, "blocks_underlay_input": false, "hit_testable": true, "z_index": 0 }],
+                            "nodes": [{
+                                "id": 1,
+                                "role": "button",
+                                "bounds": { "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0 },
+                                "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                "actions": { "focus": true, "invoke": true, "set_value": false, "set_text_selection": false },
+                                "test_id": "ok"
+                            }]
+                        }
+                    }
+                }]
+            }]
+        });
+        let b = a.clone();
+        let report = compare_bundles_json(
+            &a,
+            Path::new("a/bundle.json"),
+            &b,
+            Path::new("b/bundle.json"),
+            CompareOptions {
+                warmup_frames: 0,
+                eps_px: 0.5,
+                ignore_bounds: false,
+                ignore_scene_fingerprint: false,
+            },
+        )
+        .unwrap();
+        assert!(report.ok);
+        assert!(report.diffs.is_empty());
+    }
+
+    #[test]
+    fn compare_bundles_reports_role_mismatch_for_test_id() {
+        let a = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "scene_fingerprint": 42,
+                    "debug": {
+                        "semantics": {
+                            "roots": [{ "root": 1, "visible": true, "blocks_underlay_input": false, "hit_testable": true, "z_index": 0 }],
+                            "nodes": [{
+                                "id": 1,
+                                "role": "button",
+                                "bounds": { "x": 1.0, "y": 2.0, "w": 3.0, "h": 4.0 },
+                                "flags": { "focused": false, "captured": false, "disabled": false, "selected": false, "expanded": false, "checked": null },
+                                "actions": { "focus": true, "invoke": true, "set_value": false, "set_text_selection": false },
+                                "test_id": "t"
+                            }]
+                        }
+                    }
+                }]
+            }]
+        });
+        let mut b = a.clone();
+        b["windows"][0]["snapshots"][0]["debug"]["semantics"]["nodes"][0]["role"] =
+            serde_json::Value::from("menuitem");
+
+        let report = compare_bundles_json(
+            &a,
+            Path::new("a/bundle.json"),
+            &b,
+            Path::new("b/bundle.json"),
+            CompareOptions {
+                warmup_frames: 0,
+                eps_px: 0.5,
+                ignore_bounds: false,
+                ignore_scene_fingerprint: false,
+            },
+        )
+        .unwrap();
+        assert!(!report.ok);
+        assert!(report.diffs.iter().any(|d| d.kind == "node_field_mismatch"
+            && d.key.as_deref() == Some("t")
+            && d.field == Some("role")));
     }
 }

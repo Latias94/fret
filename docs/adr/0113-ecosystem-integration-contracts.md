@@ -137,6 +137,9 @@ Ecosystem crates that need async work (markdown fetchers, asset downloading, ind
 - communicate results via pure data messages into the UI thread (channel/inbox),
 - apply model updates on the UI thread and request redraw.
 
+Prefer the shared execution and wake surface (`docs/adr/0190-execution-and-concurrency-surface-v1.md`)
+over bespoke thread pools or ad-hoc wake logic in ecosystem crates.
+
 This matches ADR 0112’s recommended patterns and keeps wasm compatibility.
 
 ### 8) Hotpatch (Subsecond) compatibility: keep long-lived registries disposable
@@ -167,6 +170,7 @@ As these stabilize, we can tighten this ADR into a more prescriptive guide and/o
 - Kernel/backends/apps layering: `docs/adr/0093-crate-structure-core-backends-apps.md`
 - Ecosystem bootstrap/tools story: `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - Golden-path driver/pipelines: `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
+- Execution and concurrency surface: `docs/adr/0190-execution-and-concurrency-surface-v1.md`
 - Resource handles + flush point: `docs/adr/0004-resource-handles.md`
 - Editor project assets (out of scope): `docs/adr/0026-asset-database-and-import-pipeline.md`
 - Action hooks registries: `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`

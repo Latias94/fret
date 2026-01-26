@@ -368,7 +368,6 @@ mod tests {
             "expected all snapshots removed"
         );
     }
-
     #[test]
     fn clearing_base_snapshot_does_not_remove_active_overlay_snapshot() {
         let window = AppWindowId::default();

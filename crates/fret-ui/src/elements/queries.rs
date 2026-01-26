@@ -37,6 +37,23 @@ pub fn node_for_element<H: UiHost>(
     with_window_state(app, window, |st| st.node_entry(element).map(|e| e.node))
 }
 
+/// Returns whether `element` is known to be mounted in the **current frame**.
+///
+/// `node_for_element` may return a stale mapping by design (cross-frame queries). For policies
+/// that need a liveness gate (e.g. cached overlay request synthesis), prefer this check.
+pub fn element_is_live_in_current_frame<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> bool {
+    let frame_id = app.frame_id();
+    with_window_state(app, window, |st| {
+        st.node_entry(element)
+            .map(|e| e.last_seen_frame == frame_id)
+            .unwrap_or(false)
+    })
+}
+
 /// Returns the most recent recorded bounds for a declarative element, if available.
 ///
 /// This is a cross-frame geometry query intended for component-layer policies (e.g. anchored

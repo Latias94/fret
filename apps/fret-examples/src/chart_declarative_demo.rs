@@ -196,10 +196,13 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ChartDeclarativeState {
     ChartDeclarativeState { engine, spec }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartDeclarativeState) -> Vec<AnyElement> {
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut ChartDeclarativeState,
+) -> fret_kit::ViewElements {
     cx.observe_model(&st.engine, Invalidation::Paint);
 
     let mut props = ChartCanvasPanelProps::new(st.spec.clone());
     props.engine = Some(st.engine.clone());
-    vec![chart_canvas_panel(cx, props)]
+    vec![chart_canvas_panel(cx, props)].into()
 }

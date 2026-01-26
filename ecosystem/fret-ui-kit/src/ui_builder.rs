@@ -4,7 +4,8 @@ use crate::{
     MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
 use fret_core::{FontWeight, Px, TextOverflow, TextWrap};
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, ScrollAxis};
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 
 /// Aggregated authoring patch applied by `UiBuilder`.
@@ -234,6 +235,18 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
             c.padding = Some(padding);
             c
         })
+    }
+
+    pub fn padding(self, padding: impl Into<MetricRef>) -> Self {
+        self.paddings(Edges4::all(padding.into()))
+    }
+
+    pub fn padding_px(self, px: Px) -> Self {
+        self.padding(px)
+    }
+
+    pub fn padding_space(self, space: Space) -> Self {
+        self.padding(space)
     }
 
     pub fn focused_border(self) -> Self {
@@ -479,7 +492,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.ml_neg(space))
     }
 
-    pub fn min_w(self, width: MetricRef) -> Self {
+    pub fn min_w(self, width: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.min_w(width))
     }
 
@@ -487,7 +500,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.min_w_space(width))
     }
 
-    pub fn min_h(self, height: MetricRef) -> Self {
+    pub fn min_h(self, height: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.min_h(height))
     }
 
@@ -503,7 +516,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.h(height))
     }
 
-    pub fn w_px(self, width: MetricRef) -> Self {
+    pub fn w_px(self, width: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.w_px(width))
     }
 
@@ -511,7 +524,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.w_space(width))
     }
 
-    pub fn h_px(self, height: MetricRef) -> Self {
+    pub fn h_px(self, height: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.h_px(height))
     }
 
@@ -519,7 +532,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.h_space(height))
     }
 
-    pub fn max_w(self, width: MetricRef) -> Self {
+    pub fn max_w(self, width: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.max_w(width))
     }
 
@@ -527,7 +540,7 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.max_w_space(width))
     }
 
-    pub fn max_h(self, height: MetricRef) -> Self {
+    pub fn max_h(self, height: impl Into<MetricRef>) -> Self {
         self.layout_with(|l| l.max_h(height))
     }
 
@@ -537,6 +550,10 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
 
     pub fn basis(self, basis: LengthRefinement) -> Self {
         self.layout_with(|l| l.basis(basis))
+    }
+
+    pub fn basis_px(self, basis: impl Into<MetricRef>) -> Self {
+        self.layout_with(|l| l.basis_px(basis))
     }
 
     pub fn flex_grow(self, grow: f32) -> Self {
@@ -662,9 +679,17 @@ impl<T: UiPatchTarget> UiBuilder<T> {
 }
 
 impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
-    pub fn gap(mut self, space: Space) -> Self {
-        self.inner.gap = space;
+    pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
+        self.inner.gap = gap.into();
         self
+    }
+
+    pub fn gap_px(self, gap: Px) -> Self {
+        self.gap(gap)
+    }
+
+    pub fn gap_metric(self, gap: MetricRef) -> Self {
+        self.gap(gap)
     }
 
     pub fn justify(mut self, justify: Justify) -> Self {
@@ -720,33 +745,72 @@ impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
     }
 }
 
+impl<H, F> UiBuilder<crate::ui::ScrollAreaBox<H, F>> {
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.inner.axis = axis;
+        self
+    }
+
+    pub fn show_scrollbar_x(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_x = show;
+        self
+    }
+
+    pub fn show_scrollbar_y(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_y = show;
+        self
+    }
+
+    pub fn show_scrollbars(self, x: bool, y: bool) -> Self {
+        self.show_scrollbar_x(x).show_scrollbar_y(y)
+    }
+
+    pub fn handle(mut self, handle: ScrollHandle) -> Self {
+        self.inner.handle = Some(handle);
+        self
+    }
+}
+
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
 }
 
-impl<H: UiHost, F> UiBuilder<crate::ui::FlexBox<H, F>>
+impl<H: UiHost, F, I> UiBuilder<crate::ui::FlexBox<H, F>>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
 }
 
-impl<H: UiHost, F> UiBuilder<crate::ui::ContainerBox<H, F>>
+impl<H: UiHost, F, I> UiBuilder<crate::ui::ContainerBox<H, F>>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
     }
 }
 
-impl<H: UiHost, F> UiBuilder<crate::ui::StackBox<H, F>>
+impl<H: UiHost, F, I> UiBuilder<crate::ui::StackBox<H, F>>
 where
-    F: FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, F, I> UiBuilder<crate::ui::ScrollAreaBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
@@ -1010,25 +1074,26 @@ mod tests {
             .ml(Space::N2)
             .ml_neg(Space::N2)
             .ml_auto()
-            .min_w(MetricRef::Px(Px(10.0)))
+            .min_w(Px(10.0))
             .min_w_space(Space::N1)
-            .min_h(MetricRef::Px(Px(10.0)))
+            .min_h(Px(10.0))
             .min_h_space(Space::N1)
             .min_w_0()
             .w(LengthRefinement::Fill)
             .h(LengthRefinement::Auto)
-            .w_px(MetricRef::Px(Px(10.0)))
+            .w_px(Px(10.0))
             .w_space(Space::N10)
-            .h_px(MetricRef::Px(Px(11.0)))
+            .h_px(Px(11.0))
             .h_space(Space::N11)
             .w_full()
             .h_full()
             .size_full()
-            .max_w(MetricRef::Px(Px(10.0)))
+            .max_w(Px(10.0))
             .max_w_space(Space::N1)
-            .max_h(MetricRef::Px(Px(10.0)))
+            .max_h(Px(10.0))
             .max_h_space(Space::N1)
             .basis(LengthRefinement::Auto)
+            .basis_px(Px(10.0))
             .basis_0()
             .flex_grow(1.0)
             .flex_shrink(1.0)
@@ -1132,7 +1197,7 @@ mod tests {
             .wrap()
             .build();
 
-        assert_eq!(flex.gap, Space::N2);
+        assert!(matches!(flex.gap, MetricRef::Token { key, .. } if key == Space::N2.token_key()));
         assert_eq!(flex.justify, Justify::Between);
         assert_eq!(flex.items, Items::Center);
         assert!(flex.wrap);

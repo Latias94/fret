@@ -170,6 +170,27 @@ impl Dialog {
                 interactive: is_open,
             };
 
+            #[derive(Default)]
+            struct DialogFocusRestoreState {
+                was_open: bool,
+                restore_element: Option<fret_ui::elements::GlobalElementId>,
+            }
+
+            let focused_element = cx.focused_element();
+            let restore_element = cx.with_state(DialogFocusRestoreState::default, |st| {
+                if is_open && !st.was_open {
+                    st.restore_element = focused_element;
+                    st.was_open = true;
+                } else if !overlay_presence.present {
+                    st.was_open = false;
+                    st.restore_element = None;
+                } else if !is_open {
+                    st.was_open = false;
+                }
+                st.restore_element
+            });
+            let restore_trigger = restore_element.unwrap_or(id);
+
             let content_element_for_trigger: std::cell::Cell<
                 Option<fret_ui::elements::GlobalElementId>,
             > = std::cell::Cell::new(None);
@@ -318,7 +339,7 @@ impl Dialog {
                     .on_close_auto_focus(on_close_auto_focus);
                 let request = radix_dialog::modal_dialog_request_with_options_and_dismiss_handler(
                     id,
-                    id,
+                    restore_trigger,
                     self.open,
                     overlay_presence,
                     dialog_options,
@@ -369,7 +390,7 @@ impl DialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(512.0)))
+            .max_w(Px(512.0))
             .merge(self.layout);
 
         if let Some(max_w) = layout
