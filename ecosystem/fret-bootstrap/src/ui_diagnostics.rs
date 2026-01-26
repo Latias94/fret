@@ -544,6 +544,7 @@ impl UiDiagnosticsService {
         &mut self,
         app: &App,
         window: AppWindowId,
+        window_bounds: Rect,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
@@ -637,6 +638,12 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV1::ResetDiagnostics => {
+                self.reset_diagnostics_ring_for_window(window);
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV1::CaptureBundle { label } => {
                 force_dump_label =
                     Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
@@ -692,7 +699,8 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
+                    {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -723,7 +731,8 @@ impl UiDiagnosticsService {
             UiActionStepV1::Assert { predicate } => {
                 active.wait_until = None;
                 if let Some(snapshot) = semantics_snapshot {
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
+                    {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -1092,6 +1101,10 @@ impl UiDiagnosticsService {
         {
             self.pending_pick = None;
         }
+    }
+
+    fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
+        self.per_window.entry(window).or_default().clear();
     }
 
     pub fn update_inspect_hover(
@@ -1883,6 +1896,14 @@ impl WindowRing {
         self.last_pointer_position = Some(pointer.position());
     }
 
+    fn clear(&mut self) {
+        self.last_pointer_position = None;
+        self.events.clear();
+        self.snapshots.clear();
+        self.last_changed_models.clear();
+        self.last_changed_globals.clear();
+    }
+
     fn push_event(&mut self, cfg: &UiDiagnosticsConfig, event: RecordedUiEventV1) {
         self.events.push_back(event);
         while self.events.len() > cfg.max_events {
@@ -2272,6 +2293,7 @@ pub enum UiActionStepV1 {
         #[serde(default)]
         button: UiMouseButtonV1,
     },
+    ResetDiagnostics,
     MovePointer {
         target: UiSelectorV1,
     },
@@ -2362,6 +2384,13 @@ pub enum UiPredicateV1 {
     /// update.
     VisibleInWindow {
         target: UiSelectorV1,
+    },
+    /// True when the target exists and its semantics bounds are fully contained within the active
+    /// window bounds (optionally padded inward by `padding_px`).
+    BoundsWithinWindow {
+        target: UiSelectorV1,
+        #[serde(default)]
+        padding_px: f32,
     },
 }
 
@@ -2524,6 +2553,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub cache_roots: Vec<UiCacheRootStatsV1>,
     #[serde(default)]
+    pub overlay_synthesis: Vec<UiOverlaySynthesisEventV1>,
+    #[serde(default)]
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
@@ -2549,6 +2580,11 @@ impl UiTreeDebugSnapshotV1 {
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
     ) -> Self {
+        let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
+            .debug_view_cache_contained_relayout_roots()
+            .iter()
+            .copied()
+            .collect();
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
             invalidation_walks: ui
@@ -2605,10 +2641,22 @@ impl UiTreeDebugSnapshotV1 {
                         ui,
                         element_runtime_state,
                         semantics.as_ref(),
+                        &contained_relayout_roots,
                         stats,
                     )
                 })
                 .collect(),
+            overlay_synthesis: app
+                .global::<fret_ui_kit::WindowOverlaySynthesisDiagnosticsStore>()
+                .and_then(|diag| diag.events_for_window(window, app.frame_id()))
+                .map(|events| {
+                    events
+                        .iter()
+                        .copied()
+                        .map(UiOverlaySynthesisEventV1::from_event)
+                        .collect()
+                })
+                .unwrap_or_default(),
             removed_subtrees: ui
                 .debug_removed_subtrees()
                 .iter()
@@ -2660,6 +2708,15 @@ impl UiAxisV1 {
             fret_core::Axis::Vertical => Self::Vertical,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlaySynthesisKindV1 {
+    Modal,
+    Popover,
+    Hover,
+    Tooltip,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -2757,6 +2814,12 @@ impl UiVirtualListWindowV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiOverlaySynthesisSourceV1 {
+    CachedDeclaration,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiScrollHandleChangeKindV1 {
     Layout,
     HitTestOnly,
@@ -2840,6 +2903,58 @@ impl UiScrollHandleChangeV1 {
                 .map(key_to_u64)
                 .collect(),
             upgraded_to_layout_bindings: change.upgraded_to_layout_bindings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlaySynthesisOutcomeV1 {
+    Synthesized,
+    SuppressedMissingTrigger,
+    SuppressedTriggerNotLiveInCurrentFrame,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlaySynthesisEventV1 {
+    pub kind: UiOverlaySynthesisKindV1,
+    pub id: u64,
+    pub source: UiOverlaySynthesisSourceV1,
+    pub outcome: UiOverlaySynthesisOutcomeV1,
+}
+
+impl UiOverlaySynthesisEventV1 {
+    fn from_event(e: fret_ui_kit::OverlaySynthesisEvent) -> Self {
+        use fret_ui_kit::OverlaySynthesisKind;
+        use fret_ui_kit::OverlaySynthesisOutcome;
+        use fret_ui_kit::OverlaySynthesisSource;
+
+        let kind = match e.kind {
+            OverlaySynthesisKind::Modal => UiOverlaySynthesisKindV1::Modal,
+            OverlaySynthesisKind::Popover => UiOverlaySynthesisKindV1::Popover,
+            OverlaySynthesisKind::Hover => UiOverlaySynthesisKindV1::Hover,
+            OverlaySynthesisKind::Tooltip => UiOverlaySynthesisKindV1::Tooltip,
+        };
+        let source = match e.source {
+            OverlaySynthesisSource::CachedDeclaration => {
+                UiOverlaySynthesisSourceV1::CachedDeclaration
+            }
+        };
+        let outcome = match e.outcome {
+            OverlaySynthesisOutcome::Synthesized => UiOverlaySynthesisOutcomeV1::Synthesized,
+            OverlaySynthesisOutcome::SuppressedMissingTrigger => {
+                UiOverlaySynthesisOutcomeV1::SuppressedMissingTrigger
+            }
+            OverlaySynthesisOutcome::SuppressedTriggerNotLiveInCurrentFrame => {
+                UiOverlaySynthesisOutcomeV1::SuppressedTriggerNotLiveInCurrentFrame
+            }
+        };
+
+        Self {
+            kind,
+            id: e.id.0,
+            source,
+            outcome,
         }
     }
 }
@@ -3209,7 +3324,7 @@ impl UiDirtyViewV1 {
         };
 
         Self {
-            root_node: key_to_u64(dirty.root),
+            root_node: key_to_u64(dirty.view.0),
             root_element: dirty.element.map(|e| e.0),
             source: Some(source.to_string()),
             detail: dirty.detail.as_str().map(|s| s.to_string()),
@@ -3225,6 +3340,8 @@ pub struct UiCacheRootStatsV1 {
     pub element_path: Option<String>,
     pub reused: bool,
     pub contained_layout: bool,
+    #[serde(default)]
+    pub contained_relayout_in_frame: bool,
     pub paint_replayed_ops: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub direct_child_nodes: Option<u32>,
@@ -3260,6 +3377,7 @@ impl UiCacheRootStatsV1 {
         ui: &UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
         semantics: Option<&UiSemanticsSnapshotV1>,
+        contained_relayout_roots: &HashSet<fret_core::NodeId>,
         stats: &fret_ui::tree::UiDebugCacheRootStats,
     ) -> Self {
         let element_path = stats.element.and_then(|id| {
@@ -3290,6 +3408,7 @@ impl UiCacheRootStatsV1 {
             let id = stats.root.data().as_ffi();
             snap.nodes.iter().any(|n| n.id == id)
         });
+        let contained_relayout_in_frame = contained_relayout_roots.contains(&stats.root);
 
         let (
             children_last_set_location,
@@ -3350,6 +3469,7 @@ impl UiCacheRootStatsV1 {
             element_path,
             reused: stats.reused,
             contained_layout: stats.contained_layout,
+            contained_relayout_in_frame,
             paint_replayed_ops: stats.paint_replayed_ops,
             direct_child_nodes: Some(direct_child_nodes),
             subtree_nodes: Some(seen.len().min(u32::MAX as usize) as u32),
@@ -3868,6 +3988,16 @@ pub struct UiFrameStatsV1 {
     pub view_cache_invalidation_truncations: u32,
     #[serde(default)]
     pub view_cache_contained_relayouts: u32,
+    #[serde(default)]
+    pub set_children_barrier_writes: u32,
+    #[serde(default)]
+    pub barrier_relayouts_scheduled: u32,
+    #[serde(default)]
+    pub barrier_relayouts_performed: u32,
+    #[serde(default)]
+    pub virtual_list_visible_range_checks: u32,
+    #[serde(default)]
+    pub virtual_list_visible_range_refreshes: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -3923,6 +4053,11 @@ impl UiFrameStatsV1 {
             view_cache_active: stats.view_cache_active,
             view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
             view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
+            set_children_barrier_writes: stats.set_children_barrier_writes,
+            barrier_relayouts_scheduled: stats.barrier_relayouts_scheduled,
+            barrier_relayouts_performed: stats.barrier_relayouts_performed,
+            virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
+            virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
@@ -4643,6 +4778,7 @@ fn pick_best_match<'a>(
 
 fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
+    window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
     pred: &UiPredicateV1,
@@ -4666,15 +4802,30 @@ fn eval_predicate(
             else {
                 return false;
             };
-            let Some(window_bounds) = snapshot
-                .nodes
-                .iter()
-                .find(|n| n.role == fret_core::SemanticsRole::Window)
-                .map(|n| n.bounds)
+            rects_intersect(node.bounds, window_bounds)
+        }
+        UiPredicateV1::BoundsWithinWindow { target, padding_px } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
                 return false;
             };
-            rects_intersect(node.bounds, window_bounds)
+            let bounds = node.bounds;
+            let pad = padding_px.max(0.0);
+
+            let window_left = window_bounds.origin.x.0 + pad;
+            let window_top = window_bounds.origin.y.0 + pad;
+            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0 - pad;
+            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0 - pad;
+
+            let node_left = bounds.origin.x.0;
+            let node_top = bounds.origin.y.0;
+            let node_right = bounds.origin.x.0 + bounds.size.width.0;
+            let node_bottom = bounds.origin.y.0 + bounds.size.height.0;
+
+            node_left >= window_left
+                && node_top >= window_top
+                && node_right <= window_right
+                && node_bottom <= window_bottom
         }
     }
 }
@@ -5272,6 +5423,18 @@ mod tests {
     }
 
     #[test]
+    fn scripts_support_reset_diagnostics_step() {
+        let parsed: UiActionScriptV1 =
+            serde_json::from_str(r#"{"schema_version":1,"steps":[{"type":"reset_diagnostics"}]}"#)
+                .expect("parse reset_diagnostics step");
+        assert_eq!(parsed.schema_version, 1);
+        assert!(
+            matches!(parsed.steps.as_slice(), [UiActionStepV1::ResetDiagnostics]),
+            "expected reset_diagnostics step"
+        );
+    }
+
+    #[test]
     fn pick_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
@@ -5453,6 +5616,66 @@ mod tests {
             UiSelectorV1::TestId { id } => assert_eq!(id, "open"),
             other => panic!("expected TestId selector, got: {other:?}"),
         }
+    }
+
+    #[test]
+    fn bounds_within_window_predicate_respects_padding() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "content",
+                    "content",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsWithinWindow {
+            target: UiSelectorV1::TestId {
+                id: "content".to_string(),
+            },
+            padding_px: 0.0,
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::BoundsWithinWindow {
+            target: UiSelectorV1::TestId {
+                id: "content".to_string(),
+            },
+            padding_px: 12.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected padding to shrink the allowed window rect"
+        );
     }
 
     #[test]

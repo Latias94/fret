@@ -110,17 +110,21 @@ Use this when the UI "feels slow" and you need a repeatable way to find the wors
 
 2. Run a predefined suite and report the slowest frames:
 
-   - Reuse an already-running app:
+    - Reuse an already-running app:
 
-     - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
+      - `cargo run -p fretboard -- diag perf ui-gallery --sort time`
 
-     - Machine-readable JSON:
+      - Machine-readable JSON:
 
-       - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
+        - `cargo run -p fretboard -- diag perf ui-gallery --sort time --json`
 
-   - Or launch a fresh process per script (clean state, slower):
+      - Repeatable perf summary (helps reduce noise; nearest-rank p50/p95 across N runs):
 
-     - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
+        - `cargo run -p fretboard -- diag perf ui-gallery --repeat 7 --warmup-frames 5 --sort time --json`
+
+    - Or launch a fresh process per script (clean state, slower):
+
+      - `cargo run -p fretboard -- diag perf ui-gallery --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
 3. Inspect the slowest snapshots in the resulting bundle:
 
@@ -218,7 +222,8 @@ At a high level:
   - `debug.stats`: layout/paint timings and counters
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
-  - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, with optional `reuse_reason`)
+  - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
+  - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
   - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals; includes optional `*_path` strings for key elements)
@@ -290,10 +295,11 @@ Supported selectors (v1 MVP):
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`)
 - `move_pointer`
 - `drag_pointer` (optional `button`, `steps`)
-- `wheel`
+- `wheel` (optional `delta_x`, `delta_y`; default `0`)
 - `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
+- `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`
 - `wait_until`
 - `assert`
@@ -358,7 +364,8 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
-- `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
+ - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
+ - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}` (target bounds must be fully contained within the window, optionally padded inward)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
@@ -450,6 +457,61 @@ The `tools/diag-scripts/` directory contains curated scripts intended to become 
 For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
+
+### View-cache regression gating
+
+Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
+you can enforce a minimum number of cache-root reuse events observed in the exported `bundle.json`.
+
+Example (UI gallery):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --check-view-cache-reuse-min 1 --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events in snapshots after `--warmup-frames`.
+- If `view_cache_active` is false for all snapshots (or `cache_roots` are not exported), the check will fail by design.
+
+### Overlay synthesis regression gating
+
+Some overlay regressions only show up when overlay requests must be synthesized from cached declarations
+(because view caching skipped rerendering the producer subtree). To avoid "it passed but never tested
+the synthesis seam", you can gate on synthesis events exported in `bundle.json`:
+
+- `--check-overlay-synthesis-min N` counts `debug.overlay_synthesis[].outcome == "synthesized"` events in snapshots after `--warmup-frames`.
+
+### Matrix runner (uncached vs cached)
+
+To automate the “view-cache is behavior preserving” check across the UI gallery suite, run the matrix:
+
+- `cargo run -p fretboard -- diag matrix ui-gallery --dir target/fret-diag --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --launch -- cargo run -p fret-ui-gallery --release`
+
+Notes:
+
+- Requires `--launch` so the runner can control `FRET_UI_GALLERY_VIEW_CACHE` (0 vs 1) per run.
+- Writes bundles under `--dir/uncached` and `--dir/cached`, then compares each script pair via `diag compare` semantics.
+- Default reuse gate is `--check-view-cache-reuse-min 1` (pass `--check-view-cache-reuse-min 0` to disable the gate).
+- If `--env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1` is set, the matrix run also defaults to `--check-overlay-synthesis-min 1` for the cached variant (pass `--check-overlay-synthesis-min 0` to disable). The gate is only enforced for overlay-centric scripts (non-overlay scripts in the suite are exempt).
+
+Recommended (CI/automation):
+
+- `pwsh tools/diag_matrix_ui_gallery.ps1 -OutDir target/fret-diag -WarmupFrames 5 -Release -Json`
+
+### Bundle comparison (cached vs uncached)
+
+To build confidence that view-cache is "behavior preserving", compare two captured bundles.
+`fretboard diag compare` focuses on stable `debug.semantics.nodes[].test_id` anchors and can also compare
+`scene_fingerprint` (paint output fingerprint) for the selected snapshots.
+
+Example:
+
+- `cargo run -p fretboard -- diag compare ./target/fret-diag/uncached ./target/fret-diag/cached --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint --json`
+
+Notes:
+
+- By default, the command compares the last snapshot after `--warmup-frames` (per bundle, first window).
+- Use `--compare-ignore-bounds` if you only want structural semantics checks (role/flags/actions).
+- Use `--compare-ignore-scene-fingerprint` if the scene fingerprint is expected to differ (e.g. non-deterministic content).
 
 ## Troubleshooting
 

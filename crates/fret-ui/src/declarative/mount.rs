@@ -1082,6 +1082,10 @@ fn mount_element<H: UiHost>(
     };
 
     collect_scroll_handle_bindings(id, &instance, scroll_bindings);
+    let use_barrier_set_children = matches!(
+        &instance,
+        ElementInstance::VirtualList(props) if virtual_list_can_be_layout_barrier(props)
+    );
 
     let previous_instance = window_frame.instances.get(&node).map(|r| &r.instance);
     if !reuse_view_cache {
@@ -1216,7 +1220,9 @@ fn mount_element<H: UiHost>(
                 pending_invalidations,
             ));
         }
-        if had_existing_node {
+        if use_barrier_set_children {
+            ui.set_children_barrier(node, child_nodes.clone());
+        } else if had_existing_node {
             ui.set_children(node, child_nodes.clone());
         } else {
             ui.set_children_in_mount(node, child_nodes.clone());
@@ -1244,7 +1250,9 @@ fn mount_element<H: UiHost>(
                 pending_invalidations,
             ));
         }
-        if had_existing_node {
+        if use_barrier_set_children {
+            ui.set_children_barrier(node, child_nodes.clone());
+        } else if had_existing_node {
             ui.set_children(node, child_nodes.clone());
         } else {
             ui.set_children_in_mount(node, child_nodes.clone());
@@ -1369,6 +1377,17 @@ fn declarative_instance_change_mask(
         return INVALIDATION_PAINT;
     }
     0
+}
+
+fn virtual_list_can_be_layout_barrier(props: &crate::element::VirtualListProps) -> bool {
+    match props.axis {
+        fret_core::Axis::Vertical => {
+            !matches!(props.layout.size.height, crate::element::Length::Auto)
+        }
+        fret_core::Axis::Horizontal => {
+            !matches!(props.layout.size.width, crate::element::Length::Auto)
+        }
+    }
 }
 
 fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: HashMap<NodeId, u8>) {

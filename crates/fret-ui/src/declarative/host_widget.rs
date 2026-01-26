@@ -536,10 +536,12 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             }
             ElementInstance::VirtualList(props) => crate::widget::ScrollIntoViewResult::Handled {
                 did_scroll: {
-                    // VirtualList rows are laid out in unscrolled content space and translated at
-                    // paint/input time (children-only transform). Map the viewport into that same
-                    // content coordinate space before computing the delta.
-                    let offset = props.scroll_handle.offset();
+                    // VirtualList content is translated at paint/input time (children-only
+                    // transform), so `descendant_bounds` is expressed in the unscrolled content
+                    // coordinate space. Map the viewport into that same space before computing
+                    // the delta.
+                    let handle = props.scroll_handle.base_handle();
+                    let offset = handle.offset();
                     let viewport_in_content = Rect::new(
                         Point::new(
                             Px(cx.bounds.origin.x.0 + offset.x.0),
@@ -547,11 +549,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                         ),
                         cx.bounds.size,
                     );
-                    scroll_handle_into_view_y(
-                        props.scroll_handle.base_handle(),
-                        viewport_in_content,
-                        descendant_bounds,
-                    )
+                    scroll_handle_into_view_y(handle, viewport_in_content, descendant_bounds)
                 },
             },
             _ => crate::widget::ScrollIntoViewResult::NotHandled,

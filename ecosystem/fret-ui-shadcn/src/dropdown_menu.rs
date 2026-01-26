@@ -2264,7 +2264,9 @@ impl DropdownMenu {
                             )]
                         },
                     );
-                    content_focus_id_for_children.set(Some(content_id));
+                    if content_focus_id_for_children.get().is_none() {
+                        content_focus_id_for_children.set(Some(content_id));
+                    }
                     cx.key_on_key_down_for(
                         content_id,
                         Arc::new({
@@ -2379,6 +2381,10 @@ impl DropdownMenu {
                         let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
                             return (children, Some(dismissible_on_pointer_move));
                         };
+
+                        // Keep submenu geometry up to date so pointer-grace / safe-hover policies
+                        // can arm close timers when the pointer leaves the submenu corridor.
+                        menu::sub::set_geometry_if_changed(cx, geometry, &submenu_for_panel.geometry);
 
                         let submenu_entries = find_submenu_entries_by_value(
                             entries_for_submenu.as_ref(),
@@ -3614,7 +3620,9 @@ mod tests {
             let mut services = FakeServices::default();
 
             let open = app.models_mut().insert(true);
-            let trigger_id_out = app.models_mut().insert(None);
+            let trigger_id_out = app
+                .models_mut()
+                .insert(None::<fret_ui::elements::GlobalElementId>);
 
             let entries = vec![DropdownMenuEntry::Item(
                 DropdownMenuItem::new("Alpha").value("alpha"),
@@ -4703,8 +4711,8 @@ mod tests {
         let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
         let position = rect_center(trigger_bounds);
 
-        // shadcn `DropdownMenu` uses a caller-owned open model; treat this pointer interaction as
-        // the "open reason" and flip the open model like a trigger would.
+        // shadcn `DropdownMenu` uses a caller-owned open model; treat this click interaction as
+        // the "open reason" and flip the open model like a trigger would (on pointer-up activate).
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -4713,6 +4721,19 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
             }),
@@ -4991,7 +5012,6 @@ mod tests {
         } else {
             Point::new(more_center.x, Px(bounds.size.height.0 + 100.0))
         };
-
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -5336,7 +5356,9 @@ mod tests {
         ui.set_window(window);
 
         let open = app.models_mut().insert(false);
-        let trigger_id_out = app.models_mut().insert(None);
+        let trigger_id_out = app
+            .models_mut()
+            .insert(None::<fret_ui::elements::GlobalElementId>);
 
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),

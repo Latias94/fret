@@ -96,3 +96,5 @@ Evidence anchors:
 - State key tracking + touch helpers: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementState::*view_cache*`)
 - Mount-time subtree reuse: `crates/fret-ui/src/declarative/mount.rs` (`mount_element`, subtree helpers)
 - Conformance test: `crates/fret-ui/src/declarative/tests/view_cache.rs`
+  - Notes: cache-hit frames are asserted to preserve painted scene ops, semantics output, and hit targets.
+  - Notes: includes modal overlay (barrier root) input-gating outcomes under view-cache reuse.

@@ -1,9 +1,9 @@
 use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
-use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
 impl ElementHostWidget {
     pub(super) fn layout_virtual_list_impl<H: UiHost>(
@@ -12,6 +12,7 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::VirtualListProps,
     ) -> Size {
+        let axis = props.axis;
         let (
             mut metrics,
             prev_items_revision,
@@ -49,7 +50,6 @@ impl ElementHostWidget {
         let content_extent = metrics.total_height();
         let should_remeasure_visible_items = props.items_revision != prev_items_revision;
 
-        let axis = props.axis;
         let desired_w = match props.layout.size.width {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill => cx.available.width,
@@ -78,6 +78,14 @@ impl ElementHostWidget {
             fret_core::Axis::Horizontal => Px(size.width.0.max(0.0)),
         };
         let mut needs_redraw = false;
+
+        let cross_extent = match axis {
+            fret_core::Axis::Vertical => size.width,
+            fret_core::Axis::Horizontal => size.height,
+        };
+        if metrics.reset_measured_cache_if_cross_extent_changed(cross_extent) {
+            needs_redraw = true;
+        }
 
         props.scroll_handle.set_items_count(props.len);
         self.scroll_child_transform = Some(super::super::ScrollChildTransform {
@@ -118,27 +126,6 @@ impl ElementHostWidget {
         if (prev_offset_axis.0 - offset.0).abs() > 0.01 {
             needs_redraw = true;
         }
-        match axis {
-            fret_core::Axis::Vertical => {
-                props
-                    .scroll_handle
-                    .set_offset_internal(fret_core::Point::new(prev_offset.x, offset));
-            }
-            fret_core::Axis::Horizontal => {
-                props
-                    .scroll_handle
-                    .set_offset_internal(fret_core::Point::new(offset, prev_offset.y));
-            }
-        }
-
-        props
-            .scroll_handle
-            .set_viewport_size(Size::new(size.width, size.height));
-        let content_size = match axis {
-            fret_core::Axis::Vertical => Size::new(size.width, content_extent),
-            fret_core::Axis::Horizontal => Size::new(content_extent, size.height),
-        };
-        props.scroll_handle.set_content_size(content_size);
 
         let visible_range = metrics.visible_range(offset, viewport, 0);
         let anchor = visible_range.map(|r| r.start_index);
@@ -177,10 +164,19 @@ impl ElementHostWidget {
 
                 for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
                     let idx = item.index;
-                    let measured = cx.measure_in(child, item_constraints);
-                    let measured_extent = match axis {
-                        fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
-                        fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
+                    let should_measure = !metrics.is_measured(idx)
+                        || (cx.pass_kind == crate::layout_pass::LayoutPassKind::Final
+                            && cx.tree.node_needs_layout(child));
+                    let measured_extent = if should_measure {
+                        #[cfg(test)]
+                        crate::virtual_list::debug_record_virtual_list_item_measure();
+                        let measured = cx.measure_in(child, item_constraints);
+                        match axis {
+                            fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
+                            fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
+                        }
+                    } else {
+                        metrics.height_at(idx)
                     };
 
                     measured_updates.push((child, idx, measured_extent));
@@ -200,29 +196,12 @@ impl ElementHostWidget {
                         && let (Some(anchor), Some(anchor_offset_in_viewport)) =
                             (anchor, anchor_offset_in_viewport)
                     {
+                        let prev_offset = offset;
                         let desired =
                             Px(metrics.offset_for_index(anchor).0 + anchor_offset_in_viewport.0);
                         offset = metrics.clamp_offset(desired, viewport);
-
-                        let prev = props.scroll_handle.offset();
-                        let prev_axis = match axis {
-                            fret_core::Axis::Vertical => prev.y,
-                            fret_core::Axis::Horizontal => prev.x,
-                        };
-                        if (prev_axis.0 - offset.0).abs() > 0.01 {
+                        if (prev_offset.0 - offset.0).abs() > 0.01 {
                             needs_redraw = true;
-                        }
-                        match axis {
-                            fret_core::Axis::Vertical => {
-                                props
-                                    .scroll_handle
-                                    .set_offset_internal(fret_core::Point::new(prev.x, offset));
-                            }
-                            fret_core::Axis::Horizontal => {
-                                props
-                                    .scroll_handle
-                                    .set_offset_internal(fret_core::Point::new(offset, prev.y));
-                            }
                         }
                     }
                 }
@@ -246,20 +225,16 @@ impl ElementHostWidget {
         let content_extent = metrics.total_height();
         props
             .scroll_handle
-            .set_viewport_size(Size::new(size.width, size.height));
+            .set_viewport_size_internal(Size::new(size.width, size.height));
         let content_size = match axis {
             fret_core::Axis::Vertical => Size::new(size.width, content_extent),
             fret_core::Axis::Horizontal => Size::new(content_extent, size.height),
         };
-        props.scroll_handle.set_content_size(content_size);
+        props.scroll_handle.set_content_size_internal(content_size);
 
         let prev_offset = props.scroll_handle.offset();
-        let prev_axis = match axis {
-            fret_core::Axis::Vertical => prev_offset.y,
-            fret_core::Axis::Horizontal => prev_offset.x,
-        };
-        let clamped = metrics.clamp_offset(prev_axis, viewport);
-        if (clamped.0 - prev_axis.0).abs() > 0.01 {
+        let clamped = metrics.clamp_offset(offset, viewport);
+        if (clamped.0 - offset.0).abs() > 0.01 {
             needs_redraw = true;
         }
         match axis {
@@ -275,6 +250,19 @@ impl ElementHostWidget {
             }
         }
         offset = clamped;
+
+        // Layout children in stable "content space" and apply the scroll offset via
+        // `children_render_transform` (same pattern as `Scroll`).
+        //
+        // This avoids the "translation-only layout" O(N) subtree bound updates that happen when
+        // we bake the scroll offset into each child's layout rect.
+        self.scroll_child_transform = Some(super::super::ScrollChildTransform {
+            handle: props.scroll_handle.base_handle().clone(),
+            axis: match axis {
+                fret_core::Axis::Vertical => crate::element::ScrollAxis::Y,
+                fret_core::Axis::Horizontal => crate::element::ScrollAxis::X,
+            },
+        });
 
         let mut child_rects: Vec<(NodeId, Rect)> = Vec::with_capacity(measured_updates.len());
         for (child, idx, measured_extent) in &measured_updates {
@@ -360,14 +348,24 @@ impl ElementHostWidget {
             // trigger rerender while we're still within overscan.
             if is_probe_layout || viewport.0 <= 0.0 {
                 false
-            } else if let (Some(rendered), Some(visible)) = (render_window_range, visible_range) {
-                if rendered.count == 0 {
-                    false
-                } else {
-                    let rendered_start = rendered.start_index.saturating_sub(rendered.overscan);
-                    let rendered_end = (rendered.end_index + rendered.overscan)
-                        .min(rendered.count.saturating_sub(1));
-                    visible.start_index < rendered_start || visible.end_index > rendered_end
+            } else if let Some(visible) = visible_range {
+                match render_window_range {
+                    None => visible.count > 0,
+                    Some(rendered) => {
+                        if rendered.count == 0 {
+                            // If declarative render couldn't produce a window (typically because
+                            // the viewport size was unknown), the next non-probe layout pass will
+                            // compute a real visible range. Ensure we schedule a rerender so the
+                            // view-cache root can build the initial visible items.
+                            visible.count > 0
+                        } else {
+                            let rendered_start =
+                                rendered.start_index.saturating_sub(rendered.overscan);
+                            let rendered_end = (rendered.end_index + rendered.overscan)
+                                .min(rendered.count.saturating_sub(1));
+                            visible.start_index < rendered_start || visible.end_index > rendered_end
+                        }
+                    }
                 }
             } else {
                 false
@@ -420,8 +418,8 @@ impl ElementHostWidget {
             // invalidations normally.
             cx.tree.mark_nearest_view_cache_root_needs_rerender(
                 cx.node,
-                UiDebugInvalidationSource::Notify,
-                UiDebugInvalidationDetail::ScrollHandleLayout,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
             );
             needs_redraw = true;
         }
@@ -502,8 +500,8 @@ impl ElementHostWidget {
                     .unwrap_or(&state.scroll_handle)
                     .clone();
                 if !is_probe_layout {
-                    handle.set_viewport_size(desired);
-                    handle.set_content_size(Size::new(content_w, content_h));
+                    handle.set_viewport_size_internal(desired);
+                    handle.set_content_size_internal(Size::new(content_w, content_h));
                     let prev = handle.offset();
                     handle.set_offset_internal(prev);
                 }

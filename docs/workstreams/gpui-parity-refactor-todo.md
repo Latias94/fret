@@ -52,8 +52,12 @@ Keep this list short and evidence-backed:
 - ViewCache (v1) mechanics and correctness scaffolding exist:
   - Evidence: `crates/fret-ui/src/tree/tests/view_cache.rs`, `crates/fret-ui/src/declarative/tests/view_cache.rs`,
     `crates/fret-ui/src/tree/paint.rs`, `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/elements/cx.rs`.
+  - Notes: declarative conformance now also asserts cache-hit behavioral equivalence for painted scene ops and semantics/hit targets
+    (see `crates/fret-ui/src/declarative/tests/view_cache.rs`).
+  - Notes: conformance includes modal overlay barrier gating under view-cache reuse.
 - Diagnostics + scripted interaction runner exists (foundation for regression harnesses):
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, `apps/fretboard/src/diag.rs`, `tools/diag-scripts/*`.
+  - Notes: `diag matrix ui-gallery` runs cached vs uncached variants per script and can gate on view-cache reuse and overlay cached-synthesis. Evidence: `tools/diag_matrix_ui_gallery.ps1`, `docs/ui-diagnostics-and-scripted-tests.md`.
 - Cache-root and paint-cache counters are exposed in the UI gallery driver:
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (cache roots and paint cache stats).
 
@@ -65,6 +69,14 @@ Keep this list short and evidence-backed:
   - Touches: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/paint.rs`
 - [x] GPUI-MVP0-diag-003 Overlay torture scripted scenario exists.
   - Touches: `tools/diag-scripts/ui-gallery-overlay-torture.json`, `apps/fretboard/src/diag.rs`
+- [x] GPUI-MVP0-diag-012 Modal barrier underlay-block scripted scenario exists (overlay regression scaffold).
+  - Touches: `tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json`, `apps/fretboard/src/diag.rs`
+- [x] GPUI-MVP0-diag-013 Add a bundle comparison command (cached vs uncached) to enforce “behavior preserving” view-cache.
+  - Touches: `apps/fretboard/src/diag.rs`, `apps/fretboard/src/cli.rs`, `docs/ui-diagnostics-and-scripted-tests.md`
+  - Notes: compares stable semantics anchors (`debug.semantics.nodes[].test_id`) and can include paint `scene_fingerprint`.
+- [x] GPUI-MVP0-diag-014 Add post-run view-cache reuse gating for scripted regressions.
+  - Touches: `apps/fretboard/src/diag.rs`, `apps/fretboard/src/cli.rs`, `docs/ui-diagnostics-and-scripted-tests.md`
+  - Notes: `--check-view-cache-reuse-min N` counts `debug.cache_roots[].reused == true` events after warmup frames.
 - [x] GPUI-MVP0-diag-004 Virtual list torture scripted scenario exists.
   - Touches: `tools/diag-scripts/ui-gallery-virtual-list-torture.json`, `apps/fretboard/src/diag.rs`
 - [x] GPUI-MVP0-diag-005 Export prepaint timing + add warmup filtering for perf runs.
@@ -103,20 +115,18 @@ Goal: make hover/focus/pressed “cheap by default” and stop subtree shape thr
   - Start with: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, `ecosystem/fret-ui-shadcn/src/*scroll*`
   - Done when: no hover-driven `set_children` churn in these components (verified via diagnostics + manual UX sanity).
   - Evidence: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
-- [ ] GPUI-MVP1-eco-003 Write “pseudoclass rules of thumb” for component authors.
-  - Touches: `docs/component-author-guide.md` or a dedicated addendum under `docs/workstreams/`
-  - Done when: the guidance includes examples for scrollbar fade, hover toolbars, and focus rings without layout shifts.
+- [x] GPUI-MVP1-eco-003 Write “pseudoclass rules of thumb” for component authors.
+  - Evidence: `docs/component-author-guide.md` (Interactivity pseudoclasses section)
 
 ## MVP2 — Dirty Views + `notify` (GPUI-Aligned Invalidation)
 
 Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental model (ADR 0180).
 
-- [~] GPUI-MVP2-rt-001 Define `ViewId` and `notify` API shape at the `fret-ui` / `fret-app` boundary.
-  - Touches: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/elements/*`, `crates/fret-app/src/app.rs`
+- [x] GPUI-MVP2-rt-001 Define `ViewId` and `notify` API shape at the `fret-ui` / `fret-app` boundary.
+  - Touches: `crates/fret-core/src/ids.rs`, `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/tree/*`
   - Reference: `repo-ref/zed/crates/gpui/src/window.rs` (`WindowInvalidator`, `dirty_views`)
-  - Progress: `EventCx::notify()` exists and marks the nearest cache root as `view_cache_needs_rerender` via a dedicated invalidation source.
-  - Evidence: `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationSource::Notify`),
-    `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_notify_marks_cache_root_needs_rerender`).
+  - Evidence: `crates/fret-core/src/ids.rs` (`ViewId`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/dispatch.rs` (notify targets the current view),
+    `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationSource::Notify`, `debug_dirty_views`), `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_notify_marks_cache_root_needs_rerender`).
 - [x] GPUI-MVP2-rt-002 Track per-window dirty view set and coalesce redraw scheduling.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, runner glue in `crates/fret-launch/` if needed
   - Done when: repeated `notify` calls are coalesced; diagnostics can list dirty views (debug-only).
@@ -135,13 +145,13 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `crates/fret-ui/src/declarative/mount.rs` (drains animation-frame notify requests and invalidates with `UiDebugInvalidationDetail::AnimationFrameRequest`)
     - `crates/fret-ui/src/declarative/tests/view_cache.rs` (`request_animation_frame_marks_view_cache_root_dirty`)
     - `crates/fret-ui/src/tree/tests/view_cache.rs` (`widget_request_animation_frame_marks_nearest_view_cache_root_dirty`)
-- [~] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
+- [x] GPUI-MVP2-cache-003 Gate view-cache reuse on dirty views.
   - Touches: `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/declarative/mount.rs`, `crates/fret-ui/src/elements/runtime.rs`
   - Done when: a notified view never reuses cached ranges; a clean view reliably reuses them.
   - Progress: `notify` marks the nearest cache root as `view_cache_needs_rerender`, which disables view-cache reuse for that root.
   - Progress: model/global observation invalidation also marks cache roots dirty (`view_cache_needs_rerender`) so reuse is disabled on data changes.
   - Progress: cache-hit frames still uplift element-recorded observations to cache roots (prevents stale cache-hit when an input event changes model state but the subtree is reused).
-  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/elements/runtime.rs`,
+  - Evidence: `crates/fret-core/src/ids.rs` (`ViewId`), `crates/fret-ui/src/tree/dispatch.rs` (`notify_target_for_node`), `crates/fret-ui/src/tree/mod.rs` (`should_reuse_view_cache_node`, `invalidation_source_marks_view_dirty`), `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/elements/runtime.rs`,
     `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_roots`).
 
 - [x] GPUI-MVP2-cache-004 Stabilize overlay interactions under `ViewCache` shell reuse.
@@ -158,7 +168,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Follow-up: remove the global "skip sweep when reuse exists" stopgap by relying on explicit liveness under cache-root reuse (dirty views + notify + cache key gates).
 
 - [x] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
-  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC + cache-root subtree recording), `crates/fret-ui/src/elements/runtime.rs` (per-root subtree lists), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
+  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC + cache-root subtree recording), `crates/fret-ui/src/tree/mod.rs` (parent pointer repair), `crates/fret-ui/src/elements/runtime.rs` (per-root subtree lists), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Contract: `docs/adr/0191-declarative-liveness-roots-and-gc-under-view-cache-reuse.md` (Accepted).
   - Fix (v1):
@@ -279,6 +289,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
           - `debug.cache_roots[*].children_last_set_{old,new}_elements_head_paths`
       - Confirm whether liveness-root selection is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the liveness root set if needed.
     - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
+  - Evidence (unit): `crates/fret-ui/src/declarative/tests/core.rs` (`stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse`)
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
   - Touches: `crates/fret-ui/src/tree/layout.rs` (`repair_view_cache_root_bounds_from_engine_if_needed`)
@@ -312,22 +323,71 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
 
 Goal: make caching a closed loop across paint + interaction (+ semantics later), not “paint-only” (ADR 0182).
 
-- [ ] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
+- [~] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
   - Motivation: `ui-gallery-virtual-list-torture.json` remains layout-dominated even with view-cache + shell reuse.
-  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`):
-    - Baseline: `sum.total_time_us=225911` / 10 frames; `max.total_time_us=30585` (layout `29252`).
-    - ViewCache+Shell: `sum.total_time_us=214260` / 10 frames; `max.total_time_us=28999` (layout `27545`).
-    - Smooth wheel (new harness: `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
-      - Baseline: `max.total_time_us=27219` (layout `26948`, prepaint `23`, paint `248`).
-      - ViewCache+Shell: `max.total_time_us=26890` (layout `26205`, prepaint `19`, paint `666`).
+  - Progress: measured-mode virtual lists skip redundant per-frame `measure_in` passes for already-measured, clean visible rows.
+  - Progress: re-measure is forced when the cross-axis viewport extent changes or when a row is layout-invalidated.
+  - Progress: apply scroll offsets via a children-only render transform (content-space child bounds), matching `Scroll` and avoiding translation-only layout rect churn.
+  - Progress: wheel scroll invalidation is `HitTestOnly` (scroll updates coordinate mapping + paint without forcing a layout pass).
+  - Progress: view-cache roots no longer rerender on scroll-handle `HitTestOnly` invalidations (only `Layout` invalidations with `detail=ScrollHandle` force rerender).
+  - Progress: VirtualList wheel handling detects when the mounted visible range no longer covers the desired range and notifies the nearest cache root for a one-shot rerender (avoids per-frame rerenders but keeps virtualization correct under `HitTestOnly` scroll invalidation).
+  - Progress: scroll-handle-driven `HitTestOnly` invalidations (e.g. scrollbar wheel/drag) also run the same range-escape check during event dispatch, so cache-hit frames can schedule a one-shot rerender even when the VirtualList widget does not handle the wheel event directly.
+  - Progress: treat VirtualList visible-range structural churn as a layout barrier (avoid forcing ancestor relayout on child list changes; schedule a contained relayout for the list itself).
+  - Progress: export which view-cache roots were re-laid out via the contained-relayout post-pass to diagnostics bundles (`debug.cache_roots[].contained_relayout_in_frame`) and surface it in `fretboard diag stats/perf` (`cache.contained_relayout_roots`, `top_contained_relayout_cache_roots`) so slow scroll frames are explainable and actionable.
+  - Progress: avoid scroll-handle revision churn from runtime layout bookkeeping (viewport/content size writes do not bump revisions), and classify offset-driven scroll changes as `HitTestOnly` even when other scroll-handle fields update in the same frame (reduces spurious layout-driven rerender waves during steady scroll under view-cache reuse).
+  - Progress: keep scroll-handle value baselines (offset/viewport/content) in sync even when the revision does not change, so a later revision-only bump (e.g. deferred `scroll_to_item`) is classified as `Layout` and still runs the layout consumption path.
+  - Progress: fix focus/click scroll-into-view to map the viewport into the same (unscrolled) content coordinate space as `descendant_bounds` (prevents scroll jumps under render transforms).
+  - Progress: wrap heavyweight rows in per-row view-cache roots (keyed by item key) so steady-state scroll can rerender the list shell without rebuilding row subtrees.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (measurement gate, content-space bounds + `scroll_child_transform`), `crates/fret-ui/src/virtual_list.rs` (cross-extent measurement reset), `crates/fret-ui/src/declarative/host_widget/paint.rs` (paint applies `children_render_transform`), `crates/fret-ui/src/declarative/host_widget.rs` (scroll-into-view viewport mapping), `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` (wheel `HitTestOnly`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_skips_redundant_measures_for_clean_measured_rows`, `virtual_list_scroll_offsets_apply_in_semantics_snapshot`, `virtual_list_click_focus_does_not_trigger_scroll_jump_under_children_transform`, `virtual_list_scroll_transform_does_not_double_transform_per_row_clip_rects`).
+  - Evidence: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_row_view_cache_reuses_rows_across_small_scroll_deltas`), `apps/fret-ui-gallery/src/ui.rs` (virtual list torture rows wrapped in `cached_subtree`).
+  - Evidence: `crates/fret-ui/src/declarative/frame.rs` (`scroll_handle_revision_only_bumps_after_internal_offset_updates_classify_as_layout`), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_can_scroll_to_deep_index_then_to_end`).
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`set_children_barrier`, `take_pending_barrier_relayouts`, `invalidation_marks_view_dirty`), `crates/fret-ui/src/tree/layout.rs` (`layout_pending_barrier_relayouts_if_needed`, fixed-mode `scroll_to_item` early consumption), `crates/fret-ui/src/tree/dispatch.rs` (dispatch-time range escape notify for `HitTestOnly` invalidations), `crates/fret-ui/src/declarative/mount.rs` (`VirtualList` uses barrier set-children when axis size is layout-definite), `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_scroll_handle_hit_test_only_does_not_mark_root_dirty`, `view_cache_scroll_handle_layout_invalidation_marks_root_dirty`), `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` (`VirtualList` wheel range escape notify), `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached`, `virtual_list_triggers_visible_range_rerender_on_scrollbar_wheel_when_cached`, `virtual_list_fixed_scroll_to_item_does_not_force_layout_invalidation`).
+  - Perf snapshot (release, `--warmup-frames 5`, `--sort time`, `--repeat 7`; nearest-rank p50/p95; updated after per-row view-cache roots):
+    - Torture (`tools/diag-scripts/ui-gallery-virtual-list-torture.json`):
+      - Baseline: `p50.total_time_us=30326` `p95.total_time_us=32747` (p50 layout `28856`, prepaint `36`, paint `1391`) (run dir: `target/fret-diag-perf-vlist-torture-baseline-r7-0125-1542`).
+      - ViewCache+Shell: `p50.total_time_us=29842` `p95.total_time_us=31073` (p50 layout `28267`, prepaint `24`, paint `1496`) (run dir: `target/fret-diag-perf-vlist-torture-cache-shell-r7-0125-1549`).
+      - Note: wall-clock timings are noisy; use repeat percentiles for comparisons, and expect occasional spikes.
+    - Smooth wheel (`tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`):
+      - Baseline: `p50.total_time_us=23589` `p95.total_time_us=24397` (p50 layout `23282`, prepaint `29`, paint `277`) (run dir: `target/fret-diag-perf-vlist-smooth-baseline-r7-0125-1854`).
+      - ViewCache+Shell: `p50.total_time_us=26188` `p95.total_time_us=27472` (p50 layout `25309`, prepaint `26`, paint `861`) (run dir: `target/fret-diag-perf-vlist-smooth-cache-shell-r7-0125-1857`).
+      - Note: the smooth-wheel script primes scroll first, then uses `reset_diagnostics` before the measured segment so the bundle captures steady-state scroll behavior (not the initial range-refresh / mount churn).
   - Commands:
-    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-baseline --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
-    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-cache-shell --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
-    - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --warmup-frames 5 --sort time --top 15 --dir target/fret-diag-perf-vlist-smooth-scroll-baseline --launch -- cargo run -p fret-ui-gallery --release`
-    - `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --warmup-frames 5 --sort time --top 15 --dir target/fret-diag-perf-vlist-smooth-scroll-cache-shell --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
-  - Sketch:
-    - Move “visible range / scroll_to_item” work toward `prepaint` (GPUI-style), so steady-state scroll can reuse paint + interaction ranges without rebuilding large declarative subtrees.
+    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-torture-baseline-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 12 --repeat 7 --json perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-torture-cache-shell-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 12 --repeat 7 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-smooth-baseline-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 15 --repeat 7 --json perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --launch -- cargo run -p fret-ui-gallery --release`
+    - `cargo run -p fretboard -- diag --dir target/fret-diag-perf-vlist-smooth-cache-shell-r7 --timeout-ms 300000 --poll-ms 200 --warmup-frames 5 --sort time --top 15 --repeat 7 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 perf tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json --launch -- cargo run -p fret-ui-gallery --release`
+  - Notes:
+    - The current per-row cache roots help reduce subtree rebuild cost, but the measured scroll paths are still layout-dominated.
+    - The smooth wheel scenario improved after stopping view-cache rerenders on scroll-handle `HitTestOnly` invalidations, but long-term we still want the range bookkeeping to move earlier (prepaint) so the “range delta” path stays cheap.
+    - Correctness: `fretboard diag compare target/fret-diag-vlist-torture-uncached-r1 target/fret-diag-vlist-torture-cache-shell-r1 --warmup-frames 5 --compare-ignore-bounds --compare-ignore-scene-fingerprint` reports `ok=true`.
+  - Checklist:
+    - [x] Avoid redundant per-row `measure_in` for clean measured rows (measured-mode gate).
+    - [x] Apply scroll offsets via a children-only render transform (content-space bounds).
+    - [x] Treat visible-range set-children churn as a layout barrier.
+    - [x] Wrap heavyweight rows in per-row view-cache roots (stable per-item identity).
+    - [x] Export VirtualList scroll/range diagnostics counters (range recompute, children churn, barrier relayouts) to bundles to make regressions explainable.
+      - Fields: `set_children_barrier_writes`, `barrier_relayouts_scheduled`, `barrier_relayouts_performed`, `virtual_list_visible_range_checks`, `virtual_list_visible_range_refreshes`.
+      - Tooling: `fretboard diag perf --json` includes these counters in both per-run rows and summarized percentiles (so perf diffs don't require manually inspecting bundle dumps).
+      - Evidence: `crates/fret-ui/src/tree/mod.rs` (`UiDebugFrameStats`, `debug_record_virtual_list_visible_range_check`),
+        `crates/fret-ui/src/tree/layout.rs` (`barrier_relayouts_performed`),
+        `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiFrameStatsV1` export),
+        `crates/fret-ui/src/declarative/host_widget/paint.rs` (range checks).
+    - [x] Export contained-relayout cache-root hotspots to bundles and tooling (debug visibility for scroll perf regressions).
+      - Fields: `debug.cache_roots[].contained_relayout_in_frame`, `fretboard diag stats/perf: cache.contained_relayout_roots`, `top_contained_relayout_cache_roots`.
+      - Evidence: `crates/fret-ui/src/tree/layout.rs` (`layout_contained_view_cache_roots_if_needed` recording), `crates/fret-ui/src/tree/mod.rs` (`debug_view_cache_contained_relayout_roots`),
+        `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export), `apps/fretboard/src/diag.rs` (stats/perf surfaces).
+    - [x] Avoid scroll-handle revision churn from runtime layout bookkeeping (reduce rerender churn under view-cache reuse).
+      - Touches: `crates/fret-ui/src/scroll.rs` (internal setters), `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (use internal setters), `crates/fret-ui/src/declarative/frame.rs` (change classification), `crates/fret-ui/src/tree/mod.rs` (`propagate_auto_sized_view_cache_root_invalidations` gating).
+      - Evidence: `crates/fret-ui/src/scroll.rs` (`scroll_handle_internal_setters_do_not_bump_revision`), `crates/fret-ui/src/declarative/frame.rs` (`scroll_handle_changes_classify_value_changes_as_hit_test_only`), `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_auto_sized_repair_does_not_promote_hit_test_when_bounds_are_known`).
+    - [x] Avoid view-cache rerenders on scroll-handle `HitTestOnly` invalidations (rerender only on `Layout` invalidations with `detail=ScrollHandle`).
+    - [x] Trigger a one-shot rerender when the desired visible range escapes the mounted range (avoid per-frame rerenders but keep virtualization correct under wheel scroll).
+    - [x] Move visible-range escape detection toward the runtime dispatch path (GPUI-style "range delta" gate), so scroll-handle changes can schedule a one-shot rerender even when the VirtualList widget does not handle the event directly.
+    - [ ] Use contained-relayout cache-root hotspot diagnostics to reduce post-pass contained relayouts during steady scroll (target: `cache.contained_relayout_roots` stays near 0 for smooth-wheel frames under view-cache + shell).
+    - [~] Move `scroll_to_item` consumption earlier than layout where possible (fixed-mode early consumption; measured-mode still consumed during final layout).
+    - [x] Repeat the perf runs (baseline vs cache+shell) and update the p50/p95 snapshots after each structural change (see run dirs above).
+  - Sketch (target shape):
     - Keep per-item identity stable (do not recycle cells) while making the “range delta” path cheap.
+    - Make “range delta” a prepaint-plan update whenever possible (offset/visible range), and keep layout limited to true geometry changes.
 - [~] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.
   - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-core/src/*` (data-only shapes as needed)
@@ -360,9 +420,10 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
 
 Goal: make the new contracts “default obvious” by migrating a small set of representative components and demos.
 
-- [ ] GPUI-MVP4-eco-001 Add an ecosystem-facing “cached subtree” helper API (policy-free).
-  - Touches: `ecosystem/fret-ui-kit/src/*`
-- [ ] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
+- [x] GPUI-MVP4-eco-001 Add an ecosystem-facing “cached subtree” helper API (policy-free).
+  - Touches: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`, `CachedSubtreeProps`)
+- [~] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
   - Touches: `apps/fret-ui-gallery/src/*`, selected `ecosystem/*` components
 - [~] GPUI-MVP4-demo-003 VirtualList: move “visible range” derivation from declarative render into prepaint-driven state.
   - Motivation: reduce cache-root rerenders and layout invalidations during scroll/hover by keeping the element tree more structurally stable.
@@ -782,6 +843,7 @@ topics (if/when we implement them):
         per-node invalidation walks for freshly created nodes whose invalidation flags are already set.
       - Evidence (release perf; avoids Windows debug PDB limits): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --warmup-frames 5 --top 5 --sort time --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release`
         produced `target/fret-diag-perf-mount-invalidation/1769133988059-script-step-0011-click/bundle.json` with warmup-ranked top.us(total/layout/prepaint/paint)=30365/29262/67/1036 and `debug.stats.invalidation_walk_calls=45`.
+  - Progress: VirtualList torture rows are now wrapped in per-row view-cache roots (keyed by item key) so the shell can rerender without rebuilding heavy rows.
 
 ## Open Questions (Keep Short)
 

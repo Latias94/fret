@@ -715,6 +715,124 @@ fn stale_nodes_are_swept_after_gc_lag() {
 }
 
 #[test]
+fn stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let mut ids: Vec<(u64, crate::elements::GlobalElementId)> = Vec::new();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp49-sweep-view-cache",
+        |cx| {
+            let mut view_cache = crate::element::ViewCacheProps::default();
+            view_cache.cache_key = 1;
+            let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
+
+            let mut out = vec![cached];
+            out.extend(build_keyed_rows(cx, &[1u64, 2u64], &mut ids));
+            out
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    let node_to_remove =
+        app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+            runtime
+                .for_window_mut(window)
+                .node_entry(ids[1].1)
+                .unwrap()
+                .node
+        });
+
+    // Remove item 2 from the render output, but it should not be swept immediately.
+    app.advance_frame();
+    let _root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp49-sweep-view-cache",
+        |cx| {
+            let mut view_cache = crate::element::ViewCacheProps::default();
+            view_cache.cache_key = 1;
+            let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
+
+            let mut out = vec![cached];
+            out.extend(build_keyed_rows(cx, &[1u64], &mut Vec::new()));
+            out
+        },
+    );
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    assert!(ui.debug_node_bounds(node_to_remove).is_some());
+
+    // Advance frames until the GC lag is exceeded, then render again to trigger the sweep.
+    app.advance_frame();
+    let _ = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp49-sweep-view-cache",
+        |cx| {
+            let mut view_cache = crate::element::ViewCacheProps::default();
+            view_cache.cache_key = 1;
+            let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
+
+            let mut out = vec![cached];
+            out.extend(build_keyed_rows(cx, &[1u64], &mut Vec::new()));
+            out
+        },
+    );
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    assert!(ui.debug_node_bounds(node_to_remove).is_some());
+
+    app.advance_frame();
+    let _ = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp49-sweep-view-cache",
+        |cx| {
+            let mut view_cache = crate::element::ViewCacheProps::default();
+            view_cache.cache_key = 1;
+            let cached = cx.view_cache(view_cache, |cx| vec![cx.text("cached")]);
+
+            let mut out = vec![cached];
+            out.extend(build_keyed_rows(cx, &[1u64], &mut Vec::new()));
+            out
+        },
+    );
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+    assert!(ui.debug_node_bounds(node_to_remove).is_none());
+}
+
+#[test]
 fn dismissible_root_recreates_nodes_after_layer_removal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

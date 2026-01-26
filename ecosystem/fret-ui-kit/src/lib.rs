@@ -57,6 +57,13 @@ pub use window_overlays::{
 
 pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
 
+// Diagnostics-only exports: used by `fret-bootstrap` to export bundle.json fields.
+#[doc(hidden)]
+pub use window_overlays::{
+    OverlaySynthesisEvent, OverlaySynthesisKind, OverlaySynthesisOutcome, OverlaySynthesisSource,
+    WindowOverlaySynthesisDiagnosticsStore,
+};
+
 /// Common imports for component/app code using `fret-ui-kit`.
 ///
 /// Recommended: `use fret_ui_kit::prelude::*;`

@@ -98,6 +98,108 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            let mut change_kind = change.kind;
+
+            // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
+            // when offset/viewport/content are unchanged, which makes the change appear as
+            // "layout-affecting". For fixed-size virtual lists, we can consume the deferred
+            // request up-front (using cached metrics + viewport) and convert it into a simple
+            // offset update, avoiding a layout-driven consumption path.
+            if change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout {
+                let mut consumed_scroll_to_item = false;
+                for element in &bound {
+                    if consumed_scroll_to_item {
+                        break;
+                    }
+                    let Some(node) = crate::declarative::node_for_element_in_window_frame(
+                        &mut *app, window, *element,
+                    ) else {
+                        continue;
+                    };
+                    let Some(record) =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                    else {
+                        continue;
+                    };
+                    let crate::declarative::frame::ElementInstance::VirtualList(props) =
+                        record.instance
+                    else {
+                        continue;
+                    };
+                    if props.measure_mode != crate::element::VirtualListMeasureMode::Fixed {
+                        continue;
+                    }
+                    let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
+                    else {
+                        continue;
+                    };
+
+                    let applied = crate::elements::with_element_state(
+                        &mut *app,
+                        window,
+                        record.element,
+                        crate::element::VirtualListState::default,
+                        |state| {
+                            state.metrics.ensure_with_mode(
+                                props.measure_mode,
+                                props.len,
+                                props.estimate_row_height,
+                                props.gap,
+                                props.scroll_margin,
+                            );
+
+                            let viewport_size = props.scroll_handle.viewport_size();
+                            let viewport = match props.axis {
+                                fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
+                                fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
+                            };
+                            if viewport.0 <= 0.0 || props.len == 0 {
+                                return None;
+                            }
+
+                            let current = match props.axis {
+                                fret_core::Axis::Vertical => props.scroll_handle.offset().y,
+                                fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                            };
+                            let desired = state
+                                .metrics
+                                .scroll_offset_for_item(index, viewport, current, strategy);
+                            let desired = state.metrics.clamp_offset(desired, viewport);
+
+                            match props.axis {
+                                fret_core::Axis::Vertical => state.offset_y = desired,
+                                fret_core::Axis::Horizontal => state.offset_x = desired,
+                            }
+
+                            Some(desired)
+                        },
+                    );
+
+                    let Some(applied) = applied else {
+                        continue;
+                    };
+
+                    let prev = props.scroll_handle.offset();
+                    match props.axis {
+                        fret_core::Axis::Vertical => {
+                            props
+                                .scroll_handle
+                                .set_offset(fret_core::Point::new(prev.x, applied));
+                        }
+                        fret_core::Axis::Horizontal => {
+                            props
+                                .scroll_handle
+                                .set_offset(fret_core::Point::new(applied, prev.y));
+                        }
+                    }
+                    props.scroll_handle.clear_deferred_scroll_to_item();
+
+                    consumed_scroll_to_item = true;
+                    change_kind = crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly;
+                    self.request_redraw_coalesced(app);
+                }
+            }
+
             if self.debug_enabled && self.debug_scroll_handle_changes.len() < 256 {
                 let mut upgraded_to_layout_bindings = 0u32;
                 let mut bound_nodes_sample = Vec::new();
@@ -109,7 +211,7 @@ impl<H: UiHost> UiTree<H> {
                             bound_nodes_sample.push(node);
                         }
 
-                        if change.kind
+                        if change_kind
                             == crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly
                             && let Some(record) = crate::declarative::frame::element_record_for_node(
                                 &mut *app, window, node,
@@ -132,7 +234,7 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_scroll_handle_changes
                     .push(crate::tree::UiDebugScrollHandleChange {
                         handle_key,
-                        kind: match change.kind {
+                        kind: match change_kind {
                             crate::declarative::frame::ScrollHandleChangeKind::Layout => {
                                 crate::tree::UiDebugScrollHandleChangeKind::Layout
                             }
@@ -164,7 +266,7 @@ impl<H: UiHost> UiTree<H> {
                     continue;
                 };
 
-                let mut inv = match change.kind {
+                let mut inv = match change_kind {
                     crate::declarative::frame::ScrollHandleChangeKind::Layout => {
                         Invalidation::Layout
                     }
@@ -172,7 +274,7 @@ impl<H: UiHost> UiTree<H> {
                         Invalidation::HitTestOnly
                     }
                 };
-                let mut detail = match change.kind {
+                let mut detail = match change_kind {
                     crate::declarative::frame::ScrollHandleChangeKind::Layout => {
                         UiDebugInvalidationDetail::ScrollHandleLayout
                     }
@@ -360,6 +462,16 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
+            self.layout_pending_barrier_relayouts_if_needed(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                &mut viewport_cursor,
+            );
+        }
+
+        if pass_kind == LayoutPassKind::Final {
             self.repair_view_cache_root_bounds_from_engine_if_needed(app);
         }
 
@@ -478,6 +590,82 @@ impl<H: UiHost> UiTree<H> {
                 }
                 stack.extend(n.children.iter().copied());
             }
+        }
+    }
+
+    fn layout_pending_barrier_relayouts_if_needed(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        viewport_cursor: &mut usize,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+
+        let pending = self.take_pending_barrier_relayouts();
+        if pending.is_empty() {
+            return;
+        }
+
+        let mut unique = HashSet::<NodeId>::with_capacity(pending.len());
+        let mut targets: Vec<NodeId> = Vec::with_capacity(pending.len());
+        for node in pending {
+            if unique.insert(node) {
+                targets.push(node);
+            }
+        }
+
+        for root in targets {
+            let Some(node) = self.nodes.get(root) else {
+                continue;
+            };
+            if !node.invalidation.layout {
+                continue;
+            }
+
+            // Barrier relayouts intentionally do not invalidate ancestors. Prefer the retained
+            // bounds (stable barrier viewport), but fall back to resolving bounds from the parent
+            // layout-engine rect when needed (e.g. newly mounted nodes with default bounds).
+            let mut bounds = node.bounds;
+            if (bounds.size == Size::default() || bounds.origin == Point::default())
+                && let Some(parent) = node.parent
+                && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
+                && let Some(local) = self.layout_engine_child_local_rect(parent, root)
+            {
+                let resolved = Rect::new(
+                    Point::new(
+                        Px(parent_bounds.origin.x.0 + local.origin.x.0),
+                        Px(parent_bounds.origin.y.0 + local.origin.y.0),
+                    ),
+                    local.size,
+                );
+                if resolved.size != Size::default() {
+                    bounds = resolved;
+                }
+            }
+
+            if bounds.size == Size::default() {
+                continue;
+            }
+
+            let _ =
+                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+            if self.debug_enabled {
+                self.debug_stats.barrier_relayouts_performed = self
+                    .debug_stats
+                    .barrier_relayouts_performed
+                    .saturating_add(1);
+            }
+            self.flush_viewport_roots_after_root(
+                app,
+                services,
+                scale_factor,
+                pass_kind,
+                viewport_cursor,
+            );
         }
     }
 
@@ -646,6 +834,7 @@ impl<H: UiHost> UiTree<H> {
                     .debug_stats
                     .view_cache_contained_relayouts
                     .saturating_add(1);
+                self.debug_view_cache_contained_relayout_roots.push(root);
             }
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);

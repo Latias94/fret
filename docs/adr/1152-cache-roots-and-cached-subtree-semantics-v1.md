@@ -152,6 +152,9 @@ This is the v1 bridge toward GPUI's `ViewCacheKey` checks (`bounds/content_mask/
    - Nested cache roots: inner model change must invalidate outer cache root (no stale replay).
    - Observation uplift: model change invalidates cache root even if only leaf observed.
    - Inspection mode: caching disabled; subtree executed.
+   - Behavioral equivalence: cache-hit frames produce the same painted scene as uncached frames (`crates/fret-ui/src/declarative/tests/view_cache.rs`).
+   - Semantics and hit testing: cache-hit frames preserve semantics output and high-level hit targets (`crates/fret-ui/src/declarative/tests/view_cache.rs`).
+   - Modal overlays: cache-hit frames preserve modal barrier gating and underlay blocking (`crates/fret-ui/src/declarative/tests/view_cache.rs`).
 
 ## Rollout Plan
 

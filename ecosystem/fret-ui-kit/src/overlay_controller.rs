@@ -209,6 +209,7 @@ impl OverlayRequest {
 
     pub fn tooltip(
         id: GlobalElementId,
+        open: Model<bool>,
         presence: OverlayPresence,
         children: Vec<AnyElement>,
     ) -> Self {
@@ -222,7 +223,7 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            open: None,
+            open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -237,22 +238,17 @@ impl OverlayRequest {
     pub fn hover(
         id: GlobalElementId,
         trigger: GlobalElementId,
+        open: Model<bool>,
+        presence: OverlayPresence,
         children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
-        Self::hover_with_presence(
-            id,
-            trigger,
-            OverlayPresence {
-                present: true,
-                interactive: true,
-            },
-            children,
-        )
+        Self::hover_with_presence(id, trigger, open, presence, children)
     }
 
     pub fn hover_with_presence(
         id: GlobalElementId,
         trigger: GlobalElementId,
+        open: Model<bool>,
         presence: OverlayPresence,
         children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
@@ -266,7 +262,7 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            open: None,
+            open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -527,9 +523,7 @@ impl OverlayController {
                 );
             }
             OverlayKind::Tooltip => {
-                if !request.presence.present {
-                    return;
-                }
+                let open = request.open.expect("Tooltip requires open model");
                 let root_name = request
                     .root_name
                     .unwrap_or_else(|| window_overlays::tooltip_root_name(request.id));
@@ -541,6 +535,8 @@ impl OverlayController {
                         root_name,
                         interactive: request.presence.interactive,
                         trigger: request.trigger,
+                        open,
+                        present: request.presence.present,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
@@ -548,9 +544,7 @@ impl OverlayController {
                 );
             }
             OverlayKind::Hover => {
-                if !request.presence.present {
-                    return;
-                }
+                let open = request.open.expect("Hover requires open model");
                 let trigger = request.trigger.expect("Hover requires trigger");
                 let root_name = request
                     .root_name
@@ -563,6 +557,8 @@ impl OverlayController {
                         root_name,
                         interactive: request.presence.interactive,
                         trigger,
+                        open,
+                        present: request.presence.present,
                         children: request.children,
                     },
                 );

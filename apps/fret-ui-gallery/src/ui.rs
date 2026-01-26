@@ -207,6 +207,7 @@ pub(crate) fn content_view(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
     combobox_value: Model<Option<Arc<str>>>,
@@ -320,66 +321,61 @@ pub(crate) fn content_view(
         },
     );
 
-    let preview_panel = cx.keyed("ui_gallery.content.preview_panel", |cx| {
-        page_preview(
-            cx,
-            theme,
-            selected,
-            view_cache_enabled,
-            view_cache_cache_shell,
-            view_cache_inner_enabled,
-            view_cache_popover_open,
-            view_cache_continuous,
-            view_cache_counter,
-            popover_open,
-            dialog_open,
-            alert_dialog_open,
-            sheet_open,
-            select_value,
-            select_open,
-            combobox_value,
-            combobox_open,
-            combobox_query,
-            date_picker_open,
-            date_picker_month,
-            date_picker_selected,
-            resizable_h_fractions,
-            resizable_v_fractions,
-            data_table_state,
-            data_grid_selected_row,
-            tabs_value,
-            accordion_value,
-            avatar_demo_image,
-            progress,
-            checkbox,
-            switch,
-            text_input,
-            text_area,
-            dropdown_open,
-            context_menu_open,
-            cmdk_open,
-            cmdk_query,
-            last_action,
-            virtual_list_torture_jump,
-            virtual_list_torture_edit_row,
-            virtual_list_torture_edit_text,
-            virtual_list_torture_scroll,
-        )
-    });
-    let docs_panel = cx.keyed("ui_gallery.content.docs_panel", |cx| {
-        if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-            cx.text(docs_md)
-        } else {
-            markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
-        }
-    });
-    let usage_panel = cx.keyed("ui_gallery.content.usage_panel", |cx| {
-        if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-            cx.text(usage_md)
-        } else {
-            markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
-        }
-    });
+    let preview_panel = page_preview(
+        cx,
+        theme,
+        selected,
+        view_cache_enabled,
+        view_cache_cache_shell,
+        view_cache_inner_enabled,
+        view_cache_popover_open,
+        view_cache_continuous,
+        view_cache_counter,
+        popover_open,
+        dialog_open,
+        alert_dialog_open,
+        sheet_open,
+        portal_geometry_popover_open,
+        select_value,
+        select_open,
+        combobox_value,
+        combobox_open,
+        combobox_query,
+        date_picker_open,
+        date_picker_month,
+        date_picker_selected,
+        resizable_h_fractions,
+        resizable_v_fractions,
+        data_table_state,
+        data_grid_selected_row,
+        tabs_value,
+        accordion_value,
+        avatar_demo_image,
+        progress,
+        checkbox,
+        switch,
+        text_input,
+        text_area,
+        dropdown_open,
+        context_menu_open,
+        cmdk_open,
+        cmdk_query,
+        last_action,
+        virtual_list_torture_jump,
+        virtual_list_torture_edit_row,
+        virtual_list_torture_edit_text,
+        virtual_list_torture_scroll,
+    );
+    let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        cx.text(docs_md)
+    } else {
+        markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
+    };
+    let usage_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        cx.text(usage_md)
+    } else {
+        markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
+    };
 
     let tabs = if (bisect & BISECT_DISABLE_TABS) != 0 {
         stack::vstack(
@@ -448,6 +444,7 @@ fn page_preview(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
     select_value: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
     combobox_value: Model<Option<Arc<str>>>,
@@ -510,6 +507,7 @@ fn page_preview(
             dialog_open,
             alert_dialog_open,
             sheet_open,
+            portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
             last_action,
@@ -540,6 +538,7 @@ fn page_preview(
             dialog_open,
             alert_dialog_open,
             sheet_open,
+            portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
             last_action.clone(),
@@ -1107,10 +1106,6 @@ fn preview_virtual_list_torture(
     };
 
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-        let editing_row = cx
-            .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
-            .flatten();
-
         let list = cx.virtual_list_keyed_with_layout(
             list_layout,
             len,
@@ -1119,108 +1114,103 @@ fn preview_virtual_list_torture(
             |i| i as fret_ui::ItemKey,
             |cx, index| {
                 let index_u64 = index as u64;
-                let is_editing = editing_row == Some(index_u64);
+                cx.cached_subtree_with(
+                    CachedSubtreeProps::default()
+                        .contained_layout(true)
+                        .cache_key(index_u64),
+                    |cx| {
+                        let editing_row = cx
+                            .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                            .flatten();
+                        let is_editing = editing_row == Some(index_u64);
 
-                let build_row = |cx: &mut ElementContext<'_, App>| {
-                    let zebra = (index % 2) == 0;
-                    let background = if is_editing {
-                        theme.color_required("accent")
-                    } else if zebra {
-                        theme.color_required("muted")
-                    } else {
-                        theme.color_required("background")
-                    };
+                        let zebra = (index % 2) == 0;
+                        let background = if is_editing {
+                            theme.color_required("accent")
+                        } else if zebra {
+                            theme.color_required("muted")
+                        } else {
+                            theme.color_required("background")
+                        };
 
-                    let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                        let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
 
-                    let edit_row_for_activate = virtual_list_torture_edit_row.clone();
-                    let edit_text_for_activate = virtual_list_torture_edit_text.clone();
-                    let on_select_row: fret_ui::action::OnActivate =
-                        Arc::new(move |host, action_cx, _reason| {
-                            let _ = host
-                                .models_mut()
-                                .update(&edit_row_for_activate, |v| *v = Some(index_u64));
-                            let _ = host.models_mut().update(&edit_text_for_activate, |v| {
-                                *v = format!("Row {index_u64}");
+                        let edit_row_for_activate = virtual_list_torture_edit_row.clone();
+                        let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+                        let on_select_row: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&edit_row_for_activate, |v| *v = Some(index_u64));
+                                let _ = host.models_mut().update(&edit_text_for_activate, |v| {
+                                    *v = format!("Row {index_u64}");
+                                });
+                                host.request_redraw(action_cx.window);
                             });
-                            host.request_redraw(action_cx.window);
-                        });
-                    let row_label = shadcn::Button::new(format!("Row {index}"))
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Sm)
-                        .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
-                        .on_activate(on_select_row.clone())
-                        .refine_layout(LayoutRefinement::default().flex_1())
-                        .into_element(cx);
-
-                    let right = if is_editing {
-                        let mut props = fret_ui::element::TextInputProps::new(
-                            virtual_list_torture_edit_text.clone(),
-                        );
-                        props.a11y_label = Some(Arc::<str>::from("Inline edit"));
-                        props.test_id =
-                            Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
-                        props.placeholder = Some(Arc::<str>::from("Type to edit…"));
-                        props.layout.size.width = fret_ui::element::Length::Fill;
-
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full())
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| vec![cx.text_input(props)],
-                        )
-                    } else {
-                        let edit_button = shadcn::Button::new("Edit")
-                            .variant(shadcn::ButtonVariant::Outline)
+                        let row_label = shadcn::Button::new(format!("Row {index}"))
+                            .variant(shadcn::ButtonVariant::Ghost)
                             .size(shadcn::ButtonSize::Sm)
-                            .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
-                            .on_activate(on_select_row)
+                            .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
+                            .on_activate(on_select_row.clone())
+                            .refine_layout(LayoutRefinement::default().flex_1())
                             .into_element(cx);
 
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![edit_button],
-                        )
-                    };
+                        let right = if is_editing {
+                            let mut props = fret_ui::element::TextInputProps::new(
+                                virtual_list_torture_edit_text.clone(),
+                            );
+                            props.a11y_label = Some(Arc::<str>::from("Inline edit"));
+                            props.test_id =
+                                Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
+                            props.placeholder = Some(Arc::<str>::from("Type to edit…"));
+                            props.layout.size.width = fret_ui::element::Length::Fill;
 
-                    let mut container_props = decl_style::container_props(
-                        theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(background))
-                            .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
-                    );
-                    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N2)
+                                    .items_center(),
+                                |cx| vec![cx.text_input(props)],
+                            )
+                        } else {
+                            let edit_button = shadcn::Button::new("Edit")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
+                                .on_activate(on_select_row)
+                                .into_element(cx);
 
-                    cx.container(container_props, |cx| {
-                        vec![stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full().h_full())
-                                .gap(Space::N2)
-                                .items_center(),
-                            |_cx| vec![row_label, right],
-                        )]
-                    })
-                };
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_center(),
+                                |_cx| vec![edit_button],
+                            )
+                        };
 
-                if row_cache {
-                    let cache_key = index_u64 ^ ((is_editing as u64) << 63);
-                    cx.view_cache(
-                        fret_ui::element::ViewCacheProps {
-                            cache_key,
-                            ..Default::default()
-                        },
-                        |cx| vec![build_row(cx)],
-                    )
-                } else {
-                    build_row(cx)
-                }
+                        let mut container_props = decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(background))
+                                .p(Space::N2),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(height_hint)),
+                        );
+                        container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                        vec![cx.container(container_props, |cx| {
+                            vec![stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full().h_full())
+                                    .gap(Space::N2)
+                                    .items_center(),
+                                |_cx| vec![row_label, right],
+                            )]
+                        })]
+                    },
+                )
             },
         );
 
@@ -1656,6 +1646,7 @@ fn preview_chrome_torture(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
@@ -1696,6 +1687,7 @@ fn preview_chrome_torture(
                 dialog_open,
                 alert_dialog_open,
                 sheet_open,
+                portal_geometry_popover_open,
                 dropdown_open,
                 context_menu_open,
                 last_action,
@@ -3535,6 +3527,7 @@ fn preview_overlay(
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
@@ -3568,6 +3561,7 @@ fn preview_overlay(
                 let dialog_open = dialog_open.clone();
                 let alert_dialog_open = alert_dialog_open.clone();
                 let sheet_open = sheet_open.clone();
+                let portal_geometry_popover_open = portal_geometry_popover_open.clone();
                 let last_action = last_action.clone();
 
                 let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
@@ -3577,6 +3571,9 @@ fn preview_overlay(
                     let _ = host.models_mut().update(&dialog_open, |v| *v = false);
                     let _ = host.models_mut().update(&alert_dialog_open, |v| *v = false);
                     let _ = host.models_mut().update(&sheet_open, |v| *v = false);
+                    let _ = host
+                        .models_mut()
+                        .update(&portal_geometry_popover_open, |v| *v = false);
                     let _ = host.models_mut().update(&last_action, |v| {
                         *v = Arc::<str>::from("overlay:reset");
                     });
@@ -3604,6 +3601,23 @@ fn preview_overlay(
                             shadcn::DropdownMenuItem::new("Apple")
                                 .test_id("ui-gallery-dropdown-item-apple")
                                 .on_select(CMD_MENU_DROPDOWN_APPLE),
+                        ),
+                        shadcn::DropdownMenuEntry::Item(
+                            shadcn::DropdownMenuItem::new("More")
+                                .test_id("ui-gallery-dropdown-item-more")
+                                .close_on_select(false)
+                                .submenu(vec![
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Nested action")
+                                            .test_id("ui-gallery-dropdown-submenu-item-nested")
+                                            .on_select(CMD_MENU_CONTEXT_ACTION),
+                                    ),
+                                    shadcn::DropdownMenuEntry::Separator,
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Nested disabled")
+                                            .disabled(true),
+                                    ),
+                                ]),
                         ),
                         shadcn::DropdownMenuEntry::Item(
                             shadcn::DropdownMenuItem::new("Orange")
@@ -3721,14 +3735,24 @@ fn preview_overlay(
                             .into_element(cx)
                     },
                     |cx| {
+                        let open_dialog = shadcn::Button::new("Open dialog")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-popover-dialog-trigger")
+                            .toggle_model(dialog_open.clone())
+                            .into_element(cx);
+
                         let close = shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
                             .test_id("ui-gallery-popover-close")
                             .toggle_model(popover_open.clone())
                             .into_element(cx);
 
-                        shadcn::PopoverContent::new(vec![cx.text("Popover content"), close])
-                            .into_element(cx)
+                        shadcn::PopoverContent::new(vec![
+                            cx.text("Popover content"),
+                            open_dialog,
+                            close,
+                        ])
+                        .into_element(cx)
                     },
                 );
 
@@ -3771,6 +3795,7 @@ fn preview_overlay(
                 |cx| {
                     shadcn::Button::new("AlertDialog")
                         .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-alert-dialog-trigger")
                         .toggle_model(alert_dialog_open.clone())
                         .into_element(cx)
                 },
@@ -3787,8 +3812,10 @@ fn preview_overlay(
                         .into_element(cx),
                         shadcn::AlertDialogFooter::new(vec![
                             shadcn::AlertDialogCancel::new("Cancel", alert_dialog_open.clone())
+                                .test_id("ui-gallery-alert-dialog-cancel")
                                 .into_element(cx),
                             shadcn::AlertDialogAction::new("Continue", alert_dialog_open.clone())
+                                .test_id("ui-gallery-alert-dialog-action")
                                 .into_element(cx),
                         ])
                         .into_element(cx),
@@ -3828,6 +3855,97 @@ fn preview_overlay(
                     },
                 );
 
+            let portal_geometry = {
+                let popover = shadcn::Popover::new(portal_geometry_popover_open.clone())
+                    .side(shadcn::PopoverSide::Right)
+                    .align(shadcn::PopoverAlign::Start)
+                    .side_offset(Px(8.0))
+                    .window_margin(Px(8.0))
+                    .arrow(true)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new("Portal geometry (scroll + clamp)")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .test_id("ui-gallery-portal-geometry-trigger")
+                                .toggle_model(portal_geometry_popover_open.clone())
+                                .into_element(cx)
+                        },
+                        |cx| {
+                            let close = shadcn::Button::new("Close")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .test_id("ui-gallery-portal-geometry-popover-close")
+                                .toggle_model(portal_geometry_popover_open.clone())
+                                .into_element(cx);
+
+                            cx.semantics(
+                                fret_ui::element::SemanticsProps {
+                                    test_id: Some(Arc::from(
+                                        "ui-gallery-portal-geometry-popover-content",
+                                    )),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        shadcn::PopoverContent::new(vec![
+                                            cx.text("Popover content (placement + clamp)"),
+                                            cx.text("Wheel-scroll the viewport while open."),
+                                            close,
+                                        ])
+                                        .refine_layout(
+                                            LayoutRefinement::default()
+                                                .w_px(MetricRef::Px(Px(360.0)))
+                                                .h_px(MetricRef::Px(Px(220.0))),
+                                        )
+                                        .into_element(cx),
+                                    ]
+                                },
+                            )
+                        },
+                    );
+
+                let items = (1..=48)
+                    .map(|i| cx.text(format!("Scroll item {i:02}")))
+                    .collect::<Vec<_>>();
+
+                let body = stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
+                    let mut out: Vec<AnyElement> = Vec::with_capacity(items.len() + 2);
+                    out.push(popover);
+                    out.extend(items);
+                    out
+                });
+
+                let scroll = shadcn::ScrollArea::new(vec![body])
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_px(MetricRef::Px(Px(240.0)))
+                            .h_px(MetricRef::Px(Px(160.0))),
+                    )
+                    .into_element(cx);
+
+                let scroll = cx.semantics(
+                    fret_ui::element::SemanticsProps {
+                        test_id: Some(Arc::from("ui-gallery-portal-geometry-scroll-area")),
+                        ..Default::default()
+                    },
+                    |_cx| vec![scroll],
+                );
+
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("Portal geometry").into_element(cx),
+                        shadcn::CardDescription::new(
+                            "Validates floating placement under scroll + window clamp.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new(vec![scroll]).into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+            };
+
             let body = stack::vstack(
                 cx,
                 stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
@@ -3848,6 +3966,7 @@ fn preview_overlay(
                             stack::HStackProps::default().gap(Space::N2).items_center(),
                             |_cx| vec![alert_dialog, sheet],
                         ),
+                        portal_geometry,
                     ]
                 },
             );
@@ -3866,6 +3985,23 @@ fn preview_overlay(
                     ..Default::default()
                 },
                 |cx| vec![cx.text("Dialog open")],
+            ))
+        } else {
+            None
+        }
+    };
+
+    let alert_dialog_open_flag = {
+        let open = cx
+            .get_model_copied(&alert_dialog_open, Invalidation::Layout)
+            .unwrap_or(false);
+        if open {
+            Some(cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    test_id: Some(Arc::from("ui-gallery-alert-dialog-open")),
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("AlertDialog open")],
             ))
         } else {
             None
@@ -3895,6 +4031,9 @@ fn preview_overlay(
         out.push(flag);
     }
     if let Some(flag) = dialog_open_flag {
+        out.push(flag);
+    }
+    if let Some(flag) = alert_dialog_open_flag {
         out.push(flag);
     }
 

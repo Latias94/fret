@@ -25,6 +25,10 @@ use super::{
     DismissiblePopoverRequest, ModalRequest, ToastLayerRequest, ToastPosition, ToastVariant,
     dismiss_toast_action,
 };
+use super::{
+    OverlaySynthesisEvent, OverlaySynthesisKind, OverlaySynthesisOutcome, OverlaySynthesisSource,
+    WindowOverlaySynthesisDiagnosticsStore,
+};
 
 #[derive(Default)]
 struct ToastHoverPauseState {
@@ -272,11 +276,12 @@ pub fn render<H: UiHost>(
         popover_requests.iter().map(|r| r.id).collect();
     let toast_request_ids: HashSet<GlobalElementId> = toast_requests.iter().map(|r| r.id).collect();
 
-    let (extra_modals, extra_popovers, extra_toasts) =
-        app.with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
+    let (extra_modals, extra_popovers, extra_toasts, synthesized_overlays) = app
+        .with_global_mut_untracked(WindowOverlays::default, |overlays, app| {
             let mut modals: Vec<ModalRequest> = Vec::new();
             let mut popovers: Vec<DismissiblePopoverRequest> = Vec::new();
             let mut toasts: Vec<ToastLayerRequest> = Vec::new();
+            let mut synthesized: Vec<OverlaySynthesisEvent> = Vec::new();
 
             for ((w, id), req) in overlays.cached_modal_requests.iter() {
                 if *w != window || modal_request_ids.contains(id) {
@@ -289,6 +294,12 @@ pub fn render<H: UiHost>(
                 let mut req = req.clone();
                 req.present = true;
                 modals.push(req);
+                synthesized.push(OverlaySynthesisEvent {
+                    kind: OverlaySynthesisKind::Modal,
+                    id: *id,
+                    source: OverlaySynthesisSource::CachedDeclaration,
+                    outcome: OverlaySynthesisOutcome::Synthesized,
+                });
             }
 
             for ((w, id), req) in overlays.cached_popover_requests.iter() {
@@ -302,6 +313,12 @@ pub fn render<H: UiHost>(
                 let mut req = req.clone();
                 req.present = true;
                 popovers.push(req);
+                synthesized.push(OverlaySynthesisEvent {
+                    kind: OverlaySynthesisKind::Popover,
+                    id: *id,
+                    source: OverlaySynthesisSource::CachedDeclaration,
+                    outcome: OverlaySynthesisOutcome::Synthesized,
+                });
             }
 
             for ((w, id), req) in overlays.cached_toast_layer_requests.iter() {
@@ -311,12 +328,22 @@ pub fn render<H: UiHost>(
                 toasts.push(req.clone());
             }
 
-            (modals, popovers, toasts)
+            (modals, popovers, toasts, synthesized)
         });
 
     modal_requests.extend(extra_modals);
     popover_requests.extend(extra_popovers);
     toast_requests.extend(extra_toasts);
+
+    if !synthesized_overlays.is_empty() {
+        let frame_id = app.frame_id();
+        app.with_global_mut_untracked(
+            WindowOverlaySynthesisDiagnosticsStore::default,
+            |diag, _app| {
+                diag.record_events(window, frame_id, synthesized_overlays);
+            },
+        );
+    }
 
     let mut seen_modals: HashSet<GlobalElementId> = HashSet::new();
     let mut seen_popovers: HashSet<GlobalElementId> = HashSet::new();
@@ -948,6 +975,15 @@ pub fn render<H: UiHost>(
             continue;
         }
 
+        let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        if open_now && !req.present {
+            let _ = app.models_mut().update(&req.open, |v| *v = false);
+            open_now = false;
+        }
+        if !req.present {
+            continue;
+        }
+
         seen_hover_overlays.insert(req.id);
         let interactive = req.interactive;
 
@@ -973,13 +1009,14 @@ pub fn render<H: UiHost>(
                 });
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
-            apply_hover_layer_policy(ui, entry.layer, true, interactive);
+            let effective_interactive = interactive && open_now;
+            apply_hover_layer_policy(ui, entry.layer, true, effective_interactive);
             ui.debug_record_overlay_policy_decision(
                 _app.frame_id(),
                 entry.layer,
                 "hover",
                 true,
-                interactive,
+                effective_interactive,
                 false,
                 "hover_layer_policy",
             );
@@ -1034,9 +1071,17 @@ pub fn render<H: UiHost>(
         if arbitration.pointer_capture_active {
             continue;
         }
+        let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        if open_now && !req.present {
+            let _ = app.models_mut().update(&req.open, |v| *v = false);
+            open_now = false;
+        }
+        if !req.present {
+            continue;
+        }
         seen_tooltips.insert(req.id);
 
-        let interactive = req.interactive;
+        let interactive = req.interactive && open_now;
         let wants_outside_press_observer = req.on_dismiss_request.is_some();
         let wants_pointer_move_events = req.on_pointer_move.is_some();
         let on_dismiss_request = req.on_dismiss_request.clone();

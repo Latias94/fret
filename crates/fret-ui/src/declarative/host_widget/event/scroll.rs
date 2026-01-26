@@ -4,7 +4,7 @@ use crate::declarative::prelude::*;
 const SCROLL_CONSUMED_EPS: f32 = 0.001;
 
 pub(super) fn handle_virtual_list<H: UiHost>(
-    _this: &mut ElementHostWidget,
+    this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
     window: AppWindowId,
     props: crate::element::VirtualListProps,
@@ -17,32 +17,83 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         fret_core::PointerEvent::Wheel {
             delta, modifiers, ..
         } => {
-            let axis = props.axis;
-            let delta = match axis {
-                fret_core::Axis::Vertical => delta.y,
-                fret_core::Axis::Horizontal => {
-                    if modifiers.shift {
-                        delta.y
-                    } else {
-                        delta.x
+            let (consumed, needs_visible_range_rerender) = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::element::VirtualListState::default,
+                |state| {
+                    let axis = props.axis;
+                    state.metrics.ensure_with_mode(
+                        props.measure_mode,
+                        props.len,
+                        props.estimate_row_height,
+                        props.gap,
+                        props.scroll_margin,
+                    );
+                    let viewport = match axis {
+                        fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                        fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                    };
+                    if viewport.0 <= 0.0 || props.len == 0 {
+                        return (false, false);
                     }
-                }
-            };
 
-            let prev = props.scroll_handle.offset();
-            let desired = match axis {
-                fret_core::Axis::Vertical => fret_core::Point::new(prev.x, Px(prev.y.0 - delta.0)),
-                fret_core::Axis::Horizontal => {
-                    fret_core::Point::new(Px(prev.x.0 - delta.0), prev.y)
-                }
-            };
-            props.scroll_handle.set_offset(desired);
-            let next = props.scroll_handle.offset();
+                    let prev = props.scroll_handle.offset();
+                    let prev_offset = match axis {
+                        fret_core::Axis::Vertical => prev.y,
+                        fret_core::Axis::Horizontal => prev.x,
+                    };
+                    let offset = state.metrics.clamp_offset(prev_offset, viewport);
 
-            let consumed = match axis {
-                fret_core::Axis::Vertical => (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS,
-                fret_core::Axis::Horizontal => (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS,
-            };
+                    let delta = match axis {
+                        fret_core::Axis::Vertical => delta.y,
+                        fret_core::Axis::Horizontal => {
+                            if modifiers.shift {
+                                delta.y
+                            } else {
+                                delta.x
+                            }
+                        }
+                    };
+                    let next = state.metrics.clamp_offset(Px(offset.0 - delta.0), viewport);
+                    if (prev_offset.0 - next.0).abs() > SCROLL_CONSUMED_EPS {
+                        let visible_range = state.metrics.visible_range(next, viewport, 0);
+                        let needs_visible_range_rerender =
+                            visible_range.is_some_and(|visible| match state.render_window_range {
+                                None => visible.count > 0,
+                                Some(rendered) => {
+                                    if rendered.count == 0 {
+                                        visible.count > 0
+                                    } else {
+                                        let rendered_start =
+                                            rendered.start_index.saturating_sub(rendered.overscan);
+                                        let rendered_end = (rendered.end_index + rendered.overscan)
+                                            .min(rendered.count.saturating_sub(1));
+                                        visible.start_index < rendered_start
+                                            || visible.end_index > rendered_end
+                                    }
+                                }
+                            });
+
+                        match axis {
+                            fret_core::Axis::Vertical => {
+                                props
+                                    .scroll_handle
+                                    .set_offset(fret_core::Point::new(prev.x, next));
+                            }
+                            fret_core::Axis::Horizontal => {
+                                props
+                                    .scroll_handle
+                                    .set_offset(fret_core::Point::new(next, prev.y));
+                            }
+                        }
+                        (true, needs_visible_range_rerender)
+                    } else {
+                        (false, false)
+                    }
+                },
+            );
 
             if consumed {
                 let inv = Invalidation::HitTestOnly;
@@ -52,7 +103,13 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                     props.scroll_handle.base_handle().binding_key(),
                     inv,
                 );
+                // VirtualList scrolling is applied via a children-only render transform, so
+                // hit-testing must be invalidated to refresh coordinate mapping under the updated
+                // offset. This does not force a layout pass.
                 cx.invalidate_self(inv);
+                if needs_visible_range_rerender {
+                    cx.notify();
+                }
                 cx.request_redraw();
                 cx.stop_propagation();
             }

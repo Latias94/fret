@@ -115,6 +115,18 @@ impl ScrollHandle {
         }
     }
 
+    /// Internal viewport setter used by the runtime during layout passes.
+    ///
+    /// Unlike [`ScrollHandle::set_viewport_size`], this does **not** bump the handle revision
+    /// because the runtime is already invalidating and recomputing layout/paint in the same frame.
+    pub(crate) fn set_viewport_size_internal(&self, viewport: Size) {
+        let mut state = self.state.borrow_mut();
+        state.viewport = Size::new(
+            Px(viewport.width.0.max(0.0)),
+            Px(viewport.height.0.max(0.0)),
+        );
+    }
+
     pub fn content_size(&self) -> Size {
         self.state.borrow().content
     }
@@ -126,6 +138,15 @@ impl ScrollHandle {
             state.content = next;
             state.revision = state.revision.saturating_add(1);
         }
+    }
+
+    /// Internal content-size setter used by the runtime during layout passes.
+    ///
+    /// Unlike [`ScrollHandle::set_content_size`], this does **not** bump the handle revision
+    /// because the runtime is already invalidating and recomputing layout/paint in the same frame.
+    pub(crate) fn set_content_size_internal(&self, content: Size) {
+        let mut state = self.state.borrow_mut();
+        state.content = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
     }
 
     pub fn scroll_to_range_y(&self, start_y: Px, end_y: Px, strategy: ScrollStrategy) {
@@ -223,8 +244,9 @@ impl VirtualListScrollHandle {
     }
 
     pub fn scroll_to_bottom(&self) {
-        let items = self.state.borrow().items_count;
-        self.scroll_to_item(items.saturating_sub(1), ScrollStrategy::End);
+        // Avoid relying on the runtime-driven `items_count` bookkeeping for "scroll to end".
+        // The layout pass will clamp the requested index against the current list count.
+        self.scroll_to_item(usize::MAX, ScrollStrategy::End);
     }
 
     pub(crate) fn set_items_count(&self, items_count: usize) {
@@ -257,6 +279,30 @@ mod tests {
 
         handle.set_offset(Point::new(Px(-5.0), Px(999.0)));
         assert_eq!(handle.offset(), Point::new(Px(0.0), Px(20.0)));
+    }
+
+    #[test]
+    fn scroll_handle_internal_setters_do_not_bump_revision() {
+        let handle = ScrollHandle::default();
+        let rev0 = handle.revision();
+
+        handle.set_viewport_size_internal(Size::new(Px(10.0), Px(10.0)));
+        handle.set_content_size_internal(Size::new(Px(20.0), Px(30.0)));
+        handle.set_offset_internal(Point::new(Px(0.0), Px(5.0)));
+        assert_eq!(handle.revision(), rev0);
+
+        handle.set_viewport_size(Size::new(Px(11.0), Px(10.0)));
+        assert_eq!(handle.revision(), rev0.saturating_add(1));
+    }
+
+    #[test]
+    fn virtual_list_scroll_to_bottom_requests_end_sentinel() {
+        let handle = VirtualListScrollHandle::default();
+        handle.scroll_to_bottom();
+        assert_eq!(
+            handle.deferred_scroll_to_item(),
+            Some((usize::MAX, ScrollStrategy::End))
+        );
     }
 
     #[test]

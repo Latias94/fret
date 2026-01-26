@@ -2139,7 +2139,6 @@ impl MenubarMenuEntries {
                                         if content_focus_id_for_panel.get().is_none() {
                                             content_focus_id_for_panel.set(Some(roving.id));
                                         }
-
                                         let scroll_layout = LayoutStyle {
                                             size: SizeStyle {
                                                 width: Length::Fill,

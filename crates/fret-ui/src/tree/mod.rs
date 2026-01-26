@@ -7,7 +7,7 @@ use fret_core::time::{Duration, Instant};
 use fret_core::{
     AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
     SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
-    UiServices,
+    UiServices, ViewId,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
@@ -241,6 +241,19 @@ pub struct UiDebugFrameStats {
     pub view_cache_invalidation_truncations: u32,
     /// How many "contained" view-cache roots were re-laid out during the final pass.
     pub view_cache_contained_relayouts: u32,
+    /// How many times `set_children_barrier` was applied (structural changes without forcing
+    /// ancestor relayout).
+    pub set_children_barrier_writes: u32,
+    /// How many barrier relayout roots were scheduled via `set_children_barrier` in this frame.
+    pub barrier_relayouts_scheduled: u32,
+    /// How many barrier relayout roots were actually laid out in this frame.
+    pub barrier_relayouts_performed: u32,
+    /// How many VirtualList visible-range checks were evaluated (used to request rerenders under
+    /// view-cache reuse).
+    pub virtual_list_visible_range_checks: u32,
+    /// How many VirtualList visible-range checks requested a refresh (range delta outside the
+    /// currently mounted span).
+    pub virtual_list_visible_range_refreshes: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -343,7 +356,7 @@ impl UiDebugInvalidationDetail {
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugDirtyView {
-    pub root: NodeId,
+    pub view: ViewId,
     pub element: Option<GlobalElementId>,
     pub source: UiDebugInvalidationSource,
     pub detail: UiDebugInvalidationDetail,
@@ -940,10 +953,12 @@ pub struct UiTree<H: UiHost> {
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     viewport_roots: Vec<(NodeId, Rect)>,
+    pending_barrier_relayouts: Vec<NodeId>,
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
     debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,
+    debug_view_cache_contained_relayout_roots: Vec<NodeId>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
@@ -1032,9 +1047,11 @@ impl<H: UiHost> Default for UiTree<H> {
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             viewport_roots: Vec::new(),
+            pending_barrier_relayouts: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             debug_view_cache_roots: Vec::new(),
+            debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
             debug_layout_engine_solves: Vec::new(),
             debug_measure_children: HashMap::new(),
@@ -1139,6 +1156,7 @@ impl<H: UiHost> UiTree<H> {
 
     fn invalidation_marks_view_dirty(
         source: UiDebugInvalidationSource,
+        inv: Invalidation,
         detail: UiDebugInvalidationDetail,
     ) -> bool {
         matches!(
@@ -1146,11 +1164,12 @@ impl<H: UiHost> UiTree<H> {
             UiDebugInvalidationSource::Notify
                 | UiDebugInvalidationSource::ModelChange
                 | UiDebugInvalidationSource::GlobalChange
-        ) || matches!(
-            detail,
-            UiDebugInvalidationDetail::ScrollHandleLayout
-                | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
-        )
+        ) || (inv != Invalidation::Paint
+            && matches!(
+                detail,
+                UiDebugInvalidationDetail::ScrollHandleLayout
+                    | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+            ))
     }
 
     pub(crate) fn request_redraw_coalesced(&mut self, app: &mut H) {
@@ -1213,8 +1232,14 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.view_cache_active = self.view_cache_active();
         self.debug_stats.view_cache_invalidation_truncations = 0;
         self.debug_stats.view_cache_contained_relayouts = 0;
+        self.debug_stats.set_children_barrier_writes = 0;
+        self.debug_stats.barrier_relayouts_scheduled = 0;
+        self.debug_stats.barrier_relayouts_performed = 0;
+        self.debug_stats.virtual_list_visible_range_checks = 0;
+        self.debug_stats.virtual_list_visible_range_refreshes = 0;
 
         self.debug_view_cache_roots.clear();
+        self.debug_view_cache_contained_relayout_roots.clear();
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
         self.debug_measure_children.clear();
@@ -1258,7 +1283,7 @@ impl<H: UiHost> UiTree<H> {
                     UiDebugInvalidationDetail::Unknown,
                 ));
             self.debug_dirty_views.push(UiDebugDirtyView {
-                root,
+                view: ViewId(root),
                 element,
                 source,
                 detail,
@@ -1445,6 +1470,13 @@ impl<H: UiHost> UiTree<H> {
         out
     }
 
+    pub fn debug_view_cache_contained_relayout_roots(&self) -> &[NodeId] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        &self.debug_view_cache_contained_relayout_roots
+    }
+
     #[cfg(feature = "diagnostics")]
     pub fn debug_set_children_write_for(&self, parent: NodeId) -> Option<UiDebugSetChildrenWrite> {
         if !self.debug_enabled {
@@ -1554,6 +1586,10 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    pub(crate) fn node_needs_layout(&self, node: NodeId) -> bool {
+        self.nodes.get(node).is_some_and(|n| n.invalidation.layout)
+    }
+
     pub(crate) fn set_node_element(&mut self, node: NodeId, element: Option<GlobalElementId>) {
         if let Some(n) = self.nodes.get_mut(node) {
             n.element = element;
@@ -1629,7 +1665,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        if !Self::invalidation_marks_view_dirty(source, detail) {
+        if !Self::invalidation_marks_view_dirty(source, Invalidation::HitTestOnly, detail) {
             return;
         }
 
@@ -1673,6 +1709,7 @@ impl<H: UiHost> UiTree<H> {
                 (n.view_cache.enabled
                     && n.view_cache.contained_layout
                     && !n.view_cache.layout_definite
+                    && n.bounds.size == Size::default()
                     && (n.invalidation.layout || n.invalidation.hit_test))
                     .then_some(id)
             })
@@ -1903,6 +1940,11 @@ impl<H: UiHost> UiTree<H> {
             current = n.parent;
         }
         None
+    }
+
+    fn notify_target_for_node(&self, node: NodeId) -> NodeId {
+        self.nearest_view_cache_root(node)
+            .unwrap_or_else(|| self.node_root(node).unwrap_or(node))
     }
 
     fn collapse_observation_index_to_view_cache_roots(
@@ -2394,10 +2436,11 @@ impl<H: UiHost> UiTree<H> {
 
     #[track_caller]
     pub(crate) fn set_children_in_mount(&mut self, parent: NodeId, children: Vec<NodeId>) {
-        let Some(_old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
+        let Some(old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
             return;
         };
 
+        // Keep parent pointers consistent even when the child list is unchanged.
         let same_children = self
             .nodes
             .get(parent)
@@ -2425,7 +2468,7 @@ impl<H: UiHost> UiTree<H> {
                 UiDebugSetChildrenWrite {
                     parent,
                     frame_id: self.debug_stats.frame_id,
-                    old_len: _old_len.min(u32::MAX as usize) as u32,
+                    old_len: old_len.min(u32::MAX as usize) as u32,
                     new_len: children.len().min(u32::MAX as usize) as u32,
                     old_elements_head,
                     new_elements_head,
@@ -2445,6 +2488,134 @@ impl<H: UiHost> UiTree<H> {
         };
 
         for old in old_children {
+            if children.contains(&old) {
+                continue;
+            }
+            if let Some(n) = self.nodes.get_mut(old)
+                && n.parent == Some(parent)
+            {
+                #[cfg(feature = "diagnostics")]
+                if self.debug_enabled {
+                    let location = std::panic::Location::caller();
+                    self.debug_parent_sever_writes.insert(
+                        old,
+                        UiDebugParentSeverWrite {
+                            child: old,
+                            parent,
+                            frame_id: self.debug_stats.frame_id,
+                            file: location.file(),
+                            line: location.line(),
+                            column: location.column(),
+                        },
+                    );
+                }
+                n.parent = None;
+            }
+        }
+
+        for &child in &children {
+            if let Some(n) = self.nodes.get_mut(child) {
+                n.parent = Some(parent);
+            }
+        }
+
+        let mut propagate = false;
+        if let Some(n) = self.nodes.get_mut(parent) {
+            n.children = children;
+            n.invalidation.hit_test = true;
+            n.invalidation.layout = true;
+            n.invalidation.paint = true;
+            propagate = true;
+        }
+
+        if propagate {
+            // Structural changes must invalidate ancestors so the next layout pass walks far
+            // enough to place newly mounted subtrees, even when view-cache invalidation
+            // truncation is enabled.
+            self.mark_invalidation_with_source(
+                parent,
+                Invalidation::HitTest,
+                UiDebugInvalidationSource::Other,
+            );
+        }
+    }
+
+    /// Set a node's child list without forcing ancestor relayout.
+    ///
+    /// This is intended for explicit layout barriers (virtualization, scroll, etc.) whose bounds
+    /// are stable and do not depend on the size or presence of their children. In these cases,
+    /// structural changes should not require re-laying out ancestors, but the subtree still needs
+    /// a contained relayout to place newly mounted children.
+    ///
+    /// The tree will schedule a contained relayout for `parent` during the next layout pass.
+    #[track_caller]
+    pub(crate) fn set_children_barrier(&mut self, parent: NodeId, children: Vec<NodeId>) {
+        let Some(old_len) = self.nodes.get(parent).map(|n| n.children.len()) else {
+            return;
+        };
+
+        // Keep parent pointers consistent even when the child list is unchanged.
+        let same_children = self
+            .nodes
+            .get(parent)
+            .is_some_and(|n| n.children.as_slice() == children.as_slice());
+        if same_children {
+            for &child in &children {
+                if let Some(n) = self.nodes.get_mut(child) {
+                    n.parent = Some(parent);
+                }
+            }
+            return;
+        }
+
+        #[cfg(feature = "diagnostics")]
+        if self.debug_enabled {
+            let location = std::panic::Location::caller();
+            let old_elements_head = self
+                .nodes
+                .get(parent)
+                .map(|n| self.debug_sample_child_elements_head(&n.children))
+                .unwrap_or([None; 4]);
+            let new_elements_head = self.debug_sample_child_elements_head(&children);
+            self.debug_set_children_writes.insert(
+                parent,
+                UiDebugSetChildrenWrite {
+                    parent,
+                    frame_id: self.debug_stats.frame_id,
+                    old_len: old_len.min(u32::MAX as usize) as u32,
+                    new_len: children.len().min(u32::MAX as usize) as u32,
+                    old_elements_head,
+                    new_elements_head,
+                    file: location.file(),
+                    line: location.line(),
+                    column: location.column(),
+                },
+            );
+        }
+
+        if self.debug_enabled {
+            self.debug_stats.set_children_barrier_writes = self
+                .debug_stats
+                .set_children_barrier_writes
+                .saturating_add(1);
+            self.debug_stats.barrier_relayouts_scheduled = self
+                .debug_stats
+                .barrier_relayouts_scheduled
+                .saturating_add(1);
+        }
+
+        let Some(old_children) = self
+            .nodes
+            .get_mut(parent)
+            .map(|n| std::mem::take(&mut n.children))
+        else {
+            return;
+        };
+
+        for old in old_children {
+            if children.contains(&old) {
+                continue;
+            }
             if let Some(n) = self.nodes.get_mut(old)
                 && n.parent == Some(parent)
             {
@@ -2479,6 +2650,16 @@ impl<H: UiHost> UiTree<H> {
             n.invalidation.layout = true;
             n.invalidation.paint = true;
         }
+
+        // Structural changes must invalidate paint/hit-testing so routing and rendering see the
+        // updated tree, but we intentionally avoid forcing a full ancestor relayout.
+        self.mark_invalidation_with_source(
+            parent,
+            Invalidation::HitTestOnly,
+            UiDebugInvalidationSource::Other,
+        );
+
+        self.pending_barrier_relayouts.push(parent);
     }
 
     #[cfg(feature = "diagnostics")]
@@ -2512,6 +2693,29 @@ impl<H: UiHost> UiTree<H> {
         self.debug_reachable_from_layer_roots
             .as_ref()
             .is_some_and(|(_, reachable)| reachable.contains(&node))
+    }
+
+    pub(crate) fn debug_record_virtual_list_visible_range_check(
+        &mut self,
+        requested_refresh: bool,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.virtual_list_visible_range_checks = self
+            .debug_stats
+            .virtual_list_visible_range_checks
+            .saturating_add(1);
+        if requested_refresh {
+            self.debug_stats.virtual_list_visible_range_refreshes = self
+                .debug_stats
+                .virtual_list_visible_range_refreshes
+                .saturating_add(1);
+        }
+    }
+
+    pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {
+        std::mem::take(&mut self.pending_barrier_relayouts)
     }
 
     #[track_caller]
@@ -3632,7 +3836,7 @@ impl<H: UiHost> UiTree<H> {
                     }
                     hit_cache_root = Some(id);
                     did_stop = true;
-                    if Self::invalidation_marks_view_dirty(source, detail) {
+                    if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -3676,7 +3880,7 @@ impl<H: UiHost> UiTree<H> {
                     && n.view_cache.enabled
                 {
                     n.invalidation.mark(inv);
-                    if Self::invalidation_marks_view_dirty(source, detail) {
+                    if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -3739,7 +3943,7 @@ impl<H: UiHost> UiTree<H> {
             let already = visited.get(&id).copied().unwrap_or_default();
             if source != UiDebugInvalidationSource::Notify
                 && (already & needed) == needed
-                && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, detail))
+                && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, inv, detail))
             {
                 break;
             }
@@ -3771,7 +3975,7 @@ impl<H: UiHost> UiTree<H> {
                             .view_cache_invalidation_truncations
                             .saturating_add(1);
                     }
-                    if Self::invalidation_marks_view_dirty(source, detail) {
+                    if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
@@ -3816,7 +4020,7 @@ impl<H: UiHost> UiTree<H> {
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
                     if let Some(n) = self.nodes.get_mut(id) {
-                        if Self::invalidation_marks_view_dirty(source, detail) {
+                        if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
                         }

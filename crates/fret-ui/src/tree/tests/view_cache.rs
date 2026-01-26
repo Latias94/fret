@@ -187,15 +187,51 @@ fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
     assert!(
         dirty
             .iter()
-            .any(|d| d.root == inner && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
+            .any(|d| d.view.0 == inner && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
         "expected dirty views to include inner cache root with ScrollHandleLayout detail"
     );
     assert!(
         dirty
             .iter()
-            .any(|d| d.root == outer && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
+            .any(|d| d.view.0 == outer && d.detail == UiDebugInvalidationDetail::ScrollHandleLayout),
         "expected dirty views to include outer cache root with ScrollHandleLayout detail"
     );
+}
+
+#[test]
+fn view_cache_auto_sized_repair_does_not_promote_hit_test_when_bounds_are_known() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let boundary = ui.create_node(TestStack::default());
+    ui.nodes[boundary].view_cache.enabled = true;
+    ui.nodes[boundary].view_cache.contained_layout = true;
+    ui.nodes[boundary].view_cache.layout_definite = false;
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+
+    for id in [root, boundary] {
+        ui.nodes[id].invalidation.clear();
+    }
+
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(40.0)),
+    );
+    ui.nodes[boundary].bounds = bounds;
+    ui.nodes[boundary].measured_size = bounds.size;
+
+    ui.invalidate(boundary, Invalidation::HitTestOnly);
+    assert!(!ui.nodes[boundary].invalidation.layout);
+    assert!(ui.nodes[boundary].invalidation.hit_test);
+
+    ui.propagate_auto_sized_view_cache_root_invalidations();
+
+    assert!(!ui.nodes[boundary].invalidation.layout);
+    assert!(!ui.nodes[root].invalidation.layout);
 }
 
 #[test]
@@ -332,8 +368,14 @@ fn view_cache_scroll_handle_hit_test_only_invalidations_do_not_mark_cache_root_n
 
     assert!(ui.nodes[boundary].invalidation.hit_test);
     assert!(ui.nodes[boundary].invalidation.paint);
-    assert!(!ui.nodes[boundary].view_cache_needs_rerender);
-    assert!(ui.should_reuse_view_cache_node(boundary));
+    assert!(
+        !ui.nodes[boundary].view_cache_needs_rerender,
+        "scroll-handle hit-test-only invalidations should not force view-cache rerender"
+    );
+    assert!(
+        ui.should_reuse_view_cache_node(boundary),
+        "hit-test-only invalidations should allow view-cache reuse"
+    );
     assert!(!ui.nodes[root].invalidation.paint);
 }
 

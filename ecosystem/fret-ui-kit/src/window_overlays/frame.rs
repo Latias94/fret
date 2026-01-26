@@ -3,6 +3,7 @@ use fret_core::AppWindowId;
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 
+use super::WindowOverlaySynthesisDiagnosticsStore;
 use super::state::WindowOverlays;
 use super::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
@@ -21,6 +22,13 @@ pub fn begin_frame<H: UiHost>(app: &mut H, window: AppWindowId) {
             w.toasts.clear();
         }
     });
+
+    app.with_global_mut_untracked(
+        WindowOverlaySynthesisDiagnosticsStore::default,
+        |diag, _app| {
+            diag.begin_frame(window, frame_id);
+        },
+    );
 }
 
 #[cfg(feature = "unstable-internals")]

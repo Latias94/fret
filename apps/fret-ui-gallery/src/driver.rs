@@ -98,6 +98,7 @@ struct UiGalleryWindowState {
     dialog_open: Model<bool>,
     alert_dialog_open: Model<bool>,
     sheet_open: Model<bool>,
+    portal_geometry_popover_open: Model<bool>,
 
     settings_open: Model<bool>,
     settings_menu_bar_os: Model<Option<Arc<str>>>,
@@ -324,6 +325,7 @@ impl UiGalleryDriver {
         let dialog_open = app.models_mut().insert(false);
         let alert_dialog_open = app.models_mut().insert(false);
         let sheet_open = app.models_mut().insert(false);
+        let portal_geometry_popover_open = app.models_mut().insert(false);
 
         let mut settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
         let is_diag = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
@@ -470,6 +472,7 @@ impl UiGalleryDriver {
             dialog_open,
             alert_dialog_open,
             sheet_open,
+            portal_geometry_popover_open,
             settings_open,
             settings_menu_bar_os,
             settings_menu_bar_os_open,
@@ -887,6 +890,7 @@ impl UiGalleryDriver {
         let dialog_open = state.dialog_open.clone();
         let alert_dialog_open = state.alert_dialog_open.clone();
         let sheet_open = state.sheet_open.clone();
+        let portal_geometry_popover_open = state.portal_geometry_popover_open.clone();
         let settings_open = state.settings_open.clone();
         let settings_menu_bar_os = state.settings_menu_bar_os.clone();
         let settings_menu_bar_os_open = state.settings_menu_bar_os_open.clone();
@@ -1255,6 +1259,7 @@ impl UiGalleryDriver {
                                             dialog_open.clone(),
                                             alert_dialog_open.clone(),
                                             sheet_open.clone(),
+                                            portal_geometry_popover_open.clone(),
                                             select_value.clone(),
                                             select_open.clone(),
                                             combobox_value.clone(),
@@ -1327,6 +1332,7 @@ impl UiGalleryDriver {
                                         dialog_open.clone(),
                                         alert_dialog_open.clone(),
                                         sheet_open.clone(),
+                                        portal_geometry_popover_open.clone(),
                                         select_value.clone(),
                                         select_open.clone(),
                                         combobox_value.clone(),
@@ -2643,7 +2649,13 @@ impl WinitAppDriver for UiGalleryDriver {
             let semantics_snapshot = state.ui.semantics_snapshot();
             let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
                 let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-                svc.drive_script_for_window(app, window, semantics_snapshot, element_runtime)
+                svc.drive_script_for_window(
+                    app,
+                    window,
+                    bounds,
+                    semantics_snapshot,
+                    element_runtime,
+                )
             });
 
             if drive.request_redraw {

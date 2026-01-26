@@ -604,11 +604,6 @@ impl Select {
         Self::new(model, open)
     }
 
-    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
-        self.trigger_test_id = Some(id.into());
-        self
-    }
-
     pub fn item(mut self, item: SelectItem) -> Self {
         self.entries.push(SelectEntry::Item(item));
         self
@@ -622,6 +617,14 @@ impl Select {
 
     pub fn entry(mut self, entry: impl Into<SelectEntry>) -> Self {
         self.entries.push(entry.into());
+        self
+    }
+
+    /// Sets a `test_id` on the Select trigger pressable for deterministic automation.
+    ///
+    /// This is a diagnostics/testing hook and MUST NOT be mapped into platform accessibility label fields.
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
         self
     }
 
@@ -1051,6 +1054,7 @@ fn select_impl<H: UiHost>(
         // `control_chrome_pressable_with_id_props` stores handlers; keep a dedicated `open` clone
         // for trigger-owned hooks.
         let open_for_trigger = open.clone();
+        let trigger_test_id_for_trigger = trigger_test_id.clone();
 
         let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
@@ -1199,7 +1203,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
-            props.a11y.test_id = trigger_test_id.clone();
+            props.a11y.test_id = trigger_test_id_for_trigger.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
