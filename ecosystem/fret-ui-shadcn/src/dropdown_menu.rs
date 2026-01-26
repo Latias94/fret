@@ -2815,12 +2815,12 @@ impl DropdownMenu {
                                                         let test_id = item.test_id.clone();
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
-                                                         let disabled = item.disabled
-                                                             || crate::command_gating::command_is_disabled_by_gating(
-                                                                 &*cx.app,
-                                                                 &gating,
-                                                                 command.as_ref(),
-                                                             );
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &gating,
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
