@@ -9,9 +9,9 @@ use fret_icons::ids;
 use fret_runtime::{CommandId, Model, WindowCommandGatingSnapshot};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SemanticsProps, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
+    MainAlign, Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -564,7 +564,7 @@ fn menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_style: TextStyle,
-) -> Vec<AnyElement> {
+) -> Elements {
     vec![cx.container(
         ContainerProps {
             layout: LayoutStyle::default(),
@@ -673,6 +673,7 @@ fn menu_row_children<H: UiHost>(
             )]
         },
     )]
+    .into()
 }
 
 fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {

@@ -8,9 +8,9 @@ use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::OnDismissRequest;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, InsetStyle, LayoutStyle, Length,
+    MainAlign, Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps,
+    RovingFocusProps, ScrollAxis, ScrollProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -614,7 +614,7 @@ fn find_submenu_entries_by_value(
 fn menu_structural_group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     role: fret_core::SemanticsRole,
-    children: Vec<AnyElement>,
+    children: Elements,
 ) -> AnyElement {
     cx.semantic_flex(
         fret_ui::element::SemanticFlexProps {
@@ -633,7 +633,7 @@ fn menu_structural_group<H: UiHost>(
                 wrap: false,
             },
         },
-        move |_cx| children.clone(),
+        move |_cx| children,
     )
 }
 
@@ -807,7 +807,7 @@ fn checkable_menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
     text_disabled: fret_core::Color,
-) -> Vec<AnyElement> {
+) -> Elements {
     let indicator_fg = if disabled { text_disabled } else { row_fg };
 
     vec![cx.container(
@@ -949,6 +949,7 @@ fn checkable_menu_row_children<H: UiHost>(
             vec![content, indicator]
         },
     )]
+    .into()
 }
 
 fn submenu_chevron_right_text<H: UiHost>(
@@ -1563,7 +1564,7 @@ impl DropdownMenu {
                                                         entries: &[DropdownMenuEntry],
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
-                                                    ) -> Vec<AnyElement> {
+                                                    ) -> Elements {
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
@@ -2230,7 +2231,7 @@ impl DropdownMenu {
                                                     }
 
 
-                                                            out
+                                                            out.into()
                                                     }
 
                                                     let env = RenderEnv {
@@ -2629,7 +2630,7 @@ impl DropdownMenu {
                                                         entries: &[DropdownMenuEntry],
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
-                                                    ) -> Vec<AnyElement> {
+                                                    ) -> Elements {
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
@@ -3195,7 +3196,7 @@ impl DropdownMenu {
                                                         }
                                                     }
 
-                                                    rows
+                                                    rows.into()
                                                     }
 
                                                     let env = RenderEnv {
