@@ -42,7 +42,9 @@ Status legend:
 - `[x]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`, implemented as `ecosystem/fret-executor`)
 - `[x]` Driver boundary: drain inboxes at runner flush points via `InboxDrainRegistry` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`, web: `crates/fret-launch/src/runner/web.rs`)
 - `[ ]` Observability: add tracing spans for dispatch/wake/drain points
-- `[~]` Safety: document + test shutdown behavior (dispatcher shutdown fences implemented; remaining: background cancellation + hot reload boundaries)
+- `[x]` Safety: fence dispatcher on shutdown (desktop + wasm), plus basic unit tests
+- `[ ]` Safety: cancellation baseline (task handles; no post-cancel enqueue/wake)
+- `[ ]` Safety: hot reload boundary (no stale callbacks after teardown)
 
 ### Phase 2 (wasm mapping)
 
@@ -81,12 +83,12 @@ Sketch:
   - `fn dispatch_background(&self, task: Runnable, priority: Priority)`
   - `fn dispatch_after(&self, delay: Duration, task: Runnable)`
   - `fn wake(&self, window: Option<AppWindowId>)`
-  - `fn exec_capabilities(&self) -> ExecCapabilities` (optional; may be integrated into `PlatformCapabilities`)
+  - `fn exec_capabilities(&self) -> ExecCapabilities` (integrated into `PlatformCapabilities.exec` via ADR 0054 keys)
 
 Notes:
 
-- `Runnable` should support location attribution for tracing where possible.
-- `Priority` should start small (`Low/Normal/High`) and be extendable without breaking the base trait.
+- `Runnable` is currently `Box<dyn FnOnce() + Send + 'static>` (location attribution is a future ergonomics layer).
+- `Priority` is currently `DispatchPriority` (`Low/Normal/High`) and should remain extendable without breaking the base trait.
 
 ### Inbox (portable helper)
 
@@ -210,6 +212,5 @@ See `## Tracking (living TODOs)` at the top of this file for the authoritative p
 
 ## Open questions (to resolve before locking v1)
 
-- Do we expose execution capabilities via `PlatformCapabilities` (ADR 0054) or keep them as separate diagnostics?
 - What is the minimal timer vocabulary that avoids split-brain between effects and dispatcher scheduling?
 - What is the minimal "priority/backpressure" surface we want to reserve in v1?
