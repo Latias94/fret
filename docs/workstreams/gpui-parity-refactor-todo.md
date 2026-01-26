@@ -96,11 +96,12 @@ Keep this list short and evidence-backed:
 
 Goal: make hover/focus/pressed “cheap by default” and stop subtree shape thrash (ADR 0181).
 
-- [~] GPUI-MVP1-ui-001 Add debug attribution for “hover caused layout invalidation”.
+- [x] GPUI-MVP1-ui-001 Add debug attribution for “hover caused layout invalidation”.
   - Touches: `crates/fret-ui/src/tree/dispatch.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`, CLI surfacing in `apps/fretboard/src/diag.rs`.
   - Progress: `bundle.json` exports hover-attributed declarative invalidation counters + top hotspots (`debug.hover_declarative_invalidation_hotspots`); `fretboard diag stats` can gate via `--check-hover-layout[(-max N)]`.
   - Progress: `fretboard diag run` / `fretboard diag suite` can enforce the same gate post-run via `--check-hover-layout-max 0`.
   - Done when: overlay torture + virtual list torture run with 0 hover-attributed layout invalidations (except explicitly whitelisted components).
+  - Evidence: both scripts pass `--check-hover-layout-max 0` (warmup 5): `target/fret-diag-hover-check-overlay/` + `target/fret-diag-hover-check-vlist/`.
 - [x] GPUI-MVP1-eco-002 Refactor top hover offenders to be structurally stable.
   - Start with: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`, `ecosystem/fret-ui-shadcn/src/*scroll*`
   - Done when: no hover-driven `set_children` churn in these components (verified via diagnostics + manual UX sanity).
