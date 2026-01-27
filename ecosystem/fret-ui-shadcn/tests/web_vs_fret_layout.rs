@@ -25414,6 +25414,38 @@ fn web_vs_fret_layout_chart_bar_interactive_bar_rects_match_web() {
     );
 }
 
+#[test]
+fn web_vs_fret_layout_chart_bar_interactive_mobile_bar_rects_match_web() {
+    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let web_name = "chart-bar-interactive.mobile";
+
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let chart = web_find_chart_container(&theme.root);
+    let plot = web_find_chart_plot_rect(chart);
+    let bars = web_find_chart_bar_rects(chart);
+
+    assert_eq!(
+        bars.len(),
+        CHART_INTERACTIVE_MOBILE.len(),
+        "{web_name}: expected {} bar rect(s), got {}",
+        CHART_INTERACTIVE_MOBILE.len(),
+        bars.len()
+    );
+
+    let plot = Rect::new(
+        Point::new(Px(plot.x), Px(plot.y)),
+        CoreSize::new(Px(plot.w), Px(plot.h)),
+    );
+    let rects =
+        fret_ui_shadcn::recharts_geometry::bar_rects(plot, &CHART_INTERACTIVE_MOBILE, layout);
+    assert_chart_bar_rects_match_web(
+        web_name,
+        rects,
+        &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+    );
+}
+
 fn assert_chart_bar_rects_match_web(
     web_name: &str,
     rects: Vec<fret_ui_shadcn::recharts_geometry::BarRect>,
@@ -26861,6 +26893,19 @@ fn web_vs_fret_layout_chart_line_interactive_curve_bounds_match_web() {
         "chart-line-interactive",
         &[(
             &CHART_INTERACTIVE_DESKTOP,
+            fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+        )],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_line_interactive_mobile_curve_bounds_match_web() {
+    assert_chart_series_curve_bounds_match_web(
+        "chart-line-interactive.mobile",
+        &[(
+            &CHART_INTERACTIVE_MOBILE,
             fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
         )],
         5,

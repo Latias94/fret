@@ -15,7 +15,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `448/448` keys referenced (`100%`)
+- shadcn-web `v4/new-york-v4`: `450/450` keys referenced (`100%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 

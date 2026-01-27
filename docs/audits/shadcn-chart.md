@@ -13,7 +13,7 @@ To reach 1:1 parity, we need to be explicit about which parts are “wrapper UI�
   - `repo-ref/ui/apps/v4/registry/new-york-v4/charts/*.tsx`
   - Registry index: `repo-ref/ui/apps/v4/registry/new-york-v4/charts/_registry.ts`
 - Goldens (expected outcomes):
-  - `goldens/shadcn-web/v4/new-york-v4/chart-*.json` (76 variants today)
+  - `goldens/shadcn-web/v4/new-york-v4/chart-*.json` (78 variants today)
   - Note: the extractor (`goldens/shadcn-web/scripts/extract-golden.mts`) includes a Recharts “settle” wait so
     bar/radar series nodes are present in both light/dark themes (avoid partial SVG frames).
 
@@ -43,8 +43,8 @@ Current:
   - Radar family: polygon + dot bounds and polar grid outcomes match web across desktop/mobile variants.
   - Radial family: polar grid circles + radial bar sector/background bounds match web across the v4 gallery variants.
 - Interactive chart pages:
-  - `chart-line-interactive`: monotone curve bounds match web (default active series).
-  - `chart-bar-interactive`: single-series bar rect layout matches web (default active series).
+  - `chart-line-interactive`: monotone curve bounds match web (desktop + `*.mobile` variant).
+  - `chart-bar-interactive`: single-series bar rect layout matches web (desktop + `*.mobile` variant).
   - `chart-area-interactive`: stacked area curve + fill bounds match web (mobile + mobile+desktop)
     (full stacked-curve math + interaction states still pending).
 - Known gap: `chart-tooltip-advanced` currently needs a small height shim on the “Total” row to match web output.

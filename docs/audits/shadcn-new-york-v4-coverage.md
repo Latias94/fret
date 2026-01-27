@@ -30,8 +30,8 @@ Practical rule:
 This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
-- Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `448` (`100%`)
+- Golden keys (normalized `.open` suffix): `450`
+- Keys referenced by tests: `450` (`100%`)
 - Keys not referenced by tests: `0`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
