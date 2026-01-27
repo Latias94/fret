@@ -11,6 +11,7 @@ pub mod font_catalog_cache;
 #[cfg(test)]
 mod font_config_tests;
 pub mod input;
+pub mod interaction_diagnostics;
 pub mod keymap;
 pub mod menu;
 pub mod model;
@@ -57,6 +58,10 @@ pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerTok
 pub use input::{
     DefaultAction, DefaultActionSet, InputContext, InputDispatchPhase, KeyChord, Platform,
     format_chord, format_sequence,
+};
+pub use interaction_diagnostics::{
+    DockDragDiagnostics, DockingInteractionDiagnostics, ViewportCaptureDiagnostics,
+    WindowInteractionDiagnosticsStore,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
