@@ -31,8 +31,8 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 - Golden files: `487`
 - Golden keys (normalized `.open` suffix): `448`
-- Keys referenced by tests: `426` (`95.1%`)
-- Keys not referenced by tests: `22`
+- Keys referenced by tests: `448` (`100%`)
+- Keys not referenced by tests: `0`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -40,9 +40,7 @@ Top missing prefixes (heuristic grouping by the substring before the first `.` o
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -AsMarkdown -GroupMissingByPrefix -TopGroups 20
 ```
 
-At the time of writing, the largest missing groups were:
-
-- `chart` (22 variants; radar/radial families + interactive bar/line/area)
+At the time of writing, there are no missing groups (all keys are referenced by tests).
 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
@@ -86,7 +84,7 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## What to do next (recommended order)
 
-1. **Chart push**: treat `chart-*` as a dedicated sprint (surface area is large; likely needs additional audit notes).
+1. **Depth push**: convert “smoke” gates into high-signal conformance checks (especially where layout depends on viewport).
 2. **Add constrained viewport variants** early for overlay-like components:
    - menus/listboxes: max-height clamp + scroll buttons + row height (treat “menu height” as a styling outcome)
    - popovers/tooltips: flip/shift under low height

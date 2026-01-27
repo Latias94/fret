@@ -24744,7 +24744,7 @@ fn web_find_chart_container<'a>(root: &'a WebNode) -> &'a WebNode {
         n.tag == "div"
             && n.class_name
                 .as_deref()
-                .is_some_and(|c| c.contains("aspect-video") && c.contains("recharts-cartesian"))
+                .is_some_and(|c| c.contains("recharts-cartesian"))
     })
     .expect("web chart container")
 }
@@ -24876,6 +24876,183 @@ fn web_find_pie_sectors<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
                 a.rect
                     .h
                     .partial_cmp(&b.rect.h)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
+fn web_find_radial_bar_sectors<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let out = find_all(root, &|n| {
+        n.tag == "path"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("recharts-radial-bar-sector"))
+    });
+    out
+}
+
+fn web_find_radial_bar_background_sectors<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let out = find_all(root, &|n| {
+        n.tag == "path"
+            && n.class_name.as_deref()
+                == Some("recharts-sector recharts-radial-bar-background-sector")
+    });
+    out
+}
+
+fn sort_radial_band_nodes_by_outer_radius(svg_rect: Rect, nodes: &mut [&WebNode]) {
+    let cx = svg_rect.origin.x.0 + svg_rect.size.width.0 / 2.0;
+    let cy = svg_rect.origin.y.0 + svg_rect.size.height.0 / 2.0;
+
+    nodes.sort_by(|a, b| {
+        fn outer_radius_estimate(rect: WebRect, cx: f32, cy: f32) -> f32 {
+            let left = (rect.x - cx).abs();
+            let right = (rect.x + rect.w - cx).abs();
+            let top = (rect.y - cy).abs();
+            let bottom = (rect.y + rect.h - cy).abs();
+            left.max(right).max(top).max(bottom)
+        }
+
+        let ar = outer_radius_estimate(a.rect, cx, cy);
+        let br = outer_radius_estimate(b.rect, cx, cy);
+
+        ar.partial_cmp(&br)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .w
+                    .partial_cmp(&b.rect.w)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .h
+                    .partial_cmp(&b.rect.h)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+}
+
+fn web_find_radar_polygons<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.class_name
+            .as_deref()
+            .is_some_and(|c| c.contains("recharts-radar-polygon"))
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .w
+                    .partial_cmp(&b.rect.w)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .then_with(|| {
+                a.rect
+                    .h
+                    .partial_cmp(&b.rect.h)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
+fn web_find_polar_grid_concentric_polygons<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.class_name
+            .as_deref()
+            .is_some_and(|c| c.contains("recharts-polar-grid-concentric-polygon"))
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .w
+            .partial_cmp(&b.rect.w)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .h
+                    .partial_cmp(&b.rect.h)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
+fn web_find_polar_grid_concentric_circles<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.tag == "circle"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("recharts-polar-grid-concentric-circle"))
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .w
+            .partial_cmp(&b.rect.w)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .h
+                    .partial_cmp(&b.rect.h)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
+fn web_find_polar_grid_angle_lines<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.class_name
+            .as_deref()
+            .is_some_and(|c| c == "recharts-polar-grid-angle")
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
+fn web_find_radar_dots<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.tag == "circle"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("recharts-radar-dot"))
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .x
+            .partial_cmp(&b.rect.x)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .y
+                    .partial_cmp(&b.rect.y)
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
     });
@@ -25181,6 +25358,38 @@ fn web_vs_fret_layout_chart_bar_default_bar_rects_match_web() {
             .unwrap_or_else(|| panic!("missing fret semantics for {label}"));
         assert_rect_close_px(&label, node.bounds, web_bar.rect, 1.0);
     }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_bar_interactive_bar_rects_match_web() {
+    let layout = fret_ui_shadcn::recharts_geometry::BarChartSeriesLayout::default();
+    let web_name = "chart-bar-interactive";
+
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+    let chart = web_find_chart_container(&theme.root);
+    let plot = web_find_chart_plot_rect(chart);
+    let bars = web_find_chart_bar_rects(chart);
+
+    assert_eq!(
+        bars.len(),
+        CHART_INTERACTIVE_DESKTOP.len(),
+        "{web_name}: expected {} bar rect(s), got {}",
+        CHART_INTERACTIVE_DESKTOP.len(),
+        bars.len()
+    );
+
+    let plot = Rect::new(
+        Point::new(Px(plot.x), Px(plot.y)),
+        CoreSize::new(Px(plot.w), Px(plot.h)),
+    );
+    let rects =
+        fret_ui_shadcn::recharts_geometry::bar_rects(plot, &CHART_INTERACTIVE_DESKTOP, layout);
+    assert_chart_bar_rects_match_web(
+        web_name,
+        rects,
+        &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
+    );
 }
 
 fn assert_chart_bar_rects_match_web(
@@ -25640,6 +25849,714 @@ fn web_vs_fret_layout_chart_pie_sector_rects_match_web() {
     );
 }
 
+fn assert_radar_geometry_matches_web(
+    web_name: &str,
+    series: &[&[f32]],
+    layout: fret_ui_shadcn::recharts_geometry::PolarChartLayout,
+    grid_polygon: bool,
+    grid_circle: bool,
+    grid_radii_override: Option<&[f32]>,
+    radial_lines: bool,
+    dots: bool,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let svg = web_find_pie_svg(&theme.root);
+    let svg_rect = Rect::new(
+        Point::new(Px(svg.rect.x), Px(svg.rect.y)),
+        CoreSize::new(Px(svg.rect.w), Px(svg.rect.h)),
+    );
+
+    let mut all_values = Vec::new();
+    for values in series {
+        all_values.extend_from_slice(values);
+    }
+    let domain_max =
+        fret_ui_shadcn::recharts_geometry::nice_polar_domain_max_for_values(&all_values, 5);
+
+    fn union_rect(rects: &[Rect]) -> Option<Rect> {
+        let mut min_x = f32::INFINITY;
+        let mut min_y = f32::INFINITY;
+        let mut max_x = -f32::INFINITY;
+        let mut max_y = -f32::INFINITY;
+
+        for r in rects {
+            let x0 = r.origin.x.0;
+            let y0 = r.origin.y.0;
+            let x1 = x0 + r.size.width.0;
+            let y1 = y0 + r.size.height.0;
+            min_x = min_x.min(x0);
+            min_y = min_y.min(y0);
+            max_x = max_x.max(x1);
+            max_y = max_y.max(y1);
+        }
+
+        if !(min_x.is_finite() && min_y.is_finite() && max_x.is_finite() && max_y.is_finite()) {
+            return None;
+        }
+
+        Some(Rect::new(
+            Point::new(Px(min_x), Px(min_y)),
+            CoreSize::new(Px(max_x - min_x), Px(max_y - min_y)),
+        ))
+    }
+
+    let expected_dots = if dots {
+        let values = series.first().copied().unwrap_or(&[]);
+        let mut rects = fret_ui_shadcn::recharts_geometry::radar_dot_rects(
+            svg_rect, values, domain_max, 4.0, layout,
+        );
+        rects.sort_by(|a, b| {
+            a.origin
+                .x
+                .0
+                .partial_cmp(&b.origin.x.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| {
+                    a.origin
+                        .y
+                        .0
+                        .partial_cmp(&b.origin.y.0)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+        });
+        rects
+    } else {
+        Vec::new()
+    };
+
+    let mut expected_polys: Vec<Rect> = if dots {
+        union_rect(&expected_dots)
+            .map(|r| vec![r])
+            .unwrap_or_default()
+    } else {
+        series
+            .iter()
+            .enumerate()
+            .map(|(i, values)| {
+                fret_ui_shadcn::recharts_geometry::radar_polygon_rect(
+                    svg_rect, values, domain_max, layout,
+                )
+                .unwrap_or_else(|| {
+                    panic!("{web_name}: failed to compute radar polygon for series {i}")
+                })
+            })
+            .collect()
+    };
+    expected_polys.sort_by(|a, b| {
+        a.origin
+            .x
+            .0
+            .partial_cmp(&b.origin.x.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.origin
+                    .y
+                    .0
+                    .partial_cmp(&b.origin.y.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+
+    let web_polys = web_find_radar_polygons(&theme.root);
+    assert_eq!(
+        expected_polys.len(),
+        web_polys.len(),
+        "{web_name}: expected {} radar polygon(s), got {}",
+        expected_polys.len(),
+        web_polys.len()
+    );
+
+    for (i, (expected, web)) in expected_polys.iter().zip(web_polys.iter()).enumerate() {
+        assert_rect_close_px(&format!("{web_name} radar-{i}"), *expected, web.rect, 1.0);
+    }
+
+    if grid_polygon {
+        let sides = series.first().map(|s| s.len()).unwrap_or(0).max(3);
+        let expected = if let Some(radii) = grid_radii_override {
+            fret_ui_shadcn::recharts_geometry::radar_grid_polygon_rects_with_radii(
+                svg_rect, sides, radii,
+            )
+        } else {
+            fret_ui_shadcn::recharts_geometry::radar_grid_polygon_rects(svg_rect, sides, layout)
+        };
+        let actual = web_find_polar_grid_concentric_polygons(&theme.root);
+        assert_eq!(
+            expected.len(),
+            actual.len(),
+            "{web_name}: expected {} concentric polygon(s), got {}",
+            expected.len(),
+            actual.len()
+        );
+        for (i, (expected, web)) in expected.iter().zip(actual.iter()).enumerate() {
+            assert_rect_close_px(
+                &format!("{web_name} grid-poly-{i}"),
+                *expected,
+                web.rect,
+                1.0,
+            );
+        }
+    }
+
+    if grid_circle {
+        let expected = fret_ui_shadcn::recharts_geometry::radar_grid_circle_rects(svg_rect, layout);
+        let actual = web_find_polar_grid_concentric_circles(&theme.root);
+        assert_eq!(
+            expected.len(),
+            actual.len(),
+            "{web_name}: expected {} concentric circle(s), got {}",
+            expected.len(),
+            actual.len()
+        );
+        for (i, (expected, web)) in expected.iter().zip(actual.iter()).enumerate() {
+            assert_rect_close_px(
+                &format!("{web_name} grid-circle-{i}"),
+                *expected,
+                web.rect,
+                1.0,
+            );
+        }
+    }
+
+    let angles = web_find_polar_grid_angle_lines(&theme.root);
+    let expected_angle_groups = if radial_lines { 1 } else { 0 };
+    assert_eq!(
+        angles.len(),
+        expected_angle_groups,
+        "{web_name}: expected {} polar angle grid group(s), got {}",
+        expected_angle_groups,
+        angles.len()
+    );
+
+    if dots {
+        let actual = web_find_radar_dots(&theme.root);
+        assert_eq!(
+            expected_dots.len(),
+            actual.len(),
+            "{web_name}: expected {} dot(s), got {}",
+            expected_dots.len(),
+            actual.len()
+        );
+        for (i, (expected, web)) in expected_dots.iter().zip(actual.iter()).enumerate() {
+            assert_rect_close_px(&format!("{web_name} dot-{i}"), *expected, web.rect, 1.0);
+        }
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_radar_geometry_matches_web() {
+    let default = [186.0_f32, 305.0, 237.0, 273.0, 209.0, 214.0];
+    let default_grid_fill = [186.0_f32, 285.0, 237.0, 203.0, 209.0, 264.0];
+    let circle_no_lines = [186.0_f32, 305.0, 237.0, 203.0, 209.0, 214.0];
+
+    let multiple_desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
+    let multiple_mobile = [80.0_f32, 200.0, 120.0, 190.0, 130.0, 140.0];
+
+    let lines_only_desktop = [186.0_f32, 185.0, 207.0, 173.0, 160.0, 174.0];
+    let lines_only_mobile = [160.0_f32, 170.0, 180.0, 160.0, 190.0, 204.0];
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-default",
+        &[&default],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        true,
+        false,
+        None,
+        true,
+        false,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-dots",
+        &[&default],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        true,
+        false,
+        None,
+        true,
+        true,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-grid-none",
+        &[&default],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        false,
+        false,
+        None,
+        false,
+        true,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-grid-fill",
+        &[&default_grid_fill],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        true,
+        false,
+        None,
+        true,
+        false,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-grid-circle",
+        &[&default],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        false,
+        true,
+        None,
+        true,
+        true,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-grid-circle-fill",
+        &[&default_grid_fill],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        false,
+        true,
+        None,
+        true,
+        false,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-grid-circle-no-lines",
+        &[&circle_no_lines],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        false,
+        true,
+        None,
+        false,
+        true,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-grid-custom",
+        &[&default],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        true,
+        false,
+        Some(&[90.0]),
+        false,
+        false,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-multiple",
+        &[&multiple_desktop, &multiple_mobile],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        true,
+        false,
+        None,
+        true,
+        false,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-lines-only",
+        &[&lines_only_desktop, &lines_only_mobile],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        true,
+        false,
+        None,
+        false,
+        false,
+    );
+
+    assert_radar_geometry_matches_web(
+        "chart-radar-radius",
+        &[&multiple_desktop, &multiple_mobile],
+        fret_ui_shadcn::recharts_geometry::PolarChartLayout::default(),
+        true,
+        false,
+        None,
+        true,
+        false,
+    );
+
+    {
+        let mut layout = fret_ui_shadcn::recharts_geometry::PolarChartLayout::default();
+        layout.margin_top_px = 10.0;
+        layout.margin_right_px = 10.0;
+        layout.margin_bottom_px = 10.0;
+        layout.margin_left_px = 10.0;
+
+        assert_radar_geometry_matches_web(
+            "chart-radar-label-custom",
+            &[&multiple_desktop, &multiple_mobile],
+            layout,
+            true,
+            false,
+            None,
+            true,
+            false,
+        );
+    }
+
+    {
+        let mut layout = fret_ui_shadcn::recharts_geometry::PolarChartLayout::default();
+        layout.margin_top_px = -40.0;
+        layout.margin_bottom_px = -10.0;
+
+        assert_radar_geometry_matches_web(
+            "chart-radar-icons",
+            &[&multiple_desktop, &multiple_mobile],
+            layout,
+            true,
+            false,
+            None,
+            true,
+            false,
+        );
+    }
+}
+
+#[test]
+fn web_vs_fret_layout_chart_radial_geometry_matches_web() {
+    let values = [275.0_f32, 200.0, 187.0, 173.0, 90.0];
+
+    fn svg_rect(theme: &WebGoldenTheme) -> Rect {
+        let svg = web_find_pie_svg(&theme.root);
+        Rect::new(
+            Point::new(Px(svg.rect.x), Px(svg.rect.y)),
+            CoreSize::new(Px(svg.rect.w), Px(svg.rect.h)),
+        )
+    }
+
+    {
+        let web = read_web_golden("chart-radial-grid");
+        let theme = web_theme(&web);
+        let svg_rect = svg_rect(theme);
+        let expected_grid = fret_ui_shadcn::recharts_geometry::radial_grid_circle_rects(
+            svg_rect,
+            30.0,
+            100.0,
+            values.len(),
+        );
+        let expected_sectors = fret_ui_shadcn::recharts_geometry::radial_bar_sector_rects(
+            svg_rect, &values, 275.0, 0.0, 360.0, 30.0, 100.0, 5.6,
+        );
+
+        let actual_grid = web_find_polar_grid_concentric_circles(&theme.root);
+        assert_eq!(
+            expected_grid.len(),
+            actual_grid.len(),
+            "chart-radial-grid: expected {} concentric circle(s), got {}",
+            expected_grid.len(),
+            actual_grid.len()
+        );
+        for (i, (expected, web)) in expected_grid.iter().zip(actual_grid.iter()).enumerate() {
+            assert_rect_close_px(
+                &format!("chart-radial-grid grid-circle-{i}"),
+                *expected,
+                web.rect,
+                1.0,
+            );
+        }
+
+        let mut actual_sectors = web_find_radial_bar_sectors(&theme.root);
+        sort_radial_band_nodes_by_outer_radius(svg_rect, &mut actual_sectors);
+        assert_eq!(
+            expected_sectors.len(),
+            actual_sectors.len(),
+            "chart-radial-grid: expected {} sector(s), got {}",
+            expected_sectors.len(),
+            actual_sectors.len()
+        );
+        for (i, (expected, web)) in expected_sectors
+            .iter()
+            .zip(actual_sectors.iter())
+            .enumerate()
+        {
+            assert_rect_close_px(
+                &format!("chart-radial-grid sector-{i}"),
+                *expected,
+                web.rect,
+                1.0,
+            );
+        }
+
+        let angles = web_find_polar_grid_angle_lines(&theme.root);
+        assert_eq!(
+            angles.len(),
+            1,
+            "chart-radial-grid: expected 1 polar angle grid group, got {}",
+            angles.len()
+        );
+    }
+
+    {
+        let web_name = "chart-radial-simple";
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let svg_rect = svg_rect(theme);
+
+        let expected_bg = fret_ui_shadcn::recharts_geometry::radial_bar_background_rects(
+            svg_rect,
+            values.len(),
+            0.0,
+            360.0,
+            30.0,
+            110.0,
+            5.6,
+        );
+        let expected_fg = fret_ui_shadcn::recharts_geometry::radial_bar_sector_rects(
+            svg_rect, &values, 1400.0, 0.0, 360.0, 30.0, 110.0, 5.6,
+        );
+
+        let mut actual_bg = web_find_radial_bar_background_sectors(&theme.root);
+        sort_radial_band_nodes_by_outer_radius(svg_rect, &mut actual_bg);
+        assert_eq!(
+            expected_bg.len(),
+            actual_bg.len(),
+            "{web_name}: expected {} background sector(s), got {}",
+            expected_bg.len(),
+            actual_bg.len()
+        );
+        for (i, (expected, web)) in expected_bg.iter().zip(actual_bg.iter()).enumerate() {
+            assert_rect_close_px(&format!("{web_name} bg-{i}"), *expected, web.rect, 1.0);
+        }
+
+        let mut actual_fg = web_find_radial_bar_sectors(&theme.root);
+        sort_radial_band_nodes_by_outer_radius(svg_rect, &mut actual_fg);
+        assert_eq!(
+            expected_fg.len(),
+            actual_fg.len(),
+            "{web_name}: expected {} sector(s), got {}",
+            expected_fg.len(),
+            actual_fg.len()
+        );
+        for (i, (expected, web)) in expected_fg.iter().zip(actual_fg.iter()).enumerate() {
+            assert_rect_close_px(&format!("{web_name} fg-{i}"), *expected, web.rect, 1.0);
+        }
+    }
+
+    {
+        let web_name = "chart-radial-label";
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let svg_rect = svg_rect(theme);
+
+        // `endAngle` is intentionally > 360° in the upstream example; Recharts/d3-shape treats
+        // angles as raw numbers (no modulo), so we do the same here.
+        let start_angle = -90.0;
+        let end_angle = 380.0;
+
+        let expected_bg = fret_ui_shadcn::recharts_geometry::radial_bar_background_rects(
+            svg_rect,
+            values.len(),
+            0.0,
+            360.0,
+            30.0,
+            110.0,
+            5.6,
+        );
+        let expected_fg = fret_ui_shadcn::recharts_geometry::radial_bar_sector_rects(
+            svg_rect,
+            &values,
+            1400.0,
+            start_angle,
+            end_angle,
+            30.0,
+            110.0,
+            5.6,
+        );
+
+        let mut actual_bg = web_find_radial_bar_background_sectors(&theme.root);
+        sort_radial_band_nodes_by_outer_radius(svg_rect, &mut actual_bg);
+        assert_eq!(
+            expected_bg.len(),
+            actual_bg.len(),
+            "{web_name}: expected {} background sector(s), got {}",
+            expected_bg.len(),
+            actual_bg.len()
+        );
+        for (i, (expected, web)) in expected_bg.iter().zip(actual_bg.iter()).enumerate() {
+            assert_rect_close_px(&format!("{web_name} bg-{i}"), *expected, web.rect, 1.0);
+        }
+
+        let mut actual_fg = web_find_radial_bar_sectors(&theme.root);
+        sort_radial_band_nodes_by_outer_radius(svg_rect, &mut actual_fg);
+        assert_eq!(
+            expected_fg.len(),
+            actual_fg.len(),
+            "{web_name}: expected {} sector(s), got {}",
+            expected_fg.len(),
+            actual_fg.len()
+        );
+        for (i, (expected, web)) in expected_fg.iter().zip(actual_fg.iter()).enumerate() {
+            assert_rect_close_px(&format!("{web_name} fg-{i}"), *expected, web.rect, 1.0);
+        }
+    }
+
+    for (web_name, total_span, domain_max, band_inner, band_outer) in [
+        (
+            "chart-radial-shape",
+            100.0_f32,
+            7200.0_f32,
+            68.0_f32,
+            92.0_f32,
+        ),
+        (
+            "chart-radial-text",
+            250.0_f32,
+            950.0_f32,
+            74.0_f32,
+            86.0_f32,
+        ),
+    ] {
+        let value = if web_name == "chart-radial-shape" {
+            1260.0
+        } else {
+            200.0
+        };
+        let web = read_web_golden(web_name);
+        let theme = web_theme(&web);
+        let svg_rect = svg_rect(theme);
+
+        let circles = web_find_polar_grid_concentric_circles(&theme.root);
+        let mut expected_circles =
+            fret_ui_shadcn::recharts_geometry::polar_circle_rects(svg_rect, &[86.0, 74.0]);
+        expected_circles.sort_by(|a, b| {
+            a.size
+                .width
+                .0
+                .partial_cmp(&b.size.width.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| {
+                    a.size
+                        .height
+                        .0
+                        .partial_cmp(&b.size.height.0)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+        });
+        assert_eq!(
+            expected_circles.len(),
+            circles.len(),
+            "{web_name}: expected {} concentric circle(s), got {}",
+            expected_circles.len(),
+            circles.len()
+        );
+        for (i, (expected, web)) in expected_circles.iter().zip(circles.iter()).enumerate() {
+            assert_rect_close_px(
+                &format!("{web_name} grid-circle-{i}"),
+                *expected,
+                web.rect,
+                1.0,
+            );
+        }
+
+        let bg = web_find_radial_bar_background_sectors(&theme.root);
+        assert_eq!(
+            bg.len(),
+            1,
+            "{web_name}: expected 1 background sector, got {}",
+            bg.len()
+        );
+        let corner_radius = if web_name == "chart-radial-text" {
+            10.0
+        } else {
+            0.0
+        };
+        let expected_bg =
+            fret_ui_shadcn::recharts_geometry::annular_sector_rect_with_corner_radius(
+                svg_rect,
+                0.0,
+                total_span,
+                band_inner,
+                band_outer,
+                corner_radius,
+            )
+            .unwrap_or_else(|| panic!("{web_name}: failed to compute background rect"));
+        assert_rect_close_px(&format!("{web_name} bg"), expected_bg, bg[0].rect, 1.0);
+
+        let fg = web_find_radial_bar_sectors(&theme.root);
+        assert_eq!(
+            fg.len(),
+            1,
+            "{web_name}: expected 1 sector, got {}",
+            fg.len()
+        );
+        let end = (value / domain_max) * total_span;
+        let expected_fg = fret_ui_shadcn::recharts_geometry::annular_sector_rect(
+            svg_rect, 0.0, end, band_inner, band_outer,
+        )
+        .unwrap_or_else(|| panic!("{web_name}: failed to compute sector rect"));
+        assert_rect_close_px(&format!("{web_name} fg"), expected_fg, fg[0].rect, 1.0);
+    }
+
+    {
+        let web = read_web_golden("chart-radial-stacked");
+        let theme = web_theme(&web);
+        let svg_rect = svg_rect(theme);
+        let desktop = 1260.0_f32;
+        let mobile = 570.0_f32;
+        let total = desktop + mobile;
+        let span = 180.0_f32;
+
+        let inner = 69.0_f32;
+        let outer = 88.7_f32;
+
+        let desktop_end = (desktop / total) * span;
+        let expected = [
+            fret_ui_shadcn::recharts_geometry::annular_sector_rect(
+                svg_rect,
+                0.0,
+                desktop_end,
+                inner,
+                outer,
+            )
+            .unwrap_or_else(|| panic!("chart-radial-stacked: failed to compute desktop rect")),
+            fret_ui_shadcn::recharts_geometry::annular_sector_rect(
+                svg_rect,
+                desktop_end,
+                span,
+                inner,
+                outer,
+            )
+            .unwrap_or_else(|| panic!("chart-radial-stacked: failed to compute mobile rect")),
+        ];
+
+        let mut actual = web_find_radial_bar_sectors(&theme.root);
+        actual.sort_by(|a, b| {
+            a.rect
+                .x
+                .partial_cmp(&b.rect.x)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mut expected = expected;
+        expected.sort_by(|a, b| {
+            a.origin
+                .x
+                .0
+                .partial_cmp(&b.origin.x.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        assert_eq!(
+            expected.len(),
+            actual.len(),
+            "chart-radial-stacked: expected {} sector(s), got {}",
+            expected.len(),
+            actual.len()
+        );
+
+        for (i, (expected, web)) in expected.iter().zip(actual.iter()).enumerate() {
+            assert_rect_close_px(
+                &format!("chart-radial-stacked sector-{i}"),
+                *expected,
+                web.rect,
+                1.5,
+            );
+        }
+    }
+}
+
 fn assert_chart_series_curve_bounds_match_web(
     web_name: &str,
     series: &[(&[f32], fret_ui_shadcn::recharts_geometry::CurveKind)],
@@ -25789,6 +26706,34 @@ fn web_vs_fret_layout_chart_line_multiple_curve_bounds_match_web() {
     );
 }
 
+const CHART_INTERACTIVE_DESKTOP: [f32; 91] = [
+    222.0_f32, 97.0_f32, 167.0_f32, 242.0_f32, 373.0_f32, 301.0_f32, 245.0_f32, 409.0_f32,
+    59.0_f32, 261.0_f32, 327.0_f32, 292.0_f32, 342.0_f32, 137.0_f32, 120.0_f32, 138.0_f32,
+    446.0_f32, 364.0_f32, 243.0_f32, 89.0_f32, 137.0_f32, 224.0_f32, 138.0_f32, 387.0_f32,
+    215.0_f32, 75.0_f32, 383.0_f32, 122.0_f32, 315.0_f32, 454.0_f32, 165.0_f32, 293.0_f32,
+    247.0_f32, 385.0_f32, 481.0_f32, 498.0_f32, 388.0_f32, 149.0_f32, 227.0_f32, 293.0_f32,
+    335.0_f32, 197.0_f32, 197.0_f32, 448.0_f32, 473.0_f32, 338.0_f32, 499.0_f32, 315.0_f32,
+    235.0_f32, 177.0_f32, 82.0_f32, 81.0_f32, 252.0_f32, 294.0_f32, 201.0_f32, 213.0_f32,
+    420.0_f32, 233.0_f32, 78.0_f32, 340.0_f32, 178.0_f32, 178.0_f32, 470.0_f32, 103.0_f32,
+    439.0_f32, 88.0_f32, 294.0_f32, 323.0_f32, 385.0_f32, 438.0_f32, 155.0_f32, 92.0_f32,
+    492.0_f32, 81.0_f32, 426.0_f32, 307.0_f32, 371.0_f32, 475.0_f32, 107.0_f32, 341.0_f32,
+    408.0_f32, 169.0_f32, 317.0_f32, 480.0_f32, 132.0_f32, 141.0_f32, 434.0_f32, 448.0_f32,
+    149.0_f32, 103.0_f32, 446.0_f32,
+];
+
+#[test]
+fn web_vs_fret_layout_chart_line_interactive_curve_bounds_match_web() {
+    assert_chart_series_curve_bounds_match_web(
+        "chart-line-interactive",
+        &[(
+            &CHART_INTERACTIVE_DESKTOP,
+            fret_ui_shadcn::recharts_geometry::CurveKind::Monotone,
+        )],
+        5,
+        None,
+    );
+}
+
 #[test]
 fn web_vs_fret_layout_chart_area_variants_curve_bounds_match_web() {
     let desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
@@ -25875,6 +26820,31 @@ fn web_vs_fret_layout_chart_area_stacked_expand_curve_bounds_match_web() {
         5,
         Some(1.0),
     );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_area_interactive_curves_within_plot() {
+    let web_name = "chart-area-interactive";
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let chart = web_find_chart_container(&theme.root);
+    let plot = web_find_chart_plot_rect(chart);
+    let curves = web_find_chart_series_curves(chart);
+    assert_eq!(
+        curves.len(),
+        2,
+        "{web_name}: expected 2 area curve(s), got {}",
+        curves.len()
+    );
+
+    for (i, curve) in curves.iter().enumerate() {
+        assert!(
+            rect_contains(plot, curve.rect),
+            "{web_name}: curve-{i} is outside plot rect (plot={plot:?}, curve={:?})",
+            curve.rect
+        );
+    }
 }
 
 #[test]

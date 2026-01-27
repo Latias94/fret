@@ -15,7 +15,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `426/448` keys referenced (`95.1%`)
+- shadcn-web `v4/new-york-v4`: `448/448` keys referenced (`100%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -54,14 +54,16 @@ Recent breadth wins:
 
 ### Largest remaining gaps (by golden family)
 
-From `tools/golden_coverage.ps1 -GroupMissingByPrefix`:
-
-- `chart` (22 variants): radar/radial families + the interactive bar/line/area pages.
+All golden keys are referenced by tests (breadth coverage is complete). Remaining work is primarily
+**depth**: making sure each family has high-signal gates (not just “exists / within bounds”) across
+the viewports and interaction states that shape behavior.
 
 ### Recommended next alignment targets (P0 order)
 
-1. **Chart push**
-   - Treat `chart-*` as a dedicated sprint (surface area is large; likely needs new audit notes + more selective gates).
+1. **Chart depth push**
+   - The `chart-*` pages are now all referenced by tests, but several gates are still “engine-math only”
+     (series bounds / bar rect math). Next step is to add higher-signal gates for tooltip/cursor/active
+     markers and stacked area outcomes.
    - Plan + scope: `docs/audits/shadcn-chart.md`.
 
 When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a

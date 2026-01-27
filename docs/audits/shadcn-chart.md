@@ -38,13 +38,24 @@ Current:
   - Line/area curves: bounds match web for a first batch of variants (natural/linear/step + stacking/expand stacking).
     These gates still take the web plot rect (grid bounds) as input, so they validate scale + curve math rather than
     the full chart layout stack (axes/ticks/margins).
+- Radial/radar geometry gates (engine math, not full rendering):
+  - Radar family: polygon + dot bounds and polar grid outcomes match web across desktop/mobile variants.
+  - Radial family: polar grid circles + radial bar sector/background bounds match web across the v4 gallery variants.
+- Interactive chart pages:
+  - `chart-line-interactive`: monotone curve bounds match web (default active series).
+  - `chart-bar-interactive`: single-series bar rect layout matches web (default active series).
+  - `chart-area-interactive`: smoke gate asserts both stacked area curves stay within the plot rect
+    (full stacked-curve math + interaction states still pending).
 - Known gap: `chart-tooltip-advanced` currently needs a small height shim on the “Total” row to match web output.
   This likely points to a line-height / box-model mismatch that should be fixed at the text/layout layer instead of
   per-component adjustments.
 - No chart rendering backend is wired for shadcn parity yet (axes/series/tooltip hit-testing, etc).
 
-As a result, the remaining ungated `chart-*` pages are still the bulk of the work (22 keys today):
-radar/radial families + the interactive bar/line/area pages.
+Breadth status:
+
+- All `chart-*` goldens in `goldens/shadcn-web/v4/new-york-v4` are referenced by at least one test.
+- Depth varies: many gates validate math against web SVG bounds, but do not yet cover full interaction
+  state machines (hover/active index), tooltip anchoring, cursor overlays, and accessibility metadata.
 
 ## Parity scope (what “1:1” means here)
 
