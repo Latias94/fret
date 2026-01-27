@@ -1156,6 +1156,217 @@ mod tests {
     }
 
     #[test]
+    fn combobox_pointer_open_auto_focuses_search_input() {
+        use fret_core::{Event, Modifiers, MouseButton};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("beta")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            ComboboxItem::new("alpha", "Alpha"),
+            ComboboxItem::new("beta", "Beta"),
+            ComboboxItem::new("gamma", "Gamma"),
+        ];
+
+        // Frame 1: establish stable trigger bounds.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.value.is_none())
+            .expect("combobox trigger semantics");
+        let trigger_bounds = ui
+            .debug_node_visual_bounds(trigger.id)
+            .expect("trigger bounds");
+        let trigger_center = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert!(
+            app.models().get_copied(&open).unwrap_or(false),
+            "expected pointer click to open combobox"
+        );
+
+        // Frame 2: open; autofocus should move focus into the search input.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.value.is_some())
+            .expect("combobox search input node");
+        assert_eq!(
+            ui.focus(),
+            Some(input.id),
+            "expected pointer-open to autofocus the search input"
+        );
+    }
+
+    #[test]
+    fn combobox_keyboard_open_auto_focuses_search_input() {
+        use fret_core::{Event, KeyCode, Modifiers};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("beta")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            ComboboxItem::new("alpha", "Alpha"),
+            ComboboxItem::new("beta", "Beta"),
+            ComboboxItem::new("gamma", "Gamma"),
+        ];
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("combobox trigger node");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+        assert!(
+            app.models().get_copied(&open).unwrap_or(false),
+            "expected Enter to open combobox"
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.value.is_some())
+            .expect("combobox search input node");
+        assert_eq!(
+            ui.focus(),
+            Some(input.id),
+            "expected keyboard-open to autofocus the search input"
+        );
+    }
+
+    #[test]
     fn combobox_close_transition_disables_pointer_move_and_timer_events() {
         use fret_core::{Event, Modifiers, MouseButton, MouseButtons};
 
