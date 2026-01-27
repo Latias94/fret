@@ -13,7 +13,7 @@ To reach 1:1 parity, we need to be explicit about which parts are “wrapper UI�
   - `repo-ref/ui/apps/v4/registry/new-york-v4/charts/*.tsx`
   - Registry index: `repo-ref/ui/apps/v4/registry/new-york-v4/charts/_registry.ts`
 - Goldens (expected outcomes):
-  - `goldens/shadcn-web/v4/new-york-v4/chart-*.json` (80 variants today)
+  - `goldens/shadcn-web/v4/new-york-v4/chart-*.json` (82 variants today)
   - Note: the extractor (`goldens/shadcn-web/scripts/extract-golden.mts`) includes a Recharts “settle” wait so
     bar/radar series nodes are present in both light/dark themes (avoid partial SVG frames).
 
@@ -47,6 +47,7 @@ Current:
   - `chart-bar-interactive`: single-series bar rect layout matches web (desktop + `*.mobile` variant).
   - `chart-area-interactive`: stacked area curve + fill bounds match web (`*.30d`, `*.7d`, and default 90d)
     (full stacked-curve math + interaction states still pending).
+  - `chart-pie-interactive`: active sector geometry matches web for multiple selected months (`*.february`, `*.may`).
 - Known gap: `chart-tooltip-advanced` currently needs a small height shim on the “Total” row to match web output.
   This likely points to a line-height / box-model mismatch that should be fixed at the text/layout layer instead of
   per-component adjustments.

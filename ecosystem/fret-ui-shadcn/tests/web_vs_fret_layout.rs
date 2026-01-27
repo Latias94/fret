@@ -25901,6 +25901,24 @@ fn web_vs_fret_layout_chart_pie_sector_rects_match_web() {
         &[(0, svg_outer_300 + 10.0)],
         &[(0, svg_outer_300 + 12.0, svg_outer_300 + 25.0)],
     );
+
+    assert_pie_sector_rects_match_web(
+        "chart-pie-interactive.february",
+        &desktop_interactive,
+        60.0,
+        Some(svg_outer_300),
+        &[(1, svg_outer_300 + 10.0)],
+        &[(1, svg_outer_300 + 12.0, svg_outer_300 + 25.0)],
+    );
+
+    assert_pie_sector_rects_match_web(
+        "chart-pie-interactive.may",
+        &desktop_interactive,
+        60.0,
+        Some(svg_outer_300),
+        &[(4, svg_outer_300 + 10.0)],
+        &[(4, svg_outer_300 + 12.0, svg_outer_300 + 25.0)],
+    );
 }
 
 fn assert_radar_geometry_matches_web(
