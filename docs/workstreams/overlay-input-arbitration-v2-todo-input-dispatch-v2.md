@@ -235,6 +235,10 @@ Each TODO is labeled:
 - [x] OIA2-test-042 Preventing outside-press dismissal keeps popover open but remains click-through (underlay still activates).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/popover.rs` (`popover_outside_press_can_be_intercepted`)
+
+- [x] OIA2-test-043 Tooltip outside-press dismissal remains click-through (underlay activates and gains focus).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (`tooltip_outside_press_closes_and_activates_underlay`)
   - Target: same handler semantics as modal overlays, but for modal popovers (separate code path).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/popover.rs` (`modal_popover_close_transition_on_close_auto_focus_can_prevent_default_and_restore_focus`)
