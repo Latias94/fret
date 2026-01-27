@@ -208,6 +208,11 @@ Implemented (evidence):
   - `ecosystem/fret-code-editor-buffer`
   - `ecosystem/fret-code-editor-view`
   - `ecosystem/fret-code-editor`
+- Word/line selection + word navigation (Identifier mode):
+  - `ecosystem/fret-code-editor-view/src/lib.rs` (`select_word_range`, `move_word_left/right`)
+  - `ecosystem/fret-code-editor/src/lib.rs` (double/triple click selection + `text.move_word_*` routing)
+- Undo/redo wiring (widget-owned history for MVP):
+  - `ecosystem/fret-code-editor/src/lib.rs` (`edit.undo` / `edit.redo` command handling)
 - Surface + caches:
   - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor`, row text cache, torture overlay)
   - `crates/fret-ui/src/canvas.rs` / `crates/fret-ui/src/element.rs` (`CanvasCachePolicy.shared_text`)
