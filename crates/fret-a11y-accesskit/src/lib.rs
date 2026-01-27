@@ -527,6 +527,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(input),
             captured: None,
             nodes: vec![
@@ -672,6 +673,7 @@ mod tests {
                 },
             ],
             barrier_root: Some(modal_root),
+            focus_barrier_root: Some(modal_root),
             focus: Some(input),
             captured: None,
             nodes: vec![
@@ -821,6 +823,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -920,6 +923,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -1049,6 +1053,7 @@ mod tests {
                 },
             ],
             barrier_root: Some(modal_root),
+            focus_barrier_root: Some(modal_root),
             focus: None,
             captured: None,
             nodes: vec![
@@ -1147,6 +1152,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(input),
             captured: None,
             nodes: vec![
@@ -1251,6 +1257,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(input),
             captured: None,
             nodes: vec![
@@ -1347,6 +1354,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(input),
             captured: None,
             nodes: vec![
@@ -1442,6 +1450,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(input),
             captured: None,
             nodes: vec![

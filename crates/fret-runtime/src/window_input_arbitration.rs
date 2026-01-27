@@ -20,6 +20,7 @@ pub enum WindowPointerOcclusion {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct WindowInputArbitrationSnapshot {
     pub modal_barrier_root: Option<NodeId>,
+    pub focus_barrier_root: Option<NodeId>,
     pub pointer_occlusion: WindowPointerOcclusion,
     pub pointer_occlusion_root: Option<NodeId>,
     pub pointer_capture_active: bool,

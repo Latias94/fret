@@ -57,6 +57,11 @@ Keep this list short and evidence-backed:
 - [x] OIA2-diag-011 Add stable labels for scope roots (avoid relying on `Debug` formatting).
   - Target: scripted comparisons remain resilient to formatting changes.
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiHitTestSnapshotV1.scope_roots`)
+- [x] OIA2-diag-014 Expose focus barrier root alongside the pointer barrier root.
+  - Target: diagnosing “pointer is blocked but focus is not (or vice versa)” without logs.
+  - Evidence: `crates/fret-ui/src/tree/mod.rs` (`SemanticsSnapshot.focus_barrier_root`),
+    `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.semantics.focus_barrier_root`,
+    `debug.input_arbitration.focus_barrier_root`)
 
 ## P0 — Policy Normalization (Reduce Future Refactor Risk)
 
