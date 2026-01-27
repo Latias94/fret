@@ -514,6 +514,11 @@ These scripts assert that stable semantics anchors exist *and* that their bounds
 window (`bounds_within_window`), which is a fast way to catch “layout is broken / clipped to zero”
 regressions when a table suddenly “disappears”.
 
+The diagnostics harness also includes docking arbitration scripts (multi-viewport + modal):
+
+- `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
+- `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+
 ### View-cache regression gating
 
 Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
@@ -543,6 +548,8 @@ Some docking / embedded-viewport regressions only matter if viewport input forwa
 you can gate on forwarded viewport input events exported in `bundle.json`:
 
 - `--check-viewport-input-min N` counts `debug.viewport_input[]` events in snapshots after `--warmup-frames`.
+- `--check-dock-drag-min N` counts snapshots where `debug.docking_interaction.dock_drag` is present.
+- `--check-viewport-capture-min N` counts snapshots where `debug.docking_interaction.viewport_capture` is present.
 
 ### Matrix runner (uncached vs cached)
 
