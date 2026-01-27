@@ -161,6 +161,8 @@ Related:
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/popper_content.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/src/command.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/tests/{snapshots,web_vs_fret_overlay_chrome,web_vs_fret_overlay_placement,radix_web_overlay_geometry,radix_web_primitives_state}.rs`
+- [x] AUE-iter-110 Add `ui::container_build(...)` sink constructor to avoid iterator borrow pitfalls.
+  - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
 
 ## H. Adoption Audit — `ui::text` in `fret-ui-shadcn`
 

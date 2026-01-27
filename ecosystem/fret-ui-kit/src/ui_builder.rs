@@ -919,6 +919,15 @@ where
     }
 }
 
+impl<H: UiHost, B> UiBuilder<crate::ui::ContainerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
 impl<H: UiHost, F, I> UiBuilder<crate::ui::ContainerBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,

@@ -235,12 +235,32 @@ pub struct ContainerBox<H, F> {
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
 
+/// Variant of [`ContainerBox`] that collects children into a sink to avoid iterator borrow pitfalls.
+#[derive(Debug)]
+pub struct ContainerBoxBuild<H, B> {
+    pub(crate) chrome: ChromeRefinement,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) build: Option<B>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
 impl<H, F> ContainerBox<H, F> {
     pub fn new(children: F) -> Self {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, B> ContainerBoxBuild<H, B> {
+    pub fn new(build: B) -> Self {
+        Self {
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            build: Some(build),
             _phantom: PhantomData,
         }
     }
@@ -257,6 +277,17 @@ impl<H, F> UiPatchTarget for ContainerBox<H, F> {
 impl<H, F> UiSupportsChrome for ContainerBox<H, F> {}
 impl<H, F> UiSupportsLayout for ContainerBox<H, F> {}
 
+impl<H, B> UiPatchTarget for ContainerBoxBuild<H, B> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.chrome = self.chrome.merge(patch.chrome);
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, B> UiSupportsChrome for ContainerBoxBuild<H, B> {}
+impl<H, B> UiSupportsLayout for ContainerBoxBuild<H, B> {}
+
 impl<H: UiHost, F, I> ContainerBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -267,6 +298,22 @@ where
         let container = decl_style::container_props(theme, self.chrome, self.layout);
         let children = self.children.expect("expected container children closure");
         cx.container(container, move |cx| children(cx))
+    }
+}
+
+impl<H: UiHost, B> ContainerBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+        let container = decl_style::container_props(theme, self.chrome, self.layout);
+        let build = self.build.expect("expected container build closure");
+        cx.container(container, move |cx| {
+            let mut out = Vec::new();
+            build(cx, &mut out);
+            out
+        })
     }
 }
 
@@ -283,6 +330,17 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(ContainerBox::new(children))
+}
+
+/// Variant of [`container`] that avoids iterator borrow pitfalls by collecting into a sink.
+pub fn container_build<H: UiHost, B>(
+    _cx: &mut ElementContext<'_, H>,
+    build: B,
+) -> UiBuilder<ContainerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(ContainerBoxBuild::new(build))
 }
 
 /// A patchable scroll area constructor for authoring ergonomics.
