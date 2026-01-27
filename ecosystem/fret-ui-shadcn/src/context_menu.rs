@@ -2188,7 +2188,15 @@ impl ContextMenu {
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
             let on_open_auto_focus = self.on_open_auto_focus.clone();
-            let on_close_auto_focus = self.on_close_auto_focus.clone();
+            let on_close_auto_focus = self.on_close_auto_focus.clone().or_else(|| {
+                Some(Arc::new(
+                    |_host: &mut dyn fret_ui::action::UiFocusActionHost,
+                     _cx: fret_ui::action::ActionCx,
+                     req: &mut fret_ui::action::AutoFocusRequestCx| {
+                        req.prevent_default();
+                    },
+                ))
+            });
             let open_model_id = open.id();
             let anchor_store_model: Model<HashMap<ModelId, Point>> =
                 menu::context_menu_anchor_store_model(cx.app);
