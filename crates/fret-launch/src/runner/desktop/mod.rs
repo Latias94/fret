@@ -49,6 +49,10 @@ use fret_platform::open_url::OpenUrl as _;
 type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
+mod diag_bundle_screenshots;
+#[cfg(feature = "diag-screenshots")]
+mod diag_screenshots;
+mod dispatcher;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
@@ -57,6 +61,8 @@ mod renderdoc_capture;
 mod windows_menu;
 
 use super::streaming_upload::StreamingUploadQueue;
+use diag_bundle_screenshots::DiagBundleScreenshotCapture;
+use dispatcher::DesktopDispatcher;
 use no_services::NoUiServices;
 use renderdoc_capture::RenderDocCapture;
 
@@ -864,6 +870,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     pub config: WinitRunnerConfig,
     pub app: App,
     pub driver: D,
+    dispatcher: DesktopDispatcher,
     event_loop_proxy: Option<EventLoopProxy>,
     proxy_events: Arc<Mutex<Vec<RunnerUserEvent>>>,
 
@@ -872,6 +879,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     renderer: Option<Renderer>,
     renderer_caps: Option<fret_render::RendererCapabilities>,
     no_services: NoUiServices,
+    diag_bundle_screenshots: DiagBundleScreenshotCapture,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
@@ -908,6 +916,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     hotpatch: Option<HotpatchTrigger>,
     #[cfg(feature = "hotpatch-subsecond")]
     hot_reload_generation: u64,
+
+    #[cfg(feature = "diag-screenshots")]
+    diag_screenshots: Option<diag_screenshots::DiagScreenshotCapture>,
 }
 
 struct UploadedImageEntry {
@@ -1957,12 +1968,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         tracing::info!(caps = ?caps, "platform capabilities");
 
+        let dispatcher = DesktopDispatcher::new(caps.exec);
+        app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
+
         #[cfg(feature = "hotpatch-subsecond")]
         let now = Instant::now();
         Self {
             config,
             app,
             driver,
+            dispatcher,
             event_loop_proxy: None,
             proxy_events: Arc::new(Mutex::new(Vec::new())),
             renderdoc: None,
@@ -1970,6 +1985,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             renderer: None,
             renderer_caps: None,
             no_services: NoUiServices,
+            diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
@@ -1997,6 +2013,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             hotpatch: hotpatch_trigger_from_env(now),
             #[cfg(feature = "hotpatch-subsecond")]
             hot_reload_generation: 0,
+
+            #[cfg(feature = "diag-screenshots")]
+            diag_screenshots: diag_screenshots::DiagScreenshotCapture::from_env(),
         }
     }
 
@@ -2005,6 +2024,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
         {
+            caps.exec.background_work = fret_runtime::ExecBackgroundWork::Threads;
+            caps.exec.wake = fret_runtime::ExecWake::Reliable;
+            caps.exec.timers = fret_runtime::ExecTimers::Reliable;
+
             caps.ui.multi_window = true;
             caps.ui.window_tear_off = true;
             caps.ui.cursor_icons = true;
@@ -2038,6 +2061,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         #[cfg(target_arch = "wasm32")]
         {
+            caps.exec.background_work = fret_runtime::ExecBackgroundWork::Cooperative;
+            caps.exec.wake = fret_runtime::ExecWake::BestEffort;
+            caps.exec.timers = fret_runtime::ExecTimers::BestEffort;
+
             caps.ui.multi_window = false;
             caps.ui.window_tear_off = false;
             caps.ui.cursor_icons = false;
@@ -2063,6 +2090,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         #[cfg(any(target_os = "android", target_os = "ios"))]
         {
+            caps.exec.background_work = fret_runtime::ExecBackgroundWork::Threads;
+            caps.exec.wake = fret_runtime::ExecWake::Reliable;
+            caps.exec.timers = fret_runtime::ExecTimers::Reliable;
+
             caps.ui.multi_window = false;
             caps.ui.window_tear_off = false;
             caps.ui.cursor_icons = false;
@@ -2095,6 +2126,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     ) -> PlatformCapabilities {
         let available = Self::backend_platform_capabilities(config);
         let mut caps = requested.clone();
+
+        caps.exec.background_work = caps
+            .exec
+            .background_work
+            .clamp_to_available(available.exec.background_work);
+        caps.exec.wake = caps.exec.wake.clamp_to_available(available.exec.wake);
+        caps.exec.timers = caps.exec.timers.clamp_to_available(available.exec.timers);
 
         caps.ui.multi_window &= available.ui.multi_window;
         caps.ui.window_tear_off &= available.ui.window_tear_off;
@@ -2147,6 +2185,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         windows_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         #[cfg(target_os = "macos")]
         macos_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
+        self.dispatcher.set_event_loop_proxy(proxy.clone());
         self.event_loop_proxy = Some(proxy);
     }
 
@@ -2154,18 +2193,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     where
         F: FnOnce() -> PlatformCompletion + Send + 'static,
     {
-        let Some(proxy) = self.event_loop_proxy.clone() else {
+        let Some(_proxy) = self.event_loop_proxy.clone() else {
             return false;
         };
         let events = self.proxy_events.clone();
 
-        std::thread::spawn(move || {
-            let completion = task();
-            if let Ok(mut queue) = events.lock() {
-                queue.push(RunnerUserEvent::PlatformCompletion { window, completion });
-            }
-            proxy.wake_up();
-        });
+        let dispatcher = self.dispatcher.handle();
+        let wake_dispatcher = dispatcher.clone();
+        dispatcher.dispatch_background(
+            Box::new(move || {
+                let completion = task();
+                if let Ok(mut queue) = events.lock() {
+                    queue.push(RunnerUserEvent::PlatformCompletion { window, completion });
+                }
+                wake_dispatcher.wake(Some(window));
+            }),
+            fret_runtime::DispatchPriority::High,
+        );
 
         true
     }
@@ -2241,6 +2285,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         hotpatch::hotpatch_diag_log(&format!(
             "runner: hot_reload_all_windows begin reason={reason} generation={generation}"
         ));
+
+        // Ensure pending queued work does not cross the reload boundary.
+        self.dispatcher.hot_reload_boundary();
 
         // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
         {
@@ -2405,12 +2452,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let size = window.surface_size();
-        let surface = SurfaceState::new(
+        let surface = SurfaceState::new_with_usage(
             &context.adapter,
             &context.device,
             surface,
             size.width,
             size.height,
+            self.diag_bundle_screenshots.surface_usage(),
         )?;
 
         let id = self.windows.insert_with_key(|id| {
@@ -2570,12 +2618,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         self.app.with_global_mut(
             fret_runtime::WindowInputContextService::default,
-            |svc, _app| {
-                svc.remove_window(window);
-            },
-        );
-        self.app.with_global_mut(
-            fret_runtime::WindowInputArbitrationService::default,
             |svc, _app| {
                 svc.remove_window(window);
             },
@@ -2911,6 +2953,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         for _ in 0..MAX_EFFECT_DRAIN_TURNS {
             let now = Instant::now();
+            let mut did_work = self.dispatcher.drain_turn(now);
+            did_work |= self.drain_inboxes(None);
             let effects = self.app.flush_effects();
             let (effects, mut stats, acks) = self.streaming_uploads.process_effects(
                 self.frame_id,
@@ -2918,6 +2962,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 self.config.streaming_upload_budget_bytes_per_frame,
                 self.config.streaming_staging_budget_bytes,
                 self.config.streaming_update_ack_enabled,
+            );
+            tracing::trace!(
+                did_work,
+                effects = effects.len(),
+                acks = acks.len(),
+                "driver: drain_effects turn"
             );
             if self.config.streaming_update_ack_enabled {
                 for ack in acks {
@@ -2943,7 +2993,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             }
 
-            let mut did_work = self.poll_hotpatch_trigger(now);
+            did_work |= self.poll_hotpatch_trigger(now);
             did_work |= !effects.is_empty();
             let mut window_state_dirty: HashSet<fret_core::AppWindowId> = HashSet::new();
 
@@ -3015,6 +3065,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             let _ = self.force_close_window(window);
                         }
 
+                        self.dispatcher.shutdown();
                         event_loop.exit();
                         return;
                     }
@@ -3668,11 +3719,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 for window in windows {
                                     let _ = self.force_close_window(window);
                                 }
+                                self.dispatcher.shutdown();
                                 event_loop.exit();
                                 return;
                             }
 
                             if self.windows.is_empty() {
+                                self.dispatcher.shutdown();
                                 event_loop.exit();
                                 return;
                             }
@@ -3879,6 +3932,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
+    fn drain_inboxes(&mut self, window: Option<fret_core::AppWindowId>) -> bool {
+        let did_work = self.app.with_global_mut_untracked(
+            fret_runtime::InboxDrainRegistry::default,
+            |registry, app| registry.drain_all(app, window),
+        );
+        tracing::trace!(?window, did_work, "driver: drain_inboxes");
+        did_work
+    }
+
     fn propagate_model_changes(&mut self) -> bool {
         let changed = self.app.take_changed_models();
         if changed.is_empty() {
@@ -3914,6 +3976,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 || changed.contains(&TypeId::of::<
                     fret_runtime::WindowCommandActionAvailabilityService,
                 >())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
             {
                 windows_menu::sync_command_gating_from_app(&self.app);
             }
@@ -3930,6 +3993,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 || changed.contains(&TypeId::of::<
                     fret_runtime::WindowCommandActionAvailabilityService,
                 >())
+                || changed.contains(&TypeId::of::<fret_runtime::WindowCommandGatingService>())
             {
                 macos_menu::sync_command_gating_from_app(&self.app);
             }

@@ -163,8 +163,8 @@ impl DropdownMenuItem {
         self
     }
 
-    pub fn submenu(mut self, entries: Vec<DropdownMenuEntry>) -> Self {
-        self.submenu = Some(entries);
+    pub fn submenu(mut self, entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        self.submenu = Some(entries.into_iter().collect());
         self
     }
 
@@ -449,8 +449,10 @@ pub struct DropdownMenuGroup {
 }
 
 impl DropdownMenuGroup {
-    pub fn new(entries: Vec<DropdownMenuEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -1149,19 +1151,22 @@ impl DropdownMenu {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
     }
 
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry>,
-    ) -> AnyElement {
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+    {
         cx.scope(|cx| {
             let overlay_id = cx.root_id();
             let theme = Theme::global(&*cx.app).clone();
@@ -1240,6 +1245,7 @@ impl DropdownMenu {
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id_for_initial_focus = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -1274,7 +1280,8 @@ impl DropdownMenu {
                          return (Vec::new(), None);
                      };
 
-                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries(cx).into_boxed_slice());
+                    let entries: Vec<DropdownMenuEntry> = entries(cx).into_iter().collect();
+                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries.into_boxed_slice());
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
@@ -1741,7 +1748,7 @@ impl DropdownMenu {
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -1874,7 +1881,7 @@ impl DropdownMenu {
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -2035,7 +2042,7 @@ impl DropdownMenu {
                                                                 }
 
                                                                 if !has_submenu && !disabled {
-                                                                    cx.pressable_dispatch_command_opt(command.clone());
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                     if close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2524,6 +2531,15 @@ impl DropdownMenu {
                                                         let _submenu_cfg = env.submenu_cfg.clone();
                                                         let _overlay_root_name_for_controls =
                                                             env.overlay_root_name_for_controls.clone();
+                                                        let gating = crate::command_gating::snapshot_for_window(
+                                                            &*cx.app,
+                                                            cx.window,
+                                                        );
+
+                                                        let gating = crate::command_gating::snapshot_for_window(
+                                                            &*cx.app,
+                                                            cx.window,
+                                                        );
 
                                                         let mut rows: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
@@ -2668,7 +2684,7 @@ impl DropdownMenu {
                                                                                     checked.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2781,7 +2797,7 @@ impl DropdownMenu {
                                                                                     value.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2848,30 +2864,36 @@ impl DropdownMenu {
                                                                     )
                                                                 }));
                                                             }
-                                                            DropdownMenuEntry::Item(item) => {
-                                                                let collection_index = *item_ix;
-                                                                *item_ix = (*item_ix).saturating_add(1);
+                                                    DropdownMenuEntry::Item(item) => {
+                                                        let collection_index = *item_ix;
+                                                        *item_ix = (*item_ix).saturating_add(1);
 
-                                                                let label = item.label.clone();
-                                                                let value = item.value.clone();
-                                                                let a11y_label = item
-                                                                    .a11y_label
-                                                                    .clone()
-                                                                    .or_else(|| Some(label.clone()));
-                                                                let disabled = item.disabled;
-                                                                let close_on_select = item.close_on_select;
-                                                                let command = item.command;
-                                                                let leading = item.leading.clone();
-                                                                let trailing = item.trailing.clone();
-                                                                let variant = item.variant;
-                                                                let pad_left =
-                                                                    if item.inset { pad_x_inset } else { pad_x };
-                                                                let open = open_for_submenu.clone();
-                                                                let submenu_for_key =
-                                                                    submenu_models_for_panel.clone();
-                                                                let text_style = text_style.clone();
+                                                        let label = item.label.clone();
+                                                        let value = item.value.clone();
+                                                        let a11y_label = item
+                                                            .a11y_label
+                                                            .clone()
+                                                            .or_else(|| Some(label.clone()));
+                                                        let test_id = item.test_id.clone();
+                                                        let close_on_select = item.close_on_select;
+                                                        let command = item.command;
+                                                         let disabled = item.disabled
+                                                             || crate::command_gating::command_is_disabled_by_gating(
+                                                                 &*cx.app,
+                                                                 &gating,
+                                                                 command.as_ref(),
+                                                             );
+                                                        let leading = item.leading.clone();
+                                                        let trailing = item.trailing.clone();
+                                                        let variant = item.variant;
+                                                        let pad_left =
+                                                            if item.inset { pad_x_inset } else { pad_x };
+                                                        let open = open_for_submenu.clone();
+                                                        let submenu_for_key =
+                                                            submenu_models_for_panel.clone();
+                                                        let text_style = text_style.clone();
 
-                                                                        rows.push(cx.keyed(value.clone(), |cx| {
+                                                        rows.push(cx.keyed(value.clone(), |cx| {
                                                                     cx.pressable_with_id_props(
                                                                         |cx, st, item_id| {
                                                                             menu::sub_content::wire_item(
@@ -2880,11 +2902,13 @@ impl DropdownMenu {
                                                                                 disabled,
                                                                                 &submenu_for_key,
                                                                             );
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
 
+                                                                            let mut a11y = menu::item::menu_item_a11y(a11y_label, None);
+                                                                            a11y.test_id = test_id.clone();
                                                                             let props = PressableProps {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
@@ -2895,11 +2919,7 @@ impl DropdownMenu {
                                                                                 enabled: !disabled,
                                                                                 focusable: !disabled,
                                                                                 focus_ring: Some(ring),
-                                                                                a11y: menu::item::menu_item_a11y(
-                                                                                    a11y_label,
-                                                                                    None,
-                                                                                )
-                                                                                .with_collection_position(
+                                                                                a11y: a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
                                                                                 ),
@@ -3141,7 +3161,11 @@ impl DropdownMenu {
                     overlay_presence,
                     overlay_children,
                     overlay_root_name,
-                    content_focus_id.get(),
+                    menu::root::MenuInitialFocusTargets::new()
+                        .keyboard_entry_focus(first_item_focus_id_for_initial_focus.get())
+                        .pointer_content_focus(Some(content_id_for_trigger)),
+                    None,
+                    None,
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,
@@ -4175,8 +4199,9 @@ mod tests {
 
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
         let dismiss_calls_for_handler = dismiss_calls.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, _reason| {
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
             dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
         });
 
         let _ = render_frame_with_dismiss_handler(
@@ -5753,6 +5778,234 @@ mod tests {
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
             "submenu items should render after ArrowRight opens the submenu"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_items_propagate_test_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha").test_id("sub-alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha submenu item");
+        assert_eq!(
+            sub_alpha.test_id.as_deref(),
+            Some("sub-alpha"),
+            "expected submenu item test_id to be preserved for deterministic automation"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_keyboard_open_transfers_focus_and_arrow_left_restores_focus() {
+        use std::time::Duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(
+            DropdownMenuItem::new("More").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let effects = app.flush_effects();
+        let focus_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after <= Duration::from_millis(250) => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(focus_timer) = focus_timer else {
+            panic!("expected submenu focus timer effect");
+        };
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Timer { token: focus_timer },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let sub_alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha"))
+            .expect("Sub Alpha submenu item");
+        assert_eq!(
+            ui.focus(),
+            Some(sub_alpha.id),
+            "expected keyboard-open to transfer focus into the submenu"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowLeft,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more_after_close = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More submenu trigger after close");
+        assert_eq!(
+            ui.focus(),
+            Some(more_after_close.id),
+            "ArrowLeft should restore focus to the submenu trigger"
         );
     }
 }

@@ -6,6 +6,8 @@
 //! In Fret we keep the trigger rendering in wrapper crates, but centralize reusable wiring here
 //! so keyboard behavior stays consistent.
 
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::KeyCode;
@@ -47,6 +49,50 @@ pub fn wire_open_on_arrow_keys<H: UiHost>(
                 match down.key {
                     KeyCode::ArrowDown | KeyCode::ArrowUp => {
                         let _ = host.models_mut().update(&open, |v| *v = true);
+                        true
+                    }
+                    _ => false,
+                }
+            },
+        ),
+    );
+}
+
+/// Wire “ArrowDown/ArrowUp opens, then focuses the first/last item when already open”.
+///
+/// This matches common menu button behavior: pointer-opening a menu preserves trigger focus, but
+/// the first arrow key press transfers focus into the menu content.
+pub fn wire_open_or_focus_on_arrow_keys<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    trigger_id: GlobalElementId,
+    open: Model<bool>,
+    first_item_focus_id: Rc<Cell<Option<GlobalElementId>>>,
+    last_item_focus_id: Rc<Cell<Option<GlobalElementId>>>,
+) {
+    cx.key_on_key_down_for(
+        trigger_id,
+        Arc::new(
+            move |host: &mut dyn UiFocusActionHost, _acx: ActionCx, down: KeyDownCx| {
+                if down.repeat {
+                    return false;
+                }
+                match down.key {
+                    KeyCode::ArrowDown | KeyCode::ArrowUp => {
+                        let is_open = host.models_mut().read(&open, |v| *v).ok().unwrap_or(false);
+                        if !is_open {
+                            let _ = host.models_mut().update(&open, |v| *v = true);
+                            return true;
+                        }
+
+                        let target = match down.key {
+                            KeyCode::ArrowDown => first_item_focus_id.get(),
+                            KeyCode::ArrowUp => last_item_focus_id.get(),
+                            _ => None,
+                        };
+                        let Some(target) = target else {
+                            return false;
+                        };
+                        host.request_focus(target);
                         true
                     }
                     _ => false,

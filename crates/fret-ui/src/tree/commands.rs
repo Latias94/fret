@@ -44,6 +44,7 @@ impl<H: UiHost> UiTree<H> {
             platform: Platform::current(),
             caps,
             ui_has_modal: barrier_root.is_some(),
+            window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(),
             edit_can_undo: true,
             edit_can_redo: true,
@@ -58,6 +59,7 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
             }
+            input_ctx.window_arbitration = Some(self.window_input_arbitration_snapshot());
         }
 
         let Some(start) =
@@ -202,6 +204,14 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         for id in widget_commands {
+            if id.as_str() == "focus.menu_bar" {
+                let available = app
+                    .global::<fret_runtime::WindowMenuBarFocusService>()
+                    .is_some_and(|svc| svc.present(window));
+                snapshot.insert(id, available);
+                continue;
+            }
+
             let mut availability = self.command_availability_from_node(app, input_ctx, start, &id);
             if availability == CommandAvailability::NotHandled
                 && matches!(id.as_str(), "focus.next" | "focus.previous")
@@ -255,6 +265,7 @@ impl<H: UiHost> UiTree<H> {
             platform: Platform::current(),
             caps,
             ui_has_modal: barrier_root.is_some(),
+            window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(),
             edit_can_undo: true,
             edit_can_redo: true,
@@ -269,44 +280,14 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
             }
+
+            let window_arbitration = self.window_input_arbitration_snapshot();
+            input_ctx.window_arbitration = Some(window_arbitration);
+
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
-            app.with_global_mut(
-                fret_runtime::WindowInputArbitrationService::default,
-                |svc, _app| {
-                    let snapshot = self.input_arbitration_snapshot();
-                    svc.set_snapshot(
-                        window,
-                        fret_runtime::WindowInputArbitrationSnapshot {
-                            modal_barrier_root: snapshot.modal_barrier_root,
-                            pointer_occlusion: match snapshot.pointer_occlusion {
-                                PointerOcclusion::None => {
-                                    fret_runtime::WindowPointerOcclusion::None
-                                }
-                                PointerOcclusion::BlockMouse => {
-                                    fret_runtime::WindowPointerOcclusion::BlockMouse
-                                }
-                                PointerOcclusion::BlockMouseExceptScroll => {
-                                    fret_runtime::WindowPointerOcclusion::BlockMouseExceptScroll
-                                }
-                            },
-                            pointer_occlusion_root: snapshot
-                                .pointer_occlusion_layer
-                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                            pointer_capture_active: snapshot.pointer_capture_active,
-                            pointer_capture_root: snapshot
-                                .pointer_capture_layer
-                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                            pointer_capture_multiple_roots: snapshot
-                                .pointer_capture_multiple_layers
-                                || (snapshot.pointer_capture_active
-                                    && snapshot.pointer_capture_layer.is_none()),
-                        },
-                    );
                 },
             );
         }
@@ -422,6 +403,7 @@ impl<H: UiHost> UiTree<H> {
                 platform: Platform::current(),
                 caps,
                 ui_has_modal: barrier_root.is_some(),
+                window_arbitration: None,
                 focus_is_text_input: self.focus_is_text_input(),
                 edit_can_undo: true,
                 edit_can_redo: true,
@@ -435,44 +417,14 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
             }
+
+            let window_arbitration = self.window_input_arbitration_snapshot();
+            input_ctx.window_arbitration = Some(window_arbitration);
+
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
-            app.with_global_mut(
-                fret_runtime::WindowInputArbitrationService::default,
-                |svc, _app| {
-                    let snapshot = self.input_arbitration_snapshot();
-                    svc.set_snapshot(
-                        window,
-                        fret_runtime::WindowInputArbitrationSnapshot {
-                            modal_barrier_root: snapshot.modal_barrier_root,
-                            pointer_occlusion: match snapshot.pointer_occlusion {
-                                PointerOcclusion::None => {
-                                    fret_runtime::WindowPointerOcclusion::None
-                                }
-                                PointerOcclusion::BlockMouse => {
-                                    fret_runtime::WindowPointerOcclusion::BlockMouse
-                                }
-                                PointerOcclusion::BlockMouseExceptScroll => {
-                                    fret_runtime::WindowPointerOcclusion::BlockMouseExceptScroll
-                                }
-                            },
-                            pointer_occlusion_root: snapshot
-                                .pointer_occlusion_layer
-                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                            pointer_capture_active: snapshot.pointer_capture_active,
-                            pointer_capture_root: snapshot
-                                .pointer_capture_layer
-                                .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                            pointer_capture_multiple_roots: snapshot
-                                .pointer_capture_multiple_layers
-                                || (snapshot.pointer_capture_active
-                                    && snapshot.pointer_capture_layer.is_none()),
-                        },
-                    );
                 },
             );
         }

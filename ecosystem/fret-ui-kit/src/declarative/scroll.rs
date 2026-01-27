@@ -14,12 +14,15 @@ use crate::declarative::style;
 ///
 /// Fret treats scrolling as an explicit element (not a boolean overflow flag). This wrapper exists
 /// to match gpui/tailwind ergonomics while keeping the runtime contract explicit.
-pub fn overflow_scroll<H: UiHost>(
+pub fn overflow_scroll<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar: bool,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let (layout, scrollbar_w, thumb, thumb_hover) = {
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
@@ -83,13 +86,16 @@ pub fn overflow_scroll<H: UiHost>(
     })
 }
 
-pub fn overflow_scroll_with_handle<H: UiHost>(
+pub fn overflow_scroll_with_handle<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar: bool,
     handle: ScrollHandle,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let (layout, scrollbar_w, thumb, thumb_hover) = {
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
@@ -152,14 +158,17 @@ pub fn overflow_scroll_with_handle<H: UiHost>(
     })
 }
 
-pub fn overflow_scroll_with_handle_xy<H: UiHost>(
+pub fn overflow_scroll_with_handle_xy<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar_x: bool,
     show_scrollbar_y: bool,
     handle: ScrollHandle,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let (layout, scrollbar_w, thumb, thumb_hover, corner_bg) = {
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
@@ -292,11 +301,14 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
     })
 }
 
-pub fn overflow_scrollbar<H: UiHost>(
+pub fn overflow_scrollbar<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     overflow_scroll(cx, layout, true, f)
 }
 
@@ -314,13 +326,16 @@ pub fn overflow_scroll_content<H: UiHost>(
 }
 
 /// Vertical scrolling with a `vstack` content root.
-pub fn overflow_scroll_vstack<H: UiHost>(
+pub fn overflow_scroll_vstack<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar: bool,
     vstack: stack::VStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     overflow_scroll_content(cx, layout, show_scrollbar, |cx| {
         stack::vstack(cx, vstack, f)
     })
@@ -401,13 +416,16 @@ pub fn overflow_scroll_x_content<H: UiHost>(
 }
 
 /// Horizontal scrolling with a `vstack` content root.
-pub fn overflow_scroll_x_vstack<H: UiHost>(
+pub fn overflow_scroll_x_vstack<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     layout: LayoutRefinement,
     show_scrollbar_x: bool,
     vstack: stack::VStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     overflow_scroll_x_content(cx, layout, show_scrollbar_x, |cx| {
         stack::vstack(cx, vstack, f)
     })

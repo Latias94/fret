@@ -37,6 +37,9 @@ Related:
 - [x] AUE-chrome-013 Add shadow shorthands to the `ui()` chain (e.g. `shadow_sm/md/lg`).
   - Evidence: `ecosystem/fret-ui-kit/src/style/chrome.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
   - Resolution: `ecosystem/fret-ui-kit/src/declarative/style.rs`
+- [x] AUE-chrome-014 Add `border_width(...)` / `radius(...)` setters that accept `Px` / `MetricRef` (avoid struct literal noise).
+  - Evidence: `ecosystem/fret-ui-kit/src/style/chrome.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs`
 
 ## C. Layout Constructors (Reduce Props Noise)
 
@@ -64,6 +67,16 @@ Related:
   - Evidence: `docs/shadcn-declarative-progress.md`
 - [x] AUE-docs-041 Add a short cookbook for layout-only authoring (flex/grid/stack) using the new constructors.
   - Evidence: `docs/shadcn-declarative-progress.md`
+- [x] AUE-docs-042 Prefer direct `Px(...)` arguments for `*_px(...)` APIs (they accept `impl Into<MetricRef>`).
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs`
+- [x] AUE-docs-043 Prefer direct `Px(...)` arguments in web parity tests to reduce noise.
+  - Evidence: `ecosystem/fret-ui-shadcn/tests/{web_vs_fret_*,radix_web_*}.rs`
+- [x] AUE-docs-044 Prefer direct `Px(...)` arguments in ecosystem components (avoid `MetricRef::Px(...)` boilerplate).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{badge,button,checkbox,combobox,command,drawer,input_group,pagination,progress,radio_group,select,switch,tabs,toggle,toggle_group}.rs`
+  - Evidence: `ecosystem/fret-ui-material3/src/{radio_group,select}.rs`
+- [x] AUE-docs-045 Prefer direct `Px(...)` arguments in kit-level declarative helpers and goldens.
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/{icon,text_field}.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
 
 ## F. (Future) Proc-macro / Derive
 
@@ -86,6 +99,54 @@ Related:
 - [x] AUE-text-070 Add a minimal patchable `ui::text(...)` / `ui::label(...)` authoring constructor with a small typed refinement surface.
   - Scope: size/weight/color + a shadcn-aligned default line-height.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`, `ecosystem/fret-ui-kit/src/declarative/text.rs`
+
+## I. Iterable Children / Render Callbacks
+
+- [x] AUE-iter-090 Make high-frequency row/cell render callbacks iterator-friendly (avoid forcing `Vec<AnyElement>`).
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/{list,table}.rs`
+- [x] AUE-iter-091 Make sortable list recipes accept iterable row children.
+  - Evidence: `ecosystem/fret-ui-kit/src/recipes/sortable_dnd.rs`
+- [x] AUE-iter-092 Make Material3 dialog/tooltip surfaces accept iterable content closures.
+  - Evidence: `ecosystem/fret-ui-material3/src/{dialog,tooltip}.rs`
+- [x] AUE-iter-093 Add `Elements`-returning overlay layer assembly helpers (avoid forcing `Vec<AnyElement>`).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/{alert_dialog,dialog,popover,select}.rs`
+- [x] AUE-iter-094 Add `with_elements` helpers for tooltip providers; make tooltip requests accept iterable children.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`
+- [x] AUE-iter-095 Add `AnyElementIterExt::elements_owned()` for collecting into `Elements`.
+  - Evidence: `crates/fret-ui/src/element.rs`
+- [x] AUE-iter-096 Audit overlay request constructors: already accept `IntoIterator<Item = AnyElement>`; keep `children: Vec<AnyElement>` as the stable storage boundary.
+  - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs`, `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`
+- [x] AUE-iter-097 Make shadcn list-style builder inputs accept `IntoIterator` (avoid forcing `Vec<T>`).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,button_group,command,context_menu,data_table_controls,drawer,dropdown_menu,menubar,navigation_menu,resizable,select,toggle_group}.rs`
+  - Evidence: `ecosystem/fret-ui-kit/src/{overlay_controller,tree,viewport_tooling}.rs`
+- [x] AUE-iter-098 Make menu/item authoring closures accept iterable outputs (avoid forcing `Vec<T>`).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{accordion,context_menu,dropdown_menu,menubar,navigation_menu,resizable,tabs,toggle_group}.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/ui_builder_ext/menus.rs`
+- [x] AUE-iter-099 Add `Elements` helpers for select pointer-up guard assembly; remove legacy `*_layer_children*` wrappers.
+  - Motivation: keep `#![deny(deprecated)]` crates clean while moving callsites to iterator-friendly APIs.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/select.rs`, `ecosystem/fret-ui-kit/src/primitives/{dialog,alert_dialog,popover}.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{dialog,popover,select,sheet}.rs`, `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+- [x] AUE-iter-100 Validate iterator-friendly layer helpers via `todo_demo` and ecosystem overlays (reduce `vec![...]` boilerplate).
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`, `ecosystem/fret-ui-shadcn/src/{alert_dialog,select}.rs`, `ecosystem/fret-ui-material3/src/select.rs`
+- [x] AUE-iter-101 Add sink-based `stack::{hstack_build,vstack_build}` helpers to avoid `.elements()` borrow pitfalls.
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/stack.rs`
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
+- [x] AUE-iter-102 Add sink-based `ui::{h_flex_build,v_flex_build}` helpers that preserve the fluent patch surface.
+  - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
+  - Evidence: `apps/fret-examples/src/todo_mvu_demo.rs`
+- [x] AUE-iter-103 Remove remaining `.elements()` hotspots in `fret-examples` by using sink-based builders or eager `Vec` assembly.
+  - Evidence: `apps/fret-examples/src/{assets_demo,todo_interop_demo,todo_interop_kit_demo,todo_mvu_interop_demo}.rs`
+- [x] AUE-iter-104 Adopt iterable/sink-based patterns in `fret-ui-gallery` to reduce boilerplate in real-world authoring code.
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs`
+- [x] AUE-iter-105 Adopt iterable children patterns in demo shells (reduce `vec![...]` where APIs accept `IntoIterator`).
+  - Evidence: `apps/fret-demo/src/bin/hotpatch_smoke_demo.rs`
+- [x] AUE-iter-106 Remove redundant `stack::{hstack_iter,vstack_iter}` wrappers (base functions already accept `IntoIterator`).
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/stack.rs`, `ecosystem/fret-ui-kit/src/declarative/scroll.rs`
+  - Evidence: `apps/fret-examples/src/{todo_interop_kit_demo,todo_mvu_interop_demo}.rs`
+- [x] AUE-iter-107 Remove redundant `TooltipProvider::with` wrappers (keep `with_elements` as the single surface).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`
+  - Evidence: `apps/fret-ui-gallery/src/{ui,docs}.rs`
 
 ## H. Adoption Audit — `ui::text` in `fret-ui-shadcn`
 

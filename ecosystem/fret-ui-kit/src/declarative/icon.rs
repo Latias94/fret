@@ -8,7 +8,7 @@ use fret_ui::element::SvgIconProps;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::style;
-use crate::{ColorRef, LayoutRefinement, MetricRef};
+use crate::{ColorRef, LayoutRefinement};
 
 #[derive(Debug, Default)]
 pub struct IconSvgRegistry {
@@ -114,8 +114,8 @@ pub fn icon_with<H: UiHost>(
         let layout = style::layout_style(
             theme,
             LayoutRefinement::default()
-                .w_px(MetricRef::Px(size))
-                .h_px(MetricRef::Px(size))
+                .w_px(size)
+                .h_px(size)
                 .flex_shrink_0(),
         );
 

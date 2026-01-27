@@ -11,7 +11,11 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
+    resolve_override_slot_opt, ui,
+};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
@@ -129,6 +133,52 @@ fn tabs_trigger_border_width(theme: &Theme) -> Px {
 use fret_ui_kit::primitives::tabs as radix_tabs;
 pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
+#[derive(Debug, Clone, Default)]
+pub struct TabsStyle {
+    pub trigger_background: OverrideSlot<ColorRef>,
+    pub trigger_foreground: OverrideSlot<ColorRef>,
+    pub trigger_border_color: OverrideSlot<ColorRef>,
+}
+
+impl TabsStyle {
+    pub fn trigger_background(
+        mut self,
+        trigger_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_background = Some(trigger_background);
+        self
+    }
+
+    pub fn trigger_foreground(
+        mut self,
+        trigger_foreground: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_foreground = Some(trigger_foreground);
+        self
+    }
+
+    pub fn trigger_border_color(
+        mut self,
+        trigger_border_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_border_color = Some(trigger_border_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.trigger_background.is_some() {
+            self.trigger_background = other.trigger_background;
+        }
+        if other.trigger_foreground.is_some() {
+            self.trigger_foreground = other.trigger_foreground;
+        }
+        if other.trigger_border_color.is_some() {
+            self.trigger_border_color = other.trigger_border_color;
+        }
+        self
+    }
+}
+
 /// shadcn/ui `TabsTrigger` (v4).
 ///
 /// This is a "spec" type consumed by [`TabsList`] and [`TabsRoot`]. It mirrors the Radix/shadcn
@@ -225,6 +275,7 @@ pub struct TabsRoot {
     orientation: TabsOrientation,
     activation_mode: TabsActivationMode,
     loop_navigation: bool,
+    style: TabsStyle,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     force_mount_content: bool,
@@ -242,6 +293,7 @@ impl std::fmt::Debug for TabsRoot {
             .field("orientation", &self.orientation)
             .field("activation_mode", &self.activation_mode)
             .field("loop_navigation", &self.loop_navigation)
+            .field("style", &self.style)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
@@ -260,6 +312,7 @@ impl TabsRoot {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
@@ -279,6 +332,7 @@ impl TabsRoot {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
@@ -313,6 +367,11 @@ impl TabsRoot {
     /// When `true` (default), arrow key navigation loops at the ends (Radix `loop` behavior).
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn style(mut self, style: TabsStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -406,6 +465,7 @@ impl TabsRoot {
             .orientation(self.orientation)
             .activation_mode(self.activation_mode)
             .loop_navigation(self.loop_navigation)
+            .style(self.style)
             .refine_style(self.chrome)
             .refine_layout(self.layout)
             .force_mount_content(self.force_mount_content)
@@ -470,6 +530,7 @@ pub struct Tabs {
     orientation: TabsOrientation,
     activation_mode: TabsActivationMode,
     loop_navigation: bool,
+    style: TabsStyle,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     force_mount_content: bool,
@@ -486,6 +547,7 @@ impl std::fmt::Debug for Tabs {
             .field("orientation", &self.orientation)
             .field("activation_mode", &self.activation_mode)
             .field("loop_navigation", &self.loop_navigation)
+            .field("style", &self.style)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
@@ -503,6 +565,7 @@ impl Tabs {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
@@ -521,6 +584,7 @@ impl Tabs {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
@@ -555,6 +619,11 @@ impl Tabs {
     /// When `true` (default), arrow key navigation loops at the ends (Radix `loop` behavior).
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn style(mut self, style: TabsStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -614,6 +683,7 @@ impl Tabs {
         let orientation = self.orientation;
         let activation_mode = self.activation_mode;
         let loop_navigation = self.loop_navigation;
+        let style_override = self.style;
         let chrome = self.chrome;
         let layout = self.layout;
         let force_mount_content = self.force_mount_content;
@@ -656,7 +726,7 @@ impl Tabs {
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
                 .bg(ColorRef::Color(tabs_list_bg(&theme))),
-            LayoutRefinement::default().h_px(MetricRef::Px(list_height)),
+            LayoutRefinement::default().h_px(list_height),
         );
         list_props.padding = Edges::all(list_padding);
         if list_full_width {
@@ -723,14 +793,25 @@ impl Tabs {
                                     cx.roving_select_option_arc_str(&model, values_arc.clone());
                                 }
 
-                                let fg_muted = tabs_list_fg_muted(&theme);
-                                let fg_active = theme.color_required("foreground");
-                                let fg_disabled = alpha_mul(fg_active, 0.5);
+                                let fg_muted = ColorRef::Color(tabs_list_fg_muted(&theme));
+                                let fg_active = ColorRef::Color(theme.color_required("foreground"));
+                                let fg_disabled =
+                                    ColorRef::Color(alpha_mul(theme.color_required("foreground"), 0.5));
                                 let radius = tabs_trigger_radius(&theme);
                                 let ring = decl_style::focus_ring(&theme, radius);
-                                let bg_active = tabs_trigger_bg_active(&theme);
-                                let border_active = tabs_trigger_border_active(&theme);
+                                let bg_active =
+                                    ColorRef::Color(tabs_trigger_bg_active(&theme));
+                                let border_active =
+                                    ColorRef::Color(tabs_trigger_border_active(&theme));
                                 let border_w = tabs_trigger_border_width(&theme);
+
+                                let default_trigger_fg = WidgetStateProperty::new(fg_muted)
+                                    .when(WidgetStates::SELECTED, fg_active)
+                                    .when(WidgetStates::DISABLED, fg_disabled);
+                                let default_trigger_bg = WidgetStateProperty::new(None)
+                                    .when(WidgetStates::SELECTED, Some(bg_active));
+                                let default_trigger_border = WidgetStateProperty::new(None)
+                                    .when(WidgetStates::SELECTED, Some(border_active));
 
                                 let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                                 let pad_y = MetricRef::space(Space::N1).resolve(&theme);
@@ -743,7 +824,7 @@ impl Tabs {
                                     &theme,
                                     LayoutRefinement::default()
                                         .flex_1()
-                                        .h_px(MetricRef::Px(trigger_h)),
+                                        .h_px(trigger_h),
                                 );
 
                                 let mut out: Vec<AnyElement> =
@@ -754,17 +835,12 @@ impl Tabs {
                                     let tab_stop = active_idx.is_some_and(|a| a == idx);
                                     let active = tab_stop;
 
-                                    let fg = if item_disabled {
-                                        fg_disabled
-                                    } else if active {
-                                        fg_active
-                                    } else {
-                                        fg_muted
-                                    };
-                                    let bg = (active && !item_disabled).then_some(bg_active);
-                                    let border = (active && !item_disabled)
-                                        .then_some(border_active)
-                                        .unwrap_or(Color::TRANSPARENT);
+                                    let style_override = style_override.clone();
+                                    let default_trigger_fg = default_trigger_fg.clone();
+                                    let default_trigger_bg = default_trigger_bg.clone();
+                                    let default_trigger_border = default_trigger_border.clone();
+                                    let theme = theme.clone();
+
                                     let shadow = (active && !item_disabled)
                                         .then(|| decl_style::shadow_sm(&theme, radius));
 
@@ -797,6 +873,9 @@ impl Tabs {
                                                         R::Continue
                                                     }
                                                     radix_tabs::TabsTriggerPointerDownAction::PreventFocus => {
+                                                        host.prevent_default(
+                                                            fret_runtime::DefaultAction::FocusOnPointerDown,
+                                                        );
                                                         R::SkipDefault
                                                     }
                                                     radix_tabs::TabsTriggerPointerDownAction::Ignore => R::Continue,
@@ -813,6 +892,30 @@ impl Tabs {
                                         {
                                             cell.set(Some(_id.0));
                                         }
+
+                                        let mut states =
+                                            WidgetStates::from_pressable(cx, st, !item_disabled);
+                                        states.set(WidgetState::Selected, active);
+
+                                        let fg_ref = resolve_override_slot(
+                                            style_override.trigger_foreground.as_ref(),
+                                            &default_trigger_fg,
+                                            states,
+                                        );
+                                        let fg = fg_ref.resolve(&theme);
+                                        let bg = resolve_override_slot_opt(
+                                            style_override.trigger_background.as_ref(),
+                                            &default_trigger_bg,
+                                            states,
+                                        )
+                                        .map(|bg| bg.resolve(&theme));
+                                        let border = resolve_override_slot_opt(
+                                            style_override.trigger_border_color.as_ref(),
+                                            &default_trigger_border,
+                                            states,
+                                        )
+                                        .map(|border| border.resolve(&theme))
+                                        .unwrap_or(Color::TRANSPARENT);
 
                                         let props = PressableProps {
                                             layout: trigger_layout,
@@ -856,7 +959,7 @@ impl Tabs {
                                                         let mut text = ui::label(cx, label.clone())
                                                             .text_size_px(style.size)
                                                             .font_weight(style.weight)
-                                                            .text_color(ColorRef::Color(fg))
+                                                            .text_color(fg_ref.clone())
                                                             .nowrap();
                                                         if let Some(line_height) = style.line_height
                                                         {
@@ -964,19 +1067,25 @@ impl Tabs {
     }
 }
 
-pub fn tabs<H: UiHost>(
+pub fn tabs<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = TabsItem>,
+{
     Tabs::new(model).items(f(cx)).into_element(cx)
 }
 
-pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = TabsItem>,
+{
     Tabs::uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)
@@ -991,7 +1100,7 @@ mod tests {
         SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::ColumnProps;
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
@@ -1342,20 +1451,21 @@ mod tests {
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let beta_tab = snap
+        let alpha_tab = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
-            .expect("beta tab");
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha tab");
 
         let click = Point::new(
-            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
-            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+            Px(alpha_tab.bounds.origin.x.0 + alpha_tab.bounds.size.width.0 / 2.0),
+            Px(alpha_tab.bounds.origin.y.0 + alpha_tab.bounds.size.height.0 / 2.0),
         );
 
         let mut modifiers = Modifiers::default();
         modifiers.ctrl = true;
 
+        assert_eq!(ui.focus(), None);
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -1371,6 +1481,7 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("alpha"));
+        assert_eq!(ui.focus(), None);
     }
 
     #[test]

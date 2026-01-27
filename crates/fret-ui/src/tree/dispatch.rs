@@ -1,10 +1,6 @@
 use super::*;
 use std::collections::HashMap;
 
-use fret_runtime::{
-    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
-};
-
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
     inv: Invalidation,
@@ -162,6 +158,92 @@ impl<H: UiHost> UiTree<H> {
             });
     }
 
+    fn dispatch_pointer_move_layer_observers(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        input_ctx: &InputContext,
+        barrier_root: Option<NodeId>,
+        event: &Event,
+        needs_redraw: &mut bool,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
+    ) {
+        let Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            pointer_type,
+            ..
+        }) = event
+        else {
+            return;
+        };
+
+        let captured_layer_for_pointer_move = self
+            .captured
+            .get(pointer_id)
+            .copied()
+            .and_then(|n| self.node_layer(n));
+        let pointer_move_occlusion_layer = captured_layer_for_pointer_move
+            .is_none()
+            .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
+            .flatten()
+            .filter(|(_, occlusion)| {
+                pointer_type_supports_hover(*pointer_type) && *occlusion != PointerOcclusion::None
+            })
+            .map(|(layer, _)| layer);
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        let mut hit_barrier = false;
+        for layer_id in layers.into_iter().rev() {
+            let Some((layer_root, visible, wants_pointer_move_events)) = self
+                .layers
+                .get(layer_id)
+                .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
+            else {
+                continue;
+            };
+            if !visible {
+                continue;
+            }
+            if barrier_root.is_some() && hit_barrier {
+                break;
+            }
+            if !wants_pointer_move_events {
+                if barrier_root == Some(layer_root) {
+                    hit_barrier = true;
+                }
+                if pointer_move_occlusion_layer == Some(layer_id) {
+                    break;
+                }
+                continue;
+            }
+            if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
+                // Pointer-move observer hooks are used by overlay policies (e.g. Radix menu safe
+                // corridor). When a pointer is captured by a different layer (viewport tools,
+                // docking drags, etc.), do not let unrelated overlay layers observe that move
+                // stream. This keeps captured interactions stable and avoids cross-layer
+                // arbitration fights during drags.
+                if barrier_root == Some(layer_root) {
+                    hit_barrier = true;
+                }
+                continue;
+            }
+            self.dispatch_event_to_node_chain_observer(
+                app,
+                services,
+                input_ctx,
+                layer_root,
+                event,
+                invalidation_visited,
+            );
+            *needs_redraw = true;
+            if barrier_root == Some(layer_root) {
+                hit_barrier = true;
+            }
+            if pointer_move_occlusion_layer == Some(layer_id) {
+                break;
+            }
+        }
+    }
+
     fn node_depth_for_invalidation_order(&self, node: NodeId) -> u32 {
         let mut depth: u32 = 0;
         let mut current: Option<NodeId> = Some(node);
@@ -279,13 +361,15 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 element: root_element,
             };
+            let mut req =
+                crate::action::DismissRequestCx::new(crate::action::DismissReason::Escape);
             hook(
                 &mut host,
                 crate::action::ActionCx {
                     window,
                     target: root_element,
                 },
-                crate::action::DismissReason::Escape,
+                &mut req,
             );
             return true;
         }
@@ -717,6 +801,7 @@ impl<H: UiHost> UiTree<H> {
             platform: Platform::current(),
             caps,
             ui_has_modal: barrier_root.is_some(),
+            window_arbitration: None,
             focus_is_text_input,
             edit_can_undo: true,
             edit_can_redo: true,
@@ -731,38 +816,16 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
             }
+
+            let window_arbitration = self.window_input_arbitration_snapshot();
+            input_ctx.window_arbitration = Some(window_arbitration);
+
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
-            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
-                let snapshot = self.input_arbitration_snapshot();
-                svc.set_snapshot(
-                    window,
-                    WindowInputArbitrationSnapshot {
-                        modal_barrier_root: snapshot.modal_barrier_root,
-                        pointer_occlusion: match snapshot.pointer_occlusion {
-                            PointerOcclusion::None => WindowPointerOcclusion::None,
-                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
-                            PointerOcclusion::BlockMouseExceptScroll => {
-                                WindowPointerOcclusion::BlockMouseExceptScroll
-                            }
-                        },
-                        pointer_occlusion_root: snapshot
-                            .pointer_occlusion_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_active: snapshot.pointer_capture_active,
-                        pointer_capture_root: snapshot
-                            .pointer_capture_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
-                            || (snapshot.pointer_capture_active
-                                && snapshot.pointer_capture_layer.is_none()),
-                    },
-                );
-            });
         }
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
@@ -934,6 +997,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
+        let mut cursor_choice_from_query = false;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
         let mut suppress_touch_up_outside_dispatch = false;
@@ -1129,9 +1193,6 @@ impl<H: UiHost> UiTree<H> {
                     self.topmost_pointer_occlusion_layer(barrier_root)
                 && occlusion != PointerOcclusion::None
             {
-                #[cfg(debug_assertions)]
-                let debug_occlusion = std::env::var_os("FRET_DEBUG_POINTER_OCCLUSION").is_some();
-
                 let occlusion_z = self
                     .layer_order
                     .iter()
@@ -1160,13 +1221,6 @@ impl<H: UiHost> UiTree<H> {
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
                     }
-                }
-
-                #[cfg(debug_assertions)]
-                if debug_occlusion && matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-                    eprintln!(
-                        "pointer_occlusion: occlusion_layer={occlusion_layer:?} occlusion={occlusion:?} occlusion_z={occlusion_z:?} hit={hit:?} hit_layer_z={hit_layer_z:?} hit_below={hit_is_below_occlusion} suppress={suppress_pointer_dispatch}",
-                    );
                 }
             }
 
@@ -1252,6 +1306,18 @@ impl<H: UiHost> UiTree<H> {
                             &mut invalidation_visited,
                             UiDebugInvalidationSource::Hover,
                         );
+                    }
+                }
+
+                if let Some(window) = self.window {
+                    for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
+                        let (Some(element), Some(node)) = (element, node) else {
+                            continue;
+                        };
+                        let Some(bounds) = self.node_bounds(node) else {
+                            continue;
+                        };
+                        crate::elements::record_bounds_for_element(app, window, element, bounds);
                     }
                 }
 
@@ -1443,28 +1509,31 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        // Pointer occlusion suppresses hit-tested pointer dispatch for underlay layers, but overlay
-        // policies may still need to observe global pointer-move streams (e.g. Radix menu safe
-        // corridor). Keep pointer-move observers running even when hit-tested dispatch is
-        // suppressed.
-        if suppress_pointer_dispatch
-            && matches!(event, Event::Pointer(_))
-            && !matches!(event, Event::Pointer(PointerEvent::Move { .. }))
-        {
+        if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
+            if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                self.dispatch_pointer_move_layer_observers(
+                    app,
+                    services,
+                    &input_ctx,
+                    barrier_root,
+                    event,
+                    &mut needs_redraw,
+                    &mut invalidation_visited,
+                );
+            }
             if needs_redraw {
                 self.request_redraw_coalesced(app);
             }
             return;
         }
 
-        #[cfg(debug_assertions)]
-        let debug_pointer_dispatch = std::env::var_os("FRET_DEBUG_POINTER_DISPATCH").is_some();
-        #[cfg(debug_assertions)]
-        if debug_pointer_dispatch && matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
-            eprintln!(
-                "pointer_dispatch: suppress={suppress_pointer_dispatch} pointer_down_outside_suppress={} target={:?}",
-                pointer_down_outside.suppress_hit_test_dispatch, target
-            );
+        if cursor_choice.is_none()
+            && input_ctx.caps.ui.cursor_icons
+            && matches!(event, Event::Pointer(_))
+            && let Some(hit) = pointer_hit
+        {
+            cursor_choice = self.cursor_icon_query_for_pointer_hit(hit, &input_ctx, event);
+            cursor_choice_from_query = cursor_choice.is_some();
         }
 
         if !suppress_pointer_dispatch
@@ -1476,11 +1545,6 @@ impl<H: UiHost> UiTree<H> {
                     | Event::InternalDrag(_)
             )
         {
-            #[cfg(debug_assertions)]
-            if debug_pointer_dispatch && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
-            {
-                eprintln!("pointer_dispatch: hit-tested dispatch starting at node={node_id:?}");
-            }
             let chain = if event_position(event).is_some() {
                 self.build_mapped_event_chain(node_id, event)
             } else {
@@ -1599,8 +1663,11 @@ impl<H: UiHost> UiTree<H> {
                         }
                     }
 
-                    if requested_cursor.is_some() && cursor_choice.is_none() {
-                        cursor_choice = requested_cursor;
+                    if let Some(requested_cursor) = requested_cursor
+                        && (cursor_choice.is_none() || cursor_choice_from_query)
+                    {
+                        cursor_choice = Some(requested_cursor);
+                        cursor_choice_from_query = false;
                     }
 
                     if stop_propagation {
@@ -1714,8 +1781,11 @@ impl<H: UiHost> UiTree<H> {
                         }
                     }
 
-                    if requested_cursor.is_some() && cursor_choice.is_none() {
-                        cursor_choice = requested_cursor;
+                    if let Some(requested_cursor) = requested_cursor
+                        && (cursor_choice.is_none() || cursor_choice_from_query)
+                    {
+                        cursor_choice = Some(requested_cursor);
+                        cursor_choice_from_query = false;
                     }
 
                     if stop_propagation {
@@ -1732,20 +1802,6 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
             }
-        } else if suppress_pointer_dispatch
-            && matches!(
-                event,
-                Event::Pointer(PointerEvent::Move { .. })
-                    | Event::PointerCancel(_)
-                    | Event::ExternalDrag(_)
-                    | Event::InternalDrag(_)
-            )
-        {
-            // Pointer occlusion suppresses hit-tested pointer dispatch for underlay layers.
-            //
-            // For pointer-move events, we still want to keep pointer-move observers (e.g. Radix
-            // menu safe corridor) active, so we skip normal widget dispatch here and allow the
-            // observer stream to run later in this function.
         } else {
             if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
                 let mut chain: Vec<NodeId> = Vec::new();
@@ -2238,13 +2294,15 @@ impl<H: UiHost> UiTree<H> {
                         window,
                         element: root_element,
                     };
+                    let mut req =
+                        crate::action::DismissRequestCx::new(crate::action::DismissReason::Scroll);
                     hook(
                         &mut host,
                         crate::action::ActionCx {
                             window,
                             target: root_element,
                         },
-                        crate::action::DismissReason::Scroll,
+                        &mut req,
                     );
                     dismissed_any = true;
                 }
@@ -2381,106 +2439,17 @@ impl<H: UiHost> UiTree<H> {
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
-        if let Event::Pointer(PointerEvent::Move {
-            pointer_id,
-            pointer_type,
-            ..
-        }) = event
-        {
-            #[cfg(debug_assertions)]
-            let debug_pointer_move_observers =
-                std::env::var_os("FRET_DEBUG_POINTER_MOVE_OBSERVERS").is_some();
-
-            let captured_layer_for_pointer_move = self
-                .captured
-                .get(pointer_id)
-                .copied()
-                .and_then(|n| self.node_layer(n));
-            let pointer_move_occlusion_layer = captured_layer_for_pointer_move
-                .is_none()
-                .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
-                .flatten()
-                .filter(|(_, occlusion)| {
-                    pointer_type_supports_hover(*pointer_type)
-                        && *occlusion != PointerOcclusion::None
-                })
-                .map(|(layer, _)| layer);
-            #[cfg(debug_assertions)]
-            if debug_pointer_move_observers {
-                eprintln!(
-                    "pointer_move_observers: captured_layer={captured_layer_for_pointer_move:?} occlusion_layer={pointer_move_occlusion_layer:?} barrier_root={barrier_root:?}"
-                );
-            }
-            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-            let mut hit_barrier = false;
-            for layer_id in layers.into_iter().rev() {
-                let Some((layer_root, visible, wants_pointer_move_events)) = self
-                    .layers
-                    .get(layer_id)
-                    .map(|layer| (layer.root, layer.visible, layer.wants_pointer_move_events))
-                else {
-                    continue;
-                };
-                if !visible {
-                    continue;
-                }
-                #[cfg(debug_assertions)]
-                if debug_pointer_move_observers {
-                    eprintln!(
-                        "pointer_move_observers: visiting layer={layer_id:?} root={layer_root:?} wants={wants_pointer_move_events} hit_barrier={hit_barrier}"
-                    );
-                }
-                if barrier_root.is_some() && hit_barrier {
-                    break;
-                }
-                if !wants_pointer_move_events {
-                    if barrier_root == Some(layer_root) {
-                        hit_barrier = true;
-                    }
-                    if pointer_move_occlusion_layer == Some(layer_id) {
-                        #[cfg(debug_assertions)]
-                        if debug_pointer_move_observers {
-                            eprintln!(
-                                "pointer_move_observers: stopping at occlusion layer (no wants)"
-                            );
-                        }
-                        break;
-                    }
-                    continue;
-                }
-                if captured_layer_for_pointer_move.is_some_and(|layer| layer != layer_id) {
-                    // Pointer-move observer hooks are used by overlay policies (e.g. Radix menu safe
-                    // corridor). When a pointer is captured by a different layer (viewport tools,
-                    // docking drags, etc.), do not let unrelated overlay layers observe that move
-                    // stream. This keeps captured interactions stable and avoids cross-layer
-                    // arbitration fights during drags.
-                    if barrier_root == Some(layer_root) {
-                        hit_barrier = true;
-                    }
-                    continue;
-                }
-                let _ = self.dispatch_event_to_node_chain(
-                    app,
-                    services,
-                    &input_ctx,
-                    layer_root,
-                    event,
-                    &mut needs_redraw,
-                    &mut invalidation_visited,
-                );
-                if barrier_root == Some(layer_root) {
-                    hit_barrier = true;
-                }
-                if pointer_move_occlusion_layer == Some(layer_id) {
-                    #[cfg(debug_assertions)]
-                    if debug_pointer_move_observers {
-                        eprintln!(
-                            "pointer_move_observers: stopping at occlusion layer (after dispatch)"
-                        );
-                    }
-                    break;
-                }
-            }
+        self.dispatch_pointer_move_layer_observers(
+            app,
+            services,
+            &input_ctx,
+            barrier_root,
+            event,
+            &mut needs_redraw,
+            &mut invalidation_visited,
+        );
+        if needs_redraw {
+            self.request_redraw_coalesced(app);
         }
 
         // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
@@ -2499,6 +2468,7 @@ impl<H: UiHost> UiTree<H> {
                 platform: Platform::current(),
                 caps,
                 ui_has_modal: barrier_root.is_some(),
+                window_arbitration: None,
                 focus_is_text_input,
                 edit_can_undo: true,
                 edit_can_redo: true,
@@ -2512,38 +2482,17 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx.edit_can_undo = availability.edit_can_undo;
                 input_ctx.edit_can_redo = availability.edit_can_redo;
             }
+
+            let window_arbitration = self.window_input_arbitration_snapshot();
+            input_ctx.window_arbitration = Some(window_arbitration);
+
             app.with_global_mut(
                 fret_runtime::WindowInputContextService::default,
                 |svc, _app| {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
-            app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
-                let snapshot = self.input_arbitration_snapshot();
-                svc.set_snapshot(
-                    window,
-                    WindowInputArbitrationSnapshot {
-                        modal_barrier_root: snapshot.modal_barrier_root,
-                        pointer_occlusion: match snapshot.pointer_occlusion {
-                            PointerOcclusion::None => WindowPointerOcclusion::None,
-                            PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
-                            PointerOcclusion::BlockMouseExceptScroll => {
-                                WindowPointerOcclusion::BlockMouseExceptScroll
-                            }
-                        },
-                        pointer_occlusion_root: snapshot
-                            .pointer_occlusion_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_active: snapshot.pointer_capture_active,
-                        pointer_capture_root: snapshot
-                            .pointer_capture_layer
-                            .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                        pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
-                            || (snapshot.pointer_capture_active
-                                && snapshot.pointer_capture_layer.is_none()),
-                    },
-                );
-            });
+            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
 
@@ -2872,5 +2821,36 @@ impl<H: UiHost> UiTree<H> {
             cur = self.nodes.get(id).and_then(|n| n.parent);
         }
         out
+    }
+
+    fn cursor_icon_query_for_pointer_hit(
+        &mut self,
+        start: NodeId,
+        input_ctx: &InputContext,
+        event: &Event,
+    ) -> Option<fret_core::CursorIcon> {
+        if event_position(event).is_none() {
+            return None;
+        }
+
+        let chain = self.build_mapped_event_chain(start, event);
+        for (node_id, mapped_event) in chain {
+            let Some(position) = event_position(&mapped_event) else {
+                continue;
+            };
+            let bounds = self
+                .nodes
+                .get(node_id)
+                .map(|n| n.bounds)
+                .unwrap_or_default();
+            let requested = self.with_widget_mut(node_id, |widget, _tree| {
+                widget.cursor_icon_at(bounds, position, input_ctx)
+            });
+            if requested.is_some() {
+                return requested;
+            }
+        }
+
+        None
     }
 }

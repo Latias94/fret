@@ -7,6 +7,7 @@
 //! Note: This crate is declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface.
 
+pub mod command;
 mod corners4;
 pub mod declarative;
 #[cfg(feature = "dnd")]
@@ -39,7 +40,10 @@ pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
-    MetricRef, OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space,
+    MetricRef, OverflowRefinement, OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+    resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+    resolve_override_slot_with, resolve_slot,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
@@ -51,15 +55,25 @@ pub use overlay_controller::{
     OverlayStackEntryKind, ToastLayerSpec, WindowOverlayStackEntry, WindowOverlayStackSnapshot,
 };
 pub use window_overlays::{
-    DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
+    DEFAULT_MAX_TOASTS, ToastAction, ToastButtonStyle, ToastIconButtonStyle, ToastId,
+    ToastLayerStyle, ToastPosition, ToastRequest, ToastStore, ToastTextStyle, ToastVariant,
+    ToastVariantColors, ToastVariantPalette,
 };
 
 pub use window_overlays::TOAST_VIEWPORT_FOCUS_COMMAND;
+
+// Diagnostics-only exports: used by `fret-bootstrap` to export bundle.json fields.
+#[doc(hidden)]
+pub use window_overlays::{
+    OverlaySynthesisEvent, OverlaySynthesisKind, OverlaySynthesisOutcome, OverlaySynthesisSource,
+    WindowOverlaySynthesisDiagnosticsStore,
+};
 
 /// Common imports for component/app code using `fret-ui-kit`.
 ///
 /// Recommended: `use fret_ui_kit::prelude::*;`
 pub mod prelude {
+    pub use crate::command::ElementCommandGatingExt as _;
     pub use crate::declarative::prelude::*;
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
     pub use crate::declarative::{stack, style};
@@ -72,7 +86,10 @@ pub mod prelude {
 
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge,
-        MetricRef, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
+        MetricRef, OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt,
+        UiExt, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+        resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+        resolve_override_slot_with, resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};
@@ -80,7 +97,7 @@ pub mod prelude {
 
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_runtime::{CommandId, Model};
-    pub use fret_ui::element::{AnyElement, TextProps};
+    pub use fret_ui::element::{AnyElement, AnyElementIterExt as _, TextProps};
     pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
 }
 

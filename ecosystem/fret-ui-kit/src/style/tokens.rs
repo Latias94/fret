@@ -126,6 +126,7 @@ pub enum ColorFallback {
     ThemeHoverBackground,
     ThemeSelectionBackground,
     ThemeFocusRing,
+    ThemeTokenAlphaMul { key: &'static str, mul: f32 },
 }
 
 impl ColorFallback {
@@ -142,6 +143,7 @@ impl ColorFallback {
             Self::ThemeHoverBackground => theme.color_required("accent"),
             Self::ThemeSelectionBackground => theme.color_required("selection.background"),
             Self::ThemeFocusRing => theme.color_required("ring"),
+            Self::ThemeTokenAlphaMul { key, mul } => alpha_mul(theme.color_required(key), mul),
         }
     }
 }

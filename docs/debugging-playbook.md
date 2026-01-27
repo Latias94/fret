@@ -6,6 +6,40 @@ over ad-hoc guessing.
 All debug artifacts (captures, dumps, temporary outputs) should live under `.fret/` to avoid accidental
 commits.
 
+## 0) UI diagnostics bundles (AI-friendly repro units)
+
+For UI debugging (input/focus/overlays) and for agent-friendly triage, prefer collecting a **diagnostics bundle**
+instead of ad-hoc logs. Bundles capture:
+
+- per-frame UI snapshots (including semantics),
+- input events, hit test info, layer roots,
+- optional GPU-readback screenshots (for visual overlay debugging).
+
+Core docs:
+
+- Bundles + scripts: `docs/ui-diagnostics-and-scripted-tests.md`
+- Interactive inspect workflow: `docs/debugging-ui-with-inspector-and-scripts.md`
+
+Quick workflow (recommended default paths under `.fret/`):
+
+```powershell
+$env:FRET_DIAG=1
+$env:FRET_DIAG_DIR=".fret\\diag"
+
+# Optional: enable GPU readback screenshots + completion log.
+$env:FRET_DIAG_SCREENSHOTS=1
+
+# Run a deterministic scripted repro and auto-pack a shareable zip.
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
+  --pack --include-all `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Notes:
+
+- `fretboard diag inspect on` enables a GPUI/Zed-style picker overlay and writes `pick.result.json` for stable selectors.
+- `fretboard diag pack --include-all` and `diag run --pack --include-all` produce a `.zip` that the offline viewer can open (`tools/fret-bundle-viewer`).
+
 ## 1) GPU / renderer: debug specific passes
 
 ### 1.1 Capture a frame (RenderDoc)

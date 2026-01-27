@@ -115,6 +115,18 @@ impl ScrollHandle {
         }
     }
 
+    /// Internal viewport setter used by the runtime during layout passes.
+    ///
+    /// Unlike [`ScrollHandle::set_viewport_size`], this does **not** bump the handle revision
+    /// because the runtime is already invalidating and recomputing layout/paint in the same frame.
+    pub(crate) fn set_viewport_size_internal(&self, viewport: Size) {
+        let mut state = self.state.borrow_mut();
+        state.viewport = Size::new(
+            Px(viewport.width.0.max(0.0)),
+            Px(viewport.height.0.max(0.0)),
+        );
+    }
+
     pub fn content_size(&self) -> Size {
         self.state.borrow().content
     }
@@ -126,6 +138,15 @@ impl ScrollHandle {
             state.content = next;
             state.revision = state.revision.saturating_add(1);
         }
+    }
+
+    /// Internal content-size setter used by the runtime during layout passes.
+    ///
+    /// Unlike [`ScrollHandle::set_content_size`], this does **not** bump the handle revision
+    /// because the runtime is already invalidating and recomputing layout/paint in the same frame.
+    pub(crate) fn set_content_size_internal(&self, content: Size) {
+        let mut state = self.state.borrow_mut();
+        state.content = Size::new(Px(content.width.0.max(0.0)), Px(content.height.0.max(0.0)));
     }
 
     pub fn scroll_to_range_y(&self, start_y: Px, end_y: Px, strategy: ScrollStrategy) {
@@ -173,6 +194,8 @@ struct DeferredScrollToItem {
 struct VirtualListScrollHandleState {
     items_count: usize,
     deferred: Option<DeferredScrollToItem>,
+    last_consumed: Option<DeferredScrollToItem>,
+    last_consumed_revision: u64,
 }
 
 /// A scroll handle with VirtualList-specific helpers (scroll-to-item).
@@ -200,12 +223,20 @@ impl VirtualListScrollHandle {
     }
 
     pub fn scroll_to_item(&self, index: usize, strategy: ScrollStrategy) {
+        let current_revision = self.base_handle.revision();
         let mut state = self.state.borrow_mut();
         let next = DeferredScrollToItem { index, strategy };
-        if state.deferred != Some(next) {
-            state.deferred = Some(next);
-            self.base_handle.bump_revision();
+        if state.deferred == Some(next) {
+            return;
         }
+        if state.deferred.is_none()
+            && state.last_consumed == Some(next)
+            && state.last_consumed_revision == current_revision
+        {
+            return;
+        }
+        state.deferred = Some(next);
+        self.base_handle.bump_revision();
     }
 
     pub fn scroll_to_index(&self, index: usize, strategy: ScrollStrategy) {
@@ -213,8 +244,9 @@ impl VirtualListScrollHandle {
     }
 
     pub fn scroll_to_bottom(&self) {
-        let items = self.state.borrow().items_count;
-        self.scroll_to_item(items.saturating_sub(1), ScrollStrategy::End);
+        // Avoid relying on the runtime-driven `items_count` bookkeeping for "scroll to end".
+        // The layout pass will clamp the requested index against the current list count.
+        self.scroll_to_item(usize::MAX, ScrollStrategy::End);
     }
 
     pub(crate) fn set_items_count(&self, items_count: usize) {
@@ -226,7 +258,12 @@ impl VirtualListScrollHandle {
     }
 
     pub(crate) fn clear_deferred_scroll_to_item(&self) {
-        self.state.borrow_mut().deferred = None;
+        let mut state = self.state.borrow_mut();
+        if let Some(deferred) = state.deferred {
+            state.last_consumed = Some(deferred);
+            state.last_consumed_revision = self.base_handle.revision();
+        }
+        state.deferred = None;
     }
 }
 
@@ -245,6 +282,30 @@ mod tests {
     }
 
     #[test]
+    fn scroll_handle_internal_setters_do_not_bump_revision() {
+        let handle = ScrollHandle::default();
+        let rev0 = handle.revision();
+
+        handle.set_viewport_size_internal(Size::new(Px(10.0), Px(10.0)));
+        handle.set_content_size_internal(Size::new(Px(20.0), Px(30.0)));
+        handle.set_offset_internal(Point::new(Px(0.0), Px(5.0)));
+        assert_eq!(handle.revision(), rev0);
+
+        handle.set_viewport_size(Size::new(Px(11.0), Px(10.0)));
+        assert_eq!(handle.revision(), rev0.saturating_add(1));
+    }
+
+    #[test]
+    fn virtual_list_scroll_to_bottom_requests_end_sentinel() {
+        let handle = VirtualListScrollHandle::default();
+        handle.scroll_to_bottom();
+        assert_eq!(
+            handle.deferred_scroll_to_item(),
+            Some((usize::MAX, ScrollStrategy::End))
+        );
+    }
+
+    #[test]
     fn scroll_handle_scroll_to_range_nearest_keeps_range_visible() {
         let handle = ScrollHandle::default();
         handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
@@ -259,5 +320,30 @@ mod tests {
 
         handle.scroll_to_range_y(Px(95.0), Px(99.0), ScrollStrategy::Nearest);
         assert_eq!(handle.offset().y, Px(89.0));
+    }
+
+    #[test]
+    fn virtual_list_scroll_to_item_does_not_bump_revision_when_reissued_without_context_change() {
+        let handle = VirtualListScrollHandle::new();
+        handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
+        handle.set_content_size(Size::new(Px(10.0), Px(100.0)));
+
+        let initial_revision = handle.revision();
+        handle.scroll_to_item(5, ScrollStrategy::Nearest);
+        let first_rev = handle.revision();
+        assert!(first_rev > initial_revision);
+
+        // Simulate runtime consumption: the request was consumed, but did not necessarily change
+        // the offset. Reissuing the same request should not keep bumping the revision forever.
+        handle.clear_deferred_scroll_to_item();
+        handle.scroll_to_item(5, ScrollStrategy::Nearest);
+        assert_eq!(handle.revision(), first_rev);
+
+        // A context change (e.g. content size change) should allow the same request to be issued
+        // again, because it may become meaningful after layout changes.
+        handle.set_content_size(Size::new(Px(10.0), Px(120.0)));
+        let after_context = handle.revision();
+        handle.scroll_to_item(5, ScrollStrategy::Nearest);
+        assert!(handle.revision() > after_context);
     }
 }

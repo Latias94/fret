@@ -1,4 +1,7 @@
 use super::*;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 #[test]
 fn virtual_list_computes_visible_range_after_first_layout() {
@@ -103,6 +106,207 @@ fn virtual_list_computes_visible_range_after_first_layout() {
         vec![0, 1, 2, 3, 4]
     );
     assert_eq!(ui.children(list_node).len(), 5);
+}
+
+#[test]
+fn virtual_list_can_scroll_to_deep_index_then_to_end() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        list_element_id: &mut Option<crate::elements::GlobalElementId>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let list = cx.virtual_list(
+            10_000,
+            crate::element::VirtualListOptions::new(Px(10.0), 0),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                    .collect::<Vec<_>>()
+            },
+        );
+        *list_element_id = Some(list.id);
+        list
+    }
+
+    // Frame 0: establish viewport size.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 1: compute visible range for offset=0.
+    app.advance_frame();
+    let prev_list_element_id = list_element_id;
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(prev_list_element_id, list_element_id);
+
+    let list_node = ui.children(root)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4]
+    );
+
+    scroll_handle.scroll_to_item(9000, crate::scroll::ScrollStrategy::Start);
+
+    // Frame 2: consume the deferred scroll request during layout.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 3: render the updated visible range.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let list_node = ui.children(root)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert!(props.visible_items.iter().any(|item| item.index == 9000));
+
+    scroll_handle.scroll_to_item(9999, crate::scroll::ScrollStrategy::Start);
+    assert_eq!(
+        scroll_handle.deferred_scroll_to_item(),
+        Some((9999, crate::scroll::ScrollStrategy::Start)),
+        "scroll_to_item should record a deferred request until the next layout pass consumes it"
+    );
+
+    // Frame 4: consume the deferred scroll request during layout.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "layout pass should consume the deferred scroll request"
+    );
+
+    // Frame 5: render the updated visible range.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-scroll-end",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let list_node = ui.children(root)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    if !props.visible_items.iter().any(|item| item.index == 9999) {
+        let indices: Vec<usize> = props.visible_items.iter().map(|item| item.index).collect();
+        let list_element_id = list_element_id.expect("list element id");
+        let (state_items_len, state_offset_y, state_total_height) =
+            crate::elements::with_element_state(
+                &mut app,
+                window,
+                list_element_id,
+                crate::element::VirtualListState::default,
+                |s| (s.items_len, s.offset_y, s.metrics.total_height()),
+            );
+        panic!(
+            "expected to be able to scroll to the final item after scrolling to a deep index; visible={indices:?} state.items_len={state_items_len} state.offset_y={state_offset_y:?} state.total_height={state_total_height:?}"
+        );
+    }
 }
 
 #[test]
@@ -318,7 +522,7 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
         let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
         options.axis = fret_core::Axis::Horizontal;
 
-        let list_a = cx.virtual_list(100, options, scroll_handle, |cx, items| {
+        let list_a = cx.virtual_list(100, options.clone(), scroll_handle, |cx, items| {
             items
                 .iter()
                 .copied()
@@ -374,14 +578,18 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
     assert_eq!(list_a_id, prev_list_a_id);
     assert_eq!(list_b_id, prev_list_b_id);
 
-    let before = crate::elements::with_element_state(
-        &mut app,
-        window,
-        list_b_id.unwrap(),
-        crate::element::VirtualListState::default,
-        |s| s.offset_x,
+    // Before scroll, there is no scroll transform applied (offset=0).
+    let mut scene_before = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene_before, 1.0);
+    let before_push_transforms = scene_before
+        .ops()
+        .iter()
+        .filter(|op| matches!(op, SceneOp::PushTransform { .. }))
+        .count();
+    assert_eq!(
+        before_push_transforms, 0,
+        "expected no children scroll transforms before wheel scroll"
     );
-    assert_eq!(before, Px(0.0));
 
     // Scroll the first list; the second list should also be invalidated and updated because it
     // shares the same `VirtualListScrollHandle`.
@@ -399,19 +607,455 @@ fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
 
     ui.layout_all(&mut app, &mut text, bounds, 1.0);
 
-    let after = crate::elements::with_element_state(
-        &mut app,
-        window,
-        list_b_id.unwrap(),
-        crate::element::VirtualListState::default,
-        |s| s.offset_x,
+    let mut scene_after = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene_after, 1.0);
+    let after_push_transforms: Vec<String> = scene_after
+        .ops()
+        .iter()
+        .filter(|op| matches!(op, SceneOp::PushTransform { .. }))
+        .map(|op| format!("{op:?}"))
+        .collect();
+
+    // Both lists apply the same scroll handle offset via a children-only render transform, so we
+    // expect two identical translation transforms (one per list).
+    assert_eq!(
+        after_push_transforms.len(),
+        2,
+        "expected both bound virtual lists to apply a scroll transform"
+    );
+    assert_eq!(
+        after_push_transforms[0], after_push_transforms[1],
+        "expected both bound virtual lists to apply the same scroll transform"
     );
     assert!(
-        after.0 > before.0,
-        "expected shared scroll to update second list offset: before={:?} after={:?}",
-        before,
-        after
+        after_push_transforms[0].contains("-20"),
+        "expected scroll transform to include the wheel delta (-20px): {:?}",
+        after_push_transforms[0]
     );
+}
+
+#[test]
+fn virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let render_calls: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        render_calls: Arc<AtomicUsize>,
+    ) -> AnyElement {
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Fill;
+        cache.cache_key = 1;
+        cx.view_cache(cache, move |cx| {
+            render_calls.fetch_add(1, Ordering::SeqCst);
+            vec![cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::new(Px(10.0), 0),
+                scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                        .collect::<Vec<_>>()
+                },
+            )]
+        })
+    }
+
+    // Frame 0: establish viewport size so the visible range can be computed.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: mount initial visible rows (0..=4).
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    assert_eq!(ui.children(list_node).len(), 5);
+    app.advance_frame();
+
+    // Frame 2: allow any one-time layout-driven invalidations (viewport/content size) to settle.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 3: cache hit; render closure should be skipped.
+    let calls_before_wheel = render_calls.load(Ordering::SeqCst);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel,
+        "expected view-cache root to be a cache hit before wheel scroll"
+    );
+    let cache_node = ui.children(root)[0];
+    let _list_node = ui.children(cache_node)[0];
+
+    // Wheel-scroll far enough that the desired visible range no longer overlaps the mounted rows.
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: fret_core::Point::new(Px(5.0), Px(5.0)),
+            delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        scroll_handle.offset().y,
+        Px(80.0),
+        "expected wheel scroll to update the bound scroll handle"
+    );
+
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel,
+        "expected wheel scroll to schedule rerender without breaking the current cache-hit frame"
+    );
+    assert!(
+        !ui.should_reuse_view_cache_node(cache_node),
+        "expected wheel scroll to notify the view-cache root for a one-shot rerender"
+    );
+    app.advance_frame();
+
+    // Frame 4: rerender should run once to rebuild the visible range.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel.saturating_add(1),
+        "expected exactly one rerender after visible-range refresh"
+    );
+
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![8, 9, 10, 11, 12]
+    );
+    assert_eq!(ui.children(list_node).len(), 5);
+
+    app.advance_frame();
+
+    // Frame 5: allow any one-time post-refresh invalidations to settle.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 6: cache hit again (steady-state).
+    let calls_after_settle = render_calls.load(Ordering::SeqCst);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_after_settle,
+        "expected view-cache root to return to cache-hit steady state"
+    );
+}
+
+#[test]
+fn virtual_list_triggers_visible_range_rerender_on_scrollbar_wheel_when_cached() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let render_calls: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        render_calls: Arc<AtomicUsize>,
+    ) -> AnyElement {
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Fill;
+        cache.cache_key = 1;
+
+        cx.view_cache(cache, move |cx| {
+            render_calls.fetch_add(1, Ordering::SeqCst);
+
+            let mut list_layout = crate::element::LayoutStyle::default();
+            list_layout.size.width = crate::element::Length::Fill;
+            list_layout.size.height = crate::element::Length::Fill;
+
+            let mut scrollbar_layout = crate::element::LayoutStyle::default();
+            scrollbar_layout.size.width = crate::element::Length::Px(Px(10.0));
+            scrollbar_layout.size.height = crate::element::Length::Fill;
+
+            let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+            let handle = scroll_handle.clone();
+            vec![cx.row(crate::element::RowProps::default(), |cx| {
+                let list = cx.virtual_list_with_layout(
+                    list_layout,
+                    100,
+                    crate::element::VirtualListOptions::new(Px(10.0), 0),
+                    &handle,
+                    |cx, items| {
+                        items
+                            .iter()
+                            .copied()
+                            .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                            .collect::<Vec<_>>()
+                    },
+                );
+                list_element_id = Some(list.id);
+
+                let mut scrollbar = crate::element::ScrollbarProps::default();
+                scrollbar.layout = scrollbar_layout;
+                scrollbar.axis = crate::element::ScrollbarAxis::Vertical;
+                scrollbar.scroll_handle = handle.base_handle().clone();
+                scrollbar.scroll_target = list_element_id;
+
+                vec![list, cx.scrollbar(scrollbar)]
+            })]
+        })
+    }
+
+    // Frame 0: establish viewport size so the visible range can be computed.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-scrollbar-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: mount initial visible rows (0..=4).
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-scrollbar-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let cache_node = ui.children(root)[0];
+    let row_node = ui.children(cache_node)[0];
+    let list_node = ui.children(row_node)[0];
+    assert_eq!(ui.children(list_node).len(), 5);
+    app.advance_frame();
+
+    // Frame 2: allow any one-time layout-driven invalidations (viewport/content size) to settle.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-scrollbar-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 3: cache hit; render closure should be skipped.
+    let calls_before_wheel = render_calls.load(Ordering::SeqCst);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-scrollbar-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel,
+        "expected view-cache root to be a cache hit before scrollbar wheel scroll"
+    );
+    let cache_node = ui.children(root)[0];
+
+    // Wheel-scroll over the scrollbar (x=195 falls within the 10px rail), far enough that the
+    // desired visible range no longer overlaps the mounted rows.
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: fret_core::Point::new(Px(195.0), Px(5.0)),
+            delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        scroll_handle.offset().y,
+        Px(80.0),
+        "expected scrollbar wheel scroll to update the bound scroll handle"
+    );
+
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel,
+        "expected scrollbar wheel scroll to schedule rerender without breaking the current cache-hit frame"
+    );
+    assert!(
+        !ui.should_reuse_view_cache_node(cache_node),
+        "expected scrollbar wheel scroll to notify the view-cache root for a one-shot rerender"
+    );
+
+    app.advance_frame();
+
+    // Frame 4: rerender should run once to rebuild the visible range.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-refresh-on-scrollbar-wheel",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_wheel.saturating_add(1),
+        "expected exactly one rerender after visible-range refresh"
+    );
+
+    let cache_node = ui.children(root)[0];
+    let row_node = ui.children(cache_node)[0];
+    let list_node = ui.children(row_node)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![8, 9, 10, 11, 12]
+    );
+    assert_eq!(ui.children(list_node).len(), 5);
 }
 
 #[test]
@@ -512,6 +1156,86 @@ fn virtual_list_scroll_to_item_keeps_target_visible() {
         (scroll_handle.offset().y.0 - 40.0).abs() < 0.01,
         "offset_y={:?}",
         scroll_handle.offset().y
+    );
+}
+
+#[test]
+fn virtual_list_fixed_scroll_to_item_does_not_force_layout_invalidation() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(30.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    // Frame 0: establish viewport height and register scroll-handle bindings.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-fixed-scroll-to-hit-test-only",
+        |cx| {
+            vec![cx.virtual_list(
+                100,
+                crate::element::VirtualListOptions::fixed(Px(10.0), 0),
+                &scroll_handle,
+                |cx, items| {
+                    items
+                        .iter()
+                        .copied()
+                        .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                        .collect::<Vec<_>>()
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: request scroll-to-item; fixed lists should not require a scroll-handle Layout
+    // invalidation in order to consume the request.
+    let target = 6usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Nearest);
+    assert_eq!(
+        scroll_handle.deferred_scroll_to_item(),
+        Some((target, crate::scroll::ScrollStrategy::Nearest))
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "expected fixed virtual list to consume deferred scroll-to-item"
+    );
+
+    let scroll_walks: Vec<_> = ui
+        .debug_invalidation_walks()
+        .iter()
+        .filter(|w| {
+            matches!(
+                w.detail,
+                crate::tree::UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+                    | crate::tree::UiDebugInvalidationDetail::ScrollHandleLayout
+                    | crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+            )
+        })
+        .collect();
+    assert!(
+        !scroll_walks.is_empty(),
+        "expected scroll-handle invalidation walk"
+    );
+    assert!(
+        scroll_walks.iter().all(|w| w.inv != Invalidation::Layout),
+        "expected fixed scroll-to-item to avoid a scroll-handle Layout invalidation; got {:?}",
+        scroll_walks
     );
 }
 
@@ -707,6 +1431,261 @@ fn virtual_list_scroll_to_item_triggers_layout_even_without_other_invalidations(
 }
 
 #[test]
+fn virtual_list_scroll_offsets_apply_in_semantics_snapshot() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let mut layout = crate::element::LayoutStyle::default();
+        layout.size.width = crate::element::Length::Fill;
+        layout.size.height = crate::element::Length::Fill;
+        layout.overflow = crate::element::Overflow::Clip;
+
+        cx.virtual_list_with_layout(
+            layout,
+            10_000,
+            crate::element::VirtualListOptions::new(Px(28.0), 10),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| {
+                        cx.semantics(
+                            crate::element::SemanticsProps {
+                                role: fret_core::SemanticsRole::Button,
+                                test_id: Some(Arc::<str>::from(format!(
+                                    "virtual-list-row-{}",
+                                    item.index
+                                ))),
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.text("row")],
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            },
+        )
+    }
+
+    // Frame 0: establish viewport.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-semantics-scroll-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 1: request a scroll-to-item and allow final layout to consume it.
+    let target = 9000usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Start);
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-semantics-scroll-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 2: rerender the visible range and validate semantics bounds are in viewport space.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-semantics-scroll-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let needle = format!("virtual-list-row-{target}");
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(needle.as_str()))
+        .expect("expected scrolled-to row to appear in semantics snapshot");
+    assert!(
+        node.bounds.origin.y.0 >= bounds.origin.y.0
+            && node.bounds.origin.y.0 <= bounds.origin.y.0 + bounds.size.height.0,
+        "expected semantics bounds to be in viewport space after scroll; got {:?}",
+        node.bounds
+    );
+}
+
+#[test]
+fn virtual_list_click_focus_does_not_trigger_scroll_jump_under_children_transform() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let mut layout = crate::element::LayoutStyle::default();
+        layout.size.width = crate::element::Length::Fill;
+        layout.size.height = crate::element::Length::Fill;
+        layout.overflow = crate::element::Overflow::Clip;
+
+        cx.virtual_list_with_layout(
+            layout,
+            10_000,
+            crate::element::VirtualListOptions::new(Px(28.0), 10),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| {
+                        cx.keyed(item.key, |cx| {
+                            let mut props = crate::element::PressableProps::default();
+                            props.layout.size.width = crate::element::Length::Fill;
+                            props.layout.size.height = crate::element::Length::Px(Px(28.0));
+                            props.focusable = true;
+                            props.a11y.role = Some(fret_core::SemanticsRole::Button);
+                            props.a11y.test_id =
+                                Some(Arc::<str>::from(format!("virtual-list-row-{}", item.index)));
+                            cx.pressable(props, |cx, _state| vec![cx.text("row")])
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            },
+        )
+    }
+
+    // Frame 0: establish viewport.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-focus-click-no-scroll-jump",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 1: request a scroll-to-item and allow final layout to consume it.
+    let target = 9000usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Start);
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-focus-click-no-scroll-jump",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 2: rerender the visible range and click a focusable row; it must not trigger an
+    // erroneous scroll-into-view jump.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-focus-click-no-scroll-jump",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let needle = format!("virtual-list-row-{target}");
+    let node = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(needle.as_str()))
+        .expect("expected scrolled-to row to appear in semantics snapshot");
+
+    let pos = Point::new(
+        Px(node.bounds.origin.x.0 + 2.0),
+        Px(node.bounds.origin.y.0 + 2.0),
+    );
+
+    let before = scroll_handle.offset().y;
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let after = scroll_handle.offset().y;
+    assert!(
+        (after.0 - before.0).abs() <= 0.01,
+        "clicking a visible focusable row must not cause a scroll jump: before={:?} after={:?}",
+        before,
+        after
+    );
+}
+
+#[test]
 fn virtual_list_scroll_to_item_uses_measured_row_heights() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -819,6 +1798,248 @@ fn virtual_list_scroll_to_item_uses_measured_row_heights() {
         "offset_y={:?}",
         scroll_handle.offset().y
     );
+}
+
+#[test]
+fn virtual_list_skips_redundant_measures_for_clean_measured_rows() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(30.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn row<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut style = crate::element::LayoutStyle::default();
+        style.size.height = crate::element::Length::Px(Px(10.0));
+        cx.container(
+            crate::element::ContainerProps {
+                layout: style,
+                ..Default::default()
+            },
+            |_| Vec::new(),
+        )
+    }
+
+    fn build_list<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> AnyElement {
+        let options = crate::element::VirtualListOptions::new(Px(10.0), 0);
+        cx.virtual_list(100, options, scroll_handle, |cx, items| {
+            items
+                .iter()
+                .copied()
+                .map(|item| cx.keyed(item.key, row))
+                .collect::<Vec<_>>()
+        })
+    }
+
+    // Frame 0: establish viewport size so the visible range can be computed.
+    crate::virtual_list::debug_take_virtual_list_item_measures();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-skip-measure",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: first layout with a known viewport should measure the initial visible items.
+    crate::virtual_list::debug_take_virtual_list_item_measures();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-skip-measure",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let measured = crate::virtual_list::debug_take_virtual_list_item_measures();
+    assert!(measured > 0, "expected initial visible rows to be measured");
+    app.advance_frame();
+
+    // Frame 2: with a clean tree and stable viewport, measured rows should not be re-measured.
+    crate::virtual_list::debug_take_virtual_list_item_measures();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-skip-measure",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let measured = crate::virtual_list::debug_take_virtual_list_item_measures();
+    assert_eq!(
+        measured, 0,
+        "expected no redundant measures once rows are measured and clean"
+    );
+    app.advance_frame();
+
+    // Frame 3: scrolling by one row should only measure newly revealed items.
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(10.0)));
+    crate::virtual_list::debug_take_virtual_list_item_measures();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-skip-measure",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let measured = crate::virtual_list::debug_take_virtual_list_item_measures();
+    assert_eq!(
+        measured, 1,
+        "expected only one newly visible row to be measured"
+    );
+    app.advance_frame();
+
+    // Note: `items_revision` bumps are handled by the normal invalidation path (layout-dirty rows
+    // should re-measure as needed). This test focuses on the steady-state scroll hot path.
+}
+
+#[test]
+fn virtual_list_row_view_cache_reuses_rows_across_small_scroll_deltas() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(30.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let render_counts: Arc<Mutex<HashMap<u64, usize>>> = Arc::new(Mutex::new(HashMap::new()));
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        render_counts: Arc<Mutex<HashMap<u64, usize>>>,
+    ) -> AnyElement {
+        let options = crate::element::VirtualListOptions::new(Px(10.0), 0);
+        cx.virtual_list_keyed_with_layout(
+            crate::element::LayoutStyle::default(),
+            20,
+            options,
+            scroll_handle,
+            |i| i as crate::ItemKey,
+            move |cx, index| {
+                let key = index as u64;
+                let render_counts = Arc::clone(&render_counts);
+
+                let mut view_cache = crate::element::ViewCacheProps::default();
+                view_cache.cache_key = key;
+                cx.view_cache(view_cache, move |cx| {
+                    render_counts
+                        .lock()
+                        .expect("render_counts lock")
+                        .entry(key)
+                        .and_modify(|v| *v += 1)
+                        .or_insert(1);
+
+                    let mut style = crate::element::LayoutStyle::default();
+                    style.size.height = crate::element::Length::Px(Px(10.0));
+                    vec![cx.container(
+                        crate::element::ContainerProps {
+                            layout: style,
+                            ..Default::default()
+                        },
+                        |_| Vec::new(),
+                    )]
+                })
+            },
+        )
+    }
+
+    // Frame 0: establish viewport size so the visible range can be computed.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: mount initial visible rows (0..=2).
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 2: scroll by one row; should only render the newly revealed row (3).
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(10.0)));
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 3: scroll by one more row; should only render the newly revealed row (4).
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(20.0)));
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-row-cache-reuse",
+        |cx| vec![build_list(cx, &scroll_handle, Arc::clone(&render_counts))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let counts = render_counts.lock().expect("render_counts lock");
+    assert_eq!(
+        counts.len(),
+        5,
+        "expected only the 5 unique rows observed across scroll steps to render"
+    );
+    for (key, count) in counts.iter() {
+        assert_eq!(*count, 1, "row {key} rendered unexpectedly multiple times");
+    }
 }
 
 #[test]
@@ -1017,6 +2238,112 @@ fn virtual_list_paint_clips_each_visible_row() {
         .filter(|op| matches!(op, SceneOp::PushClipRect { .. }))
         .count();
     assert_eq!(pushes, 1 + 5);
+}
+
+#[test]
+fn virtual_list_scroll_transform_does_not_double_transform_per_row_clip_rects() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> AnyElement {
+        cx.virtual_list(
+            10_000,
+            crate::element::VirtualListOptions::new(Px(10.0), 0),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                    .collect::<Vec<_>>()
+            },
+        )
+    }
+
+    // Frame 0: record viewport size (no visible children yet).
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-clip-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: mount visible children.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-clip-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Request a deep scroll so the first visible row is far away in content space.
+    scroll_handle.scroll_to_item(9000, crate::scroll::ScrollStrategy::Start);
+
+    // Frame 2: consume deferred scroll during layout.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-clip-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 3: paint with the applied scroll transform.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-clip-transform",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+    // When using a children-only scroll transform, per-row clip rects must remain in the
+    // pre-transform/content coordinate space (not pre-transformed into screen space). A deep scroll
+    // should therefore produce at least one clip rect with a large y origin (e.g. ~9000 * 10px).
+    let has_large_clip = scene.ops().iter().any(|op| match *op {
+        SceneOp::PushClipRect { rect } => rect.origin.y.0 > 1_000.0,
+        _ => false,
+    });
+    assert!(
+        has_large_clip,
+        "expected at least one per-row clip rect to remain in content space under scroll transforms"
+    );
 }
 
 #[test]

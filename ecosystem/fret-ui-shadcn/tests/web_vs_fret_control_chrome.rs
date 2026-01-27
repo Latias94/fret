@@ -1151,10 +1151,7 @@ fn web_vs_fret_button_group_nested_geometry_and_chrome_match() {
                 .into(),
         ])
         .a11y_label("NestedGroupA")
-        .refine_layout(
-            fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group_a.rect.w))),
-        );
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group_a.rect.w)));
 
         let group_b = fret_ui_shadcn::ButtonGroup::new(vec![
             fret_ui_shadcn::Button::new("Previous")
@@ -1169,10 +1166,7 @@ fn web_vs_fret_button_group_nested_geometry_and_chrome_match() {
                 .into(),
         ])
         .a11y_label("NestedGroupB")
-        .refine_layout(
-            fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group_b.rect.w))),
-        );
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group_b.rect.w)));
 
         let outer = fret_ui_shadcn::ButtonGroup::new(vec![group_a.into(), group_b.into()])
             .a11y_label("OuterGroup");
@@ -2066,8 +2060,8 @@ fn web_vs_fret_button_group_popover_geometry_and_chrome_match() {
             .test_id("button-group-popover.lead")
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_lead.rect.w)))
-                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_lead.rect.h))),
+                    .w_px(Px(web_lead.rect.w))
+                    .h_px(Px(web_lead.rect.h)),
             )
             .into();
 
@@ -2200,10 +2194,7 @@ fn web_vs_fret_button_group_input_geometry_and_chrome_match() {
 
         let input = fret_ui_shadcn::Input::new(model)
             .a11y_label("ButtonGroupInputInput")
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_input.rect.w)))
             .corner_radii_override(Corners {
                 top_left: Px(8.0),
                 bottom_left: Px(8.0),
@@ -2225,8 +2216,8 @@ fn web_vs_fret_button_group_input_geometry_and_chrome_match() {
             .test_id("button-group-input.search")
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.w)))
-                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.h))),
+                    .w_px(Px(web_button.rect.w))
+                    .h_px(Px(web_button.rect.h)),
             )
             .into_element(cx);
 
@@ -2320,6 +2311,11 @@ fn web_vs_fret_input_demo_focus_ring_matches() {
     let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
     let (expected_ring_color, expected_ring_spread) =
         web_box_shadow_focus_ring(web_input).expect("web input focus ring");
+    let expected_border_color = web_input
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web input borderTopColor");
 
     let (snap, scene) = render_and_paint_with_focus_in_bounds(
         CoreSize::new(Px(1024.0), Px(768.0)),
@@ -2330,8 +2326,8 @@ fn web_vs_fret_input_demo_focus_ring_matches() {
                     .a11y_label("InputDemoInput")
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                            .w_px(Px(web_input.rect.w))
+                            .h_px(Px(web_input.rect.h)),
                     )
                     .into_element(cx),
             ]
@@ -2364,6 +2360,14 @@ fn web_vs_fret_input_demo_focus_ring_matches() {
         &expected_ring_color,
         0.06,
     );
+
+    let quad_input = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_color_close(
+        "input-demo focus border color",
+        quad_input.border_color,
+        expected_border_color,
+        0.06,
+    );
 }
 
 #[test]
@@ -2378,6 +2382,11 @@ fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
     let web_input = find_first(&theme.root, &|n| n.tag == "input").expect("web input node");
     let (expected_ring_color, expected_ring_spread) =
         web_box_shadow_focus_ring(web_input).expect("web input invalid focus ring");
+    let expected_border_color = web_input
+        .computed_style
+        .get("borderTopColor")
+        .map(String::as_str)
+        .expect("web input borderTopColor");
 
     let (snap, scene) = render_and_paint_with_focus_in_bounds(
         CoreSize::new(Px(1024.0), Px(768.0)),
@@ -2389,8 +2398,8 @@ fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
                     .aria_invalid(true)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                            .w_px(Px(web_input.rect.w))
+                            .h_px(Px(web_input.rect.h)),
                     )
                     .into_element(cx),
             ]
@@ -2422,6 +2431,14 @@ fn web_vs_fret_input_demo_aria_invalid_focus_ring_matches() {
         "input-demo invalid focus ring color",
         ring_quad.border_color,
         &expected_ring_color,
+        0.06,
+    );
+
+    let quad_input = find_best_quad(&scene, input.bounds).expect("painted quad for input");
+    assert_color_close(
+        "input-demo invalid focus border color",
+        quad_input.border_color,
+        expected_border_color,
         0.06,
     );
 }
@@ -2468,8 +2485,8 @@ fn web_vs_fret_input_group_demo_focus_ring_matches() {
                 .trailing(trailing)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.h))),
+                        .w_px(Px(web_group.rect.w))
+                        .h_px(Px(web_group.rect.h)),
                 )
                 .into_element(cx);
 
@@ -2553,8 +2570,8 @@ fn web_vs_fret_input_group_demo_aria_invalid_focus_ring_matches() {
                 .trailing(trailing)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.h))),
+                        .w_px(Px(web_group.rect.w))
+                        .h_px(Px(web_group.rect.h)),
                 )
                 .into_element(cx);
 
@@ -2645,8 +2662,8 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
             .a11y_label("ButtonGroupSelectCombobox")
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_combobox.rect.w)))
-                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_combobox.rect.h))),
+                    .w_px(Px(web_combobox.rect.w))
+                    .h_px(Px(web_combobox.rect.h)),
             )
             .corner_radii_override(Corners {
                 top_left: radius,
@@ -2660,8 +2677,8 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
             .a11y_label("ButtonGroupSelectInput")
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
-                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                    .w_px(Px(web_input.rect.w))
+                    .h_px(Px(web_input.rect.h)),
             )
             .border_left_width_override(Px(0.0))
             .corner_radii_override(Corners {
@@ -2858,17 +2875,15 @@ fn web_vs_fret_button_group_input_group_geometry_matches() {
         let input = fret_ui_shadcn::Input::new(model)
             .a11y_label("ButtonGroupInputGroupInput")
             .refine_style(
-                ChromeRefinement {
-                    border_width: Some(fret_ui_kit::MetricRef::Px(Px(0.0))),
-                    radius: Some(fret_ui_kit::MetricRef::Px(Px(0.0))),
-                    ..Default::default()
-                }
-                .pr(Space::N2),
+                ChromeRefinement::default()
+                    .border_width(Px(0.0))
+                    .radius(Px(0.0))
+                    .pr(Space::N2),
             )
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.w)))
-                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_input.rect.h))),
+                    .w_px(Px(web_input.rect.w))
+                    .h_px(Px(web_input.rect.h)),
             )
             .into_element(cx);
 
@@ -3246,8 +3261,8 @@ fn web_vs_fret_badge_demo_chrome_matches() {
             fret_ui_shadcn::Badge::new("Badge")
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
                 )
                 .into_element(cx),
         ]
@@ -3297,8 +3312,8 @@ fn assert_badge_variant_chrome_matches(
                 .variant(variant)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
                 )
                 .into_element(cx),
         ]
@@ -3379,8 +3394,8 @@ fn web_vs_fret_card_demo_chrome_matches() {
             fret_ui_shadcn::Card::new(Vec::new())
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
                 )
                 .into_element(cx),
         ]
@@ -3701,8 +3716,8 @@ fn web_vs_fret_button_demo_control_chrome_matches() {
                 .variant(fret_ui_shadcn::ButtonVariant::Outline)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
                 )
                 .into_element(cx),
         ]
@@ -3752,8 +3767,8 @@ fn web_vs_fret_button_demo_focus_ring_matches() {
                     .variant(fret_ui_shadcn::ButtonVariant::Outline)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_button.rect.h))),
+                            .w_px(Px(web_button.rect.w))
+                            .h_px(Px(web_button.rect.h)),
                     )
                     .into_element(cx),
             ]
@@ -3860,8 +3875,8 @@ fn web_vs_fret_button_loading_control_chrome_matches() {
                 .disabled(true)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
                 )
                 .into_element(cx),
         ]
@@ -3974,8 +3989,8 @@ fn web_vs_fret_button_with_icon_control_chrome_matches() {
                 .size(fret_ui_shadcn::ButtonSize::Sm)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
                 )
                 .into_element(cx),
         ]
@@ -4277,8 +4292,8 @@ fn web_vs_fret_textarea_demo_focus_ring_matches() {
                     .a11y_label("TextareaFocus")
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.h))),
+                            .w_px(Px(web_textarea.rect.w))
+                            .h_px(Px(web_textarea.rect.h)),
                     )
                     .into_element(cx),
             ]
@@ -4335,8 +4350,8 @@ fn web_vs_fret_textarea_demo_aria_invalid_focus_ring_matches() {
                     .aria_invalid(true)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_textarea.rect.h))),
+                            .w_px(Px(web_textarea.rect.w))
+                            .h_px(Px(web_textarea.rect.h)),
                     )
                     .into_element(cx),
             ]
@@ -4507,8 +4522,8 @@ fn web_vs_fret_select_demo_focus_ring_matches() {
                     .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.h))),
+                            .w_px(Px(web_trigger.rect.w))
+                            .h_px(Px(web_trigger.rect.h)),
                     )
                     .into_element(cx),
             ]
@@ -4570,8 +4585,8 @@ fn web_vs_fret_select_demo_aria_invalid_focus_ring_matches() {
                     .item(fret_ui_shadcn::SelectItem::new("two", "Two"))
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.h))),
+                            .w_px(Px(web_trigger.rect.w))
+                            .h_px(Px(web_trigger.rect.h)),
                     )
                     .into_element(cx),
             ]
@@ -5074,10 +5089,7 @@ fn web_vs_fret_progress_demo_control_chrome_matches() {
         let model: fret_runtime::Model<f32> = cx.app.models_mut().insert(42.0);
         vec![
             fret_ui_shadcn::Progress::new(model)
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w))),
-                )
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
                 .into_element(cx),
         ]
     });
@@ -5125,8 +5137,8 @@ fn web_vs_fret_toggle_demo_control_chrome_matches() {
                 .label("Bookmark")
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(web_h))),
+                        .w_px(Px(web_w))
+                        .h_px(Px(web_h)),
                 )
                 .into_element(cx),
         ]
@@ -5175,10 +5187,7 @@ fn web_vs_fret_alert_demo_chrome_matches() {
                 fret_ui_shadcn::AlertDescription::new("You can add components to your app.")
                     .into_element(cx),
             ])
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_w))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
             .into_element(cx),
         ]
     });
@@ -5223,10 +5232,7 @@ fn web_vs_fret_alert_destructive_chrome_matches() {
                     .into_element(cx),
             ])
             .variant(fret_ui_shadcn::AlertVariant::Destructive)
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_w))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_w)))
             .into_element(cx),
         ]
     });

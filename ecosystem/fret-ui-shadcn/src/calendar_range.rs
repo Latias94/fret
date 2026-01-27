@@ -14,30 +14,20 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
-use crate::calendar::CalendarLocale;
 
-use fret_ui_headless::calendar::{
-    CalendarMonth, DateRangeSelection, month_grid_compact, week_number,
-};
+use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection, month_grid};
 
 #[derive(Clone)]
 pub struct CalendarRange {
     month: Model<CalendarMonth>,
     selected: Model<DateRangeSelection>,
-    number_of_months: usize,
-    locale: CalendarLocale,
-    month_bounds: Option<(CalendarMonth, CalendarMonth)>,
-    disable_navigation: bool,
     week_start: Weekday,
     show_outside_days: bool,
     disable_outside_days: bool,
-    show_week_number: bool,
-    cell_size: Option<Px>,
-    today: Option<Date>,
     disabled: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
@@ -50,10 +40,6 @@ impl std::fmt::Debug for CalendarRange {
         f.debug_struct("CalendarRange")
             .field("month", &"<model>")
             .field("selected", &"<model>")
-            .field("number_of_months", &self.number_of_months)
-            .field("locale", &self.locale)
-            .field("month_bounds", &self.month_bounds)
-            .field("disable_navigation", &self.disable_navigation)
             .field("week_start", &self.week_start)
             .field("show_outside_days", &self.show_outside_days)
             .field("disable_outside_days", &self.disable_outside_days)
@@ -69,16 +55,9 @@ impl CalendarRange {
         Self {
             month,
             selected,
-            number_of_months: 1,
-            locale: CalendarLocale::default(),
-            month_bounds: None,
-            disable_navigation: false,
             week_start: Weekday::Monday,
             show_outside_days: true,
             disable_outside_days: true,
-            show_week_number: false,
-            cell_size: None,
-            today: None,
             disabled: None,
             close_on_select: None,
             initial_focus_out: None,
@@ -92,30 +71,6 @@ impl CalendarRange {
         self
     }
 
-    pub fn number_of_months(mut self, months: usize) -> Self {
-        self.number_of_months = months.max(1);
-        self
-    }
-
-    pub fn locale(mut self, locale: CalendarLocale) -> Self {
-        self.locale = locale;
-        self
-    }
-
-    pub fn month_bounds(mut self, start: CalendarMonth, end: CalendarMonth) -> Self {
-        self.month_bounds = Some(if crate::calendar::month_le(start, end) {
-            (start, end)
-        } else {
-            (end, start)
-        });
-        self
-    }
-
-    pub fn disable_navigation(mut self, disable: bool) -> Self {
-        self.disable_navigation = disable;
-        self
-    }
-
     pub fn show_outside_days(mut self, show: bool) -> Self {
         self.show_outside_days = show;
         self
@@ -123,24 +78,6 @@ impl CalendarRange {
 
     pub fn disable_outside_days(mut self, disable: bool) -> Self {
         self.disable_outside_days = disable;
-        self
-    }
-
-    pub fn show_week_number(mut self, show: bool) -> Self {
-        self.show_week_number = show;
-        self
-    }
-
-    pub fn cell_size(mut self, size: Px) -> Self {
-        self.cell_size = Some(size);
-        self
-    }
-
-    /// Overrides the "today" date for deterministic snapshots and testing.
-    ///
-    /// This mirrors the upstream DayPicker `today` prop.
-    pub fn today(mut self, today: Date) -> Self {
-        self.today = Some(today);
         self
     }
 
@@ -178,14 +115,6 @@ impl CalendarRange {
 
         let month_model = self.month.clone();
         let selected_model = self.selected.clone();
-        let number_of_months = self.number_of_months.max(1);
-        let locale = self.locale;
-        let month_bounds = self.month_bounds;
-        let disable_navigation = self.disable_navigation;
-        let week_start = self.week_start;
-        let show_outside_days = self.show_outside_days;
-        let disable_outside_days = self.disable_outside_days;
-        let show_week_number = self.show_week_number;
         let disabled_predicate = self.disabled.clone();
         let close_on_select = self.close_on_select.clone();
         let initial_focus_out = self.initial_focus_out.clone();
@@ -196,20 +125,13 @@ impl CalendarRange {
             .unwrap_or_else(|| CalendarMonth::from_date(OffsetDateTime::now_utc().date()));
         let selected = cx.watch_model(&selected_model).cloned().unwrap_or_default();
 
-        let grid = month_grid_compact(month, week_start);
-        let today = self
-            .today
-            .unwrap_or_else(|| OffsetDateTime::now_utc().date());
-        let in_bounds =
-            |d: Date| month_bounds.map_or(true, |b| crate::calendar::date_in_month_bounds(d, b));
+        let grid = month_grid(month, self.week_start);
+        let today = OffsetDateTime::now_utc().date();
 
         let mut disabled = Vec::with_capacity(grid.len());
         for day in grid.iter() {
             let mut is_disabled = false;
-            if !in_bounds(day.date) {
-                is_disabled = true;
-            }
-            if !day.in_month && (!show_outside_days || disable_outside_days) {
+            if !day.in_month && self.disable_outside_days {
                 is_disabled = true;
             }
             if let Some(pred) = disabled_predicate.as_ref() {
@@ -228,7 +150,7 @@ impl CalendarRange {
 
             let visible = |idx: usize| {
                 grid.get(idx)
-                    .is_some_and(|d| (d.in_month || show_outside_days) && in_bounds(d.date))
+                    .is_some_and(|d| d.in_month || self.show_outside_days)
             };
             let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
 
@@ -244,16 +166,15 @@ impl CalendarRange {
                     grid.iter()
                         .enumerate()
                         .find(|(idx, day)| {
-                            (day.in_month || show_outside_days)
-                                && in_bounds(day.date)
-                                && enabled(*idx)
+                            (day.in_month || self.show_outside_days) && enabled(*idx)
                         })
                         .map(|(_, day)| day.date)
                 })
         };
 
-        let title = locale.month_title(month.month, month.year);
-        let weekday_labels = weekday_labels(locale, week_start);
+        let root = LayoutRefinement::default().w_full().merge(self.layout);
+        let title: Arc<str> = Arc::from(format!("{:?} {}", month.month, month.year));
+        let weekday_labels = weekday_labels(self.week_start);
 
         let text_sm_px = theme
             .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
@@ -270,984 +191,225 @@ impl CalendarRange {
             ..Default::default()
         };
 
-        let day_size = self.cell_size.unwrap_or_else(|| {
-            theme
-                .metric_by_key("component.calendar.day_size")
-                .unwrap_or_else(|| theme.metric_required("component.size.sm.icon_button.size"))
-        });
-        let week_row_gap = theme
-            .metric_by_key("component.calendar.week_row_gap")
-            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
-        let day_col_gap = Px(0.0);
-        let day_grid_width = Px(day_size.0 * 7.0);
-        let month_width = if show_week_number {
-            Px(day_size.0 * 8.0)
-        } else {
-            day_grid_width
-        };
+        let day_size = theme
+            .metric_by_key("component.calendar.day_size")
+            .unwrap_or(Px(40.0));
+        let day_gap = theme
+            .metric_by_key("component.calendar.day_gap")
+            .unwrap_or(Px(4.0));
 
-        let chrome = ChromeRefinement::default().p(Space::N3).merge(self.chrome);
-        let root = LayoutRefinement::default().w_full().merge(self.layout);
-        let container_props = decl_style::container_props(&theme, chrome, root);
+        cx.container(
+            decl_style::container_props(&theme, self.chrome, root),
+            move |cx| {
+                let theme_header = theme.clone();
+                let theme_weekdays = theme.clone();
+                let theme_days = theme.clone();
 
-        cx.container(container_props, move |cx| {
-            if number_of_months > 1 {
-                return calendar_range_multi_month_view(
+                let month_model_header = month_model.clone();
+                let month_model_days = month_model.clone();
+                let selected_model = selected_model.clone();
+                let close_on_select = close_on_select.clone();
+                let disabled_predicate = disabled_predicate.clone();
+
+                let header = stack::hstack(
                     cx,
-                    &theme,
-                    month,
-                    month_model.clone(),
-                    selected_model.clone(),
-                    number_of_months,
-                    locale,
-                    month_bounds,
-                    disable_navigation,
-                    week_start,
-                    weekday_labels.clone(),
-                    selected,
-                    today,
-                    show_outside_days,
-                    disable_outside_days,
-                    show_week_number,
-                    day_size,
-                    month_width,
-                    day_grid_width,
-                    week_row_gap,
-                    disabled_predicate.clone(),
-                    close_on_select.clone(),
-                    initial_focus_out.clone(),
-                    grid_text_style.clone(),
-                );
-            }
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N4),
-                move |cx| {
-                    let theme_header = theme.clone();
-                    let theme_weekdays = theme.clone();
-                    let theme_days_for_days = theme.clone();
-                    let theme_days_for_week_numbers = theme.clone();
-
-                    let grid_text_style_weekdays = grid_text_style.clone();
-                    let grid_text_style_week_numbers = grid_text_style.clone();
-
-                    let month_model_header = month_model.clone();
-                    let month_model_days = month_model.clone();
-                    let selected_model = selected_model.clone();
-                    let close_on_select = close_on_select.clone();
-                    let disabled_predicate = disabled_predicate.clone();
-
-                    let header = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .layout(LayoutRefinement::default().w_px(MetricRef::Px(month_width)))
-                            .items_center()
-                            .justify_between(),
-                        move |cx| {
-                            let nav_enabled = !disable_navigation;
-                            let prev_enabled = nav_enabled
-                                && month_bounds
-                                    .map_or(true, |b| crate::calendar::month_lt(b.0, month));
-                            let next_enabled = nav_enabled
-                                && month_bounds.map_or(true, |b| {
-                                    crate::calendar::month_lt(
-                                        month,
-                                        crate::calendar::max_start_month(b, 1),
-                                    )
+                    stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_center()
+                        .justify_between(),
+                    move |cx| {
+                        let month_model_prev = month_model_header.clone();
+                        let prev = calendar_icon_button(
+                            cx,
+                            "Previous month",
+                            ButtonVariant::Ghost,
+                            ButtonSize::IconSm,
+                            Arc::from("<"),
+                            move |host| {
+                                let _ = host.models_mut().update(&month_model_prev, |m| {
+                                    *m = m.prev_month();
                                 });
-
-                            let month_model_prev = month_model_header.clone();
-                            let prev = calendar_icon_button(
-                                cx,
-                                "Go to the Previous Month",
-                                ButtonVariant::Ghost,
-                                ButtonSize::IconSm,
-                                day_size,
-                                Arc::from("<"),
-                                prev_enabled,
-                                move |host| {
-                                    if disable_navigation {
-                                        return;
-                                    }
-                                    let _ = host.models_mut().update(&month_model_prev, |m| {
-                                        let cand = m.prev_month();
-                                        *m = month_bounds.map_or(cand, |b| {
-                                            crate::calendar::clamp_start_month(cand, b, 1)
-                                        });
-                                    });
-                                },
-                            );
-                            let month_model_next = month_model_header.clone();
-                            let next = calendar_icon_button(
-                                cx,
-                                "Go to the Next Month",
-                                ButtonVariant::Ghost,
-                                ButtonSize::IconSm,
-                                day_size,
-                                Arc::from(">"),
-                                next_enabled,
-                                move |host| {
-                                    if disable_navigation {
-                                        return;
-                                    }
-                                    let _ = host.models_mut().update(&month_model_next, |m| {
-                                        let cand = m.next_month();
-                                        *m = month_bounds.map_or(cand, |b| {
-                                            crate::calendar::clamp_start_month(cand, b, 1)
-                                        });
-                                    });
-                                },
-                            );
-
-                            let mut title_props = TextProps::new(title.clone());
-                            title_props.style = Some(TextStyle {
-                                font: Default::default(),
-                                size: theme_header.metric_required("font.size"),
-                                weight: FontWeight::MEDIUM,
-                                line_height: Some(theme_header.metric_required("font.line_height")),
-                                ..Default::default()
-                            });
-                            title_props.wrap = TextWrap::None;
-                            title_props.overflow = TextOverflow::Clip;
-                            let title = cx.text_props(title_props);
-
-                            vec![prev, title, next]
-                        },
-                    );
-
-                    let weekday_row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_px(MetricRef::Px(month_width))),
-                        move |cx| {
-                            let mut out = Vec::with_capacity(8);
-                            if show_week_number {
-                                let mut props = TextProps::new(Arc::from("Wk"));
-                                props.style = Some(grid_text_style_weekdays.clone());
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.color =
-                                    Some(theme_weekdays.color_required("muted-foreground"));
-                                props.layout = {
-                                    let mut ls = LayoutStyle::default();
-                                    ls.size.width = Length::Px(day_size);
-                                    ls.size.height = Length::Auto;
-                                    ls
-                                };
-                                out.push(cx.text_props(props));
-                            }
-
-                            out.extend(weekday_labels.iter().map(|label| {
-                                let mut props = TextProps::new(label.clone());
-                                props.style = Some(grid_text_style_weekdays.clone());
-                                props.wrap = TextWrap::None;
-                                props.overflow = TextOverflow::Clip;
-                                props.color =
-                                    Some(theme_weekdays.color_required("muted-foreground"));
-                                props.layout = {
-                                    let mut ls = LayoutStyle::default();
-                                    ls.size.width = Length::Px(day_size);
-                                    ls.size.height = Length::Auto;
-                                    ls
-                                };
-                                cx.text_props(props)
-                            }));
-                            out
-                        },
-                    );
-
-                    let roving_props = RovingFlexProps {
-                        flex: FlexProps {
-                            layout: LayoutStyle {
-                                size: fret_ui::element::SizeStyle {
-                                    width: Length::Px(day_grid_width),
-                                    ..Default::default()
-                                },
-                                overflow: Overflow::Visible,
-                                ..Default::default()
                             },
-                            direction: fret_core::Axis::Horizontal,
-                            gap: day_col_gap,
-                            padding: fret_core::Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: fret_ui::element::CrossAlign::Start,
-                            wrap: true,
-                        },
-                        roving: RovingFocusProps {
-                            enabled: true,
-                            wrap: false,
-                            disabled: Arc::clone(&disabled),
-                        },
-                    };
-
-                    let week_numbers: Arc<[u32]> = if show_week_number {
-                        grid.chunks(7)
-                            .map(|week| week_number(week[0].date, week_start))
-                            .collect::<Vec<_>>()
-                            .into()
-                    } else {
-                        Arc::from([])
-                    };
-
-                    let days_grid = cx.roving_flex(roving_props, move |cx| {
-                        let month_model = month_model_days.clone();
-                        cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
-                            use fret_core::KeyCode;
-                            use fret_ui::action::RovingNavigateResult;
-
-                            let Some(current) = it.current else {
-                                return RovingNavigateResult::NotHandled;
-                            };
-
-                            let step = match it.key {
-                                KeyCode::ArrowLeft => Some(-1),
-                                KeyCode::ArrowRight => Some(1),
-                                KeyCode::ArrowUp => Some(-7),
-                                KeyCode::ArrowDown => Some(7),
-                                _ => None,
-                            };
-
-                            if let Some(step) = step {
-                                let next = (current as i32 + step)
-                                    .clamp(0, (it.len.saturating_sub(1)) as i32)
-                                    as usize;
-                                return RovingNavigateResult::Handled { target: Some(next) };
-                            }
-
-                            match it.key {
-                                KeyCode::Home => {
-                                    let row_start = (current / 7) * 7;
-                                    RovingNavigateResult::Handled {
-                                        target: Some(row_start),
-                                    }
-                                }
-                                KeyCode::End => {
-                                    let row_start = (current / 7) * 7;
-                                    let row_end = (row_start + 6).min(it.len.saturating_sub(1));
-                                    RovingNavigateResult::Handled {
-                                        target: Some(row_end),
-                                    }
-                                }
-                                KeyCode::PageUp => {
-                                    let _ = host.models_mut().update(&month_model, |m| {
-                                        *m = m.prev_month();
-                                    });
-                                    RovingNavigateResult::Handled {
-                                        target: Some(current),
-                                    }
-                                }
-                                KeyCode::PageDown => {
-                                    let _ = host.models_mut().update(&month_model, |m| {
-                                        *m = m.next_month();
-                                    });
-                                    RovingNavigateResult::Handled {
-                                        target: Some(current),
-                                    }
-                                }
-                                _ => RovingNavigateResult::NotHandled,
-                            }
-                        }));
-
-                        grid.iter()
-                            .enumerate()
-                            .map(|(idx, day)| {
-                                let is_hidden =
-                                    (!day.in_month && !show_outside_days) || !in_bounds(day.date);
-                                if is_hidden {
-                                    return calendar_range_hidden_day_cell(
-                                        cx,
-                                        &theme_days_for_days,
-                                        day_size,
-                                        week_row_gap,
-                                    );
-                                }
-
-                                let is_today = today == day.date;
-                                let is_disabled = disabled.get(idx).copied().unwrap_or(false);
-
-                                let is_from = selected.from.is_some_and(|d| d == day.date);
-                                let is_to = selected.to.is_some_and(|d| d == day.date);
-                                let in_range = selected.contains(day.date);
-                                let selected_flag = in_range || is_from || is_to;
-
-                                calendar_range_day_cell(
-                                    cx,
-                                    &theme_days_for_days,
-                                    locale,
-                                    day.date,
-                                    day.in_month,
-                                    is_from,
-                                    is_to,
-                                    selected_flag,
-                                    is_today,
-                                    is_disabled,
-                                    focus_date.is_some_and(|d| d == day.date),
-                                    day_size,
-                                    week_row_gap,
-                                    &selected_model,
-                                    close_on_select.clone(),
-                                    disabled_predicate.clone(),
-                                    initial_focus_out.clone(),
-                                )
-                            })
-                            .collect::<Vec<_>>()
-                    });
-
-                    let days = if show_week_number {
-                        let week_numbers = Arc::clone(&week_numbers);
-                        let week_number_column = cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Px(day_size),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                direction: fret_core::Axis::Vertical,
-                                gap: Px(0.0),
-                                padding: fret_core::Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: fret_ui::element::CrossAlign::Start,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                week_numbers
-                                    .iter()
-                                    .map(|n| {
-                                        let mut props = TextProps::new(Arc::from(n.to_string()));
-                                        props.style = Some(grid_text_style_week_numbers.clone());
-                                        props.color = Some(
-                                            theme_days_for_week_numbers
-                                                .color_required("muted-foreground"),
-                                        );
-                                        props.wrap = TextWrap::None;
-                                        props.overflow = TextOverflow::Clip;
-                                        props.layout = {
-                                            let mut ls = LayoutStyle::default();
-                                            ls.size.width = Length::Px(day_size);
-                                            ls.size.height = Length::Px(day_size);
-                                            ls.margin.bottom =
-                                                fret_ui::element::MarginEdge::Px(week_row_gap);
-                                            ls
-                                        };
-                                        cx.text_props(props)
-                                    })
-                                    .collect::<Vec<_>>()
+                        );
+                        let month_model_next = month_model_header.clone();
+                        let next = calendar_icon_button(
+                            cx,
+                            "Next month",
+                            ButtonVariant::Ghost,
+                            ButtonSize::IconSm,
+                            Arc::from(">"),
+                            move |host| {
+                                let _ = host.models_mut().update(&month_model_next, |m| {
+                                    *m = m.next_month();
+                                });
                             },
                         );
 
-                        cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle {
-                                    size: fret_ui::element::SizeStyle {
-                                        width: Length::Px(month_width),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                direction: fret_core::Axis::Horizontal,
-                                gap: Px(0.0),
-                                padding: fret_core::Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: fret_ui::element::CrossAlign::Start,
-                                wrap: false,
-                            },
-                            move |_cx| vec![week_number_column, days_grid],
-                        )
-                    } else {
-                        days_grid
-                    };
+                        let mut title_props = TextProps::new(title.clone());
+                        title_props.style = Some(TextStyle {
+                            font: Default::default(),
+                            size: theme_header.metric_required("font.size"),
+                            weight: FontWeight::MEDIUM,
+                            line_height: Some(theme_header.metric_required("font.line_height")),
+                            ..Default::default()
+                        });
+                        title_props.wrap = TextWrap::None;
+                        title_props.overflow = TextOverflow::Clip;
+                        let title = cx.text_props(title_props);
 
-                    let body = stack::vstack(
-                        cx,
-                        stack::VStackProps::default().gap(Space::N2),
-                        move |_cx| vec![weekday_row, days],
-                    );
+                        vec![prev, title, next]
+                    },
+                );
 
-                    vec![header, body]
-                },
-            )]
-        })
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn calendar_range_multi_month_view<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    start_month: CalendarMonth,
-    month_model: Model<CalendarMonth>,
-    selected_model: Model<DateRangeSelection>,
-    number_of_months: usize,
-    locale: CalendarLocale,
-    month_bounds: Option<(CalendarMonth, CalendarMonth)>,
-    disable_navigation: bool,
-    week_start: Weekday,
-    weekday_labels: Arc<[Arc<str>]>,
-    selected: DateRangeSelection,
-    today: Date,
-    show_outside_days: bool,
-    disable_outside_days: bool,
-    show_week_number: bool,
-    day_size: Px,
-    month_width: Px,
-    day_grid_width: Px,
-    week_row_gap: Px,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
-    close_on_select: Option<Model<bool>>,
-    initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
-    grid_text_style: TextStyle,
-) -> Vec<AnyElement> {
-    let is_row = cx.bounds.size.width.0 >= 768.0;
-
-    let gap_px = decl_style::space(theme, Space::N4);
-    let months_span = if is_row {
-        Px(month_width.0 * (number_of_months as f32) + gap_px.0 * ((number_of_months - 1) as f32))
-    } else {
-        month_width
-    };
-
-    let mut months = Vec::with_capacity(number_of_months);
-    let mut it = start_month;
-    for _ in 0..number_of_months {
-        months.push(it);
-        it = it.next_month();
-    }
-
-    let nav = {
-        let nav_enabled = !disable_navigation;
-        let min_start = month_bounds.map(|b| b.0);
-        let max_start = month_bounds.map(|b| crate::calendar::max_start_month(b, number_of_months));
-        let prev_enabled = nav_enabled
-            && min_start.map_or(true, |min| crate::calendar::month_lt(min, start_month));
-        let next_enabled = nav_enabled
-            && max_start.map_or(true, |max| crate::calendar::month_lt(start_month, max));
-
-        let month_model_prev = month_model.clone();
-        let prev = calendar_icon_button(
-            cx,
-            "Go to the Previous Month",
-            ButtonVariant::Ghost,
-            ButtonSize::IconSm,
-            day_size,
-            Arc::from("<"),
-            prev_enabled,
-            move |host| {
-                if disable_navigation {
-                    return;
-                }
-                let _ = host.models_mut().update(&month_model_prev, |m| {
-                    let cand = m.prev_month();
-                    *m = month_bounds.map_or(cand, |b| {
-                        crate::calendar::clamp_start_month(cand, b, number_of_months)
-                    });
-                });
-            },
-        );
-        let month_model_next = month_model.clone();
-        let next = calendar_icon_button(
-            cx,
-            "Go to the Next Month",
-            ButtonVariant::Ghost,
-            ButtonSize::IconSm,
-            day_size,
-            Arc::from(">"),
-            next_enabled,
-            move |host| {
-                if disable_navigation {
-                    return;
-                }
-                let _ = host.models_mut().update(&month_model_next, |m| {
-                    let cand = m.next_month();
-                    *m = month_bounds.map_or(cand, |b| {
-                        crate::calendar::clamp_start_month(cand, b, number_of_months)
-                    });
-                });
-            },
-        );
-
-        let mut layout = LayoutStyle::default();
-        layout.size.width = Length::Px(months_span);
-        layout.position = fret_ui::element::PositionStyle::Absolute;
-        layout.inset.top = Some(Px(0.0));
-        layout.inset.left = Some(Px(0.0));
-
-        cx.flex(
-            FlexProps {
-                layout,
-                direction: fret_core::Axis::Horizontal,
-                gap: decl_style::space(theme, Space::N1),
-                padding: fret_core::Edges::all(Px(0.0)),
-                justify: MainAlign::SpaceBetween,
-                align: fret_ui::element::CrossAlign::Center,
-                wrap: false,
-            },
-            move |_cx| vec![prev, next],
-        )
-    };
-
-    let months_el = if is_row {
-        ui::h_flex(cx, move |cx| {
-            months
-                .iter()
-                .copied()
-                .map(|m| {
-                    calendar_range_month_view(
-                        cx,
-                        theme,
-                        m,
-                        locale,
-                        month_bounds,
-                        week_start,
-                        weekday_labels.clone(),
-                        selected,
-                        today,
-                        show_outside_days,
-                        disable_outside_days,
-                        show_week_number,
-                        day_size,
-                        month_width,
-                        day_grid_width,
-                        week_row_gap,
-                        month_model.clone(),
-                        selected_model.clone(),
-                        disabled_predicate.clone(),
-                        close_on_select.clone(),
-                        initial_focus_out.clone(),
-                        grid_text_style.clone(),
-                    )
-                })
-                .collect()
-        })
-        .gap(Space::N4)
-        .items_start()
-        .w_px(MetricRef::Px(months_span))
-        .into_element(cx)
-    } else {
-        ui::v_flex(cx, move |cx| {
-            months
-                .iter()
-                .copied()
-                .map(|m| {
-                    calendar_range_month_view(
-                        cx,
-                        theme,
-                        m,
-                        locale,
-                        month_bounds,
-                        week_start,
-                        weekday_labels.clone(),
-                        selected,
-                        today,
-                        show_outside_days,
-                        disable_outside_days,
-                        show_week_number,
-                        day_size,
-                        month_width,
-                        day_grid_width,
-                        week_row_gap,
-                        month_model.clone(),
-                        selected_model.clone(),
-                        disabled_predicate.clone(),
-                        close_on_select.clone(),
-                        initial_focus_out.clone(),
-                        grid_text_style.clone(),
-                    )
-                })
-                .collect()
-        })
-        .gap(Space::N4)
-        .items_start()
-        .w_px(MetricRef::Px(month_width))
-        .into_element(cx)
-    };
-
-    let stack = ui::stack(cx, move |_cx| vec![months_el, nav])
-        .relative()
-        .w_px(MetricRef::Px(months_span))
-        .into_element(cx);
-
-    vec![stack]
-}
-
-#[allow(clippy::too_many_arguments)]
-fn calendar_range_month_view<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    month: CalendarMonth,
-    locale: CalendarLocale,
-    month_bounds: Option<(CalendarMonth, CalendarMonth)>,
-    week_start: Weekday,
-    weekday_labels: Arc<[Arc<str>]>,
-    selected: DateRangeSelection,
-    today: Date,
-    show_outside_days: bool,
-    disable_outside_days: bool,
-    show_week_number: bool,
-    day_size: Px,
-    month_width: Px,
-    day_grid_width: Px,
-    week_row_gap: Px,
-    month_model: Model<CalendarMonth>,
-    selected_model: Model<DateRangeSelection>,
-    disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
-    close_on_select: Option<Model<bool>>,
-    initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
-    grid_text_style: TextStyle,
-) -> AnyElement {
-    let grid = month_grid_compact(month, week_start);
-    let in_bounds =
-        |d: Date| month_bounds.map_or(true, |b| crate::calendar::date_in_month_bounds(d, b));
-
-    let mut disabled = Vec::with_capacity(grid.len());
-    for day in grid.iter() {
-        let mut is_disabled = false;
-        if !in_bounds(day.date) {
-            is_disabled = true;
-        }
-        if !day.in_month && (!show_outside_days || disable_outside_days) {
-            is_disabled = true;
-        }
-        if let Some(pred) = disabled_predicate.as_ref() {
-            if pred(day.date) {
-                is_disabled = true;
-            }
-        }
-        disabled.push(is_disabled);
-    }
-    let disabled: Arc<[bool]> = disabled.into();
-
-    let focus_date = {
-        let preferred = selected.from.or(selected.to);
-        let preferred_idx = preferred.and_then(|d| grid.iter().position(|it| it.date == d));
-        let today_idx = grid.iter().position(|it| it.date == today);
-
-        let visible = |idx: usize| {
-            grid.get(idx)
-                .is_some_and(|d| (d.in_month || show_outside_days) && in_bounds(d.date))
-        };
-        let enabled = |idx: usize| !disabled.get(idx).copied().unwrap_or(false);
-
-        preferred_idx
-            .filter(|&idx| visible(idx) && enabled(idx))
-            .and_then(|idx| grid.get(idx).map(|d| d.date))
-            .or_else(|| {
-                today_idx
-                    .filter(|&idx| visible(idx) && enabled(idx))
-                    .and_then(|idx| grid.get(idx).map(|d| d.date))
-            })
-            .or_else(|| {
-                grid.iter()
-                    .enumerate()
-                    .find(|(idx, day)| {
-                        (day.in_month || show_outside_days) && in_bounds(day.date) && enabled(*idx)
-                    })
-                    .map(|(_, day)| day.date)
-            })
-    };
-
-    let title = locale.month_title(month.month, month.year);
-
-    let theme_weekdays = theme.clone();
-    let theme_days_for_days = theme.clone();
-    let theme_days_for_week_numbers = theme.clone();
-
-    let grid_text_style_caption = grid_text_style.clone();
-    let grid_text_style_weekdays = grid_text_style.clone();
-    let grid_text_style_week_numbers = grid_text_style.clone();
-
-    let month_caption = cx.flex(
-        FlexProps {
-            layout: LayoutStyle {
-                size: fret_ui::element::SizeStyle {
-                    width: Length::Px(month_width),
-                    height: Length::Px(day_size),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: fret_core::Edges {
-                left: day_size,
-                right: day_size,
-                top: Px(0.0),
-                bottom: Px(0.0),
-            },
-            justify: MainAlign::Center,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: false,
-        },
-        move |cx| {
-            let mut props = TextProps::new(title.clone());
-            props.style = Some(grid_text_style_caption.clone());
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
-            vec![cx.text_props(props)]
-        },
-    );
-
-    let weekday_row = cx.flex(
-        FlexProps {
-            layout: LayoutStyle {
-                size: fret_ui::element::SizeStyle {
-                    width: Length::Px(month_width),
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
-            justify: MainAlign::Start,
-            align: fret_ui::element::CrossAlign::Center,
-            wrap: false,
-        },
-        move |cx| {
-            let mut out = Vec::with_capacity(8);
-            if show_week_number {
-                let mut props = TextProps::new(Arc::from("Wk"));
-                props.style = Some(grid_text_style_weekdays.clone());
-                props.color = theme_weekdays.color_by_key("muted-foreground");
-                props.wrap = TextWrap::None;
-                props.overflow = TextOverflow::Clip;
-
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Px(day_size);
-                layout.size.height = Length::Auto;
-                props.layout = layout;
-                out.push(cx.text_props(props));
-            }
-
-            out.extend(weekday_labels.iter().map(|label| {
-                let mut props = TextProps::new(Arc::clone(label));
-                props.style = Some(grid_text_style_weekdays.clone());
-                props.color = theme_weekdays.color_by_key("muted-foreground");
-                props.wrap = TextWrap::None;
-                props.overflow = TextOverflow::Clip;
-
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Px(day_size);
-                layout.size.height = Length::Auto;
-                props.layout = layout;
-                cx.text_props(props)
-            }));
-            out
-        },
-    );
-
-    let roving_props = RovingFlexProps {
-        flex: FlexProps {
-            layout: LayoutStyle {
-                size: fret_ui::element::SizeStyle {
-                    width: Length::Px(day_grid_width),
-                    ..Default::default()
-                },
-                overflow: Overflow::Visible,
-                ..Default::default()
-            },
-            direction: fret_core::Axis::Horizontal,
-            gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
-            justify: MainAlign::Start,
-            align: fret_ui::element::CrossAlign::Start,
-            wrap: true,
-        },
-        roving: RovingFocusProps {
-            enabled: true,
-            wrap: false,
-            disabled: Arc::clone(&disabled),
-        },
-    };
-
-    let week_numbers: Arc<[u32]> = if show_week_number {
-        grid.chunks(7)
-            .map(|week| week_number(week[0].date, week_start))
-            .collect::<Vec<_>>()
-            .into()
-    } else {
-        Arc::from([])
-    };
-
-    let days_grid = cx.roving_flex(roving_props, move |cx| {
-        let month_model = month_model.clone();
-        cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
-            use fret_core::KeyCode;
-            use fret_ui::action::RovingNavigateResult;
-
-            let Some(current) = it.current else {
-                return RovingNavigateResult::NotHandled;
-            };
-
-            let step = match it.key {
-                KeyCode::ArrowLeft => Some(-1),
-                KeyCode::ArrowRight => Some(1),
-                KeyCode::ArrowUp => Some(-7),
-                KeyCode::ArrowDown => Some(7),
-                _ => None,
-            };
-
-            if let Some(step) = step {
-                let next =
-                    (current as i32 + step).clamp(0, (it.len.saturating_sub(1)) as i32) as usize;
-                return RovingNavigateResult::Handled { target: Some(next) };
-            }
-
-            match it.key {
-                KeyCode::Home => {
-                    let row_start = (current / 7) * 7;
-                    RovingNavigateResult::Handled {
-                        target: Some(row_start),
-                    }
-                }
-                KeyCode::End => {
-                    let row_start = (current / 7) * 7;
-                    let row_end = (row_start + 6).min(it.len.saturating_sub(1));
-                    RovingNavigateResult::Handled {
-                        target: Some(row_end),
-                    }
-                }
-                KeyCode::PageUp => {
-                    let _ = host.models_mut().update(&month_model, |m| {
-                        *m = m.prev_month();
-                    });
-                    RovingNavigateResult::Handled {
-                        target: Some(current),
-                    }
-                }
-                KeyCode::PageDown => {
-                    let _ = host.models_mut().update(&month_model, |m| {
-                        *m = m.next_month();
-                    });
-                    RovingNavigateResult::Handled {
-                        target: Some(current),
-                    }
-                }
-                _ => RovingNavigateResult::NotHandled,
-            }
-        }));
-
-        grid.iter()
-            .enumerate()
-            .map(|(idx, day)| {
-                let is_hidden = (!day.in_month && !show_outside_days) || !in_bounds(day.date);
-                if is_hidden {
-                    return calendar_range_hidden_day_cell(
-                        cx,
-                        &theme_days_for_days,
-                        day_size,
-                        week_row_gap,
-                    );
-                }
-
-                let is_today = today == day.date;
-                let is_disabled = disabled.get(idx).copied().unwrap_or(false);
-
-                let is_from = selected.from.is_some_and(|d| d == day.date);
-                let is_to = selected.to.is_some_and(|d| d == day.date);
-                let in_range = selected.contains(day.date);
-                let selected_flag = in_range || is_from || is_to;
-
-                calendar_range_day_cell(
+                let weekday_row = stack::hstack(
                     cx,
-                    &theme_days_for_days,
-                    locale,
-                    day.date,
-                    day.in_month,
-                    is_from,
-                    is_to,
-                    selected_flag,
-                    is_today,
-                    is_disabled,
-                    focus_date.is_some_and(|d| d == day.date),
-                    day_size,
-                    week_row_gap,
-                    &selected_model,
-                    close_on_select.clone(),
-                    disabled_predicate.clone(),
-                    initial_focus_out.clone(),
-                )
-            })
-            .collect::<Vec<_>>()
-    });
-
-    let days = if show_week_number {
-        let week_numbers = Arc::clone(&week_numbers);
-        let week_number_column = cx.flex(
-            FlexProps {
-                layout: LayoutStyle {
-                    size: fret_ui::element::SizeStyle {
-                        width: Length::Px(day_size),
-                        ..Default::default()
+                    stack::HStackProps::default()
+                        .gap_x(Space::N1)
+                        .layout(LayoutRefinement::default().w_full()),
+                    move |cx| {
+                        weekday_labels
+                            .iter()
+                            .map(|label| {
+                                let mut props = TextProps::new(label.clone());
+                                props.style = Some(grid_text_style.clone());
+                                props.wrap = TextWrap::None;
+                                props.overflow = TextOverflow::Clip;
+                                props.color =
+                                    Some(theme_weekdays.color_required("muted-foreground"));
+                                props.layout = {
+                                    let mut ls = LayoutStyle::default();
+                                    ls.size.width = Length::Px(day_size);
+                                    ls.size.height = Length::Px(day_size);
+                                    ls
+                                };
+                                cx.text_props(props)
+                            })
+                            .collect::<Vec<_>>()
                     },
-                    ..Default::default()
-                },
-                direction: fret_core::Axis::Vertical,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: fret_ui::element::CrossAlign::Start,
-                wrap: false,
-            },
-            move |cx| {
-                week_numbers
-                    .iter()
-                    .map(|n| {
-                        let mut props = TextProps::new(Arc::from(n.to_string()));
-                        props.style = Some(grid_text_style_week_numbers.clone());
-                        props.color = theme_days_for_week_numbers.color_by_key("muted-foreground");
-                        props.wrap = TextWrap::None;
-                        props.overflow = TextOverflow::Clip;
+                );
 
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Px(day_size);
-                        layout.size.height = Length::Px(day_size);
-                        layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
-                        props.layout = layout;
-                        cx.text_props(props)
-                    })
-                    .collect::<Vec<_>>()
-            },
-        );
-
-        cx.flex(
-            FlexProps {
-                layout: LayoutStyle {
-                    size: fret_ui::element::SizeStyle {
-                        width: Length::Px(month_width),
-                        ..Default::default()
+                let roving_props = RovingFlexProps {
+                    flex: FlexProps {
+                        layout: LayoutStyle {
+                            overflow: Overflow::Visible,
+                            ..Default::default()
+                        },
+                        direction: fret_core::Axis::Horizontal,
+                        gap: day_gap,
+                        padding: fret_core::Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: fret_ui::element::CrossAlign::Start,
+                        wrap: true,
                     },
-                    ..Default::default()
-                },
-                direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: fret_ui::element::CrossAlign::Start,
-                wrap: false,
+                    roving: RovingFocusProps {
+                        enabled: true,
+                        wrap: false,
+                        disabled: Arc::clone(&disabled),
+                    },
+                };
+
+                let days = cx.roving_flex(roving_props, move |cx| {
+                    let month_model = month_model_days.clone();
+                    cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
+                        use fret_core::KeyCode;
+                        use fret_ui::action::RovingNavigateResult;
+
+                        let Some(current) = it.current else {
+                            return RovingNavigateResult::NotHandled;
+                        };
+
+                        let step = match it.key {
+                            KeyCode::ArrowLeft => Some(-1),
+                            KeyCode::ArrowRight => Some(1),
+                            KeyCode::ArrowUp => Some(-7),
+                            KeyCode::ArrowDown => Some(7),
+                            _ => None,
+                        };
+
+                        if let Some(step) = step {
+                            let next = (current as i32 + step)
+                                .clamp(0, (it.len.saturating_sub(1)) as i32)
+                                as usize;
+                            return RovingNavigateResult::Handled { target: Some(next) };
+                        }
+
+                        match it.key {
+                            KeyCode::Home => {
+                                let row_start = (current / 7) * 7;
+                                RovingNavigateResult::Handled {
+                                    target: Some(row_start),
+                                }
+                            }
+                            KeyCode::End => {
+                                let row_start = (current / 7) * 7;
+                                let row_end = (row_start + 6).min(it.len.saturating_sub(1));
+                                RovingNavigateResult::Handled {
+                                    target: Some(row_end),
+                                }
+                            }
+                            KeyCode::PageUp => {
+                                let _ = host.models_mut().update(&month_model, |m| {
+                                    *m = m.prev_month();
+                                });
+                                RovingNavigateResult::Handled {
+                                    target: Some(current),
+                                }
+                            }
+                            KeyCode::PageDown => {
+                                let _ = host.models_mut().update(&month_model, |m| {
+                                    *m = m.next_month();
+                                });
+                                RovingNavigateResult::Handled {
+                                    target: Some(current),
+                                }
+                            }
+                            _ => RovingNavigateResult::NotHandled,
+                        }
+                    }));
+
+                    grid.iter()
+                        .enumerate()
+                        .filter_map(|(idx, day)| {
+                            if !day.in_month && !self.show_outside_days {
+                                return None;
+                            }
+
+                            let is_today = today == day.date;
+                            let is_disabled = disabled.get(idx).copied().unwrap_or(false);
+
+                            let is_from = selected.from.is_some_and(|d| d == day.date);
+                            let is_to = selected.to.is_some_and(|d| d == day.date);
+                            let in_range = selected.contains(day.date);
+                            let selected_flag = in_range || is_from || is_to;
+
+                            Some(calendar_range_day_cell(
+                                cx,
+                                &theme_days,
+                                day.date,
+                                day.in_month,
+                                is_from,
+                                is_to,
+                                selected_flag,
+                                is_today,
+                                is_disabled,
+                                focus_date.is_some_and(|d| d == day.date),
+                                day_size,
+                                &selected_model,
+                                close_on_select.clone(),
+                                disabled_predicate.clone(),
+                                initial_focus_out.clone(),
+                            ))
+                        })
+                        .collect::<Vec<_>>()
+                });
+
+                vec![header, weekday_row, days]
             },
-            move |_cx| vec![week_number_column, days_grid],
         )
-    } else {
-        days_grid
-    };
-
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2),
-        move |_cx| vec![weekday_row, days],
-    );
-
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N4),
-        move |_cx| vec![month_caption, body],
-    )
+    }
 }
 
-fn weekday_labels(locale: CalendarLocale, week_start: Weekday) -> Arc<[Arc<str>]> {
+fn weekday_labels(week_start: Weekday) -> Arc<[Arc<str>]> {
     let order = [
         Weekday::Monday,
         Weekday::Tuesday,
@@ -1263,22 +425,17 @@ fn weekday_labels(locale: CalendarLocale, week_start: Weekday) -> Arc<[Arc<str>]
     let mut out = Vec::with_capacity(7);
     for i in 0..7 {
         let day = order[(start_idx + i) % 7];
-        out.push(Arc::from(locale.weekday_short(day)));
+        out.push(Arc::from(match day {
+            Weekday::Monday => "Mon",
+            Weekday::Tuesday => "Tue",
+            Weekday::Wednesday => "Wed",
+            Weekday::Thursday => "Thu",
+            Weekday::Friday => "Fri",
+            Weekday::Saturday => "Sat",
+            Weekday::Sunday => "Sun",
+        }));
     }
     out.into()
-}
-
-fn ordinal_suffix(day: u8) -> &'static str {
-    let mod_100 = day % 100;
-    if mod_100 >= 11 && mod_100 <= 13 {
-        return "th";
-    }
-    match day % 10 {
-        1 => "st",
-        2 => "nd",
-        3 => "rd",
-        _ => "th",
-    }
 }
 
 fn calendar_icon_button<H: UiHost>(
@@ -1286,9 +443,7 @@ fn calendar_icon_button<H: UiHost>(
     label: &'static str,
     variant: crate::button::ButtonVariant,
     size: ButtonSize,
-    button_size_px: Px,
     text: Arc<str>,
-    enabled: bool,
     on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
@@ -1305,8 +460,13 @@ fn calendar_icon_button<H: UiHost>(
         }));
 
         let mut pressable_layout = LayoutStyle::default();
-        pressable_layout.size.width = Length::Px(button_size_px);
-        pressable_layout.size.height = Length::Px(button_size_px);
+        let icon_button_size = match size {
+            ButtonSize::IconSm => theme.metric_required("component.size.sm.icon_button.size"),
+            ButtonSize::IconLg => theme.metric_required("component.size.lg.icon_button.size"),
+            _ => theme.metric_required("component.size.md.icon_button.size"),
+        };
+        pressable_layout.size.width = Length::Px(icon_button_size);
+        pressable_layout.size.height = Length::Px(icon_button_size);
 
         let bg = if st.pressed {
             bg_pressed
@@ -1324,8 +484,7 @@ fn calendar_icon_button<H: UiHost>(
 
         let pressable = PressableProps {
             layout: pressable_layout,
-            enabled,
-            focusable: enabled,
+            enabled: true,
             focus_ring: Some(decl_style::focus_ring(&theme, radius)),
             a11y: PressableA11y {
                 label: Some(Arc::from(label)),
@@ -1356,47 +515,10 @@ fn calendar_icon_button<H: UiHost>(
     })
 }
 
-fn calendar_range_hidden_day_cell<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    size: Px,
-    week_row_gap: Px,
-) -> AnyElement {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Px(size);
-    layout.size.height = Length::Px(size);
-    layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
-
-    control_chrome_pressable_with_id_props(cx, move |_cx, _st, _id| {
-        let mut chrome_props = decl_style::container_props(
-            theme,
-            ChromeRefinement::default(),
-            LayoutRefinement::default(),
-        );
-        chrome_props.layout = layout;
-
-        let pressable = PressableProps {
-            layout,
-            enabled: false,
-            focusable: false,
-            focus_ring: None,
-            a11y: PressableA11y {
-                hidden: true,
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let children = move |_cx: &mut ElementContext<'_, H>| Vec::new();
-        (pressable, chrome_props, children)
-    })
-}
-
 #[allow(clippy::too_many_arguments)]
 fn calendar_range_day_cell<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
-    locale: CalendarLocale,
     date: Date,
     in_month: bool,
     is_from: bool,
@@ -1406,7 +528,6 @@ fn calendar_range_day_cell<H: UiHost>(
     disabled: bool,
     focus_candidate: bool,
     size: Px,
-    week_row_gap: Px,
     selected_model: &Model<DateRangeSelection>,
     close_on_select: Option<Model<bool>>,
     disabled_predicate: Option<Arc<dyn Fn(Date) -> bool + Send + Sync + 'static>>,
@@ -1415,7 +536,6 @@ fn calendar_range_day_cell<H: UiHost>(
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(size);
     layout.size.height = Length::Px(size);
-    layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
 
     let muted_fg = theme
         .color_by_key("muted-foreground")
@@ -1441,9 +561,8 @@ fn calendar_range_day_cell<H: UiHost>(
         .color_by_key("ring")
         .unwrap_or_else(|| theme.color_required("ring"));
 
-    let day = date.day();
-    let day_text: Arc<str> = Arc::from(day.to_string());
-    let date_label = locale.day_aria_label(date, today, selected);
+    let day_text: Arc<str> = Arc::from(date.day().to_string());
+    let date_label: Arc<str> = Arc::from(date.to_string());
 
     let text_sm_px = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)

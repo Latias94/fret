@@ -16,22 +16,27 @@ use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
-pub use fret_ui::action::{ActionCx, DismissReason, OnDismissRequest, UiActionHost};
+pub use fret_ui::action::{
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, UiActionHost,
+};
 pub use fret_ui::action::{OnDismissiblePointerMove, PointerMoveCx};
 
 /// Render a full-window dismissable root that provides Escape + outside-press dismissal hooks.
 ///
 /// This is a Radix-aligned naming alias for `render_dismissible_root_with_hooks`.
 #[allow(clippy::too_many_arguments)]
-pub fn render_dismissable_root_with_hooks<H: UiHost>(
+pub fn render_dismissable_root_with_hooks<H: UiHost, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,
     window: AppWindowId,
     bounds: Rect,
     root_name: &str,
-    render: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> fret_core::NodeId {
+    render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> fret_core::NodeId
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     crate::declarative::dismissible::render_dismissible_root_with_hooks(
         ui, app, services, window, bounds, root_name, render,
     )
@@ -57,7 +62,7 @@ pub fn on_pointer_move<H: UiHost>(
 
 /// Convenience builder for an `OnDismissRequest` handler.
 pub fn handler(
-    f: impl Fn(&mut dyn UiActionHost, ActionCx, DismissReason) + 'static,
+    f: impl Fn(&mut dyn UiActionHost, ActionCx, &mut DismissRequestCx) + 'static,
 ) -> OnDismissRequest {
     Arc::new(f)
 }

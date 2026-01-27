@@ -153,6 +153,18 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
+#[allow(dead_code)]
+pub(crate) fn with_window_frame_mut<H: UiHost, R>(
+    app: &mut H,
+    window: AppWindowId,
+    f: impl FnOnce(&mut WindowFrame) -> R,
+) -> R {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+        let window_frame = frame.windows.entry(window).or_default();
+        f(window_frame)
+    })
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct ScrollHandleBinding {
     pub handle_key: usize,
@@ -251,36 +263,64 @@ pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
         let mut changed: Vec<ScrollHandleChange> = Vec::new();
         for (&handle_key, handle) in window_registry.handles.iter() {
             let revision = handle.revision();
-            let prev = window_registry.last_revision.get(&handle_key).copied();
-            if prev != Some(revision) {
-                let offset = handle.offset();
-                let viewport = handle.viewport_size();
-                let content = handle.content_size();
 
-                let prev_offset = window_registry.last_offset.get(&handle_key).copied();
-                let prev_viewport = window_registry.last_viewport.get(&handle_key).copied();
-                let prev_content = window_registry.last_content.get(&handle_key).copied();
+            // Always keep the last-seen value baselines up-to-date, even when the handle revision
+            // did not change.
+            //
+            // The runtime can mutate scroll handles during layout passes (e.g. clamping or
+            // consuming a deferred scroll-to-item request) without bumping the external revision.
+            // If we only updated baselines when `revision` changed, the next "revision-only" bump
+            // would appear as an offset change and get misclassified as `HitTestOnly`, which can
+            // prevent the layout-driven consumption path from running.
+            let offset = handle.offset();
+            let viewport = handle.viewport_size();
+            let content = handle.content_size();
 
+            let prev_revision = window_registry.last_revision.get(&handle_key).copied();
+            let prev_offset = window_registry.last_offset.get(&handle_key).copied();
+            let prev_viewport = window_registry.last_viewport.get(&handle_key).copied();
+            let prev_content = window_registry.last_content.get(&handle_key).copied();
+
+            if prev_revision != Some(revision) {
                 let offset_changed = prev_offset != Some(offset);
                 let viewport_changed = prev_viewport != Some(viewport);
                 let content_changed = prev_content != Some(content);
 
-                // If the revision changed but none of the observable values changed, treat it as
-                // layout-affecting (e.g. deferred scroll-to-item requests that are consumed during
-                // layout).
-                let kind = if viewport_changed || content_changed || (!offset_changed) {
+                // Classify as `Layout` when the scroll offset did not change. This includes the
+                // "revision-only" bumps used by deferred scroll-to-item requests (consumed during
+                // layout), as well as viewport/content updates.
+                //
+                // When the offset changed, treat it as `HitTestOnly` even if viewport/content also
+                // changed: the runtime already recomputed layout in the frame that updated
+                // viewport/content sizes, and under view-cache reuse we want to avoid triggering an
+                // additional layout-driven rerender wave for steady scrolling.
+                let kind = if !offset_changed {
                     ScrollHandleChangeKind::Layout
                 } else {
                     ScrollHandleChangeKind::HitTestOnly
                 };
 
-                changed.push(ScrollHandleChange { handle_key, kind });
-
-                window_registry.last_offset.insert(handle_key, offset);
-                window_registry.last_viewport.insert(handle_key, viewport);
-                window_registry.last_content.insert(handle_key, content);
+                changed.push(ScrollHandleChange {
+                    handle_key,
+                    kind,
+                    revision,
+                    prev_revision,
+                    offset,
+                    prev_offset,
+                    viewport,
+                    prev_viewport,
+                    content,
+                    prev_content,
+                    offset_changed,
+                    viewport_changed,
+                    content_changed,
+                });
             }
+
             window_registry.last_revision.insert(handle_key, revision);
+            window_registry.last_offset.insert(handle_key, offset);
+            window_registry.last_viewport.insert(handle_key, viewport);
+            window_registry.last_content.insert(handle_key, content);
         }
         changed
     })
@@ -292,10 +332,21 @@ pub(crate) enum ScrollHandleChangeKind {
     HitTestOnly,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ScrollHandleChange {
     pub handle_key: usize,
     pub kind: ScrollHandleChangeKind,
+    pub revision: u64,
+    pub prev_revision: Option<u64>,
+    pub offset: Point,
+    pub prev_offset: Option<Point>,
+    pub viewport: Size,
+    pub prev_viewport: Option<Size>,
+    pub content: Size,
+    pub prev_content: Option<Size>,
+    pub offset_changed: bool,
+    pub viewport_changed: bool,
+    pub content_changed: bool,
 }
 
 pub(crate) fn element_id_map_for_window<H: UiHost>(
@@ -356,6 +407,145 @@ pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutSty
         ElementInstance::WheelRegion(p) => p.layout,
         ElementInstance::Scroll(p) => p.layout,
         ElementInstance::Scrollbar(p) => p.layout,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scroll_handle_changes_classify_value_changes_as_hit_test_only() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let handle = crate::scroll::ScrollHandle::default();
+
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(1),
+            [ScrollHandleBinding {
+                handle_key: handle.binding_key(),
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let _ = take_changed_scroll_handle_keys(&mut app, window);
+
+        handle.set_viewport_size(Size::new(Px(100.0), Px(200.0)));
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(2),
+            [ScrollHandleBinding {
+                handle_key: handle.binding_key(),
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let changes = take_changed_scroll_handle_keys(&mut app, window);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].kind, ScrollHandleChangeKind::Layout);
+
+        handle.set_content_size(Size::new(Px(100.0), Px(500.0)));
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(3),
+            [ScrollHandleBinding {
+                handle_key: handle.binding_key(),
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let changes = take_changed_scroll_handle_keys(&mut app, window);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].kind, ScrollHandleChangeKind::Layout);
+
+        handle.set_offset(Point::new(Px(0.0), Px(32.0)));
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(4),
+            [ScrollHandleBinding {
+                handle_key: handle.binding_key(),
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let changes = take_changed_scroll_handle_keys(&mut app, window);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].kind, ScrollHandleChangeKind::HitTestOnly);
+
+        handle.bump_revision();
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(5),
+            [ScrollHandleBinding {
+                handle_key: handle.binding_key(),
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let changes = take_changed_scroll_handle_keys(&mut app, window);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].kind, ScrollHandleChangeKind::Layout);
+    }
+
+    #[test]
+    fn scroll_handle_revision_only_bumps_after_internal_offset_updates_classify_as_layout() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let handle = crate::scroll::ScrollHandle::default();
+        let handle_key = handle.binding_key();
+
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(1),
+            [ScrollHandleBinding {
+                handle_key,
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let _ = take_changed_scroll_handle_keys(&mut app, window);
+
+        // Simulate a runtime-driven update (e.g. clamping) that doesn't bump the revision.
+        let rev0 = handle.revision();
+        handle.set_offset_internal(fret_core::Point::new(Px(0.0), Px(42.0)));
+        assert_eq!(handle.revision(), rev0);
+
+        // Even without a revision bump, the registry should learn the updated baselines.
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(2),
+            [ScrollHandleBinding {
+                handle_key,
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let _ = take_changed_scroll_handle_keys(&mut app, window);
+
+        // Now bump the revision without changing any values (e.g. deferred scroll-to-item).
+        handle.bump_revision();
+        register_scroll_handle_bindings_batch(
+            &mut app,
+            window,
+            FrameId(3),
+            [ScrollHandleBinding {
+                handle_key,
+                element: GlobalElementId(1),
+                handle: handle.clone(),
+            }],
+        );
+        let changes = take_changed_scroll_handle_keys(&mut app, window);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].handle_key, handle_key);
+        assert_eq!(changes[0].kind, ScrollHandleChangeKind::Layout);
     }
 }
 

@@ -10,6 +10,7 @@ use fret_ui::element::{
     PressableProps, TextAreaProps, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
@@ -121,23 +122,35 @@ impl InputGroup {
         self.control(InputGroupControlKind::Textarea)
     }
 
-    pub fn leading(mut self, children: Vec<AnyElement>) -> Self {
-        self.leading = children;
+    pub fn leading<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.leading = children.into_iter().collect();
         self
     }
 
-    pub fn trailing(mut self, children: Vec<AnyElement>) -> Self {
-        self.trailing = children;
+    pub fn trailing<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.trailing = children.into_iter().collect();
         self
     }
 
-    pub fn block_start(mut self, children: Vec<AnyElement>) -> Self {
-        self.block_start = children;
+    pub fn block_start<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.block_start = children.into_iter().collect();
         self
     }
 
-    pub fn block_end(mut self, children: Vec<AnyElement>) -> Self {
-        self.block_end = children;
+    pub fn block_end<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.block_end = children.into_iter().collect();
         self
     }
 
@@ -283,7 +296,7 @@ impl InputGroup {
         let root_layout = decl_style::layout_style(&theme, {
             let mut root = self.layout.relative().w_full().min_w_0();
             if !is_block_layout && self.control == InputGroupControlKind::Input {
-                root = root.h_px(fret_ui_kit::MetricRef::Px(resolved.min_height));
+                root = root.h_px(resolved.min_height);
             }
             root
         });
@@ -407,7 +420,7 @@ impl InputGroup {
                                 LayoutRefinement::default()
                                     .w_full()
                                     .min_w_0()
-                                    .min_h(fret_ui_kit::MetricRef::Px(block_control_min_height)),
+                                    .min_h(block_control_min_height),
                             );
                             cx.text_input(input)
                         }
@@ -615,7 +628,7 @@ impl InputGroup {
                             .flex_1()
                             .h_full()
                             .min_w_0()
-                            .min_h(fret_ui_kit::MetricRef::Px(resolved.min_height)),
+                            .min_h(resolved.min_height),
                     );
 
                     let flex_layout =
@@ -756,10 +769,7 @@ impl InputGroupText {
         };
 
         cx.text_props(TextProps {
-            layout: decl_style::layout_style(
-                &theme,
-                self.layout.h_px(fret_ui_kit::MetricRef::Px(line_height)),
-            ),
+            layout: decl_style::layout_style(&theme, self.layout.h_px(line_height)),
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
@@ -813,8 +823,11 @@ impl InputGroupButton {
         }
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children<I>(mut self, children: I) -> Self
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.children = children.into_iter().collect();
         self
     }
 
@@ -886,7 +899,10 @@ impl InputGroupButton {
             };
 
             let command = self.command;
-            let disabled = self.disabled;
+            let disabled = self.disabled
+                || command
+                    .as_ref()
+                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
             let _chrome = self.chrome;
             let label = self.label;
             let a11y_label = self.a11y_label;
@@ -901,16 +917,16 @@ impl InputGroupButton {
             let mut layout = self.layout;
             layout = match self.size {
                 InputGroupButtonSize::IconXs | InputGroupButtonSize::IconSm => layout
-                    .w_px(fret_ui_kit::MetricRef::Px(size_px))
-                    .h_px(fret_ui_kit::MetricRef::Px(size_px))
-                    .min_w(fret_ui_kit::MetricRef::Px(size_px))
-                    .min_h(fret_ui_kit::MetricRef::Px(size_px)),
-                _ => layout.min_h(fret_ui_kit::MetricRef::Px(size_px)),
+                    .w_px(size_px)
+                    .h_px(size_px)
+                    .min_w(size_px)
+                    .min_h(size_px),
+                _ => layout.min_h(size_px),
             };
             let pressable_layout = decl_style::layout_style(&theme, layout);
 
             control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-                cx.pressable_dispatch_command_opt(command);
+                cx.pressable_dispatch_command_if_enabled_opt(command);
 
                 let hovered = st.hovered && !disabled;
                 let pressed = st.pressed && !disabled;

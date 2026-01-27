@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
     RenderTransformProps, SemanticsProps, SizeStyle,
@@ -38,6 +39,8 @@ pub struct AlertDialog {
     open: Model<bool>,
     overlay_color: Option<Color>,
     window_padding: Space,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
 }
 
 impl std::fmt::Debug for AlertDialog {
@@ -46,6 +49,8 @@ impl std::fmt::Debug for AlertDialog {
             .field("open", &"<model>")
             .field("overlay_color", &self.overlay_color)
             .field("window_padding", &self.window_padding)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .finish()
     }
 }
@@ -56,6 +61,8 @@ impl AlertDialog {
             open,
             overlay_color: None,
             window_padding: Space::N6,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 
@@ -83,6 +90,18 @@ impl AlertDialog {
 
     pub fn window_padding(mut self, padding: Space) -> Self {
         self.window_padding = padding;
+        self
+    }
+
+    /// Installs an open auto-focus hook (Radix `FocusScope` `onMountAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Installs a close auto-focus hook (Radix `FocusScope` `onUnmountAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 
@@ -222,7 +241,7 @@ impl AlertDialog {
                         ..Default::default()
                     };
                     let content_layout = opacity_layout.clone();
-                    let barrier_children = vec![barrier_fill];
+                    let barrier_children = [barrier_fill];
                     let open_for_children = self.open.clone();
 
                     let content = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
@@ -235,7 +254,7 @@ impl AlertDialog {
                         },
                         vec![wrapper],
                     );
-                    radix_alert_dialog::alert_dialog_modal_layer_children(
+                    radix_alert_dialog::alert_dialog_modal_layer_elements(
                         cx,
                         open_for_children.clone(),
                         barrier_children,
@@ -252,7 +271,9 @@ impl AlertDialog {
                 let options = radix_alert_dialog::dialog_options_for_alert_dialog(
                     cx,
                     open_id,
-                    radix_alert_dialog::AlertDialogOptions::default(),
+                    radix_alert_dialog::AlertDialogOptions::default()
+                        .on_open_auto_focus(self.on_open_auto_focus.clone())
+                        .on_close_auto_focus(self.on_close_auto_focus.clone()),
                 );
                 let initial_focus = is_open.then_some(options.initial_focus).flatten();
                 let options = options.initial_focus(initial_focus);
@@ -339,7 +360,7 @@ impl AlertDialogContent {
 
         let layout = LayoutRefinement::default()
             .w_full()
-            .max_w(MetricRef::Px(Px(512.0)))
+            .max_w(Px(512.0))
             .merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
@@ -510,6 +531,7 @@ pub struct AlertDialogAction {
     open: Model<bool>,
     variant: ButtonVariant,
     disabled: bool,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for AlertDialogAction {
@@ -530,7 +552,14 @@ impl AlertDialogAction {
             open,
             variant: ButtonVariant::Default,
             disabled: false,
+            test_id: None,
         }
+    }
+
+    /// Sets a `test_id` for deterministic automation (diagnostics/testing hook).
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
@@ -544,11 +573,14 @@ impl AlertDialogAction {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        Button::new(self.label)
+        let mut button = Button::new(self.label)
             .variant(self.variant)
             .disabled(self.disabled)
-            .toggle_model(self.open)
-            .into_element(cx)
+            .toggle_model(self.open);
+        if let Some(test_id) = self.test_id {
+            button = button.test_id(test_id);
+        }
+        button.into_element(cx)
     }
 }
 
@@ -560,6 +592,7 @@ pub struct AlertDialogCancel {
     label: Arc<str>,
     open: Model<bool>,
     disabled: bool,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for AlertDialogCancel {
@@ -578,7 +611,14 @@ impl AlertDialogCancel {
             label: label.into(),
             open,
             disabled: false,
+            test_id: None,
         }
+    }
+
+    /// Sets a `test_id` for deterministic automation (diagnostics/testing hook).
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -588,11 +628,14 @@ impl AlertDialogCancel {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open_id = self.open.id();
-        let element = Button::new(self.label)
+        let mut button = Button::new(self.label)
             .variant(ButtonVariant::Outline)
             .disabled(self.disabled)
-            .toggle_model(self.open)
-            .into_element(cx);
+            .toggle_model(self.open);
+        if let Some(test_id) = self.test_id {
+            button = button.test_id(test_id);
+        }
+        let element = button.into_element(cx);
 
         radix_alert_dialog::register_cancel_for_open_model(cx, open_id, element.id);
 

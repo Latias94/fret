@@ -13,7 +13,7 @@ use fret_ui::elements::{GlobalElementId, bounds_for_element};
 use fret_ui::tree::UiTree;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController, Space};
+use fret_ui_kit::{LayoutRefinement, OverlayController, Space};
 use serde::Deserialize;
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -2913,8 +2913,8 @@ fn web_vs_fret_popover_demo_overlay_placement_matches() {
                     let content = fret_ui_shadcn::PopoverContent::new(Vec::new())
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(320.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(245.33334))),
+                                .w_px(Px(320.0))
+                                .h_px(Px(245.33334)),
                         )
                         .into_element(cx);
                     if std::env::var("FRET_DEBUG_OVERLAY_PLACEMENT")
@@ -2953,8 +2953,8 @@ fn web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport() {
                     fret_ui_shadcn::PopoverContent::new(Vec::new())
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(320.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(245.33334))),
+                                .w_px(Px(320.0))
+                                .h_px(Px(245.33334)),
                         )
                         .into_element(cx)
                 },
@@ -5757,7 +5757,7 @@ fn web_vs_fret_breadcrumb_responsive_mobile_drawer_overlay_insets_match() {
                         }),
                         bc::BreadcrumbSeparator::new().into_element(cx),
                         bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                            let layout = LayoutRefinement::default().max_w(MetricRef::Px(Px(80.0)));
+                            let layout = LayoutRefinement::default().max_w(Px(80.0));
                             vec![
                                 bc::BreadcrumbLink::new("Data Fetching")
                                     .truncate(true)
@@ -5767,7 +5767,7 @@ fn web_vs_fret_breadcrumb_responsive_mobile_drawer_overlay_insets_match() {
                         }),
                         bc::BreadcrumbSeparator::new().into_element(cx),
                         bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                            let layout = LayoutRefinement::default().max_w(MetricRef::Px(Px(80.0)));
+                            let layout = LayoutRefinement::default().max_w(Px(80.0));
                             vec![
                                 bc::BreadcrumbPage::new("Caching and Revalidating")
                                     .truncate(true)
@@ -8383,10 +8383,7 @@ fn web_vs_fret_select_scrollable_overlay_placement_matches() {
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
                 .placeholder("Select a timezone")
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-                )
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
                 .entries(entries)
                 .into_element(cx)
         },
@@ -8459,10 +8456,7 @@ fn web_vs_fret_select_scrollable_small_viewport_overlay_placement_matches() {
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
                 .placeholder("Select a timezone")
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-                )
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
                 .entries(entries)
                 .into_element(cx)
         },
@@ -8496,10 +8490,7 @@ fn web_vs_fret_select_demo_overlay_placement_matches() {
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
                 .placeholder("Select a fruit")
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
-                )
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                 .entries(entries)
                 .into_element(cx)
         },
@@ -8591,10 +8582,7 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
             let content = fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
                 .placeholder("Select a fruit")
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
-                )
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                 .entries(entries)
                 .into_element(cx);
             vec![pad_root(cx, Px(0.0), content)]
@@ -8633,10 +8621,7 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
                 let content = fret_ui_shadcn::Select::new(value, open.clone())
                     .a11y_label("Select")
                     .placeholder("Select a fruit")
-                    .refine_layout(
-                        fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
-                    )
+                    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                     .entries(entries)
                     .into_element(cx);
                 vec![pad_root(cx, Px(0.0), content)]
@@ -8816,10 +8801,7 @@ fn web_vs_fret_select_scrollable_tiny_viewport_overlay_placement_matches() {
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
                 .placeholder("Select a timezone")
-                .refine_layout(
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-                )
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
                 .entries(entries)
                 .into_element(cx)
         },
@@ -8909,10 +8891,7 @@ fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
         fret_ui_shadcn::Select::new(value.clone(), open.clone())
             .a11y_label("Select")
             .placeholder("Select a timezone")
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
     };
@@ -9127,10 +9106,7 @@ fn assert_select_scrollable_listbox_option_height_matches(web_name: &str) {
         fret_ui_shadcn::Select::new(value, open)
             .a11y_label("Select")
             .placeholder("Select a timezone")
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
     };
@@ -9291,10 +9267,7 @@ fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
         fret_ui_shadcn::Select::new(value, open)
             .a11y_label("Select")
             .placeholder("Select a timezone")
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
     };
@@ -9565,10 +9538,7 @@ fn assert_select_scrollable_viewport_insets_match(web_name: &str) {
         fret_ui_shadcn::Select::new(value, open)
             .a11y_label("Select")
             .placeholder("Select a timezone")
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
     };
@@ -9772,10 +9742,7 @@ fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
         fret_ui_shadcn::Select::new(value.clone(), open.clone())
             .a11y_label("Select")
             .placeholder("Select a timezone")
-            .refine_layout(
-                fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
-            )
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
     };
@@ -12099,16 +12066,16 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                 .variant(fret_ui_shadcn::ButtonVariant::Outline)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(trigger_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(trigger_h))),
+                        .w_px(Px(trigger_w))
+                        .h_px(Px(trigger_h)),
                 )
                 .into_element(cx);
             trigger_id_out.set(Some(trigger.id));
             let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Add to library")])
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(content_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(content_h))),
+                        .w_px(Px(content_w))
+                        .h_px(Px(content_h)),
                 )
                 .into_element(cx);
             content_id_out.set(Some(content.id));
@@ -12140,16 +12107,16 @@ fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {
                     .variant(fret_ui_shadcn::ButtonVariant::Outline)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(trigger_w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(trigger_h))),
+                            .w_px(Px(trigger_w))
+                            .h_px(Px(trigger_h)),
                     )
                     .into_element(cx);
                 trigger_id_out.set(Some(trigger.id));
                 let content = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Add to library")])
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(content_w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(content_h))),
+                            .w_px(Px(content_w))
+                            .h_px(Px(content_h)),
                     )
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
@@ -12275,8 +12242,8 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                 .variant(fret_ui_shadcn::ButtonVariant::Link)
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(trigger_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(trigger_h))),
+                        .w_px(Px(trigger_w))
+                        .h_px(Px(trigger_h)),
                 )
                 .into_element(cx);
             trigger_id_out.set(Some(trigger.id));
@@ -12284,8 +12251,8 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
             let content = fret_ui_shadcn::HoverCardContent::new(vec![cx.text("@nextjs")])
                 .refine_layout(
                     fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(content_w)))
-                        .h_px(fret_ui_kit::MetricRef::Px(Px(content_h))),
+                        .w_px(Px(content_w))
+                        .h_px(Px(content_h)),
                 )
                 .into_element(cx);
             content_id_out.set(Some(content.id));
@@ -12332,8 +12299,8 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                     .variant(fret_ui_shadcn::ButtonVariant::Link)
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(trigger_w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(trigger_h))),
+                            .w_px(Px(trigger_w))
+                            .h_px(Px(trigger_h)),
                     )
                     .into_element(cx);
                 trigger_id_out.set(Some(trigger.id));
@@ -12341,8 +12308,8 @@ fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
                 let content = fret_ui_shadcn::HoverCardContent::new(vec![cx.text("@nextjs")])
                     .refine_layout(
                         fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(content_w)))
-                            .h_px(fret_ui_kit::MetricRef::Px(Px(content_h))),
+                            .w_px(Px(content_w))
+                            .h_px(Px(content_h)),
                     )
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
@@ -16693,10 +16660,7 @@ fn web_vs_fret_dialog_demo_overlay_center_matches() {
                 },
                 |cx| {
                     DialogContent::new(vec![cx.text("Edit profile")])
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
-                        )
+                        .refine_layout(fret_ui_kit::LayoutRefinement::default().max_w(Px(425.0)))
                         .into_element(cx)
                 },
             )
@@ -16722,10 +16686,7 @@ fn web_vs_fret_dialog_demo_overlay_center_matches_tiny_viewport() {
                 },
                 |cx| {
                     DialogContent::new(vec![cx.text("Edit profile")])
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
-                        )
+                        .refine_layout(fret_ui_kit::LayoutRefinement::default().max_w(Px(425.0)))
                         .into_element(cx)
                 },
             )

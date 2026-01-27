@@ -9,7 +9,10 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot_opt,
+};
 
 use crate::layout as shadcn_layout;
 
@@ -114,6 +117,40 @@ impl ToggleGroupItem {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct ToggleGroupStyle {
+    pub item_background: OverrideSlot<ColorRef>,
+    pub item_border_color: OverrideSlot<ColorRef>,
+}
+
+impl ToggleGroupStyle {
+    pub fn item_background(
+        mut self,
+        item_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.item_background = Some(item_background);
+        self
+    }
+
+    pub fn item_border_color(
+        mut self,
+        item_border_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.item_border_color = Some(item_border_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.item_background.is_some() {
+            self.item_background = other.item_background;
+        }
+        if other.item_border_color.is_some() {
+            self.item_border_color = other.item_border_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct ToggleGroup {
     model: ToggleGroupModel,
@@ -127,6 +164,7 @@ pub struct ToggleGroup {
     spacing: Space,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: ToggleGroupStyle,
 }
 
 impl std::fmt::Debug for ToggleGroup {
@@ -168,6 +206,7 @@ impl ToggleGroup {
             spacing: Space::N0,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: ToggleGroupStyle::default(),
         }
     }
 
@@ -189,6 +228,7 @@ impl ToggleGroup {
             spacing: Space::N0,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: ToggleGroupStyle::default(),
         }
     }
 
@@ -208,12 +248,18 @@ impl ToggleGroup {
             spacing: Space::N0,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: ToggleGroupStyle::default(),
         }
     }
 
     /// Creates an uncontrolled multi-select toggle group with an initial set of values (Radix
     /// `defaultValue`).
-    pub fn multiple_uncontrolled(default_value: Vec<Arc<str>>) -> Self {
+    pub fn multiple_uncontrolled<I, T>(default_value: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<Arc<str>>,
+    {
+        let default_value = default_value.into_iter().map(Into::into).collect();
         Self {
             model: ToggleGroupModel::Multiple {
                 model: None,
@@ -229,6 +275,7 @@ impl ToggleGroup {
             spacing: Space::N0,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: ToggleGroupStyle::default(),
         }
     }
 
@@ -289,6 +336,11 @@ impl ToggleGroup {
         self
     }
 
+    pub fn style(mut self, style: ToggleGroupStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let model = self.model;
         let items = self.items;
@@ -301,6 +353,7 @@ impl ToggleGroup {
         let spacing = self.spacing;
         let chrome = self.chrome;
         let layout = self.layout;
+        let style_override = self.style;
 
         let theme = Theme::global(&*cx.app).clone();
 
@@ -373,6 +426,32 @@ impl ToggleGroup {
         let bg_on = toggle_bg_on(&theme);
         let border = toggle_border(&theme);
 
+        let ToggleGroupStyle {
+            item_background,
+            item_border_color,
+        } = style_override;
+
+        let hover_bg = match variant {
+            ToggleVariant::Default => bg_hover_muted,
+            ToggleVariant::Outline => bg_on,
+        };
+
+        let default_item_background = WidgetStateProperty::new(None)
+            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_bg)))
+            .when(WidgetStates::ACTIVE, Some(ColorRef::Color(hover_bg)))
+            .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)))
+            .when(WidgetStates::DISABLED, None);
+
+        let default_item_border_color = WidgetStateProperty::new(None)
+            .when(
+                WidgetStates::FOCUS_VISIBLE,
+                Some(ColorRef::Color(ring_border)),
+            )
+            .when(WidgetStates::DISABLED, None);
+
+        let item_background_override = item_background;
+        let item_border_color_override = item_border_color;
+
         let mut group_props = decl_style::container_props(&theme, chrome, layout);
         group_props.corner_radii = Corners::all(radius);
         if matches!(variant, ToggleVariant::Outline) && gap.0 > 0.0 {
@@ -380,18 +459,14 @@ impl ToggleGroup {
         }
 
         let base_chrome = match variant {
-            ToggleVariant::Default => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(Color::TRANSPARENT)),
-                ..Default::default()
-            },
-            ToggleVariant::Outline => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border)),
-                ..Default::default()
-            },
+            ToggleVariant::Default => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(Color::TRANSPARENT)),
+            ToggleVariant::Outline => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(border)),
         };
 
         let roving = RovingFocusProps {
@@ -402,6 +477,11 @@ impl ToggleGroup {
         };
 
         cx.container(group_props, move |cx| {
+            let item_background_override = item_background_override.clone();
+            let item_border_color_override = item_border_color_override.clone();
+            let default_item_background = default_item_background.clone();
+            let default_item_border_color = default_item_border_color.clone();
+
             let flex = FlexProps {
                 direction: match orientation {
                     ToggleGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
@@ -505,10 +585,16 @@ impl ToggleGroup {
                     let pressable_layout = decl_style::layout_style(
                         &theme,
                         LayoutRefinement::default()
-                            .min_h(MetricRef::Px(item_h))
+                            .min_h(item_h)
                             .min_w_0()
                             .flex_none(),
                     );
+
+                    let item_theme = theme.clone();
+                    let item_background_override = item_background_override.clone();
+                    let item_border_color_override = item_border_color_override.clone();
+                    let default_item_background = default_item_background.clone();
+                    let default_item_border_color = default_item_border_color.clone();
 
                     out.push(cx.keyed(value.clone(), move |cx| {
                         cx.pressable(
@@ -544,28 +630,24 @@ impl ToggleGroup {
                                     cx.pressable_toggle_vec_arc_str(m, value.clone());
                                 }
 
-                                let hovered = state.hovered && !state.pressed;
-                                let pressed = state.pressed;
-
-                                let hover_bg = match variant {
-                                    ToggleVariant::Default => bg_hover_muted,
-                                    ToggleVariant::Outline => bg_on,
-                                };
-
-                                let bg = if on && !item_disabled {
-                                    Some(bg_on)
-                                } else if (hovered || pressed) && !item_disabled {
-                                    Some(hover_bg)
-                                } else {
-                                    None
-                                };
+                                let mut states = WidgetStates::from_pressable(cx, state, enabled);
+                                states.set(WidgetState::Selected, on);
 
                                 let mut props = base_props;
-                                if bg.is_some() {
-                                    props.background = bg;
+                                if let Some(bg) = resolve_override_slot_opt(
+                                    item_background_override.as_ref(),
+                                    &default_item_background,
+                                    states,
+                                ) {
+                                    props.background = Some(bg.resolve(&item_theme));
                                 }
-                                if state.focused {
-                                    props.border_color = Some(ring_border);
+
+                                if let Some(border_color) = resolve_override_slot_opt(
+                                    item_border_color_override.as_ref(),
+                                    &default_item_border_color,
+                                    states,
+                                ) {
+                                    props.border_color = Some(border_color.resolve(&item_theme));
                                 }
                                 props.layout.size = pressable_layout.size;
 
@@ -592,37 +674,51 @@ impl ToggleGroup {
     }
 }
 
-pub fn toggle_group_single<H: UiHost>(
+pub fn toggle_group_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::single(model).items(f(cx)).into_element(cx)
 }
 
-pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::single_uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)
 }
 
-pub fn toggle_group_multiple<H: UiHost>(
+pub fn toggle_group_multiple<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::multiple(model).items(f(cx)).into_element(cx)
 }
 
-pub fn toggle_group_multiple_uncontrolled<H: UiHost>(
+pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>(
     cx: &mut ElementContext<'_, H>,
-    default_value: Vec<Arc<str>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    default_value: V,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    V: IntoIterator,
+    V::Item: Into<Arc<str>>,
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::multiple_uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)
@@ -636,7 +732,7 @@ mod tests {
         AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]

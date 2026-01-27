@@ -12,7 +12,7 @@ use crate::declarative::icon;
 use crate::declarative::style as decl_style;
 use crate::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use crate::style::ChromeRefinement;
-use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
+use crate::{Items, Justify, LayoutRefinement, Size, Space};
 
 #[track_caller]
 pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
@@ -109,7 +109,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                         .left(Space::N0)
                         .top(Space::N0)
                         .bottom(Space::N0)
-                        .w_px(MetricRef::Px(slot_w))
+                        .w_px(slot_w)
                         .h_full(),
                 );
                 out.push(cx.flex(
@@ -133,7 +133,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                             .right(Space::N0)
                             .top(Space::N0)
                             .bottom(Space::N0)
-                            .w_px(MetricRef::Px(slot_w))
+                            .w_px(slot_w)
                             .h_full(),
                     );
 
@@ -143,7 +143,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
                             ..Default::default()
                         },
                         |cx, _st| {
-                            cx.pressable_dispatch_command(clear_command.clone());
+                            cx.pressable_dispatch_command_if_enabled(clear_command.clone());
                             vec![cx.flex(
                                 FlexProps {
                                     layout: decl_style::layout_style(

@@ -5,7 +5,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 
@@ -29,10 +29,7 @@ fn card_chrome(theme: &Theme) -> ChromeRefinement {
     // - `rounded-xl border bg-card text-card-foreground shadow-sm`
     // - `flex flex-col gap-6 py-6` (gap handled by the inner vstack)
     ChromeRefinement::default()
-        .merge(ChromeRefinement {
-            radius: Some(MetricRef::Px(rounded_xl)),
-            ..Default::default()
-        })
+        .radius(rounded_xl)
         .border_1()
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
@@ -86,10 +83,13 @@ impl Card {
     }
 }
 
-pub fn card<H: UiHost>(
+pub fn card<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Card::new(f(cx)).into_element(cx)
 }
 

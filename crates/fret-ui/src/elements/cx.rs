@@ -9,12 +9,13 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
 use crate::action::OnHoverChange;
 use crate::action::{
-    CommandActionHooks, DismissibleActionHooks, KeyActionHooks, OnActivate, OnCommand,
-    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel,
-    OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
-    OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer,
-    OnWheel, PointerActionHooks, PressableActionHooks, PressableHoverActionHooks,
-    PressablePointerUpResult, RovingActionHooks, TimerActionHooks,
+    CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks, KeyActionHooks,
+    OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest, OnDismissiblePointerMove,
+    OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown, OnPointerMove, OnPointerUp,
+    OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnRovingActiveChange,
+    OnRovingNavigate, OnRovingTypeahead, OnTimer, OnWheel, PointerActionHooks,
+    PressableActionHooks, PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
+    TimerActionHooks,
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
@@ -39,7 +40,7 @@ pub struct ElementContext<'a, H: UiHost> {
     pub bounds: Rect,
     window_state: &'a mut WindowElementState,
     stack: Vec<GlobalElementId>,
-    child_counters: Vec<u32>,
+    callsite_counters: Vec<HashMap<u64, u32>>,
     view_cache_should_reuse: Option<&'a mut dyn FnMut(NodeId) -> bool>,
 }
 
@@ -63,7 +64,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             bounds,
             window_state,
             stack: vec![root],
-            child_counters: vec![0],
+            callsite_counters: vec![HashMap::new()],
             view_cache_should_reuse: None,
         }
     }
@@ -196,15 +197,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let root = global_root(self.window, root_name);
 
         let prev_stack = std::mem::take(&mut self.stack);
-        let prev_counters = std::mem::take(&mut self.child_counters);
+        let prev_counters = std::mem::take(&mut self.callsite_counters);
 
         self.stack = vec![root];
-        self.child_counters = vec![0];
+        self.callsite_counters = vec![HashMap::new()];
 
         let out = f(self);
 
         self.stack = prev_stack;
-        self.child_counters = prev_counters;
+        self.callsite_counters = prev_counters;
 
         out
     }
@@ -501,9 +502,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         f: impl FnOnce(&mut Self) -> R,
     ) -> R {
         let parent = self.root_id();
-        let child_index = self.child_counters.last_mut().expect("counter exists");
-        let slot = *child_index as u64;
-        *child_index = child_index.saturating_add(1);
+        let counters = self
+            .callsite_counters
+            .last_mut()
+            .expect("callsite counters exist");
+        let next = counters.entry(callsite).or_insert(0);
+        let slot = *next as u64;
+        *next = next.saturating_add(1);
 
         let child_salt = key_hash.unwrap_or(slot);
         let id = derive_child_id(parent, callsite, child_salt);
@@ -522,9 +527,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         );
 
         self.stack.push(id);
-        self.child_counters.push(0);
+        self.callsite_counters.push(HashMap::new());
         let out = f(self);
-        self.child_counters.pop();
+        self.callsite_counters.pop();
         self.stack.pop();
         out
     }
@@ -1572,6 +1577,66 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn command_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = Some(handler);
+        });
+    }
+
+    pub fn command_add_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = match hooks.on_command_availability.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        let availability = prev(host, cx.clone(), command.clone());
+                        if availability != crate::widget::CommandAvailability::NotHandled {
+                            return availability;
+                        }
+                        next(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_prepend_on_command_availability_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnCommandAvailability,
+    ) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = match hooks.on_command_availability.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, command| {
+                        let availability = next(host, cx.clone(), command.clone());
+                        if availability != crate::widget::CommandAvailability::NotHandled {
+                            return availability;
+                        }
+                        prev(host, cx, command)
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn command_clear_on_command_availability_for(&mut self, element: GlobalElementId) {
+        self.with_state_for(element, CommandAvailabilityActionHooks::default, |hooks| {
+            hooks.on_command_availability = None;
+        });
+    }
+
     pub fn timer_on_timer_for(&mut self, element: GlobalElementId, handler: OnTimer) {
         self.with_state_for(element, TimerActionHooks::default, |hooks| {
             hooks.on_timer = Some(handler);
@@ -1625,9 +1690,9 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 None => Some(handler),
                 Some(prev) => {
                     let next = handler.clone();
-                    Some(Arc::new(move |host, cx, reason| {
-                        prev(host, cx, reason);
-                        next(host, cx, reason);
+                    Some(Arc::new(move |host, cx, req| {
+                        prev(host, cx, req);
+                        next(host, cx, req);
                     }))
                 }
             };
@@ -1899,6 +1964,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn text_input(&mut self, props: TextInputProps) -> AnyElement {
         self.scope(|cx| {
             let id = cx.root_id();
+            cx.new_any_element(id, ElementKind::TextInput(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn text_input_with_id_props(
+        &mut self,
+        f: impl FnOnce(&mut Self, GlobalElementId) -> TextInputProps,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let props = f(cx, id);
             cx.new_any_element(id, ElementKind::TextInput(props), Vec::new())
         })
     }
@@ -2177,6 +2254,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     crate::element::VirtualListKeyCacheMode::AllKeys
                 }
                 crate::element::VirtualListMeasureMode::Fixed => options.key_cache,
+                crate::element::VirtualListMeasureMode::Known => options.key_cache,
             };
 
             let range = cx.with_state(VirtualListState::default, |state| {
@@ -2257,6 +2335,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
                     state.metrics.sync_keys(&state.keys, options.items_revision);
 
+                    if options.measure_mode == crate::element::VirtualListMeasureMode::Known {
+                        if let Some(height_at) = options.known_row_height_at.as_ref() {
+                            let heights = (0..len).map(|i| height_at(i)).collect::<Vec<_>>();
+                            state.metrics.rebuild_from_known_heights(
+                                heights,
+                                options.estimate_row_height,
+                                options.gap,
+                                options.scroll_margin,
+                            );
+                        }
+                    }
+
                     if key_cache == crate::element::VirtualListKeyCacheMode::AllKeys {
                         let has_deferred_scroll = scroll_handle.deferred_scroll_to_item().is_some();
                         if !has_deferred_scroll
@@ -2284,15 +2374,90 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 }
 
                 let viewport = Px(viewport.0.max(0.0));
-                let handle_offset = match axis {
-                    fret_core::Axis::Vertical => scroll_handle.offset().y,
-                    fret_core::Axis::Horizontal => scroll_handle.offset().x,
-                };
-                let offset = state.metrics.clamp_offset(handle_offset, viewport);
+                let offset = state.metrics.clamp_offset(offset, viewport);
 
-                state
-                    .metrics
-                    .visible_range(offset, viewport, options.overscan)
+                state.deferred_scroll_offset_hint = None;
+
+                let mut range = state.render_window_range.filter(|r| {
+                    r.count == len && r.overscan == options.overscan && r.start_index <= r.end_index
+                });
+                if range.is_none() {
+                    range = state.window_range.filter(|r| {
+                        r.count == len
+                            && r.overscan == options.overscan
+                            && r.start_index <= r.end_index
+                    });
+                }
+
+                // When a scroll handle offset changes out-of-band (wheel, inertial scroll, or a
+                // component-driven `set_offset`), the handle's current offset may lead the
+                // element-local `state.offset_*` which is only updated during layout.
+                //
+                // If we are rerendering this frame, compute the visible range against the latest
+                // scroll handle offset so "window jump" frames can rebuild the correct visible
+                // items without requiring a follow-up rerender.
+                let mut preview_offset = offset;
+                if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
+                    let handle_offset = scroll_handle.offset();
+                    let handle_axis = match axis {
+                        fret_core::Axis::Vertical => handle_offset.y,
+                        fret_core::Axis::Horizontal => handle_offset.x,
+                    };
+                    let handle_axis = state.metrics.clamp_offset(handle_axis, viewport);
+                    if (handle_axis.0 - offset.0).abs() > 0.01 {
+                        preview_offset = handle_axis;
+                    }
+                }
+
+                // Preview deferred scroll-to-item requests during render so we compute the correct
+                // visible range without consuming the request. The final layout pass will apply
+                // the scroll offset and clear the request.
+                if state.has_final_viewport
+                    && viewport.0 > 0.0
+                    && len > 0
+                    && let Some((index, strategy)) = scroll_handle.deferred_scroll_to_item()
+                {
+                    let desired = state
+                        .metrics
+                        .scroll_offset_for_item(index, viewport, offset, strategy);
+                    let desired = state.metrics.clamp_offset(desired, viewport);
+                    preview_offset = desired;
+                    state.deferred_scroll_offset_hint = Some(desired);
+                    range = state
+                        .metrics
+                        .visible_range(desired, viewport, options.overscan);
+                }
+
+                if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
+                    let visible = state.metrics.visible_range(preview_offset, viewport, 0);
+                    if let (Some(prev), Some(visible)) = (range, visible) {
+                        let win_start = prev.start_index.saturating_sub(prev.overscan);
+                        let win_end =
+                            (prev.end_index + prev.overscan).min(prev.count.saturating_sub(1));
+                        let out_of_window =
+                            visible.start_index < win_start || visible.end_index > win_end;
+
+                        if out_of_window {
+                            range = state.metrics.visible_range(
+                                preview_offset,
+                                viewport,
+                                options.overscan,
+                            );
+                        }
+                    } else if range.is_none() {
+                        range =
+                            state
+                                .metrics
+                                .visible_range(preview_offset, viewport, options.overscan);
+                    }
+                } else if range.is_none() {
+                    range = state
+                        .metrics
+                        .visible_range(offset, viewport, options.overscan);
+                }
+
+                state.render_window_range = range;
+                range
             });
 
             let mut indices = range

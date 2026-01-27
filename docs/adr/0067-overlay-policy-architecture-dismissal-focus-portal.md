@@ -108,6 +108,8 @@ Modal surfaces:
 - Trap focus within the modal content.
 - Restore focus to the trigger (or previous focus) when closed.
 - Initial focus is explicitly set by policy (runtime clears focus on barrier install).
+- Auto-focus behavior is customizable by policy via Radix-like hooks (open/close auto focus may
+  `preventDefault` to take control of focus movement).
 
 Non-modal surfaces:
 

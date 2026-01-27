@@ -7,9 +7,10 @@ use fret_core::{
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
     PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
-    SelectableTextProps, SizeStyle, StackProps, TextProps,
+    SelectableTextProps, SizeStyle, StackProps, StyledTextProps, TextProps,
+    VirtualListKeyCacheMode, VirtualListOptions,
 };
-use fret_ui::scroll::ScrollHandle;
+use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -160,6 +161,16 @@ impl CodeBlockHeaderSlots {
         self
     }
 
+    pub fn left(mut self, els: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.left.extend(els);
+        self
+    }
+
+    pub fn right(mut self, els: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.right.extend(els);
+        self
+    }
+
     pub fn push_left(mut self, el: AnyElement) -> Self {
         self.left.push(el);
         self
@@ -185,6 +196,8 @@ pub struct CodeBlock {
     border: bool,
     wrap: CodeBlockWrap,
     max_height: Option<Px>,
+    windowed_lines: bool,
+    windowed_lines_overscan: usize,
     show_scrollbar_x: bool,
     scrollbar_x_on_hover: bool,
     show_scrollbar_y: bool,
@@ -206,6 +219,8 @@ impl CodeBlock {
             border: true,
             wrap: CodeBlockWrap::ScrollX,
             max_height: None,
+            windowed_lines: false,
+            windowed_lines_overscan: 6,
             show_scrollbar_x: false,
             scrollbar_x_on_hover: true,
             show_scrollbar_y: false,
@@ -268,6 +283,16 @@ impl CodeBlock {
         self
     }
 
+    pub fn windowed_lines(mut self, windowed: bool) -> Self {
+        self.windowed_lines = windowed;
+        self
+    }
+
+    pub fn windowed_lines_overscan(mut self, overscan: usize) -> Self {
+        self.windowed_lines_overscan = overscan.max(1);
+        self
+    }
+
     pub fn show_scrollbar_x(mut self, show: bool) -> Self {
         self.show_scrollbar_x = show;
         self
@@ -304,6 +329,8 @@ impl CodeBlock {
                 border: self.border,
                 wrap: self.wrap,
                 max_height: self.max_height,
+                windowed_lines: self.windowed_lines,
+                windowed_lines_overscan: self.windowed_lines_overscan,
                 show_scrollbar_x: self.show_scrollbar_x,
                 scrollbar_x_on_hover: self.scrollbar_x_on_hover,
                 show_scrollbar_y: self.show_scrollbar_y,
@@ -339,6 +366,8 @@ pub struct CodeBlockUiOptions {
     pub border: bool,
     pub wrap: CodeBlockWrap,
     pub max_height: Option<Px>,
+    pub windowed_lines: bool,
+    pub windowed_lines_overscan: usize,
     pub show_scrollbar_x: bool,
     pub scrollbar_x_on_hover: bool,
     pub show_scrollbar_y: bool,
@@ -357,6 +386,8 @@ impl Default for CodeBlockUiOptions {
             border: true,
             wrap: CodeBlockWrap::ScrollX,
             max_height: None,
+            windowed_lines: false,
+            windowed_lines_overscan: 6,
             show_scrollbar_x: false,
             scrollbar_x_on_hover: true,
             show_scrollbar_y: false,
@@ -472,6 +503,8 @@ pub fn code_block_with_header_slots<H: UiHost>(
                         &theme,
                         prepared.clone(),
                         options.wrap,
+                        options.windowed_lines,
+                        options.windowed_lines_overscan,
                         scrollbar_x_visible,
                         scrollbar_y_visible,
                         options.max_height,
@@ -588,6 +621,8 @@ fn render_code_block_body<H: UiHost>(
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
     wrap: CodeBlockWrap,
+    windowed_lines: bool,
+    windowed_lines_overscan: usize,
     scrollbar_x_visible: bool,
     scrollbar_y_visible: bool,
     max_height: Option<Px>,
@@ -617,49 +652,348 @@ fn render_code_block_body<H: UiHost>(
             Px(0.0)
         };
 
-        let (rich, line_numbers) = resolve_code_block_cached_text(cx, theme, &prepared);
-        let line_count = prepared.lines.len();
+        let content =
+            if windowed_lines && max_height.is_some() && matches!(wrap, CodeBlockWrap::ScrollX) {
+                render_code_block_windowed_lines(
+                    cx,
+                    theme,
+                    prepared.clone(),
+                    windowed_lines_overscan,
+                    scrollbar_x_visible,
+                    reserved_right_for_x_scrollbar,
+                    scrollbar_y_visible,
+                    max_height,
+                )
+            } else {
+                let (rich, line_numbers) = resolve_code_block_cached_text(cx, theme, &prepared);
+                let line_count = prepared.lines.len();
 
-        let content = if !prepared.show_line_numbers {
-            render_code_block_text(
-                cx,
-                theme,
-                rich,
-                wrap,
-                scrollbar_x_visible,
-                reserved_right_for_x_scrollbar,
-                line_count,
-            )
-        } else {
-            let code = render_code_block_text(
-                cx,
-                theme,
-                rich,
-                wrap,
-                scrollbar_x_visible,
-                reserved_right_for_x_scrollbar,
-                line_count,
-            );
-            let line_numbers = line_numbers.unwrap_or_else(|| Arc::<str>::from(""));
-            render_code_block_with_line_numbers(cx, theme, line_numbers, code)
-        };
+                let content = if !prepared.show_line_numbers {
+                    render_code_block_text(
+                        cx,
+                        theme,
+                        rich,
+                        wrap,
+                        scrollbar_x_visible,
+                        reserved_right_for_x_scrollbar,
+                        line_count,
+                    )
+                } else {
+                    let code = render_code_block_text(
+                        cx,
+                        theme,
+                        rich,
+                        wrap,
+                        scrollbar_x_visible,
+                        reserved_right_for_x_scrollbar,
+                        line_count,
+                    );
+                    let line_numbers = line_numbers.unwrap_or_else(|| Arc::<str>::from(""));
+                    render_code_block_with_line_numbers(cx, theme, line_numbers, code)
+                };
 
-        if let Some(max_height) = max_height {
-            let thumb = theme.color_required("scrollbar.thumb.background");
-            let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
-            let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+                if let Some(max_height) = max_height {
+                    let thumb = theme.color_required("scrollbar.thumb.background");
+                    let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+                    let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
 
-            let outer_layout = {
+                    let outer_layout = {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Auto;
+                        layout.size.max_height = Some(max_height);
+                        layout.overflow = Overflow::Clip;
+                        layout
+                    };
+
+                    let scroll = cx.scroll(
+                        ScrollProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout.overflow = Overflow::Clip;
+                                layout
+                            },
+                            axis: ScrollAxis::Y,
+                            scroll_handle: Some(handle.clone()),
+                            ..Default::default()
+                        },
+                        |_cx| vec![content],
+                    );
+
+                    if !scrollbar_y_visible {
+                        return vec![scroll];
+                    }
+
+                    let scroll_id = scroll.id;
+                    return vec![cx.stack_props(
+                        StackProps {
+                            layout: outer_layout,
+                        },
+                        move |cx| {
+                            let scrollbar_layout = LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    top: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    bottom: Some(if scrollbar_x_visible {
+                                        scrollbar_w
+                                    } else {
+                                        Px(0.0)
+                                    }),
+                                    left: None,
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(scrollbar_w),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
+
+                            vec![
+                                scroll,
+                                cx.scrollbar(ScrollbarProps {
+                                    layout: scrollbar_layout,
+                                    axis: ScrollbarAxis::Vertical,
+                                    scroll_target: Some(scroll_id),
+                                    scroll_handle: handle,
+                                    style: ScrollbarStyle {
+                                        thumb,
+                                        thumb_hover,
+                                        ..Default::default()
+                                    },
+                                }),
+                            ]
+                        },
+                    )];
+                } else {
+                    return vec![content];
+                }
+            };
+
+        vec![content]
+    })
+}
+
+fn build_code_block_line_rich(
+    theme: &Theme,
+    prepared: &crate::prepare::PreparedCodeBlock,
+    line_i: usize,
+) -> AttributedText {
+    let Some(line) = prepared.lines.get(line_i) else {
+        return AttributedText::new(Arc::<str>::from(""), Arc::<[TextSpan]>::from([]));
+    };
+
+    let mut text = String::new();
+    let mut spans: Vec<TextSpan> = Vec::new();
+
+    for seg in &line.segments {
+        if seg.text.is_empty() {
+            continue;
+        }
+        let color = seg.highlight.and_then(|h| syntax_color(theme, h));
+        text.push_str(seg.text.as_ref());
+        spans.push(TextSpan {
+            len: seg.text.len(),
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                fg: color,
+                ..Default::default()
+            },
+        });
+    }
+
+    AttributedText::new(Arc::<str>::from(text), spans)
+}
+
+fn render_code_block_line_row<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    prepared: &crate::prepare::PreparedCodeBlock,
+    line_i: usize,
+) -> AnyElement {
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: theme.metric_required("metric.font.mono_size"),
+        weight: FontWeight::NORMAL,
+        slant: Default::default(),
+        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        letter_spacing_em: None,
+    };
+
+    let fg = theme.color_required("foreground");
+    let muted_fg = theme.color_required("muted-foreground");
+    let border = theme.color_required("border");
+
+    let code = cx.styled_text_props(StyledTextProps {
+        layout: {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Auto;
+            layout
+        },
+        rich: build_code_block_line_rich(theme, prepared, line_i),
+        style: Some(text_style),
+        color: Some(fg),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    });
+
+    if !prepared.show_line_numbers {
+        return code;
+    }
+
+    let number = prepared
+        .line_numbers
+        .get(line_i)
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from(""));
+
+    let number_style = TextStyle {
+        font: FontId::monospace(),
+        size: theme.metric_required("metric.font.mono_size"),
+        weight: FontWeight::NORMAL,
+        slant: Default::default(),
+        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        letter_spacing_em: None,
+    };
+
+    let number = cx.text_props(TextProps {
+        layout: {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Auto;
+            layout
+        },
+        text: number,
+        style: Some(number_style),
+        color: Some(muted_fg),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    });
+
+    let gutter = cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Auto;
+                layout.size.height = Length::Auto;
+                layout
+            },
+            padding: Edges::all(Px(0.0)),
+            background: None,
+            shadow: None,
+            border: Edges {
+                top: Px(0.0),
+                right: Px(1.0),
+                bottom: Px(0.0),
+                left: Px(0.0),
+            },
+            border_color: Some(border),
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+            ..Default::default()
+        },
+        |_cx| vec![number],
+    );
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N2)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default()),
+        |_cx| vec![gutter, code],
+    )
+}
+
+fn render_code_block_windowed_lines<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    prepared: Arc<crate::prepare::PreparedCodeBlock>,
+    overscan: usize,
+    scrollbar_x_visible: bool,
+    scrollbar_x_right_inset: Px,
+    scrollbar_y_visible: bool,
+    max_height: Option<Px>,
+) -> AnyElement {
+    let Some(max_height) = max_height else {
+        return cx.text("windowed_lines requires max_height");
+    };
+
+    let row_h = theme.metric_required("metric.font.mono_line_height");
+
+    let scroll_y_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+    let mut list_options = VirtualListOptions::fixed(row_h, overscan.max(1));
+    list_options.items_revision = prepared.revision;
+    list_options.key_cache = VirtualListKeyCacheMode::VisibleOnly;
+
+    let len = prepared.lines.len();
+    let prepared_for_rows = prepared.clone();
+
+    let list_layout = {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Auto;
+        layout.size.height = Length::Fill;
+        layout.overflow = Overflow::Clip;
+        layout
+    };
+
+    let list = cx.virtual_list_keyed_with_layout(
+        list_layout,
+        len,
+        list_options,
+        &scroll_y_handle,
+        |i| i as u64,
+        |cx, i| render_code_block_line_row(cx, theme, prepared_for_rows.as_ref(), i),
+    );
+
+    let list_id = list.id;
+
+    let scroll_x_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+    let scroll_x_layout = {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        layout.overflow = Overflow::Clip;
+        layout
+    };
+
+    let scroll_x_el = cx.scroll(
+        ScrollProps {
+            layout: scroll_x_layout,
+            axis: ScrollAxis::X,
+            scroll_handle: Some(scroll_x_handle.clone()),
+            probe_unbounded: true,
+        },
+        |_cx| vec![list],
+    );
+
+    let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+    let thumb = theme.color_required("scrollbar.thumb.background");
+    let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+
+    let scroll_x_id = scroll_x_el.id;
+
+    cx.stack_props(
+        StackProps {
+            layout: {
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Auto;
                 layout.size.max_height = Some(max_height);
                 layout.overflow = Overflow::Clip;
                 layout
-            };
+            },
+        },
+        move |cx| {
+            let mut out = Vec::new();
 
-            let scroll = cx.scroll(
-                ScrollProps {
+            let thumb_x = thumb.clone();
+            let thumb_hover_x = thumb_hover.clone();
+            let thumb_y = thumb.clone();
+            let thumb_hover_y = thumb_hover.clone();
+
+            let scroll_x_and_bar = cx.stack_props(
+                StackProps {
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
@@ -667,62 +1001,82 @@ fn render_code_block_body<H: UiHost>(
                         layout.overflow = Overflow::Clip;
                         layout
                     },
-                    axis: ScrollAxis::Y,
-                    scroll_handle: Some(handle.clone()),
-                    ..Default::default()
-                },
-                |_cx| vec![content],
-            );
-
-            if !scrollbar_y_visible {
-                return vec![scroll];
-            }
-
-            let scroll_id = scroll.id;
-            vec![cx.stack_props(
-                StackProps {
-                    layout: outer_layout,
                 },
                 move |cx| {
                     let scrollbar_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(if scrollbar_x_visible {
-                                scrollbar_w
-                            } else {
-                                Px(0.0)
-                            }),
-                            left: None,
+                            top: None,
+                            right: Some(scrollbar_x_right_inset),
+                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)),
                         },
                         size: SizeStyle {
-                            width: Length::Px(scrollbar_w),
+                            height: Length::Px(scrollbar_w),
                             ..Default::default()
                         },
                         ..Default::default()
                     };
 
+                    let scrollbar = cx.scrollbar(ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: ScrollbarAxis::Horizontal,
+                        scroll_target: Some(scroll_x_id),
+                        scroll_handle: scroll_x_handle.clone(),
+                        style: ScrollbarStyle {
+                            thumb: thumb_x.clone(),
+                            thumb_hover: thumb_hover_x.clone(),
+                            ..Default::default()
+                        },
+                    });
+
                     vec![
-                        scroll,
-                        cx.scrollbar(ScrollbarProps {
-                            layout: scrollbar_layout,
-                            axis: ScrollbarAxis::Vertical,
-                            scroll_target: Some(scroll_id),
-                            scroll_handle: handle,
-                            style: ScrollbarStyle {
-                                thumb,
-                                thumb_hover,
-                                ..Default::default()
-                            },
+                        scroll_x_el,
+                        cx.opacity(if scrollbar_x_visible { 1.0 } else { 0.0 }, move |_cx| {
+                            vec![scrollbar]
                         }),
                     ]
                 },
-            )]
-        } else {
-            vec![content]
-        }
-    })
+            );
+
+            out.push(scroll_x_and_bar);
+
+            if scrollbar_y_visible {
+                let scrollbar_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        bottom: Some(if scrollbar_x_visible {
+                            scrollbar_w
+                        } else {
+                            Px(0.0)
+                        }),
+                        left: None,
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                out.push(cx.scrollbar(ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: ScrollbarAxis::Vertical,
+                    scroll_target: Some(list_id),
+                    scroll_handle: scroll_y_handle.base_handle().clone(),
+                    style: ScrollbarStyle {
+                        thumb: thumb_y.clone(),
+                        thumb_hover: thumb_hover_y.clone(),
+                        ..Default::default()
+                    },
+                }));
+            }
+
+            out
+        },
+    )
 }
 
 fn render_code_block_with_line_numbers<H: UiHost>(

@@ -1,0 +1,26 @@
+[package]
+name = "fret-ui-material3"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = []
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-icons = { path = "../fret-icons" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../fret-ui-kit" }
+material-colors.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }
+serde_json.workspace = true

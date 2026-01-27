@@ -348,7 +348,15 @@ impl<H: UiHost> Widget<H> for TextInput {
             return false;
         }
 
-        match command.as_str() {
+        let cmd = match command.as_str() {
+            "edit.copy" => "text.copy",
+            "edit.cut" => "text.cut",
+            "edit.paste" => "text.paste",
+            "edit.select_all" => "text.select_all",
+            other => other,
+        };
+
+        match cmd {
             "text.clear" => {
                 self.text.clear();
                 self.clear_ime_composition();
@@ -362,7 +370,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.copy" => {
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
-                    command.as_str(),
+                    cmd,
                     cx.window.is_some(),
                 );
                 if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
@@ -375,7 +383,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             "text.cut" => {
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
-                    command.as_str(),
+                    cmd,
                     cx.window.is_some(),
                 );
                 if let Some(crate::text_edit::commands::ClipboardRequest::SetText { text }) =
@@ -384,17 +392,14 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
 
-                let delta = crate::text_edit::commands::singleline_ui_delta(
-                    command.as_str(),
-                    result.outcome,
-                );
+                let delta = crate::text_edit::commands::singleline_ui_delta(cmd, result.outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
             "text.paste" => {
                 let result = crate::text_edit::commands::apply_clipboard(
                     &mut self.edit_state(),
-                    command.as_str(),
+                    cmd,
                     cx.window.is_some(),
                 );
                 if let Some(crate::text_edit::commands::ClipboardRequest::GetText) = result.request
@@ -416,8 +421,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.move_home",
                     is_ime_composing,
                 );
-                let delta =
-                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
@@ -428,8 +432,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.move_end",
                     is_ime_composing,
                 );
-                let delta =
-                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
@@ -440,8 +443,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.select_home",
                     is_ime_composing,
                 );
-                let delta =
-                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
@@ -452,8 +454,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     "text.select_end",
                     is_ime_composing,
                 );
-                let delta =
-                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
             }
@@ -461,11 +462,10 @@ impl<H: UiHost> Widget<H> for TextInput {
                 let is_ime_composing = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_basic(
                     &mut self.edit_state(),
-                    command.as_str(),
+                    cmd,
                     is_ime_composing,
                 );
-                let delta =
-                    crate::text_edit::commands::singleline_ui_delta(command.as_str(), outcome);
+                let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 if !delta.handled {
                     return false;
                 }
@@ -530,12 +530,11 @@ impl<H: UiHost> Widget<H> for TextInput {
         self.sync_chrome_from_theme(theme);
         self.sync_text_style_from_theme(theme);
         let focused = cx.focus == Some(cx.node);
+        let focus_visible = focused && crate::focus_visible::is_focus_visible(cx.app, cx.window);
         if !focused && self.is_ime_composing() {
             self.clear_ime_composition();
         }
-        let border_color = if focused && self.chrome_style.focus_ring.is_some() {
-            self.chrome_style.border_color
-        } else if focused {
+        let border_color = if focused && (focus_visible || self.chrome_style.focus_ring.is_none()) {
             self.chrome_style.border_color_focused
         } else {
             self.chrome_style.border_color
@@ -640,10 +639,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             corner_radii: self.chrome_style.corner_radii,
         });
 
-        if focused
-            && crate::focus_visible::is_focus_visible(cx.app, cx.window)
-            && let Some(mut ring) = self.chrome_style.focus_ring
-        {
+        if focus_visible && let Some(mut ring) = self.chrome_style.focus_ring {
             ring.corner_radii = self.chrome_style.corner_radii;
             crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
         }

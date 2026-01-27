@@ -2090,7 +2090,10 @@ fn radix_web_hover_card_hover_matches_fret() {
         &mut ui,
         &mut app,
         &mut services,
-        Point::new(Px(0.0), Px(0.0)),
+        Point::new(
+            Px(bounds.size.width.0 - 1.0),
+            Px(bounds.size.height.0 - 1.0),
+        ),
     );
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
@@ -5938,7 +5941,7 @@ fn radix_web_scroll_area_scroll_top_delta_matches_fret() {
                 .refine_layout(
                     fret_ui_shadcn::prelude::LayoutRefinement::default()
                         .w_full()
-                        .h_px(fret_ui_shadcn::prelude::MetricRef::Px(Px(200.0))),
+                        .h_px(Px(200.0)),
                 )
                 .into_element(cx),
         ]

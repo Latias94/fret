@@ -51,6 +51,24 @@ impl MetricRef {
     }
 }
 
+impl From<Px> for MetricRef {
+    fn from(value: Px) -> Self {
+        Self::Px(value)
+    }
+}
+
+impl From<Space> for MetricRef {
+    fn from(value: Space) -> Self {
+        Self::space(value)
+    }
+}
+
+impl From<Radius> for MetricRef {
+    fn from(value: Radius) -> Self {
+        Self::radius(value)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum SignedMetricRef {
     Pos(MetricRef),

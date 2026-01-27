@@ -9,6 +9,27 @@ This note is a design-oriented snapshot focused on two questions:
 This document is not an ADR. If we agree on a direction, we should promote the chosen contract
 surface(s) into an ADR (and keep it narrow and hard-to-change).
 
+## Background work (portable) and "heavy app" adapters
+
+Fret is intentionally main-thread oriented for UI/runtime mutation. The scalable pattern is:
+
+- background work runs off the UI lane (or best-effort cooperatively on wasm),
+- results return as **data-only** messages,
+- the runner is woken to the next driver boundary where inboxes are drained and redraw is scheduled.
+
+This surface is locked in `docs/adr/0190-execution-and-concurrency-surface-v1.md` and aligns with the golden-path guidance in `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`.
+
+### Heavy app recipe: Tokio thread + inbox + wake
+
+For editor-grade apps (indexing, LSP, asset IO, compilation), a realistic adapter story is:
+
+1. Run a Tokio runtime on a dedicated background thread (or use an existing runtime handle).
+2. Send results into an inbox (pure data).
+3. Call `wake()` so the runner reaches the next driver boundary promptly.
+4. Drain inboxes on the UI thread, apply updates to models/globals, and request redraw.
+
+This avoids forcing Tokio on small apps while giving large apps an explicit, debuggable concurrency boundary.
+
 ## Mental Model: Three Things That Often Get Mixed
 
 When users say “the API feels complex”, it usually comes from these layers bleeding together:
@@ -95,7 +116,7 @@ The remaining high-impact ergonomics improvements tend to be:
 
 1. **Reduce “children container” boilerplate**
    - Prefer accepting `IntoIterator<Item = AnyElement>` in high-frequency APIs.
-   - Provide a tiny authoring helper for iterator-heavy lists (example: `.elements()`).
+   - Provide a tiny authoring helper for iterator-heavy lists (examples: `.elements()` for `Vec`, `.elements_owned()` for `Elements`).
 2. **Make root rendering accept iterables**
    - Root render fns should accept iterable children, not force `Vec`.
 3. **Bias toward key-based identity**
@@ -114,4 +135,3 @@ If we want to evaluate ergonomics concretely, measure:
 
 The current `apps/fret-examples/src/todo_demo.rs` is a good baseline because it already exercises:
 input, buttons, tabs, list rendering, and style tokens.
-

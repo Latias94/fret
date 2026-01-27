@@ -65,6 +65,8 @@ When mounting a `ViewCache` element whose `GlobalElementId` is marked as reused 
 - inherit previously recorded model/global observations for the subtree so model changes continue to invalidate correctly without re-running render,
 - re-collect scroll handle bindings from the existing subtree using the persisted `ElementFrame` instance records.
 
+Note: the authoritative lifetime/GC contract under reuse is defined by `docs/adr/0191-declarative-liveness-roots-and-gc-under-view-cache-reuse.md`. In particular, cache-hit frames must preserve liveness deterministically via explicit liveness roots and subtree membership lists; "seen this frame" is not a sufficient semantic signal by itself.
+
 ### 4) Per-frame `ElementFrame` persistence
 
 `ElementFrame`’s `WindowFrame.instances` / `children` are treated as a persistent retained snapshot across frames:
@@ -94,3 +96,5 @@ Evidence anchors:
 - State key tracking + touch helpers: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementState::*view_cache*`)
 - Mount-time subtree reuse: `crates/fret-ui/src/declarative/mount.rs` (`mount_element`, subtree helpers)
 - Conformance test: `crates/fret-ui/src/declarative/tests/view_cache.rs`
+  - Notes: cache-hit frames are asserted to preserve painted scene ops, semantics output, and hit targets.
+  - Notes: includes modal overlay (barrier root) input-gating outcomes under view-cache reuse.

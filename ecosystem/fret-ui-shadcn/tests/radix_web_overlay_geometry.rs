@@ -11,7 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::prelude::{LayoutRefinement, MetricRef};
+use fret_ui_shadcn::prelude::LayoutRefinement;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -471,7 +471,7 @@ fn render_tooltip_fixture(
             fret_ui_shadcn::TooltipProvider::new()
                 .delay_duration_frames(0)
                 .skip_delay_duration_frames(0)
-                .with(cx, |cx| {
+                .with_elements(cx, |cx| {
                     let trigger = cx.pressable(
                         PressableProps {
                             layout: {
@@ -500,8 +500,8 @@ fn render_tooltip_fixture(
                     let content = fret_ui_shadcn::TooltipContent::new(Vec::new())
                         .refine_layout(
                             fret_ui_shadcn::LayoutRefinement::default()
-                                .w_px(fret_ui_shadcn::MetricRef::Px(Px(web_content_rect.w)))
-                                .h_px(fret_ui_shadcn::MetricRef::Px(Px(web_content_rect.h))),
+                                .w_px(Px(web_content_rect.w))
+                                .h_px(Px(web_content_rect.h)),
                         )
                         .into_element(cx);
 
@@ -3050,9 +3050,9 @@ fn radix_web_dialog_open_geometry_matches_fret() {
                                 fret_ui_shadcn::DialogContent::new(Vec::new())
                                     .refine_layout(
                                         LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(web_content_rect.w)))
-                                            .h_px(MetricRef::Px(Px(web_content_rect.h)))
-                                            .max_w(MetricRef::Px(Px(web_content_rect.w))),
+                                            .w_px(Px(web_content_rect.w))
+                                            .h_px(Px(web_content_rect.h))
+                                            .max_w(Px(web_content_rect.w)),
                                     )
                                     .into_element(cx)
                             },
@@ -3166,9 +3166,9 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
                                 fret_ui_shadcn::AlertDialogContent::new(Vec::new())
                                     .refine_layout(
                                         LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(web_content_rect.w)))
-                                            .h_px(MetricRef::Px(Px(web_content_rect.h)))
-                                            .max_w(MetricRef::Px(Px(web_content_rect.w))),
+                                            .w_px(Px(web_content_rect.w))
+                                            .h_px(Px(web_content_rect.h))
+                                            .max_w(Px(web_content_rect.w)),
                                     )
                                     .into_element(cx)
                             },

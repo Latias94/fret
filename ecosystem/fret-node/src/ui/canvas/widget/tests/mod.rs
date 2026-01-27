@@ -26,6 +26,7 @@ mod color_mode_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod custom_edge_path_conformance;
+mod edit_command_availability_conformance;
 mod elevate_on_select_conformance;
 mod fit_view_nodes_conformance;
 mod fit_view_on_mount_conformance;
@@ -231,7 +232,7 @@ fn space_to_pan_starts_left_mouse_panning_and_updates_viewport() {
             position: *screen_positions.last().unwrap(),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
-            is_click: false,
+            is_click: true,
             click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
@@ -1150,7 +1151,7 @@ fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
                 alt: true,
                 ..Modifiers::default()
             },
-            is_click: false,
+            is_click: true,
             click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),

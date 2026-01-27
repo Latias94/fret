@@ -31,7 +31,8 @@ use fret_ui_kit::recipes::input::{
 };
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, OverrideSlot, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -58,7 +59,7 @@ fn select_list_desired_height(
     Px(content_height.0.min(max_height.0).max(min_height.0))
 }
 
-fn select_scroll_with_buttons<H: UiHost>(
+fn select_scroll_with_buttons<H: UiHost, C, I>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
@@ -71,8 +72,12 @@ fn select_scroll_with_buttons<H: UiHost>(
     set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
     should_focus_selected_item: impl Fn() -> bool + Clone + 'static,
     on_focused_selected_item: impl Fn() + Clone + 'static,
-    content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
-) -> AnyElement {
+    content: C,
+) -> AnyElement
+where
+    C: FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.flex(
         FlexProps {
             layout: {
@@ -165,6 +170,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                                 return fret_ui::action::PressablePointerDownResult::Continue;
                             }
                             on_scroll(host, action_cx);
+                            host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                             fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
                         }));
 
@@ -270,7 +276,11 @@ fn select_scroll_with_buttons<H: UiHost>(
                                     padding: Edges::all(Px(0.0)),
                                     ..Default::default()
                                 },
-                                move |cx| content(cx, active_element_ref),
+                                move |cx| {
+                                    content(cx, active_element_ref)
+                                        .into_iter()
+                                        .collect::<Vec<_>>()
+                                },
                             )]
                         },
                     );
@@ -466,8 +476,10 @@ pub struct SelectGroup {
 }
 
 impl SelectGroup {
-    pub fn new(entries: Vec<SelectEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = SelectEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -523,6 +535,52 @@ struct BorderWidthOverride {
     left: Option<Px>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct SelectStyle {
+    pub trigger_border_color: OverrideSlot<ColorRef>,
+    pub option_background: OverrideSlot<ColorRef>,
+    pub option_foreground: OverrideSlot<ColorRef>,
+}
+
+impl SelectStyle {
+    pub fn trigger_border_color(
+        mut self,
+        trigger_border_color: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_border_color = Some(trigger_border_color);
+        self
+    }
+
+    pub fn option_background(
+        mut self,
+        option_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.option_background = Some(option_background);
+        self
+    }
+
+    pub fn option_foreground(
+        mut self,
+        option_foreground: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.option_foreground = Some(option_foreground);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.trigger_border_color.is_some() {
+            self.trigger_border_color = other.trigger_border_color;
+        }
+        if other.option_background.is_some() {
+            self.option_background = other.option_background;
+        }
+        if other.option_foreground.is_some() {
+            self.option_foreground = other.option_foreground;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Select {
     model: Model<Option<Arc<str>>>,
@@ -530,12 +588,14 @@ pub struct Select {
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
     disabled: bool,
+    trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: SelectStyle,
     align: SelectAlign,
     side: SelectSide,
     align_offset: Px,
@@ -557,12 +617,14 @@ impl Select {
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
             disabled: false,
+            trigger_test_id: None,
             a11y_label: None,
             trigger_test_id: None,
             aria_invalid: false,
             on_dismiss_request: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: SelectStyle::default(),
             align: SelectAlign::default(),
             side: SelectSide::default(),
             align_offset: Px(0.0),
@@ -620,6 +682,14 @@ impl Select {
         self
     }
 
+    /// Sets a `test_id` on the Select trigger pressable for deterministic automation.
+    ///
+    /// This is a diagnostics/testing hook and MUST NOT be mapped into platform accessibility label fields.
+    pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.trigger_test_id = Some(id.into());
+        self
+    }
+
     pub fn entries(mut self, entries: impl IntoIterator<Item = SelectEntry>) -> Self {
         self.entries.extend(entries);
         self
@@ -652,8 +722,8 @@ impl Select {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
@@ -661,6 +731,11 @@ impl Select {
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn style(mut self, style: SelectStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -756,12 +831,14 @@ impl Select {
             &self.entries,
             self.placeholder,
             self.disabled,
+            self.trigger_test_id,
             self.a11y_label,
             self.trigger_test_id,
             self.aria_invalid,
             self.on_dismiss_request,
             self.chrome,
             self.layout,
+            self.style,
             self.align,
             self.side,
             self.align_offset,
@@ -795,12 +872,14 @@ pub fn select<H: UiHost>(
         &entries,
         placeholder,
         disabled,
+        None,
         a11y_label,
         None,
         false,
         None,
         ChromeRefinement::default(),
         layout,
+        SelectStyle::default(),
         SelectAlign::default(),
         SelectSide::default(),
         Px(0.0),
@@ -822,12 +901,14 @@ fn select_impl<H: UiHost>(
     entries: &[SelectEntry],
     placeholder: Arc<str>,
     disabled: bool,
+    trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     aria_invalid: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: SelectStyle,
     align: SelectAlign,
     side: SelectSide,
     align_offset: Px,
@@ -847,6 +928,7 @@ fn select_impl<H: UiHost>(
         .merge(chrome);
 
     cx.scope(|cx| {
+        let trigger_test_id = trigger_test_id.clone();
         fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
             for entry in entries {
                 match entry {
@@ -940,7 +1022,7 @@ fn select_impl<H: UiHost>(
         let trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .h_px(MetricRef::Px(resolved.min_height))
+                .h_px(resolved.min_height)
                 .merge(layout),
         );
 
@@ -966,6 +1048,9 @@ fn select_impl<H: UiHost>(
                 .or_else(|| theme.color_by_key("destructive/20"))
                 .unwrap_or(border_color);
         }
+
+        let style_for_trigger = style.clone();
+        let style_for_options = style;
 
         let enabled = !disabled;
         let item_len = count_items(entries);
@@ -1050,6 +1135,7 @@ fn select_impl<H: UiHost>(
         // `control_chrome_pressable_with_id_props` stores handlers; keep a dedicated `open` clone
         // for trigger-owned hooks.
         let open_for_trigger = open.clone();
+        let trigger_test_id_for_trigger = trigger_test_id.clone();
 
         let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
@@ -1184,11 +1270,22 @@ fn select_impl<H: UiHost>(
                 host.request_redraw(action_cx.window);
             }));
 
-            let border_color = if st.hovered || st.pressed || st.focused {
-                alpha_mul(border_focus, 0.85)
-            } else {
-                border
-            };
+            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+            states.set(WidgetState::Open, is_open);
+
+            let highlight = ColorRef::Color(alpha_mul(border_focus, 0.85));
+            let default_border_color = WidgetStateProperty::new(ColorRef::Color(border))
+                .when(WidgetStates::HOVERED, highlight.clone())
+                .when(WidgetStates::ACTIVE, highlight.clone())
+                .when(WidgetStates::FOCUS_VISIBLE, highlight.clone())
+                .when(WidgetStates::OPEN, highlight);
+
+            let border_color = resolve_override_slot(
+                style_for_trigger.trigger_border_color.as_ref(),
+                &default_border_color,
+                states,
+            )
+            .resolve(&theme);
 
             let mut props = PressableProps {
                 layout: trigger_layout,
@@ -1198,7 +1295,7 @@ fn select_impl<H: UiHost>(
                 a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
-            props.a11y.test_id = trigger_test_id.clone();
+            props.a11y.test_id = trigger_test_id_for_trigger.clone();
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier
@@ -1208,6 +1305,7 @@ fn select_impl<H: UiHost>(
             let listbox_id_for_trigger =
                 radix_select::select_listbox_semantics_id(cx, overlay_root_name.as_str());
             props.a11y.controls_element = Some(listbox_id_for_trigger.0);
+            props.a11y.test_id = trigger_test_id.clone();
 
             if motion.present && enabled {
                 let debug_item_aligned = std::env::var("FRET_DEBUG_SELECT_ITEM_ALIGNED")
@@ -1959,6 +2057,8 @@ fn select_impl<H: UiHost>(
                                                                                 mouse_open_guard_for_content.clone();
 
                                                                             let value_key = item.value.clone();
+                                                                            let style_for_item =
+                                                                                style_for_options.clone();
 
                                                                             out.push(cx.keyed(value_key, move |cx| {
                                                                                 cx.pressable_with_id(
@@ -2035,26 +2135,68 @@ fn select_impl<H: UiHost>(
                                                                                         .or_else(|| theme.color_by_key("accent.foreground"))
                                                                                         .unwrap_or_else(|| theme.color_required("accent.foreground"));
 
-                                                                                    let mut bg = Color::TRANSPARENT;
-                                                                                    let mut fg = if item_disabled {
-                                                                                        alpha_mul(fg_muted, 0.8)
-                                                                                    } else {
-                                                                                        fg
-                                                                                    };
-                                                                                    if is_active || st.hovered || st.pressed {
-                                                                                        bg = bg_accent;
-                                                                                        fg = fg_accent;
-                                                                                    }
+                                                                                    let item_enabled = !item_disabled;
+
+                                                                                    let mut states = WidgetStates::from_pressable(cx, st, item_enabled);
+                                                                                    states.set(WidgetState::Focused, is_active);
+                                                                                    states.set(WidgetState::Selected, is_selected);
+
+                                                                                    let default_bg = WidgetStateProperty::new(
+                                                                                        ColorRef::Color(Color::TRANSPARENT),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::FOCUSED,
+                                                                                        ColorRef::Color(bg_accent),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::HOVERED,
+                                                                                        ColorRef::Color(bg_accent),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::ACTIVE,
+                                                                                        ColorRef::Color(bg_accent),
+                                                                                    )
+                                                                                    .when(
+                                                                                        WidgetStates::DISABLED,
+                                                                                        ColorRef::Color(Color::TRANSPARENT),
+                                                                                    );
+
+                                                                                    let default_fg = WidgetStateProperty::new(ColorRef::Color(fg))
+                                                                                        .when(
+                                                                                            WidgetStates::FOCUSED,
+                                                                                            ColorRef::Color(fg_accent),
+                                                                                        )
+                                                                                        .when(
+                                                                                            WidgetStates::HOVERED,
+                                                                                            ColorRef::Color(fg_accent),
+                                                                                        )
+                                                                                        .when(
+                                                                                            WidgetStates::ACTIVE,
+                                                                                            ColorRef::Color(fg_accent),
+                                                                                        )
+                                                                                        .when(
+                                                                                            WidgetStates::DISABLED,
+                                                                                            ColorRef::Color(alpha_mul(fg_muted, 0.8)),
+                                                                                        );
+
+                                                                                    let bg = resolve_override_slot(
+                                                                                        style_for_item.option_background.as_ref(),
+                                                                                        &default_bg,
+                                                                                        states,
+                                                                                    )
+                                                                                    .resolve(&theme);
+                                                                                    let fg = resolve_override_slot(
+                                                                                        style_for_item.option_foreground.as_ref(),
+                                                                                        &default_fg,
+                                                                                        states,
+                                                                                    )
+                                                                                    .resolve(&theme);
 
                                                                                     let icon = decl_icon::icon_with(
                                                                                         cx,
                                                                                         ids::ui::CHECK,
                                                                                         Some(Px(16.0)),
-                                                                                        Some(ColorRef::Color(if item_disabled {
-                                                                                            alpha_mul(fg_muted, 0.8)
-                                                                                        } else {
-                                                                                            fg
-                                                                                        })),
+                                                                                        Some(ColorRef::Color(fg)),
                                                                                     );
                                                                                     let icon = cx.opacity(
                                                                                         if is_selected { 1.0 } else { 0.0 },
@@ -2336,13 +2478,13 @@ fn select_impl<H: UiHost>(
                             }
                         }
 
-                        radix_select::select_modal_layer_children_with_pointer_up_guard_and_dismiss_handler(
+                        radix_select::select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler(
                             cx,
                             open_for_barrier_children.clone(),
                             dismiss_on_overlay_press,
                             on_dismiss_request_for_overlay_children.clone(),
                             mouse_open_guard_for_barrier_children.clone(),
-                            vec![probe],
+                            [probe],
                             animated,
                         )
                     });
@@ -2372,7 +2514,7 @@ fn select_impl<H: UiHost>(
                             open_for_overlay.clone(),
                             true,
                             on_dismiss_request_for_overlay_children.clone(),
-                            vec![pointer_up_guard],
+                            [pointer_up_guard],
                         )]
                     });
 
@@ -2517,13 +2659,13 @@ mod tests {
     use std::time::Duration;
 
     use fret_app::App;
+    use fret_core::UiServices;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
-        PathMetrics,
+        PathMetrics, PointerEvent,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_core::{TextStyle, UiServices};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::tree::UiTree;
 
@@ -3629,8 +3771,9 @@ mod tests {
 
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
         let dismiss_calls_for_handler = dismiss_calls.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, _reason| {
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
             dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
         });
 
         let _ = render_frame_with_dismiss_handler(

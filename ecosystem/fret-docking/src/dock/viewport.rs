@@ -32,7 +32,7 @@ pub(super) fn viewport_input_from_hit(
     position: Point,
     kind: ViewportInputKind,
 ) -> Option<ViewportInputEvent> {
-    ViewportInputEvent::from_mapping_window_point(
+    ViewportInputEvent::from_mapping_window_point_maybe_clamped(
         window,
         hit.viewport.target,
         &hit.mapping,
@@ -41,6 +41,7 @@ pub(super) fn viewport_input_from_hit(
         pointer_type,
         position,
         kind,
+        false,
     )
 }
 
@@ -53,7 +54,7 @@ pub(super) fn viewport_input_from_hit_clamped(
     position: Point,
     kind: ViewportInputKind,
 ) -> ViewportInputEvent {
-    ViewportInputEvent::from_mapping_window_point_clamped(
+    ViewportInputEvent::from_mapping_window_point_maybe_clamped(
         window,
         hit.viewport.target,
         &hit.mapping,
@@ -62,7 +63,9 @@ pub(super) fn viewport_input_from_hit_clamped(
         pointer_type,
         position,
         kind,
+        true,
     )
+    .expect("clamped viewport mapping must always yield an input event")
 }
 
 pub(super) fn hit_test_active_viewport_panel(

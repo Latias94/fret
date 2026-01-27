@@ -13,6 +13,8 @@ regression testing.
     - selected `aria-*` / `data-*` attributes.
 - `goldens/tailwind-spec/`: hand-authored conformance cases for Tailwind class parsing into typed tokens.
   - `goldens/tailwind-spec/v1/*.json`: per-case `classes[]` + expected normalized layout tokens.
+- `goldens/material3-headless/`: renderer-agnostic “visual outcome” snapshots for Material 3 components.
+  - `goldens/material3-headless/v1/*.json`: per-scene `SceneOp` signatures + quad paint/geometry.
 
 ## Generate web goldens (shadcn/ui v4)
 

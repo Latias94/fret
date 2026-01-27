@@ -4,12 +4,13 @@ use fret_core::geometry::Edges;
 use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
+    AnyElement, CrossAlign, Elements, FlexProps, GridProps, MainAlign, Overflow, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 
@@ -33,12 +34,10 @@ fn table_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
-fn row_min_h(theme: &Theme) -> MetricRef {
-    MetricRef::Px(
-        theme
-            .metric_by_key("component.table.row_min_h")
-            .unwrap_or(fret_core::Px(40.0)),
-    )
+fn row_min_h(theme: &Theme) -> fret_core::Px {
+    theme
+        .metric_by_key("component.table.row_min_h")
+        .unwrap_or(fret_core::Px(40.0))
 }
 
 fn border_color(theme: &Theme) -> fret_core::Color {
@@ -253,8 +252,11 @@ impl TableRow {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let cols = self.cols;
         let selected = self.selected;
-        let enabled = self.enabled;
+        let mut enabled = self.enabled;
         let on_click = self.on_click.clone();
+        if let Some(cmd) = on_click.as_ref() {
+            enabled = enabled && cx.command_is_enabled(cmd);
+        }
         let on_activate = self.on_activate.clone();
         let border_bottom = self.border_bottom;
         let children = self.children;
@@ -273,7 +275,7 @@ impl TableRow {
             if let Some(on_activate) = on_activate.clone() {
                 cx.pressable_add_on_activate(on_activate);
             }
-            cx.pressable_dispatch_command_opt(on_click);
+            cx.pressable_dispatch_command_if_enabled_opt(on_click);
             let theme = Theme::global(&*cx.app).clone();
 
             let mut hover_bg = muted_bg(&theme);
@@ -317,13 +319,18 @@ impl TableRow {
                 };
 
                 let cells = assign_grid_column_starts(row_children.clone());
-                vec![cx.grid(grid, move |_cx| cells)]
+                vec![cx.grid(grid, move |_cx| cells.clone())]
             })]
         })
     }
 }
 
-fn assign_grid_column_starts(mut cells: Vec<AnyElement>) -> Vec<AnyElement> {
+fn assign_grid_column_starts<I>(cells: I) -> Elements
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    let mut cells: Vec<AnyElement> = cells.into_iter().collect();
+
     fn grid_span(cell: &AnyElement) -> u16 {
         match &cell.kind {
             fret_ui::element::ElementKind::Container(props) => {
@@ -361,7 +368,7 @@ fn assign_grid_column_starts(mut cells: Vec<AnyElement>) -> Vec<AnyElement> {
         col = col.saturating_add(span as i16);
     }
 
-    cells
+    cells.into()
 }
 
 /// shadcn/ui `TableHead` (`th`).

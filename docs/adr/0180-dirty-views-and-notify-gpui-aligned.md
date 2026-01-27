@@ -69,6 +69,15 @@ Frame-driven updates (animation frames):
   changes (or without always triggering node-level invalidation), a paint-only frame request would allow stale cached
   output to be replayed indefinitely.
 
+Paint-only frame loops (chrome-only):
+
+- The runtime MAY also provide a **paint-only** animation-frame request for cases where the view is clean and only the
+  paint output changes (hover fades, selection/caret blink, drag/drop indicators, scrollbar fades).
+- Such a request MUST NOT mark the owning view dirty. It only forces a paint pass and schedules a frame.
+- Components MUST NOT rely on paint-only frames to rebuild the declarative element tree. If the output depends on
+  rerendering (structural changes, item window changes, state-driven layout), use `request_animation_frame()` (notify
+  semantics) or call `notify()` explicitly.
+
 ### 2) Dirty views are the primary cache key for view caching
 
 When a view is used behind a caching boundary (ADR 1152), cache reuse is allowed only if:

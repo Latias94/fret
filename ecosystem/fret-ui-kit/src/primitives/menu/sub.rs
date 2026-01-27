@@ -933,6 +933,69 @@ pub fn handle_dismissible_pointer_move(
         floating: g.floating,
     });
 
+    // If a submenu is open but we have no geometry yet, we still want to begin closing it when the
+    // pointer wanders away. Without geometry we can't compute a safe-hover corridor, so fall back
+    // to arming the close-delay timer once.
+    let submenu_open = host
+        .models_mut()
+        .read(&models.open_value, |v| v.is_some())
+        .ok()
+        .unwrap_or(false);
+    if !submenu_open {
+        let next_dir = match prev_pointer {
+            None => prev_dir,
+            Some(prev) => match pointer_grace_intent::pointer_dir(prev, mv.position) {
+                Some(dir) => Some(dir),
+                None => prev_dir,
+            },
+        };
+        let _ = host
+            .models_mut()
+            .update(&models.pointer_dir, |v| *v = next_dir);
+        let _ = host
+            .models_mut()
+            .update(&models.last_pointer, |v| *v = Some(mv.position));
+        return false;
+    }
+
+    if grace.is_none() {
+        let next_dir = match prev_pointer {
+            None => prev_dir,
+            Some(prev) => match pointer_grace_intent::pointer_dir(prev, mv.position) {
+                Some(dir) => Some(dir),
+                None => prev_dir,
+            },
+        };
+        let _ = host
+            .models_mut()
+            .update(&models.pointer_dir, |v| *v = next_dir);
+        let _ = host
+            .models_mut()
+            .update(&models.last_pointer, |v| *v = Some(mv.position));
+
+        let pending = host
+            .models_mut()
+            .read(&models.close_timer, |v| *v)
+            .ok()
+            .flatten();
+        if pending.is_some() {
+            return false;
+        }
+
+        let token = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window: Some(acx.window),
+            token,
+            after: cfg.close_delay,
+            repeat: None,
+        });
+        let _ = host
+            .models_mut()
+            .update(&models.close_timer, |v| *v = Some(token));
+        host.request_redraw(acx.window);
+        return true;
+    }
+
     let changed = pointer_grace_intent::drive_close_timer_on_pointer_move(
         host,
         acx,

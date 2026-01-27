@@ -1771,7 +1771,7 @@ fn render_inline_flow_with_layout<H: UiHost>(
                         justify,
                     )
                 })
-                .collect()
+                .collect::<Vec<_>>()
         },
     )
 }

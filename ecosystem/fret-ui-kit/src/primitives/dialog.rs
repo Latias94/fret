@@ -17,10 +17,12 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::action::{DismissReason, OnDismissRequest};
+use fret_ui::action::{
+    DismissReason, DismissRequestCx, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus,
+};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
-    SizeStyle,
+    AnyElement, ContainerProps, Elements, InsetStyle, LayoutStyle, Length, PositionStyle,
+    PressableProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -29,10 +31,23 @@ use crate::declarative::ModelWatchExt;
 use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct DialogOptions {
     pub dismiss_on_overlay_press: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+}
+
+impl std::fmt::Debug for DialogOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialogOptions")
+            .field("dismiss_on_overlay_press", &self.dismiss_on_overlay_press)
+            .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .finish()
+    }
 }
 
 impl Default for DialogOptions {
@@ -40,6 +55,8 @@ impl Default for DialogOptions {
         Self {
             dismiss_on_overlay_press: true,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 }
@@ -52,6 +69,16 @@ impl DialogOptions {
 
     pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
         self.initial_focus = initial_focus;
+        self
+    }
+
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 }
@@ -117,24 +144,28 @@ impl DialogRoot {
     }
 
     pub fn options(&self) -> DialogOptions {
-        self.options
+        self.options.clone()
     }
 
-    pub fn modal_request_with_dismiss_handler<H: UiHost>(
+    pub fn modal_request_with_dismiss_handler<H: UiHost, I>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
         on_dismiss_request: Option<OnDismissRequest>,
-        children: Vec<AnyElement>,
-    ) -> OverlayRequest {
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let children: Vec<AnyElement> = children.into_iter().collect();
         modal_dialog_request_with_options_and_dismiss_handler(
             id,
             trigger,
             self.open_model(cx),
             presence,
-            self.options,
+            self.options.clone(),
             on_dismiss_request,
             children,
         )
@@ -161,20 +192,24 @@ impl DialogRoot {
             .unwrap_or(false)
     }
 
-    pub fn modal_request<H: UiHost>(
+    pub fn modal_request<H: UiHost, I>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
-    ) -> OverlayRequest {
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let children: Vec<AnyElement> = children.into_iter().collect();
         modal_dialog_request_with_options(
             id,
             trigger,
             self.open_model(cx),
             presence,
-            self.options,
+            self.options.clone(),
             children,
         )
     }
@@ -197,7 +232,7 @@ pub fn modal_dialog_request(
     trigger: GlobalElementId,
     open: Model<bool>,
     presence: OverlayPresence,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     modal_dialog_request_with_options(
         id,
@@ -205,7 +240,7 @@ pub fn modal_dialog_request(
         open,
         presence,
         DialogOptions::default(),
-        children,
+        children.into_iter().collect::<Vec<_>>(),
     )
 }
 
@@ -216,11 +251,14 @@ pub fn modal_dialog_request_with_options(
     open: Model<bool>,
     presence: OverlayPresence,
     options: DialogOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
+    let children: Vec<AnyElement> = children.into_iter().collect();
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.root_name = Some(dialog_root_name(id));
     request.initial_focus = options.initial_focus;
+    request.on_open_auto_focus = options.on_open_auto_focus.clone();
+    request.on_close_auto_focus = options.on_close_auto_focus.clone();
     request
 }
 
@@ -235,7 +273,7 @@ pub fn modal_dialog_request_with_options_and_dismiss_handler(
     presence: OverlayPresence,
     options: DialogOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request =
         modal_dialog_request_with_options(id, trigger, open, presence, options, children);
@@ -270,7 +308,7 @@ pub fn modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
@@ -285,9 +323,10 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     let layout = modal_barrier_layout();
+    let children: Vec<AnyElement> = children.into_iter().collect();
 
     if dismiss_on_press {
         cx.pressable(
@@ -299,20 +338,21 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
             },
             move |cx, _st| {
                 if let Some(on_dismiss_request) = on_dismiss_request.clone() {
+                    let open_for_dismiss = open.clone();
                     cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
-                        on_dismiss_request(
-                            host,
-                            action_cx,
-                            DismissReason::OutsidePress {
-                                pointer: Some(fret_ui::action::OutsidePressCx {
-                                    pointer_id: up.pointer_id,
-                                    pointer_type: up.pointer_type,
-                                    button: up.button,
-                                    modifiers: up.modifiers,
-                                    click_count: up.click_count,
-                                }),
-                            },
-                        );
+                        let mut req = DismissRequestCx::new(DismissReason::OutsidePress {
+                            pointer: Some(fret_ui::action::OutsidePressCx {
+                                pointer_id: up.pointer_id,
+                                pointer_type: up.pointer_type,
+                                button: up.button,
+                                modifiers: up.modifiers,
+                                click_count: up.click_count,
+                            }),
+                        });
+                        on_dismiss_request(host, action_cx, &mut req);
+                        if !req.default_prevented() {
+                            let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                        }
                         fret_ui::action::PressablePointerUpResult::SkipActivate
                     }));
                 } else {
@@ -338,30 +378,30 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
 
 /// Convenience helper to assemble modal overlay children in a Radix-like order: barrier then
 /// content.
-pub fn modal_dialog_layer_children<H: UiHost>(
+pub fn modal_dialog_layer_elements<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     options: DialogOptions,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         modal_barrier(cx, open, options.dismiss_on_overlay_press, barrier_children),
         content,
-    ]
+    ])
 }
 
 /// Convenience helper to assemble modal overlay children in a Radix-like order (barrier then
 /// content), while routing barrier presses through an optional dismiss handler.
-pub fn modal_dialog_layer_children_with_dismiss_handler<H: UiHost>(
+pub fn modal_dialog_layer_elements_with_dismiss_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     options: DialogOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         modal_barrier_with_dismiss_handler(
             cx,
             open,
@@ -370,7 +410,7 @@ pub fn modal_dialog_layer_children_with_dismiss_handler<H: UiHost>(
             barrier_children,
         ),
         content,
-    ]
+    ])
 }
 
 /// Requests a Radix-style modal dialog overlay for the current window.
@@ -478,7 +518,7 @@ mod tests {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
 
-        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let handler: OnDismissRequest = Arc::new(|_host, _cx, _req: &mut DismissRequestCx| {});
         let req = modal_dialog_request_with_options_and_dismiss_handler(
             GlobalElementId(0x123),
             GlobalElementId(0x123),
@@ -586,7 +626,7 @@ mod tests {
         let overlay_children =
             fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
                 let content = cx.container(ContainerProps::default(), |_cx| Vec::new());
-                modal_dialog_layer_children(
+                modal_dialog_layer_elements(
                     cx,
                     open.clone(),
                     DialogOptions::default(),
@@ -732,8 +772,9 @@ mod tests {
         let reason_cell: Arc<std::sync::Mutex<Option<DismissReason>>> =
             Arc::new(std::sync::Mutex::new(None));
         let reason_cell_for_handler = reason_cell.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+            req.prevent_default();
         });
 
         let overlay_children =
@@ -861,7 +902,7 @@ mod tests {
                     },
                 );
 
-                modal_dialog_layer_children(
+                modal_dialog_layer_elements(
                     cx,
                     open.clone(),
                     DialogOptions::default(),

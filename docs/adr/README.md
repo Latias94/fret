@@ -128,6 +128,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Ecosystem crates (glue vs kit vs primitives)**: `docs/adr/0169-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md`
 - **Inspector / property editing (example editor layer)**: `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
 - **Theme tokens and theme config (P0 styling)**: `docs/adr/0032-style-tokens-and-theme-resolution.md`, `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
+- **State-driven style resolution (interactive states)**: `docs/adr/1158-state-driven-style-resolution-v1.md`
 - **Elevation and shadows (no-blur baseline)**: `docs/adr/0060-shadows-and-elevation.md`
 - **Focus rings (outline) and focus-visible**: `docs/adr/0061-focus-rings-and-focus-visible.md`
 - **Component sizing/density (Tailwind-like scales)**: `docs/adr/0056-component-size-and-density-system.md`
@@ -314,6 +315,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 ## Cross-Cutting
 
 - `docs/adr/0008-threading-logging-errors.md`
+- `docs/adr/0190-execution-and-concurrency-surface-v1.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - `docs/adr/0097-plot-widgets-and-crate-placement.md`

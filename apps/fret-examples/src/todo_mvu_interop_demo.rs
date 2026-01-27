@@ -174,67 +174,52 @@ impl MvuProgram for TodoMvuInteropProgram {
         cx: &mut ElementContext<'_, App>,
         st: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
-    ) -> Vec<AnyElement> {
-        cx.observe_model(&st.todos, Invalidation::Layout);
-        cx.observe_model(&st.draft, Invalidation::Layout);
-
+    ) -> Elements {
         let Some(models) = embedded::models(&*cx.app, cx.window) else {
-            return vec![cx.text("Embedded viewport models are not installed.")];
+            return vec![cx.text("Embedded viewport models are not installed.")].into();
         };
-        cx.observe_model(&models.clicks, Invalidation::Paint);
-        cx.observe_model(&models.last_input, Invalidation::Paint);
-        cx.observe_model(&models.target, Invalidation::Paint);
 
         let theme = Theme::global(&*cx.app).clone();
 
         let todos = cx
-            .app
-            .models()
-            .read(&st.todos, |v| v.clone())
+            .watch_model(&st.todos)
+            .layout()
+            .cloned()
             .unwrap_or_default();
         for t in &todos {
-            cx.observe_model(&t.done, Invalidation::Layout);
+            cx.watch_model(&t.done).layout().observe();
         }
 
-        let clicks = cx.app.models().read(&models.clicks, |v| *v).unwrap_or(0);
+        let clicks = cx.watch_model(&models.clicks).paint().copied().unwrap_or(0);
         let last_input = cx
-            .app
-            .models()
-            .read(&models.last_input, |v| v.clone())
-            .unwrap_or_else(|_| Arc::<str>::from("<error>"));
+            .watch_model(&models.last_input)
+            .paint()
+            .cloned()
+            .unwrap_or_else(|| Arc::<str>::from("<error>"));
         let target = cx
-            .app
-            .models()
-            .read(&models.target, |v| *v)
+            .watch_model(&models.target)
+            .paint()
+            .copied()
             .unwrap_or_default();
 
-        let mut root_layout = fret_ui::element::LayoutStyle::default();
-        root_layout.size.width = fret_ui::element::Length::Fill;
-        root_layout.size.height = fret_ui::element::Length::Fill;
+        let root = ui::container(cx, |cx| {
+            let left = todo_panel(cx, &theme, st, msg, &todos);
+            let right = external_panel(cx, &st.embedded, target, clicks, last_input);
 
-        let root = cx.container(
-            fret_ui::element::ContainerProps {
-                layout: root_layout,
-                background: Some(theme.color_required("background")),
-                ..Default::default()
-            },
-            |cx| {
-                let flex = fret_ui::element::FlexProps {
-                    layout: root_layout,
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(16.0),
-                    padding: fret_core::Edges::all(Px(16.0)),
-                    ..Default::default()
-                };
+            [ui::h_flex(cx, move |_cx| [left, right])
+                .gap(Space::N4)
+                .p(Space::N4)
+                .w_full()
+                .h_full()
+                .items_stretch()
+                .into_element(cx)]
+        })
+        .bg(ColorRef::Color(theme.color_required("background")))
+        .w_full()
+        .h_full()
+        .into_element(cx);
 
-                let left = todo_panel(cx, &theme, st, msg, &todos);
-                let right = external_panel(cx, &st.embedded, target, clicks, last_input);
-
-                [cx.flex(flex, move |_cx| [left, right])]
-            },
-        );
-
-        vec![root]
+        vec![root].into()
     }
 }
 
@@ -261,10 +246,16 @@ fn todo_panel(
         .on_click(msg.cmd(Msg::ClearDone))
         .into_element(cx);
 
-    let list = todos.iter().map(|t| todo_row(cx, theme, msg, t)).elements();
+    let list = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+        let mut out = Vec::new();
+        for t in todos {
+            out.push(todo_row(cx, theme, msg, t));
+        }
+        out
+    });
 
     let body = shadcn::CardContent::new([
-        stack::hstack_iter(
+        stack::hstack(
             cx,
             stack::HStackProps::default()
                 .gap(Space::N2)
@@ -272,15 +263,11 @@ fn todo_panel(
                 .layout(LayoutRefinement::default().w_full()),
             move |_cx| [draft, add, clear_done],
         ),
-        cx.column(fret_ui::element::ColumnProps::default(), move |_cx| list),
+        list,
     ]);
 
     shadcn::Card::new([header.into_element(cx), body.into_element(cx)])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(360.0)))
-                .h_full(),
-        )
+        .refine_layout(LayoutRefinement::default().w_px(Px(360.0)).h_full())
         .into_element(cx)
 }
 
@@ -300,24 +287,19 @@ fn todo_row(
         .on_click(msg.cmd(Msg::Remove(item.id)))
         .into_element(cx);
 
-    let row = stack::hstack_iter(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .items_center()
-            .layout(LayoutRefinement::default().w_full()),
-        move |_cx| [checkbox, text, remove],
-    );
+    let row = ui::h_flex(cx, move |_cx| [checkbox, text, remove])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
+        .into_element(cx);
 
-    let props = shadcn::decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .border_1()
-            .rounded(Radius::Md)
-            .p(Space::N2),
-        LayoutRefinement::default().w_full(),
-    );
-    cx.container(props, move |_cx| [row])
+    ui::container(cx, move |_cx| [row])
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_required("border")))
+        .rounded(Radius::Md)
+        .p(Space::N2)
+        .w_full()
+        .into_element(cx)
 }
 
 fn external_panel(

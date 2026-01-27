@@ -80,18 +80,13 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement> {
-    cx.observe_model(&st.todos, Invalidation::Layout);
-    cx.observe_model(&st.draft, Invalidation::Layout);
-    cx.observe_model(&st.filter, Invalidation::Layout);
-
+fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewElements {
     let theme = Theme::global(&*cx.app).clone();
 
     let filter_value = cx
-        .app
-        .models()
-        .read(&st.filter, |v| v.clone())
-        .ok()
+        .watch_model(&st.filter)
+        .layout()
+        .cloned()
         .unwrap_or_default();
 
     let done_invalidation = if filter_value.as_deref() == Some("all") {
@@ -101,10 +96,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
     };
 
     let draft_value = cx
-        .app
-        .models()
-        .read(&st.draft, |s| s.clone())
-        .ok()
+        .watch_model(&st.draft)
+        .layout()
+        .cloned()
         .unwrap_or_default();
 
     let add_enabled = !draft_value.trim().is_empty();
@@ -114,7 +108,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .variant(shadcn::ButtonVariant::Default)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
-        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
+        .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx);
     let add_btn = cx.semantics(
         SemanticsProps {
@@ -122,7 +116,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
             test_id: Some(Arc::from(TEST_ID_ADD)),
             ..Default::default()
         },
-        move |_cx| vec![add_btn],
+        move |_cx| [add_btn],
     );
 
     let input = shadcn::Input::new(st.draft.clone())
@@ -136,88 +130,74 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
             test_id: Some(Arc::from(TEST_ID_INPUT)),
             ..Default::default()
         },
-        move |_cx| vec![input],
+        move |_cx| [input],
     );
 
     let todos = cx
-        .app
-        .models()
-        .read(&st.todos, |v| v.clone())
-        .ok()
+        .watch_model(&st.todos)
+        .layout()
+        .cloned()
         .unwrap_or_default();
-
+    let mut completed = 0usize;
     for it in &todos {
-        cx.observe_model(&it.done, done_invalidation);
+        let is_done = cx
+            .watch_model(&it.done)
+            .invalidation(done_invalidation)
+            .copied()
+            .unwrap_or(false);
+        if is_done {
+            completed += 1;
+        }
     }
-
-    let completed = todos
-        .iter()
-        .filter(|t| cx.app.models().read(&t.done, |v| *v).ok().unwrap_or(false))
-        .count();
     let active = todos.len().saturating_sub(completed);
 
-    let header = shadcn::CardHeader::new(vec![stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_between()
-            .items_start(),
-        |cx| {
-            let left = stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N1).items_start(),
-                |cx| {
-                    vec![
-                        shadcn::CardTitle::new("待办事项").into_element(cx),
-                        shadcn::CardDescription::new("管理你的日常任务。").into_element(cx),
-                    ]
-                },
-            );
+    let header = shadcn::CardHeader::new([ui::h_flex(cx, |cx| {
+        let left = ui::v_flex(cx, |cx| {
+            [
+                shadcn::CardTitle::new("待办事项").into_element(cx),
+                shadcn::CardDescription::new("管理你的日常任务。").into_element(cx),
+            ]
+        })
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx);
 
-            let icon_bg = {
-                let props = decl_style::container_props(
-                    &theme,
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(theme.color_required("muted")))
-                        .rounded(Radius::Full),
-                    LayoutRefinement::default()
-                        .w_px(MetricRef::Px(Px(32.0)))
-                        .h_px(MetricRef::Px(Px(32.0))),
-                );
-                cx.container(props, |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .justify_center()
-                            .items_center(),
-                        |cx| {
-                            vec![icon::icon_with(
-                                cx,
-                                IconId::new("lucide.calendar"),
-                                Some(Px(16.0)),
-                                Some(ColorRef::Color(theme.color_required("muted-foreground"))),
-                            )]
-                        },
-                    )]
-                })
-            };
+        let icon_bg = ui::container(cx, |cx| {
+            [ui::h_flex(cx, |cx| {
+                [icon::icon_with(
+                    cx,
+                    IconId::new("lucide.calendar"),
+                    Some(Px(16.0)),
+                    Some(ColorRef::Color(theme.color_required("muted-foreground"))),
+                )]
+            })
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            .into_element(cx)]
+        })
+        .bg(ColorRef::Color(theme.color_required("muted")))
+        .rounded(Radius::Full)
+        .w_px(Px(32.0))
+        .h_px(Px(32.0))
+        .into_element(cx);
 
-            vec![left, icon_bg]
-        },
-    )])
+        [left, icon_bg]
+    })
+    .w_full()
+    .justify_between()
+    .items_start()
+    .into_element(cx)])
     .into_element(cx);
 
-    let input_row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
-            .items_center(),
-        |_cx| vec![input, add_btn],
-    );
+    let input_row = ui::h_flex(cx, |_cx| [input, add_btn])
+        .w_full()
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
-    let list_max_h = MetricRef::Px(Px(260.0));
+    let list_max_h: MetricRef = Px(260.0).into();
 
     let tabs = shadcn::Tabs::new(st.filter.clone())
         .refine_layout(LayoutRefinement::default().w_full())
@@ -226,7 +206,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
             shadcn::TabsItem::new(
                 "all",
                 "全部",
-                vec![todo_list_panel(
+                [todo_list_panel(
                     cx,
                     &theme,
                     &todos,
@@ -237,7 +217,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
             shadcn::TabsItem::new(
                 "active",
                 "进行中",
-                vec![todo_list_panel(
+                [todo_list_panel(
                     cx,
                     &theme,
                     &todos,
@@ -248,7 +228,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
             shadcn::TabsItem::new(
                 "completed",
                 "已完成",
-                vec![todo_list_panel(
+                [todo_list_panel(
                     cx,
                     &theme,
                     &todos,
@@ -259,93 +239,71 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         ])
         .into_element(cx);
 
-    let content = shadcn::CardContent::new(vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4),
-        |_cx| vec![input_row, tabs],
-    )])
+    let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [input_row, tabs])
+        .gap(Space::N4)
+        .w_full()
+        .into_element(cx)])
     .into_element(cx);
 
-    let footer = shadcn::CardFooter::new(vec![stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_between()
-            .items_center(),
-        |cx| {
-            let left = cx.text(format!("{active} 个进行中"));
+    let footer = shadcn::CardFooter::new([ui::h_flex(cx, |cx| {
+        let left = cx.text(format!("{active} 个进行中"));
 
-            let mut right: Vec<AnyElement> = Vec::new();
-            if completed > 0 {
-                right.push(
-                    shadcn::Badge::new(format!("已完成 {completed}"))
-                        .variant(shadcn::BadgeVariant::Secondary)
-                        .into_element(cx),
-                );
-            }
+        let completed_badge = (completed > 0).then(|| {
+            shadcn::Badge::new(format!("已完成 {completed}"))
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx)
+        });
 
-            let right = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |_cx| right,
-            );
+        let right = ui::h_flex(cx, |_cx| completed_badge.into_iter())
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-            vec![left, right]
-        },
-    )])
+        [left, right]
+    })
+    .w_full()
+    .justify_between()
+    .items_center()
+    .into_element(cx)])
     .into_element(cx);
 
-    let card = shadcn::Card::new(vec![header, content, footer])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .max_w(MetricRef::Px(Px(460.0))),
-        )
+    let card = shadcn::Card::new([header, content, footer])
+        .ui()
+        .w_full()
+        .max_w(Px(460.0))
         .into_element(cx);
 
-    let page = {
-        let props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required("muted")))
-                .p(Space::N4),
-            LayoutRefinement::default().w_full().h_full(),
-        );
-        cx.container(props, |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .justify_center()
-                    .items_center()
-                    .gap(Space::N6),
-                |cx| {
-                    vec![
-                        card,
-                        cx.text_props(TextProps {
-                            layout: Default::default(),
-                            text: Arc::from("Shadcn 风格 · Fret UiAppDriver demo"),
-                            style: None,
-                            color: Some(theme.color_required("muted-foreground")),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                        }),
-                    ]
-                },
-            )]
+    let page = ui::container(cx, |cx| {
+        [ui::v_flex(cx, |cx| {
+            [
+                card,
+                ui::raw_text(cx, "Shadcn 风格 · Fret UiAppDriver demo")
+                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                    .nowrap()
+                    .into_element(cx),
+            ]
         })
-    };
+        .w_full()
+        .h_full()
+        .justify_center()
+        .items_center()
+        .gap(Space::N6)
+        .into_element(cx)]
+    })
+    .bg(ColorRef::Color(theme.color_required("muted")))
+    .p(Space::N4)
+    .w_full()
+    .h_full()
+    .into_element(cx);
 
-    vec![cx.semantics(
+    ViewElements::from([cx.semantics(
         SemanticsProps {
             role: SemanticsRole::Panel,
             label: Some(Arc::from("Debug:todo-demo:page")),
             ..Default::default()
         },
-        move |_cx| vec![page],
-    )]
+        move |_cx| [page],
+    )])
 }
 
 fn todo_list_panel(
@@ -382,33 +340,32 @@ fn todo_list_panel(
             .rounded(Radius::Lg)
             .px(Space::N4)
             .py(Space::N10);
-        let props =
-            decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full());
-        return cx.container(props, |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_center(),
-                |cx| vec![cx.text(label)],
-            )]
-        });
+        return ui::container(cx, |cx| {
+            [ui::v_flex(cx, |cx| [cx.text(label)])
+                .w_full()
+                .items_center()
+                .into_element(cx)]
+        })
+        .style(chrome)
+        .w_full()
+        .into_element(cx);
     }
 
-    let rows = stack::vstack(
+    let rows = stack::vstack_build(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N3),
-        |cx| {
-            filtered
-                .iter()
-                .map(|(t, done)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done)))
-                .collect()
+        |cx, out| {
+            out.extend(
+                filtered
+                    .iter()
+                    .map(|(t, done)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done))),
+            );
         },
     );
 
-    shadcn::ScrollArea::new(vec![rows])
+    shadcn::ScrollArea::new([rows])
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -439,14 +396,14 @@ fn todo_row(
             test_id: Some(todo_item_test_id(it.id, "done")),
             ..Default::default()
         },
-        move |_cx| vec![checkbox],
+        move |_cx| [checkbox],
     );
 
     let remove_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::IconSm)
         .variant(shadcn::ButtonVariant::Ghost)
         .on_click(remove_cmd(it.id))
-        .children(vec![icon::icon_with(
+        .children([icon::icon_with(
             cx,
             IconId::new("lucide.trash-2"),
             Some(Px(16.0)),
@@ -459,7 +416,7 @@ fn todo_row(
             test_id: Some(todo_item_test_id(it.id, "remove")),
             ..Default::default()
         },
-        move |_cx| vec![remove_btn],
+        move |_cx| [remove_btn],
     );
 
     let mut hover = HoverRegionProps::default();
@@ -472,41 +429,29 @@ fn todo_row(
             chrome = chrome.bg(ColorRef::Color(bg));
         }
 
-        let props =
-            decl_style::container_props(theme, chrome, LayoutRefinement::default().w_full());
+        let label = todo_label_simple(cx, theme, &it.text, done, hovered);
 
-        vec![cx.container(props, |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_between()
-                    .items_center(),
-                |cx| {
-                    let left = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().flex_1().min_w_0())
-                            .gap(Space::N3)
-                            .items_center(),
-                        |cx| {
-                            vec![
-                                checkbox.clone(),
-                                todo_label_simple(cx, theme, &it.text, done, hovered),
-                            ]
-                        },
-                    );
+        let left = ui::h_flex(cx, |_cx| [checkbox.clone(), label])
+            .flex_1()
+            .min_w_0()
+            .gap(Space::N3)
+            .items_center()
+            .into_element(cx);
 
-                    let right = cx.interactivity_gate(true, hovered, |cx| {
-                        vec![cx.opacity(if hovered { 1.0 } else { 0.0 }, |_cx| {
-                            vec![remove_btn.clone()]
-                        })]
-                    });
+        let right = cx.interactivity_gate(true, hovered, |cx| {
+            [cx.opacity(if hovered { 1.0 } else { 0.0 }, |_cx| [remove_btn.clone()])]
+        });
 
-                    vec![left, right]
-                },
-            )]
-        })]
+        let row = ui::h_flex(cx, |_cx| [left, right])
+            .w_full()
+            .justify_between()
+            .items_center()
+            .into_element(cx);
+
+        [ui::container(cx, |_cx| [row])
+            .style(chrome)
+            .w_full()
+            .into_element(cx)]
     })
 }
 

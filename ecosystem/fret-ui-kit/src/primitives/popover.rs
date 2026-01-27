@@ -18,8 +18,8 @@ use std::sync::Arc;
 
 use fret_core::{Px, Rect};
 use fret_runtime::Model;
-use fret_ui::action::OnDismissRequest;
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
+use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
+use fret_ui::element::{AnyElement, Elements, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -38,11 +38,28 @@ pub enum PopoverVariant {
     Modal,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct PopoverOptions {
     pub variant: PopoverVariant,
     pub consume_outside_pointer_events: bool,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+}
+
+impl std::fmt::Debug for PopoverOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PopoverOptions")
+            .field("variant", &self.variant)
+            .field(
+                "consume_outside_pointer_events",
+                &self.consume_outside_pointer_events,
+            )
+            .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .finish()
+    }
 }
 
 impl Default for PopoverOptions {
@@ -51,6 +68,8 @@ impl Default for PopoverOptions {
             variant: PopoverVariant::NonModal,
             consume_outside_pointer_events: false,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
         }
     }
 }
@@ -72,6 +91,16 @@ impl PopoverOptions {
 
     pub fn initial_focus(mut self, element: GlobalElementId) -> Self {
         self.initial_focus = Some(element);
+        self
+    }
+
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 }
@@ -170,7 +199,7 @@ impl PopoverRoot {
     }
 
     pub fn options(&self) -> PopoverOptions {
-        self.options
+        self.options.clone()
     }
 
     pub fn request_with_dismiss_handler<H: UiHost>(
@@ -187,7 +216,7 @@ impl PopoverRoot {
             trigger,
             self.open_model(cx),
             presence,
-            self.options,
+            self.options.clone(),
             on_dismiss_request,
             children,
         )
@@ -229,11 +258,14 @@ pub fn popover_use_open_model<H: UiHost>(
 }
 
 /// A minimal semantics wrapper matching Radix `PopoverContent` (`role="dialog"`).
-pub fn popover_dialog_wrapper<H: UiHost>(
+pub fn popover_dialog_wrapper<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     label: Option<Arc<str>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.semantics_with_id(
         SemanticsProps {
             role: fret_core::SemanticsRole::Dialog,
@@ -253,7 +285,7 @@ pub fn popover_dialog_wrapper_id<H: UiHost>(
     overlay_root_name: &str,
 ) -> GlobalElementId {
     cx.with_root_name(overlay_root_name, |cx| {
-        let element = popover_dialog_wrapper::<H>(cx, None, |_cx| Vec::new());
+        let element = popover_dialog_wrapper(cx, None, |_cx| Vec::new());
         element.id
     })
 }
@@ -280,8 +312,9 @@ pub fn popover_request(
     open: Model<bool>,
     presence: OverlayPresence,
     options: PopoverOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
+    let children: Vec<AnyElement> = children.into_iter().collect();
     let mut request = match options.variant {
         PopoverVariant::NonModal => {
             OverlayRequest::dismissible_popover(id, trigger, open, presence, children)
@@ -295,6 +328,8 @@ pub fn popover_request(
     });
     request.consume_outside_pointer_events = options.consume_outside_pointer_events;
     request.initial_focus = options.initial_focus;
+    request.on_open_auto_focus = options.on_open_auto_focus.clone();
+    request.on_close_auto_focus = options.on_close_auto_focus.clone();
     request
 }
 
@@ -309,7 +344,7 @@ pub fn popover_request_with_dismiss_handler(
     presence: OverlayPresence,
     options: PopoverOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request = popover_request(id, trigger, open, presence, options, children);
     request.dismissible_on_dismiss_request = on_dismiss_request;
@@ -329,7 +364,7 @@ pub fn popover_request_with_anchor(
     open: Model<bool>,
     presence: OverlayPresence,
     options: PopoverOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request = popover_request(id, trigger, open, presence, options, children);
     if let Some(anchor) = anchor
@@ -350,7 +385,7 @@ pub fn popover_request_with_anchor_and_dismiss_handler(
     presence: OverlayPresence,
     options: PopoverOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request =
         popover_request_with_anchor(id, trigger, anchor, open, presence, options, children);
@@ -374,7 +409,7 @@ pub fn popover_modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     popover_modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
@@ -386,7 +421,7 @@ pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost>(
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     dialog_prim::modal_barrier_with_dismiss_handler(
         cx,
@@ -402,28 +437,28 @@ pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost>(
 ///
 /// This delegates to the Dialog barrier helpers, since Radix Popover's modal variant shares the
 /// same "hide others + block outside pointer events" outcome.
-pub fn popover_modal_layer_children<H: UiHost>(
+pub fn popover_modal_layer_elements<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         popover_modal_barrier(cx, open, true, barrier_children),
         content,
-    ]
+    ])
 }
 
 /// Convenience helper to assemble modal popover overlay children in a Radix-like order (barrier
 /// then content), while routing barrier presses through an optional dismiss handler.
-pub fn popover_modal_layer_children_with_dismiss_handler<H: UiHost>(
+pub fn popover_modal_layer_elements_with_dismiss_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         popover_modal_barrier_with_dismiss_handler(
             cx,
             open,
@@ -432,7 +467,7 @@ pub fn popover_modal_layer_children_with_dismiss_handler<H: UiHost>(
             barrier_children,
         ),
         content,
-    ]
+    ])
 }
 
 /// Builds an overlay request for a Radix-style non-modal popover.
@@ -443,7 +478,7 @@ pub fn dismissible_popover_request(
     trigger: GlobalElementId,
     open: Model<bool>,
     presence: OverlayPresence,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     popover_request(
         trigger,
@@ -622,7 +657,7 @@ mod tests {
             let root_name = "popover-dialog-wrapper-id-test";
             let computed = popover_dialog_wrapper_id::<App>(cx, root_name);
             let rendered = cx.with_root_name(root_name, |cx| {
-                popover_dialog_wrapper::<App>(cx, None, |_cx| Vec::new())
+                popover_dialog_wrapper(cx, None, |_cx| Vec::new())
             });
             assert_eq!(computed, rendered.id);
         });
@@ -648,7 +683,8 @@ mod tests {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
 
-        let handler: OnDismissRequest = Arc::new(|_host, _cx, _reason: DismissReason| {});
+        let handler: OnDismissRequest =
+            Arc::new(|_host, _cx, _req: &mut fret_ui::action::DismissRequestCx| {});
         let req = popover_request_with_dismiss_handler(
             GlobalElementId(0x123),
             GlobalElementId(0x123),
@@ -733,7 +769,7 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
             let content: AnyElement = cx.container(Default::default(), |_cx| Vec::new());
             let children =
-                popover_modal_layer_children::<App>(cx, open.clone(), Vec::new(), content);
+                popover_modal_layer_elements::<App>(cx, open.clone(), [], content).into_vec();
             assert_eq!(children.len(), 2);
         });
     }
@@ -781,8 +817,9 @@ mod tests {
         let reason_cell: std::sync::Arc<std::sync::Mutex<Option<DismissReason>>> =
             std::sync::Arc::new(std::sync::Mutex::new(None));
         let reason_cell_for_handler = reason_cell.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _cx, reason| {
-            *reason_cell_for_handler.lock().expect("reason lock") = Some(reason);
+        let handler: OnDismissRequest = Arc::new(move |_host, _cx, req| {
+            *reason_cell_for_handler.lock().expect("reason lock") = Some(req.reason);
+            req.prevent_default();
         });
 
         let overlay_children =
@@ -811,13 +848,14 @@ mod tests {
                     },
                     |_cx, _st| Vec::new(),
                 );
-                popover_modal_layer_children_with_dismiss_handler::<App>(
+                popover_modal_layer_elements_with_dismiss_handler::<App>(
                     cx,
                     open.clone(),
                     Some(handler.clone()),
-                    Vec::new(),
+                    [],
                     content,
                 )
+                .into_vec()
             });
 
         let req = popover_request(

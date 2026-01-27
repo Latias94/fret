@@ -28,7 +28,7 @@ ui-app-driver = [
 ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 tracy = ["tracing", "dep:tracing-tracy"]
-diagnostics = ["tracing", "dep:fret-canvas"]
+diagnostics = ["tracing", "dep:fret-canvas", "fret-launch/diag-screenshots"]
 
 [dependencies]
 thiserror.workspace = true

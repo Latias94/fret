@@ -511,6 +511,42 @@ impl ViewportInputEvent {
             kind,
         }
     }
+
+    pub fn from_mapping_window_point_maybe_clamped(
+        window: AppWindowId,
+        target: RenderTargetId,
+        mapping: &ViewportMapping,
+        pixels_per_point: f32,
+        pointer_id: PointerId,
+        pointer_type: PointerType,
+        position: Point,
+        kind: ViewportInputKind,
+        clamped: bool,
+    ) -> Option<Self> {
+        if clamped {
+            Some(Self::from_mapping_window_point_clamped(
+                window,
+                target,
+                mapping,
+                pixels_per_point,
+                pointer_id,
+                pointer_type,
+                position,
+                kind,
+            ))
+        } else {
+            Self::from_mapping_window_point(
+                window,
+                target,
+                mapping,
+                pixels_per_point,
+                pointer_id,
+                pointer_type,
+                position,
+                kind,
+            )
+        }
+    }
 }
 
 #[cfg(test)]

@@ -2,6 +2,7 @@ use super::*;
 
 use fret_runtime::{
     CommandMeta, CommandScope, InputDispatchPhase, WindowCommandActionAvailabilityService,
+    WindowMenuBarFocusService,
 };
 
 #[derive(Debug, Default)]
@@ -60,6 +61,7 @@ fn publish_snapshot(
         platform: Platform::current(),
         caps,
         ui_has_modal: false,
+        window_arbitration: None,
         focus_is_text_input: ui.focus_is_text_input(),
         edit_can_undo: true,
         edit_can_redo: true,
@@ -179,6 +181,131 @@ fn action_availability_snapshot_publishes_focus_traversal_gating() {
     );
     assert_eq!(
         svc.available(window, &CommandId::from("focus.previous")),
+        Some(true)
+    );
+}
+
+#[test]
+fn action_availability_snapshot_publishes_focus_menu_bar_gating() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("focus.menu_bar"),
+        widget_command_meta("Focus Menu Bar"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(FocusableLeaf::default());
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+    ui.set_focus(Some(leaf));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.menu_bar")),
+        Some(false)
+    );
+
+    let mut focus_svc = WindowMenuBarFocusService::default();
+    focus_svc.set_present(window, true);
+    app.set_global(focus_svc);
+
+    publish_snapshot(&mut ui, &mut app, window);
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("focus.menu_bar")),
+        Some(true)
+    );
+}
+
+#[derive(Debug, Default)]
+struct FocusOnPointerDownAvailable;
+
+impl<H: UiHost> Widget<H> for FocusOnPointerDownAvailable {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if matches!(event, Event::Pointer(fret_core::PointerEvent::Down { .. })) {
+            cx.request_focus(cx.node);
+            cx.stop_propagation();
+        }
+    }
+
+    fn command_availability(
+        &self,
+        _cx: &mut crate::widget::CommandAvailabilityCx<'_, H>,
+        command: &CommandId,
+    ) -> crate::widget::CommandAvailability {
+        match command.as_str() {
+            "test.available" => crate::widget::CommandAvailability::Available,
+            _ => crate::widget::CommandAvailability::NotHandled,
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.available
+    }
+}
+
+#[test]
+fn dispatch_event_publishes_action_availability_snapshot() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    app.register_command(
+        CommandId::from("test.available"),
+        widget_command_meta("Available"),
+    );
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(FocusOnPointerDownAvailable::default());
+    ui.set_root(root);
+    ui.add_child(root, leaf);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let svc = app
+        .global::<WindowCommandActionAvailabilityService>()
+        .expect("action availability service");
+    assert_eq!(
+        svc.available(window, &CommandId::from("test.available")),
         Some(true)
     );
 }

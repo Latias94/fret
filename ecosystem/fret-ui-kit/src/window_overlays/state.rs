@@ -2,14 +2,15 @@ use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::{FrameId, Model};
-use fret_ui::tree::UiLayerId;
+use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 
 use super::{
-    DismissCause, DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest,
-    TooltipRequest,
+    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
 };
 use fret_ui::elements::GlobalElementId;
+
+pub(crate) const OVERLAY_CACHE_TTL_FRAMES: u64 = 3;
 
 #[derive(Default)]
 pub(super) struct WindowOverlayFrame {
@@ -31,14 +32,12 @@ pub(super) struct ActivePopover {
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
     pub(super) initial_focus: Option<GlobalElementId>,
+    pub(super) pending_initial_focus: bool,
     pub(super) consume_outside_pointer_events: bool,
     pub(super) disable_outside_pointer_events: bool,
-    pub(super) restore_focus_on_escape: bool,
-    pub(super) restore_focus_on_outside_press: bool,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) last_focus: Option<NodeId>,
-    pub(super) dismiss_cause: Model<Option<DismissCause>>,
 }
 
 pub(super) struct ActiveModal {
@@ -54,6 +53,8 @@ pub(super) struct ActiveModal {
 pub(super) struct ActiveTooltip {
     pub(super) layer: UiLayerId,
     pub(super) root_name: String,
+    pub(super) open: Model<bool>,
+    pub(super) last_seen_frame: FrameId,
 }
 
 pub(super) struct ActiveToastLayer {
@@ -65,6 +66,8 @@ pub(super) struct ActiveHoverOverlay {
     pub(super) layer: UiLayerId,
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
+    pub(super) open: Model<bool>,
+    pub(super) last_seen_frame: FrameId,
 }
 
 #[derive(Default)]
@@ -125,10 +128,10 @@ impl OverlayLayerState {
         }
     }
 
-    fn modal(present: bool, interactive: bool) -> Self {
+    fn modal(present: bool) -> Self {
         Self {
             present,
-            interactive,
+            interactive: false,
             wants_timer_events: false,
         }
     }
@@ -144,18 +147,18 @@ impl OverlayLayerState {
         }
     }
 
-    fn tooltip(present: bool) -> Self {
+    fn tooltip(present: bool, interactive: bool) -> Self {
         Self {
             present,
-            interactive: false,
+            interactive,
             wants_timer_events: false,
         }
     }
 
-    fn hover(present: bool) -> Self {
+    fn hover(present: bool, interactive: bool) -> Self {
         Self {
             present,
-            interactive: present,
+            interactive,
             wants_timer_events: false,
         }
     }
@@ -176,6 +179,9 @@ fn apply_overlay_layer_state<H: UiHost>(
     st: OverlayLayerState,
 ) {
     ui.set_layer_wants_timer_events(layer, st.wants_timer_events);
+    ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+    ui.set_layer_consume_pointer_down_outside_events(layer, false);
+    ui.set_layer_pointer_occlusion(layer, PointerOcclusion::None);
 
     match kind {
         OverlayLayerKind::NonModalDismissible => {
@@ -191,24 +197,107 @@ fn apply_overlay_layer_state<H: UiHost>(
             // layer must remain hit-testable to keep the underlay inert and prevent click-through.
             ui.set_layer_hit_testable(layer, st.present);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
+            ui.set_layer_wants_pointer_move_events(layer, false);
         }
         OverlayLayerKind::Tooltip => {
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, false);
-            ui.set_layer_wants_pointer_down_outside_events(layer, st.present);
-            ui.set_layer_wants_pointer_move_events(layer, st.present);
+            ui.set_layer_wants_pointer_down_outside_events(layer, st.interactive);
+            ui.set_layer_wants_pointer_move_events(layer, st.interactive);
         }
         OverlayLayerKind::Hover => {
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, st.interactive);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
+            ui.set_layer_wants_pointer_move_events(layer, false);
         }
         OverlayLayerKind::Toast => {
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, st.interactive);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
+            ui.set_layer_wants_pointer_move_events(layer, false);
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct NonModalDismissibleLayerPolicy {
+    pub dismissable_branches: Vec<NodeId>,
+    pub consume_outside_pointer_events: bool,
+    pub disable_outside_pointer_events: bool,
+    pub wants_pointer_move_events: bool,
+}
+
+pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+    policy: NonModalDismissibleLayerPolicy,
+) {
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::NonModalDismissible,
+        OverlayLayerState::non_modal_dismissible(present, interactive),
+    );
+
+    let interactive = present && interactive;
+    if interactive {
+        ui.set_layer_pointer_down_outside_branches(layer, policy.dismissable_branches);
+    }
+    ui.set_layer_consume_pointer_down_outside_events(
+        layer,
+        interactive && policy.consume_outside_pointer_events,
+    );
+    ui.set_layer_pointer_occlusion(
+        layer,
+        if interactive && policy.disable_outside_pointer_events {
+            PointerOcclusion::BlockMouseExceptScroll
+        } else {
+            PointerOcclusion::None
+        },
+    );
+    ui.set_layer_wants_pointer_move_events(layer, interactive && policy.wants_pointer_move_events);
+}
+
+pub(super) fn apply_modal_layer<H: UiHost>(ui: &mut UiTree<H>, layer: UiLayerId, present: bool) {
+    // For modal overlays, `present` is the authority for barrier semantics. This intentionally
+    // ignores the per-overlay open model so close transitions can keep the underlay inert.
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::Modal,
+        OverlayLayerState::modal(present),
+    );
+}
+
+pub(super) fn apply_hover_layer<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+) {
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::Hover,
+        OverlayLayerState::hover(present, interactive),
+    );
+}
+
+pub(super) fn apply_tooltip_layer<H: UiHost>(
+    ui: &mut UiTree<H>,
+    layer: UiLayerId,
+    present: bool,
+    interactive: bool,
+) {
+    apply_overlay_layer_state(
+        ui,
+        layer,
+        OverlayLayerKind::Tooltip,
+        OverlayLayerState::tooltip(present, interactive),
+    );
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -226,49 +315,8 @@ impl OverlayLayer {
         Self::new(kind, OverlayLayerState::hidden())
     }
 
-    pub(super) fn hide_modal() -> Self {
-        Self::hidden(OverlayLayerKind::Modal)
-    }
-
-    pub(super) fn hide_non_modal_dismissible() -> Self {
-        Self::hidden(OverlayLayerKind::NonModalDismissible)
-    }
-
-    pub(super) fn hide_hover() -> Self {
-        Self::hidden(OverlayLayerKind::Hover)
-    }
-
-    pub(super) fn hide_tooltip() -> Self {
-        Self::hidden(OverlayLayerKind::Tooltip)
-    }
-
     pub(super) fn hide_toast() -> Self {
         Self::hidden(OverlayLayerKind::Toast)
-    }
-
-    pub(super) fn modal(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::Modal,
-            OverlayLayerState::modal(present, interactive),
-        )
-    }
-
-    pub(super) fn non_modal_dismissible(present: bool, interactive: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::NonModalDismissible,
-            OverlayLayerState::non_modal_dismissible(present, interactive),
-        )
-    }
-
-    pub(super) fn tooltip(present: bool) -> Self {
-        Self::new(
-            OverlayLayerKind::Tooltip,
-            OverlayLayerState::tooltip(present),
-        )
-    }
-
-    pub(super) fn hover(present: bool) -> Self {
-        Self::new(OverlayLayerKind::Hover, OverlayLayerState::hover(present))
     }
 
     pub(super) fn toast(present: bool, wants_timer_events: bool) -> Self {

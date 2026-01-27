@@ -433,7 +433,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                                         &opts,
                                     )
                                 })
-                                .collect()
+                                .collect::<Vec<_>>()
                         },
                     )]
                 },
@@ -690,7 +690,7 @@ fn request_menu_overlay<H: UiHost>(
             let submenu_for_panel_items = submenu_for_panel.clone();
             let item_text_for_panel_items = item_text_for_overlay.clone();
 
-            let panel = menu::content_panel::menu_panel_at::<H>(
+            let panel = menu::content_panel::menu_panel_at(
                 cx,
                 placed,
                 move |layout| ContainerProps {
@@ -869,7 +869,7 @@ fn request_menu_overlay<H: UiHost>(
             (children, Some(dismissible_on_pointer_move))
         });
 
-    let on_dismiss_request: Option<OnDismissRequest> = Some(Arc::new(move |host, acx, _reason| {
+    let on_dismiss_request: Option<OnDismissRequest> = Some(Arc::new(move |host, acx, _req| {
         let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
         let _ = host
             .models_mut()
@@ -877,6 +877,8 @@ fn request_menu_overlay<H: UiHost>(
         host.request_redraw(acx.window);
     }));
 
+    let initial_focus =
+        menu::root::MenuInitialFocusTargets::new().pointer_content_focus(content_focus_id.get());
     let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
         cx,
         trigger_id,
@@ -885,7 +887,9 @@ fn request_menu_overlay<H: UiHost>(
         overlay_presence,
         overlay_children,
         overlay_root_name,
-        content_focus_id.get(),
+        initial_focus,
+        None,
+        None,
         on_dismiss_request,
         dismissible_on_pointer_move,
         false,
@@ -1179,6 +1183,7 @@ fn menu_shortcut_input_context<H: UiHost>(
         platform,
         caps,
         ui_has_modal: false,
+        window_arbitration: None,
         focus_is_text_input: false,
         edit_can_undo: true,
         edit_can_redo: true,

@@ -13,6 +13,7 @@ Implemented:
 - Observer pass contract: outside-press uses `Widget::event_observer` with `ObserverCx` (Preview phase) so routing state (focus/capture/propagation/default actions) cannot be mutated: `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/tree/dispatch.rs`.
 - Default actions step (v1): `DefaultAction::FocusOnPointerDown` is applied by default during event dispatch and can be suppressed via `prevent_default`: `crates/fret-ui/src/tree/dispatch.rs`.
 - Capture-phase dispatch (root → target): key down/up and pointer interactions (down/up/wheel/pinch/cancel, and move when buttons are pressed or capture is active): `crates/fret-ui/src/tree/dispatch.rs`.
+- Per-layer pointer-move observation: when overlay policies opt in (e.g. Radix menu safe-hover corridors), pointer-move observers still run even when hit-tested pointer dispatch is suppressed by pointer occlusion: `crates/fret-ui/src/tree/dispatch.rs`, `crates/fret-ui/src/declarative/host_widget/event/dismissible.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/prevent_default.rs`.
 - Tests: `crates/fret-ui/src/tree/tests/dispatch_phase.rs`.
 - Dispatch-path action availability query (retained `UiTree`):
@@ -160,6 +161,10 @@ Start with a conservative set of defaults that are hard-to-change and widely nee
 
 Additional defaults (pressed/capture/activate/text selection) may be introduced later, but are
 explicitly out of scope for v1 to keep the migration low risk.
+
+Status note (implementation alignment): we intentionally keep the catalog minimal until a concrete,
+cross-surface motivation exists. See `docs/workstreams/input-dispatch-v2-todo.md` (IDV2-def-006/007)
+for the current boundary decision and the "defer by default" rule for new defaults.
 
 ### 3) Standardize an action availability query API
 

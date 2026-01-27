@@ -18,12 +18,8 @@ pub mod breadcrumb;
 pub mod button;
 pub mod button_group;
 pub mod calendar;
-pub mod calendar_hijri;
-pub mod calendar_multiple;
 pub mod calendar_range;
 pub mod card;
-pub mod carousel;
-pub mod chart;
 pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
@@ -53,7 +49,6 @@ pub mod kbd;
 pub mod label;
 mod layout;
 pub mod menubar;
-pub mod native_select;
 pub mod navigation_menu;
 mod overlay_motion;
 pub mod pagination;
@@ -61,8 +56,6 @@ pub mod popover;
 mod popper_arrow;
 pub mod progress;
 pub mod radio_group;
-#[doc(hidden)]
-pub mod recharts_geometry;
 pub mod resizable;
 pub mod scroll_area;
 pub mod select;
@@ -103,22 +96,16 @@ pub use aspect_ratio::AspectRatio;
 pub use avatar::{Avatar, AvatarFallback, AvatarImage};
 pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
-pub use button::{Button, ButtonSize, ButtonVariant};
-pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupText};
+pub use button::{Button, ButtonSize, ButtonStyle, ButtonVariant};
+pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
 pub use calendar::Calendar;
-pub use calendar_hijri::CalendarHijri;
-pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
-pub use carousel::{Carousel, CarouselOrientation};
-pub use chart::{
-    ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
-    ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,
-};
-pub use checkbox::{Checkbox, checkbox};
+pub use checkbox::{Checkbox, CheckboxStyle, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
+pub use combobox::ComboboxStyle;
 pub use combobox::{Combobox, ComboboxItem, combobox};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
@@ -162,9 +149,7 @@ pub use dropdown_menu::{
     DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
     DropdownMenuRadioItem, DropdownMenuRadioItemSpec, DropdownMenuShortcut, DropdownMenuSide,
 };
-pub use empty::{
-    Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
-};
+pub use empty::Empty;
 pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
     FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
@@ -177,15 +162,15 @@ pub use fret_ui_kit::declarative::table::TableViewOutput as DataTableViewOutput;
 pub use hover_card::{
     HoverCard, HoverCardAlign, HoverCardAnchor, HoverCardContent, HoverCardSide, HoverCardTrigger,
 };
-pub use input::{Input, input};
+pub use input::{Input, InputStyle, input};
 pub use input_group::{
     InputGroup, InputGroupButton, InputGroupButtonSize, InputGroupText, InputGroupTextSize,
     input_group,
 };
-pub use input_otp::{InputOtp, InputOtpSlotCornerMode, input_otp};
+pub use input_otp::{InputOtp, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
-    ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
+    ItemMediaVariant, ItemSeparator, ItemSize, ItemStyle, ItemTitle, ItemVariant, item_group,
 };
 pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
@@ -194,11 +179,11 @@ pub use menubar::{
     MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
     MenubarShortcut, menubar,
 };
-pub use native_select::{NativeSelect, NativeSelectSize, native_select};
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
-    NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
-    NavigationMenuViewport, navigation_menu, navigation_menu_list, navigation_menu_uncontrolled,
+    NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuStyle,
+    NavigationMenuTrigger, NavigationMenuViewport, navigation_menu, navigation_menu_list,
+    navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -209,7 +194,9 @@ pub use popover::{
     PopoverSide, PopoverTitle, PopoverTrigger,
 };
 pub use progress::{Progress, progress};
-pub use radio_group::{RadioGroup, RadioGroupItem, radio_group, radio_group_uncontrolled};
+pub use radio_group::{
+    RadioGroup, RadioGroupItem, RadioGroupStyle, radio_group, radio_group_uncontrolled,
+};
 pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
@@ -219,7 +206,7 @@ pub use scroll_area::{
 };
 pub use select::{
     Select, SelectAlign, SelectEntry, SelectGroup, SelectItem, SelectLabel, SelectSeparator,
-    SelectSide, select,
+    SelectSide, SelectStyle, select,
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
@@ -227,26 +214,29 @@ pub use sheet::{
 };
 pub use sidebar::{
     Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
-    SidebarMenu, SidebarMenuButton, SidebarMenuButtonSize, SidebarMenuItem,
+    SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 };
 pub use skeleton::Skeleton;
-pub use slider::{Slider, slider};
+pub use slider::{Slider, SliderStyle, slider};
 pub use sonner::{
     Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise, ToastRequest,
     ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
-pub use switch::{Switch, switch};
+pub use switch::{Switch, SwitchStyle, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
 pub use tabs::{
-    Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsTrigger, tabs, tabs_uncontrolled,
+    Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsStyle, TabsTrigger, tabs,
+    tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
-pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
+pub use toggle::{
+    Toggle, ToggleRoot, ToggleSize, ToggleStyle, ToggleVariant, toggle, toggle_uncontrolled,
+};
 pub use toggle_group::{
-    ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
+    ToggleGroup, ToggleGroupItem, ToggleGroupKind, ToggleGroupStyle, toggle_group_multiple,
     toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,
 };
 pub use tooltip::{

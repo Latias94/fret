@@ -8,12 +8,16 @@
 //! In Fret, modal dismissal via outside press is modeled at the recipe layer (e.g. the overlay
 //! barrier click handler). This module focuses on the Radix-specific focus preference: choosing
 //! the cancel action as the default initial focus target when present.
+//!
+//! For parity with Radix `FocusScope`, alert dialogs also allow customizing open/close auto focus
+//! via `AlertDialogOptions` (forwarded into `DialogOptions`).
 
 use std::collections::HashMap;
 
 use fret_runtime::Model;
 use fret_runtime::ModelId;
-use fret_ui::element::{AnyElement, LayoutStyle};
+use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
+use fret_ui::element::{AnyElement, Elements, LayoutStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -77,7 +81,7 @@ impl AlertDialogRoot {
     }
 
     pub fn options(&self) -> AlertDialogOptions {
-        self.options
+        self.options.clone()
     }
 
     /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
@@ -106,7 +110,7 @@ impl AlertDialogRoot {
 
     pub fn dialog_options<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> DialogOptions {
         let open_id = self.open_id(cx);
-        dialog_options_for_alert_dialog(cx, open_id, self.options)
+        dialog_options_for_alert_dialog(cx, open_id, self.options.clone())
     }
 
     pub fn modal_request<H: UiHost>(
@@ -115,7 +119,7 @@ impl AlertDialogRoot {
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
+        children: impl IntoIterator<Item = AnyElement>,
     ) -> OverlayRequest {
         let open = self.open_model(cx);
         let options = self.dialog_options(cx);
@@ -179,14 +183,46 @@ impl Default for AlertDialogInitialFocus {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone)]
 pub struct AlertDialogOptions {
     pub initial_focus: AlertDialogInitialFocus,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
+}
+
+impl std::fmt::Debug for AlertDialogOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AlertDialogOptions")
+            .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .finish()
+    }
+}
+
+impl Default for AlertDialogOptions {
+    fn default() -> Self {
+        Self {
+            initial_focus: AlertDialogInitialFocus::default(),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+        }
+    }
 }
 
 impl AlertDialogOptions {
     pub fn initial_focus(mut self, initial_focus: AlertDialogInitialFocus) -> Self {
         self.initial_focus = initial_focus;
+        self
+    }
+
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
         self
     }
 }
@@ -206,6 +242,8 @@ pub fn dialog_options_for_alert_dialog<H: UiHost>(
     DialogOptions::default()
         .dismiss_on_overlay_press(false)
         .initial_focus(initial_focus)
+        .on_open_auto_focus(options.on_open_auto_focus.clone())
+        .on_close_auto_focus(options.on_close_auto_focus.clone())
 }
 
 /// Layout used for a Radix-like alert dialog modal barrier element.
@@ -219,23 +257,23 @@ pub fn alert_dialog_modal_barrier_layout() -> LayoutStyle {
 pub fn alert_dialog_modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     dialog_prim::modal_barrier(cx, open, false, children)
 }
 
 /// Convenience helper to assemble alert dialog overlay children in a Radix-like order: barrier then
 /// content.
-pub fn alert_dialog_modal_layer_children<H: UiHost>(
+pub fn alert_dialog_modal_layer_elements<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         alert_dialog_modal_barrier(cx, open, barrier_children),
         content,
-    ]
+    ])
 }
 
 /// Stamps Radix-like trigger relationships:
@@ -256,7 +294,7 @@ pub fn alert_dialog_modal_request_with_options(
     open: Model<bool>,
     presence: OverlayPresence,
     options: DialogOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     dialog_prim::modal_dialog_request_with_options(id, trigger, open, presence, options, children)
 }

@@ -177,7 +177,13 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
             return CommandAvailability::NotHandled;
         }
 
-        let cmd = command.as_str();
+        let cmd = match command.as_str() {
+            "edit.copy" => "text.copy",
+            "edit.cut" => "text.cut",
+            "edit.paste" => "text.paste",
+            "edit.select_all" => "text.select_all",
+            other => other,
+        };
         if !cmd.starts_with("text.") {
             return CommandAvailability::NotHandled;
         }
@@ -199,7 +205,10 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                 }
                 CommandAvailability::Available
             }
-            _ => CommandAvailability::Available,
+            "text.select_all" | "text.clear" => (!self.input.text().is_empty())
+                .then_some(CommandAvailability::Available)
+                .unwrap_or(CommandAvailability::Blocked),
+            _ => CommandAvailability::NotHandled,
         }
     }
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {

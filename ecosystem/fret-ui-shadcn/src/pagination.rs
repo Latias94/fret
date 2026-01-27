@@ -4,6 +4,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space};
@@ -188,7 +189,11 @@ impl PaginationLink {
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let px_2p5 = MetricRef::space(Space::N2p5).resolve(&theme);
 
-        let enabled = self.command.is_some() && !self.disabled;
+        let enabled = self
+            .command
+            .as_ref()
+            .is_some_and(|cmd| cx.command_is_enabled(cmd))
+            && !self.disabled;
         let focus_ring = decl_style::focus_ring(&theme, r);
 
         let base_bg = if self.is_active {
@@ -223,8 +228,8 @@ impl PaginationLink {
                     decl_style::layout_style(
                         &theme,
                         LayoutRefinement::default()
-                            .w_px(MetricRef::Px(s))
-                            .h_px(MetricRef::Px(s))
+                            .w_px(s)
+                            .h_px(s)
                             .flex_none()
                             .flex_shrink_0(),
                     ),
@@ -237,7 +242,7 @@ impl PaginationLink {
                 decl_style::layout_style(
                     &theme,
                     LayoutRefinement::default()
-                        .min_h(MetricRef::Px(button_h(&theme)))
+                        .min_h(button_h(&theme))
                         .flex_none()
                         .flex_shrink_0(),
                 ),
@@ -315,7 +320,7 @@ impl PaginationLink {
                 ..Default::default()
             },
             move |cx, st| {
-                cx.pressable_dispatch_command_opt(self.command);
+                cx.pressable_dispatch_command_if_enabled_opt(self.command);
                 content(cx, st.hovered, st.pressed)
             },
         )
@@ -418,8 +423,8 @@ impl PaginationEllipsis {
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .w_px(MetricRef::Px(s))
-                .h_px(MetricRef::Px(s))
+                .w_px(s)
+                .h_px(s)
                 .flex_none()
                 .flex_shrink_0(),
         );

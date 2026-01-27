@@ -80,13 +80,16 @@ pub fn popper_panel_layout(placed: Rect, wrapper_insets: Edges, overflow: Overfl
 
 /// Render a popper inner panel container inside the wrapper.
 #[track_caller]
-pub fn popper_panel_at<H: UiHost>(
+pub fn popper_panel_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     wrapper_insets: Edges,
     overflow: Overflow,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.container(
         ContainerProps {
             layout: popper_panel_layout(placed, wrapper_insets, overflow),
@@ -100,15 +103,35 @@ pub fn popper_panel_at<H: UiHost>(
 ///
 /// The wrapper uses `overflow: visible` so an arrow can protrude outside the panel rect while
 /// remaining hit-testable by overlay systems that rely on the overlay root bounds.
-pub fn popper_wrapper_at<H: UiHost>(
+pub fn popper_wrapper_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     wrapper_insets: Edges,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    cx.container(
+        ContainerProps {
+            layout: popper_wrapper_layout(placed, wrapper_insets),
+            ..Default::default()
+        },
+        f,
+    )
+}
+
+/// Render an autosizing popper wrapper positioned at `origin`.
+///
+/// This wrapper uses `overflow: visible` and relies on its children to determine its size.
+pub fn popper_wrapper_at_autosize<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    origin: Point,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.container(
         ContainerProps {
-            layout: popper_wrapper_layout(placed, wrapper_insets),
+            layout: popper_wrapper_layout_autosize(origin),
             ..Default::default()
         },
         f,
@@ -138,14 +161,18 @@ pub fn popper_wrapper_at_autosize<H: UiHost>(
 /// This keeps the panel element *scoped under the wrapper* (correct identity), while still
 /// allowing the wrapper to render siblings like arrows.
 #[track_caller]
-pub fn popper_wrapper_at_with_panel<H: UiHost>(
+pub fn popper_wrapper_at_with_panel<H: UiHost, PI, WI>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     wrapper_insets: Edges,
     overflow: Overflow,
-    panel: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    wrapper_children: impl FnOnce(&mut ElementContext<'_, H>, AnyElement) -> Vec<AnyElement>,
-) -> AnyElement {
+    panel: impl FnOnce(&mut ElementContext<'_, H>) -> PI,
+    wrapper_children: impl FnOnce(&mut ElementContext<'_, H>, AnyElement) -> WI,
+) -> AnyElement
+where
+    PI: IntoIterator<Item = AnyElement>,
+    WI: IntoIterator<Item = AnyElement>,
+{
     popper_wrapper_at(cx, placed, wrapper_insets, |cx| {
         let panel = popper_panel_at(cx, placed, wrapper_insets, overflow, panel);
         wrapper_children(cx, panel)
@@ -159,14 +186,18 @@ pub fn popper_wrapper_at_with_panel<H: UiHost>(
 /// wrapper node with expanded bounds (arrow protrusion) while still keeping the panel element
 /// scoped beneath it (correct identity).
 #[track_caller]
-pub fn popper_hover_region_at_with_panel<H: UiHost>(
+pub fn popper_hover_region_at_with_panel<H: UiHost, PI, WI>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     wrapper_insets: Edges,
     overflow: Overflow,
-    panel: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    wrapper_children: impl FnOnce(&mut ElementContext<'_, H>, bool, AnyElement) -> Vec<AnyElement>,
-) -> AnyElement {
+    panel: impl FnOnce(&mut ElementContext<'_, H>) -> PI,
+    wrapper_children: impl FnOnce(&mut ElementContext<'_, H>, bool, AnyElement) -> WI,
+) -> AnyElement
+where
+    PI: IntoIterator<Item = AnyElement>,
+    WI: IntoIterator<Item = AnyElement>,
+{
     cx.hover_region(
         HoverRegionProps {
             layout: popper_wrapper_layout(placed, wrapper_insets),
@@ -184,13 +215,16 @@ pub fn popper_hover_region_at_with_panel<H: UiHost>(
 /// - wrapper absolute positioning + hit-test expansion (arrow insets),
 /// - panel absolute positioning inside the wrapper.
 #[track_caller]
-pub fn popper_wrapper_panel_at<H: UiHost>(
+pub fn popper_wrapper_panel_at<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     placed: Rect,
     wrapper_insets: Edges,
     overflow: Overflow,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     popper_wrapper_at_with_panel(cx, placed, wrapper_insets, overflow, f, |_cx, panel| {
         vec![panel]
     })

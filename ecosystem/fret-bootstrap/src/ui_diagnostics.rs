@@ -33,6 +33,8 @@ pub struct UiDiagnosticsConfig {
     pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    pub max_gating_trace_entries: usize,
+    pub screenshot_on_dump: bool,
 }
 
 impl Default for UiDiagnosticsConfig {
@@ -108,6 +110,12 @@ impl Default for UiDiagnosticsConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(4096);
+        let max_gating_trace_entries = std::env::var("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(200)
+            .clamp(0, 2000);
+        let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
 
         Self {
             enabled,
@@ -131,6 +139,8 @@ impl Default for UiDiagnosticsConfig {
             inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
+            max_gating_trace_entries,
+            screenshot_on_dump,
         }
     }
 }
@@ -544,6 +554,7 @@ impl UiDiagnosticsService {
         &mut self,
         app: &App,
         window: AppWindowId,
+        window_bounds: Rect,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
@@ -637,6 +648,12 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV1::ResetDiagnostics => {
+                self.reset_diagnostics_ring_for_window(window);
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV1::CaptureBundle { label } => {
                 force_dump_label =
                     Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
@@ -692,7 +709,8 @@ impl UiDiagnosticsService {
                         },
                     };
 
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
+                    {
                         active.wait_until = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -723,7 +741,8 @@ impl UiDiagnosticsService {
             UiActionStepV1::Assert { predicate } => {
                 active.wait_until = None;
                 if let Some(snapshot) = semantics_snapshot {
-                    if eval_predicate(snapshot, window, element_runtime, &predicate) {
+                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
+                    {
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
                     } else {
@@ -850,6 +869,73 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-move_pointer"));
+                }
+            }
+            UiActionStepV1::DragPointer {
+                target,
+                button,
+                delta_x,
+                delta_y,
+                steps,
+            } => {
+                let Some(snapshot) = semantics_snapshot else {
+                    output.request_redraw = true;
+                    let label = format!("script-step-{step_index:04}-drag_pointer-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
+                    return output;
+                };
+                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
+                else {
+                    output.request_redraw = true;
+                    let label =
+                        format!("script-step-{step_index:04}-drag_pointer-no-semantics-match");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("drag_pointer_no_semantics_match".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
+                    return output;
+                };
+
+                let start = center_of_rect(node.bounds);
+                let end = Point::new(
+                    fret_core::Px(start.x.0 + delta_x),
+                    fret_core::Px(start.y.0 + delta_y),
+                );
+                let steps = steps.max(1);
+                output.events.extend(drag_events(start, end, button, steps));
+
+                active.wait_until = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                if self.cfg.script_auto_dump {
+                    force_dump_label = Some(format!("script-step-{step_index:04}-drag_pointer"));
                 }
             }
             UiActionStepV1::Wheel {
@@ -1025,6 +1111,10 @@ impl UiDiagnosticsService {
         {
             self.pending_pick = None;
         }
+    }
+
+    fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
+        self.per_window.entry(window).or_default().clear();
     }
 
     pub fn update_inspect_hover(
@@ -1331,6 +1421,19 @@ impl UiDiagnosticsService {
         ring.push_event(&self.cfg, recorded);
     }
 
+    pub fn record_viewport_input(&mut self, event: fret_core::ViewportInputEvent) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let ring = self.per_window.entry(event.window).or_default();
+        if ring.viewport_input_this_frame.len() >= self.cfg.max_events {
+            return;
+        }
+        ring.viewport_input_this_frame
+            .push(UiViewportInputEventV1::from_event(event));
+    }
+
     pub fn record_snapshot(
         &mut self,
         app: &App,
@@ -1349,8 +1452,7 @@ impl UiDiagnosticsService {
             .per_window
             .get(&window)
             .and_then(|ring| ring.last_pointer_position);
-        let hit_test = last_pointer_position
-            .map(|pos| UiHitTestSnapshotV1::from_hit_test(pos, ui.debug_hit_test(pos)));
+        let hit_test = last_pointer_position.map(|pos| UiHitTestSnapshotV1::from_tree(pos, ui));
 
         let element_diag = element_runtime.and_then(|runtime| {
             runtime.diagnostics_snapshot(window).map(|snapshot| {
@@ -1385,6 +1487,7 @@ impl UiDiagnosticsService {
             });
 
         let ring = self.per_window.entry(window).or_default();
+        let viewport_input = std::mem::take(&mut ring.viewport_input_this_frame);
 
         let changed_models = std::mem::take(&mut ring.last_changed_models);
         let changed_model_sources_top = if cfg!(debug_assertions) && !changed_models.is_empty() {
@@ -1432,6 +1535,18 @@ impl UiDiagnosticsService {
             })
         };
 
+        let mut debug = UiTreeDebugSnapshotV1::from_tree(
+            app,
+            window,
+            ui,
+            element_runtime,
+            hit_test,
+            element_diag,
+            semantics,
+            self.cfg.max_gating_trace_entries,
+        );
+        debug.viewport_input = viewport_input;
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -1442,15 +1557,7 @@ impl UiDiagnosticsService {
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
             scene_fingerprint: scene.fingerprint(),
-            debug: UiTreeDebugSnapshotV1::from_tree(
-                app,
-                window,
-                ui,
-                element_runtime,
-                hit_test,
-                element_diag,
-                semantics,
-            ),
+            debug,
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
             changed_model_sources_top,
@@ -1584,6 +1691,9 @@ impl UiDiagnosticsService {
             return None;
         }
         let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+        if self.cfg.screenshot_on_dump {
+            let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
+        }
         self.last_dump_dir = Some(dir.clone());
         Some(dir)
     }
@@ -1804,6 +1914,7 @@ struct WindowRing {
     last_pointer_position: Option<Point>,
     events: VecDeque<RecordedUiEventV1>,
     snapshots: VecDeque<UiDiagnosticsSnapshotV1>,
+    viewport_input_this_frame: Vec<UiViewportInputEventV1>,
     last_changed_models: Vec<u64>,
     last_changed_globals: Vec<String>,
 }
@@ -1814,6 +1925,15 @@ impl WindowRing {
             return;
         };
         self.last_pointer_position = Some(pointer.position());
+    }
+
+    fn clear(&mut self) {
+        self.last_pointer_position = None;
+        self.events.clear();
+        self.snapshots.clear();
+        self.viewport_input_this_frame.clear();
+        self.last_changed_models.clear();
+        self.last_changed_globals.clear();
     }
 
     fn push_event(&mut self, cfg: &UiDiagnosticsConfig, event: RecordedUiEventV1) {
@@ -2205,8 +2325,18 @@ pub enum UiActionStepV1 {
         #[serde(default)]
         button: UiMouseButtonV1,
     },
+    ResetDiagnostics,
     MovePointer {
         target: UiSelectorV1,
+    },
+    DragPointer {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
     },
     Wheel {
         target: UiSelectorV1,
@@ -2240,6 +2370,10 @@ pub enum UiActionStepV1 {
     },
 }
 
+fn default_drag_steps() -> u32 {
+    8
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiMouseButtonV1 {
@@ -2251,6 +2385,19 @@ pub enum UiMouseButtonV1 {
 impl Default for UiMouseButtonV1 {
     fn default() -> Self {
         Self::Left
+    }
+}
+
+impl UiMouseButtonV1 {
+    fn from_button(button: fret_core::MouseButton) -> Self {
+        match button {
+            fret_core::MouseButton::Left => Self::Left,
+            fret_core::MouseButton::Right => Self::Right,
+            fret_core::MouseButton::Middle => Self::Middle,
+            fret_core::MouseButton::Back
+            | fret_core::MouseButton::Forward
+            | fret_core::MouseButton::Other(_) => Self::Left,
+        }
     }
 }
 
@@ -2266,11 +2413,41 @@ pub struct UiKeyModifiersV1 {
     pub meta: bool,
 }
 
+impl UiKeyModifiersV1 {
+    fn from_modifiers(modifiers: fret_core::Modifiers) -> Self {
+        Self {
+            shift: modifiers.shift,
+            ctrl: modifiers.ctrl,
+            alt: modifiers.alt,
+            meta: modifiers.meta,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
-    Exists { target: UiSelectorV1 },
-    FocusIs { target: UiSelectorV1 },
+    Exists {
+        target: UiSelectorV1,
+    },
+    FocusIs {
+        target: UiSelectorV1,
+    },
+    /// True when the target exists and its semantics bounds intersect the active window bounds.
+    ///
+    /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
+    /// that exists in the tree but is currently far off-screen due to an in-flight scroll/window
+    /// update.
+    VisibleInWindow {
+        target: UiSelectorV1,
+    },
+    /// True when the target exists and its semantics bounds are fully contained within the active
+    /// window bounds (optionally padded inward by `padding_px`).
+    BoundsWithinWindow {
+        target: UiSelectorV1,
+        #[serde(default)]
+        padding_px: f32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2409,6 +2586,50 @@ struct WaitUntilState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInputArbitrationSnapshotV1 {
+    #[serde(default)]
+    pub modal_barrier_root: Option<u64>,
+    #[serde(default)]
+    pub pointer_occlusion: String,
+    #[serde(default)]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    #[serde(default)]
+    pub pointer_capture_active: bool,
+    #[serde(default)]
+    pub pointer_capture_layer_id: Option<u64>,
+    #[serde(default)]
+    pub pointer_capture_multiple_layers: bool,
+}
+
+impl Default for UiInputArbitrationSnapshotV1 {
+    fn default() -> Self {
+        Self {
+            modal_barrier_root: None,
+            pointer_occlusion: "none".to_string(),
+            pointer_occlusion_layer_id: None,
+            pointer_capture_active: false,
+            pointer_capture_layer_id: None,
+            pointer_capture_multiple_layers: false,
+        }
+    }
+}
+
+impl UiInputArbitrationSnapshotV1 {
+    fn from_snapshot(snapshot: fret_ui::tree::UiInputArbitrationSnapshot) -> Self {
+        Self {
+            modal_barrier_root: snapshot.modal_barrier_root.map(key_to_u64),
+            pointer_occlusion: pointer_occlusion_label(snapshot.pointer_occlusion),
+            pointer_occlusion_layer_id: snapshot
+                .pointer_occlusion_layer
+                .map(|id| id.data().as_ffi()),
+            pointer_capture_active: snapshot.pointer_capture_active,
+            pointer_capture_layer_id: snapshot.pointer_capture_layer.map(|id| id.data().as_ffi()),
+            pointer_capture_multiple_layers: snapshot.pointer_capture_multiple_layers,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiTreeDebugSnapshotV1 {
     pub stats: UiFrameStatsV1,
     #[serde(default)]
@@ -2417,6 +2638,10 @@ pub struct UiTreeDebugSnapshotV1 {
     pub hover_declarative_invalidation_hotspots: Vec<UiHoverDeclarativeInvalidationHotspotV1>,
     #[serde(default)]
     pub dirty_views: Vec<UiDirtyViewV1>,
+    #[serde(default)]
+    pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
+    #[serde(default)]
+    pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
@@ -2428,10 +2653,38 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub cache_roots: Vec<UiCacheRootStatsV1>,
     #[serde(default)]
+    pub overlay_synthesis: Vec<UiOverlaySynthesisEventV1>,
+    /// Viewport input forwarding events observed during the current frame.
+    ///
+    /// This records `Effect::ViewportInput` deliveries (ADR 0147) so scripted diagnostics can
+    /// gate on “viewport tooling input was actually exercised” without scraping logs.
+    #[serde(default)]
+    pub viewport_input: Vec<UiViewportInputEventV1>,
+    /// Docking interaction ownership snapshot (best-effort).
+    ///
+    /// This is sourced from a frame-local diagnostics store populated by policy-heavy ecosystem
+    /// crates (e.g. docking), and is intended for debugging arbitration regressions without logs.
+    #[serde(default)]
+    pub docking_interaction: Option<UiDockingInteractionSnapshotV1>,
+    #[serde(default)]
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
+    #[serde(default)]
+    pub input_arbitration: UiInputArbitrationSnapshotV1,
+    /// Best-effort command gating decisions for a small set of "interesting" commands.
+    ///
+    /// This is intended for debugging cross-surface inconsistencies (menus vs palette vs buttons)
+    /// without relying on ad-hoc logs.
+    #[serde(default)]
+    pub command_gating_trace: Vec<UiCommandGatingTraceEntryV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
+    #[serde(default)]
+    pub all_layer_roots: Vec<u64>,
+    #[serde(default)]
+    pub layer_visible_writes: Vec<UiLayerVisibleWriteV1>,
+    #[serde(default)]
+    pub overlay_policy_decisions: Vec<UiOverlayPolicyDecisionV1>,
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
@@ -2446,7 +2699,13 @@ impl UiTreeDebugSnapshotV1 {
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
+        max_gating_trace_entries: usize,
     ) -> Self {
+        let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
+            .debug_view_cache_contained_relayout_roots()
+            .iter()
+            .copied()
+            .collect();
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
             invalidation_walks: ui
@@ -2463,6 +2722,16 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_dirty_views()
                 .iter()
                 .map(UiDirtyViewV1::from_dirty_view)
+                .collect(),
+            virtual_list_windows: ui
+                .debug_virtual_list_windows()
+                .iter()
+                .map(UiVirtualListWindowV1::from_window)
+                .collect(),
+            scroll_handle_changes: ui
+                .debug_scroll_handle_changes()
+                .iter()
+                .map(UiScrollHandleChangeV1::from_change)
                 .collect(),
             model_change_hotspots: ui
                 .debug_model_change_hotspots()
@@ -2493,10 +2762,27 @@ impl UiTreeDebugSnapshotV1 {
                         ui,
                         element_runtime_state,
                         semantics.as_ref(),
+                        &contained_relayout_roots,
                         stats,
                     )
                 })
                 .collect(),
+            overlay_synthesis: app
+                .global::<fret_ui_kit::WindowOverlaySynthesisDiagnosticsStore>()
+                .and_then(|diag| diag.events_for_window(window, app.frame_id()))
+                .map(|events| {
+                    events
+                        .iter()
+                        .copied()
+                        .map(UiOverlaySynthesisEventV1::from_event)
+                        .collect()
+                })
+                .unwrap_or_default(),
+            viewport_input: Vec::new(),
+            docking_interaction: app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .and_then(|store| store.docking_for_window(window, app.frame_id()))
+                .map(UiDockingInteractionSnapshotV1::from_snapshot),
             removed_subtrees: ui
                 .debug_removed_subtrees()
                 .iter()
@@ -2507,14 +2793,751 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiLayoutEngineSolveV1::from_solve)
                 .collect(),
+            input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
+                ui.input_arbitration_snapshot(),
+            ),
+            command_gating_trace: command_gating_trace_for_window(
+                app,
+                window,
+                max_gating_trace_entries,
+            ),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
                 .map(UiLayerInfoV1::from_layer)
                 .collect(),
+            all_layer_roots: ui
+                .debug_layers_in_paint_order()
+                .into_iter()
+                .map(|l| l.root.data().as_ffi())
+                .collect(),
+            layer_visible_writes: ui
+                .debug_layer_visible_writes()
+                .iter()
+                .map(UiLayerVisibleWriteV1::from_write)
+                .collect(),
+            overlay_policy_decisions: ui
+                .debug_overlay_policy_decisions()
+                .iter()
+                .map(UiOverlayPolicyDecisionV1::from_decision)
+                .collect(),
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDockingInteractionSnapshotV1 {
+    #[serde(default)]
+    pub dock_drag: Option<UiDockDragDiagnosticsV1>,
+    #[serde(default)]
+    pub viewport_capture: Option<UiViewportCaptureDiagnosticsV1>,
+}
+
+impl UiDockingInteractionSnapshotV1 {
+    fn from_snapshot(snapshot: &fret_runtime::DockingInteractionDiagnostics) -> Self {
+        Self {
+            dock_drag: snapshot
+                .dock_drag
+                .map(UiDockDragDiagnosticsV1::from_snapshot),
+            viewport_capture: snapshot
+                .viewport_capture
+                .map(UiViewportCaptureDiagnosticsV1::from_snapshot),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDragDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub source_window: u64,
+    pub current_window: u64,
+    pub dragging: bool,
+    pub cross_window_hover: bool,
+}
+
+impl UiDockDragDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockDragDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            source_window: snapshot.source_window.data().as_ffi(),
+            current_window: snapshot.current_window.data().as_ffi(),
+            dragging: snapshot.dragging,
+            cross_window_hover: snapshot.cross_window_hover,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiViewportCaptureDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub target: u64,
+}
+
+impl UiViewportCaptureDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::ViewportCaptureDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            target: snapshot.target.data().as_ffi(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiViewportInputEventV1 {
+    pub target: u64,
+    pub pointer_id: u64,
+    pub pointer_type: String,
+    pub cursor_px: PointV1,
+    pub uv: (f32, f32),
+    pub target_px: (u32, u32),
+    pub kind: UiViewportInputKindV1,
+}
+
+impl UiViewportInputEventV1 {
+    fn from_event(event: fret_core::ViewportInputEvent) -> Self {
+        Self {
+            target: event.target.data().as_ffi(),
+            pointer_id: event.pointer_id.0 as u64,
+            pointer_type: viewport_pointer_type_label(event.pointer_type).to_string(),
+            cursor_px: PointV1::from(event.cursor_px),
+            uv: event.uv,
+            target_px: event.target_px,
+            kind: UiViewportInputKindV1::from_kind(event.kind),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum UiViewportInputKindV1 {
+    PointerMove {
+        buttons: UiMouseButtonsV1,
+        modifiers: UiKeyModifiersV1,
+    },
+    PointerDown {
+        button: UiMouseButtonV1,
+        modifiers: UiKeyModifiersV1,
+        click_count: u8,
+    },
+    PointerUp {
+        button: UiMouseButtonV1,
+        modifiers: UiKeyModifiersV1,
+        is_click: bool,
+        click_count: u8,
+    },
+    PointerCancel {
+        buttons: UiMouseButtonsV1,
+        modifiers: UiKeyModifiersV1,
+        reason: String,
+    },
+    Wheel {
+        delta: PointV1,
+        modifiers: UiKeyModifiersV1,
+    },
+}
+
+impl UiViewportInputKindV1 {
+    fn from_kind(kind: fret_core::ViewportInputKind) -> Self {
+        match kind {
+            fret_core::ViewportInputKind::PointerMove { buttons, modifiers } => Self::PointerMove {
+                buttons: UiMouseButtonsV1::from_buttons(buttons),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+            },
+            fret_core::ViewportInputKind::PointerDown {
+                button,
+                modifiers,
+                click_count,
+            } => Self::PointerDown {
+                button: UiMouseButtonV1::from_button(button),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+                click_count,
+            },
+            fret_core::ViewportInputKind::PointerUp {
+                button,
+                modifiers,
+                is_click,
+                click_count,
+            } => Self::PointerUp {
+                button: UiMouseButtonV1::from_button(button),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+                is_click,
+                click_count,
+            },
+            fret_core::ViewportInputKind::PointerCancel {
+                buttons,
+                modifiers,
+                reason,
+            } => Self::PointerCancel {
+                buttons: UiMouseButtonsV1::from_buttons(buttons),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+                reason: viewport_cancel_reason_label(reason).to_string(),
+            },
+            fret_core::ViewportInputKind::Wheel { delta, modifiers } => Self::Wheel {
+                delta: PointV1::from(delta),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiMouseButtonsV1 {
+    #[serde(default)]
+    pub left: bool,
+    #[serde(default)]
+    pub right: bool,
+    #[serde(default)]
+    pub middle: bool,
+}
+
+impl UiMouseButtonsV1 {
+    fn from_buttons(buttons: fret_core::MouseButtons) -> Self {
+        Self {
+            left: buttons.left,
+            right: buttons.right,
+            middle: buttons.middle,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiAxisV1 {
+    Horizontal,
+    Vertical,
+}
+
+impl UiAxisV1 {
+    fn from_axis(axis: fret_core::Axis) -> Self {
+        match axis {
+            fret_core::Axis::Horizontal => Self::Horizontal,
+            fret_core::Axis::Vertical => Self::Vertical,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlaySynthesisKindV1 {
+    Modal,
+    Popover,
+    Hover,
+    Tooltip,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListMeasureModeV1 {
+    Fixed,
+    Measured,
+    Known,
+}
+
+impl UiVirtualListMeasureModeV1 {
+    fn from_mode(mode: fret_ui::element::VirtualListMeasureMode) -> Self {
+        match mode {
+            fret_ui::element::VirtualListMeasureMode::Fixed => Self::Fixed,
+            fret_ui::element::VirtualListMeasureMode::Measured => Self::Measured,
+            fret_ui::element::VirtualListMeasureMode::Known => Self::Known,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiVirtualRangeV1 {
+    pub start_index: u64,
+    pub end_index: u64,
+    pub overscan: u64,
+    pub count: u64,
+}
+
+impl UiVirtualRangeV1 {
+    fn from_range(range: fret_ui::virtual_list::VirtualRange) -> Self {
+        Self {
+            start_index: range.start_index as u64,
+            end_index: range.end_index as u64,
+            overscan: range.overscan as u64,
+            count: range.count as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiVirtualListWindowV1 {
+    pub node: u64,
+    pub element: u64,
+    pub axis: UiAxisV1,
+    #[serde(default)]
+    pub is_probe_layout: bool,
+    pub items_len: u64,
+    pub items_revision: u64,
+    pub prev_items_revision: u64,
+    pub measure_mode: UiVirtualListMeasureModeV1,
+    pub overscan: u64,
+    pub viewport: f32,
+    pub prev_viewport: f32,
+    pub offset: f32,
+    pub prev_offset: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_window_range: Option<UiVirtualRangeV1>,
+    #[serde(default)]
+    pub deferred_scroll_to_item: bool,
+    #[serde(default)]
+    pub deferred_scroll_consumed: bool,
+    #[serde(default)]
+    pub window_mismatch: bool,
+}
+
+impl UiVirtualListWindowV1 {
+    fn from_window(window: &fret_ui::tree::UiDebugVirtualListWindow) -> Self {
+        Self {
+            node: key_to_u64(window.node),
+            element: window.element.0,
+            axis: UiAxisV1::from_axis(window.axis),
+            is_probe_layout: window.is_probe_layout,
+            items_len: window.items_len as u64,
+            items_revision: window.items_revision,
+            prev_items_revision: window.prev_items_revision,
+            measure_mode: UiVirtualListMeasureModeV1::from_mode(window.measure_mode),
+            overscan: window.overscan as u64,
+            viewport: window.viewport.0,
+            prev_viewport: window.prev_viewport.0,
+            offset: window.offset.0,
+            prev_offset: window.prev_offset.0,
+            window_range: window.window_range.map(UiVirtualRangeV1::from_range),
+            prev_window_range: window.prev_window_range.map(UiVirtualRangeV1::from_range),
+            render_window_range: window.render_window_range.map(UiVirtualRangeV1::from_range),
+            deferred_scroll_to_item: window.deferred_scroll_to_item,
+            deferred_scroll_consumed: window.deferred_scroll_consumed,
+            window_mismatch: window.window_mismatch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlaySynthesisSourceV1 {
+    CachedDeclaration,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiScrollHandleChangeKindV1 {
+    Layout,
+    HitTestOnly,
+}
+
+impl UiScrollHandleChangeKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugScrollHandleChangeKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugScrollHandleChangeKind::Layout => Self::Layout,
+            fret_ui::tree::UiDebugScrollHandleChangeKind::HitTestOnly => Self::HitTestOnly,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiScrollHandleChangeV1 {
+    pub handle_key: u64,
+    pub kind: UiScrollHandleChangeKindV1,
+    pub revision: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_revision: Option<u64>,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_offset_x: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_offset_y: Option<f32>,
+    pub viewport_w: f32,
+    pub viewport_h: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_viewport_w: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_viewport_h: Option<f32>,
+    pub content_w: f32,
+    pub content_h: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_content_w: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_content_h: Option<f32>,
+    #[serde(default)]
+    pub offset_changed: bool,
+    #[serde(default)]
+    pub viewport_changed: bool,
+    #[serde(default)]
+    pub content_changed: bool,
+    #[serde(default)]
+    pub bound_elements: u32,
+    #[serde(default)]
+    pub bound_nodes_sample: Vec<u64>,
+    #[serde(default)]
+    pub upgraded_to_layout_bindings: u32,
+}
+
+impl UiScrollHandleChangeV1 {
+    fn from_change(change: &fret_ui::tree::UiDebugScrollHandleChange) -> Self {
+        Self {
+            handle_key: change.handle_key as u64,
+            kind: UiScrollHandleChangeKindV1::from_kind(change.kind),
+            revision: change.revision,
+            prev_revision: change.prev_revision,
+            offset_x: change.offset.x.0,
+            offset_y: change.offset.y.0,
+            prev_offset_x: change.prev_offset.map(|p| p.x.0),
+            prev_offset_y: change.prev_offset.map(|p| p.y.0),
+            viewport_w: change.viewport.width.0,
+            viewport_h: change.viewport.height.0,
+            prev_viewport_w: change.prev_viewport.map(|s| s.width.0),
+            prev_viewport_h: change.prev_viewport.map(|s| s.height.0),
+            content_w: change.content.width.0,
+            content_h: change.content.height.0,
+            prev_content_w: change.prev_content.map(|s| s.width.0),
+            prev_content_h: change.prev_content.map(|s| s.height.0),
+            offset_changed: change.offset_changed,
+            viewport_changed: change.viewport_changed,
+            content_changed: change.content_changed,
+            bound_elements: change.bound_elements,
+            bound_nodes_sample: change
+                .bound_nodes_sample
+                .iter()
+                .copied()
+                .map(key_to_u64)
+                .collect(),
+            upgraded_to_layout_bindings: change.upgraded_to_layout_bindings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOverlaySynthesisOutcomeV1 {
+    Synthesized,
+    SuppressedMissingTrigger,
+    SuppressedTriggerNotLiveInCurrentFrame,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiOverlaySynthesisEventV1 {
+    pub kind: UiOverlaySynthesisKindV1,
+    pub id: u64,
+    pub source: UiOverlaySynthesisSourceV1,
+    pub outcome: UiOverlaySynthesisOutcomeV1,
+}
+
+impl UiOverlaySynthesisEventV1 {
+    fn from_event(e: fret_ui_kit::OverlaySynthesisEvent) -> Self {
+        use fret_ui_kit::OverlaySynthesisKind;
+        use fret_ui_kit::OverlaySynthesisOutcome;
+        use fret_ui_kit::OverlaySynthesisSource;
+
+        let kind = match e.kind {
+            OverlaySynthesisKind::Modal => UiOverlaySynthesisKindV1::Modal,
+            OverlaySynthesisKind::Popover => UiOverlaySynthesisKindV1::Popover,
+            OverlaySynthesisKind::Hover => UiOverlaySynthesisKindV1::Hover,
+            OverlaySynthesisKind::Tooltip => UiOverlaySynthesisKindV1::Tooltip,
+        };
+        let source = match e.source {
+            OverlaySynthesisSource::CachedDeclaration => {
+                UiOverlaySynthesisSourceV1::CachedDeclaration
+            }
+        };
+        let outcome = match e.outcome {
+            OverlaySynthesisOutcome::Synthesized => UiOverlaySynthesisOutcomeV1::Synthesized,
+            OverlaySynthesisOutcome::SuppressedMissingTrigger => {
+                UiOverlaySynthesisOutcomeV1::SuppressedMissingTrigger
+            }
+            OverlaySynthesisOutcome::SuppressedTriggerNotLiveInCurrentFrame => {
+                UiOverlaySynthesisOutcomeV1::SuppressedTriggerNotLiveInCurrentFrame
+            }
+        };
+
+        Self {
+            kind,
+            id: e.id.0,
+            source,
+            outcome,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCommandGatingTraceEntryV1 {
+    pub command: String,
+    pub enabled: bool,
+    pub reason: String,
+    #[serde(default)]
+    pub scope: String,
+    #[serde(default)]
+    pub source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub menu_path: Option<String>,
+    /// Structured explanation of why the command is disabled (multiple blockers may apply).
+    #[serde(default)]
+    pub blocked_by: Vec<String>,
+    /// Best-effort detail fields to make debugging inconsistent gating easier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_available: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command_when: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub menu_when: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled_override: Option<bool>,
+    #[serde(default)]
+    pub command_registered: bool,
+}
+
+#[derive(Debug, Clone)]
+struct UiCommandGatingTraceCandidate {
+    command: fret_runtime::CommandId,
+    source: &'static str,
+    menu_path: Option<String>,
+    menu_when: Option<fret_runtime::WhenExpr>,
+}
+
+fn command_gating_trace_for_window(
+    app: &App,
+    window: AppWindowId,
+    max_entries: usize,
+) -> Vec<UiCommandGatingTraceEntryV1> {
+    let gating = fret_runtime::best_effort_snapshot_for_window(app, window);
+
+    let mut candidates: Vec<UiCommandGatingTraceCandidate> = Vec::new();
+
+    // 1) Explicit gating inputs (useful for verifying that snapshots are being published).
+    for (cmd, _) in gating.enabled_overrides() {
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: cmd.clone(),
+            source: "enabled_overrides",
+            menu_path: None,
+            menu_when: None,
+        });
+    }
+    if let Some(map) = gating.action_availability() {
+        for (cmd, _) in map {
+            candidates.push(UiCommandGatingTraceCandidate {
+                command: cmd.clone(),
+                source: "action_availability",
+                menu_path: None,
+                menu_when: None,
+            });
+        }
+    }
+
+    // 2) Effective OS menubar model (data-only). This is the closest source of truth for
+    // "visible menu commands" from the app's perspective.
+    if let Some(menu_bar) = fret_app::effective_menu_bar(app) {
+        collect_menu_bar_commands(&menu_bar, &mut candidates);
+    }
+
+    // 3) Command palette catalog (best-effort). This approximates the set of entries derived from
+    // host commands; the actual palette filters further by query/group options.
+    for (id, meta) in app.commands().iter() {
+        if meta.hidden {
+            continue;
+        }
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: id.clone(),
+            source: "command_palette_catalog",
+            menu_path: None,
+            menu_when: None,
+        });
+    }
+
+    // Always include a core, cross-surface set even if the host didn't publish any snapshot yet.
+    for &cmd in &[
+        "edit.undo",
+        "edit.redo",
+        "edit.copy",
+        "edit.cut",
+        "edit.paste",
+        "edit.select_all",
+        "focus.menu_bar",
+    ] {
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: fret_runtime::CommandId::from(cmd),
+            source: "core",
+            menu_path: None,
+            menu_when: None,
+        });
+    }
+
+    // Deduplicate by (command, source, menu_path) so repeated insertions don't explode snapshots.
+    let mut seen: HashSet<(String, &'static str, Option<String>)> = HashSet::new();
+    candidates.retain(|c| {
+        let key = (
+            c.command.as_str().to_string(),
+            c.source,
+            c.menu_path.clone(),
+        );
+        if seen.contains(&key) {
+            return false;
+        }
+        seen.insert(key);
+        true
+    });
+
+    candidates.sort_by(|a, b| {
+        a.source
+            .cmp(b.source)
+            .then_with(|| a.menu_path.cmp(&b.menu_path))
+            .then_with(|| a.command.as_str().cmp(b.command.as_str()))
+    });
+
+    let max_entries = max_entries.min(2000);
+    candidates
+        .into_iter()
+        .take(max_entries)
+        .map(|c| {
+            let decision =
+                command_gating_decision_trace(app, &gating, &c.command, c.menu_when.as_ref());
+
+            UiCommandGatingTraceEntryV1 {
+                command: c.command.as_str().to_string(),
+                enabled: decision.enabled,
+                reason: decision.reason,
+                scope: decision.scope,
+                source: c.source.to_string(),
+                menu_path: c.menu_path,
+                blocked_by: decision.blocked_by,
+                action_available: decision.action_available,
+                command_when: decision.command_when,
+                menu_when: decision.menu_when,
+                enabled_override: decision.enabled_override,
+                command_registered: decision.command_registered,
+            }
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone)]
+struct UiCommandGatingDecisionTrace {
+    enabled: bool,
+    reason: String,
+    scope: String,
+    blocked_by: Vec<String>,
+    action_available: Option<bool>,
+    command_when: Option<bool>,
+    menu_when: Option<bool>,
+    enabled_override: Option<bool>,
+    command_registered: bool,
+}
+
+fn command_gating_decision_trace(
+    app: &App,
+    gating: &fret_runtime::WindowCommandGatingSnapshot,
+    command: &fret_runtime::CommandId,
+    menu_when: Option<&fret_runtime::WhenExpr>,
+) -> UiCommandGatingDecisionTrace {
+    let meta = app.commands().get(command.clone());
+    let scope = meta
+        .map(|m| format!("{:?}", m.scope))
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    let mut blocked_by: Vec<String> = Vec::new();
+
+    let action_available = if let Some(meta) = meta
+        && meta.scope == fret_runtime::CommandScope::Widget
+        && let Some(map) = gating.action_availability()
+        && let Some(is_available) = map.get(command).copied()
+    {
+        Some(is_available)
+    } else {
+        None
+    };
+    if action_available == Some(false) {
+        blocked_by.push("action_availability".to_string());
+    }
+
+    let command_when = meta.and_then(|m| m.when.as_ref().map(|w| w.eval(gating.input_ctx())));
+    if command_when == Some(false) {
+        blocked_by.push("when".to_string());
+    }
+
+    let enabled_override = gating.enabled_overrides().get(command).copied();
+    if enabled_override == Some(false) {
+        blocked_by.push("enabled_override".to_string());
+    }
+
+    let menu_when = menu_when.map(|w| w.eval(gating.input_ctx()));
+    if menu_when == Some(false) {
+        blocked_by.push("menu_when".to_string());
+    }
+
+    let command_registered = meta.is_some();
+    let enabled = blocked_by.is_empty();
+
+    // Keep a stable "primary reason" string for backwards compatibility / easy grepping.
+    let reason = if blocked_by.iter().any(|b| b == "action_availability") {
+        "action_unavailable"
+    } else if blocked_by.iter().any(|b| b == "when") {
+        "when_false"
+    } else if blocked_by.iter().any(|b| b == "enabled_override") {
+        "disabled_override"
+    } else if blocked_by.iter().any(|b| b == "menu_when") {
+        "menu_when_false"
+    } else if !command_registered {
+        "unknown_command"
+    } else {
+        "enabled"
+    }
+    .to_string();
+
+    UiCommandGatingDecisionTrace {
+        enabled,
+        reason,
+        scope,
+        blocked_by,
+        action_available,
+        command_when,
+        menu_when,
+        enabled_override,
+        command_registered,
+    }
+}
+
+fn collect_menu_bar_commands(
+    menu_bar: &fret_runtime::MenuBar,
+    out: &mut Vec<UiCommandGatingTraceCandidate>,
+) {
+    for menu in &menu_bar.menus {
+        let menu_title = menu.title.as_ref().to_string();
+        collect_menu_items(&menu_title, &menu.items, out);
+    }
+}
+
+fn collect_menu_items(
+    prefix: &str,
+    items: &[fret_runtime::MenuItem],
+    out: &mut Vec<UiCommandGatingTraceCandidate>,
+) {
+    for item in items {
+        match item {
+            fret_runtime::MenuItem::Command { command, when } => {
+                out.push(UiCommandGatingTraceCandidate {
+                    command: command.clone(),
+                    source: "menu_bar",
+                    menu_path: Some(prefix.to_string()),
+                    menu_when: when.clone(),
+                });
+            }
+            fret_runtime::MenuItem::Separator | fret_runtime::MenuItem::SystemMenu { .. } => {}
+            fret_runtime::MenuItem::Submenu {
+                title,
+                when: _,
+                items,
+            } => {
+                let next = format!("{prefix} > {}", title.as_ref());
+                collect_menu_items(&next, items, out);
+            }
         }
     }
 }
@@ -2552,21 +3575,93 @@ pub struct UiRemovedSubtreeV1 {
     #[serde(default)]
     pub root_parent_element: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_element_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub root_element_path: Option<String>,
     #[serde(default)]
     pub root_parent: Option<u64>,
     #[serde(default)]
     pub root_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_parent_is_view_cache_reuse_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_location: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_root_parent_sever_frame_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_old_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_old_elements_head_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_new_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_root_parent_sever_parent_children_last_set_new_elements_head_paths: Vec<String>,
     #[serde(default)]
     pub root_layer: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_layer_visible: Option<bool>,
+    #[serde(default)]
+    pub reachable_from_layer_roots: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reachable_from_view_cache_roots: Option<bool>,
+    #[serde(default)]
+    pub unreachable_from_liveness_roots: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub liveness_layer_roots_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view_cache_reuse_roots_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view_cache_reuse_root_nodes_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_in_view_cache_keep_alive: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_listed_under_reuse_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_element_root_path: Option<String>,
     #[serde(default)]
     pub root_children_len: u32,
     #[serde(default)]
     pub root_parent_children_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_children_contains_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_frame_children_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_parent_frame_children_contains_root: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_frame_instance_present: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub root_frame_children_len: Option<u32>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub root_path: Vec<u64>,
     #[serde(default)]
     pub root_path_truncated: bool,
+    /// For each `root_path` edge (`child -> parent`), whether `UiTree` currently has the
+    /// corresponding `parent.children` edge:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing node entry)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_path_edge_ui_contains_child: Vec<u8>,
+    /// For each `root_path` edge (`child -> parent`), whether `WindowFrame.children[parent]`
+    /// contains the child node:
+    /// - `0`: false
+    /// - `1`: true
+    /// - `2`: unknown (missing frame edge capture)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub root_path_edge_frame_contains_child: Vec<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub root_parent_children_last_set_location: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2607,7 +3702,29 @@ impl UiRemovedSubtreeV1 {
                 .and_then(|runtime| runtime.debug_path_for_element(window, element))
         });
 
+        let root_parent_element_path = r.root_parent_element.and_then(|element| {
+            element_runtime_state
+                .and_then(|runtime| runtime.debug_path_for_element(window, element))
+        });
+
+        let trigger_element_path = r.trigger_element.and_then(|element| {
+            element_runtime_state
+                .and_then(|runtime| runtime.debug_path_for_element(window, element))
+        });
+
+        let trigger_element_root_path = r.trigger_element_root.and_then(|element| {
+            element_runtime_state
+                .and_then(|runtime| runtime.debug_path_for_element(window, element))
+        });
+
         let root_path = r.root_path[..(r.root_path_len as usize).min(r.root_path.len())].to_vec();
+        let root_path_edge_len = (r.root_path_edge_len as usize)
+            .min(r.root_path_edge_ui_contains_child.len())
+            .min(r.root_path_edge_frame_contains_child.len());
+        let root_path_edge_ui_contains_child =
+            r.root_path_edge_ui_contains_child[..root_path_edge_len].to_vec();
+        let root_path_edge_frame_contains_child =
+            r.root_path_edge_frame_contains_child[..root_path_edge_len].to_vec();
 
         let (
             root_parent_children_last_set_location,
@@ -2627,18 +3744,130 @@ impl UiRemovedSubtreeV1 {
             })
             .unwrap_or((None, None, None, None));
 
+        let (
+            root_root_parent_sever_parent,
+            root_root_parent_sever_parent_element,
+            root_root_parent_sever_parent_path,
+            root_root_parent_sever_parent_is_view_cache_reuse_root,
+            root_root_parent_sever_location,
+            root_root_parent_sever_frame_id,
+            root_root_parent_sever_parent_children_last_set_old_elements_head,
+            root_root_parent_sever_parent_children_last_set_old_elements_head_paths,
+            root_root_parent_sever_parent_children_last_set_new_elements_head,
+            root_root_parent_sever_parent_children_last_set_new_elements_head_paths,
+        ) = r
+            .root_root
+            .and_then(|root| ui.debug_parent_sever_write_for(root))
+            .map(|w| {
+                let parent_element = element_runtime_state
+                    .and_then(|runtime| runtime.element_for_node(window, w.parent));
+                let parent_path = parent_element.and_then(|element| {
+                    element_runtime_state
+                        .and_then(|runtime| runtime.debug_path_for_element(window, element))
+                });
+                let parent_is_view_cache_reuse_root = parent_element.and_then(|element| {
+                    element_runtime_state.and_then(|runtime| {
+                        runtime
+                            .diagnostics_snapshot(window)
+                            .map(|s| s.view_cache_reuse_roots.contains(&element))
+                    })
+                });
+
+                let mut old_elements_head: Vec<u64> = Vec::new();
+                let mut old_elements_head_paths: Vec<String> = Vec::new();
+                let mut new_elements_head: Vec<u64> = Vec::new();
+                let mut new_elements_head_paths: Vec<String> = Vec::new();
+
+                if let Some(write) = ui.debug_set_children_write_for(w.parent) {
+                    for element in write.old_elements_head.into_iter().flatten() {
+                        old_elements_head.push(element.0);
+                        if let Some(path) = element_runtime_state
+                            .and_then(|runtime| runtime.debug_path_for_element(window, element))
+                        {
+                            old_elements_head_paths.push(path);
+                        }
+                    }
+                    for element in write.new_elements_head.into_iter().flatten() {
+                        new_elements_head.push(element.0);
+                        if let Some(path) = element_runtime_state
+                            .and_then(|runtime| runtime.debug_path_for_element(window, element))
+                        {
+                            new_elements_head_paths.push(path);
+                        }
+                    }
+                }
+
+                (
+                    Some(key_to_u64(w.parent)),
+                    parent_element.map(|e| e.0),
+                    parent_path,
+                    parent_is_view_cache_reuse_root,
+                    Some(format!("{}:{}:{}", w.file, w.line, w.column)),
+                    Some(w.frame_id.0),
+                    old_elements_head,
+                    old_elements_head_paths,
+                    new_elements_head,
+                    new_elements_head_paths,
+                )
+            })
+            .unwrap_or((
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            ));
+
         Self {
             root: key_to_u64(r.root),
             root_element: r.root_element.map(|e| e.0),
             root_parent_element: r.root_parent_element.map(|e| e.0),
+            root_parent_element_path,
             root_element_path,
             root_parent: r.root_parent.map(key_to_u64),
             root_root: r.root_root.map(key_to_u64),
+            root_root_parent_sever_parent,
+            root_root_parent_sever_parent_element,
+            root_root_parent_sever_parent_path,
+            root_root_parent_sever_parent_is_view_cache_reuse_root,
+            root_root_parent_sever_location,
+            root_root_parent_sever_frame_id,
+            root_root_parent_sever_parent_children_last_set_old_elements_head,
+            root_root_parent_sever_parent_children_last_set_old_elements_head_paths,
+            root_root_parent_sever_parent_children_last_set_new_elements_head,
+            root_root_parent_sever_parent_children_last_set_new_elements_head_paths,
             root_layer: r.root_layer.map(|id| id.data().as_ffi()),
+            root_layer_visible: r.root_layer_visible,
+            reachable_from_layer_roots: r.reachable_from_layer_roots,
+            reachable_from_view_cache_roots: r.reachable_from_view_cache_roots,
+            unreachable_from_liveness_roots: r.unreachable_from_liveness_roots,
+            liveness_layer_roots_len: r.liveness_layer_roots_len,
+            view_cache_reuse_roots_len: r.view_cache_reuse_roots_len,
+            view_cache_reuse_root_nodes_len: r.view_cache_reuse_root_nodes_len,
+            trigger_element: r.trigger_element.map(|e| e.0),
+            trigger_element_root: r.trigger_element_root.map(|e| e.0),
+            trigger_element_in_view_cache_keep_alive: r.trigger_element_in_view_cache_keep_alive,
+            trigger_element_listed_under_reuse_root: r
+                .trigger_element_listed_under_reuse_root
+                .map(|id| id.0),
+            trigger_element_path,
+            trigger_element_root_path,
             root_children_len: r.root_children_len,
             root_parent_children_len: r.root_parent_children_len,
+            root_parent_children_contains_root: r.root_parent_children_contains_root,
+            root_parent_frame_children_len: r.root_parent_frame_children_len,
+            root_parent_frame_children_contains_root: r.root_parent_frame_children_contains_root,
+            root_frame_instance_present: r.root_frame_instance_present,
+            root_frame_children_len: r.root_frame_children_len,
             root_path,
             root_path_truncated: r.root_path_truncated,
+            root_path_edge_ui_contains_child,
+            root_path_edge_frame_contains_child,
             root_parent_children_last_set_location,
             root_parent_children_last_set_old_len,
             root_parent_children_last_set_new_len,
@@ -2678,7 +3907,7 @@ impl UiDirtyViewV1 {
         };
 
         Self {
-            root_node: key_to_u64(dirty.root),
+            root_node: key_to_u64(dirty.view.0),
             root_element: dirty.element.map(|e| e.0),
             source: Some(source.to_string()),
             detail: dirty.detail.as_str().map(|s| s.to_string()),
@@ -2694,6 +3923,8 @@ pub struct UiCacheRootStatsV1 {
     pub element_path: Option<String>,
     pub reused: bool,
     pub contained_layout: bool,
+    #[serde(default)]
+    pub contained_relayout_in_frame: bool,
     pub paint_replayed_ops: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub direct_child_nodes: Option<u32>,
@@ -2709,6 +3940,14 @@ pub struct UiCacheRootStatsV1 {
     pub children_last_set_old_len: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub children_last_set_new_len: Option<u32>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_old_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_new_elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_old_elements_head_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub children_last_set_new_elements_head_paths: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub children_last_set_frame_id: Option<u64>,
     #[serde(default)]
@@ -2721,6 +3960,7 @@ impl UiCacheRootStatsV1 {
         ui: &UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
         semantics: Option<&UiSemanticsSnapshotV1>,
+        contained_relayout_roots: &HashSet<fret_core::NodeId>,
         stats: &fret_ui::tree::UiDebugCacheRootStats,
     ) -> Self {
         let element_path = stats.element.and_then(|id| {
@@ -2751,29 +3991,68 @@ impl UiCacheRootStatsV1 {
             let id = stats.root.data().as_ffi();
             snap.nodes.iter().any(|n| n.id == id)
         });
+        let contained_relayout_in_frame = contained_relayout_roots.contains(&stats.root);
 
         let (
             children_last_set_location,
             children_last_set_old_len,
             children_last_set_new_len,
+            children_last_set_old_elements_head,
+            children_last_set_new_elements_head,
+            children_last_set_old_elements_head_paths,
+            children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
         ) = ui
             .debug_set_children_write_for(stats.root)
             .map(|w| {
+                let old_elements_head: Vec<_> =
+                    w.old_elements_head.iter().flatten().copied().collect();
+                let new_elements_head: Vec<_> =
+                    w.new_elements_head.iter().flatten().copied().collect();
+
+                let old_paths: Vec<String> = old_elements_head
+                    .iter()
+                    .filter_map(|id| {
+                        element_runtime
+                            .and_then(|runtime| runtime.debug_path_for_element(window, *id))
+                    })
+                    .collect();
+                let new_paths: Vec<String> = new_elements_head
+                    .iter()
+                    .filter_map(|id| {
+                        element_runtime
+                            .and_then(|runtime| runtime.debug_path_for_element(window, *id))
+                    })
+                    .collect();
+
                 (
                     Some(format!("{}:{}:{}", w.file, w.line, w.column)),
                     Some(w.old_len),
                     Some(w.new_len),
+                    old_elements_head.iter().map(|id| id.0).collect::<Vec<_>>(),
+                    new_elements_head.iter().map(|id| id.0).collect::<Vec<_>>(),
+                    old_paths,
+                    new_paths,
                     Some(w.frame_id.0),
                 )
             })
-            .unwrap_or((None, None, None, None));
+            .unwrap_or((
+                None,
+                None,
+                None,
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+                None,
+            ));
         Self {
             root: stats.root.data().as_ffi(),
             element: stats.element.map(|id| id.0),
             element_path,
             reused: stats.reused,
             contained_layout: stats.contained_layout,
+            contained_relayout_in_frame,
             paint_replayed_ops: stats.paint_replayed_ops,
             direct_child_nodes: Some(direct_child_nodes),
             subtree_nodes: Some(seen.len().min(u32::MAX as usize) as u32),
@@ -2782,6 +4061,10 @@ impl UiCacheRootStatsV1 {
             children_last_set_location,
             children_last_set_old_len,
             children_last_set_new_len,
+            children_last_set_old_elements_head,
+            children_last_set_new_elements_head,
+            children_last_set_old_elements_head_paths,
+            children_last_set_new_elements_head_paths,
             children_last_set_frame_id,
             reuse_reason: Some(stats.reuse_reason.as_str().to_string()),
         }
@@ -3288,6 +4571,16 @@ pub struct UiFrameStatsV1 {
     pub view_cache_invalidation_truncations: u32,
     #[serde(default)]
     pub view_cache_contained_relayouts: u32,
+    #[serde(default)]
+    pub set_children_barrier_writes: u32,
+    #[serde(default)]
+    pub barrier_relayouts_scheduled: u32,
+    #[serde(default)]
+    pub barrier_relayouts_performed: u32,
+    #[serde(default)]
+    pub virtual_list_visible_range_checks: u32,
+    #[serde(default)]
+    pub virtual_list_visible_range_refreshes: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -3343,6 +4636,11 @@ impl UiFrameStatsV1 {
             view_cache_active: stats.view_cache_active,
             view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
             view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
+            set_children_barrier_writes: stats.set_children_barrier_writes,
+            barrier_relayouts_scheduled: stats.barrier_relayouts_scheduled,
+            barrier_relayouts_performed: stats.barrier_relayouts_performed,
+            virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
+            virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
@@ -3352,11 +4650,21 @@ impl UiFrameStatsV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayerInfoV1 {
     pub id: String,
+    /// Numeric layer id (stable across `Debug` formatting changes; not stable between runs).
+    #[serde(default)]
+    pub layer_id: u64,
     pub root: u64,
     pub visible: bool,
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
+    /// Pointer occlusion mode for this layer root (when applicable).
+    #[serde(default)]
+    pub pointer_occlusion: String,
     pub wants_pointer_down_outside_events: bool,
+    #[serde(default)]
+    pub consume_pointer_down_outside_events: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pointer_down_outside_branches: Vec<u64>,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
 }
@@ -3365,13 +4673,77 @@ impl UiLayerInfoV1 {
     fn from_layer(layer: UiDebugLayerInfo) -> Self {
         Self {
             id: format!("{:?}", layer.id),
+            layer_id: layer.id.data().as_ffi(),
             root: key_to_u64(layer.root),
             visible: layer.visible,
             blocks_underlay_input: layer.blocks_underlay_input,
             hit_testable: layer.hit_testable,
+            pointer_occlusion: pointer_occlusion_label(layer.pointer_occlusion),
             wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
+            consume_pointer_down_outside_events: layer.consume_pointer_down_outside_events,
+            pointer_down_outside_branches: layer
+                .pointer_down_outside_branches
+                .into_iter()
+                .take(32)
+                .map(key_to_u64)
+                .collect(),
             wants_pointer_move_events: layer.wants_pointer_move_events,
             wants_timer_events: layer.wants_timer_events,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayerVisibleWriteV1 {
+    pub layer: String,
+    pub prev_visible: Option<bool>,
+    pub visible: bool,
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+impl UiLayerVisibleWriteV1 {
+    fn from_write(write: &fret_ui::tree::UiDebugSetLayerVisibleWrite) -> Self {
+        Self {
+            layer: format!("{:?}", write.layer),
+            prev_visible: write.prev_visible,
+            visible: write.visible,
+            file: write.file.to_string(),
+            line: write.line,
+            column: write.column,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiOverlayPolicyDecisionV1 {
+    pub layer: String,
+    pub kind: String,
+    pub present: bool,
+    pub interactive: bool,
+    pub wants_timer_events: bool,
+    pub reason: String,
+    #[serde(default)]
+    pub file: String,
+    #[serde(default)]
+    pub line: u32,
+    #[serde(default)]
+    pub column: u32,
+}
+
+impl UiOverlayPolicyDecisionV1 {
+    fn from_decision(d: &fret_ui::tree::UiDebugOverlayPolicyDecisionWrite) -> Self {
+        Self {
+            layer: format!("{:?}", d.layer),
+            kind: d.kind.to_string(),
+            present: d.present,
+            interactive: d.interactive,
+            wants_timer_events: d.wants_timer_events,
+            reason: d.reason.to_string(),
+            file: d.file.to_string(),
+            line: d.line,
+            column: d.column,
         }
     }
 }
@@ -3382,10 +4754,55 @@ pub struct UiHitTestSnapshotV1 {
     pub hit: Option<u64>,
     pub active_layer_roots: Vec<u64>,
     pub barrier_root: Option<u64>,
+    /// Stable, script-friendly labels for each scope root.
+    ///
+    /// Prefer this over `active_layer_roots` when validating behavior across refactors, since node
+    /// ids are not stable between runs.
+    #[serde(default)]
+    pub scope_roots: Vec<UiHitTestScopeRootV1>,
 }
 
 impl UiHitTestSnapshotV1 {
-    fn from_hit_test(position: Point, hit_test: UiDebugHitTest) -> Self {
+    fn from_tree(position: Point, ui: &UiTree<App>) -> Self {
+        let hit_test = ui.debug_hit_test(position);
+        let layers = ui.debug_layers_in_paint_order();
+        Self::from_hit_test_with_layers(position, hit_test, &layers)
+    }
+
+    fn from_hit_test_with_layers(
+        position: Point,
+        hit_test: UiDebugHitTest,
+        layers: &[UiDebugLayerInfo],
+    ) -> Self {
+        let mut scope_roots = Vec::new();
+        if let Some(root) = hit_test.barrier_root {
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "modal_barrier_root".to_string(),
+                root: key_to_u64(root),
+                layer_id: None,
+                pointer_occlusion: None,
+                blocks_underlay_input: None,
+                hit_testable: None,
+            });
+        }
+
+        let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
+        for layer in layers {
+            by_root.insert(layer.root, layer.clone());
+        }
+
+        for root in &hit_test.active_layer_roots {
+            let info = by_root.get(root);
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "layer_root".to_string(),
+                root: key_to_u64(*root),
+                layer_id: info.map(|l| l.id.data().as_ffi()),
+                pointer_occlusion: info.map(|l| pointer_occlusion_label(l.pointer_occlusion)),
+                blocks_underlay_input: info.map(|l| l.blocks_underlay_input),
+                hit_testable: info.map(|l| l.hit_testable),
+            });
+        }
+
         Self {
             position: PointV1::from(position),
             hit: hit_test.hit.map(key_to_u64),
@@ -3395,8 +4812,27 @@ impl UiHitTestSnapshotV1 {
                 .map(key_to_u64)
                 .collect(),
             barrier_root: hit_test.barrier_root.map(key_to_u64),
+            scope_roots,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestScopeRootV1 {
+    /// Stable scope root kind (e.g. `modal_barrier_root`, `layer_root`).
+    pub kind: String,
+    /// Node id of the root (not stable between runs; treat as an in-run reference only).
+    pub root: u64,
+    /// When `kind=layer_root`, the corresponding layer id (if known).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layer_id: Option<u64>,
+    /// Pointer occlusion mode for the layer root (if known).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocks_underlay_input: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hit_testable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3404,15 +4840,30 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub focused_element: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub focused_element_path: Option<String>,
+    pub focused_element_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_visual_bounds: Option<RectV1>,
     pub active_text_selection: Option<(u64, u64)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_text_selection_path: Option<(String, String)>,
     pub hovered_pressable: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hovered_pressable_path: Option<String>,
+    pub hovered_pressable_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_visual_bounds: Option<RectV1>,
     pub pressed_pressable: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pressed_pressable_path: Option<String>,
+    pub pressed_pressable_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_visual_bounds: Option<RectV1>,
     pub hovered_hover_region: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hovered_hover_region_path: Option<String>,
@@ -3423,6 +4874,40 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub view_cache_reuse_roots: Vec<u64>,
     #[serde(default)]
     pub view_cache_reuse_root_element_counts: Vec<(u64, u32)>,
+    #[serde(default)]
+    pub view_cache_reuse_root_element_samples: Vec<ElementViewCacheReuseRootElementsSampleV1>,
+    #[serde(default)]
+    pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementViewCacheReuseRootElementsSampleV1 {
+    pub root: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub node: Option<u64>,
+    pub elements_len: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elements_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub elements_tail: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementNodeEntryRootOverwriteV1 {
+    pub frame_id: u64,
+    pub element: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub element_path: Option<String>,
+    pub old_root: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub old_root_path: Option<String>,
+    pub new_root: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub new_root_path: Option<String>,
+    pub old_node: u64,
+    pub new_node: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<UiSourceLocationV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3464,12 +4949,25 @@ impl ElementDiagnosticsSnapshotV1 {
         Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
             focused_element_path,
+            focused_element_node: snapshot.focused_element_node.map(key_to_u64),
+            focused_element_bounds: snapshot.focused_element_bounds.map(RectV1::from),
+            focused_element_visual_bounds: snapshot.focused_element_visual_bounds.map(RectV1::from),
             active_text_selection: snapshot.active_text_selection.map(|(a, b)| (a.0, b.0)),
             active_text_selection_path,
             hovered_pressable: snapshot.hovered_pressable.map(|id| id.0),
             hovered_pressable_path,
+            hovered_pressable_node: snapshot.hovered_pressable_node.map(key_to_u64),
+            hovered_pressable_bounds: snapshot.hovered_pressable_bounds.map(RectV1::from),
+            hovered_pressable_visual_bounds: snapshot
+                .hovered_pressable_visual_bounds
+                .map(RectV1::from),
             pressed_pressable: snapshot.pressed_pressable.map(|id| id.0),
             pressed_pressable_path,
+            pressed_pressable_node: snapshot.pressed_pressable_node.map(key_to_u64),
+            pressed_pressable_bounds: snapshot.pressed_pressable_bounds.map(RectV1::from),
+            pressed_pressable_visual_bounds: snapshot
+                .pressed_pressable_visual_bounds
+                .map(RectV1::from),
             hovered_hover_region: snapshot.hovered_hover_region.map(|id| id.0),
             hovered_hover_region_path,
             wants_continuous_frames: snapshot.wants_continuous_frames,
@@ -3504,6 +5002,37 @@ impl ElementDiagnosticsSnapshotV1 {
                 .view_cache_reuse_root_element_counts
                 .into_iter()
                 .map(|(id, count)| (id.0, count))
+                .collect(),
+            view_cache_reuse_root_element_samples: snapshot
+                .view_cache_reuse_root_element_samples
+                .into_iter()
+                .map(|s| ElementViewCacheReuseRootElementsSampleV1 {
+                    root: s.root.0,
+                    node: s.node.map(|n| n.data().as_ffi()),
+                    elements_len: s.elements_len,
+                    elements_head: s.elements_head.into_iter().map(|id| id.0).collect(),
+                    elements_tail: s.elements_tail.into_iter().map(|id| id.0).collect(),
+                })
+                .collect(),
+            node_entry_root_overwrites: snapshot
+                .node_entry_root_overwrites
+                .into_iter()
+                .map(|r| ElementNodeEntryRootOverwriteV1 {
+                    frame_id: r.frame_id.0,
+                    element: r.element.0,
+                    element_path: runtime.debug_path_for_element(window, r.element),
+                    old_root: r.old_root.0,
+                    old_root_path: runtime.debug_path_for_element(window, r.old_root),
+                    new_root: r.new_root.0,
+                    new_root_path: runtime.debug_path_for_element(window, r.new_root),
+                    old_node: r.old_node.data().as_ffi(),
+                    new_node: r.new_node.data().as_ffi(),
+                    location: Some(UiSourceLocationV1 {
+                        file: r.file.to_string(),
+                        line: r.line,
+                        column: r.column,
+                    }),
+                })
                 .collect(),
         }
     }
@@ -3579,6 +5108,30 @@ fn invalidation_label(inv: Invalidation) -> &'static str {
     }
 }
 
+fn pointer_occlusion_label(occlusion: fret_ui::tree::PointerOcclusion) -> String {
+    match occlusion {
+        fret_ui::tree::PointerOcclusion::None => "none",
+        fret_ui::tree::PointerOcclusion::BlockMouse => "block_mouse",
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll => "block_mouse_except_scroll",
+    }
+    .to_string()
+}
+
+fn viewport_pointer_type_label(pointer_type: fret_core::PointerType) -> &'static str {
+    match pointer_type {
+        fret_core::PointerType::Mouse => "mouse",
+        fret_core::PointerType::Touch => "touch",
+        fret_core::PointerType::Pen => "pen",
+        fret_core::PointerType::Unknown => "unknown",
+    }
+}
+
+fn viewport_cancel_reason_label(reason: fret_core::PointerCancelReason) -> &'static str {
+    match reason {
+        fret_core::PointerCancelReason::LeftWindow => "left_window",
+    }
+}
+
 fn event_kind(event: &Event) -> String {
     match event {
         Event::Pointer(p) => format!("pointer.{}", p.kind()),
@@ -3613,6 +5166,17 @@ fn unix_ms_now() -> u64 {
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or_default()
+}
+
+fn env_flag_default_false(name: &str) -> bool {
+    let Ok(v) = std::env::var(name) else {
+        return false;
+    };
+    let v = v.trim().to_ascii_lowercase();
+    if v.is_empty() {
+        return true;
+    }
+    !matches!(v.as_str(), "0" | "false" | "no" | "off")
 }
 
 fn env_flag_default_true(name: &str) -> bool {
@@ -3943,6 +5507,7 @@ fn pick_best_match<'a>(
 
 fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
+    window_bounds: Rect,
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
     pred: &UiPredicateV1,
@@ -3961,7 +5526,51 @@ fn eval_predicate(
             };
             node.id == focus
         }
+        UiPredicateV1::VisibleInWindow { target } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            rects_intersect(node.bounds, window_bounds)
+        }
+        UiPredicateV1::BoundsWithinWindow { target, padding_px } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let bounds = node.bounds;
+            let pad = padding_px.max(0.0);
+
+            let window_left = window_bounds.origin.x.0 + pad;
+            let window_top = window_bounds.origin.y.0 + pad;
+            let window_right = window_bounds.origin.x.0 + window_bounds.size.width.0 - pad;
+            let window_bottom = window_bounds.origin.y.0 + window_bounds.size.height.0 - pad;
+
+            let node_left = bounds.origin.x.0;
+            let node_top = bounds.origin.y.0;
+            let node_right = bounds.origin.x.0 + bounds.size.width.0;
+            let node_bottom = bounds.origin.y.0 + bounds.size.height.0;
+
+            node_left >= window_left
+                && node_top >= window_top
+                && node_right <= window_right
+                && node_bottom <= window_bottom
+        }
     }
+}
+
+fn rects_intersect(a: Rect, b: Rect) -> bool {
+    let ax0 = a.origin.x.0;
+    let ay0 = a.origin.y.0;
+    let ax1 = ax0 + a.size.width.0.max(0.0);
+    let ay1 = ay0 + a.size.height.0.max(0.0);
+
+    let bx0 = b.origin.x.0;
+    let by0 = b.origin.y.0;
+    let bx1 = bx0 + b.size.width.0.max(0.0);
+    let by1 = by0 + b.size.height.0.max(0.0);
+
+    ax1 > bx0 && bx1 > ax0 && ay1 > by0 && by1 > ay0
 }
 
 fn center_of_rect(rect: Rect) -> Point {
@@ -4221,6 +5830,89 @@ fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
     [move_event, down, up]
 }
 
+fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) -> Vec<Event> {
+    let pointer_id = PointerId(0);
+    let modifiers = Modifiers::default();
+    let pointer_type = PointerType::Mouse;
+
+    let button = match button {
+        UiMouseButtonV1::Left => MouseButton::Left,
+        UiMouseButtonV1::Right => MouseButton::Right,
+        UiMouseButtonV1::Middle => MouseButton::Middle,
+    };
+
+    let mut pressed_buttons = MouseButtons::default();
+    match button {
+        MouseButton::Left => pressed_buttons.left = true,
+        MouseButton::Right => pressed_buttons.right = true,
+        MouseButton::Middle => pressed_buttons.middle = true,
+        _ => {}
+    }
+
+    let mut out = Vec::with_capacity(3 + steps as usize);
+    out.push(Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position: start,
+        buttons: MouseButtons::default(),
+        modifiers,
+        pointer_type,
+    }));
+    out.push(Event::Pointer(PointerEvent::Down {
+        pointer_id,
+        position: start,
+        button,
+        modifiers,
+        click_count: 1,
+        pointer_type,
+    }));
+
+    for i in 1..=steps {
+        let t = i as f32 / steps as f32;
+        let x = start.x.0 + (end.x.0 - start.x.0) * t;
+        let y = start.y.0 + (end.y.0 - start.y.0) * t;
+        let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+        out.push(Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position,
+            buttons: pressed_buttons,
+            modifiers,
+            pointer_type,
+        }));
+
+        // For scripted diagnostics, also emit `InternalDrag` events during pointer drags. The
+        // runtime routes these to the active internal-drag anchor when a cross-window drag session
+        // is active (e.g. docking tear-off / drop indicators).
+        //
+        // This is intentionally safe for generic scripts: `UiTree` ignores `InternalDrag` events
+        // unless `app.drag(pointer_id)` exists and is marked `cross_window_hover`.
+        out.push(Event::InternalDrag(fret_core::InternalDragEvent {
+            pointer_id,
+            position,
+            kind: fret_core::InternalDragKind::Over,
+            modifiers,
+        }));
+    }
+
+    out.push(Event::Pointer(PointerEvent::Up {
+        pointer_id,
+        position: end,
+        button,
+        modifiers,
+        is_click: false,
+        click_count: 1,
+        pointer_type,
+    }));
+
+    // Mirror the runner's "mouse-up routes a drop then clears hover" behavior for internal drags.
+    out.push(Event::InternalDrag(fret_core::InternalDragEvent {
+        pointer_id,
+        position: end,
+        kind: fret_core::InternalDragKind::Drop,
+        modifiers,
+    }));
+    out
+}
+
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
     let modifiers = Modifiers {
         shift: modifiers.shift,
@@ -4460,6 +6152,18 @@ mod tests {
     }
 
     #[test]
+    fn scripts_support_reset_diagnostics_step() {
+        let parsed: UiActionScriptV1 =
+            serde_json::from_str(r#"{"schema_version":1,"steps":[{"type":"reset_diagnostics"}]}"#)
+                .expect("parse reset_diagnostics step");
+        assert_eq!(parsed.schema_version, 1);
+        assert!(
+            matches!(parsed.steps.as_slice(), [UiActionStepV1::ResetDiagnostics]),
+            "expected reset_diagnostics step"
+        );
+    }
+
+    #[test]
     fn pick_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
@@ -4641,6 +6345,66 @@ mod tests {
             UiSelectorV1::TestId { id } => assert_eq!(id, "open"),
             other => panic!("expected TestId selector, got: {other:?}"),
         }
+    }
+
+    #[test]
+    fn bounds_within_window_predicate_respects_padding() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "content",
+                    "content",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsWithinWindow {
+            target: UiSelectorV1::TestId {
+                id: "content".to_string(),
+            },
+            padding_px: 0.0,
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::BoundsWithinWindow {
+            target: UiSelectorV1::TestId {
+                id: "content".to_string(),
+            },
+            padding_px: 12.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected padding to shrink the allowed window rect"
+        );
     }
 
     #[test]

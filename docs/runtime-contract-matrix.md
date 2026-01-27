@@ -24,6 +24,16 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 - **ADR(s):** `docs/adr/0068-focus-traversal-and-focus-scopes.md`
 - **Reference(s):**
   - WAI-ARIA Authoring Practices (APG): focus/keyboard interaction outcomes (policy lives in components)
+- **Runner snapshot seam (data-only):**
+  - `fret-runtime::WindowInputContextService` publishes a window-scoped `InputContext` snapshot for
+    runner/platform integration surfaces (OS menubars, etc.).
+  - `InputContext.window_arbitration` (`WindowInputArbitrationSnapshot`) is the single source of
+    truth for window-level modal/capture/occlusion state. It is published by the UI runtime as part
+    of the `InputContext` snapshot (no separate arbitration service).
+  - Evidence anchors:
+    - Snapshot service: `crates/fret-runtime/src/window_input_context.rs`
+    - Snapshot type: `crates/fret-runtime/src/input.rs`
+    - Publishing sites: `crates/fret-ui/src/tree/{dispatch.rs,commands.rs,paint.rs}`
 
 ### Overlay/layer substrate + modal barrier
 
@@ -63,6 +73,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
   - `crates/fret-launch/src/runner/mod.rs`
   - `crates/fret-ui/src/elements/mod.rs`
 - **ADR(s):** `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
+- **Portability (execution/wake/timers):** Native: `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable`; wasm: `exec.background_work=cooperative`, `exec.wake=best_effort`, `exec.timers=best_effort`; mobile (future): `exec.background_work=threads`, `exec.wake=reliable`, `exec.timers=reliable` (see `docs/adr/0190-execution-and-concurrency-surface-v1.md` and `docs/adr/0054-platform-capabilities-and-portability-matrix.md`).
 - **Reference(s):**
   - GPUI/Zed `Window::refresh()` mental model: `repo-ref/zed/crates/gpui/src/window.rs`
 

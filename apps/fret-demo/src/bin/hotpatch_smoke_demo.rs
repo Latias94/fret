@@ -63,7 +63,10 @@ mod hotpatch {
 
     #[inline(never)]
     #[unsafe(export_name = "fret_hotpatch_smoke_demo_view")]
-    fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Vec<AnyElement> {
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        st: &mut State,
+    ) -> fret_bootstrap::ui_app_driver::ViewElements {
         if cfg!(debug_assertions)
             && std::env::var_os("DIOXUS_CLI_ENABLED").is_some_and(|v| !v.is_empty())
             && VIEW_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 3
@@ -89,8 +92,8 @@ mod hotpatch {
             .read(&st.debug, |v| v.clone())
             .unwrap_or_else(|_| Arc::<str>::from("<missing debug model>"));
 
-        let content = shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
+        let content = shadcn::Card::new([
+            shadcn::CardHeader::new([
                 shadcn::CardTitle::new(DEMO_HEADLINE).into_element(cx),
                 shadcn::CardDescription::new(format!(
                     "counter={value} (click, then watch the terminal logs)"
@@ -99,12 +102,12 @@ mod hotpatch {
                 shadcn::CardDescription::new(format!("debug: {debug}")).into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new(vec![fret_ui_kit::declarative::stack::vstack(
+            shadcn::CardContent::new([fret_ui_kit::declarative::stack::vstack(
                 cx,
                 fret_ui_kit::declarative::stack::VStackProps::default()
                     .gap_y(fret_ui_kit::Space::N2),
                 |cx| {
-                    vec![
+                    [
                         shadcn::Button::new("Increment")
                             .on_click(CMD_INC)
                             .into_element(cx),
@@ -128,7 +131,7 @@ mod hotpatch {
             fret_ui_kit::LayoutRefinement::default().w_full().h_full(),
         );
 
-        vec![cx.container(wrap, |_cx| vec![content])]
+        vec![cx.container(wrap, |_cx| [content])].into()
     }
 
     fn on_event(

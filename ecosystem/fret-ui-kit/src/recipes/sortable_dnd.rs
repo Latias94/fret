@@ -82,12 +82,15 @@ fn get_state_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<SortableD
 /// - Geometry is sourced from `last_bounds_for_element` (prev-bounds snapshot), so the first frame may not have
 ///   droppable rects yet. Most use-sites will naturally render continuously during interactions.
 #[allow(clippy::too_many_arguments)]
-pub fn sortable_reorder_list<H: UiHost>(
+pub fn sortable_reorder_list<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     items: Model<Vec<DndItemId>>,
     props: SortableReorderListProps,
-    mut row_contents: impl FnMut(&mut ElementContext<'_, H>, DndItemId) -> Vec<AnyElement>,
-) -> AnyElement {
+    mut row_contents: impl FnMut(&mut ElementContext<'_, H>, DndItemId) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let SortableReorderListProps {
         row_height,
         activation,

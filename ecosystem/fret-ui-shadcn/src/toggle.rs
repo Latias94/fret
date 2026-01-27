@@ -4,14 +4,16 @@ use fret_core::{Color, Edges, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space,
-    ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
+    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, resolve_override_slot_opt, ui,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -103,6 +105,43 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct ToggleStyle {
+    pub background: OverrideSlot<ColorRef>,
+    pub foreground: OverrideSlot<ColorRef>,
+    pub border_color: OverrideSlot<ColorRef>,
+}
+
+impl ToggleStyle {
+    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn foreground(mut self, foreground: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.foreground = Some(foreground);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.foreground.is_some() {
+            self.foreground = other.foreground;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Toggle {
     model: Option<Model<bool>>,
@@ -116,6 +155,7 @@ pub struct Toggle {
     size: ToggleSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: ToggleStyle,
 }
 
 impl std::fmt::Debug for Toggle {
@@ -131,6 +171,7 @@ impl std::fmt::Debug for Toggle {
             .field("size", &self.size)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("style", &self.style)
             .finish()
     }
 }
@@ -149,6 +190,7 @@ impl Toggle {
             size: ToggleSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: ToggleStyle::default(),
         }
     }
 
@@ -166,6 +208,7 @@ impl Toggle {
             size: ToggleSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: ToggleStyle::default(),
         }
     }
 
@@ -217,6 +260,11 @@ impl Toggle {
         self
     }
 
+    pub fn style(mut self, style: ToggleStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
@@ -233,17 +281,15 @@ impl Toggle {
         let disabled_explicit = self.disabled;
         let a11y_label = self.a11y_label.clone();
         let on_click = self.on_click;
-        let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
         let disabled = disabled_explicit
-            || crate::command_gating::command_is_disabled_by_gating(
-                &*cx.app,
-                &gating,
-                on_click.as_ref(),
-            );
+            || on_click
+                .as_ref()
+                .is_some_and(|cmd| !cx.command_is_enabled(cmd));
         let variant = self.variant;
         let size_token = self.size;
         let chrome = self.chrome;
         let layout = self.layout;
+        let style_override = self.style;
 
         let theme = Theme::global(&*cx.app).clone();
 
@@ -262,8 +308,8 @@ impl Toggle {
         let pressable_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .min_h(MetricRef::Px(min_h))
-                .min_w(MetricRef::Px(min_w))
+                .min_h(min_h)
+                .min_w(min_w)
                 .merge(layout),
         );
 
@@ -275,57 +321,67 @@ impl Toggle {
         let fg_on = toggle_fg_on(&theme);
         let border = toggle_border(&theme);
 
+        let (hover_bg, hover_fg) = match variant {
+            ToggleVariant::Default => (bg_hover, fg_muted),
+            ToggleVariant::Outline => (bg_on, fg_on),
+        };
+
+        let default_background = WidgetStateProperty::new(None)
+            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_bg)))
+            .when(WidgetStates::SELECTED, Some(ColorRef::Color(bg_on)))
+            .when(WidgetStates::ACTIVE, Some(ColorRef::Color(hover_bg)))
+            .when(WidgetStates::DISABLED, None);
+
+        let default_foreground = WidgetStateProperty::new(ColorRef::Color(fg_default))
+            .when(WidgetStates::HOVERED, ColorRef::Color(hover_fg))
+            .when(WidgetStates::SELECTED, ColorRef::Color(fg_on))
+            .when(WidgetStates::ACTIVE, ColorRef::Color(hover_fg))
+            .when(WidgetStates::DISABLED, ColorRef::Color(fg_disabled));
+
+        let default_border_color = WidgetStateProperty::new(None)
+            .when(
+                WidgetStates::FOCUS_VISIBLE,
+                Some(ColorRef::Color(ring_border)),
+            )
+            .when(WidgetStates::DISABLED, None);
+
+        let user_bg_override = chrome.background.is_some();
+
         let base_chrome = match variant {
-            ToggleVariant::Default => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(Color::TRANSPARENT)),
-                ..Default::default()
-            },
-            ToggleVariant::Outline => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border)),
-                ..Default::default()
-            },
+            ToggleVariant::Default => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(Color::TRANSPARENT)),
+            ToggleVariant::Outline => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(border)),
         }
         .merge(chrome);
 
         control_chrome_pressable_with_id_props(cx, move |cx, state, _id| {
-            cx.pressable_dispatch_command_opt(on_click);
+            cx.pressable_dispatch_command_if_enabled_opt(on_click);
             cx.pressable_toggle_bool(&model);
 
             let on = cx.watch_model(&model).copied().unwrap_or(false);
-            let hovered = state.hovered && !state.pressed;
-            let pressed = state.pressed;
+            let mut states = WidgetStates::from_pressable(cx, state, !disabled);
+            states.set(WidgetState::Selected, on);
 
-            let (hover_bg, hover_fg) = match variant {
-                ToggleVariant::Default => (bg_hover, fg_muted),
-                ToggleVariant::Outline => (bg_on, fg_on),
-            };
-
-            let mut fg = if disabled {
-                fg_disabled
-            } else if on {
-                fg_on
-            } else if hovered {
-                hover_fg
-            } else {
-                fg_default
-            };
-
-            let mut bg = if on && !disabled {
-                Some(bg_on)
-            } else if hovered && !disabled {
-                Some(hover_bg)
-            } else {
-                None
-            };
-
-            if pressed && !disabled {
-                fg = hover_fg;
-                bg = Some(hover_bg);
-            }
+            let fg = resolve_override_slot(
+                style_override.foreground.as_ref(),
+                &default_foreground,
+                states,
+            );
+            let bg = resolve_override_slot_opt(
+                style_override.background.as_ref(),
+                &default_background,
+                states,
+            );
+            let border_color = resolve_override_slot_opt(
+                style_override.border_color.as_ref(),
+                &default_border_color,
+                states,
+            );
 
             let mut chrome_props = decl_style::container_props(
                 &theme,
@@ -341,11 +397,13 @@ impl Toggle {
             if matches!(variant, ToggleVariant::Outline) {
                 chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
             }
-            if bg.is_some() {
-                chrome_props.background = bg;
+            if !user_bg_override {
+                if let Some(bg) = bg {
+                    chrome_props.background = Some(bg.resolve(&theme));
+                }
             }
-            if state.focused && !disabled {
-                chrome_props.border_color = Some(ring_border);
+            if let Some(border_color) = border_color {
+                chrome_props.border_color = Some(border_color.resolve(&theme));
             }
             chrome_props.layout.size = pressable_layout.size;
 
@@ -376,7 +434,7 @@ impl Toggle {
                             let mut text = ui::label(cx, label)
                                 .text_size_px(text_style.size)
                                 .font_weight(text_style.weight)
-                                .text_color(ColorRef::Color(fg))
+                                .text_color(fg.clone())
                                 .nowrap();
                             if let Some(line_height) = text_style.line_height {
                                 text = text.line_height_px(line_height);
@@ -396,19 +454,25 @@ impl Toggle {
     }
 }
 
-pub fn toggle<H: UiHost>(
+pub fn toggle<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<bool>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Toggle::new(model).children(f(cx)).into_element(cx)
 }
 
-pub fn toggle_uncontrolled<H: UiHost>(
+pub fn toggle_uncontrolled<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     default_pressed: bool,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     Toggle::uncontrolled(default_pressed)
         .children(f(cx))
         .into_element(cx)
@@ -423,7 +487,7 @@ mod tests {
         AppWindowId, Modifiers, PathCommand, Point, Px, Rect, Size, SvgId, SvgService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{
         CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
         WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
@@ -700,7 +764,7 @@ mod tests {
             let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
             let mut availability: HashMap<CommandId, bool> = HashMap::new();
             availability.insert(cmd.clone(), false);
-            svc.set_snapshot(
+            let _token = svc.push_snapshot(
                 window,
                 WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
                     .with_action_availability(Some(Arc::new(availability))),

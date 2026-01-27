@@ -3,6 +3,7 @@ use fret_ui::UiHost;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
 use std::panic::Location;
+use fret_ui::theme::CubicBezier;
 
 use crate::headless::transition::{TransitionOutput, TransitionTimeline};
 
@@ -181,6 +182,59 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
         });
     } else if stop_lease {
         cx.with_state_for(state_owner, TransitionDriverState::default, |st| {
+            st.lease = None;
+        });
+    }
+
+    if output.animating {
+        cx.request_frame();
+    }
+
+    output
+}
+
+pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    bezier: CubicBezier,
+) -> TransitionOutput {
+    let app_tick = cx.app.tick_id().0;
+    let frame_tick = cx.frame_id.0;
+
+    let (output, start_lease, stop_lease) = cx.with_state(TransitionDriverState::default, |st| {
+        if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
+            st.configured_open_ticks = open_ticks;
+            st.configured_close_ticks = close_ticks;
+            st.timeline.set_durations(open_ticks, close_ticks);
+        }
+
+        if st.last_frame_tick != frame_tick {
+            st.last_frame_tick = frame_tick;
+            st.tick = st.tick.saturating_add(1);
+        } else if st.last_app_tick != app_tick {
+            st.last_app_tick = app_tick;
+            st.tick = st.tick.saturating_add(1);
+        } else {
+            st.tick = st.tick.saturating_add(1);
+        }
+
+        let output = st
+            .timeline
+            .update_with_cubic_bezier(open, st.tick, bezier.x1, bezier.y1, bezier.x2, bezier.y2);
+        let start_lease = output.animating && st.lease.is_none();
+        let stop_lease = !output.animating && st.lease.is_some();
+        (output, start_lease, stop_lease)
+    });
+
+    if start_lease {
+        let lease = cx.begin_continuous_frames();
+        cx.with_state(TransitionDriverState::default, |st| {
+            st.lease = Some(lease);
+        });
+    } else if stop_lease {
+        cx.with_state(TransitionDriverState::default, |st| {
             st.lease = None;
         });
     }

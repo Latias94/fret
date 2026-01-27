@@ -1,10 +1,6 @@
 use super::*;
 use std::any::TypeId;
 
-use fret_runtime::{
-    WindowInputArbitrationService, WindowInputArbitrationSnapshot, WindowPointerOcclusion,
-};
-
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
     pub fn paint_all(
@@ -40,10 +36,12 @@ impl<H: UiHost> UiTree<H> {
                 .global::<PlatformCapabilities>()
                 .cloned()
                 .unwrap_or_default();
+            let window_arbitration = self.window_input_arbitration_snapshot();
             let input_ctx = InputContext {
                 platform: Platform::current(),
                 caps,
                 ui_has_modal: barrier_root.is_some(),
+                window_arbitration: Some(window_arbitration),
                 focus_is_text_input,
                 edit_can_undo: app
                     .global::<fret_runtime::WindowCommandAvailabilityService>()
@@ -68,37 +66,6 @@ impl<H: UiHost> UiTree<H> {
                         svc.set_snapshot(window, input_ctx);
                     },
                 );
-            }
-
-            let snapshot = self.input_arbitration_snapshot();
-            let arbitration = WindowInputArbitrationSnapshot {
-                modal_barrier_root: snapshot.modal_barrier_root,
-                pointer_occlusion: match snapshot.pointer_occlusion {
-                    PointerOcclusion::None => WindowPointerOcclusion::None,
-                    PointerOcclusion::BlockMouse => WindowPointerOcclusion::BlockMouse,
-                    PointerOcclusion::BlockMouseExceptScroll => {
-                        WindowPointerOcclusion::BlockMouseExceptScroll
-                    }
-                },
-                pointer_occlusion_root: snapshot
-                    .pointer_occlusion_layer
-                    .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                pointer_capture_active: snapshot.pointer_capture_active,
-                pointer_capture_root: snapshot
-                    .pointer_capture_layer
-                    .and_then(|layer| self.layers.get(layer).map(|l| l.root)),
-                pointer_capture_multiple_roots: snapshot.pointer_capture_multiple_layers
-                    || (snapshot.pointer_capture_active
-                        && snapshot.pointer_capture_layer.is_none()),
-            };
-            let needs_update = app
-                .global::<WindowInputArbitrationService>()
-                .and_then(|svc| svc.snapshot(window))
-                .is_none_or(|prev| prev != &arbitration);
-            if needs_update {
-                app.with_global_mut(WindowInputArbitrationService::default, |svc, _app| {
-                    svc.set_snapshot(window, arbitration);
-                });
             }
         }
 
@@ -266,6 +233,51 @@ impl<H: UiHost> UiTree<H> {
                             end: end as u32,
                         });
                         n.invalidation.paint = false;
+                    }
+
+                    if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
+                        // Paint-cache replay translates recorded draw ops by `delta` without visiting
+                        // descendants. Keep hit-testing and semantics consistent by translating the
+                        // retained subtree bounds too (mirrors the layout-only translation fast path).
+                        //
+                        // Without this, cached subtrees that move (e.g. due to parent layout changes)
+                        // can render correctly while their descendant bounds remain stale, causing
+                        // incorrect pointer routing and stale semantics geometry.
+                        let window = self.window;
+                        let mut stack: Vec<NodeId> = Vec::new();
+                        let mut i = 0usize;
+                        loop {
+                            let child = self
+                                .nodes
+                                .get(node)
+                                .and_then(|n| n.children.get(i))
+                                .copied();
+                            let Some(child) = child else {
+                                break;
+                            };
+                            stack.push(child);
+                            i += 1;
+                        }
+
+                        while let Some(id) = stack.pop() {
+                            let Some(n) = self.nodes.get_mut(id) else {
+                                continue;
+                            };
+                            n.bounds.origin = Point::new(
+                                n.bounds.origin.x + delta.x,
+                                n.bounds.origin.y + delta.y,
+                            );
+                            if let Some(window) = window
+                                && let Some(element) = n.element
+                            {
+                                crate::elements::record_bounds_for_element(
+                                    app, window, element, n.bounds,
+                                );
+                            }
+                            for &child in &n.children {
+                                stack.push(child);
+                            }
+                        }
                     }
 
                     self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);

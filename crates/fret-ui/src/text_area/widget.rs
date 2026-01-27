@@ -356,7 +356,13 @@ impl<H: UiHost> Widget<H> for TextArea {
             return false;
         }
 
-        let cmd = command.as_str();
+        let cmd = match command.as_str() {
+            "edit.copy" => "text.copy",
+            "edit.cut" => "text.cut",
+            "edit.paste" => "text.paste",
+            "edit.select_all" => "text.select_all",
+            other => other,
+        };
         let is_vertical = matches!(
             cmd,
             "text.move_up" | "text.move_down" | "text.select_up" | "text.select_down"

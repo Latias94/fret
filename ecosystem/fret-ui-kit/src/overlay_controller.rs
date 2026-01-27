@@ -1,6 +1,8 @@
 use fret_core::{AppWindowId, Rect};
 use fret_runtime::Model;
-use fret_ui::action::{OnDismissRequest, OnDismissiblePointerMove};
+use fret_ui::action::{
+    OnCloseAutoFocus, OnDismissRequest, OnDismissiblePointerMove, OnOpenAutoFocus,
+};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
@@ -56,6 +58,7 @@ pub enum OverlayKind {
 pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
+    pub style: Option<window_overlays::ToastLayerStyle>,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -82,15 +85,13 @@ pub struct OverlayRequest {
     pub close_on_window_focus_lost: bool,
     /// Whether this overlay should close when the OS window is resized (or scale factor changes).
     pub close_on_window_resize: bool,
-    /// Whether focus should be restored when the overlay closes via Escape.
-    pub restore_focus_on_escape: bool,
-    /// Whether focus should be restored when the overlay closes via outside press.
-    pub restore_focus_on_outside_press: bool,
     pub open: Option<Model<bool>>,
     pub dismissible_on_dismiss_request: Option<OnDismissRequest>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub children: Vec<AnyElement>,
     pub toast_layer: Option<ToastLayerSpec>,
 }
@@ -111,11 +112,6 @@ impl std::fmt::Debug for OverlayRequest {
                 "disable_outside_pointer_events",
                 &self.disable_outside_pointer_events,
             )
-            .field("restore_focus_on_escape", &self.restore_focus_on_escape)
-            .field(
-                "restore_focus_on_outside_press",
-                &self.restore_focus_on_outside_press,
-            )
             .field("open", &self.open)
             .field(
                 "dismissible_on_dismiss_request",
@@ -127,6 +123,8 @@ impl std::fmt::Debug for OverlayRequest {
             )
             .field("presence", &self.presence)
             .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("children_len", &self.children.len())
             .field("toast_layer", &self.toast_layer)
             .finish()
@@ -151,13 +149,13 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            restore_focus_on_escape: true,
-            restore_focus_on_outside_press: true,
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -197,13 +195,13 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            restore_focus_on_escape: true,
-            restore_focus_on_outside_press: true,
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -211,6 +209,7 @@ impl OverlayRequest {
 
     pub fn tooltip(
         id: GlobalElementId,
+        open: Model<bool>,
         presence: OverlayPresence,
         children: Vec<AnyElement>,
     ) -> Self {
@@ -224,13 +223,13 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            restore_focus_on_escape: false,
-            restore_focus_on_outside_press: false,
-            open: None,
+            open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -239,6 +238,8 @@ impl OverlayRequest {
     pub fn hover(
         id: GlobalElementId,
         trigger: GlobalElementId,
+        open: Model<bool>,
+        presence: OverlayPresence,
         children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         Self {
@@ -251,16 +252,13 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            restore_focus_on_escape: false,
-            restore_focus_on_outside_press: false,
-            open: None,
+            open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
-            presence: OverlayPresence {
-                present: true,
-                interactive: true,
-            },
+            presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children: children.into_iter().collect(),
             toast_layer: None,
         }
@@ -277,17 +275,18 @@ impl OverlayRequest {
             disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
-            restore_focus_on_escape: false,
-            restore_focus_on_outside_press: false,
             open: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children: Vec::new(),
             toast_layer: Some(ToastLayerSpec {
                 store,
                 position: window_overlays::ToastPosition::default(),
+                style: None,
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -312,6 +311,15 @@ impl OverlayRequest {
             .as_mut()
             .expect("toast_position requires a ToastLayer request");
         spec.position = position;
+        self
+    }
+
+    pub fn toast_style(mut self, style: window_overlays::ToastLayerStyle) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_style requires a ToastLayer request");
+        spec.style = Some(style);
         self
     }
 
@@ -351,8 +359,11 @@ impl OverlayRequest {
         self
     }
 
-    pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
-        self.dismissable_branches = branches;
+    pub fn dismissable_branches(
+        mut self,
+        branches: impl IntoIterator<Item = GlobalElementId>,
+    ) -> Self {
+        self.dismissable_branches = branches.into_iter().collect();
         self
     }
 
@@ -482,8 +493,8 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
-                        restore_focus_on_escape: request.restore_focus_on_escape,
-                        restore_focus_on_outside_press: request.restore_focus_on_outside_press,
+                        on_open_auto_focus: request.on_open_auto_focus,
+                        on_close_auto_focus: request.on_close_auto_focus,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
@@ -507,12 +518,15 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
+                        on_open_auto_focus: request.on_open_auto_focus,
+                        on_close_auto_focus: request.on_close_auto_focus,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         children: request.children,
                     },
                 );
             }
             OverlayKind::Tooltip => {
+                let open = request.open.expect("Tooltip requires open model");
                 if !request.presence.present {
                     return;
                 }
@@ -525,7 +539,10 @@ impl OverlayController {
                     window_overlays::TooltipRequest {
                         id: request.id,
                         root_name,
+                        interactive: request.presence.interactive,
                         trigger: request.trigger,
+                        open,
+                        present: request.presence.present,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
@@ -533,6 +550,10 @@ impl OverlayController {
                 );
             }
             OverlayKind::Hover => {
+                let open = request.open.expect("Hover requires open model");
+                if !request.presence.present {
+                    return;
+                }
                 let trigger = request.trigger.expect("Hover requires trigger");
                 let root_name = request
                     .root_name
@@ -543,7 +564,10 @@ impl OverlayController {
                     window_overlays::HoverOverlayRequest {
                         id: request.id,
                         root_name,
+                        interactive: request.presence.interactive,
                         trigger,
+                        open,
+                        present: request.presence.present,
                         children: request.children,
                     },
                 );
@@ -564,6 +588,9 @@ impl OverlayController {
                 }
                 if let Some(gap) = spec.gap {
                     toast_req = toast_req.gap(gap);
+                }
+                if let Some(style) = spec.style {
+                    toast_req = toast_req.style(style);
                 }
                 if let Some(width) = spec.toast_min_width {
                     toast_req = toast_req.toast_min_width(width);
@@ -765,6 +792,22 @@ impl OverlayController {
             open_ticks,
             close_ticks,
             ease,
+        )
+    }
+
+    pub fn transition_with_durations_and_cubic_bezier<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+        bezier: fret_ui::theme::CubicBezier,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+            bezier,
         )
     }
 

@@ -36,7 +36,9 @@ const DOCK_FLOATING_CLOSE_SIZE: Px = Px(14.0);
 
 pub struct DockSpace {
     pub window: fret_core::AppWindowId,
+    semantics_test_id: Option<&'static str>,
     last_bounds: Rect,
+    prepaint_wants_animation_frames: bool,
     divider_drag: Option<DividerDragSession>,
     floating_drag: Option<FloatingDragState>,
     pending_dock_drags: HashMap<fret_core::PointerId, PendingDockDrag>,
@@ -44,7 +46,7 @@ pub struct DockSpace {
     pressed_floating_close: Option<DockNodeId>,
     panel_content: HashMap<PanelKey, NodeId>,
     panel_last_sizes: HashMap<PanelKey, Size>,
-    viewport_capture: Option<ViewportCaptureState>,
+    viewport_capture: HashMap<fret_core::PointerId, ViewportCaptureState>,
     tab_titles: HashMap<PanelKey, PreparedTabTitle>,
     empty_state: Option<PreparedTabTitle>,
     hovered_tab: Option<(DockNodeId, usize)>,
@@ -97,7 +99,9 @@ impl DockSpace {
     pub fn new(window: fret_core::AppWindowId) -> Self {
         Self {
             window,
+            semantics_test_id: None,
             last_bounds: Rect::default(),
+            prepaint_wants_animation_frames: false,
             divider_drag: None,
             floating_drag: None,
             pending_dock_drags: HashMap::new(),
@@ -105,7 +109,7 @@ impl DockSpace {
             pressed_floating_close: None,
             panel_content: HashMap::new(),
             panel_last_sizes: HashMap::new(),
-            viewport_capture: None,
+            viewport_capture: HashMap::new(),
             tab_titles: HashMap::new(),
             empty_state: None,
             hovered_tab: None,
@@ -134,6 +138,11 @@ impl DockSpace {
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
         }
+    }
+
+    pub fn with_semantics_test_id(mut self, id: &'static str) -> Self {
+        self.semantics_test_id = Some(id);
+        self
     }
 
     pub fn with_panel_content(mut self, panel: PanelKey, root: NodeId) -> Self {
@@ -475,6 +484,50 @@ impl DockSpace {
 impl<H: UiHost> Widget<H> for DockSpace {
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::Panel);
+        if let Some(id) = self.semantics_test_id {
+            cx.set_test_id(id);
+        }
+    }
+
+    fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        // Keep the dock host "alive" as a stable internal drag route target.
+        //
+        // This must be refreshed during paint/layout, not only during event handling, because
+        // cross-window drag routing needs a reliable per-window anchor even when hit-testing is
+        // over unrelated UI (ADR 0072) and even when no events have fired this frame.
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_PANEL,
+            cx.node,
+        );
+
+        let is_dock_dragging = cx
+            .app
+            .drag(fret_core::PointerId(0))
+            .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
+        let wants_animation_frames = is_dock_dragging
+            || self.divider_drag.is_some()
+            || self.floating_drag.is_some()
+            || !self.viewport_capture.is_empty();
+
+        // If the node is a view-cache root and paint caching is active, a "no-op" frame can
+        // replay the previous paint ops and skip `Widget::paint()`. This makes it easy to miss
+        // frame-driven UI (dragging, capture, resize).
+        //
+        // Keep paint invalidated while the chrome is active so cached replay cannot suppress
+        // per-frame indicator updates. On transitions, request a redraw to ensure we get at least
+        // one paint pass to establish/tear down the frame loop.
+        if wants_animation_frames {
+            cx.invalidate_self(Invalidation::Paint);
+            if !self.prepaint_wants_animation_frames {
+                cx.request_redraw();
+            }
+        } else if self.prepaint_wants_animation_frames {
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
+        self.prepaint_wants_animation_frames = wants_animation_frames;
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
@@ -939,14 +992,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let dock_space_node = cx.node;
         let allow_tear_off =
             cx.input_ctx.caps.ui.window_tear_off && cx.input_ctx.caps.ui.multi_window;
-        let window_input_arbitration = cx
-            .app
-            .global::<fret_runtime::WindowInputArbitrationService>()
-            .and_then(|svc| svc.snapshot(self.window))
-            .copied();
-        let pointer_occlusion = window_input_arbitration
-            .map(|snapshot| snapshot.pointer_occlusion)
-            .unwrap_or(fret_runtime::WindowPointerOcclusion::None);
+        let window_input_arbitration = cx.input_ctx.window_arbitration();
+        let pointer_occlusion = cx.input_ctx.window_pointer_occlusion();
         let foreign_capture_active = window_input_arbitration.is_some_and(|snapshot| {
             if !snapshot.pointer_capture_active {
                 return false;
@@ -1015,13 +1062,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             {
                                 return;
                             }
-                            if let Some(capture) = self.viewport_capture.as_ref() {
-                                if docking_interaction_settings
-                                    .suppress_context_menu_during_viewport_capture
-                                    && *button == fret_core::MouseButton::Right
-                                    && capture.button != fret_core::MouseButton::Right
-                                {
-                                    stop_propagation = true;
+                            if !self.viewport_capture.is_empty() {
+                                if let Some(capture) = self.viewport_capture.values().next() {
+                                    if docking_interaction_settings
+                                        .suppress_context_menu_during_viewport_capture
+                                        && *button == fret_core::MouseButton::Right
+                                        && capture.button != fret_core::MouseButton::Right
+                                    {
+                                        stop_propagation = true;
+                                    }
                                 }
                                 return;
                             }
@@ -1234,14 +1283,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     pending_redraws.push(self.window);
                                 }
 
-                                self.viewport_capture = Some(ViewportCaptureState {
+                                self.viewport_capture.insert(
                                     pointer_id,
-                                    hit,
-                                    button: *button,
-                                    start: *position,
-                                    last: *position,
-                                    moved: false,
-                                });
+                                    ViewportCaptureState {
+                                        pointer_id,
+                                        hit,
+                                        button: *button,
+                                        start: *position,
+                                        last: *position,
+                                        moved: false,
+                                    },
+                                );
                                 request_pointer_capture = Some(Some(dock_space_node));
                             }
                         }
@@ -1252,10 +1304,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             pointer_type,
                             ..
                         } => {
-                            if self
-                                .viewport_capture
-                                .as_ref()
-                                .is_some_and(|capture| capture.pointer_id != pointer_id)
+                            if !self.viewport_capture.is_empty()
+                                && !self.viewport_capture.contains_key(&pointer_id)
                             {
                                 return;
                             }
@@ -1348,7 +1398,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
                                 }
 
-                                if self.viewport_capture.is_none()
+                                if self.viewport_capture.is_empty()
                                     && self.divider_drag.is_none()
                                     && dock_drag.is_none()
                                 {
@@ -1377,7 +1427,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
                                 }
 
-                                let hovered = if self.viewport_capture.is_none()
+                                let hovered = if self.viewport_capture.is_empty()
                                     && self.divider_drag.is_none()
                                     && dock_drag.is_none()
                                 {
@@ -1465,7 +1515,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
                                 }
 
-                                if let Some(capture) = self.viewport_capture.as_mut() {
+                                if let Some(capture) = self.viewport_capture.get_mut(&pointer_id) {
                                     capture.last = *position;
                                     if !capture.moved
                                         && capture.button == fret_core::MouseButton::Right
@@ -1660,7 +1710,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 && *button == fret_core::MouseButton::Right
                                 && self
                                     .viewport_capture
-                                    .as_ref()
+                                    .values()
+                                    .next()
                                     .is_some_and(|c| c.button != fret_core::MouseButton::Right)
                             {
                                 stop_propagation = true;
@@ -1804,12 +1855,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             }
 
                             if !handled {
-                                let released_capture =
-                                    self.viewport_capture.as_ref().is_some_and(|c| {
-                                        c.pointer_id == pointer_id && c.button == *button
-                                    });
+                                let released_capture = self
+                                    .viewport_capture
+                                    .get(&pointer_id)
+                                    .is_some_and(|c| c.button == *button);
                                 if released_capture {
-                                    let capture = self.viewport_capture.take().unwrap();
+                                    let capture =
+                                        self.viewport_capture.remove(&pointer_id).unwrap();
                                     let e = viewport_input_from_hit_clamped(
                                         self.window,
                                         capture.hit.clone(),
@@ -2098,12 +2150,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             invalidate_paint = true;
                             pending_redraws.push(self.window);
                         }
-                        if self
-                            .viewport_capture
-                            .as_ref()
-                            .is_some_and(|capture| capture.pointer_id == e.pointer_id)
-                        {
-                            let capture = self.viewport_capture.take().unwrap();
+                        if let Some(capture) = self.viewport_capture.remove(&e.pointer_id) {
                             let position = e.position.unwrap_or(capture.last);
                             let evt = viewport_input_from_hit_clamped(
                                 self.window,
@@ -2340,6 +2387,54 @@ impl<H: UiHost> Widget<H> for DockSpace {
             fret_runtime::DRAG_KIND_DOCK_PANEL,
             cx.node,
         );
+
+        // Best-effort diagnostics hook: only record if a diagnostics collector has registered the
+        // store (avoids allocating globals in production apps).
+        if cx
+            .app
+            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+            .is_some()
+        {
+            let frame_id = cx.app.frame_id();
+            let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
+                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    && (d.source_window == self.window || d.current_window == self.window)
+            });
+            let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
+                let drag = cx.app.drag(pointer_id)?;
+                Some(fret_runtime::DockDragDiagnostics {
+                    pointer_id,
+                    source_window: drag.source_window,
+                    current_window: drag.current_window,
+                    dragging: drag.dragging,
+                    cross_window_hover: drag.cross_window_hover,
+                })
+            });
+            let viewport_capture = self
+                .viewport_capture
+                .iter()
+                .min_by_key(|(pointer_id, _)| pointer_id.0)
+                .map(
+                    |(_pointer_id, capture)| fret_runtime::ViewportCaptureDiagnostics {
+                        pointer_id: capture.pointer_id,
+                        target: capture.hit.viewport.target,
+                    },
+                );
+
+            cx.app.with_global_mut_untracked(
+                fret_runtime::WindowInteractionDiagnosticsStore::default,
+                |svc, _app| {
+                    svc.record_docking(
+                        self.window,
+                        frame_id,
+                        fret_runtime::DockingInteractionDiagnostics {
+                            dock_drag,
+                            viewport_capture,
+                        },
+                    );
+                },
+            );
+        }
         let overlay_hooks = cx
             .app
             .global::<DockViewportOverlayHooksService>()
@@ -2351,11 +2446,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()
             || self.floating_drag.is_some()
-            || self.viewport_capture.is_some();
-        if wants_animation_frames && let Some(window) = cx.window {
-            cx.app.push_effect(Effect::RequestAnimationFrame(window));
+            || !self.viewport_capture.is_empty();
+        if wants_animation_frames {
+            cx.request_animation_frame_paint_only();
         }
-
         if cx.app.global::<DockManager>().is_none() {
             self.paint_empty_state(cx);
             return;

@@ -19,8 +19,8 @@ use std::sync::Arc;
 use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, HoverRegionProps, Overflow, PointerRegionProps, SemanticsProps,
-    SpinnerProps, SvgIconProps,
+    AnyElement, ElementKind, Elements, HoverRegionProps, Overflow, PointerRegionProps,
+    SemanticsProps, SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -185,11 +185,25 @@ impl TooltipProvider {
         self
     }
 
-    pub fn with<H: UiHost>(
+    pub fn with<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> Vec<AnyElement> {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements(cx, f).into_vec()
+    }
+
+    pub fn with_elements<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         tooltip_provider::with_tooltip_provider(
             cx,
             tooltip_provider::TooltipProviderConfig::new(
@@ -197,7 +211,7 @@ impl TooltipProvider {
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            f,
+            |cx| f(cx).into_iter().collect::<Elements>(),
         )
     }
 }
@@ -376,6 +390,26 @@ impl Tooltip {
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let focused = cx.is_focused_element(trigger_id);
             let event_models = tooltip_trigger_event_models(cx);
+            let tooltip_id = cx.root_id();
+
+            #[derive(Default)]
+            struct TooltipOpenModelState {
+                model: Option<Model<bool>>,
+            }
+
+            let open = cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                st.model.clone()
+            });
+            let open = if let Some(model) = open {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+            let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
 
             let close_requested = cx
                 .watch_model(&event_models.close_requested)
@@ -505,6 +539,11 @@ impl Tooltip {
             );
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
+
+            if update.open != open_now {
+                let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
+                open_now = update.open;
+            }
 
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
                 base_trigger.clone(),
@@ -638,7 +677,6 @@ impl Tooltip {
                 return out;
             }
 
-            let tooltip_id = cx.root_id();
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.opacity;
             let scale = motion.scale;
@@ -743,8 +781,12 @@ impl Tooltip {
                 )]
             });
 
-            let mut request =
-                radix_tooltip::tooltip_request(tooltip_id, overlay_presence, overlay_children);
+            let mut request = radix_tooltip::tooltip_request(
+                tooltip_id,
+                open.clone(),
+                overlay_presence,
+                overlay_children,
+            );
             request.trigger = Some(trigger_id);
             request.dismissible_on_dismiss_request = Some(radix_dismissable_layer::handler({
                 let close_requested = event_models.close_requested.clone();
@@ -1165,7 +1207,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(1)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -1711,7 +1753,7 @@ mod tests {
                         TooltipProvider::new()
                             .delay_duration_frames(10)
                             .skip_delay_duration_frames(30)
-                            .with(cx, |cx| {
+                            .with_elements(cx, |cx| {
                                 vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                                     let trigger_1 = cx.pressable_with_id(
                                         PressableProps {
@@ -1932,7 +1974,7 @@ mod tests {
                         TooltipProvider::new()
                             .delay_duration_frames(0)
                             .skip_delay_duration_frames(0)
-                            .with(cx, |cx| {
+                            .with_elements(cx, |cx| {
                                 vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                                     let trigger_1 = cx.pressable_with_id(
                                         PressableProps {
@@ -2202,7 +2244,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -2392,7 +2434,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -2583,7 +2625,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let scroll = cx.scroll(
                                 fret_ui::element::ScrollProps {
                                     layout: {
@@ -2813,7 +2855,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let mut flex_layout = LayoutStyle::default();
                             flex_layout.size.width = Length::Px(Px(800.0));
                             flex_layout.size.height = Length::Px(Px(600.0));
@@ -3089,7 +3131,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -3262,7 +3304,7 @@ mod tests {
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
                         .disable_hoverable_content(false)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             vec![cx.row(
                                 fret_ui::element::RowProps {
                                     gap: Px(20.0),
@@ -3502,7 +3544,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {

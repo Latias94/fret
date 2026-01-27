@@ -58,6 +58,16 @@ Introduce timer requests as data effects:
 
 The platform runner owns the actual timer mechanism and injects timer events back into the app loop.
 
+### 2.1) Timer routing is element-owned by default
+
+When an element-owned hook schedules a timer, the runtime records the timer token’s **target element**.
+When the runner later injects `Event::Timer { token }`, the UI runtime first attempts to dispatch it
+to the recorded target element (if it is still mounted). If no target is found, the runtime falls
+back to dispatching the timer event to visible layers that have opted into timer delivery.
+
+This allows interaction policies (e.g. overlay/menu hover delays) to remain deterministic under
+view caching and multi-layer input routing.
+
 ### 3) Animation frames are requested, not assumed
 
 Introduce an explicit request for "next frame as soon as possible":

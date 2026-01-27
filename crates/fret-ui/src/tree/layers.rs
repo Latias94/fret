@@ -118,6 +118,7 @@ impl<H: UiHost> UiTree<H> {
         Some(root)
     }
 
+    #[track_caller]
     pub fn set_layer_visible(&mut self, layer: UiLayerId, visible: bool) {
         let prev_visible = self.layers.get(layer).map(|l| l.visible);
         let Some(l) = self.layers.get_mut(layer) else {
@@ -155,6 +156,21 @@ impl<H: UiHost> UiTree<H> {
             let (active_roots, barrier_root) = self.active_input_layers();
             if barrier_root.is_some() {
                 self.enforce_modal_barrier_scope(&active_roots);
+            }
+
+            #[cfg(feature = "diagnostics")]
+            if self.debug_enabled {
+                let caller = std::panic::Location::caller();
+                self.debug_layer_visible_writes
+                    .push(UiDebugSetLayerVisibleWrite {
+                        layer,
+                        frame_id: self.debug_stats.frame_id,
+                        prev_visible,
+                        visible,
+                        file: caller.file(),
+                        line: caller.line(),
+                        column: caller.column(),
+                    });
             }
         }
     }

@@ -17,6 +17,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
+        notify_requested: &'a mut bool,
     }
 
     impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
@@ -53,52 +54,113 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
         fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
         }
+
+        fn notify(&mut self, _cx: action::ActionCx) {
+            *self.notify_requested = true;
+        }
     }
 
-    let Event::Pointer(fret_core::PointerEvent::Down {
-        button,
-        modifiers,
-        click_count,
-        pointer_id,
-        pointer_type,
-        ..
-    }) = event
-    else {
-        return;
-    };
-
-    let hook = crate::elements::with_element_state(
-        &mut *cx.app,
-        window,
-        this.element,
-        crate::action::DismissibleActionHooks::default,
-        |hooks| hooks.on_dismiss_request.clone(),
-    );
-
-    if let Some(h) = hook {
-        let mut host = DismissibleHookHost {
-            app: &mut *cx.app,
-            window,
-            element: this.element,
-        };
-        h(
-            &mut host,
-            action::ActionCx {
+    match event {
+        Event::Pointer(fret_core::PointerEvent::Down {
+            button,
+            modifiers,
+            click_count,
+            pointer_id,
+            pointer_type,
+            ..
+        }) => {
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
                 window,
-                target: this.element,
-            },
-            DismissReason::OutsidePress {
-                pointer: Some(action::OutsidePressCx {
-                    pointer_id: *pointer_id,
-                    pointer_type: *pointer_type,
-                    button: *button,
-                    modifiers: *modifiers,
-                    click_count: *click_count,
-                }),
-            },
-        );
-        cx.invalidate_self(Invalidation::Paint);
-        cx.request_redraw();
+                this.element,
+                crate::action::DismissibleActionHooks::default,
+                |hooks| hooks.on_dismiss_request.clone(),
+            );
+
+            if let Some(h) = hook {
+                let mut host = DismissibleHookHost {
+                    app: &mut *cx.app,
+                    window,
+                    element: this.element,
+                    notify_requested: &mut cx.notify_requested,
+                };
+                let mut req = action::DismissRequestCx::new(DismissReason::OutsidePress {
+                    pointer: Some(action::OutsidePressCx {
+                        pointer_id: *pointer_id,
+                        pointer_type: *pointer_type,
+                        button: *button,
+                        modifiers: *modifiers,
+                        click_count: *click_count,
+                    }),
+                });
+                h(
+                    &mut host,
+                    action::ActionCx {
+                        window,
+                        target: this.element,
+                    },
+                    &mut req,
+                );
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+            }
+        }
+        Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons,
+            modifiers,
+            pointer_type,
+            pointer_id,
+            ..
+        }) => {
+            let pixels_per_point = cx
+                .app
+                .global::<fret_core::WindowMetricsService>()
+                .and_then(|svc| svc.scale_factor(window))
+                .unwrap_or(1.0);
+
+            let hook = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::action::DismissibleActionHooks::default,
+                |hooks| hooks.on_pointer_move.clone(),
+            );
+            let Some(h) = hook else {
+                return;
+            };
+
+            let mv = action::PointerMoveCx {
+                pointer_id: *pointer_id,
+                position: *position,
+                tick_id: cx.app.tick_id(),
+                pixels_per_point,
+                buttons: *buttons,
+                modifiers: *modifiers,
+                pointer_type: *pointer_type,
+            };
+
+            let mut host = DismissibleHookHost {
+                app: &mut *cx.app,
+                window,
+                element: this.element,
+                notify_requested: &mut cx.notify_requested,
+            };
+            let handled = h(
+                &mut host,
+                action::ActionCx {
+                    window,
+                    target: this.element,
+                },
+                mv,
+            );
+
+            if handled {
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+            }
+        }
+        _ => {}
     }
 }
 
@@ -117,6 +179,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
+        notify_requested: &'a mut bool,
     }
 
     impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
@@ -152,6 +215,10 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
 
         fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
             self.app.next_timer_token()
+        }
+
+        fn notify(&mut self, _cx: action::ActionCx) {
+            *self.notify_requested = true;
         }
     }
 
@@ -174,14 +241,16 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                     app: &mut *cx.app,
                     window,
                     element: this.element,
+                    notify_requested: &mut cx.notify_requested,
                 };
+                let mut req = action::DismissRequestCx::new(DismissReason::Escape);
                 h(
                     &mut host,
                     action::ActionCx {
                         window,
                         target: this.element,
                     },
-                    DismissReason::Escape,
+                    &mut req,
                 );
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -228,6 +297,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 app: &mut *cx.app,
                 window,
                 element: this.element,
+                notify_requested: &mut cx.notify_requested,
             };
             let handled = h(
                 &mut host,

@@ -5,6 +5,9 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
+mod dispatcher;
+use dispatcher::WebDispatcher;
+
 use fret_app::{App, Effect};
 use fret_core::{AppWindowId, Event, Point, Px, Rect, Scene, Size};
 use fret_render::{RenderSceneParams, Renderer, SurfaceState, UploadedRgba8Image, WgpuContext};
@@ -43,6 +46,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     pub driver: D,
 
     event_loop_proxy: Option<EventLoopProxy>,
+    dispatcher: WebDispatcher,
 
     window: Option<Arc<dyn Window>>,
     window_id: Option<WindowId>,
@@ -145,14 +149,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             });
         let caps = Self::effective_platform_capabilities(&requested);
         if caps != requested {
-            app.set_global(caps);
+            app.set_global(caps.clone());
         }
+
+        let dispatcher = WebDispatcher::new(caps.exec);
+        app.set_global::<fret_runtime::DispatcherHandle>(dispatcher.handle());
 
         Self {
             config,
             app,
             driver,
             event_loop_proxy: None,
+            dispatcher,
             window: None,
             window_id: None,
             app_window: AppWindowId::default(),
@@ -179,6 +187,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy) {
         let wake = proxy.clone();
         self.web_services.set_waker(move || wake.wake_up());
+        self.dispatcher.set_event_loop_proxy(proxy.clone());
         self.event_loop_proxy = Some(proxy);
     }
 
@@ -203,6 +212,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         self.exiting = true;
+        self.dispatcher.shutdown();
         self.web_cursor.take();
         event_loop.exit();
         true
@@ -210,6 +220,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     fn effective_platform_capabilities(requested: &PlatformCapabilities) -> PlatformCapabilities {
         let mut available = PlatformCapabilities::default();
+        available.exec.background_work = fret_runtime::ExecBackgroundWork::Cooperative;
+        available.exec.wake = fret_runtime::ExecWake::BestEffort;
+        available.exec.timers = fret_runtime::ExecTimers::BestEffort;
+
         available.ui.multi_window = false;
         available.ui.window_tear_off = false;
         available.ui.cursor_icons = true;
@@ -227,6 +241,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.gfx.webgpu = true;
 
         let mut caps = requested.clone();
+        caps.exec.background_work = caps
+            .exec
+            .background_work
+            .clamp_to_available(available.exec.background_work);
+        caps.exec.wake = caps.exec.wake.clamp_to_available(available.exec.wake);
+        caps.exec.timers = caps.exec.timers.clamp_to_available(available.exec.timers);
+
         caps.ui.multi_window &= available.ui.multi_window;
         caps.ui.window_tear_off &= available.ui.window_tear_off;
         caps.ui.cursor_icons &= available.ui.cursor_icons;
@@ -850,6 +871,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         gfx: &mut GfxState,
         state: &mut D::WindowState,
     ) -> bool {
+        let did_work = self.dispatcher.drain_turn() || self.drain_inboxes(Some(self.app_window));
         let effects = self.app.flush_effects();
         let effects = self.web_services.handle_effects(&mut self.app, effects);
         self.pending_events.extend(self.web_services.take_events());
@@ -860,6 +882,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.config.streaming_upload_budget_bytes_per_frame,
             self.config.streaming_staging_budget_bytes,
             self.config.streaming_update_ack_enabled,
+        );
+        tracing::trace!(
+            did_work,
+            effects = effects.len(),
+            acks = acks.len(),
+            "driver: drain_effects turn"
         );
         if self.config.streaming_update_ack_enabled {
             for ack in acks {
@@ -942,7 +970,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     "streaming image updates queued/budgeted"
                 );
             }
-            return false;
+            return did_work;
         }
 
         for effect in effects {
@@ -1280,6 +1308,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             continue;
                         }
                         self.exiting = true;
+                        self.dispatcher.shutdown();
                         self.web_cursor.take();
                         event_loop.exit();
                         return true;
@@ -1288,6 +1317,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 },
                 Effect::QuitApp => {
                     self.exiting = true;
+                    self.dispatcher.shutdown();
                     self.web_cursor.take();
                     event_loop.exit();
                     return true;
@@ -1389,6 +1419,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         true
+    }
+
+    fn drain_inboxes(&mut self, window: Option<AppWindowId>) -> bool {
+        let did_work = self.app.with_global_mut_untracked(
+            fret_runtime::InboxDrainRegistry::default,
+            |registry, app| registry.drain_all(app, window),
+        );
+        tracing::trace!(?window, did_work, "driver: drain_inboxes");
+        did_work
     }
 
     fn dispatch_events(&mut self, gfx: &mut GfxState, state: &mut D::WindowState) -> bool {

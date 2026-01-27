@@ -5,17 +5,17 @@ mod id;
 mod queries;
 mod runtime;
 
-pub use access::{take_element_state, with_element_state};
+pub use access::{dismissible_has_pointer_move_handler, take_element_state, with_element_state};
 pub use cx::ElementContext;
 pub use hash::global_root;
 pub use id::GlobalElementId;
 pub use queries::{
-    bounds_for_element, node_for_element, root_bounds_for_element, visual_bounds_for_element,
-    with_element_cx,
+    bounds_for_element, element_is_live_in_current_frame, node_for_element,
+    root_bounds_for_element, visual_bounds_for_element, with_element_cx,
 };
-#[cfg(feature = "diagnostics")]
-pub use runtime::WindowElementDiagnosticsSnapshot;
 pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};
+#[cfg(feature = "diagnostics")]
+pub use runtime::{NodeEntryRootOverwrite, WindowElementDiagnosticsSnapshot};
 
 pub(crate) use access::{
     clear_timer_target, is_pressed_pressable, observed_globals_for_element,

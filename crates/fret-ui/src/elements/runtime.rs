@@ -20,15 +20,36 @@ use super::GlobalElementId;
 #[derive(Debug, Clone)]
 pub struct WindowElementDiagnosticsSnapshot {
     pub focused_element: Option<GlobalElementId>,
+    pub focused_element_node: Option<NodeId>,
+    pub focused_element_bounds: Option<Rect>,
+    pub focused_element_visual_bounds: Option<Rect>,
     pub active_text_selection: Option<(GlobalElementId, GlobalElementId)>,
     pub hovered_pressable: Option<GlobalElementId>,
+    pub hovered_pressable_node: Option<NodeId>,
+    pub hovered_pressable_bounds: Option<Rect>,
+    pub hovered_pressable_visual_bounds: Option<Rect>,
     pub pressed_pressable: Option<GlobalElementId>,
+    pub pressed_pressable_node: Option<NodeId>,
+    pub pressed_pressable_bounds: Option<Rect>,
+    pub pressed_pressable_visual_bounds: Option<Rect>,
     pub hovered_hover_region: Option<GlobalElementId>,
     pub wants_continuous_frames: bool,
     pub observed_models: Vec<(GlobalElementId, Vec<(u64, Invalidation)>)>,
     pub observed_globals: Vec<(GlobalElementId, Vec<(String, Invalidation)>)>,
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
+    pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
+    pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
+}
+
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone)]
+pub struct ViewCacheReuseRootElementsSample {
+    pub root: GlobalElementId,
+    pub node: Option<NodeId>,
+    pub elements_len: u32,
+    pub elements_head: Vec<GlobalElementId>,
+    pub elements_tail: Vec<GlobalElementId>,
 }
 
 #[derive(Default)]
@@ -121,6 +142,8 @@ pub struct WindowElementState {
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
     prepared_frame: FrameId,
+    #[cfg(any(test, feature = "diagnostics"))]
+    strict_ownership: bool,
     pub(super) prev_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) cur_unkeyed_fingerprints: HashMap<u64, Vec<u64>>,
     pub(super) observed_models_rendered: HashMap<GlobalElementId, Vec<(ModelId, Invalidation)>>,
@@ -142,6 +165,8 @@ pub struct WindowElementState {
     continuous_frames: Arc<AtomicUsize>,
     #[cfg(feature = "diagnostics")]
     debug_identity: DebugIdentityRegistry,
+    #[cfg(feature = "diagnostics")]
+    debug_node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -157,7 +182,27 @@ pub(crate) struct NodeEntry {
     pub root: GlobalElementId,
 }
 
+#[cfg(feature = "diagnostics")]
+#[derive(Debug, Clone, Copy)]
+pub struct NodeEntryRootOverwrite {
+    pub frame_id: FrameId,
+    pub element: GlobalElementId,
+    pub old_root: GlobalElementId,
+    pub new_root: GlobalElementId,
+    pub old_node: NodeId,
+    pub new_node: NodeId,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 impl WindowElementState {
+    #[cfg(any(test, feature = "diagnostics"))]
+    #[allow(dead_code)]
+    pub(crate) fn set_strict_ownership(&mut self, strict: bool) {
+        self.strict_ownership = strict;
+    }
+
     fn prepare_for_frame(&mut self, frame_id: FrameId, lag_frames: u64) {
         if self.prepared_frame == frame_id {
             return;
@@ -225,6 +270,8 @@ impl WindowElementState {
             self.debug_identity
                 .entries
                 .retain(|_, v| v.last_seen_frame.0 >= cutoff);
+            self.debug_node_entry_root_overwrites
+                .retain(|r| r.frame_id.0 >= cutoff);
         }
     }
 
@@ -473,18 +520,28 @@ impl WindowElementState {
 
         self.view_cache_elements_next.insert(root, elements.clone());
 
+        let mut missing_node_entries: u32 = 0;
         for element in elements {
             let Some(entry) = self.nodes.get_mut(&element) else {
+                missing_node_entries = missing_node_entries.saturating_add(1);
                 continue;
             };
             entry.last_seen_frame = frame_id;
-            entry.root = root_id;
+            // Touching a retained subtree must not reassign cross-root ownership (ADR 0191).
+            // If the element is already owned by a different root, keep the original owner and
+            // rely on diagnostics to flag the mismatch rather than "repairing" it implicitly.
+            if entry.root == root_id {
+                // Fast path: expected owner.
+            }
 
             #[cfg(feature = "diagnostics")]
             self.touch_debug_identity_for_element(frame_id, element);
         }
 
-        true
+        // If the recorded list references elements that no longer have node entries, treat the
+        // list as potentially incomplete/stale so the caller can fall back to a retained-subtree
+        // walk and re-record the membership deterministically.
+        missing_node_entries == 0
     }
 
     pub(crate) fn view_cache_elements_for_root(
@@ -563,7 +620,41 @@ impl WindowElementState {
             .find_map(|(&element, entry)| (entry.node == node).then_some(element))
     }
 
+    #[track_caller]
     pub(crate) fn set_node_entry(&mut self, id: GlobalElementId, entry: NodeEntry) {
+        #[cfg(feature = "diagnostics")]
+        if let Some(prev) = self.nodes.get(&id) {
+            if prev.root != entry.root {
+                let location = std::panic::Location::caller();
+                self.debug_node_entry_root_overwrites
+                    .push(NodeEntryRootOverwrite {
+                        frame_id: entry.last_seen_frame,
+                        element: id,
+                        old_root: prev.root,
+                        new_root: entry.root,
+                        old_node: prev.node,
+                        new_node: entry.node,
+                        file: location.file(),
+                        line: location.line(),
+                        column: location.column(),
+                    });
+                const MAX_RECORDS: usize = 256;
+                if self.debug_node_entry_root_overwrites.len() > MAX_RECORDS {
+                    let drain = self.debug_node_entry_root_overwrites.len() - MAX_RECORDS;
+                    self.debug_node_entry_root_overwrites.drain(0..drain);
+                }
+            }
+        }
+        #[cfg(any(test, feature = "diagnostics"))]
+        if self.strict_ownership {
+            if let Some(prev) = self.nodes.get(&id) {
+                assert_eq!(
+                    prev.root, entry.root,
+                    "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
+                    prev.root, entry.root
+                );
+            }
+        }
         self.nodes.insert(id, entry);
     }
 
@@ -586,6 +677,13 @@ impl WindowElementState {
 
     pub(crate) fn record_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
         self.cur_bounds.insert(element, bounds);
+    }
+
+    pub(crate) fn element_nodes(&self) -> Vec<(GlobalElementId, NodeId)> {
+        self.nodes
+            .iter()
+            .map(|(&element, entry)| (element, entry.node))
+            .collect()
     }
 
     pub(crate) fn last_bounds(&self, element: GlobalElementId) -> Option<Rect> {
@@ -621,6 +719,26 @@ impl WindowElementState {
 
     #[cfg(feature = "diagnostics")]
     fn diagnostics_snapshot(&self) -> WindowElementDiagnosticsSnapshot {
+        let bounds_for = |element: Option<GlobalElementId>| {
+            element.and_then(|id| {
+                self.prev_bounds
+                    .get(&id)
+                    .copied()
+                    .or_else(|| self.cur_bounds.get(&id).copied())
+            })
+        };
+        let visual_bounds_for = |element: Option<GlobalElementId>| {
+            element.and_then(|id| {
+                self.prev_visual_bounds
+                    .get(&id)
+                    .copied()
+                    .or_else(|| self.cur_visual_bounds.get(&id).copied())
+            })
+        };
+        let node_for = |element: Option<GlobalElementId>| {
+            element.and_then(|id| self.node_entry(id).map(|e| e.node))
+        };
+
         let mut view_cache_reuse_roots: Vec<GlobalElementId> =
             self.view_cache_reuse_roots.iter().copied().collect();
         view_cache_reuse_roots.sort_by_key(|id| id.0);
@@ -638,13 +756,51 @@ impl WindowElementState {
                 })
                 .collect();
 
+        const ELEMENT_SAMPLE: usize = 16;
+        let view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample> =
+            view_cache_reuse_roots
+                .iter()
+                .map(|&root| {
+                    let elements = self.view_cache_elements_for_root(root).unwrap_or(&[]);
+                    let elements_len = elements.len().min(u32::MAX as usize) as u32;
+                    let elements_head: Vec<GlobalElementId> =
+                        elements.iter().take(ELEMENT_SAMPLE).copied().collect();
+                    let elements_tail: Vec<GlobalElementId> = if elements.len() > ELEMENT_SAMPLE {
+                        elements
+                            .iter()
+                            .skip(elements.len().saturating_sub(ELEMENT_SAMPLE))
+                            .copied()
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
+
+                    ViewCacheReuseRootElementsSample {
+                        root,
+                        node: self.node_entry(root).map(|e| e.node),
+                        elements_len,
+                        elements_head,
+                        elements_tail,
+                    }
+                })
+                .collect();
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
+            focused_element_node: node_for(self.focused_element),
+            focused_element_bounds: bounds_for(self.focused_element),
+            focused_element_visual_bounds: visual_bounds_for(self.focused_element),
             active_text_selection: self
                 .active_text_selection
                 .map(|sel| (sel.root, sel.element)),
             hovered_pressable: self.hovered_pressable,
+            hovered_pressable_node: node_for(self.hovered_pressable),
+            hovered_pressable_bounds: bounds_for(self.hovered_pressable),
+            hovered_pressable_visual_bounds: visual_bounds_for(self.hovered_pressable),
             pressed_pressable: self.pressed_pressable,
+            pressed_pressable_node: node_for(self.pressed_pressable),
+            pressed_pressable_bounds: bounds_for(self.pressed_pressable),
+            pressed_pressable_visual_bounds: visual_bounds_for(self.pressed_pressable),
             hovered_hover_region: self.hovered_hover_region,
             wants_continuous_frames: self.wants_continuous_frames(),
             observed_models: self
@@ -673,6 +829,8 @@ impl WindowElementState {
                 .collect(),
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
+            view_cache_reuse_root_element_samples,
+            node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
         }
     }
 
@@ -819,5 +977,35 @@ impl DebugIdentitySegment {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "ownership root overwrite detected")]
+    fn strict_ownership_panics_on_root_overwrite() {
+        let mut state = WindowElementState::default();
+        state.set_strict_ownership(true);
+
+        let element = GlobalElementId(123);
+        state.set_node_entry(
+            element,
+            NodeEntry {
+                node: NodeId::default(),
+                last_seen_frame: FrameId(1),
+                root: GlobalElementId(1),
+            },
+        );
+        state.set_node_entry(
+            element,
+            NodeEntry {
+                node: NodeId::default(),
+                last_seen_frame: FrameId(1),
+                root: GlobalElementId(2),
+            },
+        );
     }
 }

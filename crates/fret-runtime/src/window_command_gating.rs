@@ -3,27 +3,142 @@ use std::sync::Arc;
 
 use fret_core::AppWindowId;
 
-use crate::GlobalsHost;
 use crate::WindowCommandActionAvailabilityService;
 use crate::{CommandId, CommandMeta, CommandScope, InputContext, WhenExpr};
+use crate::{CommandsHost, GlobalsHost};
 use crate::{WindowCommandEnabledService, WindowInputContextService};
+
+/// Token identifying a pushed, overlay-scoped gating override.
+///
+/// The intent is to allow nested overlays (command palette -> menu -> sub-menu, etc.) to publish
+/// independent gating snapshots without clobbering each other.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct WindowCommandGatingToken(u64);
+
+/// Handle identifying a pushed, overlay-scoped gating override.
+///
+/// Returned by `push_snapshot` so overlays can remove or update only their own snapshot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WindowCommandGatingHandle {
+    window: AppWindowId,
+    token: WindowCommandGatingToken,
+}
+
+#[derive(Debug, Default)]
+struct WindowCommandGatingWindowState {
+    base: Option<WindowCommandGatingSnapshot>,
+    stack: Vec<(WindowCommandGatingToken, WindowCommandGatingSnapshot)>,
+}
 
 #[derive(Debug, Default)]
 pub struct WindowCommandGatingService {
-    by_window: HashMap<AppWindowId, WindowCommandGatingSnapshot>,
+    by_window: HashMap<AppWindowId, WindowCommandGatingWindowState>,
+    next_token: u64,
 }
 
 impl WindowCommandGatingService {
     pub fn snapshot(&self, window: AppWindowId) -> Option<&WindowCommandGatingSnapshot> {
-        self.by_window.get(&window)
+        self.by_window.get(&window).and_then(|state| {
+            state
+                .stack
+                .last()
+                .map(|(_, snap)| snap)
+                .or(state.base.as_ref())
+        })
     }
 
+    pub fn base_snapshot(&self, window: AppWindowId) -> Option<&WindowCommandGatingSnapshot> {
+        self.by_window
+            .get(&window)
+            .and_then(|state| state.base.as_ref())
+    }
+
+    /// Sets the base override snapshot for the window.
+    ///
+    /// Nested overlays should prefer `push_snapshot` so they do not overwrite other overrides.
+    pub fn set_base_snapshot(
+        &mut self,
+        window: AppWindowId,
+        snapshot: WindowCommandGatingSnapshot,
+    ) {
+        let state = self.by_window.entry(window).or_default();
+        state.base = Some(snapshot);
+        self.gc_window(window);
+    }
+
+    /// Sets the base override snapshot for the window.
+    ///
+    /// Nested overlays should prefer `push_snapshot` so they do not overwrite other overrides.
     pub fn set_snapshot(&mut self, window: AppWindowId, snapshot: WindowCommandGatingSnapshot) {
-        self.by_window.insert(window, snapshot);
+        self.set_base_snapshot(window, snapshot);
+    }
+
+    pub fn clear_base_snapshot(&mut self, window: AppWindowId) {
+        if let Some(state) = self.by_window.get_mut(&window) {
+            state.base = None;
+        }
+        self.gc_window(window);
+    }
+
+    pub fn clear_snapshot(&mut self, window: AppWindowId) {
+        self.clear_base_snapshot(window);
+    }
+
+    /// Pushes an overlay-scoped gating snapshot and returns a handle that can later remove it.
+    ///
+    /// The most recently pushed snapshot wins (`snapshot()` returns the stack top).
+    pub fn push_snapshot(
+        &mut self,
+        window: AppWindowId,
+        snapshot: WindowCommandGatingSnapshot,
+    ) -> WindowCommandGatingHandle {
+        let token = WindowCommandGatingToken(self.next_token.max(1));
+        self.next_token = token.0.saturating_add(1);
+        let state = self.by_window.entry(window).or_default();
+        state.stack.push((token, snapshot));
+        WindowCommandGatingHandle { window, token }
+    }
+
+    pub fn update_pushed_snapshot(
+        &mut self,
+        handle: WindowCommandGatingHandle,
+        snapshot: WindowCommandGatingSnapshot,
+    ) -> bool {
+        let Some(state) = self.by_window.get_mut(&handle.window) else {
+            return false;
+        };
+        for (t, s) in &mut state.stack {
+            if *t == handle.token {
+                *s = snapshot;
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn pop_snapshot(
+        &mut self,
+        handle: WindowCommandGatingHandle,
+    ) -> Option<WindowCommandGatingSnapshot> {
+        let state = self.by_window.get_mut(&handle.window)?;
+        let idx = state.stack.iter().position(|(t, _)| *t == handle.token)?;
+        let (_, snapshot) = state.stack.remove(idx);
+        self.gc_window(handle.window);
+        Some(snapshot)
     }
 
     pub fn remove_window(&mut self, window: AppWindowId) {
         self.by_window.remove(&window);
+    }
+
+    fn gc_window(&mut self, window: AppWindowId) {
+        let remove = self
+            .by_window
+            .get(&window)
+            .is_some_and(|state| state.base.is_none() && state.stack.is_empty());
+        if remove {
+            self.by_window.remove(&window);
+        }
     }
 }
 
@@ -114,6 +229,31 @@ pub fn snapshot_for_window(
     snapshot_for_window_with_input_ctx_fallback(app, window, InputContext::default())
 }
 
+/// Best-effort: returns a `WindowCommandGatingSnapshot` from a previously published override if
+/// present (`WindowCommandGatingService`), otherwise falls back to `snapshot_for_window`.
+pub fn best_effort_snapshot_for_window(
+    app: &impl GlobalsHost,
+    window: AppWindowId,
+) -> WindowCommandGatingSnapshot {
+    best_effort_snapshot_for_window_with_input_ctx_fallback(app, window, InputContext::default())
+}
+
+/// Best-effort: returns a `WindowCommandGatingSnapshot` from a previously published override if
+/// present (`WindowCommandGatingService`), otherwise falls back to
+/// `snapshot_for_window_with_input_ctx_fallback`.
+pub fn best_effort_snapshot_for_window_with_input_ctx_fallback(
+    app: &impl GlobalsHost,
+    window: AppWindowId,
+    fallback_input_ctx: InputContext,
+) -> WindowCommandGatingSnapshot {
+    app.global::<WindowCommandGatingService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .unwrap_or_else(|| {
+            snapshot_for_window_with_input_ctx_fallback(app, window, fallback_input_ctx)
+        })
+}
+
 pub fn snapshot_for_window_with_input_ctx_fallback(
     app: &impl GlobalsHost,
     window: AppWindowId,
@@ -137,4 +277,356 @@ pub fn snapshot_for_window_with_input_ctx_fallback(
 
     WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
         .with_action_availability(action_availability)
+}
+
+/// Returns whether `command` is enabled according to the best-effort window gating snapshot.
+///
+/// This is intended for cross-surface checks (OS menus, in-window menus, command palettes,
+/// shortcuts, effect filtering) that need consistent results without depending on UI internals.
+pub fn command_is_enabled_for_window_with_input_ctx_fallback(
+    app: &(impl GlobalsHost + CommandsHost),
+    window: AppWindowId,
+    command: &CommandId,
+    fallback_input_ctx: InputContext,
+) -> bool {
+    let gating =
+        best_effort_snapshot_for_window_with_input_ctx_fallback(app, window, fallback_input_ctx);
+    if let Some(meta) = app.commands().get(command.clone()) {
+        gating.is_enabled_for_command(command, meta)
+    } else {
+        gating.is_enabled_for_meta(command, CommandScope::App, None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base_snapshot_is_visible_when_no_stack_overrides_exist() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_base_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        assert!(
+            svc.base_snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input),
+            "expected base snapshot getter to return the stored base snapshot"
+        );
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input),
+            "expected snapshot() to fall back to base snapshot"
+        );
+    }
+
+    #[test]
+    fn snapshot_prefers_stack_top_and_falls_back_to_base() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_base_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input),
+            "expected base snapshot to be visible"
+        );
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        overlay_ctx.focus_is_text_input = false;
+        let handle = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected stack top snapshot to win"
+        );
+
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input && !s.input_ctx().ui_has_modal),
+            "expected fallback to base snapshot after popping"
+        );
+
+        svc.clear_base_snapshot(window);
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected window to be cleared"
+        );
+    }
+
+    #[test]
+    fn set_snapshot_does_not_override_stack_top() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.focus_is_text_input = true;
+        let token = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.ui_has_modal = true;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input && !s.input_ctx().ui_has_modal),
+            "expected stack top to remain effective after set_snapshot"
+        );
+
+        svc.pop_snapshot(token).expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected base snapshot to become effective after popping stack"
+        );
+    }
+
+    #[test]
+    fn pushed_snapshots_can_be_removed_out_of_order() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.ui_has_modal = true;
+        let outer = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut inner_ctx = InputContext::default();
+        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
+        );
+
+        assert_eq!(
+            svc.snapshot(window)
+                .expect("snapshot")
+                .input_ctx()
+                .dispatch_phase,
+            crate::InputDispatchPhase::Capture
+        );
+
+        svc.pop_snapshot(outer).expect("remove outer");
+        assert_eq!(
+            svc.snapshot(window)
+                .expect("snapshot")
+                .input_ctx()
+                .dispatch_phase,
+            crate::InputDispatchPhase::Capture,
+            "expected inner snapshot to remain effective"
+        );
+
+        svc.pop_snapshot(inner).expect("remove inner");
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected all snapshots removed"
+        );
+    }
+    #[test]
+    fn clearing_base_snapshot_does_not_remove_active_overlay_snapshot() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_base_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        let handle = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+
+        svc.clear_base_snapshot(window);
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected overlay snapshot to remain effective after clearing base"
+        );
+
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected window to be cleared after removing the last overlay snapshot"
+        );
+    }
+
+    #[test]
+    fn setting_base_snapshot_does_not_override_stack_top() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        overlay_ctx.focus_is_text_input = false;
+        let handle = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.ui_has_modal = false;
+        base_ctx.focus_is_text_input = true;
+        svc.set_base_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        assert!(
+            svc.snapshot(window).is_some_and(|s| {
+                s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input
+            }),
+            "expected stack top snapshot to remain effective after set_snapshot"
+        );
+
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| !s.input_ctx().ui_has_modal && s.input_ctx().focus_is_text_input),
+            "expected base snapshot to take effect after popping the overlay"
+        );
+    }
+
+    #[test]
+    fn updating_pushed_snapshot_only_affects_that_entry() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.ui_has_modal = true;
+        let outer = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut inner_ctx = InputContext::default();
+        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
+        );
+
+        let mut updated_outer_ctx = InputContext::default();
+        updated_outer_ctx.dispatch_phase = crate::InputDispatchPhase::Preview;
+        assert!(
+            svc.update_pushed_snapshot(
+                outer,
+                WindowCommandGatingSnapshot::new(updated_outer_ctx, HashMap::new())
+            ),
+            "expected update to succeed"
+        );
+
+        assert_eq!(
+            svc.snapshot(window)
+                .expect("snapshot")
+                .input_ctx()
+                .dispatch_phase,
+            crate::InputDispatchPhase::Capture,
+            "expected inner snapshot to remain effective"
+        );
+
+        svc.pop_snapshot(inner).expect("remove inner");
+        assert_eq!(
+            svc.snapshot(window)
+                .expect("snapshot")
+                .input_ctx()
+                .dispatch_phase,
+            crate::InputDispatchPhase::Preview,
+            "expected updated outer snapshot to become effective after popping inner"
+        );
+    }
+
+    #[test]
+    fn removing_inner_snapshot_restores_outer_snapshot() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.ui_has_modal = true;
+        let outer = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut inner_ctx = InputContext::default();
+        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
+        );
+
+        svc.pop_snapshot(inner).expect("remove inner");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal),
+            "expected outer snapshot to become effective after popping inner"
+        );
+
+        svc.pop_snapshot(outer).expect("remove outer");
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected all snapshots removed"
+        );
+    }
+
+    #[test]
+    fn clear_snapshot_only_clears_base_not_pushed_overrides() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_base_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        let mut overlay_ctx = InputContext::default();
+        overlay_ctx.ui_has_modal = true;
+        let handle = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
+        );
+
+        svc.clear_base_snapshot(window);
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal),
+            "expected pushed override to remain after clearing base snapshot"
+        );
+
+        svc.pop_snapshot(handle).expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window).is_none(),
+            "expected window to be cleared after removing last pushed override and base"
+        );
+    }
 }

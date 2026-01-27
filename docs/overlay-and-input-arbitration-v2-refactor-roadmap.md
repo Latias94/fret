@@ -6,6 +6,10 @@ This document is a concrete, test-driven refactor plan for Fret’s overlay subs
 arbitration, targeting editor-grade interaction **and** a general-purpose application framework
 baseline.
 
+Progress log (keep updated during implementation):
+
+- `docs/workstreams/overlay-input-arbitration-v2.md`
+
 It is aligned with the existing contract split:
 
 - Runtime substrate (mechanisms): `crates/fret-ui`
@@ -118,6 +122,9 @@ The policy layer (`fret-ui-kit/window_overlays`) maps Radix outcomes onto the ru
 - Presence (mount vs interactive) is represented via `OverlayPresence { present, interactive }`.
 - Menu-like overlays implement `disableOutsidePointerEvents` by enabling pointer occlusion
   (`PointerOcclusion::BlockMouseExceptScroll`) on the overlay layer.
+- View caching support: overlay requests are cached and may be synthesized when the producer subtree
+  is skipped by view caching. Hover/tooltips participate with a short TTL so stale cached requests
+  cannot keep ephemeral overlays alive indefinitely (`ecosystem/fret-ui-kit/src/window_overlays/render.rs`).
 
 This is directionally correct, but the barrier behavior is currently achieved by composing multiple
 runtime flags. We want a simpler *mechanism vocabulary* that makes those compositions obvious and
@@ -125,25 +132,29 @@ hard to get wrong.
 
 ### Implementation snapshot (as of 2026-01)
 
-The current `disableOutsidePointerEvents` outcome is implemented as a **separate, non-visual layer**
-in `fret-ui-kit`:
+The current `disableOutsidePointerEvents` outcome is implemented using a **first-class pointer
+occlusion mechanism** on overlay layers (no extra “barrier root” layer is required):
 
-- `ecosystem/fret-ui-kit/src/window_overlays/render.rs` installs an additional
-  `pointer_barrier_layer` with:
-  - `blocks_underlay_input = true` (reuses the modal barrier scoping mechanism),
-  - `hit_testable = false` (so it does not become the hit-tested target).
-- `crates/fret-ui/src/tree/dispatch.rs` contains a special-case for wheel events:
-  - when the topmost barrier root is **hit-test-inert**, wheel hit-testing is re-run against
-    hit-testable layers so the underlay scroll target can still receive `PointerEvent::Wheel`.
+- `ecosystem/fret-ui-kit/src/window_overlays/render.rs` configures the overlay layer with
+  `PointerOcclusion::BlockMouseExceptScroll` when the overlay requests
+  `disable_outside_pointer_events=true`.
+- `crates/fret-ui/src/tree/dispatch.rs` enforces the occlusion outcome:
+  - underlay hover/move/down/up are suppressed while the occluding overlay is active,
+  - wheel events are still allowed to route to the underlay scroll target for
+    `BlockMouseExceptScroll` (editor ergonomics / GPUI alignment),
+  - pointer-move observer hooks still run for overlay layers that opt into them (menu safe corridor),
+    even when underlay hit-tested dispatch is suppressed.
+- Conformance tests:
+  - runtime-level occlusion routing: `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+  - menu safe-corridor behavior: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` tests
 
-This works, and it is already covered by tests in `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`.
-However, it has two structural drawbacks for a general-purpose framework baseline:
+Window-scoped “what is the UI currently doing?” state is published as part of the window
+`InputContext` snapshot (runner-friendly data seam):
 
-1. The semantics are implicit (a “barrier” that is not hit-testable is a *different* concept than a
-   modal barrier, but the runtime does not model that explicitly).
-2. The policy layer is forced to create extra layer roots to express a runtime outcome, which makes
-   layering and debugging harder (especially once docking, viewports, and multi-pointer routing are
-   involved).
+- `WindowInputContextService` publishes `InputContext`, which includes
+  `InputContext.window_arbitration` (`WindowInputArbitrationSnapshot`).
+- This snapshot is the single source of truth for modal barrier / pointer capture / pointer
+  occlusion state; there is no separate window arbitration service.
 
 ## Proposed Changes (v2)
 
@@ -216,6 +227,12 @@ Implementation strategy:
 - Keep `present/interactive` in policy, but enforce the resulting runtime configuration via a single
   helper that sets all relevant runtime knobs consistently (visibility, hit-testability, observer flags, occlusion).
 - Prefer “one helper per overlay kind” in `fret-ui-kit`, but backed by runtime-level invariants and tests.
+   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`apply_non_modal_dismissible_layer_policy`),
+     `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_disable_outside_pointer_events_does_not_block_underlay_while_closing`).
+   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`apply_tooltip_layer_policy`,
+     `apply_hover_layer_policy`), `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+     (`tooltip_does_not_request_observers_by_default`, `tooltip_does_not_request_observers_while_closing`,
+     `hover_overlay_is_click_through_while_closing`).
 
 ### 3) Policy: Normalize Overlay Kinds + Capabilities (P0)
 

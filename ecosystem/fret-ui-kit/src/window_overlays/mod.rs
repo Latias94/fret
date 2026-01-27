@@ -3,6 +3,8 @@
 //! This is a small component-layer orchestration helper that installs `UiTree` overlay roots
 //! (ADR 0067) and coordinates dismissal + focus restore rules (ADR 0069).
 
+use std::collections::HashMap;
+
 mod frame;
 mod names;
 mod render;
@@ -14,6 +16,7 @@ mod toast;
 mod tests;
 
 use fret_core::AppWindowId;
+use fret_runtime::FrameId;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
@@ -34,8 +37,9 @@ pub use names::{
 };
 pub use render::render;
 pub use requests::{
-    DismissCause, DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest,
-    TooltipRequest,
+    DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastButtonStyle,
+    ToastIconButtonStyle, ToastLayerRequest, ToastLayerStyle, ToastTextStyle, ToastVariantColors,
+    ToastVariantPalette, TooltipRequest,
 };
 pub use toast::{
     DEFAULT_MAX_TOASTS, DEFAULT_SWIPE_DRAGGING_THRESHOLD_PX, DEFAULT_SWIPE_MAX_DRAG_PX,
@@ -117,7 +121,7 @@ pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
 ) -> Vec<WindowOverlayLayerEntry> {
-    app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
+    app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, app| {
         let mut out: Vec<WindowOverlayLayerEntry> = Vec::new();
 
         for ((w, id), active) in overlays.popovers.iter() {
@@ -148,11 +152,12 @@ pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
             if *w != window {
                 continue;
             }
+            let open = app.models().get_copied(&active.open).unwrap_or(false);
             out.push(WindowOverlayLayerEntry {
                 kind: WindowOverlayLayerKind::Hover,
                 id: *id,
                 layer: active.layer,
-                open: true,
+                open,
             });
         }
 
@@ -160,11 +165,12 @@ pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
             if *w != window {
                 continue;
             }
+            let open = app.models().get_copied(&active.open).unwrap_or(false);
             out.push(WindowOverlayLayerEntry {
                 kind: WindowOverlayLayerKind::Tooltip,
                 id: *id,
                 layer: active.layer,
-                open: true,
+                open,
             });
         }
 
@@ -182,4 +188,79 @@ pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
 
         out
     })
+}
+
+/// Tracks which window overlays were synthesized from cached request declarations.
+///
+/// This is intended for diagnostics and scripted regressions: when view caching skips rerendering
+/// overlay producers, cached synthesis keeps behavior stable. Recording this makes it possible to
+/// assert that synthesis happened (or understand why it didn't) from exported `bundle.json` files.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlaySynthesisKind {
+    Modal,
+    Popover,
+    Hover,
+    Tooltip,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlaySynthesisSource {
+    CachedDeclaration,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlaySynthesisOutcome {
+    Synthesized,
+    SuppressedMissingTrigger,
+    SuppressedTriggerNotLiveInCurrentFrame,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OverlaySynthesisEvent {
+    pub kind: OverlaySynthesisKind,
+    pub id: GlobalElementId,
+    pub source: OverlaySynthesisSource,
+    pub outcome: OverlaySynthesisOutcome,
+}
+
+#[derive(Default)]
+pub struct WindowOverlaySynthesisDiagnosticsStore {
+    per_window: HashMap<AppWindowId, WindowOverlaySynthesisDiagnosticsFrame>,
+}
+
+#[derive(Default)]
+struct WindowOverlaySynthesisDiagnosticsFrame {
+    frame_id: FrameId,
+    events: Vec<OverlaySynthesisEvent>,
+}
+
+impl WindowOverlaySynthesisDiagnosticsStore {
+    pub fn begin_frame(&mut self, window: AppWindowId, frame_id: FrameId) {
+        let w = self.per_window.entry(window).or_default();
+        if w.frame_id != frame_id {
+            w.frame_id = frame_id;
+            w.events.clear();
+        }
+    }
+
+    pub fn record_events(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        events: impl IntoIterator<Item = OverlaySynthesisEvent>,
+    ) {
+        self.begin_frame(window, frame_id);
+        let w = self.per_window.entry(window).or_default();
+        w.events.extend(events);
+    }
+
+    #[allow(dead_code)]
+    pub fn events_for_window(
+        &self,
+        window: AppWindowId,
+        frame_id: FrameId,
+    ) -> Option<&[OverlaySynthesisEvent]> {
+        let w = self.per_window.get(&window)?;
+        (w.frame_id == frame_id).then_some(w.events.as_slice())
+    }
 }

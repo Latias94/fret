@@ -193,6 +193,9 @@ impl PortalTextEditor {
                                         Some(cx.window),
                                         portal_step_text_command_with_mode(cmd_node, -1, mode),
                                     );
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
+                                    );
                                     PressablePointerDownResult::SkipDefaultAndStopPropagation
                                 }));
                                 vec![render_pressable_small_button(
@@ -219,6 +222,9 @@ impl PortalTextEditor {
                                     host.dispatch_command(
                                         Some(cx.window),
                                         portal_step_text_command_with_mode(cmd_node, 1, mode),
+                                    );
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
                                     );
                                     PressablePointerDownResult::SkipDefaultAndStopPropagation
                                 }));

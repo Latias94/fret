@@ -84,11 +84,14 @@ impl HStackProps {
 /// Component-layer "hstack" helper.
 ///
 /// This exists to express Tailwind-like `gap-*` ergonomically without reaching into runtime props.
-pub fn hstack<H: UiHost>(
+pub fn hstack<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: HStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let theme = Theme::global(&*cx.app);
     let gap = style::space(theme, props.gap);
     let layout = style::layout_style(theme, props.layout);
@@ -104,25 +107,20 @@ pub fn hstack<H: UiHost>(
     )
 }
 
-/// Variant of [`hstack`] that accepts any iterable children.
-pub fn hstack_iter<H: UiHost, C: IntoIterator<Item = AnyElement>>(
+/// Variant of [`hstack`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn hstack_build<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: HStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> C,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app);
-    let gap = style::space(theme, props.gap);
-    let layout = style::layout_style(theme, props.layout);
-    cx.row(
-        RowProps {
-            layout,
-            gap,
-            justify: props.justify.to_main_align(),
-            align: props.items.to_cross_align(),
-            ..Default::default()
-        },
-        f,
-    )
+    hstack(cx, props, |cx| {
+        let mut out = Vec::new();
+        build(cx, &mut out);
+        out
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -205,11 +203,14 @@ impl VStackProps {
 /// Component-layer "vstack" helper.
 ///
 /// This exists to express Tailwind-like `gap-*` ergonomically without reaching into runtime props.
-pub fn vstack<H: UiHost>(
+pub fn vstack<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     props: VStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let theme = Theme::global(&*cx.app);
     let gap = style::space(theme, props.gap);
     let layout = style::layout_style(theme, props.layout);
@@ -225,23 +226,18 @@ pub fn vstack<H: UiHost>(
     )
 }
 
-/// Variant of [`vstack`] that accepts any iterable children.
-pub fn vstack_iter<H: UiHost, C: IntoIterator<Item = AnyElement>>(
+/// Variant of [`vstack`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn vstack_build<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: VStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> C,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app);
-    let gap = style::space(theme, props.gap);
-    let layout = style::layout_style(theme, props.layout);
-    cx.column(
-        ColumnProps {
-            layout,
-            gap,
-            justify: props.justify.to_main_align(),
-            align: props.items.to_cross_align(),
-            ..Default::default()
-        },
-        f,
-    )
+    vstack(cx, props, |cx| {
+        let mut out = Vec::new();
+        build(cx, &mut out);
+        out
+    })
 }

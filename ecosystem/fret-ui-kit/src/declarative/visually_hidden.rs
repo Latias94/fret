@@ -10,10 +10,13 @@ use fret_ui::{ElementContext, UiHost};
 ///
 /// This is a layout-only + semantics-only wrapper that keeps its subtree in the a11y tree while
 /// remaining effectively invisible.
-pub fn visually_hidden<H: UiHost>(
+pub fn visually_hidden<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.semantics(
         SemanticsProps {
             layout: LayoutStyle {

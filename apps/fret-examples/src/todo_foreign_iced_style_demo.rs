@@ -181,91 +181,90 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoForeignIcedStyleState 
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoForeignIcedStyleState) -> Vec<AnyElement> {
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut TodoForeignIcedStyleState,
+) -> fret_kit::ViewElements {
     let theme = Theme::global(&*cx.app).clone();
 
     let Some(models) = embedded::models(&*cx.app, cx.window) else {
-        return vec![cx.text("Embedded viewport models are not installed.")];
+        return vec![cx.text("Embedded viewport models are not installed.")].into();
     };
-    cx.observe_model(&models.clicks, Invalidation::Paint);
-    cx.observe_model(&models.last_input, Invalidation::Paint);
-    cx.observe_model(&models.target, Invalidation::Paint);
-
-    cx.observe_model(&st.foreign.items, Invalidation::Layout);
-    cx.observe_model(&st.foreign.hint, Invalidation::Paint);
+    cx.watch_model(&models.target).paint().observe();
 
     let items = cx
-        .app
-        .models()
-        .read(&st.foreign.items, |v| v.clone())
+        .watch_model(&st.foreign.items)
+        .layout()
+        .cloned()
         .unwrap_or_default();
     let hint = cx
-        .app
-        .models()
-        .read(&st.foreign.hint, |v| v.clone())
-        .unwrap_or_else(|_| Arc::from("<error>"));
+        .watch_model(&st.foreign.hint)
+        .paint()
+        .cloned()
+        .unwrap_or_else(|| Arc::from("<error>"));
 
-    let clicks = cx.app.models().read(&models.clicks, |v| *v).unwrap_or(0);
+    let clicks = cx.watch_model(&models.clicks).paint().copied().unwrap_or(0);
     let last_input = cx
-        .app
-        .models()
-        .read(&models.last_input, |v| v.clone())
-        .unwrap_or_else(|_| Arc::from("<error>"));
+        .watch_model(&models.last_input)
+        .paint()
+        .cloned()
+        .unwrap_or_else(|| Arc::from("<error>"));
 
-    let mut root_layout = fret_ui::element::LayoutStyle::default();
-    root_layout.size.width = Length::Fill;
-    root_layout.size.height = Length::Fill;
+    let root = ui::container(cx, |cx| {
+        let left = ui::v_flex(cx, |cx| {
+            let title = cx.text("Foreign UI interop (iced-style sketch)");
 
-    let root = cx.container(
-        fret_ui::element::ContainerProps {
-            layout: root_layout,
-            background: Some(theme.color_required("background")),
-            ..Default::default()
-        },
-        |cx| {
-            let flex = fret_ui::element::FlexProps {
-                layout: root_layout,
-                direction: fret_core::Axis::Horizontal,
-                gap: Px(16.0),
-                padding: fret_core::Edges::all(Px(16.0)),
-                ..Default::default()
-            };
+            let hint = cx.text(hint);
+            let last = cx.text(Arc::from(format!(
+                "clicks={} last_input={}",
+                clicks, last_input
+            )));
 
-            let left = cx.flex(flex, |cx| {
-                let title = cx.text("Foreign UI interop (iced-style sketch)");
-
-                let hint = cx.text(hint);
-                let last = cx.text(Arc::from(format!(
-                    "clicks={} last_input={}",
-                    clicks, last_input
-                )));
-
-                let lines = items.into_iter().map(|it| {
-                    let mark = if it.done { "[x]" } else { "[ ]" };
-                    cx.text(Arc::from(format!("{mark} {}", it.text)))
-                });
-
-                [title, hint, last]
-                    .into_iter()
-                    .chain(lines)
-                    .collect::<Vec<_>>()
+            let lines = items.into_iter().map(|it| {
+                let mark = if it.done { "[x]" } else { "[ ]" };
+                cx.text(Arc::from(format!("{mark} {}", it.text)))
             });
 
-            let right = cx.container(Default::default(), |cx| {
-                let panel = st.embedded.panel(
-                    cx,
-                    embedded::EmbeddedViewportPanelProps {
-                        fit: ViewportFit::Contain,
-                        opacity: 1.0,
-                        forward_input: true,
-                    },
-                );
-                [panel]
-            });
+            std::iter::once(title)
+                .chain(std::iter::once(hint))
+                .chain(std::iter::once(last))
+                .chain(lines)
+                .collect::<Vec<_>>()
+        })
+        .gap(Space::N2)
+        .items_start()
+        .w_px(Px(360.0))
+        .h_full()
+        .into_element(cx);
 
-            [left, right]
-        },
-    );
+        let right = ui::container(cx, |cx| {
+            let panel = st.embedded.panel(
+                cx,
+                embedded::EmbeddedViewportPanelProps {
+                    fit: ViewportFit::Contain,
+                    opacity: 1.0,
+                    forward_input: true,
+                },
+            );
+            [panel]
+        })
+        .flex_1()
+        .min_w_0()
+        .h_full()
+        .into_element(cx);
 
-    vec![root]
+        [ui::h_flex(cx, |_cx| [left, right])
+            .gap(Space::N4)
+            .items_stretch()
+            .w_full()
+            .h_full()
+            .into_element(cx)]
+    })
+    .bg(ColorRef::Color(theme.color_required("background")))
+    .p(Space::N4)
+    .w_full()
+    .h_full()
+    .into_element(cx);
+
+    vec![root].into()
 }
