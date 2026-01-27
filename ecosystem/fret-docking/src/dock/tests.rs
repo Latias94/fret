@@ -2215,6 +2215,10 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
 
+    harness
+        .app
+        .set_global(fret_runtime::WindowInteractionDiagnosticsStore::default());
+
     harness.app.begin_cross_window_drag_with_kind(
         fret_core::PointerId(0),
         DRAG_KIND_DOCK_PANEL,
@@ -2227,6 +2231,14 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             tear_off_requested: false,
         },
     );
+    if let Some(drag) = harness.app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    // Ensure the dock interaction state is publishable to diagnostics (so suppression is
+    // debuggable without relying on logs).
+    harness.layout();
+    let _ = harness.app.take_effects();
 
     let position = harness.viewport_point();
 
@@ -2259,6 +2271,16 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             .iter()
             .any(|e| matches!(e, Effect::ViewportInput(_))),
         "dock drag must suppress viewport hover/wheel forwarding (ADR 0072), got: {effects:?}",
+    );
+
+    let dock = harness
+        .app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.docking_for_window(harness.window, harness.app.frame_id()))
+        .expect("expected docking interaction diagnostics to be published for the window/frame");
+    assert!(
+        dock.dock_drag.is_some(),
+        "expected dock drag to be recorded as the suppression reason, got: {dock:?}"
     );
 }
 

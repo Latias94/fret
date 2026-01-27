@@ -57,10 +57,12 @@ Each TODO is labeled:
     - the other viewport does not receive forwarded input for the same pointer.
   - Suggested location: `ecosystem/fret-docking/src/dock/tests.rs`
   - Evidence: `ecosystem/fret-docking/src/dock/tests.rs` (`split_viewports_forward_input_to_captured_viewport`)
-- [ ] DMV1-test-011 Add a unit regression for dock drag suppressing competing viewport forwarding (ADR 0072).
+- [x] DMV1-test-011 Add a unit regression for dock drag suppressing competing viewport forwarding (ADR 0072).
   - Assertions:
     - while a dock drag is active, viewport input forwarding is suppressed for other interactions in the window,
       and the suppression reason is diagnosable.
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_suppresses_viewport_hover_and_wheel_forwarding`)
 
 ## P0 — Refactor Guardrails (Multi-pointer Ready)
 
