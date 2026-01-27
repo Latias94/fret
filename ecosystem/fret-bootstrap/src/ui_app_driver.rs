@@ -1952,7 +1952,16 @@ fn ui_app_render<S>(
     #[cfg(feature = "diagnostics")]
     {
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.record_snapshot(app, window, bounds, scale_factor, &state.ui, scene);
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &state.ui,
+                element_runtime,
+                scene,
+            );
             if let Some(dir) = svc.maybe_dump_if_triggered() {
                 #[cfg(feature = "tracing")]
                 tracing::info!(window = ?window, out_dir = %dir.display(), "ui diagnostics dumped");

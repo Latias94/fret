@@ -2433,6 +2433,23 @@ pub enum UiPredicateV1 {
     FocusIs {
         target: UiSelectorV1,
     },
+    /// Matches the current modal/pointer barrier root and focus barrier root (if any).
+    ///
+    /// This is intentionally coarse-grained: scripts should be able to assert that close
+    /// transitions keep the pointer barrier active while releasing focus containment (or vice
+    /// versa) without needing stable node ids.
+    BarrierRoots {
+        #[serde(default)]
+        barrier_root: UiOptionalRootStateV1,
+        #[serde(default)]
+        focus_barrier_root: UiOptionalRootStateV1,
+        /// When set, additionally enforces whether the two roots are equal.
+        ///
+        /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
+        /// - `false`: requires `barrier_root != focus_barrier_root`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        require_equal: Option<bool>,
+    },
     /// True when the target exists and its semantics bounds intersect the active window bounds.
     ///
     /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
@@ -2448,6 +2465,16 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         padding_px: f32,
     },
+}
+
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOptionalRootStateV1 {
+    /// Do not assert anything about the root (accept both `Some` and `None`).
+    #[default]
+    Any,
+    None,
+    Some,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2585,7 +2612,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -2900,7 +2927,7 @@ impl UiViewportInputEventV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiViewportInputKindV1 {
     PointerMove {
@@ -4781,11 +4808,11 @@ impl UiHitTestSnapshotV1 {
 
         let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
-            by_root.insert(layer.root, *layer);
+            by_root.insert(layer.root, layer.clone());
         }
 
         for root in &hit_test.active_layer_roots {
-            let info = by_root.get(root).copied();
+            let info = by_root.get(root);
             scope_roots.push(UiHitTestScopeRootV1 {
                 kind: "layer_root".to_string(),
                 root: key_to_u64(*root),
@@ -5518,6 +5545,34 @@ fn eval_predicate(
                 return false;
             };
             node.id == focus
+        }
+        UiPredicateV1::BarrierRoots {
+            barrier_root,
+            focus_barrier_root,
+            require_equal,
+        } => {
+            let barrier = snapshot.barrier_root.map(|n| n.data().as_ffi());
+            let focus_barrier = snapshot.focus_barrier_root.map(|n| n.data().as_ffi());
+
+            let matches_root_state = |state: UiOptionalRootStateV1, value: Option<u64>| match state
+            {
+                UiOptionalRootStateV1::Any => true,
+                UiOptionalRootStateV1::None => value.is_none(),
+                UiOptionalRootStateV1::Some => value.is_some(),
+            };
+
+            if !matches_root_state(*barrier_root, barrier) {
+                return false;
+            }
+            if !matches_root_state(*focus_barrier_root, focus_barrier) {
+                return false;
+            }
+
+            match require_equal {
+                None => true,
+                Some(true) => barrier == focus_barrier,
+                Some(false) => barrier != focus_barrier,
+            }
         }
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
@@ -6514,6 +6569,131 @@ mod tests {
         let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
+    }
+
+    #[test]
+    fn scripts_can_assert_barrier_root_and_focus_barrier_root_independently() {
+        let window = window_id(1);
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: Some(node_id(1)),
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node(
+                1,
+                None,
+                SemanticsRole::Window,
+                rect(0.0, 0.0, 100.0, 100.0),
+                "root",
+            )],
+        };
+
+        let pred = UiPredicateV1::BarrierRoots {
+            barrier_root: UiOptionalRootStateV1::Some,
+            focus_barrier_root: UiOptionalRootStateV1::None,
+            require_equal: Some(false),
+        };
+
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
+        );
+
+        let pred = UiPredicateV1::BarrierRoots {
+            barrier_root: UiOptionalRootStateV1::Some,
+            focus_barrier_root: UiOptionalRootStateV1::None,
+            require_equal: Some(true),
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            "expected require_equal=true to fail when the roots differ"
+        );
+    }
+
+    #[test]
+    fn scripts_can_assert_barrier_roots_via_drive_script() {
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.cfg.script_auto_dump = false;
+
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be >= UNIX_EPOCH")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("fret-diag-test-script-{}", unique));
+        std::fs::create_dir_all(&dir).expect("create temp test dir");
+        svc.cfg.out_dir = dir.clone();
+        svc.cfg.ready_path = dir.join("ready.touch");
+        svc.cfg.script_path = dir.join("script.json");
+        svc.cfg.script_trigger_path = dir.join("script.touch");
+        svc.cfg.script_result_path = dir.join("script.result.json");
+        svc.cfg.script_result_trigger_path = dir.join("script.result.touch");
+
+        let window = AppWindowId::default();
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: Some(node_id(1)),
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node(
+                1,
+                None,
+                SemanticsRole::Window,
+                rect(0.0, 0.0, 100.0, 100.0),
+                "root",
+            )],
+        };
+
+        let script: UiActionScriptV1 = serde_json::from_str(
+            r#"{
+                "schema_version": 1,
+                "steps": [
+                    {
+                        "type": "assert",
+                        "predicate": {
+                            "kind": "barrier_roots",
+                            "barrier_root": "some",
+                            "focus_barrier_root": "none",
+                            "require_equal": false
+                        }
+                    }
+                ]
+            }"#,
+        )
+        .expect("parse barrier_roots predicate");
+        svc.pending_script = Some(script);
+        svc.pending_script_run_id = Some(1);
+
+        let app = App::new();
+        let _ = svc.drive_script_for_window(&app, window, window_bounds, Some(&snapshot), None);
+
+        let bytes =
+            std::fs::read(&svc.cfg.script_result_path).expect("read script result json file");
+        let result: UiScriptResultV1 =
+            serde_json::from_slice(&bytes).expect("parse UiScriptResultV1");
+        assert!(
+            matches!(result.stage, UiScriptStageV1::Passed),
+            "expected drive_script to persist the passed result"
+        );
     }
 }
 
