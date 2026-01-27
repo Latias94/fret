@@ -1,7 +1,8 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
+    AppWindowId, Color, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
     PointerEvent, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+    Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::ElementContext;
@@ -506,6 +507,92 @@ impl fret_core::PathService for FakeServices {
 }
 
 impl fret_core::SvgService for FakeServices {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        true
+    }
+}
+
+#[derive(Default)]
+struct StyleAwareServices;
+
+impl fret_core::TextService for StyleAwareServices {
+    fn prepare(
+        &mut self,
+        input: &fret_core::TextInput,
+        constraints: fret_core::TextConstraints,
+    ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let (text, style) = match input {
+            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style.clone()),
+            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base.clone()),
+            _ => (input.text(), fret_core::TextStyle::default()),
+        };
+        let line_height = style
+            .line_height
+            .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
+
+        fn estimate_width_px(text: &str, font_size: f32) -> Px {
+            let mut units = 0.0f32;
+            for ch in text.chars() {
+                units += match ch {
+                    ' ' => 0.28,
+                    '(' | ')' => 0.28,
+                    'i' | 'l' | 'I' | 't' | 'f' | 'j' | 'r' => 0.32,
+                    'm' | 'w' | 'M' | 'W' => 0.75,
+                    'o' | 'O' | 'p' | 'P' => 0.62,
+                    'A'..='Z' => 0.62,
+                    'a'..='z' => 0.56,
+                    _ => 0.56,
+                };
+            }
+            Px((units * font_size).max(1.0))
+        }
+
+        let est_w = estimate_width_px(text, style.size.0);
+
+        let max_w = constraints.max_width.unwrap_or(est_w);
+        let (lines, w) = match constraints.wrap {
+            fret_core::TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
+                let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
+                (lines, Px(est_w.0.min(max_w.0)))
+            }
+            _ => (1, est_w),
+        };
+
+        let h = Px(line_height.0 * lines as f32);
+
+        (
+            fret_core::TextBlobId::default(),
+            fret_core::TextMetrics {
+                size: CoreSize::new(w, h),
+                baseline: Px((line_height.0 * 0.8).max(0.0)),
+            },
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for StyleAwareServices {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for StyleAwareServices {
     fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
         fret_core::SvgId::default()
     }
@@ -2036,10 +2123,12 @@ fn find_best_solid_quad_within_matching_bg(
     within: Rect,
     expected_bg: css_color::Rgba,
 ) -> Option<PaintedQuad> {
-    let mut best: Option<PaintedQuad> = None;
-    let mut best_score = f32::INFINITY;
+    let mut best_raw: Option<PaintedQuad> = None;
+    let mut best_raw_score = f32::INFINITY;
+    let mut best_tx: Option<PaintedQuad> = None;
+    let mut best_tx_score = f32::INFINITY;
 
-    for op in scene.ops() {
+    scene_walk(scene, |st, op| {
         let SceneOp::Quad {
             rect,
             border,
@@ -2049,19 +2138,21 @@ fn find_best_solid_quad_within_matching_bg(
             ..
         } = *op
         else {
-            continue;
+            return;
         };
 
         let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         if has_border(&border) {
-            continue;
+            return;
         }
+        let background = color_with_opacity(background, st.opacity);
+        let border_color = color_with_opacity(border_color, st.opacity);
         if background.a <= 0.01 {
-            continue;
+            return;
         }
-        if !rect_contains(within, rect) {
-            continue;
-        }
+
+        let rect_raw = rect;
+        let rect_tx = transform_rect_bounds(st.transform, rect);
 
         let bg = color_to_rgba(background);
         let score = (bg.r - expected_bg.r).abs()
@@ -2069,10 +2160,10 @@ fn find_best_solid_quad_within_matching_bg(
             + (bg.b - expected_bg.b).abs()
             + (bg.a - expected_bg.a).abs();
 
-        if score < best_score {
-            best_score = score;
-            best = Some(PaintedQuad {
-                rect,
+        if rect_contains(within, rect_tx) && score < best_tx_score {
+            best_tx_score = score;
+            best_tx = Some(PaintedQuad {
+                rect: rect_tx,
                 background,
                 border,
                 border_color,
@@ -2084,9 +2175,24 @@ fn find_best_solid_quad_within_matching_bg(
                 ],
             });
         }
-    }
+        if rect_contains(within, rect_raw) && score < best_raw_score {
+            best_raw_score = score;
+            best_raw = Some(PaintedQuad {
+                rect: rect_raw,
+                background,
+                border,
+                border_color,
+                corners: [
+                    corner_radii.top_left.0,
+                    corner_radii.top_right.0,
+                    corner_radii.bottom_right.0,
+                    corner_radii.bottom_left.0,
+                ],
+            });
+        }
+    });
 
-    best
+    best_tx.or(best_raw)
 }
 
 fn assert_overlay_chrome_matches_by_portal_slot(
@@ -2618,6 +2724,185 @@ fn web_find_highlighted_menu_item_background(theme: &WebGoldenTheme) -> css_colo
         .map(String::as_str)
         .and_then(parse_css_color)
         .expect("web highlighted menuitem backgroundColor")
+}
+
+#[derive(Debug, Clone, Copy)]
+struct WebHighlightedNodeChrome {
+    bg: css_color::Rgba,
+    fg: css_color::Rgba,
+}
+
+fn web_find_highlighted_listbox_option_chrome(
+    theme: &WebGoldenTheme,
+    item_slot: &str,
+) -> WebHighlightedNodeChrome {
+    fn node_area(node: &WebNode) -> f32 {
+        node.rect.w * node.rect.h
+    }
+
+    fn collect<'a>(node: &'a WebNode, item_slot: &str, out: &mut Vec<&'a WebNode>) {
+        let is_option = node
+            .attrs
+            .get("role")
+            .is_some_and(|v| v.as_str() == "option");
+        let is_item_slot = node
+            .attrs
+            .get("data-slot")
+            .is_some_and(|v| v.as_str() == item_slot);
+        if is_option && is_item_slot {
+            if let Some(bg) = node
+                .computed_style
+                .get("backgroundColor")
+                .map(String::as_str)
+                .and_then(parse_css_color)
+                && bg.a > 0.01
+            {
+                out.push(node);
+            }
+        }
+        for child in &node.children {
+            collect(child, item_slot, out);
+        }
+    }
+
+    let mut candidates: Vec<&WebNode> = Vec::new();
+    for portal in &theme.portals {
+        collect(portal, item_slot, &mut candidates);
+    }
+    let highlighted = candidates
+        .into_iter()
+        .max_by(|a, b| node_area(a).total_cmp(&node_area(b)))
+        .unwrap_or_else(|| panic!("web highlighted option (data-slot={item_slot})"));
+
+    let bg = highlighted
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web highlighted option backgroundColor");
+    let fg = highlighted
+        .computed_style
+        .get("color")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web highlighted option color");
+
+    WebHighlightedNodeChrome { bg, fg }
+}
+
+fn rect_contains_point_with_margin(rect: Rect, point: Point, margin_px: f32) -> bool {
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = rect.origin.x.0 + rect.size.width.0;
+    let y1 = rect.origin.y.0 + rect.size.height.0;
+    point.x.0 >= x0 - margin_px
+        && point.x.0 <= x1 + margin_px
+        && point.y.0 >= y0 - margin_px
+        && point.y.0 <= y1 + margin_px
+}
+
+#[derive(Clone, Copy)]
+struct SceneWalkState {
+    transform: Transform2D,
+    opacity: f32,
+}
+
+fn scene_walk(scene: &Scene, mut f: impl FnMut(SceneWalkState, &SceneOp)) {
+    let mut transform_stack: Vec<Transform2D> = Vec::new();
+    let mut opacity_stack: Vec<f32> = Vec::new();
+    let mut st = SceneWalkState {
+        transform: Transform2D::IDENTITY,
+        opacity: 1.0,
+    };
+
+    for op in scene.ops() {
+        match *op {
+            SceneOp::PushTransform { transform } => {
+                transform_stack.push(st.transform);
+                st.transform = st.transform.compose(transform);
+            }
+            SceneOp::PopTransform => {
+                st.transform = transform_stack.pop().unwrap_or(Transform2D::IDENTITY);
+            }
+            SceneOp::PushOpacity { opacity } => {
+                opacity_stack.push(st.opacity);
+                st.opacity *= opacity;
+            }
+            SceneOp::PopOpacity => {
+                st.opacity = opacity_stack.pop().unwrap_or(1.0);
+            }
+            _ => f(st, op),
+        }
+    }
+}
+
+fn transform_rect_bounds(transform: Transform2D, rect: Rect) -> Rect {
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = x0 + rect.size.width.0;
+    let y1 = y0 + rect.size.height.0;
+
+    let p0 = transform.apply_point(Point::new(Px(x0), Px(y0)));
+    let p1 = transform.apply_point(Point::new(Px(x1), Px(y0)));
+    let p2 = transform.apply_point(Point::new(Px(x0), Px(y1)));
+    let p3 = transform.apply_point(Point::new(Px(x1), Px(y1)));
+
+    let min_x = p0.x.0.min(p1.x.0).min(p2.x.0).min(p3.x.0);
+    let max_x = p0.x.0.max(p1.x.0).max(p2.x.0).max(p3.x.0);
+    let min_y = p0.y.0.min(p1.y.0).min(p2.y.0).min(p3.y.0);
+    let max_y = p0.y.0.max(p1.y.0).max(p2.y.0).max(p3.y.0);
+
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        CoreSize::new(Px(max_x - min_x), Px(max_y - min_y)),
+    )
+}
+
+fn color_with_opacity(color: Color, opacity: f32) -> Color {
+    Color {
+        a: (color.a * opacity).clamp(0.0, 1.0),
+        ..color
+    }
+}
+
+fn find_best_text_color_near(
+    scene: &Scene,
+    search_within: Rect,
+    near: Point,
+) -> Option<css_color::Rgba> {
+    let mut best_raw: Option<css_color::Rgba> = None;
+    let mut best_raw_score = f32::INFINITY;
+    let mut best_tx: Option<css_color::Rgba> = None;
+    let mut best_tx_score = f32::INFINITY;
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Text { origin, color, .. } = *op else {
+            return;
+        };
+        let raw_origin = origin;
+        let tx_origin = st.transform.apply_point(origin);
+        let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
+        if rgba.a <= 0.01 {
+            return;
+        }
+
+        if rect_contains_point_with_margin(search_within, tx_origin, 10.0) {
+            let dist_score = (tx_origin.x.0 - near.x.0).abs() + (tx_origin.y.0 - near.y.0).abs();
+            if dist_score < best_tx_score {
+                best_tx_score = dist_score;
+                best_tx = Some(rgba);
+            }
+        }
+        if rect_contains_point_with_margin(search_within, raw_origin, 10.0) {
+            let dist_score = (raw_origin.x.0 - near.x.0).abs() + (raw_origin.y.0 - near.y.0).abs();
+            if dist_score < best_raw_score {
+                best_raw_score = dist_score;
+                best_raw = Some(rgba);
+            }
+        }
+    });
+
+    best_tx.or(best_raw)
 }
 
 fn fret_drop_shadow_insets_candidates(scene: &Scene, panel_rect: Rect) -> Vec<ShadowInsets> {
@@ -7616,6 +7901,384 @@ fn web_vs_fret_select_scrollable_tiny_viewport_shadow_matches_web_dark() {
         SemanticsRole::ListBox,
         fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
         build_shadcn_select_scrollable_demo,
+    );
+}
+
+fn hover_first_listbox_option(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+) {
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let listbox = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBox)
+        .max_by(|a, b| {
+            rect_area(ui.debug_node_bounds(a.id).unwrap_or(a.bounds))
+                .total_cmp(&rect_area(ui.debug_node_bounds(b.id).unwrap_or(b.bounds)))
+        })
+        .expect("listbox");
+    let listbox_bounds = ui.debug_node_bounds(listbox.id).unwrap_or(listbox.bounds);
+    let mut option_candidates: Vec<(Rect, &fret_core::SemanticsNode)> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBoxOption)
+        .map(|n| (ui.debug_node_bounds(n.id).unwrap_or(n.bounds), n))
+        .collect();
+    option_candidates.sort_by(|(a, _), (b, _)| {
+        a.origin
+            .y
+            .0
+            .total_cmp(&b.origin.y.0)
+            .then_with(|| a.origin.x.0.total_cmp(&b.origin.x.0))
+    });
+
+    let option = option_candidates
+        .iter()
+        .find(|(bounds, _)| rect_contains(listbox_bounds, *bounds))
+        .map(|(_, n)| *n)
+        .unwrap_or_else(|| {
+            let samples: Vec<Rect> = option_candidates.iter().take(8).map(|(b, _)| *b).collect();
+            panic!(
+                "listbox option\n  listbox_bounds={listbox_bounds:?}\n  first_option_bounds={samples:?}"
+            )
+        });
+    let option_bounds = ui.debug_node_bounds(option.id).unwrap_or(option.bounds);
+
+    ui.dispatch_event(
+        app,
+        services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
+            position: bounds_center(option_bounds),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+}
+
+fn build_shadcn_select_demo_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+    let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+    let entries: Vec<SelectEntry> = vec![
+        SelectGroup::new(vec![
+            SelectLabel::new("Fruits").into(),
+            SelectItem::new("apple", "Apple").into(),
+            SelectItem::new("banana", "Banana").into(),
+            SelectItem::new("blueberry", "Blueberry").into(),
+            SelectItem::new("grapes", "Grapes").into(),
+            SelectItem::new("pineapple", "Pineapple").into(),
+        ])
+        .into(),
+    ];
+
+    fret_ui_shadcn::Select::new(value, open.clone())
+        .a11y_label("Select")
+        .placeholder("Select a fruit")
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default().w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
+        )
+        .entries(entries)
+        .into_element(cx)
+}
+
+fn build_shadcn_select_scrollable_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+    let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+    let entries: Vec<SelectEntry> = vec![
+        SelectGroup::new(vec![
+            SelectLabel::new("North America").into(),
+            SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+            SelectItem::new("cst", "Central Standard Time (CST)").into(),
+            SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+            SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+            SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+            SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("Europe & Africa").into(),
+            SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+            SelectItem::new("cet", "Central European Time (CET)").into(),
+            SelectItem::new("eet", "Eastern European Time (EET)").into(),
+            SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+            SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+            SelectItem::new("eat", "East Africa Time (EAT)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("Asia").into(),
+            SelectItem::new("msk", "Moscow Time (MSK)").into(),
+            SelectItem::new("ist", "India Standard Time (IST)").into(),
+            SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+            SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+            SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+            SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("Australia & Pacific").into(),
+            SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+            SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+            SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+            SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+            SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+        ])
+        .into(),
+        SelectGroup::new(vec![
+            SelectLabel::new("South America").into(),
+            SelectItem::new("art", "Argentina Time (ART)").into(),
+            SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+            SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+            SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+        ])
+        .into(),
+    ];
+
+    fret_ui_shadcn::Select::new(value, open.clone())
+        .a11y_label("Select")
+        .placeholder("Select a timezone")
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default().w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
+        )
+        .entries(entries)
+        .into_element(cx)
+}
+
+fn build_shadcn_combobox_demo_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{Combobox, ComboboxItem};
+
+    let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+    let items = vec![
+        ComboboxItem::new("apple", "Apple"),
+        ComboboxItem::new("banana", "Banana"),
+        ComboboxItem::new("blueberry", "Blueberry"),
+        ComboboxItem::new("grapes", "Grapes"),
+        ComboboxItem::new("pineapple", "Pineapple"),
+    ];
+
+    Combobox::new(value, open.clone())
+        .a11y_label("Select a fruit")
+        .width(Px(200.0))
+        .items(items)
+        .into_element(cx)
+}
+
+fn assert_listbox_highlighted_option_chrome_matches_web(
+    web_name: &str,
+    web_theme_name: &str,
+    web_option_slot: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_highlighted_listbox_option_chrome(theme, web_option_slot);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![build(cx, &open)],
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            tick + 1 == settle_frames,
+            |cx| vec![build(cx, &open)],
+        );
+    }
+
+    hover_first_listbox_option(&mut ui, &mut app, &mut services);
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2 + settle_frames),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let listbox = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBox)
+        .max_by(|a, b| {
+            rect_area(ui.debug_node_bounds(a.id).unwrap_or(a.bounds))
+                .total_cmp(&rect_area(ui.debug_node_bounds(b.id).unwrap_or(b.bounds)))
+        })
+        .expect("listbox");
+    let listbox_bounds = ui.debug_node_bounds(listbox.id).unwrap_or(listbox.bounds);
+    let option = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::ListBoxOption)
+        .filter(|n| {
+            rect_contains(
+                listbox_bounds,
+                ui.debug_node_bounds(n.id).unwrap_or(n.bounds),
+            )
+        })
+        .min_by(|a, b| {
+            let a_bounds = ui.debug_node_bounds(a.id).unwrap_or(a.bounds);
+            let b_bounds = ui.debug_node_bounds(b.id).unwrap_or(b.bounds);
+            a_bounds
+                .origin
+                .y
+                .0
+                .total_cmp(&b_bounds.origin.y.0)
+                .then_with(|| a_bounds.origin.x.0.total_cmp(&b_bounds.origin.x.0))
+        })
+        .expect("listbox option");
+    let option_bounds = ui.debug_node_bounds(option.id).unwrap_or(option.bounds);
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, option_bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("{web_name} {web_theme_name}: highlighted option background quad")
+        });
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted option background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(&scene, listbox_bounds, bounds_center(option_bounds))
+        .unwrap_or_else(|| {
+            let mut total_text = 0usize;
+            let mut samples_raw: Vec<(f32, f32)> = Vec::new();
+            let mut samples_tx: Vec<(f32, f32)> = Vec::new();
+            scene_walk(&scene, |st, op| {
+                let SceneOp::Text { origin, .. } = *op else {
+                    return;
+                };
+                total_text += 1;
+                if samples_raw.len() < 16 {
+                    samples_raw.push((origin.x.0, origin.y.0));
+                }
+                if samples_tx.len() < 16 {
+                    let p = st.transform.apply_point(origin);
+                    samples_tx.push((p.x.0, p.y.0));
+                }
+            });
+            panic!(
+                "{web_name} {web_theme_name}: highlighted option text color (no text ops near)\n  total_text_ops={total_text}\n  sample_origins_raw={samples_raw:?}\n  sample_origins_tx={samples_tx:?}\n  listbox_bounds={listbox_bounds:?}\n  option_bounds={option_bounds:?}",
+            )
+        });
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted option text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_highlighted_option_chrome_matches_web() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-demo.highlight-first",
+        "light",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_highlighted_option_chrome_matches_web_dark() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-demo.highlight-first",
+        "dark",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-scrollable.highlight-first",
+        "light",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_scrollable_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web_dark() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-scrollable.highlight-first",
+        "dark",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_scrollable_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "combobox-demo.highlight-first",
+        "light",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_combobox_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_dark() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "combobox-demo.highlight-first",
+        "dark",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_combobox_demo_page,
     );
 }
 
