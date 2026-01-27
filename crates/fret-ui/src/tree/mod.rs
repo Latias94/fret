@@ -4582,6 +4582,18 @@ impl<H: UiHost> UiTree<H> {
         let element_id_map: HashMap<u64, NodeId> =
             crate::declarative::frame::element_id_map_for_window(app, window);
 
+        // View-cache reuse can legitimately skip re-setting `UiTree` child edges for cached
+        // subtrees. `WindowFrame` retains the authoritative element-tree edges, so semantics
+        // traversal should treat the union as the effective child list (mirrors GC reachability
+        // bookkeeping). Only pay the cost when view-cache reuse can occur.
+        let window_frame_children: HashMap<NodeId, Vec<NodeId>> = if self.view_cache_active() {
+            crate::declarative::with_window_frame(app, window, |window_frame| {
+                window_frame.map(|w| w.children.clone()).unwrap_or_default()
+            })
+        } else {
+            HashMap::new()
+        };
+
         let mut barrier_index: Option<usize> = None;
         for (idx, layer) in visible_layers.iter().enumerate() {
             if self.layers[*layer].blocks_underlay_input {
@@ -4644,7 +4656,20 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or(Transform2D::IDENTITY);
                     let at_node = before.compose(node_transform);
                     let bounds = rect_aabb_transformed(node.bounds, at_node);
-                    let children = node.children.clone();
+                    let ui_children = node.children.clone();
+                    let children = match window_frame_children.get(&id) {
+                        None => ui_children,
+                        Some(frame_children) if ui_children.is_empty() => frame_children.clone(),
+                        Some(frame_children) => {
+                            let mut out = ui_children;
+                            for &child in frame_children {
+                                if !out.contains(&child) {
+                                    out.push(child);
+                                }
+                            }
+                            out
+                        }
+                    };
                     let is_text_input = widget.is_some_and(|w| w.is_text_input());
                     let is_focusable = widget.is_some_and(|w| w.is_focusable());
                     let traverse_children = widget.map(|w| w.semantics_children()).unwrap_or(true);
