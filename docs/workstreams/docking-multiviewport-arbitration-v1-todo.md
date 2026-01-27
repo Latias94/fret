@@ -74,13 +74,19 @@ Each TODO is labeled:
     - conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`viewport_capture_does_not_clear_on_other_pointer_up`)
   - Done when: tests cover two concurrent pointer streams (even if only synthetic) without panics or state leaks.
 
-## P1 — Scripted Regressions (UI Gallery)
+## P1 — Scripted Regressions (Diagnostics Harness)
 
-- [ ] DMV1-reg-030 Add a UI Gallery scenario for “split viewports” and a scripted diag test.
+- [x] DMV1-reg-030 Add a scripted diag test for “split viewports” (docking arbitration demo).
   - Target: ensure the table stakes work via `fretboard diag` (no manual repro).
+  - Evidence:
+    - script: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
+    - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-viewport-left`, `dock-arb-viewport-right`)
   - Notes: keep scripts small; prefer `--check-*` gates over log scraping.
-- [ ] DMV1-reg-031 Add a UI Gallery scenario for “dock drag + modal barrier + viewport capture”.
-  - Target: one script that asserts: modal blocks underlay; dock drag closes menus; viewport forwarding suppressed.
+- [x] DMV1-reg-031 Add a scripted diag test for “dock drag + modal barrier + viewport capture” (docking arbitration demo).
+  - Target: one script that exercises: dock drag hygiene, modal barrier toggling, viewport capture.
+  - Evidence:
+    - script: `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+    - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-tab-drag-anchor-left`, `dock-arb-dialog-*`, `dock-arb-popover-*`)
 
 ## P2 — Unification Opportunities (Optional)
 

@@ -1115,6 +1115,7 @@ dependencies = [
  "glam",
  "image",
  "serde_json",
+ "slotmap",
  "time",
  "tracing",
  "tracing-subscriber",
