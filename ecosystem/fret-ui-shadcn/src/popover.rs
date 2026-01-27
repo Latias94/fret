@@ -1770,6 +1770,11 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(true),
+            "expected click-through outside press to still activate the underlay when dismissal is prevented"
+        );
         let reason = dismiss_reason.get();
         let Some(fret_ui::action::DismissReason::OutsidePress { pointer }) = reason else {
             panic!("expected outside-press dismissal, got {reason:?}");
