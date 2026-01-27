@@ -169,6 +169,15 @@ Exit criteria:
   - double-click select-word behavior,
   - triple-click select-line behavior.
 
+Implemented (evidence):
+
+- `crates/fret-runtime/src/window_text_boundary_mode.rs` (`WindowTextBoundaryModeService`)
+- `crates/fret-ui/src/element.rs` (`TextInputRegionProps::text_boundary_mode_override`)
+- `crates/fret-ui/src/tree/dispatch.rs` (`focus_text_boundary_mode_override`)
+- Tests:
+  - `crates/fret-ui/src/text_edit.rs` (Unicode/Identifier boundary unit tests)
+  - `crates/fret-ui/src/tree/tests/window_input_context_snapshot.rs`
+
 ### M3 — Editor surface MVP (native first, windowed)
 
 Exit criteria:
@@ -178,6 +187,20 @@ Exit criteria:
   - supports caret + selection + clipboard + undo hooks,
   - integrates IME preedit and cursor-area effects (native).
 - Row text is prepared and cached per visible window (no whole-doc blob).
+
+Implemented (evidence):
+
+- Crate split:
+  - `ecosystem/fret-code-editor-buffer`
+  - `ecosystem/fret-code-editor-view`
+  - `ecosystem/fret-code-editor`
+- Surface + caches:
+  - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor`, row text cache, torture overlay)
+  - `crates/fret-ui/src/canvas.rs` / `crates/fret-ui/src/element.rs` (`CanvasCachePolicy.shared_text`)
+- Harness pages:
+  - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
+  - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
+  - `apps/fret-ui-gallery/src/docs.rs`
 
 ### M4 — Incremental highlighting (visible-window materialization)
 

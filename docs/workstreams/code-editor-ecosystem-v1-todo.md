@@ -110,18 +110,18 @@ Evidence anchors:
 - [x] Choose the v1 surface implementation:
   - paint-driven windowed surface (preferred), or
   - VirtualList rows (only if composability is required early).
-- [~] Define overscan policy and scroll stability expectations.
+- [x] Define overscan policy and scroll stability expectations.
 
 ### Text preparation + caching
 
-- [~] Prepare text per visible display row only (no monolithic document blob).
-- [~] Define row cache keys and budgets (LRU or epoch-based).
+- [x] Prepare text per visible display row only (no monolithic document blob).
+- [x] Define row cache keys and budgets (viewport-bounded, LRU-ish).
 - [ ] Ensure theme-only changes remain paint-only (no reshaping).
 
 ### Input/IME integration
 
-- [~] Inline preedit rendering (best-effort overlay for v1).
-- [~] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
+- [x] Inline preedit rendering (best-effort overlay for v1).
+- [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
 - [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
 
 ### Harness
