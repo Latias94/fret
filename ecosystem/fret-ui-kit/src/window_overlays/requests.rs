@@ -479,6 +479,7 @@ impl HoverOverlayRequest {
     pub fn new(
         id: GlobalElementId,
         trigger: GlobalElementId,
+        open: Model<bool>,
         children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         Self {
@@ -486,6 +487,8 @@ impl HoverOverlayRequest {
             root_name: super::hover_overlay_root_name(id),
             interactive: true,
             trigger,
+            open,
+            present: true,
             children: children.into_iter().collect(),
         }
     }
@@ -533,12 +536,18 @@ pub struct TooltipRequest {
 }
 
 impl TooltipRequest {
-    pub fn new(id: GlobalElementId, children: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn new(
+        id: GlobalElementId,
+        open: Model<bool>,
+        children: impl IntoIterator<Item = AnyElement>,
+    ) -> Self {
         Self {
             id,
             root_name: super::tooltip_root_name(id),
             interactive: true,
             trigger: None,
+            open,
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: children.into_iter().collect(),

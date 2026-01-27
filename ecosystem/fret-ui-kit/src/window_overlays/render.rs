@@ -3,7 +3,10 @@ use std::sync::Arc;
 
 use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D, WindowMetricsService};
 use fret_runtime::DRAG_KIND_DOCK_PANEL;
-use fret_ui::action::{ActionCx, DismissReason, UiActionHostAdapter, UiActionHostExt};
+use fret_ui::action::{
+    ActionCx, AutoFocusRequestCx, DismissReason, DismissRequestCx, UiActionHost,
+    UiActionHostAdapter, UiActionHostExt, UiFocusActionHost,
+};
 use fret_ui::declarative;
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
@@ -62,6 +65,42 @@ fn should_suspend_pointer_gating_for_capture(
 ) -> bool {
     open && capture_conflicts_with_layer
         && (disable_outside_pointer_events || consume_outside_pointer_events)
+}
+
+struct OverlayFocusHost<'a, H: UiHost> {
+    ui: &'a mut UiTree<H>,
+    app: &'a mut H,
+    window: AppWindowId,
+}
+
+impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+        self.app.models_mut()
+    }
+
+    fn push_effect(&mut self, effect: fret_runtime::Effect) {
+        self.app.push_effect(effect);
+    }
+
+    fn request_redraw(&mut self, window: AppWindowId) {
+        self.app.request_redraw(window);
+    }
+
+    fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+        self.app.next_timer_token()
+    }
+
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+        self.app.next_clipboard_token()
+    }
+}
+
+impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusHost<'a, H> {
+    fn request_focus(&mut self, target: fret_ui::elements::GlobalElementId) {
+        if let Some(node) = fret_ui::elements::node_for_element(self.app, self.window, target) {
+            self.ui.set_focus(Some(node));
+        }
+    }
 }
 
 pub fn render<H: UiHost>(
@@ -281,6 +320,7 @@ pub fn render<H: UiHost>(
         let trigger = req.trigger;
         let initial_focus = req.initial_focus;
         let open = req.open;
+        let on_close_auto_focus = req.on_close_auto_focus.clone();
         let on_dismiss_request = req.on_dismiss_request.clone();
         let children = req.children;
 
@@ -293,9 +333,11 @@ pub fn render<H: UiHost>(
             &root_name,
             move |cx| {
                 cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
-                    Arc::new(move |host, _cx, _reason: DismissReason| {
-                        let _ = host.models_mut().update(&open, |v| *v = false);
-                    })
+                    Arc::new(
+                        move |host: &mut dyn UiActionHost, _cx, _req: &mut DismissRequestCx| {
+                            let _ = host.models_mut().update(&open, |v| *v = false);
+                        },
+                    )
                 }));
                 children
             },
@@ -341,14 +383,29 @@ pub fn render<H: UiHost>(
                 let focus_in_layer =
                     focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
                 if focus_now.is_none() || focus_in_layer {
-                    if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
-                        ui,
-                        app,
-                        window,
-                        entry.trigger,
-                        entry.restore_focus,
-                    ) {
-                        ui.set_focus(Some(node));
+                    let mut focus_req = AutoFocusRequestCx::new();
+                    if let Some(on_close_auto_focus) = &on_close_auto_focus {
+                        let mut host = OverlayFocusHost { ui, app, window };
+                        on_close_auto_focus(
+                            &mut host,
+                            ActionCx {
+                                window,
+                                target: modal_id,
+                            },
+                            &mut focus_req,
+                        );
+                    }
+
+                    if !focus_req.default_prevented() {
+                        if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                            ui,
+                            app,
+                            window,
+                            entry.trigger,
+                            entry.restore_focus,
+                        ) {
+                            ui.set_focus(Some(node));
+                        }
                     }
                 }
             }
@@ -461,6 +518,7 @@ pub fn render<H: UiHost>(
         let consume_outside_pointer_events = req.consume_outside_pointer_events;
         let wants_pointer_move_events = req.on_pointer_move.is_some();
         let open = req.open;
+        let on_open_auto_focus = req.on_open_auto_focus.clone();
         let open_for_dismiss = open.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let on_dismiss_request = req.on_dismiss_request.clone();
@@ -480,9 +538,11 @@ pub fn render<H: UiHost>(
                 }
                 let on_dismiss_request = on_dismiss_request_for_root.clone();
                 cx.dismissible_on_dismiss_request(on_dismiss_request.unwrap_or_else(|| {
-                    Arc::new(move |host, _cx, _reason: DismissReason| {
-                        let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
-                    })
+                    Arc::new(
+                        move |host: &mut dyn UiActionHost, _cx, _req: &mut DismissRequestCx| {
+                            let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                        },
+                    )
                 }));
                 children
             },
@@ -548,13 +608,14 @@ pub fn render<H: UiHost>(
             {
                 if let Some(on_dismiss_request) = on_dismiss_request.as_ref() {
                     let mut host = UiActionHostAdapter { app };
+                    let mut req = DismissRequestCx::new(DismissReason::FocusOutside);
                     on_dismiss_request(
                         &mut host,
                         ActionCx {
                             window,
                             target: trigger,
                         },
-                        DismissReason::FocusOutside,
+                        &mut req,
                     );
                     open_now = app
                         .models_mut()
@@ -628,6 +689,30 @@ pub fn render<H: UiHost>(
         });
 
         if should_focus_initial || pending_initial_focus {
+            let mut focus_req = AutoFocusRequestCx::new();
+            if open_now && (should_focus_initial || pending_initial_focus) {
+                if let Some(on_open_auto_focus) = &on_open_auto_focus {
+                    let mut host = OverlayFocusHost { ui, app, window };
+                    on_open_auto_focus(
+                        &mut host,
+                        ActionCx {
+                            window,
+                            target: popover_id,
+                        },
+                        &mut focus_req,
+                    );
+                }
+            }
+
+            if focus_req.default_prevented() {
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    if let Some(entry) = overlays.popovers.get_mut(&key) {
+                        entry.pending_initial_focus = false;
+                    }
+                });
+                continue;
+            }
+
             if should_focus_initial && open_now && consume_outside_pointer_events {
                 ui.set_focus(Some(root));
             }
@@ -824,6 +909,9 @@ pub fn render<H: UiHost>(
     }
 
     for req in tooltip_requests {
+        if dock_drag_affects_window {
+            continue;
+        }
         if !req.present {
             continue;
         }
@@ -887,7 +975,10 @@ pub fn render<H: UiHost>(
             );
 
             if interactive {
-                ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
+                ui.set_layer_scroll_dismiss_elements(
+                    entry.layer,
+                    req.trigger.into_iter().collect(),
+                );
             } else {
                 ui.set_layer_scroll_dismiss_elements(entry.layer, Vec::new());
             }

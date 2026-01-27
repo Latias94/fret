@@ -1400,6 +1400,10 @@ mod tests {
         fn next_timer_token(&mut self) -> TimerToken {
             self.app.next_timer_token()
         }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.app.next_clipboard_token()
+        }
     }
 
     impl UiFocusActionHost for PointerHost<'_> {
