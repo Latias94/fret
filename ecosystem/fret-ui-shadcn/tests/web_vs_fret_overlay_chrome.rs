@@ -1,7 +1,8 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
+    AppWindowId, Color, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
     PointerEvent, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+    Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::ElementContext;
@@ -30,6 +31,8 @@ struct WebGoldenTheme {
     root: WebNode,
     #[serde(default)]
     portals: Vec<WebNode>,
+    #[serde(rename = "portalWrappers", default)]
+    portal_wrappers: Vec<WebNode>,
     #[serde(default)]
     viewport: Option<WebViewport>,
 }
@@ -473,19 +476,134 @@ fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
     best_border.or(best_background)
 }
 
+fn find_best_solid_quad_within_matching_bg(
+    scene: &Scene,
+    target: Rect,
+    expected_bg: css_color::Rgba,
+) -> Option<PaintedQuad> {
+    let target_area = rect_area(target).max(1.0);
+    let mut best: Option<PaintedQuad> = None;
+    let mut best_score = f32::INFINITY;
+    let mut best_area = f32::INFINITY;
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Quad {
+            rect,
+            border,
+            corner_radii,
+            background,
+            border_color,
+            ..
+        } = *op
+        else {
+            return;
+        };
+
+        let rect = transform_rect_bounds(st.transform, rect);
+        let background = color_with_opacity(background, st.opacity);
+
+        if rect_intersection_area(rect, target) <= 0.01 {
+            return;
+        }
+        if background.a <= 0.01 {
+            return;
+        }
+        // Ignore drop-shadow layers: highlighted option backgrounds are opaque in shadcn.
+        if background.a < 0.5 {
+            return;
+        }
+        // Avoid capturing the overlay panel surface (too large) when the intent is to find the
+        // option-level highlight quad. Use a generous ratio because some semantics bounds are
+        // tighter than the painted row background.
+        let area = rect_area(rect);
+        if area > target_area * 40.0 {
+            return;
+        }
+
+        let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+        let quad = PaintedQuad {
+            rect,
+            background,
+            border,
+            border_color,
+            corners: [
+                corner_radii.top_left.0,
+                corner_radii.top_right.0,
+                corner_radii.bottom_right.0,
+                corner_radii.bottom_left.0,
+            ],
+        };
+
+        let bg = color_to_rgba(background);
+        let score = (bg.r - expected_bg.r).abs()
+            + (bg.g - expected_bg.g).abs()
+            + (bg.b - expected_bg.b).abs()
+            + (bg.a - expected_bg.a).abs();
+        if score < best_score || (score <= best_score + 0.0001 && area < best_area) {
+            best_score = score;
+            best_area = area;
+            best = Some(quad);
+        }
+    });
+
+    best
+}
+
+#[derive(Default)]
 struct FakeServices;
+
+type StyleAwareServices = FakeServices;
 
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        _input: &fret_core::TextInput,
-        _constraints: fret_core::TextConstraints,
+        input: &fret_core::TextInput,
+        constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let (text, style) = match input {
+            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style.clone()),
+            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base.clone()),
+            _ => (input.text(), fret_core::TextStyle::default()),
+        };
+        let line_height = style
+            .line_height
+            .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
+
+        fn estimate_width_px(text: &str, font_size: f32) -> Px {
+            let mut units = 0.0f32;
+            for ch in text.chars() {
+                units += match ch {
+                    ' ' => 0.28,
+                    '(' | ')' => 0.28,
+                    'i' | 'l' | 'I' | 't' | 'f' | 'j' | 'r' => 0.32,
+                    'm' | 'w' | 'M' | 'W' => 0.75,
+                    'o' | 'O' | 'p' | 'P' => 0.62,
+                    'A'..='Z' => 0.62,
+                    'a'..='z' => 0.56,
+                    _ => 0.56,
+                };
+            }
+            Px((units * font_size).max(1.0))
+        }
+
+        let est_w = estimate_width_px(text, style.size.0);
+
+        let max_w = constraints.max_width.unwrap_or(est_w);
+        let (lines, w) = match constraints.wrap {
+            fret_core::TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
+                let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
+                (lines, Px(est_w.0.min(max_w.0)))
+            }
+            _ => (1, est_w),
+        };
+
+        let h = Px(line_height.0 * lines as f32);
+
         (
             fret_core::TextBlobId::default(),
             fret_core::TextMetrics {
-                size: CoreSize::new(Px(10.0), Px(10.0)),
-                baseline: Px(8.0),
+                size: CoreSize::new(w, h),
+                baseline: Px(h.0 * 0.8),
             },
         )
     }
@@ -595,6 +713,13 @@ fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
         delta <= tol,
         "{label}: expected＞{expected} (㊣{tol}) got={actual} (忖={delta})"
     );
+}
+
+fn assert_rgba_close(label: &str, actual: css_color::Rgba, expected: css_color::Rgba, tol: f32) {
+    assert_close(&format!("{label}.r"), actual.r, expected.r, tol);
+    assert_close(&format!("{label}.g"), actual.g, expected.g, tol);
+    assert_close(&format!("{label}.b"), actual.b, expected.b, tol);
+    assert_close(&format!("{label}.a"), actual.a, expected.a, tol);
 }
 
 fn bounds_center(r: Rect) -> Point {
@@ -2080,9 +2205,6 @@ fn web_find_active_element<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
     for portal in &theme.portals {
         collect(portal, &mut active_descendants, &mut actives);
     }
-    for wrapper in &theme.portal_wrappers {
-        collect(wrapper, &mut active_descendants, &mut actives);
-    }
 
     if let Some(best) = active_descendants
         .into_iter()
@@ -2258,6 +2380,8 @@ fn find_best_text_color_near(
     let mut best_raw_score = f32::INFINITY;
     let mut best_tx: Option<css_color::Rgba> = None;
     let mut best_tx_score = f32::INFINITY;
+    let mut best_any: Option<css_color::Rgba> = None;
+    let mut best_any_score = f32::INFINITY;
 
     scene_walk(scene, |st, op| {
         let SceneOp::Text { origin, color, .. } = *op else {
@@ -2284,9 +2408,15 @@ fn find_best_text_color_near(
                 best_raw = Some(rgba);
             }
         }
+
+        let dist_score = (tx_origin.x.0 - near.x.0).abs() + (tx_origin.y.0 - near.y.0).abs();
+        if dist_score < best_any_score {
+            best_any_score = dist_score;
+            best_any = Some(rgba);
+        }
     });
 
-    best_tx.or(best_raw)
+    best_tx.or(best_raw).or(best_any)
 }
 
 fn fret_drop_shadow_insets_candidates(scene: &Scene, panel_rect: Rect) -> Vec<ShadowInsets> {
@@ -5338,6 +5468,13 @@ fn build_shadcn_select_scrollable_page(
         )
         .entries(entries)
         .into_element(cx)
+}
+
+fn build_shadcn_select_scrollable_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    build_shadcn_select_scrollable_page(cx, open)
 }
 
 fn build_shadcn_combobox_demo_page(

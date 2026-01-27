@@ -1735,7 +1735,7 @@ impl CommandPalette {
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
 
             let bg_hover = item_bg_hover(&theme);
-            let bg_selected = alpha_mul(bg_hover, 0.85);
+            let bg_selected = bg_hover;
             let fg = theme.color_required("foreground");
             let fg_disabled = alpha_mul(fg, 0.5);
             let text_style = item_text_style(&theme);
