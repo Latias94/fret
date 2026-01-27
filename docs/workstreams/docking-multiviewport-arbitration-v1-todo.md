@@ -96,8 +96,12 @@ Each TODO is labeled:
 
 ## P2 — Unification Opportunities (Optional)
 
-- [ ] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.
+- [x] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.
   - Candidates:
     - `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`
     - `ecosystem/fret-docking/src/dock/viewport.rs`
+  - Evidence:
+    - `crates/fret-core/src/input.rs` (`ViewportInputEvent::from_mapping_window_point_maybe_clamped`)
+    - `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs` (uses `from_mapping_window_point_maybe_clamped`)
+    - `ecosystem/fret-docking/src/dock/viewport.rs` (uses `from_mapping_window_point_maybe_clamped`)
   - Guardrail: do not move policy into `crates/*`; keep helper in ecosystem unless it becomes a true contract.
