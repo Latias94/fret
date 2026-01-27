@@ -33,7 +33,6 @@ Related ADRs:
 1. Run any demo/app wired via `UiAppDriver` and enable diagnostics:
 
    - `FRET_DIAG=1`
-   - (Optional) `FRET_DIAG_SCREENSHOTS=1` to request a GPU readback screenshot alongside each bundle dump (written under `target/fret-diag/screenshots/<bundle_timestamp>/` with a `manifest.json`).
 
 2. Reproduce the issue.
 
@@ -285,6 +284,7 @@ Privacy / size:
 
 - `FRET_DIAG_REDACT_TEXT=0`: disable redaction (default enabled).
 - `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
+- `FRET_DIAG_MAX_GATING_TRACE_ENTRIES=...`: cap `debug.command_gating_trace` entries (default 200; clamped to <= 2000).
 
 Script harness:
 
@@ -303,6 +303,10 @@ Screenshot capture:
 - `FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH=...`: screenshot completion trigger file (default `<dir>/screenshots.result.touch`).
 
 The screenshot completion log is append-only (bounded) and includes a `request_id` that scripted steps can wait on.
+
+Bundle screenshots (frame dump):
+
+- `FRET_DIAG_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
 
 Picking:
 

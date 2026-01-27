@@ -47,20 +47,41 @@ impl WindowCommandGatingService {
         })
     }
 
+    pub fn base_snapshot(&self, window: AppWindowId) -> Option<&WindowCommandGatingSnapshot> {
+        self.by_window
+            .get(&window)
+            .and_then(|state| state.base.as_ref())
+    }
+
     /// Sets the base override snapshot for the window.
     ///
     /// Nested overlays should prefer `push_snapshot` so they do not overwrite other overrides.
-    pub fn set_snapshot(&mut self, window: AppWindowId, snapshot: WindowCommandGatingSnapshot) {
+    pub fn set_base_snapshot(
+        &mut self,
+        window: AppWindowId,
+        snapshot: WindowCommandGatingSnapshot,
+    ) {
         let state = self.by_window.entry(window).or_default();
         state.base = Some(snapshot);
         self.gc_window(window);
     }
 
-    pub fn clear_snapshot(&mut self, window: AppWindowId) {
+    /// Sets the base override snapshot for the window.
+    ///
+    /// Nested overlays should prefer `push_snapshot` so they do not overwrite other overrides.
+    pub fn set_snapshot(&mut self, window: AppWindowId, snapshot: WindowCommandGatingSnapshot) {
+        self.set_base_snapshot(window, snapshot);
+    }
+
+    pub fn clear_base_snapshot(&mut self, window: AppWindowId) {
         if let Some(state) = self.by_window.get_mut(&window) {
             state.base = None;
         }
         self.gc_window(window);
+    }
+
+    pub fn clear_snapshot(&mut self, window: AppWindowId) {
+        self.clear_base_snapshot(window);
     }
 
     /// Pushes an overlay-scoped gating snapshot and returns a handle that can later remove it.
@@ -282,13 +303,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn base_snapshot_is_visible_when_no_stack_overrides_exist() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.focus_is_text_input = true;
+        svc.set_base_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        assert!(
+            svc.base_snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input),
+            "expected base snapshot getter to return the stored base snapshot"
+        );
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input),
+            "expected snapshot() to fall back to base snapshot"
+        );
+    }
+
+    #[test]
     fn snapshot_prefers_stack_top_and_falls_back_to_base() {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
         let mut base_ctx = InputContext::default();
         base_ctx.focus_is_text_input = true;
-        svc.set_snapshot(
+        svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
         );
@@ -318,10 +363,44 @@ mod tests {
             "expected fallback to base snapshot after popping"
         );
 
-        svc.clear_snapshot(window);
+        svc.clear_base_snapshot(window);
         assert!(
             svc.snapshot(window).is_none(),
             "expected window to be cleared"
+        );
+    }
+
+    #[test]
+    fn set_snapshot_does_not_override_stack_top() {
+        let window = AppWindowId::default();
+        let mut svc = WindowCommandGatingService::default();
+
+        let mut outer_ctx = InputContext::default();
+        outer_ctx.focus_is_text_input = true;
+        let token = svc.push_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
+        );
+
+        let mut base_ctx = InputContext::default();
+        base_ctx.ui_has_modal = true;
+        svc.set_snapshot(
+            window,
+            WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
+        );
+
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().focus_is_text_input && !s.input_ctx().ui_has_modal),
+            "expected stack top to remain effective after set_snapshot"
+        );
+
+        svc.remove_pushed_snapshot(window, token)
+            .expect("remove pushed snapshot");
+        assert!(
+            svc.snapshot(window)
+                .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
+            "expected base snapshot to become effective after popping stack"
         );
     }
 
@@ -375,7 +454,7 @@ mod tests {
 
         let mut base_ctx = InputContext::default();
         base_ctx.focus_is_text_input = true;
-        svc.set_snapshot(
+        svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
         );
@@ -387,7 +466,7 @@ mod tests {
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
         );
 
-        svc.clear_snapshot(window);
+        svc.clear_base_snapshot(window);
         assert!(
             svc.snapshot(window)
                 .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
@@ -417,7 +496,7 @@ mod tests {
         let mut base_ctx = InputContext::default();
         base_ctx.ui_has_modal = false;
         base_ctx.focus_is_text_input = true;
-        svc.set_snapshot(
+        svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
         );
@@ -526,7 +605,7 @@ mod tests {
 
         let mut base_ctx = InputContext::default();
         base_ctx.focus_is_text_input = true;
-        svc.set_snapshot(
+        svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
         );
@@ -538,7 +617,7 @@ mod tests {
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
         );
 
-        svc.clear_snapshot(window);
+        svc.clear_base_snapshot(window);
         assert!(
             svc.snapshot(window)
                 .is_some_and(|s| s.input_ctx().ui_has_modal),

@@ -992,14 +992,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let dock_space_node = cx.node;
         let allow_tear_off =
             cx.input_ctx.caps.ui.window_tear_off && cx.input_ctx.caps.ui.multi_window;
-        let window_input_arbitration = cx
-            .app
-            .global::<fret_runtime::WindowInputArbitrationService>()
-            .and_then(|svc| svc.snapshot(self.window))
-            .copied();
-        let pointer_occlusion = window_input_arbitration
-            .map(|snapshot| snapshot.pointer_occlusion)
-            .unwrap_or(fret_runtime::WindowPointerOcclusion::None);
+        let window_input_arbitration = cx.input_ctx.window_arbitration();
+        let pointer_occlusion = cx.input_ctx.window_pointer_occlusion();
         let foreign_capture_active = window_input_arbitration.is_some_and(|snapshot| {
             if !snapshot.pointer_capture_active {
                 return false;

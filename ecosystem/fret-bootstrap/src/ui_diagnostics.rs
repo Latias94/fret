@@ -33,6 +33,7 @@ pub struct UiDiagnosticsConfig {
     pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    pub max_gating_trace_entries: usize,
     pub screenshot_on_dump: bool,
 }
 
@@ -109,6 +110,11 @@ impl Default for UiDiagnosticsConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(4096);
+        let max_gating_trace_entries = std::env::var("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(200)
+            .clamp(0, 2000);
         let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
 
         Self {
@@ -133,6 +139,7 @@ impl Default for UiDiagnosticsConfig {
             inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
+            max_gating_trace_entries,
             screenshot_on_dump,
         }
     }
@@ -1432,8 +1439,7 @@ impl UiDiagnosticsService {
             .per_window
             .get(&window)
             .and_then(|ring| ring.last_pointer_position);
-        let hit_test = last_pointer_position
-            .map(|pos| UiHitTestSnapshotV1::from_hit_test(pos, ui.debug_hit_test(pos)));
+        let hit_test = last_pointer_position.map(|pos| UiHitTestSnapshotV1::from_tree(pos, ui));
 
         let element_diag = element_runtime.and_then(|runtime| {
             runtime.diagnostics_snapshot(window).map(|snapshot| {
@@ -1533,6 +1539,7 @@ impl UiDiagnosticsService {
                 hit_test,
                 element_diag,
                 semantics,
+                self.cfg.max_gating_trace_entries,
             ),
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
@@ -2536,6 +2543,37 @@ struct WaitUntilState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiInputArbitrationSnapshotV1 {
+    #[serde(default)]
+    pub modal_barrier_root: Option<u64>,
+    #[serde(default)]
+    pub pointer_occlusion: String,
+    #[serde(default)]
+    pub pointer_occlusion_layer_id: Option<u64>,
+    #[serde(default)]
+    pub pointer_capture_active: bool,
+    #[serde(default)]
+    pub pointer_capture_layer_id: Option<u64>,
+    #[serde(default)]
+    pub pointer_capture_multiple_layers: bool,
+}
+
+impl UiInputArbitrationSnapshotV1 {
+    fn from_snapshot(snapshot: fret_ui::tree::UiInputArbitrationSnapshot) -> Self {
+        Self {
+            modal_barrier_root: snapshot.modal_barrier_root.map(key_to_u64),
+            pointer_occlusion: pointer_occlusion_label(snapshot.pointer_occlusion),
+            pointer_occlusion_layer_id: snapshot
+                .pointer_occlusion_layer
+                .map(|id| id.data().as_ffi()),
+            pointer_capture_active: snapshot.pointer_capture_active,
+            pointer_capture_layer_id: snapshot.pointer_capture_layer.map(|id| id.data().as_ffi()),
+            pointer_capture_multiple_layers: snapshot.pointer_capture_multiple_layers,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiTreeDebugSnapshotV1 {
     pub stats: UiFrameStatsV1,
     #[serde(default)]
@@ -2566,6 +2604,14 @@ pub struct UiTreeDebugSnapshotV1 {
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
+    #[serde(default)]
+    pub input_arbitration: UiInputArbitrationSnapshotV1,
+    /// Best-effort command gating decisions for a small set of "interesting" commands.
+    ///
+    /// This is intended for debugging cross-surface inconsistencies (menus vs palette vs buttons)
+    /// without relying on ad-hoc logs.
+    #[serde(default)]
+    pub command_gating_trace: Vec<UiCommandGatingTraceEntryV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     #[serde(default)]
     pub all_layer_roots: Vec<u64>,
@@ -2587,6 +2633,7 @@ impl UiTreeDebugSnapshotV1 {
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
+        max_gating_trace_entries: usize,
     ) -> Self {
         let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
             .debug_view_cache_contained_relayout_roots()
@@ -2680,6 +2727,14 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiLayoutEngineSolveV1::from_solve)
                 .collect(),
+            input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
+                ui.input_arbitration_snapshot(),
+            ),
+            command_gating_trace: command_gating_trace_for_window(
+                app,
+                window,
+                max_gating_trace_entries,
+            ),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()
@@ -3045,6 +3100,280 @@ impl UiOverlaySynthesisEventV1 {
             id: e.id.0,
             source,
             outcome,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCommandGatingTraceEntryV1 {
+    pub command: String,
+    pub enabled: bool,
+    pub reason: String,
+    #[serde(default)]
+    pub scope: String,
+    #[serde(default)]
+    pub source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub menu_path: Option<String>,
+    /// Structured explanation of why the command is disabled (multiple blockers may apply).
+    #[serde(default)]
+    pub blocked_by: Vec<String>,
+    /// Best-effort detail fields to make debugging inconsistent gating easier.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_available: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command_when: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub menu_when: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled_override: Option<bool>,
+    #[serde(default)]
+    pub command_registered: bool,
+}
+
+#[derive(Debug, Clone)]
+struct UiCommandGatingTraceCandidate {
+    command: fret_runtime::CommandId,
+    source: &'static str,
+    menu_path: Option<String>,
+    menu_when: Option<fret_runtime::WhenExpr>,
+}
+
+fn command_gating_trace_for_window(
+    app: &App,
+    window: AppWindowId,
+    max_entries: usize,
+) -> Vec<UiCommandGatingTraceEntryV1> {
+    let gating = fret_runtime::best_effort_snapshot_for_window(app, window);
+
+    let mut candidates: Vec<UiCommandGatingTraceCandidate> = Vec::new();
+
+    // 1) Explicit gating inputs (useful for verifying that snapshots are being published).
+    for (cmd, _) in gating.enabled_overrides() {
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: cmd.clone(),
+            source: "enabled_overrides",
+            menu_path: None,
+            menu_when: None,
+        });
+    }
+    if let Some(map) = gating.action_availability() {
+        for (cmd, _) in map {
+            candidates.push(UiCommandGatingTraceCandidate {
+                command: cmd.clone(),
+                source: "action_availability",
+                menu_path: None,
+                menu_when: None,
+            });
+        }
+    }
+
+    // 2) Effective OS menubar model (data-only). This is the closest source of truth for
+    // "visible menu commands" from the app's perspective.
+    if let Some(menu_bar) = fret_app::effective_menu_bar(app) {
+        collect_menu_bar_commands(&menu_bar, &mut candidates);
+    }
+
+    // 3) Command palette catalog (best-effort). This approximates the set of entries derived from
+    // host commands; the actual palette filters further by query/group options.
+    for (id, meta) in app.commands().iter() {
+        if meta.hidden {
+            continue;
+        }
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: id.clone(),
+            source: "command_palette_catalog",
+            menu_path: None,
+            menu_when: None,
+        });
+    }
+
+    // Always include a core, cross-surface set even if the host didn't publish any snapshot yet.
+    for &cmd in &[
+        "edit.undo",
+        "edit.redo",
+        "edit.copy",
+        "edit.cut",
+        "edit.paste",
+        "edit.select_all",
+        "focus.menu_bar",
+    ] {
+        candidates.push(UiCommandGatingTraceCandidate {
+            command: fret_runtime::CommandId::from(cmd),
+            source: "core",
+            menu_path: None,
+            menu_when: None,
+        });
+    }
+
+    // Deduplicate by (command, source, menu_path) so repeated insertions don't explode snapshots.
+    let mut seen: HashSet<(String, &'static str, Option<String>)> = HashSet::new();
+    candidates.retain(|c| {
+        let key = (
+            c.command.as_str().to_string(),
+            c.source,
+            c.menu_path.clone(),
+        );
+        if seen.contains(&key) {
+            return false;
+        }
+        seen.insert(key);
+        true
+    });
+
+    candidates.sort_by(|a, b| {
+        a.source
+            .cmp(b.source)
+            .then_with(|| a.menu_path.cmp(&b.menu_path))
+            .then_with(|| a.command.as_str().cmp(b.command.as_str()))
+    });
+
+    let max_entries = max_entries.min(2000);
+    candidates
+        .into_iter()
+        .take(max_entries)
+        .map(|c| {
+            let decision =
+                command_gating_decision_trace(app, &gating, &c.command, c.menu_when.as_ref());
+
+            UiCommandGatingTraceEntryV1 {
+                command: c.command.as_str().to_string(),
+                enabled: decision.enabled,
+                reason: decision.reason,
+                scope: decision.scope,
+                source: c.source.to_string(),
+                menu_path: c.menu_path,
+                blocked_by: decision.blocked_by,
+                action_available: decision.action_available,
+                command_when: decision.command_when,
+                menu_when: decision.menu_when,
+                enabled_override: decision.enabled_override,
+                command_registered: decision.command_registered,
+            }
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone)]
+struct UiCommandGatingDecisionTrace {
+    enabled: bool,
+    reason: String,
+    scope: String,
+    blocked_by: Vec<String>,
+    action_available: Option<bool>,
+    command_when: Option<bool>,
+    menu_when: Option<bool>,
+    enabled_override: Option<bool>,
+    command_registered: bool,
+}
+
+fn command_gating_decision_trace(
+    app: &App,
+    gating: &fret_runtime::WindowCommandGatingSnapshot,
+    command: &fret_runtime::CommandId,
+    menu_when: Option<&fret_runtime::WhenExpr>,
+) -> UiCommandGatingDecisionTrace {
+    let meta = app.commands().get(command.clone());
+    let scope = meta
+        .map(|m| format!("{:?}", m.scope))
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    let mut blocked_by: Vec<String> = Vec::new();
+
+    let action_available = if let Some(meta) = meta
+        && meta.scope == fret_runtime::CommandScope::Widget
+        && let Some(map) = gating.action_availability()
+        && let Some(is_available) = map.get(command).copied()
+    {
+        Some(is_available)
+    } else {
+        None
+    };
+    if action_available == Some(false) {
+        blocked_by.push("action_availability".to_string());
+    }
+
+    let command_when = meta.and_then(|m| m.when.as_ref().map(|w| w.eval(gating.input_ctx())));
+    if command_when == Some(false) {
+        blocked_by.push("when".to_string());
+    }
+
+    let enabled_override = gating.enabled_overrides().get(command).copied();
+    if enabled_override == Some(false) {
+        blocked_by.push("enabled_override".to_string());
+    }
+
+    let menu_when = menu_when.map(|w| w.eval(gating.input_ctx()));
+    if menu_when == Some(false) {
+        blocked_by.push("menu_when".to_string());
+    }
+
+    let command_registered = meta.is_some();
+    let enabled = blocked_by.is_empty();
+
+    // Keep a stable "primary reason" string for backwards compatibility / easy grepping.
+    let reason = if blocked_by.iter().any(|b| b == "action_availability") {
+        "action_unavailable"
+    } else if blocked_by.iter().any(|b| b == "when") {
+        "when_false"
+    } else if blocked_by.iter().any(|b| b == "enabled_override") {
+        "disabled_override"
+    } else if blocked_by.iter().any(|b| b == "menu_when") {
+        "menu_when_false"
+    } else if !command_registered {
+        "unknown_command"
+    } else {
+        "enabled"
+    }
+    .to_string();
+
+    UiCommandGatingDecisionTrace {
+        enabled,
+        reason,
+        scope,
+        blocked_by,
+        action_available,
+        command_when,
+        menu_when,
+        enabled_override,
+        command_registered,
+    }
+}
+
+fn collect_menu_bar_commands(
+    menu_bar: &fret_runtime::MenuBar,
+    out: &mut Vec<UiCommandGatingTraceCandidate>,
+) {
+    for menu in &menu_bar.menus {
+        let menu_title = menu.title.as_ref().to_string();
+        collect_menu_items(&menu_title, &menu.items, out);
+    }
+}
+
+fn collect_menu_items(
+    prefix: &str,
+    items: &[fret_runtime::MenuItem],
+    out: &mut Vec<UiCommandGatingTraceCandidate>,
+) {
+    for item in items {
+        match item {
+            fret_runtime::MenuItem::Command { command, when } => {
+                out.push(UiCommandGatingTraceCandidate {
+                    command: command.clone(),
+                    source: "menu_bar",
+                    menu_path: Some(prefix.to_string()),
+                    menu_when: when.clone(),
+                });
+            }
+            fret_runtime::MenuItem::Separator | fret_runtime::MenuItem::SystemMenu { .. } => {}
+            fret_runtime::MenuItem::Submenu {
+                title,
+                when: _,
+                items,
+            } => {
+                let next = format!("{prefix} > {}", title.as_ref());
+                collect_menu_items(&next, items, out);
+            }
         }
     }
 }
@@ -4157,10 +4486,16 @@ impl UiFrameStatsV1 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayerInfoV1 {
     pub id: String,
+    /// Numeric layer id (stable across `Debug` formatting changes; not stable between runs).
+    #[serde(default)]
+    pub layer_id: u64,
     pub root: u64,
     pub visible: bool,
     pub blocks_underlay_input: bool,
     pub hit_testable: bool,
+    /// Pointer occlusion mode for this layer root (when applicable).
+    #[serde(default)]
+    pub pointer_occlusion: String,
     pub wants_pointer_down_outside_events: bool,
     #[serde(default)]
     pub consume_pointer_down_outside_events: bool,
@@ -4174,10 +4509,12 @@ impl UiLayerInfoV1 {
     fn from_layer(layer: UiDebugLayerInfo) -> Self {
         Self {
             id: format!("{:?}", layer.id),
+            layer_id: layer.id.data().as_ffi(),
             root: key_to_u64(layer.root),
             visible: layer.visible,
             blocks_underlay_input: layer.blocks_underlay_input,
             hit_testable: layer.hit_testable,
+            pointer_occlusion: pointer_occlusion_label(layer.pointer_occlusion),
             wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
             consume_pointer_down_outside_events: layer.consume_pointer_down_outside_events,
             pointer_down_outside_branches: layer
@@ -4253,10 +4590,55 @@ pub struct UiHitTestSnapshotV1 {
     pub hit: Option<u64>,
     pub active_layer_roots: Vec<u64>,
     pub barrier_root: Option<u64>,
+    /// Stable, script-friendly labels for each scope root.
+    ///
+    /// Prefer this over `active_layer_roots` when validating behavior across refactors, since node
+    /// ids are not stable between runs.
+    #[serde(default)]
+    pub scope_roots: Vec<UiHitTestScopeRootV1>,
 }
 
 impl UiHitTestSnapshotV1 {
-    fn from_hit_test(position: Point, hit_test: UiDebugHitTest) -> Self {
+    fn from_tree(position: Point, ui: &UiTree<App>) -> Self {
+        let hit_test = ui.debug_hit_test(position);
+        let layers = ui.debug_layers_in_paint_order();
+        Self::from_hit_test_with_layers(position, hit_test, &layers)
+    }
+
+    fn from_hit_test_with_layers(
+        position: Point,
+        hit_test: UiDebugHitTest,
+        layers: &[UiDebugLayerInfo],
+    ) -> Self {
+        let mut scope_roots = Vec::new();
+        if let Some(root) = hit_test.barrier_root {
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "modal_barrier_root".to_string(),
+                root: key_to_u64(root),
+                layer_id: None,
+                pointer_occlusion: None,
+                blocks_underlay_input: None,
+                hit_testable: None,
+            });
+        }
+
+        let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
+        for layer in layers {
+            by_root.insert(layer.root, *layer);
+        }
+
+        for root in &hit_test.active_layer_roots {
+            let info = by_root.get(root).copied();
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "layer_root".to_string(),
+                root: key_to_u64(*root),
+                layer_id: info.map(|l| l.id.data().as_ffi()),
+                pointer_occlusion: info.map(|l| pointer_occlusion_label(l.pointer_occlusion)),
+                blocks_underlay_input: info.map(|l| l.blocks_underlay_input),
+                hit_testable: info.map(|l| l.hit_testable),
+            });
+        }
+
         Self {
             position: PointV1::from(position),
             hit: hit_test.hit.map(key_to_u64),
@@ -4266,8 +4648,27 @@ impl UiHitTestSnapshotV1 {
                 .map(key_to_u64)
                 .collect(),
             barrier_root: hit_test.barrier_root.map(key_to_u64),
+            scope_roots,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestScopeRootV1 {
+    /// Stable scope root kind (e.g. `modal_barrier_root`, `layer_root`).
+    pub kind: String,
+    /// Node id of the root (not stable between runs; treat as an in-run reference only).
+    pub root: u64,
+    /// When `kind=layer_root`, the corresponding layer id (if known).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub layer_id: Option<u64>,
+    /// Pointer occlusion mode for the layer root (if known).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pointer_occlusion: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocks_underlay_input: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hit_testable: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4541,6 +4942,15 @@ fn invalidation_label(inv: Invalidation) -> &'static str {
         Invalidation::HitTest => "hit_test",
         Invalidation::HitTestOnly => "hit_test_only",
     }
+}
+
+fn pointer_occlusion_label(occlusion: fret_ui::tree::PointerOcclusion) -> String {
+    match occlusion {
+        fret_ui::tree::PointerOcclusion::None => "none",
+        fret_ui::tree::PointerOcclusion::BlockMouse => "block_mouse",
+        fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll => "block_mouse_except_scroll",
+    }
+    .to_string()
 }
 
 fn event_kind(event: &Event) -> String {

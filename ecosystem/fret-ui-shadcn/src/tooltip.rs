@@ -10,15 +10,17 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
-use fret_ui_kit::primitives::tooltip_provider;
+use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space, ui,
 };
 use std::sync::Arc;
 
-use fret_core::{Px, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, HoverRegionProps, Overflow, SemanticsProps, SpinnerProps, SvgIconProps,
+    AnyElement, ElementKind, HoverRegionProps, Overflow, PointerRegionProps, SemanticsProps,
+    SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -95,6 +97,45 @@ fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
         .py(Space::N1p5)
 }
 
+#[derive(Clone)]
+struct TooltipTriggerEventModels {
+    has_pointer_move_opened: Model<bool>,
+    pointer_transit_geometry: Model<Option<(Rect, Rect)>>,
+    suppress_hover_open: Model<bool>,
+    suppress_focus_open: Model<bool>,
+    close_requested: Model<bool>,
+}
+
+fn tooltip_trigger_event_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> TooltipTriggerEventModels {
+    #[derive(Default)]
+    struct State {
+        models: Option<TooltipTriggerEventModels>,
+    }
+
+    let existing = cx.with_state(State::default, |st| st.models.clone());
+    if let Some(models) = existing {
+        return models;
+    }
+
+    let models = TooltipTriggerEventModels {
+        has_pointer_move_opened: cx.app.models_mut().insert(false),
+        pointer_transit_geometry: tooltip_provider::pointer_transit_geometry_model(cx),
+        suppress_hover_open: cx.app.models_mut().insert(false),
+        suppress_focus_open: cx.app.models_mut().insert(false),
+        close_requested: cx.app.models_mut().insert(false),
+    };
+
+    cx.with_state(State::default, |st| st.models = Some(models.clone()));
+    models
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct TooltipTriggerHoverEdgeState {
+    was_hovered: bool,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum TooltipAlign {
     Start,
@@ -144,22 +185,19 @@ impl TooltipProvider {
         self
     }
 
-    pub fn with<H: UiHost, I>(
+    pub fn with<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-    ) -> Vec<AnyElement>
-    where
-        I: IntoIterator<Item = AnyElement>,
-    {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> Vec<AnyElement> {
         tooltip_provider::with_tooltip_provider(
             cx,
-            radix_tooltip::TooltipProviderConfig::new(
+            tooltip_provider::TooltipProviderConfig::new(
                 self.delay_duration_frames as u64,
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            |cx| f(cx).into_iter().collect::<Vec<_>>(),
+            f,
         )
     }
 }
@@ -337,18 +375,99 @@ impl Tooltip {
 
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let focused = cx.is_focused_element(trigger_id);
-            let event_models = radix_tooltip::tooltip_trigger_event_models(cx);
-            let gates =
-                radix_tooltip::tooltip_trigger_update_gates(cx, hovered, focused, &event_models);
+            let event_models = tooltip_trigger_event_models(cx);
+            let tooltip_id = cx.root_id();
 
-            let provider_cfg = radix_tooltip::current_config(cx);
+            #[derive(Default)]
+            struct TooltipOpenModelState {
+                model: Option<Model<bool>>,
+            }
+
+            let open = cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                st.model.clone()
+            });
+            let open = if let Some(model) = open {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+            let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+
+            let close_requested = cx
+                .watch_model(&event_models.close_requested)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            let has_pointer_move_opened = cx
+                .watch_model(&event_models.has_pointer_move_opened)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            let suppress_hover_open = cx
+                .watch_model(&event_models.suppress_hover_open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            let suppress_focus_open = cx
+                .watch_model(&event_models.suppress_focus_open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+
+            let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+                let left = st.was_hovered && !hovered;
+                st.was_hovered = hovered;
+                left
+            });
+
+            if left_hover && (has_pointer_move_opened || suppress_hover_open) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.has_pointer_move_opened, |v| *v = false);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_hover_open, |v| *v = false);
+            }
+
+            if !focused && suppress_focus_open {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_focus_open, |v| *v = false);
+            }
+
+            if close_requested {
+                if has_pointer_move_opened && !suppress_hover_open {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&event_models.suppress_hover_open, |v| *v = true);
+                }
+                if focused && !suppress_focus_open {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&event_models.suppress_focus_open, |v| *v = true);
+                }
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.close_requested, |v| *v = false);
+            }
+
+            let provider_cfg = tooltip_provider::current_config(cx);
             let disable_hoverable_content = disable_hoverable_content_override
                 .unwrap_or(provider_cfg.disable_hoverable_content);
             let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
 
-            let trigger_hovered = gates.trigger_hovered;
-            let trigger_focused = gates.trigger_focused;
-            let close_requested = gates.force_close;
+            let trigger_hovered = hovered && has_pointer_move_opened && !suppress_hover_open;
+            let trigger_focused = focused && !suppress_focus_open;
 
             let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id);
             let floating_bounds = anchor_bounds.and_then(|anchor| {
@@ -407,10 +526,9 @@ impl Tooltip {
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
 
-            let open = event_models.open.clone();
-            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
             if update.open != open_now {
                 let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
+                open_now = update.open;
             }
 
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
@@ -419,17 +537,111 @@ impl Tooltip {
                 content_id,
             );
 
-            radix_tooltip::tooltip_install_default_trigger_dismiss_handlers(
-                cx,
+            cx.pressable_add_on_pointer_down_for(
                 trigger_id,
-                event_models.clone(),
+                Arc::new({
+                    let close_requested = event_models.close_requested.clone();
+                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
+                    let suppress_hover_open = event_models.suppress_hover_open.clone();
+                    move |host, acx, down| {
+                        if down.pointer_type != PointerType::Touch {
+                            let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        }
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_focus_open, |v| *v = true);
+                        let gate = host
+                            .models_mut()
+                            .read(&has_pointer_move_opened, |v| *v)
+                            .ok()
+                            .unwrap_or(false);
+                        if gate {
+                            let _ = host
+                                .models_mut()
+                                .update(&suppress_hover_open, |v| *v = true);
+                        }
+                        host.request_redraw(acx.window);
+                        fret_ui::action::PressablePointerDownResult::Continue
+                    }
+                }),
             );
-            let trigger = radix_tooltip::tooltip_wrap_trigger_with_pointer_move_open_gate(
-                cx,
-                trigger,
-                event_models.clone(),
-                Px(5.0),
+
+            cx.pressable_add_on_activate_for(
+                trigger_id,
+                Arc::new({
+                    let close_requested = event_models.close_requested.clone();
+                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    move |host, acx, _reason| {
+                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_focus_open, |v| *v = true);
+                        host.request_redraw(acx.window);
+                    }
+                }),
             );
+
+            cx.key_add_on_key_down_for(
+                trigger_id,
+                Arc::new({
+                    let close_requested = event_models.close_requested.clone();
+                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    move |host, acx, down| {
+                        if down.repeat || down.key != KeyCode::Escape {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_focus_open, |v| *v = true);
+                        host.request_redraw(acx.window);
+                        true
+                    }
+                }),
+            );
+
+            let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
+                cx.pointer_region_on_pointer_move(Arc::new({
+                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
+                    let pointer_transit_geometry = event_models.pointer_transit_geometry.clone();
+                    move |host, acx, mv| {
+                        if mv.pointer_type == PointerType::Touch {
+                            return false;
+                        }
+
+                        let geometry = host
+                            .models_mut()
+                            .read(&pointer_transit_geometry, |v| *v)
+                            .ok()
+                            .flatten();
+                        if let Some((anchor, floating)) = geometry
+                            && radix_tooltip::tooltip_pointer_in_transit(
+                                mv.position,
+                                anchor,
+                                floating,
+                                Px(5.0),
+                            )
+                        {
+                            return false;
+                        }
+                        let already = host
+                            .models_mut()
+                            .read(&has_pointer_move_opened, |v| *v)
+                            .ok()
+                            .unwrap_or(false);
+                        if !already {
+                            let _ = host.models_mut().update(&has_pointer_move_opened, |v| {
+                                *v = true;
+                            });
+                            host.request_redraw(acx.window);
+                        }
+                        false
+                    }
+                }));
+
+                vec![trigger]
+            });
 
             let opening = update.open;
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
@@ -451,7 +663,6 @@ impl Tooltip {
                 return out;
             }
 
-            let tooltip_id = cx.root_id();
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.opacity;
             let scale = motion.scale;
@@ -558,7 +769,7 @@ impl Tooltip {
 
             let mut request = radix_tooltip::tooltip_request(
                 tooltip_id,
-                open,
+                open.clone(),
                 overlay_presence,
                 overlay_children,
             );
@@ -703,7 +914,7 @@ mod tests {
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService,
+        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
