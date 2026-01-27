@@ -1095,7 +1095,7 @@ impl CommandList {
                     .min_w_0(),
             );
 
-            let scroll = self.scroll;
+            let scroll = self.scroll.w_full().min_w_0();
 
             cx.semantics(
                 fret_ui::element::SemanticsProps {
@@ -1468,7 +1468,7 @@ impl CommandPalette {
             group_pad_y: MetricRef::space(Space::N1),
             group_next_top_pad_zero: false,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
+            layout: LayoutRefinement::default().w_full().min_w_0(),
             scroll: LayoutRefinement::default()
                 .max_h(MetricRef::Px(Px(300.0)))
                 .w_full()
@@ -1733,7 +1733,7 @@ impl CommandPalette {
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
 
             let bg_hover = item_bg_hover(&theme);
-            let bg_selected = alpha_mul(bg_hover, 0.85);
+            let bg_selected = bg_hover;
             let fg = theme.color_required("foreground");
             let fg_disabled = alpha_mul(fg, 0.5);
             let text_style = item_text_style(&theme);
@@ -2267,6 +2267,7 @@ impl CommandPalette {
                 );
             }
 
+            let scroll_layout = self.scroll.w_full().min_w_0();
             let list = cx.semantics(
                 fret_ui::element::SemanticsProps {
                     role: SemanticsRole::ListBox,
@@ -2279,7 +2280,6 @@ impl CommandPalette {
                         return vec![CommandEmpty::new(empty).into_element(cx)];
                     }
 
-                    let scroll = self.scroll;
                     let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
                     let scroll_area = ScrollArea::new(vec![cx.flex(
                         FlexProps {
@@ -2305,7 +2305,7 @@ impl CommandPalette {
                         move |_cx| rows,
                     )])
                     .scroll_handle(scroll_handle.clone())
-                    .refine_layout(scroll)
+                    .refine_layout(scroll_layout.clone())
                     .into_element(cx);
 
                     if let Some(active_row_element) = active_row_element {
