@@ -374,6 +374,11 @@ impl<H: UiHost> UiTree<H> {
                                 fret_core::Axis::Vertical => state.offset_y = offset_axis,
                                 fret_core::Axis::Horizontal => state.offset_x = offset_axis,
                             }
+
+                            state.window_range =
+                                state
+                                    .metrics
+                                    .visible_range(offset_axis, viewport, props.overscan);
                         },
                     );
 
@@ -381,17 +386,36 @@ impl<H: UiHost> UiTree<H> {
                         inv = Invalidation::Layout;
                         detail = UiDebugInvalidationDetail::ScrollHandleLayout;
                     } else if requires_window_update {
-                        // Do not force a layout pass just to discover that the visible window is
-                        // outside the previously rendered overscan window. Instead, treat it as a
-                        // prepaint-windowed "ephemeral update" signal (ADR 0190): mark the nearest
-                        // view-cache root dirty and request a redraw so the next frame rerenders
-                        // the virtual surface children.
-                        self.mark_nearest_view_cache_root_needs_rerender(
-                            node,
-                            UiDebugInvalidationSource::Other,
-                            UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-                        );
-                        self.request_redraw_coalesced(app);
+                        let retained_host =
+                            crate::elements::with_window_state(&mut *app, window, |window_state| {
+                                let retained = window_state.has_state::<
+                                    crate::windowed_surface_host::RetainedVirtualListHostMarker,
+                                >(record.element);
+                                if retained {
+                                    window_state
+                                        .mark_retained_virtual_list_needs_reconcile(record.element);
+                                }
+                                retained
+                            });
+
+                        if retained_host {
+                            // Retained-host virtual surfaces can update row membership without
+                            // rerendering the parent cache root (ADR 0192). Schedule a redraw so
+                            // `render_root` can reconcile row subtrees in the next frame.
+                            self.request_redraw_coalesced(app);
+                        } else {
+                            // Do not force a layout pass just to discover that the visible window
+                            // is outside the previously rendered overscan window. Instead, treat
+                            // it as a prepaint-windowed "ephemeral update" signal (ADR 0190):
+                            // mark the nearest view-cache root dirty and request a redraw so the
+                            // next frame rerenders the virtual surface children.
+                            self.mark_nearest_view_cache_root_needs_rerender(
+                                node,
+                                UiDebugInvalidationSource::Other,
+                                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                            );
+                            self.request_redraw_coalesced(app);
+                        }
                     }
                 }
 

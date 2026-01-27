@@ -277,11 +277,25 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if self.view_cache_active() && update.window_mismatch {
-            self.mark_nearest_view_cache_root_needs_rerender(
-                record.node,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-            );
+            let retained_host =
+                crate::elements::with_window_state(&mut *app, window, |window_state| {
+                    let retained = window_state
+                        .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
+                        inputs.element,
+                    );
+                    if retained {
+                        window_state.mark_retained_virtual_list_needs_reconcile(inputs.element);
+                    }
+                    retained
+                });
+
+            if !retained_host {
+                self.mark_nearest_view_cache_root_needs_rerender(
+                    record.node,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                );
+            }
             self.request_redraw_coalesced(app);
         }
     }
