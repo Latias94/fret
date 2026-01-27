@@ -66,11 +66,12 @@ Each TODO is labeled:
 
 ## P0 — Refactor Guardrails (Multi-pointer Ready)
 
-- [ ] DMV1-ref-020 Make viewport capture pointer-keyed in docking (`PointerId -> ViewportCaptureState`).
+- [x] DMV1-ref-020 Make viewport capture pointer-keyed in docking (`PointerId -> ViewportCaptureState`).
   - Rationale: ADR 0072/0165 explicitly require pointer-keyed ownership; single `Option` is a trap for later.
   - Evidence anchors:
-    - current capture: `ecosystem/fret-docking/src/dock/space.rs`
+    - current capture: `ecosystem/fret-docking/src/dock/space.rs` (`viewport_capture: HashMap<PointerId, ViewportCaptureState>`)
     - viewport capture types: `ecosystem/fret-docking/src/dock/viewport.rs`
+    - conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`viewport_capture_does_not_clear_on_other_pointer_up`)
   - Done when: tests cover two concurrent pointer streams (even if only synthetic) without panics or state leaks.
 
 ## P1 — Scripted Regressions (UI Gallery)

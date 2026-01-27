@@ -3226,6 +3226,77 @@ fn viewport_capture_suppresses_viewport_moves_for_other_pointers() {
 }
 
 #[test]
+fn viewport_capture_does_not_clear_on_other_pointer_up() {
+    let mut harness = DockViewportHarness::new();
+    harness.layout();
+
+    let down_pos = harness.viewport_point();
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Up {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(1),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    let _ = harness.app.take_effects();
+
+    let outside = Point::new(Px(-50.0), Px(-50.0));
+    harness.ui.dispatch_event(
+        &mut harness.app,
+        &mut harness.text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: outside,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = harness.app.take_effects();
+    let Some(Effect::ViewportInput(input)) = effects
+        .iter()
+        .find(|e| matches!(e, Effect::ViewportInput(_)))
+    else {
+        panic!("expected a ViewportInput effect during viewport capture, got: {effects:?}");
+    };
+    assert_eq!(
+        input.kind,
+        ViewportInputKind::PointerMove {
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+        }
+    );
+    assert_eq!(input.uv, (0.0, 0.0), "expected clamped uv at top-left");
+}
+
+#[test]
 fn dock_split_handle_hover_sets_resize_cursor_effect() {
     let window = AppWindowId::default();
 
