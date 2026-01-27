@@ -257,6 +257,13 @@ pub struct UiDebugFrameStats {
     /// How many VirtualList visible-range checks requested a refresh (range delta outside the
     /// currently mounted span).
     pub virtual_list_visible_range_refreshes: u32,
+    /// How many retained VirtualList hosts were reconciled (attach/detach without rerendering the
+    /// parent view-cache root).
+    pub retained_virtual_list_reconciles: u32,
+    /// Total items attached across retained VirtualList reconciles (new keys mounted).
+    pub retained_virtual_list_attached_items: u32,
+    /// Total items detached across retained VirtualList reconciles (keys removed from children).
+    pub retained_virtual_list_detached_items: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -467,6 +474,17 @@ pub struct UiDebugVirtualListWindow {
     pub deferred_scroll_to_item: bool,
     pub deferred_scroll_consumed: bool,
     pub window_mismatch: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugRetainedVirtualListReconcile {
+    pub node: NodeId,
+    pub element: GlobalElementId,
+    pub prev_items: u32,
+    pub next_items: u32,
+    pub preserved_items: u32,
+    pub attached_items: u32,
+    pub detached_items: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1000,6 +1018,7 @@ pub struct UiTree<H: UiHost> {
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
     debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
+    debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
     debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
     #[cfg(feature = "diagnostics")]
@@ -1093,6 +1112,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
             debug_virtual_list_windows: Vec::new(),
+            debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
             debug_prepaint_actions: Vec::new(),
             #[cfg(feature = "diagnostics")]
@@ -1267,6 +1287,9 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.barrier_relayouts_performed = 0;
         self.debug_stats.virtual_list_visible_range_checks = 0;
         self.debug_stats.virtual_list_visible_range_refreshes = 0;
+        self.debug_stats.retained_virtual_list_reconciles = 0;
+        self.debug_stats.retained_virtual_list_attached_items = 0;
+        self.debug_stats.retained_virtual_list_detached_items = 0;
 
         self.debug_view_cache_roots.clear();
         self.debug_view_cache_contained_relayout_roots.clear();
@@ -1282,6 +1305,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
         self.debug_virtual_list_windows.clear();
+        self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
         self.debug_prepaint_actions.clear();
         #[cfg(feature = "diagnostics")]
@@ -1443,6 +1467,32 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.debug_virtual_list_windows.push(record);
+    }
+
+    pub(crate) fn debug_record_retained_virtual_list_reconcile(
+        &mut self,
+        record: UiDebugRetainedVirtualListReconcile,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        const MAX_RECORDS: usize = 128;
+        if self.debug_retained_virtual_list_reconciles.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_stats.retained_virtual_list_reconciles = self
+            .debug_stats
+            .retained_virtual_list_reconciles
+            .saturating_add(1);
+        self.debug_stats.retained_virtual_list_attached_items = self
+            .debug_stats
+            .retained_virtual_list_attached_items
+            .saturating_add(record.attached_items);
+        self.debug_stats.retained_virtual_list_detached_items = self
+            .debug_stats
+            .retained_virtual_list_detached_items
+            .saturating_add(record.detached_items);
+        self.debug_retained_virtual_list_reconciles.push(record);
     }
 
     pub(crate) fn debug_record_prepaint_action(&mut self, action: UiDebugPrepaintAction) {
@@ -1890,6 +1940,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_virtual_list_windows.as_slice()
+    }
+
+    pub fn debug_retained_virtual_list_reconciles(&self) -> &[UiDebugRetainedVirtualListReconcile] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_retained_virtual_list_reconciles.as_slice()
     }
 
     pub fn debug_scroll_handle_changes(&self) -> &[UiDebugScrollHandleChange] {

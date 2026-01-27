@@ -2585,6 +2585,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
     #[serde(default)]
+    pub retained_virtual_list_reconciles: Vec<UiRetainedVirtualListReconcileV1>,
+    #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
     #[serde(default)]
     pub prepaint_actions: Vec<UiPrepaintActionV1>,
@@ -2661,6 +2663,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_virtual_list_windows()
                 .iter()
                 .map(UiVirtualListWindowV1::from_window)
+                .collect(),
+            retained_virtual_list_reconciles: ui
+                .debug_retained_virtual_list_reconciles()
+                .iter()
+                .map(UiRetainedVirtualListReconcileV1::from_record)
                 .collect(),
             scroll_handle_changes: ui
                 .debug_scroll_handle_changes()
@@ -2879,6 +2886,31 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiRetainedVirtualListReconcileV1 {
+    pub node: u64,
+    pub element: u64,
+    pub prev_items: u64,
+    pub next_items: u64,
+    pub preserved_items: u64,
+    pub attached_items: u64,
+    pub detached_items: u64,
+}
+
+impl UiRetainedVirtualListReconcileV1 {
+    fn from_record(record: &fret_ui::tree::UiDebugRetainedVirtualListReconcile) -> Self {
+        Self {
+            node: key_to_u64(record.node),
+            element: record.element.0,
+            prev_items: record.prev_items as u64,
+            next_items: record.next_items as u64,
+            preserved_items: record.preserved_items as u64,
+            attached_items: record.attached_items as u64,
+            detached_items: record.detached_items as u64,
         }
     }
 }
@@ -4417,6 +4449,12 @@ pub struct UiFrameStatsV1 {
     pub virtual_list_visible_range_checks: u32,
     #[serde(default)]
     pub virtual_list_visible_range_refreshes: u32,
+    #[serde(default)]
+    pub retained_virtual_list_reconciles: u32,
+    #[serde(default)]
+    pub retained_virtual_list_attached_items: u32,
+    #[serde(default)]
+    pub retained_virtual_list_detached_items: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -4477,6 +4515,9 @@ impl UiFrameStatsV1 {
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
             virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
             virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
+            retained_virtual_list_reconciles: stats.retained_virtual_list_reconciles,
+            retained_virtual_list_attached_items: stats.retained_virtual_list_attached_items,
+            retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
