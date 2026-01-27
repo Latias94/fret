@@ -395,8 +395,7 @@ mod tests {
             "expected stack top to remain effective after set_snapshot"
         );
 
-        svc.remove_pushed_snapshot(window, token)
-            .expect("remove pushed snapshot");
+        svc.pop_snapshot(token).expect("remove pushed snapshot");
         assert!(
             svc.snapshot(window)
                 .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),

@@ -1,4 +1,4 @@
-use super::state::WindowOverlays;
+use super::state::{OVERLAY_CACHE_TTL_FRAMES, WindowOverlays};
 use super::*;
 
 use crate::declarative::action_hooks::ActionHooksExt;
@@ -365,6 +365,270 @@ fn cached_popover_request_is_synthesized_when_open_without_rerender() {
     });
     let layer = layer.expect("popover layer");
     assert!(ui.is_layer_visible(layer));
+}
+
+#[test]
+fn cached_hover_overlay_request_is_synthesized_for_short_ttl_when_open_without_rerender() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let base_open = app.models_mut().insert(false);
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    app.set_frame_id(FrameId(0));
+    let trigger =
+        render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
+
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: GlobalElementId(0x3),
+            root_name: hover_overlay_root_name(GlobalElementId(0x3)),
+            interactive: true,
+            trigger,
+            open: open.clone(),
+            present: true,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .hover_overlays
+            .get(&(window, GlobalElementId(0x3)))
+            .map(|o| o.layer)
+    });
+    let layer = layer.expect("hover overlay layer");
+    assert!(ui.is_layer_visible(layer));
+
+    for _ in 0..OVERLAY_CACHE_TTL_FRAMES {
+        begin_frame(&mut app, window);
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        assert!(
+            ui.is_layer_visible(layer),
+            "expected hover overlay to remain visible while synthesized from cached request"
+        );
+    }
+
+    begin_frame(&mut app, window);
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected hover overlay to expire once cache TTL elapses"
+    );
+}
+
+#[test]
+fn cached_tooltip_request_is_synthesized_for_short_ttl_when_open_without_rerender() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let base_open = app.models_mut().insert(false);
+    let open = app.models_mut().insert(true);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    app.set_frame_id(FrameId(0));
+    let trigger =
+        render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
+
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: GlobalElementId(0x4),
+            root_name: tooltip_root_name(GlobalElementId(0x4)),
+            interactive: true,
+            trigger: Some(trigger),
+            open: open.clone(),
+            present: true,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    let layer = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+        overlays
+            .tooltips
+            .get(&(window, GlobalElementId(0x4)))
+            .map(|t| t.layer)
+    });
+    let layer = layer.expect("tooltip layer");
+    assert!(ui.is_layer_visible(layer));
+
+    for _ in 0..OVERLAY_CACHE_TTL_FRAMES {
+        begin_frame(&mut app, window);
+        render(&mut ui, &mut app, &mut services, window, bounds);
+        assert!(
+            ui.is_layer_visible(layer),
+            "expected tooltip to remain visible while synthesized from cached request"
+        );
+    }
+
+    begin_frame(&mut app, window);
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert!(
+        !ui.is_layer_visible(layer),
+        "expected tooltip to expire once cache TTL elapses"
+    );
+}
+
+#[test]
+fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let base_open = app.models_mut().insert(false);
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
+
+    // Install a tooltip layer that is still `present` but `open=false` (closing animation).
+    begin_frame(&mut app, window);
+    let tooltip_id = GlobalElementId(0x44);
+    request_tooltip_for_window(
+        &mut app,
+        window,
+        TooltipRequest {
+            id: tooltip_id,
+            root_name: tooltip_root_name(tooltip_id),
+            interactive: false,
+            trigger: None,
+            open,
+            present: true,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .tooltips
+                .get(&(window, tooltip_id))
+                .map(|p| p.layer)
+        })
+        .expect("tooltip layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("tooltip debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(!info.hit_testable);
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert!(
+        !info.wants_pointer_down_outside_events,
+        "expected tooltip to stop requesting outside-press observers during close transitions"
+    );
+    assert!(
+        !info.wants_pointer_move_events,
+        "expected tooltip to stop requesting pointer-move observers during close transitions"
+    );
+}
+
+#[test]
+fn hover_overlay_is_pointer_transparent_while_closing() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let base_open = app.models_mut().insert(false);
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // Base root (required so the window exists and rendering can proceed).
+    let trigger =
+        render_base_with_trigger(&mut ui, &mut app, &mut services, window, bounds, base_open);
+
+    // Install a hover overlay layer that is still `present` but `open=false` (closing animation).
+    begin_frame(&mut app, window);
+    let hover_id = GlobalElementId(0x55);
+    request_hover_overlay_for_window(
+        &mut app,
+        window,
+        HoverOverlayRequest {
+            id: hover_id,
+            root_name: hover_overlay_root_name(hover_id),
+            interactive: false,
+            trigger,
+            open,
+            present: true,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays
+                .hover_overlays
+                .get(&(window, hover_id))
+                .map(|p| p.layer)
+        })
+        .expect("hover overlay layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("hover debug layer info");
+
+    assert!(info.visible);
+    assert!(!info.blocks_underlay_input);
+    assert!(
+        !info.hit_testable,
+        "expected hover overlays to become pointer-transparent during close transitions"
+    );
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
 }
 
 fn render_base_with_trigger_and_underlay(
@@ -2249,6 +2513,28 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
     render(&mut ui, &mut app, &mut services, window, bounds);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+    let layer = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            overlays.modals.get(&(window, modal_id)).map(|p| p.layer)
+        })
+        .expect("modal layer");
+
+    let info = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .find(|l| l.id == layer)
+        .expect("modal debug layer info");
+
+    assert!(info.visible);
+    assert!(info.blocks_underlay_input);
+    assert!(info.hit_testable);
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None
+    );
+    assert!(!info.wants_pointer_down_outside_events);
+    assert!(!info.wants_pointer_move_events);
+
     ui.dispatch_event(
         &mut app,
         &mut services,
@@ -3116,7 +3402,16 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
     assert!(info.visible);
     assert!(!info.blocks_underlay_input);
     assert!(!info.hit_testable);
+    assert_eq!(
+        info.pointer_occlusion,
+        fret_ui::tree::PointerOcclusion::None,
+        "expected non-modal overlays to drop pointer occlusion during close transitions"
+    );
     assert!(!info.wants_pointer_down_outside_events);
+    assert!(
+        !info.wants_pointer_move_events,
+        "expected non-modal overlays to stop receiving pointer-move observers during close transitions"
+    );
 }
 
 #[test]
@@ -3239,119 +3534,6 @@ fn non_modal_overlay_does_not_request_pointer_move_observer_while_closing() {
 }
 
 #[test]
-fn non_modal_overlay_does_not_request_timer_events_while_closing() {
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-
-    let open = app.models_mut().insert(false);
-
-    let mut services = FakeServices;
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        fret_core::Size::new(Px(300.0), Px(200.0)),
-    );
-
-    // Base root (required so the window exists and rendering can proceed).
-    begin_frame(&mut app, window);
-    let base = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        "base",
-        |_| Vec::new(),
-    );
-    ui.set_root(base);
-
-    let trigger = GlobalElementId(0xdead);
-
-    // First frame: open the overlay so we know it may request timer events (submenu safe-hover).
-    let _ = app.models_mut().update(&open, |v| *v = true);
-    begin_frame(&mut app, window);
-    request_dismissible_popover_for_window(
-        &mut app,
-        window,
-        DismissiblePopoverRequest {
-            id: trigger,
-            root_name: popover_root_name(trigger),
-            trigger,
-            dismissable_branches: Vec::new(),
-            consume_outside_pointer_events: false,
-            disable_outside_pointer_events: true,
-            close_on_window_focus_lost: false,
-            close_on_window_resize: false,
-            open: open.clone(),
-            present: true,
-            initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
-            on_dismiss_request: None,
-            on_pointer_move: None,
-            children: Vec::new(),
-        },
-    );
-
-    render(&mut ui, &mut app, &mut services, window, bounds);
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let layer = app
-        .with_global_mut(WindowOverlays::default, |overlays, _app| {
-            overlays.popovers.get(&(window, trigger)).map(|p| p.layer)
-        })
-        .expect("popover layer");
-
-    let info = ui
-        .debug_layers_in_paint_order()
-        .into_iter()
-        .find(|l| l.id == layer)
-        .expect("popover debug layer info");
-    assert!(info.visible);
-    assert!(info.wants_timer_events);
-
-    // Second frame: close the overlay but keep it present for a close transition. It must not
-    // participate in timer-driven interaction policies while closing.
-    let _ = app.models_mut().update(&open, |v| *v = false);
-    begin_frame(&mut app, window);
-    request_dismissible_popover_for_window(
-        &mut app,
-        window,
-        DismissiblePopoverRequest {
-            id: trigger,
-            root_name: popover_root_name(trigger),
-            trigger,
-            dismissable_branches: Vec::new(),
-            consume_outside_pointer_events: false,
-            disable_outside_pointer_events: true,
-            close_on_window_focus_lost: false,
-            close_on_window_resize: false,
-            open: open.clone(),
-            present: true,
-            initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
-            on_dismiss_request: None,
-            on_pointer_move: None,
-            children: Vec::new(),
-        },
-    );
-
-    render(&mut ui, &mut app, &mut services, window, bounds);
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let info = ui
-        .debug_layers_in_paint_order()
-        .into_iter()
-        .find(|l| l.id == layer)
-        .expect("popover debug layer info");
-
-    assert!(info.visible);
-    assert!(!info.wants_timer_events);
-}
-
-#[test]
 fn tooltip_does_not_request_observers_by_default() {
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -3381,6 +3563,7 @@ fn tooltip_does_not_request_observers_by_default() {
     // unless the request explicitly opts into them.
     begin_frame(&mut app, window);
     let id = GlobalElementId(0xdead);
+    let open = app.models_mut().insert(true);
     request_tooltip_for_window(
         &mut app,
         window,
@@ -3389,6 +3572,8 @@ fn tooltip_does_not_request_observers_by_default() {
             root_name: tooltip_root_name(id),
             interactive: true,
             trigger: Some(id),
+            open,
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -3446,6 +3631,7 @@ fn tooltip_does_not_request_observers_while_closing() {
     // Install a tooltip layer that is still present but non-interactive (closing animation).
     begin_frame(&mut app, window);
     let id = GlobalElementId(0xdead);
+    let open = app.models_mut().insert(false);
     let handler: fret_ui::action::OnDismissRequest = Arc::new(|_host, _cx, _req| {});
     let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
         Arc::new(|_host, _cx, _move| false);
@@ -3457,6 +3643,8 @@ fn tooltip_does_not_request_observers_while_closing() {
             root_name: tooltip_root_name(id),
             interactive: false,
             trigger: Some(id),
+            open,
+            present: true,
             on_dismiss_request: Some(handler),
             on_pointer_move: Some(on_pointer_move),
             children: Vec::new(),
@@ -3514,6 +3702,7 @@ fn hover_overlay_is_click_through_while_closing() {
     // Install a hover overlay that is still present but non-interactive (closing animation).
     begin_frame(&mut app, window);
     let id = GlobalElementId(0xdead);
+    let open = app.models_mut().insert(false);
     request_hover_overlay_for_window(
         &mut app,
         window,
@@ -3522,6 +3711,8 @@ fn hover_overlay_is_click_through_while_closing() {
             root_name: hover_overlay_root_name(id),
             interactive: false,
             trigger: id,
+            open,
+            present: true,
             children: Vec::new(),
         },
     );
@@ -4793,6 +4984,10 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
     let open_b = app.models_mut().insert(false);
     let underlay_clicked_a = app.models_mut().insert(false);
     let underlay_clicked_b = app.models_mut().insert(false);
+    let hover_open_a = app.models_mut().insert(true);
+    let tooltip_open_a = app.models_mut().insert(true);
+    let hover_open_b = app.models_mut().insert(true);
+    let tooltip_open_b = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -4833,6 +5028,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_a),
             interactive: true,
             trigger: trigger_a,
+            open: hover_open_a.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -4844,6 +5041,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_a),
             interactive: true,
             trigger: Some(trigger_a),
+            open: tooltip_open_a.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -4859,6 +5058,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_b),
             interactive: true,
             trigger: trigger_b,
+            open: hover_open_b.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -4870,6 +5071,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
+            open: tooltip_open_b.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -4939,6 +5142,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_a),
             interactive: true,
             trigger: trigger_a,
+            open: hover_open_a.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -4950,6 +5155,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_a),
             interactive: true,
             trigger: Some(trigger_a),
+            open: tooltip_open_a.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -4975,6 +5182,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_b),
             interactive: true,
             trigger: trigger_b,
+            open: hover_open_b.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -4986,6 +5195,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
+            open: tooltip_open_b.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5033,6 +5244,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_a),
             interactive: true,
             trigger: trigger_a,
+            open: hover_open_a.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5044,6 +5257,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_a),
             interactive: true,
             trigger: Some(trigger_a),
+            open: tooltip_open_a.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5069,6 +5284,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_b),
             interactive: true,
             trigger: trigger_b,
+            open: hover_open_b.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5080,6 +5297,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
+            open: tooltip_open_b.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5125,6 +5344,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_a),
             interactive: true,
             trigger: trigger_a,
+            open: hover_open_a.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5136,6 +5357,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_a),
             interactive: true,
             trigger: Some(trigger_a),
+            open: tooltip_open_a.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5161,6 +5384,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: hover_overlay_root_name(trigger_b),
             interactive: true,
             trigger: trigger_b,
+            open: hover_open_b.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5172,6 +5397,8 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
+            open: tooltip_open_b.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5215,6 +5442,10 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
     let open_b = app.models_mut().insert(false);
     let underlay_clicked_a = app.models_mut().insert(false);
     let underlay_clicked_b = app.models_mut().insert(false);
+    let hover_open_a = app.models_mut().insert(true);
+    let tooltip_open_a = app.models_mut().insert(true);
+    let hover_open_b = app.models_mut().insert(true);
+    let tooltip_open_b = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -5255,6 +5486,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: hover_overlay_root_name(trigger_a),
             interactive: true,
             trigger: trigger_a,
+            open: hover_open_a.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5266,6 +5499,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: tooltip_root_name(trigger_a),
             interactive: true,
             trigger: Some(trigger_a),
+            open: tooltip_open_a.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5281,6 +5516,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: hover_overlay_root_name(trigger_b),
             interactive: true,
             trigger: trigger_b,
+            open: hover_open_b.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5292,6 +5529,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
+            open: tooltip_open_b.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5362,6 +5601,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: hover_overlay_root_name(trigger_a),
             interactive: true,
             trigger: trigger_a,
+            open: hover_open_a.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5373,6 +5614,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: tooltip_root_name(trigger_a),
             interactive: true,
             trigger: Some(trigger_a),
+            open: tooltip_open_a.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5398,6 +5641,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: hover_overlay_root_name(trigger_b),
             interactive: true,
             trigger: trigger_b,
+            open: hover_open_b.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5409,6 +5654,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
+            open: tooltip_open_b.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5444,6 +5691,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: hover_overlay_root_name(trigger_a),
             interactive: true,
             trigger: trigger_a,
+            open: hover_open_a.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5455,6 +5704,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: tooltip_root_name(trigger_a),
             interactive: true,
             trigger: Some(trigger_a),
+            open: tooltip_open_a.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -5480,6 +5731,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: hover_overlay_root_name(trigger_b),
             interactive: true,
             trigger: trigger_b,
+            open: hover_open_b.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -5491,6 +5744,8 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
+            open: tooltip_open_b.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -6250,6 +6505,7 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
 
     let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
+    let hover_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -6277,6 +6533,8 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -6317,6 +6575,8 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -6346,6 +6606,8 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -6366,6 +6628,7 @@ fn dock_drag_hides_tooltips_in_affected_window() {
 
     let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
+    let tooltip_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -6393,6 +6656,8 @@ fn dock_drag_hides_tooltips_in_affected_window() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -6432,6 +6697,8 @@ fn dock_drag_hides_tooltips_in_affected_window() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -6463,6 +6730,8 @@ fn dock_drag_hides_tooltips_in_affected_window() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -7284,6 +7553,7 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
     ui.set_window(window);
 
     let open = app.models_mut().insert(false);
+    let hover_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -7311,6 +7581,8 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7365,6 +7637,8 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7407,6 +7681,8 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7436,6 +7712,8 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7455,6 +7733,7 @@ fn pointer_capture_hides_hover_overlays_in_same_window() {
 
     let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
+    let hover_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -7481,6 +7760,8 @@ fn pointer_capture_hides_hover_overlays_in_same_window() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7531,6 +7812,8 @@ fn pointer_capture_hides_hover_overlays_in_same_window() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7551,6 +7834,7 @@ fn pointer_capture_restores_hover_overlays_after_release() {
 
     let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
+    let hover_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -7577,6 +7861,8 @@ fn pointer_capture_restores_hover_overlays_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7626,6 +7912,8 @@ fn pointer_capture_restores_hover_overlays_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7671,6 +7959,8 @@ fn pointer_capture_restores_hover_overlays_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -7690,6 +7980,7 @@ fn pointer_capture_hides_tooltips_in_same_window() {
 
     let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
+    let tooltip_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -7716,6 +8007,8 @@ fn pointer_capture_hides_tooltips_in_same_window() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -7764,6 +8057,8 @@ fn pointer_capture_hides_tooltips_in_same_window() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -7786,6 +8081,7 @@ fn pointer_capture_restores_tooltips_after_release() {
 
     let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
+    let tooltip_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -7812,6 +8108,8 @@ fn pointer_capture_restores_tooltips_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -7860,6 +8158,8 @@ fn pointer_capture_restores_tooltips_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -7907,6 +8207,8 @@ fn pointer_capture_restores_tooltips_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -7927,6 +8229,7 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
     ui.set_window(window);
 
     let open = app.models_mut().insert(false);
+    let hover_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -7954,6 +8257,8 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8003,6 +8308,8 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8048,6 +8355,8 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8067,6 +8376,7 @@ fn viewport_capture_cancel_restores_hover_overlays() {
     ui.set_window(window);
 
     let open = app.models_mut().insert(false);
+    let hover_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8094,6 +8404,8 @@ fn viewport_capture_cancel_restores_hover_overlays() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8143,6 +8455,8 @@ fn viewport_capture_cancel_restores_hover_overlays() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8187,6 +8501,8 @@ fn viewport_capture_cancel_restores_hover_overlays() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8206,6 +8522,7 @@ fn viewport_capture_hides_tooltips_and_restores_after_release() {
     ui.set_window(window);
 
     let open = app.models_mut().insert(false);
+    let tooltip_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8232,6 +8549,8 @@ fn viewport_capture_hides_tooltips_and_restores_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8280,6 +8599,8 @@ fn viewport_capture_hides_tooltips_and_restores_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8326,6 +8647,8 @@ fn viewport_capture_hides_tooltips_and_restores_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8346,6 +8669,7 @@ fn viewport_capture_cancel_restores_tooltips() {
     ui.set_window(window);
 
     let open = app.models_mut().insert(false);
+    let tooltip_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8372,6 +8696,8 @@ fn viewport_capture_cancel_restores_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8420,6 +8746,8 @@ fn viewport_capture_cancel_restores_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8465,6 +8793,8 @@ fn viewport_capture_cancel_restores_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8486,6 +8816,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
     ui.set_window(window);
 
     let open = app.models_mut().insert(false);
+    let hover_open = app.models_mut().insert(true);
+    let tooltip_open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8513,6 +8845,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8524,6 +8858,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8656,6 +8992,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8667,6 +9005,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),
@@ -8721,6 +9061,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
+            open: hover_open.clone(),
+            present: true,
             children: Vec::new(),
         },
     );
@@ -8732,6 +9074,8 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
+            open: tooltip_open.clone(),
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: Vec::new(),

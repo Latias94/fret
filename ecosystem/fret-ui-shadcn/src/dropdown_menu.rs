@@ -2704,6 +2704,11 @@ impl DropdownMenu {
                                                         let _overlay_root_name_for_controls =
                                                             env.overlay_root_name_for_controls.clone();
 
+                                                        let gating = crate::command_gating::snapshot_for_window(
+                                                            &*cx.app,
+                                                            cx.window,
+                                                        );
+
                                                         let mut rows: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
 
@@ -3075,19 +3080,19 @@ impl DropdownMenu {
                                                             || crate::command_gating::command_is_disabled_by_gating(
                                                                 &*cx.app,
                                                                 &gating,
-                                                                        command.as_ref(),
-                                                                    );
-                                                                let leading = item.leading.clone();
-                                                                let trailing = item.trailing.clone();
-                                                                let variant = item.variant;
-                                                                let pad_left =
-                                                                    if item.inset { pad_x_inset } else { pad_x };
-                                                                let open = open_for_submenu.clone();
-                                                                let submenu_for_key =
-                                                                    submenu_models_for_panel.clone();
-                                                                let text_style = text_style.clone();
+                                                                command.as_ref(),
+                                                            );
+                                                        let leading = item.leading.clone();
+                                                        let trailing = item.trailing.clone();
+                                                        let variant = item.variant;
+                                                        let pad_left =
+                                                            if item.inset { pad_x_inset } else { pad_x };
+                                                        let open = open_for_submenu.clone();
+                                                        let submenu_for_key =
+                                                            submenu_models_for_panel.clone();
+                                                        let text_style = text_style.clone();
 
-                                                                        rows.push(cx.keyed(value.clone(), |cx| {
+                                                        rows.push(cx.keyed(value.clone(), |cx| {
                                                                     cx.pressable_with_id_props(
                                                                         |cx, st, item_id| {
                                                                             menu::sub_content::wire_item(

@@ -105,7 +105,7 @@ pub fn hover_card_request_with_presence(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
-    let mut request = OverlayRequest::hover_with_presence(id, trigger, open, presence, children);
+    let mut request = OverlayRequest::hover(id, trigger, open, presence, children);
     request.root_name = Some(hover_card_root_name(id));
     request
 }

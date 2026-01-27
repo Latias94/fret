@@ -10,6 +10,18 @@ It is intentionally non-authoritative; the normative contracts are:
 - `docs/adr/0194-text-navigation-and-word-boundaries-v1.md`
 - `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
 
+Non-normative upstream reference anchors (for concept mapping only; do not copy implementations):
+
+- Zed/GPUI (copyleft; architecture reference only):
+  - `repo-ref/zed/crates/editor/src/display_map.rs`
+  - `repo-ref/zed/crates/editor/src/editor.rs`
+  - `repo-ref/zed/crates/rope/src/rope.rs`
+  - `repo-ref/zed/crates/text/src/text.rs`
+- Monaco Editor (MIT; concept reference):
+  - `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/textModel.js`
+  - `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeTextBuffer.js`
+  - `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeBase.js`
+
 It also depends on existing locked contracts:
 
 - Text boundary + geometry queries: `docs/adr/0006-text-system.md`, `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`,
@@ -295,4 +307,3 @@ Legend:
 - Targeted tests (examples):
   - `cargo nextest run -p fret-ui` (focus/scroll/semantics regressions)
   - `cargo nextest run -p fret-render` (text cache/atlas conformance)
-

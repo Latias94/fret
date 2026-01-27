@@ -470,6 +470,8 @@ pub struct HoverOverlayRequest {
     /// and excluded from any observer passes.
     pub interactive: bool,
     pub trigger: GlobalElementId,
+    pub open: Model<bool>,
+    pub present: bool,
     pub children: Vec<AnyElement>,
 }
 
@@ -477,6 +479,7 @@ impl HoverOverlayRequest {
     pub fn new(
         id: GlobalElementId,
         trigger: GlobalElementId,
+        open: Model<bool>,
         children: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
         Self {
@@ -484,6 +487,8 @@ impl HoverOverlayRequest {
             root_name: super::hover_overlay_root_name(id),
             interactive: true,
             trigger,
+            open,
+            present: true,
             children: children.into_iter().collect(),
         }
     }
@@ -506,6 +511,8 @@ impl std::fmt::Debug for HoverOverlayRequest {
             .field("root_name", &self.root_name)
             .field("interactive", &self.interactive)
             .field("trigger", &self.trigger)
+            .field("open", &"<model>")
+            .field("present", &self.present)
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -521,18 +528,26 @@ pub struct TooltipRequest {
     /// outside-press or pointer-move events.
     pub interactive: bool,
     pub trigger: Option<GlobalElementId>,
+    pub open: Model<bool>,
+    pub present: bool,
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
 }
 
 impl TooltipRequest {
-    pub fn new(id: GlobalElementId, children: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn new(
+        id: GlobalElementId,
+        open: Model<bool>,
+        children: impl IntoIterator<Item = AnyElement>,
+    ) -> Self {
         Self {
             id,
             root_name: super::tooltip_root_name(id),
             interactive: true,
             trigger: None,
+            open,
+            present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
             children: children.into_iter().collect(),
@@ -572,6 +587,8 @@ impl std::fmt::Debug for TooltipRequest {
             .field("root_name", &self.root_name)
             .field("interactive", &self.interactive)
             .field("trigger", &self.trigger)
+            .field("open", &"<model>")
+            .field("present", &self.present)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_pointer_move", &self.on_pointer_move.is_some())
             .field("children_len", &self.children.len())

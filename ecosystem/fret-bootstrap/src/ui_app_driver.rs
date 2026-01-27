@@ -1587,6 +1587,20 @@ fn ui_app_render<S>(
         "ui_app_render: after begin_frame window={window:?}"
     ));
 
+    #[cfg(feature = "diagnostics")]
+    {
+        // Ensure optional diagnostics stores exist before layout/paint so ecosystem crates can
+        // publish frame-local records without allocating globals in production runs.
+        let enabled = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+        if enabled {
+            app.with_global_mut_untracked(
+                fret_runtime::WindowInteractionDiagnosticsStore::default,
+                |store, app| store.begin_frame(window, app.frame_id()),
+            );
+        }
+    }
+
     let view_started = hitch_config.map(|_| Instant::now());
     #[cfg(feature = "tracing")]
     let view_span = tracing::info_span!("fret.ui.view");
@@ -2439,6 +2453,13 @@ fn ui_app_accessibility_set_value_text<S>(
 }
 
 fn ui_app_viewport_input<S>(driver: &mut UiAppDriver<S>, app: &mut App, event: ViewportInputEvent) {
+    #[cfg(feature = "diagnostics")]
+    {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_viewport_input(event);
+        });
+    }
+
     if let Some(f) = driver.viewport_input {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
