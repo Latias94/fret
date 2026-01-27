@@ -2647,6 +2647,12 @@ pub struct UiTreeDebugSnapshotV1 {
     /// gate on “viewport tooling input was actually exercised” without scraping logs.
     #[serde(default)]
     pub viewport_input: Vec<UiViewportInputEventV1>,
+    /// Docking interaction ownership snapshot (best-effort).
+    ///
+    /// This is sourced from a frame-local diagnostics store populated by policy-heavy ecosystem
+    /// crates (e.g. docking), and is intended for debugging arbitration regressions without logs.
+    #[serde(default)]
+    pub docking_interaction: Option<UiDockingInteractionSnapshotV1>,
     #[serde(default)]
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]
@@ -2760,6 +2766,10 @@ impl UiTreeDebugSnapshotV1 {
                 })
                 .unwrap_or_default(),
             viewport_input: Vec::new(),
+            docking_interaction: app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .and_then(|store| store.docking_for_window(window, app.frame_id()))
+                .map(UiDockingInteractionSnapshotV1::from_snapshot),
             removed_subtrees: ui
                 .debug_removed_subtrees()
                 .iter()
@@ -2801,6 +2811,63 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDockingInteractionSnapshotV1 {
+    #[serde(default)]
+    pub dock_drag: Option<UiDockDragDiagnosticsV1>,
+    #[serde(default)]
+    pub viewport_capture: Option<UiViewportCaptureDiagnosticsV1>,
+}
+
+impl UiDockingInteractionSnapshotV1 {
+    fn from_snapshot(snapshot: &fret_runtime::DockingInteractionDiagnostics) -> Self {
+        Self {
+            dock_drag: snapshot
+                .dock_drag
+                .map(UiDockDragDiagnosticsV1::from_snapshot),
+            viewport_capture: snapshot
+                .viewport_capture
+                .map(UiViewportCaptureDiagnosticsV1::from_snapshot),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDragDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub source_window: u64,
+    pub current_window: u64,
+    pub dragging: bool,
+    pub cross_window_hover: bool,
+}
+
+impl UiDockDragDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockDragDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            source_window: snapshot.source_window.data().as_ffi(),
+            current_window: snapshot.current_window.data().as_ffi(),
+            dragging: snapshot.dragging,
+            cross_window_hover: snapshot.cross_window_hover,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiViewportCaptureDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub target: u64,
+}
+
+impl UiViewportCaptureDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::ViewportCaptureDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            target: snapshot.target.data().as_ffi(),
         }
     }
 }

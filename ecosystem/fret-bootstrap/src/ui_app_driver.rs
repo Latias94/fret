@@ -1587,6 +1587,20 @@ fn ui_app_render<S>(
         "ui_app_render: after begin_frame window={window:?}"
     ));
 
+    #[cfg(feature = "diagnostics")]
+    {
+        // Ensure optional diagnostics stores exist before layout/paint so ecosystem crates can
+        // publish frame-local records without allocating globals in production runs.
+        let enabled = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+        if enabled {
+            app.with_global_mut_untracked(
+                fret_runtime::WindowInteractionDiagnosticsStore::default,
+                |store, app| store.begin_frame(window, app.frame_id()),
+            );
+        }
+    }
+
     let view_started = hitch_config.map(|_| Instant::now());
     #[cfg(feature = "tracing")]
     let view_span = tracing::info_span!("fret.ui.view");
