@@ -74,7 +74,7 @@ Evidence anchors:
 - Scroll button height: **Gated**
 - Constrained viewport variants: **Gated** (e.g. `select-scrollable.vp1440x240`, `combobox-demo.vp1440x240`)
 - Hovered/active option chrome: **Gated** (`*.highlight-first.open.json`)
-- Keyboard focus (active option) chrome: **Gated** (`*.focus-first.open.json`)
+- Keyboard focus (active option) chrome: **Partially gated** (Select via `*.focus-first.open.json`; Combobox pending aria-activedescendant harness)
 
 Evidence anchors:
 
