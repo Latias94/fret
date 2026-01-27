@@ -1,0 +1,90 @@
+# shadcn/ui new-york-v4 Depth Checklist (Fret)
+
+This checklist tracks **depth** (interaction + stress variants), not breadth coverage.
+
+For breadth coverage snapshots, see `docs/audits/shadcn-new-york-v4-coverage.md`.
+For high-impact gap notes, see `docs/audits/shadcn-new-york-v4-alignment.md`.
+
+Status legend:
+
+- **Gated**: backed by at least one deterministic test gate.
+- **Partially gated**: some gates exist, but not across the full state matrix.
+- **Not gated**: no deterministic gate yet (or not audited).
+
+## Overlays: menus & listboxes
+
+Goal: treat “menu height” and scroll affordances as **styling outcomes** (padding/border/row height +
+scroll buttons + max-height clamping), not as incidental layout.
+
+### Menubar (`menubar-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`*.vp1440x320.open`, `*.vp1440x240.open`)
+- Row height (menu items): **Gated**
+- Menu content insets + overall menu height: **Gated**
+- Scroll state (first visible item under clamp): **Gated**
+- Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
+- Hovered item chrome: **Not gated**
+- Focus ring + roving focus visuals: **Not gated**
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/menubar-demo*.open.json`
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`assert_menubar_demo_constrained_menu_content_insets_match`,
+  `assert_menubar_demo_constrained_scroll_state_matches`,
+  `assert_menubar_demo_submenu_*`)
+
+### DropdownMenu (`dropdown-menu-demo*`, `context-menu-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`*.vp1440x320.open`, `*.vp1440x240.open`)
+- Row height (menu items): **Gated**
+- Menu content insets + overall menu height: **Gated**
+- Scroll state (first visible item under clamp): **Gated**
+- Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
+- Hovered item chrome: **Not gated**
+- Focus ring + roving focus visuals: **Not gated**
+
+Evidence anchors:
+
+- Goldens:
+  - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo*.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo*.open.json`
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`assert_dropdown_menu_demo_constrained_scroll_state_matches`,
+  `assert_context_menu_demo_constrained_scroll_state_matches`)
+
+### Select / Combobox listboxes
+
+- Option row height: **Gated**
+- Scroll button height: **Gated**
+- Constrained viewport variants: **Gated** (e.g. `select-scrollable.vp1440x240`, `combobox-demo.vp1440x240`)
+- Hovered/active option chrome: **Not gated**
+
+Evidence anchors:
+
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`assert_select_scrollable_listbox_option_height_matches`,
+  `assert_select_scrollable_scroll_button_height_matches`,
+  `assert_combobox_demo_listbox_option_height_matches`)
+
+## Charts (wrapper UI + interaction snapshots)
+
+- Tooltip panel geometry (wrapper): **Gated**
+- Legend panel geometry (wrapper): **Gated**
+- Interactive hover tooltip + cursor rect (scripted): **Gated** (`*.hover-mid`)
+- Full chart engine rendering parity (axes/ticks/marks/hit-test): **Not gated** (not implemented as a shadcn chart engine yet)
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/chart-*.json`
+- Audit: `docs/audits/shadcn-chart.md`
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+
+## DPI / font metrics
+
+- Cross-DPI geometry stability: **Not gated**
+- Cross-font metrics stability (“weird metrics” fonts): **Not gated**
+
+Rationale: add once the interaction-state gates are stable; keep the matrix small and deterministic.

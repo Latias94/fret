@@ -12,6 +12,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 - `docs/audits/shadcn-new-york-v4-coverage.md`
 - Chart-specific audit: `docs/audits/shadcn-chart.md`
+- Depth checklist (interaction + constrained viewport targets): `docs/audits/shadcn-new-york-v4-depth-checklist.md`
 
 Coverage snapshot (time of writing):
 

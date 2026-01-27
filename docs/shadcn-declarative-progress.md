@@ -19,8 +19,9 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `426/448` (`95.1%`)
-- Next P0 gaps: `chart-*` sprint (22 variants: radar/radial families + interactive line/area/bar pages).
+- Keys referenced by tests: `456/456` (`100%`)
+- Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
+  viewports, DPIs, fonts, and interaction state machines.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
@@ -38,12 +39,17 @@ Decision note (scope + sequencing):
 
 P0 (next):
 
-- Dedicated `chart-*` alignment push (large surface area; likely needs more selective gates + audit notes).
-- Continue layering constrained viewport variants for overlay families (menus/listboxes) where “menu height” is a styling outcome.
+- Consolidate a **depth checklist** for interaction states (hover/focus/active/open) and constrained
+  viewports so “what is gated” is explicit and auditable.
+- Add scripted interaction variants (hover/focus) for high-risk overlay families where geometry alone
+  does not catch regressions (e.g. hovered item chrome, focus ring, active/pressed states).
+- Keep expanding constrained viewport variants only when they materially increase signal (max-height clamping,
+  scroll buttons, truncation/wrap).
 
 P2:
 
-- Add targeted DPI/font-metrics gates once chart geometry is stable (typography + menus/listboxes first).
+- Add a small, targeted DPI/font-metrics matrix once the interaction-state gates are stable (typography +
+  menus/listboxes first).
 
 ## Scope
 
