@@ -605,6 +605,11 @@ async function extractOne(page: puppeteer.Page) {
 
     const rootRect = root.getBoundingClientRect();
 
+    const activeElement =
+      document.activeElement instanceof Element ? document.activeElement : null;
+    const activeDescendantId =
+      activeElement?.getAttribute("aria-activedescendant") || "";
+
     const attrKeys = [
       "role",
       "aria-label",
@@ -616,6 +621,7 @@ async function extractOne(page: puppeteer.Page) {
       "aria-expanded",
       "aria-pressed",
       "aria-controls",
+      "aria-activedescendant",
       "aria-disabled",
       "aria-hidden",
       "data-state",
@@ -739,6 +745,8 @@ async function extractOne(page: puppeteer.Page) {
         },
         computedStyle: collectStyle(el),
         text: collectText(el) || undefined,
+        active: document.activeElement === el,
+        activeDescendant: Boolean(activeDescendantId && id === activeDescendantId),
         children: [],
       };
 
@@ -1615,6 +1623,11 @@ async function setThemeBeforeLoad(page: puppeteer.Page, theme: Theme) {
 }
 
 function repoRootFromScript(): string {
+  const envRoot = process.env.REPO_ROOT
+  if (envRoot) {
+    return path.resolve(envRoot)
+  }
+
   const scriptPath = fileURLToPath(import.meta.url)
   const scriptDir = path.dirname(scriptPath)
   return path.resolve(scriptDir, "../../..")
