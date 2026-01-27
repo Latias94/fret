@@ -4774,6 +4774,8 @@ pub struct UiHitTestSnapshotV1 {
     pub hit: Option<u64>,
     pub active_layer_roots: Vec<u64>,
     pub barrier_root: Option<u64>,
+    #[serde(default)]
+    pub focus_barrier_root: Option<u64>,
     /// Stable, script-friendly labels for each scope root.
     ///
     /// Prefer this over `active_layer_roots` when validating behavior across refactors, since node
@@ -4785,13 +4787,15 @@ pub struct UiHitTestSnapshotV1 {
 impl UiHitTestSnapshotV1 {
     fn from_tree(position: Point, ui: &UiTree<App>) -> Self {
         let hit_test = ui.debug_hit_test(position);
+        let arbitration = ui.input_arbitration_snapshot();
         let layers = ui.debug_layers_in_paint_order();
-        Self::from_hit_test_with_layers(position, hit_test, &layers)
+        Self::from_hit_test_with_layers(position, hit_test, arbitration.focus_barrier_root, &layers)
     }
 
     fn from_hit_test_with_layers(
         position: Point,
         hit_test: UiDebugHitTest,
+        focus_barrier_root: Option<NodeId>,
         layers: &[UiDebugLayerInfo],
     ) -> Self {
         let mut scope_roots = Vec::new();
@@ -4809,6 +4813,18 @@ impl UiHitTestSnapshotV1 {
         let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
             by_root.insert(layer.root, layer.clone());
+        }
+
+        if let Some(root) = focus_barrier_root {
+            let info = by_root.get(&root);
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "focus_barrier_root".to_string(),
+                root: key_to_u64(root),
+                layer_id: info.map(|l| l.id.data().as_ffi()),
+                pointer_occlusion: info.map(|l| pointer_occlusion_label(l.pointer_occlusion)),
+                blocks_underlay_input: info.map(|l| l.blocks_underlay_input),
+                hit_testable: info.map(|l| l.hit_testable),
+            });
         }
 
         for root in &hit_test.active_layer_roots {
@@ -4832,6 +4848,7 @@ impl UiHitTestSnapshotV1 {
                 .map(key_to_u64)
                 .collect(),
             barrier_root: hit_test.barrier_root.map(key_to_u64),
+            focus_barrier_root: focus_barrier_root.map(key_to_u64),
             scope_roots,
         }
     }
@@ -6693,6 +6710,36 @@ mod tests {
         assert!(
             matches!(result.stage, UiScriptStageV1::Passed),
             "expected drive_script to persist the passed result"
+        );
+    }
+
+    #[test]
+    fn hit_test_snapshot_exposes_focus_barrier_root() {
+        let position = Point::new(Px(1.0), Px(2.0));
+        let hit_test = UiDebugHitTest {
+            hit: None,
+            active_layer_roots: vec![node_id(10)],
+            barrier_root: Some(node_id(10)),
+        };
+
+        let snap = UiHitTestSnapshotV1::from_hit_test_with_layers(
+            position,
+            hit_test,
+            Some(node_id(11)),
+            &[],
+        );
+
+        assert_eq!(snap.barrier_root, Some(key_to_u64(node_id(10))));
+        assert_eq!(snap.focus_barrier_root, Some(key_to_u64(node_id(11))));
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| r.kind == "modal_barrier_root" && r.root == key_to_u64(node_id(10)))
+        );
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| { r.kind == "focus_barrier_root" && r.root == key_to_u64(node_id(11)) })
         );
     }
 }
