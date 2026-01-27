@@ -67,6 +67,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
+    let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
     let mut compare_eps_px: f32 = 0.5;
     let mut compare_ignore_bounds: bool = false;
     let mut compare_ignore_scene_fingerprint: bool = false;
@@ -365,6 +366,19 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_overlay_synthesis_min =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-overlay-synthesis-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-retained-vlist-reconcile-no-notify" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-retained-vlist-reconcile-no-notify".to_string(),
+                    );
+                };
+                check_retained_vlist_reconcile_no_notify_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-retained-vlist-reconcile-no-notify".to_string()
                     })?);
                 i += 1;
             }
@@ -798,6 +812,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_overlay_synthesis_min.is_some()
+                    || check_retained_vlist_reconcile_no_notify_min.is_some()
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -820,6 +835,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
+                        check_retained_vlist_reconcile_no_notify_min,
                         warmup_frames,
                     )?;
                 }
@@ -1002,7 +1018,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         || check_hover_layout_max.is_some()
                         || check_gc_sweep_liveness
                         || check_view_cache_reuse_min.is_some()
-                        || check_overlay_synthesis_min.is_some())
+                        || check_overlay_synthesis_min.is_some()
+                        || check_retained_vlist_reconcile_no_notify_min.is_some())
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -1026,6 +1043,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
+                        check_retained_vlist_reconcile_no_notify_min,
                         warmup_frames,
                     )?;
                 }
@@ -1661,6 +1679,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 && min > 0
             {
                 check_bundle_for_overlay_synthesis_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
+            if let Some(min) = check_retained_vlist_reconcile_no_notify_min
+                && min > 0
+            {
+                check_bundle_for_retained_vlist_reconcile_no_notify_min(
+                    bundle_path.as_path(),
+                    min,
+                    warmup_frames,
+                )?;
             }
             Ok(())
         }
@@ -2677,6 +2704,7 @@ fn apply_post_run_checks(
     check_gc_sweep_liveness: bool,
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
+    check_retained_vlist_reconcile_no_notify_min: Option<u64>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -2706,6 +2734,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_overlay_synthesis_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_retained_vlist_reconcile_no_notify_min
+        && min > 0
+    {
+        check_bundle_for_retained_vlist_reconcile_no_notify_min(bundle_path, min, warmup_frames)?;
     }
     if check_gc_sweep_liveness {
         check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
@@ -5608,10 +5641,132 @@ fn check_bundle_for_overlay_synthesis_min_json(
 
     Err(format!(
         "expected at least {min_synthesized_events} overlay synthesis events, got {synthesized_events} \
-(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}).{suppressions} \
-bundle: {}",
+ (any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}).{suppressions} \
+ bundle: {}",
         bundle_path.display()
     ))
+}
+
+fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
+    bundle_path: &Path,
+    min_reconcile_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
+        &bundle,
+        bundle_path,
+        min_reconcile_events,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_reconcile_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut reconcile_events: u64 = 0;
+    let mut reconcile_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut notify_offenders: Vec<String> = Vec::new();
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let list_count = s
+                .get("debug")
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.len() as u64)
+                .unwrap_or(0);
+            let stats_count = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let count = list_count.max(stats_count);
+            if count == 0 {
+                continue;
+            }
+
+            reconcile_frames = reconcile_frames.saturating_add(1);
+            reconcile_events = reconcile_events.saturating_add(count);
+
+            let dirty_views = s
+                .get("debug")
+                .and_then(|v| v.get("dirty_views"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            for dv in dirty_views {
+                let source = dv
+                    .get("source")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                let detail = dv
+                    .get("detail")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                if source == "notify" || detail.contains("notify") {
+                    let root_node = dv.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0);
+                    notify_offenders.push(format!(
+                        "frame_id={frame_id} dirty_view_root_node={root_node} source={source} detail={detail}"
+                    ));
+                    break;
+                }
+            }
+        }
+    }
+
+    if !notify_offenders.is_empty() {
+        let mut msg = String::new();
+        msg.push_str(
+            "retained virtual-list reconcile should not require notify-based dirty views\n",
+        );
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        msg.push_str(&format!(
+            "min_reconcile_events={min_reconcile_events} reconcile_events={reconcile_events} reconcile_frames={reconcile_frames} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
+        ));
+        for line in notify_offenders.into_iter().take(10) {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    if reconcile_events < min_reconcile_events {
+        return Err(format!(
+            "expected at least {min_reconcile_events} retained virtual-list reconcile events, got {reconcile_events} \
+(reconcile_frames={reconcile_frames}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    Ok(())
 }
 
 fn bundle_stats_from_json_with_options(
@@ -7632,6 +7787,99 @@ mod tests {
         assert!(err.contains("expected at least 1 overlay synthesis events"));
         assert!(err.contains("got 0"));
         assert!(err.contains("suppressions=["));
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_reconcile_no_notify_min_passes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "stats": { "retained_virtual_list_reconciles": 1 },
+                            "dirty_views": [{ "root_node": 1, "source": "notify" }]
+                        }
+                    },
+                    {
+                        "frame_id": 1,
+                        "debug": {
+                            "stats": { "retained_virtual_list_reconciles": 2 },
+                            "retained_virtual_list_reconciles": [
+                                { "node": 10, "element": 20, "prev_items": 1, "next_items": 2, "preserved_items": 1, "attached_items": 1, "detached_items": 0 },
+                                { "node": 11, "element": 21, "prev_items": 2, "next_items": 3, "preserved_items": 2, "attached_items": 1, "detached_items": 0 }
+                            ],
+                            "dirty_views": []
+                        }
+                    }
+                ]
+            }]
+        });
+
+        check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            1,
+        )
+        .expect("expected reconcile>=1 without notify dirtiness");
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_reconcile_no_notify_min_fails_on_notify_dirty_view() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 1,
+                    "debug": {
+                        "stats": { "retained_virtual_list_reconciles": 1 },
+                        "dirty_views": [
+                            { "root_node": 123, "source": "notify", "detail": "notify_call" }
+                        ]
+                    }
+                }]
+            }]
+        });
+
+        let err = check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            0,
+        )
+        .expect_err("expected notify offenders");
+        assert!(err.contains(
+            "retained virtual-list reconcile should not require notify-based dirty views"
+        ));
+        assert!(err.contains("source=notify"));
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_reconcile_no_notify_min_fails_when_missing_reconciles() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": { "stats": { "retained_virtual_list_reconciles": 0 } }
+                }]
+            }]
+        });
+
+        let err = check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            0,
+        )
+        .expect_err("expected missing reconcile events");
+        assert!(err.contains("expected at least 1 retained virtual-list reconcile events"));
+        assert!(err.contains("got 0"));
     }
 
     #[test]
