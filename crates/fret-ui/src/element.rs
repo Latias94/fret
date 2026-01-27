@@ -1132,6 +1132,7 @@ impl CanvasCacheTuning {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CanvasCachePolicy {
     pub text: CanvasCacheTuning,
+    pub shared_text: CanvasCacheTuning,
     pub path: CanvasCacheTuning,
     pub svg: CanvasCacheTuning,
 }
@@ -1142,6 +1143,14 @@ impl CanvasCachePolicy {
             // ~1s at 60fps; reduces prepare/release thrash during scroll/pan.
             text: CanvasCacheTuning {
                 keep_frames: 60,
+                max_entries: 4096,
+            },
+            // Shared cache (keyed by content/style/constraints) is useful for repeated labels,
+            // but should remain bounded and configurable for large, scroll-driven surfaces.
+            //
+            // Default preserves the previous hard-coded behavior in `CanvasCache`.
+            shared_text: CanvasCacheTuning {
+                keep_frames: 120,
                 max_entries: 4096,
             },
             path: CanvasCacheTuning {
