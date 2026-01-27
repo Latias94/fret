@@ -204,6 +204,14 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         for id in widget_commands {
+            if id.as_str() == "focus.menu_bar" {
+                let available = app
+                    .global::<fret_runtime::WindowMenuBarFocusService>()
+                    .is_some_and(|svc| svc.present(window));
+                snapshot.insert(id, available);
+                continue;
+            }
+
             let mut availability = self.command_availability_from_node(app, input_ctx, start, &id);
             if availability == CommandAvailability::NotHandled
                 && matches!(id.as_str(), "focus.next" | "focus.previous")
