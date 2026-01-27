@@ -2590,6 +2590,8 @@ pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
     #[serde(default)]
+    pub focus_barrier_root: Option<u64>,
+    #[serde(default)]
     pub pointer_occlusion: String,
     #[serde(default)]
     pub pointer_occlusion_layer_id: Option<u64>,
@@ -2605,6 +2607,7 @@ impl UiInputArbitrationSnapshotV1 {
     fn from_snapshot(snapshot: fret_ui::tree::UiInputArbitrationSnapshot) -> Self {
         Self {
             modal_barrier_root: snapshot.modal_barrier_root.map(key_to_u64),
+            focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
             pointer_occlusion: pointer_occlusion_label(snapshot.pointer_occlusion),
             pointer_occlusion_layer_id: snapshot
                 .pointer_occlusion_layer
@@ -4330,6 +4333,8 @@ pub struct UiSemanticsSnapshotV1 {
     pub window: u64,
     pub roots: Vec<UiSemanticsRootV1>,
     pub barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
     pub focus: Option<u64>,
     pub captured: Option<u64>,
     pub nodes: Vec<UiSemanticsNodeV1>,
@@ -4403,6 +4408,7 @@ impl UiSemanticsSnapshotV1 {
                 })
                 .collect(),
             barrier_root: snapshot.barrier_root.map(key_to_u64),
+            focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
             focus: snapshot.focus.map(key_to_u64),
             captured: snapshot.captured.map(key_to_u64),
             nodes: snapshot
@@ -6222,6 +6228,7 @@ mod tests {
                 },
             ],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6282,6 +6289,7 @@ mod tests {
                 },
             ],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6347,6 +6355,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6406,6 +6415,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(node_id(2)),
             captured: None,
             nodes: vec![
@@ -6466,6 +6476,7 @@ mod tests {
                 },
             ],
             barrier_root: Some(node_id(3)),
+            focus_barrier_root: Some(node_id(3)),
             focus: None,
             captured: None,
             nodes: vec![

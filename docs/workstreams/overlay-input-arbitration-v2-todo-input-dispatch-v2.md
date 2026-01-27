@@ -77,6 +77,9 @@ Each TODO is labeled:
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.layers_in_paint_order[].layer_id`, `pointer_occlusion`)
 - [x] OIA2-diag-013 Snapshot input arbitration state (modal / occlusion / capture) for scripted comparisons.
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.input_arbitration`)
+- [x] OIA2-diag-014 Expose focus barrier root alongside the pointer barrier root.
+  - Target: allow diagnosing “modal still blocks pointer input while close auto-focus runs” scenarios without logs.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.semantics.focus_barrier_root`, `debug.input_arbitration.focus_barrier_root`)
 
 ## P0 — Policy Normalization (Reduce Future Refactor Risk)
 
@@ -253,5 +256,6 @@ Each TODO is labeled:
 - `PointerOcclusion` is a routing/scope mechanism; it should remain orthogonal to dispatch phases and `prevent_default`.
 - Keep mechanism contracts in `crates/*` and policy in `ecosystem/*`.
 - Prefer adding/expanding conformance tests before larger refactors.
-- Modal close-transition conformance checks validate both `semantics_snapshot().barrier_root` and the underlying layer
-  flags (`blocks_underlay_input`, `hit_testable`) to prevent “looks modal but click-through” regressions.
+- Modal close-transition conformance checks validate both `semantics_snapshot().barrier_root` and
+  `semantics_snapshot().focus_barrier_root` plus the underlying layer flags (`blocks_underlay_input`, `hit_testable`) to
+  prevent “looks modal but click-through” regressions.

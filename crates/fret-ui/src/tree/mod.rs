@@ -396,6 +396,7 @@ pub enum PointerOcclusion {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct UiInputArbitrationSnapshot {
     pub modal_barrier_root: Option<NodeId>,
+    pub focus_barrier_root: Option<NodeId>,
     pub pointer_occlusion: PointerOcclusion,
     pub pointer_occlusion_layer: Option<UiLayerId>,
     pub pointer_capture_active: bool,
@@ -2110,6 +2111,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn input_arbitration_snapshot(&self) -> UiInputArbitrationSnapshot {
         let (_active, barrier_root) = self.active_input_layers();
+        let (_focus_active, focus_barrier_root) = self.active_focus_layers();
 
         let (pointer_occlusion_layer, pointer_occlusion) = self
             .topmost_pointer_occlusion_layer(barrier_root)
@@ -2141,6 +2143,7 @@ impl<H: UiHost> UiTree<H> {
 
         UiInputArbitrationSnapshot {
             modal_barrier_root: barrier_root,
+            focus_barrier_root,
             pointer_occlusion,
             pointer_occlusion_layer,
             pointer_capture_active,
@@ -2155,6 +2158,7 @@ impl<H: UiHost> UiTree<H> {
         let snapshot = self.input_arbitration_snapshot();
         fret_runtime::WindowInputArbitrationSnapshot {
             modal_barrier_root: snapshot.modal_barrier_root,
+            focus_barrier_root: snapshot.focus_barrier_root,
             pointer_occlusion: match snapshot.pointer_occlusion {
                 PointerOcclusion::None => fret_runtime::WindowPointerOcclusion::None,
                 PointerOcclusion::BlockMouse => fret_runtime::WindowPointerOcclusion::BlockMouse,
@@ -4576,6 +4580,15 @@ impl<H: UiHost> UiTree<H> {
         }
         let barrier_root = barrier_index.map(|idx| self.layers[visible_layers[idx]].root);
 
+        let mut focus_barrier_index: Option<usize> = None;
+        for (idx, layer) in visible_layers.iter().enumerate() {
+            if self.layers[*layer].blocks_underlay_focus {
+                focus_barrier_index = Some(idx);
+            }
+        }
+        let focus_barrier_root =
+            focus_barrier_index.map(|idx| self.layers[visible_layers[idx]].root);
+
         let mut roots: Vec<SemanticsRoot> = Vec::with_capacity(visible_layers.len());
         for (z, layer_id) in visible_layers.iter().enumerate() {
             let layer = &self.layers[*layer_id];
@@ -4796,6 +4809,7 @@ impl<H: UiHost> UiTree<H> {
             window,
             roots,
             barrier_root,
+            focus_barrier_root,
             focus,
             captured,
             nodes,
