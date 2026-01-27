@@ -88,8 +88,15 @@ pub(super) struct WindowOverlays {
     /// See `cached_popover_requests`.
     pub(super) cached_hover_overlay_requests:
         HashMap<(AppWindowId, GlobalElementId), HoverOverlayRequest>,
+    /// Frame id when the cached hover overlay request was last explicitly declared (i.e. emitted
+    /// by a rerendering subtree). This is used to bound view-cache synthesis TTL for ephemeral
+    /// overlays.
+    pub(super) cached_hover_overlay_declared_frames:
+        HashMap<(AppWindowId, GlobalElementId), FrameId>,
     /// See `cached_popover_requests`.
     pub(super) cached_tooltip_requests: HashMap<(AppWindowId, GlobalElementId), TooltipRequest>,
+    /// Frame id when the cached tooltip request was last explicitly declared.
+    pub(super) cached_tooltip_declared_frames: HashMap<(AppWindowId, GlobalElementId), FrameId>,
     pub(super) popovers: HashMap<(AppWindowId, GlobalElementId), ActivePopover>,
     pub(super) modals: HashMap<(AppWindowId, GlobalElementId), ActiveModal>,
     pub(super) hover_overlays: HashMap<(AppWindowId, GlobalElementId), ActiveHoverOverlay>,
