@@ -4,6 +4,7 @@
 //! caret/selection geometry.
 
 use std::cell::{Cell, RefCell};
+use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -11,8 +12,8 @@ use std::sync::Arc;
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer};
 use fret_code_editor_view::{DisplayPoint, byte_to_display_point, display_point_to_byte};
 use fret_core::{
-    AttributedText, Color, Corners, DrawOrder, Edges, FontId, KeyCode, Modifiers, MouseButton, Px,
-    Rect, SceneOp, Size, TextOverflow, TextSpan, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
+    Size, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::{ClipboardToken, Effect};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
@@ -68,6 +69,10 @@ struct CodeEditorState {
     dragging: bool,
     drag_pointer: Option<fret_core::PointerId>,
     last_bounds: Option<Rect>,
+    row_text_cache_rev: fret_code_editor_buffer::Revision,
+    row_text_cache_tick: u64,
+    row_text_cache: HashMap<usize, (Arc<str>, u64)>,
+    row_text_cache_queue: VecDeque<(usize, u64)>,
 }
 
 #[derive(Clone)]
@@ -89,6 +94,10 @@ impl CodeEditorHandle {
                 dragging: false,
                 drag_pointer: None,
                 last_bounds: None,
+                row_text_cache_rev: fret_code_editor_buffer::Revision(0),
+                row_text_cache_tick: 0,
+                row_text_cache: HashMap::new(),
+                row_text_cache_queue: VecDeque::new(),
             })),
         }
     }
@@ -110,6 +119,7 @@ pub struct CodeEditorTorture {
     pub auto_scroll: bool,
     pub scroll_speed: Px,
     pub bounce: bool,
+    pub show_overlay: bool,
 }
 
 impl CodeEditorTorture {
@@ -118,6 +128,7 @@ impl CodeEditorTorture {
             auto_scroll: true,
             scroll_speed,
             bounce: true,
+            show_overlay: true,
         }
     }
 }
@@ -159,6 +170,7 @@ impl CodeEditor {
             let fg = theme.color_required("foreground");
             let selection_bg = theme.color_required("selection.background");
             let caret_color = fg;
+            let overlay_bg = theme.color_required("muted");
 
             let text_style = TextStyle {
                 font: FontId::monospace(),
@@ -353,32 +365,34 @@ impl CodeEditor {
             surface_props.row_height = row_h;
             surface_props.overscan = overscan;
             surface_props.scroll_handle = scroll_handle.clone();
-            surface_props.canvas.cache_policy = {
-                let viewport_rows = if row_h.0 > 0.0 {
-                    (cx.bounds.size.height.0 / row_h.0).ceil() as usize
-                } else {
-                    0
-                };
-                let max_entries = viewport_rows
-                    .saturating_add(overscan.saturating_mul(2))
-                    .saturating_add(128)
-                    .max(256)
-                    .min(8_192);
-                CanvasCachePolicy {
-                    text: CanvasCacheTuning {
-                        keep_frames: 60,
-                        max_entries,
-                    },
-                    path: CanvasCacheTuning::transient(),
-                    svg: CanvasCacheTuning::transient(),
-                }
+            let viewport_rows = if row_h.0 > 0.0 {
+                (cx.bounds.size.height.0 / row_h.0).ceil() as usize
+            } else {
+                0
+            };
+            let text_cache_max_entries = viewport_rows
+                .saturating_add(overscan.saturating_mul(2))
+                .saturating_add(128)
+                .max(256)
+                .min(8_192);
+            surface_props.canvas.cache_policy = CanvasCachePolicy {
+                text: CanvasCacheTuning {
+                    keep_frames: 60,
+                    max_entries: text_cache_max_entries,
+                },
+                shared_text: CanvasCacheTuning::transient(),
+                path: CanvasCacheTuning::transient(),
+                svg: CanvasCacheTuning::transient(),
             };
             surface_props.on_paint_frame = torture.map(|torture| {
                 let scroll_handle = scroll_handle.clone();
                 let scroll_dir = scroll_dir.clone();
+                let text_style = text_style.clone();
+                let overlay_bg = overlay_bg;
+                let text_cache_max_entries = text_cache_max_entries;
                 let hook: OnWindowedRowsPaintFrame = Arc::new(
                     move |painter: &mut fret_ui::canvas::CanvasPainter<'_>,
-                          _frame: WindowedRowsPaintFrame| {
+                          frame: WindowedRowsPaintFrame| {
                         if !torture.auto_scroll {
                             return;
                         }
@@ -398,6 +412,49 @@ impl CodeEditor {
 
                         scroll_handle.set_offset(fret_core::Point::new(offset.x, Px(next_y)));
                         painter.request_animation_frame();
+
+                        if !torture.show_overlay {
+                            return;
+                        }
+
+                        let origin = fret_core::Point::new(Px(8.0), Px(offset.y.0 + 8.0));
+                        painter.scene().push(SceneOp::Quad {
+                            order: DrawOrder(100),
+                            rect: Rect::new(origin, Size::new(Px(420.0), Px(24.0))),
+                            background: overlay_bg,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: Corners::all(Px(6.0)),
+                        });
+
+                        let label = format!(
+                            "rows={}-{} offset_y={:.1}/{:.1} cache_max={}",
+                            frame.visible_start,
+                            frame.visible_end,
+                            offset.y.0,
+                            max.y.0,
+                            text_cache_max_entries
+                        );
+                        let key = painter.key(&("fret-code-editor-torture-overlay", 0u8));
+                        let _ = painter.text(
+                            key,
+                            DrawOrder(101),
+                            fret_core::Point::new(Px(origin.x.0 + 8.0), Px(origin.y.0 + 4.0)),
+                            label,
+                            text_style.clone(),
+                            Color {
+                                r: 1.0,
+                                g: 1.0,
+                                b: 1.0,
+                                a: 1.0,
+                            },
+                            CanvasTextConstraints {
+                                max_width: Some(Px(400.0)),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                            },
+                            painter.scale_factor(),
+                        );
                     },
                 );
                 hook
@@ -504,11 +561,11 @@ impl CodeEditor {
                         if cell_w.get().0 <= 0.0 {
                             let scope = painter.key_scope(&"fret-code-editor-cell-width");
                             let key: u64 = painter.child_key(scope, &0u8).into();
-                            let metrics = painter.rich_text(
+                            let metrics = painter.text(
                                 key,
                                 DrawOrder(0),
                                 fret_core::Point::new(Px(-10_000.0), Px(-10_000.0)),
-                                AttributedText::new(Arc::<str>::from("M"), vec![TextSpan::new(1)]),
+                                "M",
                                 text_style.clone(),
                                 Color::TRANSPARENT,
                                 CanvasTextConstraints {
@@ -522,14 +579,15 @@ impl CodeEditor {
                             cell_w.set(w);
                         }
 
-                        let st = editor_state.borrow();
+                        let mut st = editor_state.borrow_mut();
                         paint_row(
                             painter,
-                            &st,
+                            &mut st,
                             row,
                             rect,
                             row_h,
                             cell_w.get(),
+                            text_cache_max_entries,
                             &text_style,
                             fg,
                             selection_bg,
@@ -840,17 +898,18 @@ fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool) {
 
 fn paint_row(
     painter: &mut fret_ui::canvas::CanvasPainter<'_>,
-    st: &CodeEditorState,
+    st: &mut CodeEditorState,
     row: usize,
     rect: Rect,
     row_h: Px,
     cell_w: Px,
+    text_cache_max_entries: usize,
     text_style: &TextStyle,
     fg: Color,
     selection_bg: Color,
     caret_color: Color,
 ) {
-    let line = st.buffer.line_text(row).unwrap_or("");
+    let line = cached_row_text(st, row, text_cache_max_entries);
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
@@ -865,7 +924,7 @@ fn paint_row(
         let start_pt = byte_to_display_point(&st.buffer, sel.start);
         let end_pt = byte_to_display_point(&st.buffer, sel.end);
         if row >= start_pt.row && row <= end_pt.row {
-            let line_cols = line_len_cols(line);
+            let line_cols = line_len_cols(&line);
             let start_col = if row == start_pt.row { start_pt.col } else { 0 };
             let end_col = if row == end_pt.row {
                 end_pt.col
@@ -894,17 +953,16 @@ fn paint_row(
     let origin = fret_core::Point::new(rect.origin.x, rect.origin.y);
     let scope = painter.key_scope(&"fret-code-editor-row-text");
     let key: u64 = painter.child_key(scope, &(row, 0u8)).into();
-    let line_rich = AttributedText::new(Arc::<str>::from(line), vec![TextSpan::new(line.len())]);
     let constraints = CanvasTextConstraints {
         max_width: Some(rect.size.width),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     };
-    let _ = painter.rich_text(
+    let _ = painter.text(
         key,
         DrawOrder(2),
         origin,
-        line_rich,
+        Arc::clone(&line),
         text_style.clone(),
         fg,
         constraints,
@@ -937,15 +995,11 @@ fn paint_row(
             let origin = fret_core::Point::new(x, rect.origin.y);
             let scope = painter.key_scope(&"fret-code-editor-row-text");
             let key: u64 = painter.child_key(scope, &(row, 1u8)).into();
-            let rich = AttributedText::new(
-                Arc::<str>::from(preedit.text.as_str()),
-                vec![TextSpan::new(preedit.text.len())],
-            );
-            let _ = painter.rich_text(
+            let _ = painter.text(
                 key,
                 DrawOrder(4),
                 origin,
-                rich,
+                preedit.text.as_str(),
                 text_style.clone(),
                 fg,
                 constraints,
@@ -953,4 +1007,42 @@ fn paint_row(
             );
         }
     }
+}
+
+fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> Arc<str> {
+    let rev = st.buffer.revision();
+    if st.row_text_cache_rev != rev {
+        st.row_text_cache_rev = rev;
+        st.row_text_cache_tick = 0;
+        st.row_text_cache.clear();
+        st.row_text_cache_queue.clear();
+    }
+
+    st.row_text_cache_tick = st.row_text_cache_tick.saturating_add(1);
+    let tick = st.row_text_cache_tick;
+
+    if let Some((text, last_used)) = st.row_text_cache.get_mut(&row) {
+        *last_used = tick;
+        st.row_text_cache_queue.push_back((row, tick));
+        return Arc::clone(text);
+    }
+
+    let text = st.buffer.line_text(row).unwrap_or("").to_string().into();
+    st.row_text_cache.insert(row, (Arc::clone(&text), tick));
+    st.row_text_cache_queue.push_back((row, tick));
+
+    while st.row_text_cache.len() > max_entries {
+        let Some((victim, victim_tick)) = st.row_text_cache_queue.pop_front() else {
+            break;
+        };
+        let remove = st
+            .row_text_cache
+            .get(&victim)
+            .is_some_and(|(_, last_used)| *last_used == victim_tick);
+        if remove {
+            st.row_text_cache.remove(&victim);
+        }
+    }
+
+    text
 }
