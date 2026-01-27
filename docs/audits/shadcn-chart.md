@@ -13,7 +13,7 @@ To reach 1:1 parity, we need to be explicit about which parts are “wrapper UI�
   - `repo-ref/ui/apps/v4/registry/new-york-v4/charts/*.tsx`
   - Registry index: `repo-ref/ui/apps/v4/registry/new-york-v4/charts/_registry.ts`
 - Goldens (expected outcomes):
-  - `goldens/shadcn-web/v4/new-york-v4/chart-*.json` (82 variants today)
+  - `goldens/shadcn-web/v4/new-york-v4/chart-*.json` (84 variants today, including `*.hover-mid` scripted snapshots)
   - Note: the extractor (`goldens/shadcn-web/scripts/extract-golden.mts`) includes a Recharts “settle” wait so
     bar/radar series nodes are present in both light/dark themes (avoid partial SVG frames).
 
@@ -45,6 +45,7 @@ Current:
 - Interactive chart pages:
   - `chart-line-interactive`: monotone curve bounds match web (desktop + `*.mobile` variant).
   - `chart-bar-interactive`: single-series bar rect layout matches web (desktop + `*.mobile` variant).
+  - `chart-line-interactive.hover-mid` + `chart-bar-interactive.hover-mid`: tooltip panel size and tooltip cursor rect bounds match web.
   - `chart-area-interactive`: stacked area curve + fill bounds match web (`*.30d`, `*.7d`, and default 90d)
     (full stacked-curve math + interaction states still pending).
   - `chart-pie-interactive`: active sector geometry matches web for multiple selected months (`*.february`, `*.may`).
@@ -57,7 +58,7 @@ Breadth status:
 
 - All `chart-*` goldens in `goldens/shadcn-web/v4/new-york-v4` are referenced by at least one test.
 - Depth varies: many gates validate math against web SVG bounds, but do not yet cover full interaction
-  state machines (hover/active index), tooltip anchoring, cursor overlays, and accessibility metadata.
+  state machines (hover/active index), tooltip anchoring, accessibility metadata, and “full-stack” cursor/marker rendering.
 
 ## Parity scope (what “1:1” means here)
 

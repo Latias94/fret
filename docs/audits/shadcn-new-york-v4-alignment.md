@@ -15,11 +15,11 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `454/454` keys referenced (`100%`)
+- shadcn-web `v4/new-york-v4`: `456/456` keys referenced (`100%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
-- `calendar` (34), `input` (27), `button` (26), `form` (19), `navigation` (17), `sidebar` (16)
+- `chart` (84), `calendar` (34), `input` (27), `button` (26), `form` (19), `navigation` (17)
 
 ## Executive summary (current status + next targets)
 
@@ -51,6 +51,7 @@ Recent breadth wins:
   - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced`.
   - Pie legend variant includes `chart-pie-legend` (recharts wrapper + shadcn `*:basis-1/4` layout).
+  - Hover-mid scripted snapshots now gate tooltip panel size and cursor rect geometry for the interactive line/bar pages.
 
 ### Largest remaining gaps (by golden family)
 

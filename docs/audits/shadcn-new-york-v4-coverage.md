@@ -29,9 +29,9 @@ Practical rule:
 
 This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
-- Golden files: `487`
-- Golden keys (normalized `.open` suffix): `454`
-- Keys referenced by tests: `454` (`100%`)
+- Golden files: `495`
+- Golden keys (normalized `.open` suffix): `456`
+- Keys referenced by tests: `456` (`100%`)
 - Keys not referenced by tests: `0`
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
@@ -45,6 +45,7 @@ At the time of writing, there are no missing groups (all keys are referenced by 
 The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
 
+- `chart` (84)
 - `calendar` (34)
 - `input` (27)
 - `button` (26)
@@ -54,17 +55,16 @@ The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-sha
 - `typography` (14)
 - `toggle` (13)
 - `field` (12)
+- `spinner` (10)
 - `sheet` (10)
 - `scroll` (10)
 - `item` (10)
-- `spinner` (10)
 - `dropdown` (10)
 - `breadcrumb` (9)
 - `menubar` (9)
 - `textarea` (8)
 - `select` (7)
 - `combobox` (7)
-- `context` (7)
 
 Recompute locally:
 
