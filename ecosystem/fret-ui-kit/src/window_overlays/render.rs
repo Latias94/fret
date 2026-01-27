@@ -34,7 +34,6 @@ struct ToastHoverPauseState {
 
 struct OverlayAutoFocusHost<'a, H: UiHost> {
     app: &'a mut H,
-    window: AppWindowId,
     requested_focus: Option<GlobalElementId>,
 }
 
@@ -70,7 +69,6 @@ fn run_open_auto_focus_hook<H: UiHost>(
 ) -> (bool, Option<GlobalElementId>) {
     let mut host = OverlayAutoFocusHost {
         app,
-        window,
         requested_focus: None,
     };
     let mut req = AutoFocusRequestCx::new();
@@ -86,7 +84,6 @@ fn run_close_auto_focus_hook<H: UiHost>(
 ) -> (bool, Option<GlobalElementId>) {
     let mut host = OverlayAutoFocusHost {
         app,
-        window,
         requested_focus: None,
     };
     let mut req = AutoFocusRequestCx::new();
