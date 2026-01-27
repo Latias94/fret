@@ -10,12 +10,15 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer};
-use fret_code_editor_view::{DisplayPoint, byte_to_display_point, display_point_to_byte};
+use fret_code_editor_view::{
+    DisplayPoint, byte_to_display_point, display_point_to_byte, move_word_left, move_word_right,
+    select_word_range,
+};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
     Size, TextOverflow, TextStyle, TextWrap,
 };
-use fret_runtime::{ClipboardToken, Effect};
+use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::AnyElement;
@@ -30,6 +33,7 @@ use fret_ui_kit::declarative::windowed_rows_surface::{
     WindowedRowsSurfacePointerHandlers, WindowedRowsSurfaceProps,
     windowed_rows_surface_with_pointer_region,
 };
+use fret_undo::{InvertibleTransaction, UndoHistory, UndoRecord};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Selection {
@@ -62,10 +66,30 @@ pub struct PreeditState {
 }
 
 #[derive(Debug, Clone)]
+struct CodeEditorTx {
+    edit: Edit,
+    selection: Selection,
+    inverse_edit: Edit,
+    inverse_selection: Selection,
+}
+
+impl InvertibleTransaction for CodeEditorTx {
+    fn invert(&self) -> Self {
+        Self {
+            edit: self.inverse_edit.clone(),
+            selection: self.inverse_selection,
+            inverse_edit: self.edit.clone(),
+            inverse_selection: self.selection,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    undo: UndoHistory<CodeEditorTx>,
     dragging: bool,
     drag_pointer: Option<fret_core::PointerId>,
     last_bounds: Option<Rect>,
@@ -91,6 +115,7 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                undo: UndoHistory::with_limit(512),
                 dragging: false,
                 drag_pointer: None,
                 last_bounds: None,
@@ -188,7 +213,7 @@ impl CodeEditor {
             let region_props = TextInputRegionProps {
                 layout: region_layout,
                 enabled: true,
-                text_boundary_mode_override: Some(fret_runtime::TextBoundaryMode::Identifier),
+                text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
             };
 
             let mut pointer_props = PointerRegionProps::default();
@@ -217,13 +242,36 @@ impl CodeEditor {
                     st.drag_pointer = Some(down.pointer_id);
 
                     let caret = caret_for_pointer(&st.buffer, row, bounds, down.position, cell_w);
-                    if down.modifiers.shift {
-                        st.selection.focus = caret;
-                    } else {
-                        st.selection = Selection {
-                            anchor: caret,
-                            focus: caret,
-                        };
+                    match down.click_count {
+                        2 => {
+                            let (start, end) = select_word_range(
+                                st.buffer.text(),
+                                caret,
+                                TextBoundaryMode::Identifier,
+                            );
+                            st.selection = Selection {
+                                anchor: start,
+                                focus: end,
+                            };
+                        }
+                        3 => {
+                            if let Some(range) = st.buffer.line_byte_range_including_newline(row) {
+                                st.selection = Selection {
+                                    anchor: range.start,
+                                    focus: range.end,
+                                };
+                            }
+                        }
+                        _ => {
+                            if down.modifiers.shift {
+                                st.selection.focus = caret;
+                            } else {
+                                st.selection = Selection {
+                                    anchor: caret,
+                                    focus: caret,
+                                };
+                            }
+                        }
                     }
                     st.preedit = None;
 
@@ -346,6 +394,78 @@ impl CodeEditor {
                             return true;
                         }
                         false
+                    },
+                ),
+            );
+
+            let cmd_state = editor_state.clone();
+            let cmd_scroll = scroll_handle.clone();
+            let cmd_cell_w = cell_w.clone();
+            cx.command_on_command_for(
+                region_id,
+                Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiFocusActionHost,
+                          action_cx: ActionCx,
+                          command| {
+                        let mut st = cmd_state.borrow_mut();
+                        let mut did = false;
+                        match command.as_str() {
+                            "edit.undo" => {
+                                did = undo(&mut st);
+                            }
+                            "edit.redo" => {
+                                did = redo(&mut st);
+                            }
+                            "text.select_all" => {
+                                let end = st.buffer.len_bytes();
+                                st.selection = Selection {
+                                    anchor: 0,
+                                    focus: end,
+                                };
+                                st.preedit = None;
+                                did = true;
+                            }
+                            "text.copy" => {
+                                copy_selection(host, &st);
+                                did = true;
+                            }
+                            "text.cut" => {
+                                if cut_selection(host, &mut st) {
+                                    did = true;
+                                }
+                            }
+                            "text.paste" => {
+                                request_paste(host, action_cx);
+                                did = true;
+                            }
+                            "text.move_word_left" => {
+                                did = move_word(&mut st, -1, false);
+                            }
+                            "text.move_word_right" => {
+                                did = move_word(&mut st, 1, false);
+                            }
+                            "text.select_word_left" => {
+                                did = move_word(&mut st, -1, true);
+                            }
+                            "text.select_word_right" => {
+                                did = move_word(&mut st, 1, true);
+                            }
+                            _ => return false,
+                        }
+
+                        if did {
+                            push_caret_rect_effect(
+                                host,
+                                action_cx,
+                                &st,
+                                row_h,
+                                cmd_cell_w.get(),
+                                &cmd_scroll,
+                            );
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                        }
+                        true
                     },
                 ),
             );
@@ -680,19 +800,18 @@ fn insert_text(st: &mut CodeEditorState, text: &str) -> Option<()> {
     let range = st.selection.normalized();
     let start = range.start.min(st.buffer.len_bytes());
     let end = range.end.min(st.buffer.len_bytes());
-    let _ = st
-        .buffer
-        .apply(Edit::Replace {
+    let caret = start.saturating_add(text.len()).min(st.buffer.len_bytes());
+    apply_and_record_edit(
+        st,
+        Edit::Replace {
             range: start..end,
             text: text.to_string(),
-        })
-        .ok()?;
-
-    let caret = start.saturating_add(text.len()).min(st.buffer.len_bytes());
-    st.selection = Selection {
-        anchor: caret,
-        focus: caret,
-    };
+        },
+        Selection {
+            anchor: caret,
+            focus: caret,
+        },
+    )?;
     Some(())
 }
 
@@ -805,11 +924,14 @@ fn delete_backward(st: &mut CodeEditorState) {
     let start = range.start.min(st.buffer.len_bytes());
     let end = range.end.min(st.buffer.len_bytes());
     if start != end {
-        let _ = st.buffer.apply(Edit::Delete { range: start..end });
-        st.selection = Selection {
-            anchor: start,
-            focus: start,
-        };
+        let _ = apply_and_record_edit(
+            st,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
         return;
     }
 
@@ -818,11 +940,14 @@ fn delete_backward(st: &mut CodeEditorState) {
         return;
     }
     let prev = prev_char_boundary(st.buffer.text(), caret);
-    let _ = st.buffer.apply(Edit::Delete { range: prev..caret });
-    st.selection = Selection {
-        anchor: prev,
-        focus: prev,
-    };
+    let _ = apply_and_record_edit(
+        st,
+        Edit::Delete { range: prev..caret },
+        Selection {
+            anchor: prev,
+            focus: prev,
+        },
+    );
 }
 
 fn delete_forward(st: &mut CodeEditorState) {
@@ -830,11 +955,14 @@ fn delete_forward(st: &mut CodeEditorState) {
     let start = range.start.min(st.buffer.len_bytes());
     let end = range.end.min(st.buffer.len_bytes());
     if start != end {
-        let _ = st.buffer.apply(Edit::Delete { range: start..end });
-        st.selection = Selection {
-            anchor: start,
-            focus: start,
-        };
+        let _ = apply_and_record_edit(
+            st,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
         return;
     }
 
@@ -843,11 +971,14 @@ fn delete_forward(st: &mut CodeEditorState) {
     if next == caret {
         return;
     }
-    let _ = st.buffer.apply(Edit::Delete { range: caret..next });
-    st.selection = Selection {
-        anchor: caret,
-        focus: caret,
-    };
+    let _ = apply_and_record_edit(
+        st,
+        Edit::Delete { range: caret..next },
+        Selection {
+            anchor: caret,
+            focus: caret,
+        },
+    );
 }
 
 fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
@@ -894,6 +1025,129 @@ fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool) {
             focus: next,
         };
     }
+}
+
+fn apply_and_record_edit(
+    st: &mut CodeEditorState,
+    edit: Edit,
+    next_selection: Selection,
+) -> Option<()> {
+    let before_selection = st.selection;
+    let inverse_edit = match &edit {
+        Edit::Insert { at, text } => Edit::Delete {
+            range: (*at)..at.saturating_add(text.len()),
+        },
+        Edit::Delete { range } => Edit::Insert {
+            at: range.start,
+            text: st.buffer.text().get(range.clone())?.to_string(),
+        },
+        Edit::Replace { range, text } => Edit::Replace {
+            range: range.start..range.start.saturating_add(text.len()),
+            text: st.buffer.text().get(range.clone())?.to_string(),
+        },
+    };
+
+    st.preedit = None;
+    st.buffer.apply(edit.clone()).ok()?;
+    st.selection = next_selection;
+    st.undo.record(UndoRecord::new(CodeEditorTx {
+        edit,
+        selection: next_selection,
+        inverse_edit,
+        inverse_selection: before_selection,
+    }));
+    Some(())
+}
+
+fn undo(st: &mut CodeEditorState) -> bool {
+    let (buffer, selection, preedit, history) = (
+        &mut st.buffer,
+        &mut st.selection,
+        &mut st.preedit,
+        &mut st.undo,
+    );
+    let mut applied = false;
+    let _ = history.undo_invertible(|record| {
+        *preedit = None;
+        if buffer.apply(record.tx.edit.clone()).is_ok() {
+            *selection = record.tx.selection;
+            applied = true;
+        }
+        Ok::<_, ()>(())
+    });
+    applied
+}
+
+fn redo(st: &mut CodeEditorState) -> bool {
+    let (buffer, selection, preedit, history) = (
+        &mut st.buffer,
+        &mut st.selection,
+        &mut st.preedit,
+        &mut st.undo,
+    );
+    let mut applied = false;
+    let _ = history.redo_invertible(|record| {
+        *preedit = None;
+        if buffer.apply(record.tx.edit.clone()).is_ok() {
+            *selection = record.tx.selection;
+            applied = true;
+        }
+        Ok::<_, ()>(())
+    });
+    applied
+}
+
+fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
+    let text = st.buffer.text();
+    let mode = TextBoundaryMode::Identifier;
+
+    let (sel_start, sel_end) = {
+        let r = st.selection.normalized();
+        (r.start, r.end)
+    };
+    let mut caret = st.selection.caret().min(st.buffer.len_bytes());
+    if !st.selection.is_caret() && !extend {
+        caret = if dir < 0 { sel_start } else { sel_end };
+    }
+
+    let next = if dir < 0 {
+        move_word_left(text, caret, mode)
+    } else {
+        move_word_right(text, caret, mode)
+    };
+
+    if extend {
+        if st.selection.is_caret() {
+            st.selection.anchor = caret;
+        }
+        st.selection.focus = next;
+    } else {
+        st.selection = Selection {
+            anchor: next,
+            focus: next,
+        };
+    }
+    st.preedit = None;
+    true
+}
+
+fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool {
+    let range = st.selection.normalized();
+    if range.is_empty() {
+        return false;
+    }
+    copy_selection(host, st);
+    let start = range.start.min(st.buffer.len_bytes());
+    let end = range.end.min(st.buffer.len_bytes());
+    apply_and_record_edit(
+        st,
+        Edit::Delete { range: start..end },
+        Selection {
+            anchor: start,
+            focus: start,
+        },
+    )
+    .is_some()
 }
 
 fn paint_row(
