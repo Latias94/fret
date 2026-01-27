@@ -967,6 +967,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             .collect(),
                         Some(BuiltinSuite::UiGallery),
                     )
+                } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
                 } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
                     (
                         docking_arbitration_suite_scripts()
@@ -983,6 +993,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         None,
                     )
                 };
+ 
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -1074,20 +1085,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     }
                 }
 
-                if result.stage.as_deref() == Some("passed")
-                    && (check_stale_paint_test_id.is_some()
-                        || check_wheel_scroll_test_id.is_some()
-                        || check_drag_cache_root_paint_only_test_id.is_some()
-                        || check_hover_layout_max.is_some()
-                        || check_gc_sweep_liveness
-                        || check_view_cache_reuse_min.is_some()
-                        || check_overlay_synthesis_min.is_some()
-                        || check_viewport_input_min.is_some()
-                        || check_dock_drag_min.is_some()
-                        || check_viewport_capture_min.is_some()
-                        || check_retained_vlist_reconcile_no_notify_min.is_some()
-                        || builtin_suite == Some(BuiltinSuite::DockingArbitration))
-                {
+                let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min
+                    .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
+                    || check_wheel_scroll_test_id.is_some()
+                    || check_drag_cache_root_paint_only_test_id.is_some()
+                    || check_hover_layout_max.is_some()
+                    || check_gc_sweep_liveness
+                    || check_view_cache_reuse_min.is_some()
+                    || check_overlay_synthesis_min.is_some()
+                    || check_viewport_input_min.is_some()
+                    || check_dock_drag_min.is_some()
+                    || check_viewport_capture_min.is_some()
+                    || retained_vlist_gate_for_script.is_some();
+
+                let wants_post_run_checks_for_script = wants_post_run_checks_for_script
+                    || builtin_suite == Some(BuiltinSuite::DockingArbitration);
+
+                if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
                         &result,
@@ -1120,7 +1135,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_viewport_input_min.or(suite_viewport_input_min),
                         check_dock_drag_min.or(suite_dock_drag_min),
                         check_viewport_capture_min.or(suite_viewport_capture_min),
-                        check_retained_vlist_reconcile_no_notify_min,
+                        retained_vlist_gate_for_script,
                         warmup_frames,
                     )?;
                 }
@@ -2662,6 +2677,15 @@ fn docking_arbitration_script_default_gates(
         }
         _ => (None, None, None),
     }
+fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+    )
 }
 
 fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {
