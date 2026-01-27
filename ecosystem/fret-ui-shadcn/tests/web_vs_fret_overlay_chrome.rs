@@ -61,6 +61,8 @@ struct WebNode {
     attrs: BTreeMap<String, String>,
     #[serde(default)]
     active: bool,
+    #[serde(rename = "activeDescendant", default)]
+    active_descendant: bool,
     rect: WebRect,
     #[serde(rename = "computedStyle", default)]
     computed_style: BTreeMap<String, String>,
@@ -811,6 +813,28 @@ fn leftish_text_probe_point(bounds: Rect) -> Point {
         Px(bounds.origin.x.0 + 40.0),
         Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
     )
+}
+
+fn fret_find_active_listbox_option<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+) -> Option<&'a fret_core::SemanticsNode> {
+    if let Some(focused) = snap
+        .nodes
+        .iter()
+        .find(|n| n.flags.focused && n.role == SemanticsRole::ListBoxOption)
+    {
+        return Some(focused);
+    }
+
+    for owner in snap.nodes.iter().filter(|n| n.active_descendant.is_some()) {
+        let active_id = owner.active_descendant?;
+        let target = snap.nodes.iter().find(|n| n.id == active_id)?;
+        if target.role == SemanticsRole::ListBoxOption {
+            return Some(target);
+        }
+    }
+
+    None
 }
 
 fn assert_overlay_chrome_matches(
@@ -2750,25 +2774,40 @@ fn web_find_active_element<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
         node.rect.w * node.rect.h
     }
 
-    fn collect<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+    fn collect<'a>(
+        node: &'a WebNode,
+        active_descendants: &mut Vec<&'a WebNode>,
+        actives: &mut Vec<&'a WebNode>,
+    ) {
+        if node.active_descendant {
+            active_descendants.push(node);
+        }
         if node.active {
-            out.push(node);
+            actives.push(node);
         }
         for child in &node.children {
-            collect(child, out);
+            collect(child, active_descendants, actives);
         }
     }
 
-    let mut candidates: Vec<&WebNode> = Vec::new();
-    collect(&theme.root, &mut candidates);
+    let mut active_descendants: Vec<&WebNode> = Vec::new();
+    let mut actives: Vec<&WebNode> = Vec::new();
+    collect(&theme.root, &mut active_descendants, &mut actives);
     for portal in &theme.portals {
-        collect(portal, &mut candidates);
+        collect(portal, &mut active_descendants, &mut actives);
     }
     for wrapper in &theme.portal_wrappers {
-        collect(wrapper, &mut candidates);
+        collect(wrapper, &mut active_descendants, &mut actives);
     }
 
-    candidates
+    if let Some(best) = active_descendants
+        .into_iter()
+        .max_by(|a, b| node_area(a).total_cmp(&node_area(b)))
+    {
+        return best;
+    }
+
+    actives
         .into_iter()
         .max_by(|a, b| node_area(a).total_cmp(&node_area(b)))
         .expect("web activeElement")
@@ -4247,6 +4286,247 @@ fn web_vs_fret_command_dialog_panel_chrome_matches() {
                 .into_element(cx, |cx| Button::new("Open").into_element(cx))
         },
     );
+}
+
+fn assert_command_dialog_focused_item_chrome_matches_web(web_theme_name: &str) {
+    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+
+    let web = read_web_golden_open("command-dialog.focus-first");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let scheme = match web_theme_name {
+        "dark" => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        _ => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    };
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            #[derive(Default)]
+            struct Models {
+                query: Option<Model<String>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.query.clone());
+            let query = if let Some(existing) = existing {
+                existing
+            } else {
+                let model = cx.app.models_mut().insert(String::new());
+                cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+                model
+            };
+
+            let items = vec![
+                CommandItem::new("Calendar"),
+                CommandItem::new("Search Emoji"),
+                CommandItem::new("Calculator"),
+            ];
+
+            vec![
+                CommandDialog::new(open.clone(), query, items)
+                    .into_element(cx, |cx| Button::new("Open").into_element(cx)),
+            ]
+        },
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            tick + 1 == settle_frames,
+            |cx| {
+                #[derive(Default)]
+                struct Models {
+                    query: Option<Model<String>>,
+                }
+
+                let existing = cx.with_state(Models::default, |st| st.query.clone());
+                let query = if let Some(existing) = existing {
+                    existing
+                } else {
+                    let model = cx.app.models_mut().insert(String::new());
+                    cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+                    model
+                };
+
+                let items = vec![
+                    CommandItem::new("Calendar"),
+                    CommandItem::new("Search Emoji"),
+                    CommandItem::new("Calculator"),
+                ];
+
+                vec![
+                    CommandDialog::new(open.clone(), query, items)
+                        .into_element(cx, |cx| Button::new("Open").into_element(cx)),
+                ]
+            },
+        );
+    }
+
+    let (snap, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    if let Some(text_field) = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::TextField)
+        .max_by(|a, b| rect_area(a.bounds).total_cmp(&rect_area(b.bounds)))
+    {
+        ui.set_focus(Some(text_field.id));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + settle_frames),
+            true,
+            |cx| {
+                #[derive(Default)]
+                struct Models {
+                    query: Option<Model<String>>,
+                }
+
+                let existing = cx.with_state(Models::default, |st| st.query.clone());
+                let query = if let Some(existing) = existing {
+                    existing
+                } else {
+                    let model = cx.app.models_mut().insert(String::new());
+                    cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+                    model
+                };
+
+                let items = vec![
+                    CommandItem::new("Calendar"),
+                    CommandItem::new("Search Emoji"),
+                    CommandItem::new("Calculator"),
+                ];
+
+                vec![
+                    CommandDialog::new(open.clone(), query, items)
+                        .into_element(cx, |cx| Button::new("Open").into_element(cx)),
+                ]
+            },
+        );
+    }
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3 + settle_frames),
+        true,
+        |cx| {
+            #[derive(Default)]
+            struct Models {
+                query: Option<Model<String>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.query.clone());
+            let query = if let Some(existing) = existing {
+                existing
+            } else {
+                let model = cx.app.models_mut().insert(String::new());
+                cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+                model
+            };
+
+            let items = vec![
+                CommandItem::new("Calendar"),
+                CommandItem::new("Search Emoji"),
+                CommandItem::new("Calculator"),
+            ];
+
+            vec![
+                CommandDialog::new(open.clone(), query, items)
+                    .into_element(cx, |cx| Button::new("Open").into_element(cx)),
+            ]
+        },
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let option = fret_find_active_listbox_option(&snap).unwrap_or_else(|| {
+        let focused_roles: Vec<SemanticsRole> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.flags.focused)
+            .map(|n| n.role)
+            .collect();
+        let active_owner_roles: Vec<SemanticsRole> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.active_descendant.is_some())
+            .map(|n| n.role)
+            .collect();
+        panic!(
+            "command-dialog {web_theme_name}: expected active listbox option\n  focused_roles={focused_roles:?}\n  active_descendant_owner_roles={active_owner_roles:?}"
+        )
+    });
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, option.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("command-dialog {web_theme_name}: focused option background quad")
+        });
+    assert_rgba_close(
+        &format!("command-dialog {web_theme_name} focused option background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        option.bounds,
+        leftish_text_probe_point(option.bounds),
+    )
+    .unwrap_or_else(|| panic!("command-dialog {web_theme_name}: focused option text color"));
+    assert_rgba_close(
+        &format!("command-dialog {web_theme_name} focused option text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_command_dialog_focused_item_chrome_matches_web() {
+    assert_command_dialog_focused_item_chrome_matches_web("light");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_focused_item_chrome_matches_web_dark() {
+    assert_command_dialog_focused_item_chrome_matches_web("dark");
 }
 
 #[test]
@@ -8532,48 +8812,73 @@ fn assert_listbox_focused_option_chrome_matches_web(
         );
     }
 
-    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
-    let option = snap
-        .nodes
-        .iter()
-        .find(|n| n.flags.focused && n.role == SemanticsRole::ListBoxOption)
-        .or_else(|| {
-            // Some widgets use an aria-activedescendant model where the listbox retains focus and
-            // the active option is indicated via `active_descendant`.
-            let focused_listbox = snap
-                .nodes
-                .iter()
-                .find(|n| n.flags.focused && n.role == SemanticsRole::ListBox)
-                .or_else(|| {
-                    snap.nodes
-                        .iter()
-                        .find(|n| n.role == SemanticsRole::ListBox && n.active_descendant.is_some())
-                });
+    let (mut snap, mut scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    if fret_find_active_listbox_option(&snap).is_none() {
+        // If the trigger key path did not produce an active item (some pages open via click and
+        // move focus into an inner text field), force the open state and drive ArrowDown on the
+        // first text field inside the overlay.
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        for tick in 0..settle_frames {
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                FrameId(3 + settle_frames + tick),
+                tick + 1 == settle_frames,
+                |cx| vec![build(cx, &open)],
+            );
+        }
 
-            let listbox = focused_listbox?;
-            let active_id = listbox.active_descendant?;
-            snap.nodes
-                .iter()
-                .find(|n| n.id == active_id && n.role == SemanticsRole::ListBoxOption)
-        })
-        .unwrap_or_else(|| {
-            let focused_roles: Vec<SemanticsRole> =
-                snap.nodes.iter().filter(|n| n.flags.focused).map(|n| n.role).collect();
-            let focused_listbox_active = snap
-                .nodes
-                .iter()
-                .find(|n| n.flags.focused && n.role == SemanticsRole::ListBox)
-                .and_then(|n| n.active_descendant);
-            let listbox_count = snap.nodes.iter().filter(|n| n.role == SemanticsRole::ListBox).count();
-            let option_count = snap
-                .nodes
-                .iter()
-                .filter(|n| n.role == SemanticsRole::ListBoxOption)
-                .count();
-            panic!(
-                "expected focused listbox option semantics node (or listbox active_descendant)\n  listbox_count={listbox_count}\n  option_count={option_count}\n  focused_roles={focused_roles:?}\n  focused_listbox_active_descendant={focused_listbox_active:?}"
-            )
-        });
+        let (snap2, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+        if let Some(text_field) = snap2
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::TextField)
+            .max_by(|a, b| rect_area(a.bounds).total_cmp(&rect_area(b.bounds)))
+        {
+            ui.set_focus(Some(text_field.id));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                FrameId(3 + settle_frames + settle_frames),
+                true,
+                |cx| vec![build(cx, &open)],
+            );
+            dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        }
+
+        (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    }
+
+    let option = fret_find_active_listbox_option(&snap).unwrap_or_else(|| {
+        let focused_roles: Vec<SemanticsRole> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.flags.focused)
+            .map(|n| n.role)
+            .collect();
+        let listbox_count = snap.nodes.iter().filter(|n| n.role == SemanticsRole::ListBox).count();
+        let option_count = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::ListBoxOption)
+            .count();
+        let active_owner_roles: Vec<SemanticsRole> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.active_descendant.is_some())
+            .map(|n| n.role)
+            .collect();
+        panic!(
+            "expected focused listbox option semantics node (or any active_descendant -> option)\n  listbox_count={listbox_count}\n  option_count={option_count}\n  focused_roles={focused_roles:?}\n  active_descendant_owner_roles={active_owner_roles:?}"
+        )
+    });
 
     let quad = find_best_solid_quad_within_matching_bg(&scene, option.bounds, expected.bg)
         .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused option background quad"));
@@ -8639,6 +8944,28 @@ fn web_vs_fret_select_scrollable_focused_option_chrome_matches_web_dark() {
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         build_shadcn_select_scrollable_page,
         "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_focused_option_chrome_matches_web() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "combobox-demo.focus-first",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_combobox_demo_page,
+        "Select a fruit",
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_focused_option_chrome_matches_web_dark() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "combobox-demo.focus-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_combobox_demo_page,
+        "Select a fruit",
     );
 }
 

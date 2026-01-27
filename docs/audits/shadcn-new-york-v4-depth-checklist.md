@@ -74,7 +74,7 @@ Evidence anchors:
 - Scroll button height: **Gated**
 - Constrained viewport variants: **Gated** (e.g. `select-scrollable.vp1440x240`, `combobox-demo.vp1440x240`)
 - Hovered/active option chrome: **Gated** (`*.highlight-first.open.json`)
-- Keyboard focus (active option) chrome: **Partially gated** (Select via `*.focus-first.open.json`; Combobox pending aria-activedescendant harness)
+- Keyboard focus (active option) chrome: **Gated** (`*.focus-first.open.json`, including cmdk/aria-activedescendant)
 
 Evidence anchors:
 
@@ -88,11 +88,15 @@ Evidence anchors:
   - `goldens/shadcn-web/v4/new-york-v4/combobox-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/select-demo.focus-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/select-scrollable.focus-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/combobox-demo.focus-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/command-dialog.focus-first.open.json`
 - Gates (state): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_select_demo_highlighted_option_chrome_matches_web`,
   `web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web`,
   `web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web`,
-  `web_vs_fret_select_demo_focused_option_chrome_matches_web`, and `*_dark` variants)
+  `web_vs_fret_select_demo_focused_option_chrome_matches_web`,
+  `web_vs_fret_combobox_demo_focused_option_chrome_matches_web`,
+  `web_vs_fret_command_dialog_focused_item_chrome_matches_web`, and `*_dark` variants)
 
 ## Charts (wrapper UI + interaction snapshots)
 
