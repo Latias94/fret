@@ -106,6 +106,7 @@ struct Node<H: UiHost> {
     prepaint_hit_test: Option<PrepaintHitTestCache>,
     view_cache: ViewCacheFlags,
     view_cache_needs_rerender: bool,
+    text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
 }
 
 #[derive(Debug, Clone)]
@@ -144,6 +145,7 @@ impl<H: UiHost> Node<H> {
             prepaint_hit_test: None,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
+            text_boundary_mode_override: None,
         }
     }
 
@@ -3729,6 +3731,23 @@ impl<H: UiHost> UiTree<H> {
 
             self.cleanup_node_resources(services, node);
         }
+    }
+
+    pub(crate) fn set_node_text_boundary_mode_override(
+        &mut self,
+        node: NodeId,
+        mode: Option<fret_runtime::TextBoundaryMode>,
+    ) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.text_boundary_mode_override = mode;
+        }
+    }
+
+    fn focus_text_boundary_mode_override(&self) -> Option<fret_runtime::TextBoundaryMode> {
+        let focus = self.focus?;
+        self.nodes
+            .get(focus)
+            .and_then(|n| n.text_boundary_mode_override)
     }
 
     fn cleanup_node_resources(&mut self, services: &mut dyn UiServices, node: NodeId) {

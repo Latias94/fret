@@ -1343,6 +1343,27 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         })
     }
 
+    #[track_caller]
+    pub fn text_input_region<I>(
+        &mut self,
+        props: crate::element::TextInputRegionProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.text_input_region_clear_on_text_input();
+            cx.text_input_region_clear_on_ime();
+            cx.text_input_region_clear_on_clipboard_text();
+            cx.text_input_region_clear_on_clipboard_unavailable();
+            cx.text_input_region_clear_on_set_selection();
+            let children = f(cx).into_iter().collect();
+            cx.new_any_element(id, ElementKind::TextInputRegion(props), children)
+        })
+    }
+
     pub fn internal_drag_region<I>(
         &mut self,
         props: crate::element::InternalDragRegionProps,
@@ -1524,6 +1545,108 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.with_state(PointerActionHooks::default, |hooks| {
             hooks.on_pinch_gesture = None;
         });
+    }
+
+    pub fn text_input_region_on_text_input(
+        &mut self,
+        handler: crate::action::OnTextInputRegionTextInput,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_text_input = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_text_input(&mut self) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_text_input = None;
+            },
+        );
+    }
+
+    pub fn text_input_region_on_ime(&mut self, handler: crate::action::OnTextInputRegionIme) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_ime = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_ime(&mut self) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_ime = None;
+            },
+        );
+    }
+
+    pub fn text_input_region_on_clipboard_text(
+        &mut self,
+        handler: crate::action::OnTextInputRegionClipboardText,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_clipboard_text = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_clipboard_text(&mut self) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_clipboard_text = None;
+            },
+        );
+    }
+
+    pub fn text_input_region_on_clipboard_unavailable(
+        &mut self,
+        handler: crate::action::OnTextInputRegionClipboardUnavailable,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_clipboard_unavailable = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_clipboard_unavailable(&mut self) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_clipboard_unavailable = None;
+            },
+        );
+    }
+
+    pub fn text_input_region_on_set_selection(
+        &mut self,
+        handler: crate::action::OnTextInputRegionSetSelection,
+    ) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_set_selection = Some(handler);
+            },
+        );
+    }
+
+    pub fn text_input_region_clear_on_set_selection(&mut self) {
+        self.with_state(
+            crate::action::TextInputRegionActionHooks::default,
+            |hooks| {
+                hooks.on_set_selection = None;
+            },
+        );
     }
 
     pub fn key_on_key_down_for(&mut self, element: GlobalElementId, handler: OnKeyDown) {
