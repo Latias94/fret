@@ -732,8 +732,13 @@ pub fn render<H: UiHost>(
             let focus_in_layer = layer
                 .is_some_and(|layer| focus_now.is_some_and(|n| ui.node_layer(n) == Some(layer)));
             let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
-            if (!focus_cleared_by_modal_scope && focus_now.is_none()) || focus_in_layer {
-                let mut close_auto_focus_prevented = false;
+            let focus_on_trigger = fret_ui::elements::node_for_element(app, window, trigger)
+                .is_some_and(|node| focus_now == Some(node));
+            let should_run_close_auto_focus =
+                focus_in_layer || focus_on_trigger || (!focus_cleared_by_modal_scope && focus_now.is_none());
+
+            let mut close_auto_focus_prevented = false;
+            if should_run_close_auto_focus {
                 if let Some(on_close_auto_focus) = on_close_auto_focus.as_ref() {
                     let mut host = OverlayFocusActionHostAdapter { app, ui, window };
                     let mut req_cx = AutoFocusRequestCx::new();
@@ -747,24 +752,26 @@ pub fn render<H: UiHost>(
                     );
                     close_auto_focus_prevented = req_cx.default_prevented();
                 }
+            }
 
-                if !close_auto_focus_prevented {
-                    let restore_focus =
-                        app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
-                            overlays
-                                .popovers
-                                .get(&key)
-                                .and_then(|entry| entry.restore_focus)
-                        });
-                    if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
-                        ui,
-                        app,
-                        window,
-                        Some(trigger),
-                        restore_focus,
-                    ) {
-                        ui.set_focus(Some(node));
-                    }
+            if (!close_auto_focus_prevented)
+                && (((!focus_cleared_by_modal_scope && focus_now.is_none()) || focus_in_layer))
+            {
+                let restore_focus =
+                    app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                        overlays
+                            .popovers
+                            .get(&key)
+                            .and_then(|entry| entry.restore_focus)
+                    });
+                if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                    ui,
+                    app,
+                    window,
+                    Some(trigger),
+                    restore_focus,
+                ) {
+                    ui.set_focus(Some(node));
                 }
             }
         }

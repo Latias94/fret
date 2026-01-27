@@ -210,7 +210,10 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                 WidgetStates::HOVERED,
                 token("accent", ColorFallback::ThemeHoverBackground),
             )
-            .when(WidgetStates::ACTIVE, token("accent", ColorFallback::ThemeHoverBackground)),
+            .when(
+                WidgetStates::ACTIVE,
+                token("accent", ColorFallback::ThemeHoverBackground),
+            ),
             border_color: WidgetStateProperty::new(token(
                 "border",
                 ColorFallback::ThemePanelBorder,
@@ -230,7 +233,10 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                     WidgetStates::HOVERED,
                     token("accent", ColorFallback::ThemeHoverBackground),
                 )
-                .when(WidgetStates::ACTIVE, token("accent", ColorFallback::ThemeHoverBackground)),
+                .when(
+                    WidgetStates::ACTIVE,
+                    token("accent", ColorFallback::ThemeHoverBackground),
+                ),
             border_color: WidgetStateProperty::new(transparent.clone()),
             foreground: WidgetStateProperty::new(token(
                 "foreground",
