@@ -19,8 +19,8 @@ use std::sync::Arc;
 use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, HoverRegionProps, Overflow, PointerRegionProps, SemanticsProps,
-    SpinnerProps, SvgIconProps,
+    AnyElement, ElementKind, Elements, HoverRegionProps, Overflow, PointerRegionProps,
+    SemanticsProps, SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -185,11 +185,25 @@ impl TooltipProvider {
         self
     }
 
-    pub fn with<H: UiHost>(
+    pub fn with<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> Vec<AnyElement> {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Vec<AnyElement>
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.with_elements(cx, f).into_vec()
+    }
+
+    pub fn with_elements<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         tooltip_provider::with_tooltip_provider(
             cx,
             tooltip_provider::TooltipProviderConfig::new(
@@ -197,7 +211,7 @@ impl TooltipProvider {
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            f,
+            |cx| f(cx).into_iter().collect::<Elements>(),
         )
     }
 }
@@ -1193,7 +1207,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(1)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -1739,7 +1753,7 @@ mod tests {
                         TooltipProvider::new()
                             .delay_duration_frames(10)
                             .skip_delay_duration_frames(30)
-                            .with(cx, |cx| {
+                            .with_elements(cx, |cx| {
                                 vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                                     let trigger_1 = cx.pressable_with_id(
                                         PressableProps {
@@ -1960,7 +1974,7 @@ mod tests {
                         TooltipProvider::new()
                             .delay_duration_frames(0)
                             .skip_delay_duration_frames(0)
-                            .with(cx, |cx| {
+                            .with_elements(cx, |cx| {
                                 vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                                     let trigger_1 = cx.pressable_with_id(
                                         PressableProps {
@@ -2230,7 +2244,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -2420,7 +2434,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -2611,7 +2625,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let scroll = cx.scroll(
                                 fret_ui::element::ScrollProps {
                                     layout: {
@@ -2841,7 +2855,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let mut flex_layout = LayoutStyle::default();
                             flex_layout.size.width = Length::Px(Px(800.0));
                             flex_layout.size.height = Length::Px(Px(600.0));
@@ -3117,7 +3131,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -3290,7 +3304,7 @@ mod tests {
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
                         .disable_hoverable_content(false)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             vec![cx.row(
                                 fret_ui::element::RowProps {
                                     gap: Px(20.0),
@@ -3530,7 +3544,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {

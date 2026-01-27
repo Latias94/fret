@@ -7,8 +7,8 @@ use fret_runtime::{
     WindowCommandGatingService, WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
-    PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
+    AnyElement, ContainerProps, Elements, FlexProps, LayoutStyle, Length, MainAlign,
+    PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
     VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
@@ -207,8 +207,8 @@ impl NavigationMenuTrigger {
         }
     }
 
-    pub fn children(self) -> Vec<AnyElement> {
-        self.children
+    pub fn children(self) -> Elements {
+        Elements::from(self.children)
     }
 }
 
@@ -386,8 +386,8 @@ impl NavigationMenuContent {
         }
     }
 
-    pub fn children(self) -> Vec<AnyElement> {
-        self.children
+    pub fn children(self) -> Elements {
+        Elements::from(self.children)
     }
 }
 
@@ -404,8 +404,9 @@ impl NavigationMenuItem {
     pub fn new(
         value: impl Into<Arc<str>>,
         label: impl Into<Arc<str>>,
-        content: Vec<AnyElement>,
+        content: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
+        let content = content.into_iter().collect();
         Self {
             value: value.into(),
             label: label.into(),
@@ -421,7 +422,7 @@ impl NavigationMenuItem {
     }
 
     pub fn trigger(mut self, trigger: NavigationMenuTrigger) -> Self {
-        self.trigger = Some(trigger.children());
+        self.trigger = Some(trigger.children().into_vec());
         self
     }
 
@@ -431,7 +432,7 @@ impl NavigationMenuItem {
     }
 
     pub fn content(mut self, content: NavigationMenuContent) -> Self {
-        self.content = content.children();
+        self.content = content.children().into_vec();
         self
     }
 
@@ -451,12 +452,14 @@ pub struct NavigationMenuList {
 }
 
 impl NavigationMenuList {
-    pub fn new(items: Vec<NavigationMenuItem>) -> Self {
-        Self { items }
+    pub fn new(items: impl IntoIterator<Item = NavigationMenuItem>) -> Self {
+        Self {
+            items: items.into_iter().collect(),
+        }
     }
 
-    pub fn items(mut self, items: Vec<NavigationMenuItem>) -> Self {
-        self.items = items;
+    pub fn items(mut self, items: impl IntoIterator<Item = NavigationMenuItem>) -> Self {
+        self.items = items.into_iter().collect();
         self
     }
 
@@ -558,8 +561,8 @@ impl NavigationMenu {
         }
     }
 
-    pub fn items(mut self, items: Vec<NavigationMenuItem>) -> Self {
-        self.items = items;
+    pub fn items(mut self, items: impl IntoIterator<Item = NavigationMenuItem>) -> Self {
+        self.items = items.into_iter().collect();
         self
     }
 
@@ -1323,26 +1326,35 @@ impl NavigationMenu {
     }
 }
 
-pub fn navigation_menu<H: UiHost>(
+pub fn navigation_menu<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = NavigationMenuItem>,
+{
     NavigationMenu::new(model).items(f(cx)).into_element(cx)
 }
 
-pub fn navigation_menu_list<H: UiHost>(
+pub fn navigation_menu_list<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
-) -> NavigationMenuList {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> NavigationMenuList
+where
+    I: IntoIterator<Item = NavigationMenuItem>,
+{
     NavigationMenuList::new(f(cx))
 }
 
-pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = NavigationMenuItem>,
+{
     NavigationMenu::uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)

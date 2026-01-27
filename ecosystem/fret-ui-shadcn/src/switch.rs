@@ -17,7 +17,7 @@ use fret_ui_kit::primitives::switch::{
     switch_a11y, switch_checked_from_optional_bool, switch_use_checked_model, toggle_optional_bool,
 };
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, WidgetState,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverrideSlot, Radius, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
 
@@ -275,8 +275,8 @@ impl Switch {
                     .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
             let layout = LayoutRefinement::default()
-                .w_px(MetricRef::Px(w))
-                .h_px(MetricRef::Px(h))
+                .w_px(w)
+                .h_px(h)
                 .merge(self.layout);
             let pressable_layout = decl_style::layout_style(&theme, layout);
 

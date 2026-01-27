@@ -4574,7 +4574,7 @@ fn radix_web_scroll_area_scroll_top_delta_matches_fret() {
                 .refine_layout(
                     fret_ui_shadcn::prelude::LayoutRefinement::default()
                         .w_full()
-                        .h_px(fret_ui_shadcn::prelude::MetricRef::Px(Px(200.0))),
+                        .h_px(Px(200.0)),
                 )
                 .into_element(cx),
         ]

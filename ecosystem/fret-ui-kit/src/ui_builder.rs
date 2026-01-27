@@ -341,6 +341,14 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
         self.style_with(|c| c.rounded(radius))
     }
 
+    pub fn border_width(self, width: impl Into<MetricRef>) -> Self {
+        self.style_with(|c| c.border_width(width))
+    }
+
+    pub fn radius(self, radius: impl Into<MetricRef>) -> Self {
+        self.style_with(|c| c.radius(radius))
+    }
+
     pub fn bg(self, color: ColorRef) -> Self {
         self.style_with(|c| c.bg(color))
     }
@@ -745,6 +753,73 @@ impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
     }
 }
 
+impl<H, B> UiBuilder<crate::ui::FlexBoxBuild<H, B>> {
+    pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
+        self.inner.gap = gap.into();
+        self
+    }
+
+    pub fn gap_px(self, gap: Px) -> Self {
+        self.gap(gap)
+    }
+
+    pub fn gap_metric(self, gap: MetricRef) -> Self {
+        self.gap(gap)
+    }
+
+    pub fn justify(mut self, justify: Justify) -> Self {
+        self.inner.justify = justify;
+        self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
+    pub fn items(mut self, items: Items) -> Self {
+        self.inner.items = items;
+        self
+    }
+
+    pub fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
+    }
+
+    pub fn wrap(mut self) -> Self {
+        self.inner.wrap = true;
+        self
+    }
+
+    pub fn no_wrap(mut self) -> Self {
+        self.inner.wrap = false;
+        self
+    }
+}
+
 impl<H, F> UiBuilder<crate::ui::ScrollAreaBox<H, F>> {
     pub fn axis(mut self, axis: ScrollAxis) -> Self {
         self.inner.axis = axis;
@@ -781,6 +856,15 @@ impl<H: UiHost, F, I> UiBuilder<crate::ui::FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiBuilder<crate::ui::FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
@@ -889,7 +973,7 @@ mod tests {
         let dummy = Dummy::default()
             .ui()
             .style_with(|mut c| {
-                c.min_height = Some(MetricRef::Px(Px(40.0)));
+                c.min_height = Some(Px(40.0).into());
                 c
             })
             .build();

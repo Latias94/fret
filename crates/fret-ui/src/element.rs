@@ -1645,6 +1645,10 @@ pub trait AnyElementIterExt: Iterator<Item = AnyElement> + Sized {
     fn elements(self) -> Vec<AnyElement> {
         self.collect()
     }
+
+    fn elements_owned(self) -> Elements {
+        self.collect::<Elements>()
+    }
 }
 
 impl<T> AnyElementIterExt for T where T: Iterator<Item = AnyElement> + Sized {}

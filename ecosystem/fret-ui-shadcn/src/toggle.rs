@@ -308,8 +308,8 @@ impl Toggle {
         let pressable_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .min_h(MetricRef::Px(min_h))
-                .min_w(MetricRef::Px(min_w))
+                .min_h(min_h)
+                .min_w(min_w)
                 .merge(layout),
         );
 
@@ -348,18 +348,14 @@ impl Toggle {
         let user_bg_override = chrome.background.is_some();
 
         let base_chrome = match variant {
-            ToggleVariant::Default => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(Color::TRANSPARENT)),
-                ..Default::default()
-            },
-            ToggleVariant::Outline => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border)),
-                ..Default::default()
-            },
+            ToggleVariant::Default => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(Color::TRANSPARENT)),
+            ToggleVariant::Outline => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(border)),
         }
         .merge(chrome);
 

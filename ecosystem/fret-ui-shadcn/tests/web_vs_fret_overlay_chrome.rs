@@ -3140,10 +3140,7 @@ fn web_vs_fret_dialog_demo_panel_chrome_matches() {
                 },
                 |cx| {
                     DialogContent::new(vec![cx.text("Edit profile")])
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
-                        )
+                        .refine_layout(fret_ui_kit::LayoutRefinement::default().max_w(Px(425.0)))
                         .into_element(cx)
                 },
             )
@@ -3165,10 +3162,7 @@ fn web_vs_fret_dialog_demo_surface_colors_match_web() {
             },
             |cx| {
                 DialogContent::new(vec![cx.text("Edit profile")])
-                    .refine_layout(
-                        fret_ui_kit::LayoutRefinement::default()
-                            .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
-                    )
+                    .refine_layout(fret_ui_kit::LayoutRefinement::default().max_w(Px(425.0)))
                     .into_element(cx)
             },
         )
@@ -3195,10 +3189,7 @@ fn web_vs_fret_dialog_demo_surface_colors_match_web_dark() {
                 },
                 |cx| {
                     DialogContent::new(vec![cx.text("Edit profile")])
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
-                        )
+                        .refine_layout(fret_ui_kit::LayoutRefinement::default().max_w(Px(425.0)))
                         .into_element(cx)
                 },
             )
@@ -3348,8 +3339,8 @@ fn web_vs_fret_popover_demo_surface_colors_match_web() {
                     PopoverContent::new(Vec::new())
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(320.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(245.33334))),
+                                .w_px(Px(320.0))
+                                .h_px(Px(245.33334)),
                         )
                         .into_element(cx)
                 },
@@ -3381,8 +3372,8 @@ fn web_vs_fret_popover_demo_surface_colors_match_web_dark() {
                     PopoverContent::new(Vec::new())
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(320.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(245.33334))),
+                                .w_px(Px(320.0))
+                                .h_px(Px(245.33334)),
                         )
                         .into_element(cx)
                 },

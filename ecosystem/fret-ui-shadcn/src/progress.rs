@@ -95,7 +95,7 @@ impl Progress {
 
             let base_layout = LayoutRefinement::default()
                 .w_full()
-                .h_px(MetricRef::Px(height))
+                .h_px(height)
                 .overflow_hidden()
                 .merge(self.layout);
 

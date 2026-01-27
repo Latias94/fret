@@ -359,8 +359,11 @@ impl OverlayRequest {
         self
     }
 
-    pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
-        self.dismissable_branches = branches;
+    pub fn dismissable_branches(
+        mut self,
+        branches: impl IntoIterator<Item = GlobalElementId>,
+    ) -> Self {
+        self.dismissable_branches = branches.into_iter().collect();
         self
     }
 

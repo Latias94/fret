@@ -21,8 +21,8 @@ use fret_ui::action::{
     DismissReason, DismissRequestCx, OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
-    SizeStyle,
+    AnyElement, ContainerProps, Elements, InsetStyle, LayoutStyle, Length, PositionStyle,
+    PressableProps, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -147,15 +147,19 @@ impl DialogRoot {
         self.options.clone()
     }
 
-    pub fn modal_request_with_dismiss_handler<H: UiHost>(
+    pub fn modal_request_with_dismiss_handler<H: UiHost, I>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
         on_dismiss_request: Option<OnDismissRequest>,
-        children: Vec<AnyElement>,
-    ) -> OverlayRequest {
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let children: Vec<AnyElement> = children.into_iter().collect();
         modal_dialog_request_with_options_and_dismiss_handler(
             id,
             trigger,
@@ -188,14 +192,18 @@ impl DialogRoot {
             .unwrap_or(false)
     }
 
-    pub fn modal_request<H: UiHost>(
+    pub fn modal_request<H: UiHost, I>(
         &self,
         cx: &mut ElementContext<'_, H>,
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
-    ) -> OverlayRequest {
+        children: I,
+    ) -> OverlayRequest
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let children: Vec<AnyElement> = children.into_iter().collect();
         modal_dialog_request_with_options(
             id,
             trigger,
@@ -224,7 +232,7 @@ pub fn modal_dialog_request(
     trigger: GlobalElementId,
     open: Model<bool>,
     presence: OverlayPresence,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     modal_dialog_request_with_options(
         id,
@@ -232,7 +240,7 @@ pub fn modal_dialog_request(
         open,
         presence,
         DialogOptions::default(),
-        children,
+        children.into_iter().collect::<Vec<_>>(),
     )
 }
 
@@ -243,8 +251,9 @@ pub fn modal_dialog_request_with_options(
     open: Model<bool>,
     presence: OverlayPresence,
     options: DialogOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
+    let children: Vec<AnyElement> = children.into_iter().collect();
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.root_name = Some(dialog_root_name(id));
     request.initial_focus = options.initial_focus;
@@ -264,7 +273,7 @@ pub fn modal_dialog_request_with_options_and_dismiss_handler(
     presence: OverlayPresence,
     options: DialogOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request =
         modal_dialog_request_with_options(id, trigger, open, presence, options, children);
@@ -299,7 +308,7 @@ pub fn modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
@@ -314,9 +323,10 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     let layout = modal_barrier_layout();
+    let children: Vec<AnyElement> = children.into_iter().collect();
 
     if dismiss_on_press {
         cx.pressable(
@@ -368,30 +378,30 @@ pub fn modal_barrier_with_dismiss_handler<H: UiHost>(
 
 /// Convenience helper to assemble modal overlay children in a Radix-like order: barrier then
 /// content.
-pub fn modal_dialog_layer_children<H: UiHost>(
+pub fn modal_dialog_layer_elements<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     options: DialogOptions,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         modal_barrier(cx, open, options.dismiss_on_overlay_press, barrier_children),
         content,
-    ]
+    ])
 }
 
 /// Convenience helper to assemble modal overlay children in a Radix-like order (barrier then
 /// content), while routing barrier presses through an optional dismiss handler.
-pub fn modal_dialog_layer_children_with_dismiss_handler<H: UiHost>(
+pub fn modal_dialog_layer_elements_with_dismiss_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     options: DialogOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         modal_barrier_with_dismiss_handler(
             cx,
             open,
@@ -400,7 +410,7 @@ pub fn modal_dialog_layer_children_with_dismiss_handler<H: UiHost>(
             barrier_children,
         ),
         content,
-    ]
+    ])
 }
 
 /// Requests a Radix-style modal dialog overlay for the current window.
@@ -616,7 +626,7 @@ mod tests {
         let overlay_children =
             fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
                 let content = cx.container(ContainerProps::default(), |_cx| Vec::new());
-                modal_dialog_layer_children(
+                modal_dialog_layer_elements(
                     cx,
                     open.clone(),
                     DialogOptions::default(),
@@ -892,7 +902,7 @@ mod tests {
                     },
                 );
 
-                modal_dialog_layer_children(
+                modal_dialog_layer_elements(
                     cx,
                     open.clone(),
                     DialogOptions::default(),

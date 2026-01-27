@@ -123,8 +123,8 @@ impl ContextMenuItem {
         self
     }
 
-    pub fn submenu(mut self, entries: Vec<ContextMenuEntry>) -> Self {
-        self.submenu = Some(entries);
+    pub fn submenu(mut self, entries: impl IntoIterator<Item = ContextMenuEntry>) -> Self {
+        self.submenu = Some(entries.into_iter().collect());
         self
     }
 
@@ -180,8 +180,10 @@ pub struct ContextMenuGroup {
 }
 
 impl ContextMenuGroup {
-    pub fn new(entries: Vec<ContextMenuEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = ContextMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -2121,12 +2123,15 @@ impl ContextMenu {
         self
     }
 
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ContextMenuEntry>,
-    ) -> AnyElement {
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = ContextMenuEntry>,
+    {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let submenu_max_height_metric = theme.metric_by_key("component.context_menu.max_height");
@@ -2250,7 +2255,7 @@ impl ContextMenu {
                         return (Vec::new(), None);
                     };
 
-                    let entries_tree = entries(cx);
+                    let entries_tree: Vec<ContextMenuEntry> = entries(cx).into_iter().collect();
                     let gating = crate::command_gating::snapshot_for_window(&*cx.app, cx.window);
                     let mut flat: Vec<ContextMenuEntry> = Vec::new();
                     flatten_entries(&mut flat, entries_tree.clone());

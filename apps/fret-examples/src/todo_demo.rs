@@ -206,7 +206,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
             shadcn::TabsItem::new(
                 "all",
                 "全部",
-                vec![todo_list_panel(
+                [todo_list_panel(
                     cx,
                     &theme,
                     &todos,
@@ -217,7 +217,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
             shadcn::TabsItem::new(
                 "active",
                 "进行中",
-                vec![todo_list_panel(
+                [todo_list_panel(
                     cx,
                     &theme,
                     &todos,
@@ -228,7 +228,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
             shadcn::TabsItem::new(
                 "completed",
                 "已完成",
-                vec![todo_list_panel(
+                [todo_list_panel(
                     cx,
                     &theme,
                     &todos,
@@ -296,15 +296,14 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
     .h_full()
     .into_element(cx);
 
-    vec![cx.semantics(
+    ViewElements::from([cx.semantics(
         SemanticsProps {
             role: SemanticsRole::Panel,
             label: Some(Arc::from("Debug:todo-demo:page")),
             ..Default::default()
         },
         move |_cx| [page],
-    )]
-    .into()
+    )])
 }
 
 fn todo_list_panel(
@@ -352,20 +351,21 @@ fn todo_list_panel(
         .into_element(cx);
     }
 
-    let rows = stack::vstack(
+    let rows = stack::vstack_build(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N3),
-        |cx| {
-            filtered
-                .iter()
-                .map(|(t, done)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done)))
-                .elements()
+        |cx, out| {
+            out.extend(
+                filtered
+                    .iter()
+                    .map(|(t, done)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done))),
+            );
         },
     );
 
-    shadcn::ScrollArea::new(vec![rows])
+    shadcn::ScrollArea::new([rows])
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()

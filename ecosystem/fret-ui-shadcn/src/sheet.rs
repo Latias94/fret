@@ -422,12 +422,12 @@ impl Sheet {
                         vec![wrapper],
                     );
 
-                    radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
+                    radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
                         cx,
                         open_for_children.clone(),
                         dialog_options.clone(),
                         on_dismiss_request_for_barrier.clone(),
-                        vec![barrier_fill],
+                        [barrier_fill],
                         content,
                     )
                 });

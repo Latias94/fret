@@ -34,6 +34,20 @@ pub struct FlexBox<H, F> {
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
 
+/// Variant of [`FlexBox`] that collects children into a sink to avoid iterator borrow pitfalls.
+#[derive(Debug)]
+pub struct FlexBoxBuild<H, B> {
+    pub(crate) chrome: ChromeRefinement,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) direction: Axis,
+    pub(crate) gap: MetricRef,
+    pub(crate) justify: Justify,
+    pub(crate) items: Items,
+    pub(crate) wrap: bool,
+    pub(crate) build: Option<B>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
 impl<H, F> FlexBox<H, F> {
     pub fn new(direction: Axis, children: F) -> Self {
         let items = match direction {
@@ -54,6 +68,26 @@ impl<H, F> FlexBox<H, F> {
     }
 }
 
+impl<H, B> FlexBoxBuild<H, B> {
+    pub fn new(direction: Axis, build: B) -> Self {
+        let items = match direction {
+            Axis::Horizontal => Items::Center,
+            Axis::Vertical => Items::Stretch,
+        };
+        Self {
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            direction,
+            gap: MetricRef::space(Space::N0),
+            justify: Justify::Start,
+            items,
+            wrap: false,
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+}
+
 impl<H, F> UiPatchTarget for FlexBox<H, F> {
     fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
         self.chrome = self.chrome.merge(patch.chrome);
@@ -64,6 +98,17 @@ impl<H, F> UiPatchTarget for FlexBox<H, F> {
 
 impl<H, F> UiSupportsChrome for FlexBox<H, F> {}
 impl<H, F> UiSupportsLayout for FlexBox<H, F> {}
+
+impl<H, B> UiPatchTarget for FlexBoxBuild<H, B> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.chrome = self.chrome.merge(patch.chrome);
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, B> UiSupportsChrome for FlexBoxBuild<H, B> {}
+impl<H, B> UiSupportsLayout for FlexBoxBuild<H, B> {}
 
 impl<H: UiHost, F, I> FlexBox<H, F>
 where
@@ -93,6 +138,37 @@ where
     }
 }
 
+impl<H: UiHost, B> FlexBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+
+        let container = decl_style::container_props(theme, self.chrome, self.layout);
+
+        let gap = self.gap.resolve(theme);
+        let flex_props = FlexProps {
+            direction: self.direction,
+            gap,
+            padding: Edges::all(Px(0.0)),
+            justify: self.justify.to_main_align(),
+            align: self.items.to_cross_align(),
+            wrap: self.wrap,
+            ..Default::default()
+        };
+
+        let build = self.build.expect("expected flex build closure");
+        cx.container(container, move |cx| {
+            vec![cx.flex(flex_props, move |cx| {
+                let mut out = Vec::new();
+                build(cx, &mut out);
+                out
+            })]
+        })
+    }
+}
+
 /// Returns a patchable horizontal flex layout builder.
 ///
 /// Usage:
@@ -108,6 +184,20 @@ where
     UiBuilder::new(FlexBox::new(Axis::Horizontal, children))
 }
 
+/// Variant of [`h_flex`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn h_flex_build<H: UiHost, B>(
+    _cx: &mut ElementContext<'_, H>,
+    build: B,
+) -> UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(FlexBoxBuild::new(Axis::Horizontal, build))
+}
+
 /// Returns a patchable vertical flex layout builder.
 pub fn v_flex<H: UiHost, F, I>(
     _cx: &mut ElementContext<'_, H>,
@@ -118,6 +208,20 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(FlexBox::new(Axis::Vertical, children))
+}
+
+/// Variant of [`v_flex`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn v_flex_build<H: UiHost, B>(
+    _cx: &mut ElementContext<'_, H>,
+    build: B,
+) -> UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(FlexBoxBuild::new(Axis::Vertical, build))
 }
 
 /// A patchable container constructor for authoring ergonomics.

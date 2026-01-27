@@ -107,13 +107,20 @@ where
     )
 }
 
-/// Variant of [`hstack`] that accepts any iterable children.
-pub fn hstack_iter<H: UiHost, C: IntoIterator<Item = AnyElement>>(
+/// Variant of [`hstack`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn hstack_build<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: HStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> C,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 ) -> AnyElement {
-    hstack(cx, props, f)
+    hstack(cx, props, |cx| {
+        let mut out = Vec::new();
+        build(cx, &mut out);
+        out
+    })
 }
 
 #[derive(Debug, Clone)]
@@ -219,11 +226,18 @@ where
     )
 }
 
-/// Variant of [`vstack`] that accepts any iterable children.
-pub fn vstack_iter<H: UiHost, C: IntoIterator<Item = AnyElement>>(
+/// Variant of [`vstack`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn vstack_build<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: VStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> C,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 ) -> AnyElement {
-    vstack(cx, props, f)
+    vstack(cx, props, |cx| {
+        let mut out = Vec::new();
+        build(cx, &mut out);
+        out
+    })
 }

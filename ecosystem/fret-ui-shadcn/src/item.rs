@@ -195,7 +195,7 @@ impl ItemMedia {
 
         let mut layout = LayoutRefinement::default().flex_none().flex_shrink_0();
         if let Some(s) = size {
-            layout = layout.w_px(MetricRef::Px(s)).h_px(MetricRef::Px(s));
+            layout = layout.w_px(s).h_px(s);
         }
 
         let mut props = decl_style::container_props(&theme, chrome, layout);
@@ -555,11 +555,11 @@ impl Item {
                         states,
                     );
 
-                    let mut chrome = padding.clone().merge(ChromeRefinement {
-                        radius: Some(MetricRef::Px(radius)),
-                        border_width: Some(MetricRef::Px(Px(1.0))),
-                        ..Default::default()
-                    });
+                    let mut chrome = padding.clone().merge(
+                        ChromeRefinement::default()
+                            .radius(radius)
+                            .border_width(Px(1.0)),
+                    );
 
                     if !user_bg_override {
                         chrome.background = bg;
@@ -595,11 +595,11 @@ impl Item {
                 },
             )
         } else {
-            let mut chrome = padding.merge(ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                ..Default::default()
-            });
+            let mut chrome = padding.merge(
+                ChromeRefinement::default()
+                    .radius(radius)
+                    .border_width(Px(1.0)),
+            );
 
             let bg_defaults = WidgetStateProperty::new(base_bg.map(ColorRef::Color));
             let border_defaults = WidgetStateProperty::new(ColorRef::Color(border_color));

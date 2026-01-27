@@ -238,9 +238,18 @@ impl ChromeRefinement {
         self
     }
 
-    pub fn rounded(mut self, radius: Radius) -> Self {
-        self.radius = Some(MetricRef::radius(radius));
+    pub fn border_width(mut self, width: impl Into<MetricRef>) -> Self {
+        self.border_width = Some(width.into());
         self
+    }
+
+    pub fn radius(mut self, radius: impl Into<MetricRef>) -> Self {
+        self.radius = Some(radius.into());
+        self
+    }
+
+    pub fn rounded(self, radius: Radius) -> Self {
+        self.radius(MetricRef::radius(radius))
     }
 
     pub fn corner_radii(mut self, radii: impl Into<Corners4<MetricRef>>) -> Self {
@@ -408,9 +417,8 @@ impl ChromeRefinement {
         self.rounded(Radius::Md)
     }
 
-    pub fn border_1(mut self) -> Self {
-        self.border_width = Some(MetricRef::Px(Px(1.0)));
-        self
+    pub fn border_1(self) -> Self {
+        self.border_width(Px(1.0))
     }
 
     pub fn bg(mut self, color: ColorRef) -> Self {

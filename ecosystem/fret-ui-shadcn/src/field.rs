@@ -439,7 +439,7 @@ impl FieldGroup {
     }
 
     pub fn gap_px(mut self, px: Px) -> Self {
-        self.gap = Some(MetricRef::Px(px));
+        self.gap = Some(px.into());
         self
     }
 
@@ -723,10 +723,7 @@ impl FieldSeparator {
 
         let layout = decl_style::layout_style(
             &theme,
-            LayoutRefinement::default()
-                .relative()
-                .w_full()
-                .h_px(MetricRef::Px(h)),
+            LayoutRefinement::default().relative().w_full().h_px(h),
         );
 
         cx.container(

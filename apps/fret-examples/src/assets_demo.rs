@@ -177,7 +177,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
     );
     let right = render_svg_panel(cx, &theme, svg);
 
-    let stats = ui::v_flex(cx, |cx| {
+    let stats = ui::v_flex_build(cx, |cx, out| {
         let lines = [
             format!(
                 "Images: ready={} pending={} failed={} bytes={} / {}",
@@ -200,19 +200,16 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
             ),
         ];
 
-        lines
-            .into_iter()
-            .map(|line| {
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::from(line),
-                    style: None,
-                    color: Some(theme.color_required("muted-foreground")),
-                    wrap: fret_core::TextWrap::None,
-                    overflow: fret_core::TextOverflow::Clip,
-                })
+        out.extend(lines.into_iter().map(|line| {
+            cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::from(line),
+                style: None,
+                color: Some(theme.color_required("muted-foreground")),
+                wrap: fret_core::TextWrap::None,
+                overflow: fret_core::TextOverflow::Clip,
             })
-            .elements()
+        }));
     })
     .gap(Space::N2)
     .items_start()

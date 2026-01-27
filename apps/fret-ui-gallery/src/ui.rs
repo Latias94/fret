@@ -153,7 +153,7 @@ pub(crate) fn sidebar_view(
         let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
             nav_body
         } else {
-            shadcn::ScrollArea::new(vec![nav_body])
+            shadcn::ScrollArea::new([nav_body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         };
@@ -162,7 +162,7 @@ pub(crate) fn sidebar_view(
                 test_id: Some(Arc::<str>::from("ui-gallery-nav-scroll")),
                 ..Default::default()
             },
-            move |_cx| vec![nav_scroll],
+            move |_cx| [nav_scroll],
         )
     };
 
@@ -172,17 +172,15 @@ pub(crate) fn sidebar_view(
             ChromeRefinement::default()
                 .bg(ColorRef::Color(theme.color_required("muted")))
                 .p(Space::N4),
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(280.0)))
-                .h_full(),
+            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
         ),
         |cx| {
-            vec![stack::vstack(
+            [stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full().h_full())
                     .gap(Space::N4),
-                |_cx| vec![title_row, query_input, nav_scroll],
+                |_cx| [title_row, query_input, nav_scroll],
             )]
         },
     );
@@ -299,7 +297,7 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("neutral/light", "Neutral (light)"),
                     shadcn::SelectItem::new("neutral/dark", "Neutral (dark)"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
                 .into_element(cx);
 
             let copy_actions = stack::hstack(
@@ -329,10 +327,10 @@ pub(crate) fn content_view(
             let right = stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N3).items_center(),
-                |_cx| vec![theme_select, copy_actions],
+                |_cx| [theme_select, copy_actions],
             );
 
-            vec![left, right]
+            [left, right]
         },
     );
 
@@ -413,16 +411,16 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| vec![preview_panel, usage_panel, docs_panel],
+            |_cx| [preview_panel, usage_panel, docs_panel],
         )
     } else {
         shadcn::Tabs::new(content_tab)
             .refine_layout(LayoutRefinement::default().w_full())
             .list_full_width(true)
             .items([
-                shadcn::TabsItem::new("preview", "Preview", vec![preview_panel]),
-                shadcn::TabsItem::new("usage", "Usage", vec![usage_panel]),
-                shadcn::TabsItem::new("docs", "Notes", vec![docs_panel]),
+                shadcn::TabsItem::new("preview", "Preview", [preview_panel]),
+                shadcn::TabsItem::new("usage", "Usage", [usage_panel]),
+                shadcn::TabsItem::new("docs", "Notes", [docs_panel]),
             ])
             .into_element(cx)
     };
@@ -433,14 +431,14 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| vec![header, tabs],
+            |_cx| [header, tabs],
         )
     });
     let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            shadcn::ScrollArea::new(vec![body])
+            shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         })
@@ -455,7 +453,7 @@ pub(crate) fn content_view(
                     .p(Space::N6),
                 LayoutRefinement::default().w_full().h_full(),
             ),
-            |_cx| vec![content],
+            |_cx| [content],
         )
     })
 }
@@ -1018,7 +1016,7 @@ fn preview_view_cache(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::PopoverContent::new(vec![
+                    shadcn::PopoverContent::new([
                         cx.text("Popover content"),
                         shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
@@ -1041,18 +1039,14 @@ fn preview_view_cache(
             }));
         }
 
-        let list = shadcn::ScrollArea::new(vec![stack::vstack(
+        let list = shadcn::ScrollArea::new([stack::vstack(
             cx,
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N1),
             |_cx| rows,
         )])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(cx);
 
         vec![
@@ -1126,7 +1120,7 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
                     .p(Space::N3),
                 LayoutRefinement::default().w_full(),
             ),
-            |cx| vec![cx.text(label)],
+            |cx| [cx.text(label)],
         )
     };
 
@@ -1352,6 +1346,7 @@ fn preview_virtual_list_torture(
                             });
                             host.request_redraw(action_cx.window);
                         });
+
                     let row_label = shadcn::Button::new(format!("Row {index}"))
                         .variant(shadcn::ButtonVariant::Ghost)
                         .size(shadcn::ButtonSize::Sm)
@@ -1376,7 +1371,7 @@ fn preview_virtual_list_torture(
                                 .layout(LayoutRefinement::default().w_full())
                                 .gap(Space::N2)
                                 .items_center(),
-                            |cx| vec![cx.text_input(props)],
+                            |cx| [cx.text_input(props)],
                         )
                     } else {
                         let edit_button = shadcn::Button::new("Edit")
@@ -1389,7 +1384,7 @@ fn preview_virtual_list_torture(
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![edit_button],
+                            |_cx| [edit_button],
                         )
                     };
 
@@ -1398,20 +1393,18 @@ fn preview_virtual_list_torture(
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
+                        LayoutRefinement::default().w_full().h_px(height_hint),
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                     cx.container(container_props, |cx| {
-                        vec![stack::hstack(
+                        [stack::hstack(
                             cx,
                             stack::HStackProps::default()
                                 .layout(LayoutRefinement::default().w_full().h_full())
                                 .gap(Space::N2)
                                 .items_center(),
-                            |_cx| vec![row_label, right],
+                            |_cx| [row_label, right],
                         )]
                     })
                 };
@@ -1421,7 +1414,7 @@ fn preview_virtual_list_torture(
                         CachedSubtreeProps::default()
                             .contained_layout(false)
                             .cache_key(index_u64),
-                        |cx| vec![row(cx)],
+                        |cx| [row(cx)],
                     )
                 } else {
                     row(cx)
@@ -1435,7 +1428,7 @@ fn preview_virtual_list_torture(
                 test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
                 ..Default::default()
             },
-            |_cx| vec![list],
+            |_cx| [list],
         );
 
         vec![list]
@@ -2657,7 +2650,7 @@ fn preview_material3_gallery(
             let hover_style = material3::TextFieldStyle::default()
                 .outline_color(
                     fret_ui_kit::WidgetStateProperty::new(None)
-                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover)),
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover.clone())),
                 )
                 .label_color(
                     fret_ui_kit::WidgetStateProperty::new(None)
@@ -2979,11 +2972,7 @@ fn preview_material3_touch_targets(
             .into_element(cx),
             shadcn::CardContent::new(vec![stack]).into_element(cx),
         ])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(280.0)))
-                .min_w_0(),
-        )
+        .refine_layout(LayoutRefinement::default().w_px(Px(280.0)).min_w_0())
         .into_element(cx)
     };
 
@@ -3738,7 +3727,7 @@ fn preview_material3_navigation_rail(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![rail],
+        move |_cx| [rail],
     );
 
     vec![
@@ -3787,7 +3776,7 @@ fn preview_material3_navigation_drawer(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![drawer],
+        move |_cx| [drawer],
     );
 
     vec![
@@ -3885,7 +3874,7 @@ fn preview_material3_modal_navigation_drawer(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![modal],
+        move |_cx| [modal],
     );
 
     vec![
@@ -3972,7 +3961,7 @@ fn preview_material3_dialog(
                     },
                 )
             },
-            |_cx| vec![],
+            |_cx| std::iter::empty::<AnyElement>(),
         );
 
     let last = cx
@@ -3990,7 +3979,7 @@ fn preview_material3_dialog(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![dialog],
+        move |_cx| [dialog],
     );
 
     vec![
@@ -4166,7 +4155,7 @@ fn preview_material3_list(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4)
             .items_stretch(),
-        move |_cx| vec![standard, expressive],
+        move |_cx| [standard, expressive],
     );
 
     vec![
@@ -4300,7 +4289,7 @@ fn preview_material3_snackbar(
 }
 
 fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let content = material3::TooltipProvider::new().with(cx, |cx| {
+    let content = material3::TooltipProvider::new().with_elements(cx, |cx| {
         let outlined = material3::ButtonVariant::Outlined;
 
         let top = material3::PlainTooltip::new(
@@ -4344,15 +4333,15 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .into_element(cx);
 
         vec![
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N4)
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| vec![top, right, bottom, left],
-            ),
-            cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
-        ]
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N4)
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| [top, right, bottom, left],
+                ),
+                cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
+            ]
     });
 
     let card = shadcn::Card::new(vec![
@@ -4433,7 +4422,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4)
             .items_stretch(),
-        |_cx| vec![left, right],
+        |_cx| [left, right],
     )]
 }
 
@@ -4442,7 +4431,7 @@ fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         |cx| {
-            vec![
+            [
                 shadcn::Badge::new("Default").into_element(cx),
                 shadcn::Badge::new("Secondary")
                     .variant(shadcn::BadgeVariant::Secondary)
@@ -4487,25 +4476,21 @@ fn preview_avatar(
             .when_image_missing_model(avatar_image.clone())
             .delay_ms(120)
             .into_element(cx);
-        shadcn::Avatar::new(vec![image, fallback]).into_element(cx)
+        shadcn::Avatar::new([image, fallback]).into_element(cx)
     };
 
-    let b = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("WK").into_element(cx)])
-        .into_element(cx);
+    let b =
+        shadcn::Avatar::new([shadcn::AvatarFallback::new("WK").into_element(cx)]).into_element(cx);
 
-    let c = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("?").into_element(cx)])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(48.0)))
-                .h_px(MetricRef::Px(Px(48.0))),
-        )
+    let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("?").into_element(cx)])
+        .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
         .into_element(cx);
 
     vec![
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N3).items_center(),
-            |_cx| vec![a, b, c],
+            |_cx| [a, b, c],
         ),
         cx.text("Tip: use AvatarImage when you have an ImageId; AvatarFallback covers missing/slow loads."),
     ]
@@ -4520,16 +4505,16 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |cx| {
             vec![
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(180.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new().into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
                     .into_element(cx),
             ]
         },
@@ -4563,12 +4548,8 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |_cx| items,
     );
 
-    let scroll = shadcn::ScrollArea::new(vec![body])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(240.0))),
-        )
+    let scroll = shadcn::ScrollArea::new([body])
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
         .into_element(cx);
 
     vec![
@@ -4587,26 +4568,27 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    shadcn::TooltipProvider::new().with(cx, |cx| {
-        let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
-            shadcn::Tooltip::new(
-                shadcn::Button::new(label)
-                    .variant(shadcn::ButtonVariant::Outline)
+    shadcn::TooltipProvider::new()
+        .with_elements(cx, |cx| {
+            let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
+                shadcn::Tooltip::new(
+                    shadcn::Button::new(label)
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into_element(cx),
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        format!("Tooltip on {label}"),
+                    )])
                     .into_element(cx),
-                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                    cx,
-                    format!("Tooltip on {label}"),
-                )])
-                .into_element(cx),
-            )
-            .arrow(true)
-            .side(side)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
-            .into_element(cx)
-        };
+                )
+                .arrow(true)
+                .side(side)
+                .open_delay_frames(10)
+                .close_delay_frames(10)
+                .into_element(cx)
+            };
 
-        vec![
+            vec![
             stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -4623,7 +4605,8 @@ fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 "Hover the buttons to validate hover intent, delay group, and overlay placement.",
             ),
         ]
-    })
+        })
+        .into_vec()
 }
 
 fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -4692,7 +4675,7 @@ fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         .p(Space::N3),
                     LayoutRefinement::default().w_full(),
                 ),
-                |_cx| vec![row],
+                |_cx| [row],
             )
         };
 
@@ -4839,7 +4822,7 @@ fn preview_forms(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N3),
-            |_cx| vec![input, textarea, toggles],
+            |_cx| [input, textarea, toggles],
         ),
         cx.text(
             "Tip: these are model-bound controls; values persist while you stay in the window.",
@@ -4870,7 +4853,7 @@ fn preview_select(
                 shadcn::SelectItem::new(value, label).test_id(test_id)
             })),
         )
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
         .into_element(cx);
 
     let selected = cx
@@ -4957,17 +4940,17 @@ fn preview_resizable(
                 .p(Space::N3),
             LayoutRefinement::default().w_full().h_full(),
         );
-        cx.container(props, move |cx| vec![cx.text(title)])
+        cx.container(props, move |cx| [cx.text(title)])
     };
 
     let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
         .axis(fret_core::Axis::Vertical)
-        .entries(vec![
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Viewport", "muted")])
+        .entries([
+            shadcn::ResizablePanel::new([boxy(cx, "Viewport", "muted")])
                 .min_px(Px(120.0))
                 .into(),
             shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Console", "card")])
+            shadcn::ResizablePanel::new([boxy(cx, "Console", "card")])
                 .min_px(Px(80.0))
                 .into(),
         ])
@@ -4975,11 +4958,7 @@ fn preview_resizable(
 
     let root = shadcn::ResizablePanelGroup::new(h_fractions)
         .axis(fret_core::Axis::Horizontal)
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(320.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
         .entries(vec![
             shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
                 .min_px(Px(140.0))
@@ -5104,11 +5083,7 @@ fn preview_data_table(
 
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(
             cx,
             assets.data.clone(),
@@ -5427,11 +5402,7 @@ fn preview_data_grid(
 
         let grid =
             shadcn::experimental::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(Px(320.0))),
-                )
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
                 .into_element(
                     cx,
                     1,
@@ -5709,7 +5680,7 @@ fn preview_menus(
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| vec![dropdown, context_menu],
+            |_cx| [dropdown, context_menu],
         ),
         cx.text(format!("last action: {last}")),
     ]
@@ -5805,7 +5776,7 @@ fn preview_overlay(
                 test_id: Some(Arc::from("ui-gallery-overlay-last-action")),
                 ..Default::default()
             },
-            |cx| vec![cx.text(text)],
+            |cx| [cx.text(text)],
         )
     };
 
@@ -6215,17 +6186,17 @@ fn preview_overlay(
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![dropdown, context_menu, overlay_reset],
+                            |_cx| [dropdown, context_menu, overlay_reset],
                         ),
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![tooltip, hover_card, popover, underlay, dialog],
+                            |_cx| [tooltip, hover_card, popover, underlay, dialog],
                         ),
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![alert_dialog, sheet],
+                            |_cx| [alert_dialog, sheet],
                         ),
                         portal_geometry,
                     ]
@@ -6245,7 +6216,7 @@ fn preview_overlay(
                     test_id: Some(Arc::from("ui-gallery-dialog-open")),
                     ..Default::default()
                 },
-                |cx| vec![cx.text("Dialog open")],
+                |cx| [cx.text("Dialog open")],
             ))
         } else {
             None
@@ -6279,7 +6250,7 @@ fn preview_overlay(
                     test_id: Some(Arc::from("ui-gallery-popover-dismissed")),
                     ..Default::default()
                 },
-                |cx| vec![cx.text("Popover dismissed")],
+                |cx| [cx.text("Popover dismissed")],
             ))
         } else {
             None

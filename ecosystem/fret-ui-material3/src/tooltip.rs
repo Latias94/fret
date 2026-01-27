@@ -11,8 +11,8 @@ use fret_core::{
     Color, Corners, Edges, KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, HoverRegionProps, LayoutStyle, PointerRegionProps,
-    SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
+    AnyElement, ContainerProps, ElementKind, Elements, HoverRegionProps, LayoutStyle,
+    PointerRegionProps, SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -122,11 +122,14 @@ impl TooltipProvider {
         self
     }
 
-    pub fn with<H: UiHost>(
+    pub fn with_elements<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
-        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> Vec<AnyElement> {
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         tooltip_provider::with_tooltip_provider(
             cx,
             tooltip_provider::TooltipProviderConfig::new(
@@ -134,7 +137,7 @@ impl TooltipProvider {
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            f,
+            |cx| f(cx).into_iter().collect::<Elements>(),
         )
     }
 }

@@ -428,13 +428,10 @@ fn todo_list_panel(
         .into_element(cx);
     }
 
-    let rows = ui::v_flex(cx, |cx| {
-        filtered
-            .iter()
-            .map(|(t, done, remove_cmd)| {
-                cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done, remove_cmd.clone()))
-            })
-            .elements()
+    let rows = ui::v_flex_build(cx, |cx, out| {
+        out.extend(filtered.iter().map(|(t, done, remove_cmd)| {
+            cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done, remove_cmd.clone()))
+        }));
     })
     .w_full()
     .gap(Space::N3)

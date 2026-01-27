@@ -528,12 +528,12 @@ impl Command {
 
         let base = ChromeRefinement::default()
             .rounded(Radius::Lg)
-            .merge(ChromeRefinement {
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border(&theme))),
-                background: Some(ColorRef::Color(bg(&theme))),
-                ..Default::default()
-            })
+            .merge(
+                ChromeRefinement::default()
+                    .border_width(Px(1.0))
+                    .border_color(ColorRef::Color(border(&theme)))
+                    .bg(ColorRef::Color(bg(&theme))),
+            )
             .merge(self.chrome);
 
         let props = decl_style::container_props(&theme, base, self.layout);
@@ -851,7 +851,8 @@ impl std::fmt::Debug for CommandGroup {
 }
 
 impl CommandGroup {
-    pub fn new(items: Vec<CommandItem>) -> Self {
+    pub fn new(items: impl IntoIterator<Item = CommandItem>) -> Self {
+        let items = items.into_iter().collect();
         Self {
             heading: None,
             items,
@@ -1005,7 +1006,8 @@ impl std::fmt::Debug for CommandList {
 }
 
 impl CommandList {
-    pub fn new(items: Vec<CommandItem>) -> Self {
+    pub fn new(items: impl IntoIterator<Item = CommandItem>) -> Self {
+        let items = items.into_iter().collect();
         Self {
             items,
             disabled: false,
@@ -1090,10 +1092,7 @@ impl CommandList {
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_h(MetricRef::Px(row_h))
-                    .min_w_0(),
+                LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
             );
 
             let scroll = self.scroll;
@@ -1452,7 +1451,7 @@ impl std::fmt::Debug for CommandPalette {
 }
 
 impl CommandPalette {
-    pub fn new(model: Model<String>, items: Vec<CommandItem>) -> Self {
+    pub fn new(model: Model<String>, items: impl IntoIterator<Item = CommandItem>) -> Self {
         Self {
             model,
             entries: items.into_iter().map(CommandEntry::Item).collect(),
@@ -1463,9 +1462,9 @@ impl CommandPalette {
             placeholder: None,
             input_role: Some(SemanticsRole::ComboBox),
             input_expanded: None,
-            input_wrapper_h: MetricRef::Px(Px(36.0)),
-            input_h: MetricRef::Px(Px(40.0)),
-            input_icon_size: MetricRef::Px(Px(16.0)),
+            input_wrapper_h: Px(36.0).into(),
+            input_h: Px(40.0).into(),
+            input_icon_size: Px(16.0).into(),
             item_pad_y: MetricRef::space(Space::N1p5),
             group_pad_x: MetricRef::space(Space::N1),
             group_pad_y: MetricRef::space(Space::N1),
@@ -1487,7 +1486,7 @@ impl CommandPalette {
         cx: &mut ElementContext<'_, H>,
         query: Option<Model<String>>,
         default_query: String,
-        items: Vec<CommandItem>,
+        items: impl IntoIterator<Item = CommandItem>,
     ) -> Self {
         let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
         Self::new(query, items)
@@ -1501,9 +1500,9 @@ impl CommandPalette {
     /// - `[&_[cmdk-item]]:py-3`
     /// - `[&_[cmdk-group]]:px-2`
     pub fn command_dialog_defaults(mut self) -> Self {
-        self.input_wrapper_h = MetricRef::Px(Px(48.0));
-        self.input_h = MetricRef::Px(Px(48.0));
-        self.input_icon_size = MetricRef::Px(Px(20.0));
+        self.input_wrapper_h = Px(48.0).into();
+        self.input_h = Px(48.0).into();
+        self.input_icon_size = Px(20.0).into();
         self.item_pad_y = MetricRef::space(Space::N3);
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
@@ -1521,8 +1520,8 @@ impl CommandPalette {
         self
     }
 
-    pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
-        self.entries = entries;
+    pub fn entries(mut self, entries: impl IntoIterator<Item = CommandEntry>) -> Self {
+        self.entries = entries.into_iter().collect();
         self
     }
 
@@ -1742,10 +1741,7 @@ impl CommandPalette {
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_h(MetricRef::Px(row_h))
-                    .min_w_0(),
+                LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
             );
 
             let mut key_counts: HashMap<RowKey, u32> = HashMap::new();
@@ -2360,7 +2356,11 @@ impl std::fmt::Debug for CommandDialog {
 }
 
 impl CommandDialog {
-    pub fn new(open: Model<bool>, query: Model<String>, items: Vec<CommandItem>) -> Self {
+    pub fn new(
+        open: Model<bool>,
+        query: Model<String>,
+        items: impl IntoIterator<Item = CommandItem>,
+    ) -> Self {
         Self {
             open,
             query,
@@ -2382,7 +2382,7 @@ impl CommandDialog {
         default_open: bool,
         query: Option<Model<String>>,
         default_query: String,
-        items: Vec<CommandItem>,
+        items: impl IntoIterator<Item = CommandItem>,
     ) -> Self {
         let open = radix_dialog::DialogRoot::new()
             .open(open)
@@ -2409,8 +2409,8 @@ impl CommandDialog {
         }
     }
 
-    pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
-        self.entries = entries;
+    pub fn entries(mut self, entries: impl IntoIterator<Item = CommandEntry>) -> Self {
+        self.entries = entries.into_iter().collect();
         self
     }
 
@@ -2527,11 +2527,7 @@ impl CommandDialog {
                 .disabled(disabled)
                 .wrap(wrap)
                 .empty_text(empty_text)
-                .refine_scroll_layout(
-                    LayoutRefinement::default()
-                        .h_px(MetricRef::Px(list_h))
-                        .max_h(MetricRef::Px(list_h)),
-                )
+                .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
                 .into_element(cx);
 
             DialogContent::new(vec![palette])

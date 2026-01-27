@@ -241,7 +241,7 @@ impl AlertDialog {
                         ..Default::default()
                     };
                     let content_layout = opacity_layout.clone();
-                    let barrier_children = vec![barrier_fill];
+                    let barrier_children = [barrier_fill];
                     let open_for_children = self.open.clone();
 
                     let content = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
@@ -254,7 +254,7 @@ impl AlertDialog {
                         },
                         vec![wrapper],
                     );
-                    radix_alert_dialog::alert_dialog_modal_layer_children(
+                    radix_alert_dialog::alert_dialog_modal_layer_elements(
                         cx,
                         open_for_children.clone(),
                         barrier_children,

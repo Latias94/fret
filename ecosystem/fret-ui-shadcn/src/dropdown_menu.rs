@@ -142,8 +142,8 @@ impl DropdownMenuItem {
         self
     }
 
-    pub fn submenu(mut self, entries: Vec<DropdownMenuEntry>) -> Self {
-        self.submenu = Some(entries);
+    pub fn submenu(mut self, entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        self.submenu = Some(entries.into_iter().collect());
         self
     }
 
@@ -428,8 +428,10 @@ pub struct DropdownMenuGroup {
 }
 
 impl DropdownMenuGroup {
-    pub fn new(entries: Vec<DropdownMenuEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -1129,12 +1131,15 @@ impl DropdownMenu {
         self
     }
 
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry>,
-    ) -> AnyElement {
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+    {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx
@@ -1216,7 +1221,8 @@ impl DropdownMenu {
                         return (Vec::new(), None);
                     };
 
-                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries(cx).into_boxed_slice());
+                    let entries: Vec<DropdownMenuEntry> = entries(cx).into_iter().collect();
+                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries.into_boxed_slice());
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 

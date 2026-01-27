@@ -482,7 +482,12 @@ pub mod composable {
         }
 
         /// Creates an uncontrolled accordion with an initial set of values (Radix `defaultValue`).
-        pub fn multiple_uncontrolled(default_value: Vec<Arc<str>>) -> Self {
+        pub fn multiple_uncontrolled<I, T>(default_value: I) -> Self
+        where
+            I: IntoIterator<Item = T>,
+            T: Into<Arc<str>>,
+        {
+            let default_value = default_value.into_iter().map(Into::into).collect();
             Self {
                 model: AccordionModel::Multiple {
                     model: None,
@@ -613,12 +618,10 @@ pub mod composable {
                 };
 
                 let border = border_color(&theme);
-                let base_item_chrome = ChromeRefinement {
-                    border_width: Some(MetricRef::Px(Px(1.0))),
-                    border_color: Some(ColorRef::Color(border)),
-                    radius: Some(MetricRef::Px(Px(0.0))),
-                    ..Default::default()
-                };
+                let base_item_chrome = ChromeRefinement::default()
+                    .border_width(Px(1.0))
+                    .border_color(ColorRef::Color(border))
+                    .radius(Px(0.0));
 
                 let wrapper =
                     decl_style::container_props(&theme, ChromeRefinement::default(), layout);
@@ -1177,7 +1180,12 @@ impl Accordion {
     }
 
     /// Creates an uncontrolled accordion with an initial set of values (Radix `defaultValue`).
-    pub fn multiple_uncontrolled(default_value: Vec<Arc<str>>) -> Self {
+    pub fn multiple_uncontrolled<I, T>(default_value: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<Arc<str>>,
+    {
+        let default_value = default_value.into_iter().map(Into::into).collect();
         Self {
             model: AccordionModel::Multiple {
                 model: None,
@@ -1305,12 +1313,10 @@ impl Accordion {
             };
 
             let border = border_color(&theme);
-            let base_item_chrome = ChromeRefinement {
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border)),
-                radius: Some(MetricRef::Px(Px(0.0))),
-                ..Default::default()
-            };
+            let base_item_chrome = ChromeRefinement::default()
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(border))
+                .radius(Px(0.0));
 
             let wrapper = decl_style::container_props(&theme, ChromeRefinement::default(), layout);
 
@@ -1456,37 +1462,51 @@ impl Accordion {
     }
 }
 
-pub fn accordion_single<H: UiHost>(
+pub fn accordion_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AccordionItem>,
+{
     Accordion::single(model).items(f(cx)).into_element(cx)
 }
 
-pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AccordionItem>,
+{
     Accordion::single_uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)
 }
 
-pub fn accordion_multiple<H: UiHost>(
+pub fn accordion_multiple<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AccordionItem>,
+{
     Accordion::multiple(model).items(f(cx)).into_element(cx)
 }
 
-pub fn accordion_multiple_uncontrolled<H: UiHost>(
+pub fn accordion_multiple_uncontrolled<H: UiHost, V, I>(
     cx: &mut ElementContext<'_, H>,
-    default_value: Vec<Arc<str>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
-) -> AnyElement {
+    default_value: V,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    V: IntoIterator,
+    V::Item: Into<Arc<str>>,
+    I: IntoIterator<Item = AccordionItem>,
+{
     Accordion::multiple_uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)

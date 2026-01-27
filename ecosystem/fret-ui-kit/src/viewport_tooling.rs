@@ -358,7 +358,8 @@ impl ViewportToolArbitrator {
         self.active
     }
 
-    pub fn set_tools(&mut self, mut tools: Vec<Box<dyn ViewportTool>>) {
+    pub fn set_tools(&mut self, tools: impl IntoIterator<Item = Box<dyn ViewportTool>>) {
+        let mut tools: Vec<Box<dyn ViewportTool>> = tools.into_iter().collect();
         tools.sort_by_key(|t| Reverse(t.priority().0));
         self.tools = tools;
         self.hot = None;
@@ -722,7 +723,10 @@ mod tests {
         b.hit = true;
 
         let mut arb = ViewportToolArbitrator::new(Default::default());
-        arb.set_tools(vec![Box::new(a), Box::new(b)]);
+        arb.set_tools(vec![
+            Box::new(a) as Box<dyn ViewportTool>,
+            Box::new(b) as Box<dyn ViewportTool>,
+        ]);
 
         let handled = arb.handle_event(&dummy_event(ViewportInputKind::PointerMove {
             buttons: Default::default(),
@@ -744,7 +748,10 @@ mod tests {
         b.down_capture = true;
 
         let mut arb = ViewportToolArbitrator::new(Default::default());
-        arb.set_tools(vec![Box::new(a), Box::new(b)]);
+        arb.set_tools(vec![
+            Box::new(a) as Box<dyn ViewportTool>,
+            Box::new(b) as Box<dyn ViewportTool>,
+        ]);
 
         assert!(
             arb.handle_event(&dummy_event(ViewportInputKind::PointerDown {
@@ -772,7 +779,7 @@ mod tests {
         a.down_capture = true;
 
         let mut arb = ViewportToolArbitrator::new(Default::default());
-        arb.set_tools(vec![Box::new(a)]);
+        arb.set_tools(vec![Box::new(a) as Box<dyn ViewportTool>]);
 
         assert!(
             arb.handle_event(&dummy_event(ViewportInputKind::PointerDown {
@@ -933,7 +940,7 @@ mod tests {
         a.down_capture = true;
 
         let mut arb = ViewportToolArbitrator::new(Default::default());
-        arb.set_tools(vec![Box::new(a)]);
+        arb.set_tools(vec![Box::new(a) as Box<dyn ViewportTool>]);
 
         let mut down = dummy_event(ViewportInputKind::PointerDown {
             button: MouseButton::Left,

@@ -10,7 +10,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverrideSlot,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, OverrideSlot,
     Size as ComponentSize, Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 
@@ -507,14 +507,10 @@ impl Button {
                 // shadcn/ui v4 `size=icon` uses Tailwind `size-*` (a fixed square), not
                 // `min-width/min-height`. Using an explicit width/height avoids relying on flexbox
                 // min-size behavior and makes icon buttons match web goldens 1:1.
-                base_layout = base_layout
-                    .w_px(MetricRef::Px(icon))
-                    .h_px(MetricRef::Px(icon))
-                    .min_w(MetricRef::Px(icon))
-                    .min_h(MetricRef::Px(icon));
+                base_layout = base_layout.w_px(icon).h_px(icon).min_w(icon).min_h(icon);
             } else {
                 let min_h = size.button_h(&theme);
-                base_layout = base_layout.min_h(MetricRef::Px(min_h));
+                base_layout = base_layout.min_h(min_h);
             }
 
             let pressable_layout = decl_style::layout_style(&theme, base_layout);
@@ -594,11 +590,11 @@ impl Button {
                     }
                 };
 
-                let mut chrome = padding.merge(ChromeRefinement {
-                    radius: Some(MetricRef::Px(radius)),
-                    border_width: Some(MetricRef::Px(border_w)),
-                    ..Default::default()
-                });
+                let mut chrome = padding.merge(
+                    ChromeRefinement::default()
+                        .radius(radius)
+                        .border_width(border_w),
+                );
 
                 if !user_bg_override {
                     chrome.background = Some(bg);

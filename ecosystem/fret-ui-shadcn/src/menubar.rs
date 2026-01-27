@@ -159,7 +159,7 @@ impl MenubarItem {
         }
     }
 
-    pub fn submenu(self, entries: Vec<MenubarEntry>) -> MenubarSubmenu {
+    pub fn submenu(self, entries: impl IntoIterator<Item = MenubarEntry>) -> MenubarSubmenu {
         MenubarSubmenu::new(self, entries)
     }
 
@@ -221,7 +221,8 @@ pub struct MenubarSubmenu {
 }
 
 impl MenubarSubmenu {
-    pub fn new(trigger: MenubarItem, entries: Vec<MenubarEntry>) -> Self {
+    pub fn new(trigger: MenubarItem, entries: impl IntoIterator<Item = MenubarEntry>) -> Self {
+        let entries: Vec<MenubarEntry> = entries.into_iter().collect();
         Self {
             trigger,
             entries: Arc::from(entries.into_boxed_slice()),
@@ -272,8 +273,10 @@ pub struct MenubarGroup {
 }
 
 impl MenubarGroup {
-    pub fn new(entries: Vec<MenubarEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = MenubarEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -777,7 +780,8 @@ impl std::fmt::Debug for Menubar {
 }
 
 impl Menubar {
-    pub fn new(menus: Vec<MenubarMenuEntries>) -> Self {
+    pub fn new(menus: impl IntoIterator<Item = MenubarMenuEntries>) -> Self {
+        let menus = menus.into_iter().collect();
         Self {
             menus,
             disabled: false,
@@ -1019,7 +1023,8 @@ impl MenubarMenu {
         self
     }
 
-    pub fn entries(self, entries: Vec<MenubarEntry>) -> MenubarMenuEntries {
+    pub fn entries(self, entries: impl IntoIterator<Item = MenubarEntry>) -> MenubarMenuEntries {
+        let entries: Vec<MenubarEntry> = entries.into_iter().collect();
         MenubarMenuEntries {
             menu: self,
             entries: Arc::from(entries.into_boxed_slice()),
@@ -3229,10 +3234,13 @@ impl MenubarMenuEntries {
     }
 }
 
-pub fn menubar<H: UiHost>(
+pub fn menubar<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<MenubarMenuEntries>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = MenubarMenuEntries>,
+{
     Menubar::new(f(cx)).into_element(cx)
 }
 

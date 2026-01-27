@@ -761,10 +761,10 @@ pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
 ```rust
 use fret_ui_material3 as m3;
 
-m3::TooltipProvider::new().with(cx, |cx| {
+m3::TooltipProvider::new().with_elements(cx, |cx| {
     let trigger = m3::Button::new("Hover me").into_element(cx);
-    vec![m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
-});
+    [m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+})
 ```
 "#;
 
@@ -1190,7 +1190,7 @@ Scrollable region with custom scrollbars and nested content.
 pub(crate) const USAGE_SCROLL_AREA: &str = r#"
 ```rust
 let body = stack::vstack(cx, stack::VStackProps::default(), |_cx| items);
-let scroll = shadcn::ScrollArea::new(vec![body]).into_element(cx);
+let scroll = shadcn::ScrollArea::new([body]).into_element(cx);
 ```
 "#;
 

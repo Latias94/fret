@@ -476,8 +476,10 @@ pub struct SelectGroup {
 }
 
 impl SelectGroup {
-    pub fn new(entries: Vec<SelectEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = SelectEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -1010,7 +1012,7 @@ fn select_impl<H: UiHost>(
         let trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .h_px(MetricRef::Px(resolved.min_height))
+                .h_px(resolved.min_height)
                 .merge(layout),
         );
 
@@ -2466,13 +2468,13 @@ fn select_impl<H: UiHost>(
                             }
                         }
 
-                        radix_select::select_modal_layer_children_with_pointer_up_guard_and_dismiss_handler(
+                        radix_select::select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler(
                             cx,
                             open_for_barrier_children.clone(),
                             dismiss_on_overlay_press,
                             on_dismiss_request_for_overlay_children.clone(),
                             mouse_open_guard_for_barrier_children.clone(),
-                            vec![probe],
+                            [probe],
                             animated,
                         )
                     });
@@ -2502,7 +2504,7 @@ fn select_impl<H: UiHost>(
                             open_for_overlay.clone(),
                             true,
                             on_dismiss_request_for_overlay_children.clone(),
-                            vec![pointer_up_guard],
+                            [pointer_up_guard],
                         )]
                     });
 
