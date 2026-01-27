@@ -248,6 +248,8 @@ At a high level:
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
   - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0190 “ephemeral prepaint items” workflows)
+  - `debug.virtual_list_windows`: VirtualList window telemetry (used to triage scroll-induced work)
+    - `debug.virtual_list_windows[*].source`: whether the record was emitted from `layout` or `prepaint`
   - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
   - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0147)
   - `debug.docking_interaction`: docking interaction ownership snapshot (dock drag + viewport capture)
