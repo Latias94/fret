@@ -887,7 +887,10 @@ pub fn render<H: UiHost>(
             );
 
             if interactive {
-                ui.set_layer_scroll_dismiss_elements(entry.layer, req.trigger.into_iter().collect());
+                ui.set_layer_scroll_dismiss_elements(
+                    entry.layer,
+                    req.trigger.into_iter().collect(),
+                );
             } else {
                 ui.set_layer_scroll_dismiss_elements(entry.layer, Vec::new());
             }
