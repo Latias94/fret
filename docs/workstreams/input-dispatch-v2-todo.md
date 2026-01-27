@@ -1,6 +1,6 @@
 # Input Dispatch v2 — TODO Tracker
 
-Status: Active (workstream tracker; keep updated during refactors)
+Status: Complete (v2 shipped; keep updated if new v2 gaps are discovered)
 
 This document tracks executable TODOs for the Input Dispatch v2 workstream.
 
