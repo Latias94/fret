@@ -1157,7 +1157,9 @@ impl CommandList {
                                                 ..Default::default()
                                             },
                                             move |cx, st| {
-                                                cx.pressable_dispatch_command_opt(command);
+                                                cx.pressable_dispatch_command_if_enabled_opt(
+                                                    command,
+                                                );
                                                 if let Some(on_select) = on_select.clone() {
                                                     cx.pressable_add_on_activate(on_select);
                                                 }
@@ -1883,7 +1885,7 @@ impl CommandPalette {
                                     ..Default::default()
                                 },
                                 move |cx, st| {
-                                    cx.pressable_dispatch_command_opt(command);
+                                    cx.pressable_dispatch_command_if_enabled_opt(command);
                                     if let Some(on_select) = on_select.clone() {
                                         cx.pressable_add_on_activate(on_select);
                                     }

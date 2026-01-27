@@ -433,7 +433,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                                         &opts,
                                     )
                                 })
-                                .collect()
+                                .collect::<Vec<_>>()
                         },
                     )]
                 },
@@ -690,7 +690,7 @@ fn request_menu_overlay<H: UiHost>(
             let submenu_for_panel_items = submenu_for_panel.clone();
             let item_text_for_panel_items = item_text_for_overlay.clone();
 
-            let panel = menu::content_panel::menu_panel_at::<H>(
+            let panel = menu::content_panel::menu_panel_at(
                 cx,
                 placed,
                 move |layout| ContainerProps {
@@ -885,7 +885,11 @@ fn request_menu_overlay<H: UiHost>(
         overlay_presence,
         overlay_children,
         overlay_root_name,
-        content_focus_id.get(),
+        menu::root::MenuInitialFocusTargets::new()
+            .pointer_content_focus(content_focus_id.get())
+            .keyboard_entry_focus(content_focus_id.get()),
+        None,
+        None,
         on_dismiss_request,
         dismissible_on_pointer_move,
         false,
