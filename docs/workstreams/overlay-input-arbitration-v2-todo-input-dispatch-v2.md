@@ -120,6 +120,14 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_click_through_outside_press_can_be_prevented_and_still_activates_underlay`)
 
+- [x] OIA2-test-040 Click-through outside-press closes and focuses the underlay (context menu, `modal=false`).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_click_through_outside_press_closes_and_focuses_underlay`)
+
+- [x] OIA2-test-041 Click-through outside-press can be prevented without blocking underlay activation (context menu, `modal=false`).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_click_through_outside_press_can_be_prevented_and_still_activates_underlay`)
+
 - [x] OIA2-test-013 Close transition disables pointer-move observers and timers (combobox popover).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/combobox.rs` (`combobox_close_transition_disables_pointer_move_and_timer_events`)
