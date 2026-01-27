@@ -1633,6 +1633,24 @@ impl IntoIterator for Elements {
     }
 }
 
+impl<'a> IntoIterator for &'a Elements {
+    type Item = &'a AnyElement;
+    type IntoIter = std::slice::Iter<'a, AnyElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Elements {
+    type Item = &'a mut AnyElement;
+    type IntoIter = std::slice::IterMut<'a, AnyElement>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
+    }
+}
+
 /// Authoring helper for collecting iterator-produced child elements.
 ///
 /// This exists to reduce boilerplate after switching common `children: Vec<AnyElement>` APIs to

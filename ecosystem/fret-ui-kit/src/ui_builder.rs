@@ -412,8 +412,16 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.inset(space))
     }
 
+    pub fn inset_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.inset_px(px))
+    }
+
     pub fn top(self, space: Space) -> Self {
         self.layout_with(|l| l.top(space))
+    }
+
+    pub fn top_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.top_px(px))
     }
 
     pub fn top_neg(self, space: Space) -> Self {
@@ -424,12 +432,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.right(space))
     }
 
+    pub fn right_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.right_px(px))
+    }
+
     pub fn right_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.right_neg(space))
     }
 
     pub fn bottom(self, space: Space) -> Self {
         self.layout_with(|l| l.bottom(space))
+    }
+
+    pub fn bottom_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.bottom_px(px))
     }
 
     pub fn bottom_neg(self, space: Space) -> Self {
@@ -440,12 +456,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.left(space))
     }
 
+    pub fn left_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.left_px(px))
+    }
+
     pub fn left_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.left_neg(space))
     }
 
     pub fn m(self, space: Space) -> Self {
         self.layout_with(|l| l.m(space))
+    }
+
+    pub fn m_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.m_px(px))
     }
 
     pub fn m_neg(self, space: Space) -> Self {
@@ -456,12 +480,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.mx(space))
     }
 
+    pub fn mx_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mx_px(px))
+    }
+
     pub fn mx_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.mx_neg(space))
     }
 
     pub fn my(self, space: Space) -> Self {
         self.layout_with(|l| l.my(space))
+    }
+
+    pub fn my_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.my_px(px))
     }
 
     pub fn my_neg(self, space: Space) -> Self {
@@ -472,12 +504,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.mt(space))
     }
 
+    pub fn mt_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mt_px(px))
+    }
+
     pub fn mt_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.mt_neg(space))
     }
 
     pub fn mr(self, space: Space) -> Self {
         self.layout_with(|l| l.mr(space))
+    }
+
+    pub fn mr_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mr_px(px))
     }
 
     pub fn mr_neg(self, space: Space) -> Self {
@@ -488,12 +528,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.mb(space))
     }
 
+    pub fn mb_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mb_px(px))
+    }
+
     pub fn mb_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.mb_neg(space))
     }
 
     pub fn ml(self, space: Space) -> Self {
         self.layout_with(|l| l.ml(space))
+    }
+
+    pub fn ml_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.ml_px(px))
     }
 
     pub fn ml_neg(self, space: Space) -> Self {

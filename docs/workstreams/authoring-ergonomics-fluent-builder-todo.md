@@ -96,6 +96,9 @@ Related:
 - [x] AUE-layout-023 Add a patchable `ui::container(...)` constructor as the default “box” layout node.
   - Intent: reduce raw `cx.container(...)` usage in cookbook/recipes.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- [x] AUE-layout-024 Add `*_px(...)` positioning/margin shorthands on the fluent builder surface.
+  - Motivation: reduce verbosity when authoring pixel-precise overlays/popovers (avoid `Edges4::all(Px(...))` for the common case).
+  - Evidence: `ecosystem/fret-ui-kit/src/style/layout.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`
 - [x] AUE-text-070 Add a minimal patchable `ui::text(...)` / `ui::label(...)` authoring constructor with a small typed refinement surface.
   - Scope: size/weight/color + a shadcn-aligned default line-height.
   - Evidence: `ecosystem/fret-ui-kit/src/ui.rs`, `ecosystem/fret-ui-kit/src/ui_builder.rs`, `ecosystem/fret-ui-kit/src/declarative/text.rs`
@@ -113,6 +116,8 @@ Related:
 - [x] AUE-iter-094 Add `with_elements` helpers for tooltip providers; make tooltip requests accept iterable children.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`, `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`
 - [x] AUE-iter-095 Add `AnyElementIterExt::elements_owned()` for collecting into `Elements`.
+  - Evidence: `crates/fret-ui/src/element.rs`
+- [x] AUE-iter-108 Make `Elements` implement `IntoIterator` (so it can be passed to any `IntoIterator<Item = AnyElement>` API).
   - Evidence: `crates/fret-ui/src/element.rs`
 - [x] AUE-iter-096 Audit overlay request constructors: already accept `IntoIterator<Item = AnyElement>`; keep `children: Vec<AnyElement>` as the stable storage boundary.
   - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs`, `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`
