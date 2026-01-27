@@ -2387,6 +2387,50 @@ impl<H: UiHost> Widget<H> for DockSpace {
             fret_runtime::DRAG_KIND_DOCK_PANEL,
             cx.node,
         );
+
+        // Best-effort diagnostics hook: only record if a diagnostics collector has registered the
+        // store (avoids allocating globals in production apps).
+        if cx
+            .app
+            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+            .is_some()
+        {
+            let frame_id = cx.app.frame_id();
+            let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
+                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    && (d.source_window == self.window || d.current_window == self.window)
+            });
+            let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
+                let drag = cx.app.drag(pointer_id)?;
+                Some(fret_runtime::DockDragDiagnostics {
+                    pointer_id,
+                    source_window: drag.source_window,
+                    current_window: drag.current_window,
+                    dragging: drag.dragging,
+                    cross_window_hover: drag.cross_window_hover,
+                })
+            });
+            let viewport_capture = self.viewport_capture.as_ref().map(|capture| {
+                fret_runtime::ViewportCaptureDiagnostics {
+                    pointer_id: capture.pointer_id,
+                    target: capture.hit.viewport.target,
+                }
+            });
+
+            cx.app.with_global_mut_untracked(
+                fret_runtime::WindowInteractionDiagnosticsStore::default,
+                |svc, _app| {
+                    svc.record_docking(
+                        self.window,
+                        frame_id,
+                        fret_runtime::DockingInteractionDiagnostics {
+                            dock_drag,
+                            viewport_capture,
+                        },
+                    );
+                },
+            );
+        }
         let overlay_hooks = cx
             .app
             .global::<DockViewportOverlayHooksService>()
