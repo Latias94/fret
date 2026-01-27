@@ -910,8 +910,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 );
             }
 
-            let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
-                ui_gallery_suite_scripts()
+            let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0].starts_with("ui-gallery") {
+                let scripts: Vec<&'static str> = match rest[0].as_str() {
+                    "ui-gallery" => ui_gallery_suite_scripts().to_vec(),
+                    "ui-gallery-virt-retained" => vec![
+                        "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                    ],
+                    other => {
+                        return Err(format!(
+                            "unknown suite target: {other} (expected: ui-gallery|ui-gallery-virt-retained)"
+                        ));
+                    }
+                };
+
+                scripts
                     .into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                     .collect()
@@ -1011,16 +1023,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     }
                 }
 
-                if result.stage.as_deref() == Some("passed")
-                    && (check_stale_paint_test_id.is_some()
-                        || check_wheel_scroll_test_id.is_some()
-                        || check_drag_cache_root_paint_only_test_id.is_some()
-                        || check_hover_layout_max.is_some()
-                        || check_gc_sweep_liveness
-                        || check_view_cache_reuse_min.is_some()
-                        || check_overlay_synthesis_min.is_some()
-                        || check_retained_vlist_reconcile_no_notify_min.is_some())
-                {
+                let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min
+                    .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
+                    || check_wheel_scroll_test_id.is_some()
+                    || check_drag_cache_root_paint_only_test_id.is_some()
+                    || check_hover_layout_max.is_some()
+                    || check_gc_sweep_liveness
+                    || check_view_cache_reuse_min.is_some()
+                    || check_overlay_synthesis_min.is_some()
+                    || retained_vlist_gate_for_script.is_some();
+
+                if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
                         &result,
@@ -1043,7 +1057,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
-                        check_retained_vlist_reconcile_no_notify_min,
+                        retained_vlist_gate_for_script,
                         warmup_frames,
                     )?;
                 }
@@ -2527,6 +2541,17 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
         "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
     ]
+}
+
+fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+    )
 }
 
 fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {
