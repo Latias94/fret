@@ -81,10 +81,31 @@ Validation:
 
 - `cargo nextest run -p fret-ui-shadcn --lib`
 
+### Bundle E — Select/Combobox modality focus + click-through preventDefault conformance
+
+Goal: keep “menu-like” overlays consistent across surfaces (select/combobox/context menu/dropdown menu),
+including the subtle “prevent default dismissal but still allow click-through under `modal=false`” cases.
+
+- UI-kit: Select initial focus targets (pointer-open vs keyboard-open).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/select.rs`
+- Shadcn: Select wires initial focus targets + conformance tests.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/select.rs`
+- Shadcn: Combobox open auto-focus focuses the search input (pointer-open and keyboard-open).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/combobox.rs`
+- Shadcn: Click-through (`modal=false`) outside-press can be prevented without blocking underlay activation.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
+    - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
+    - Tracker: `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md` (OIA2-test-039..041)
+
+Validation:
+
+- `cargo nextest run -p fret-ui-shadcn --lib`
+- (Optional) `cargo nextest run -p fret-ui-kit --lib`
+
 ## Notes / open items
 
 - Keep overlay arbitration docs split from Input Dispatch v2 contracts:
   - Input Dispatch v2 TODO tracker: `docs/workstreams/input-dispatch-v2-todo.md`
   - Overlay arbitration TODO tracker: `docs/workstreams/overlay-input-arbitration-v2-todo.md`
   - Worktree overlay tracker: `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md`
-
