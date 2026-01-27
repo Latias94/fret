@@ -31,11 +31,15 @@ Each TODO is labeled:
 
 ## P0 — Diagnostics & Observability (AI-Friendly)
 
-- [ ] DMV1-diag-001 Export viewport input forwarding events to diagnostic bundles.
+- [x] DMV1-diag-001 Export viewport input forwarding events to diagnostic bundles.
   - Target: `bundle.json` should include per-frame records of forwarded viewport input, keyed by `PointerId` and `RenderTargetId`.
   - Evidence anchor (existing bundle exporter): `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
   - Evidence anchor (runner drains effects): `crates/fret-launch/src/runner/desktop/mod.rs`
   - Done when: scripted tests can gate on “>= N viewport input events occurred” without parsing logs.
+  - Evidence:
+    - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (records `ViewportInputEvent` into diagnostics)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.viewport_input`)
+    - `apps/fretboard/src/diag.rs` (`--check-viewport-input-min`)
 - [ ] DMV1-diag-002 Export docking drag/capture ownership as a stable diagnostic record.
   - Target: per-frame “dock drag active” + pointer owner (dock drag vs viewport capture vs none).
   - Rationale: most regressions are arbitration bugs; diagnostics must make ownership visible.
