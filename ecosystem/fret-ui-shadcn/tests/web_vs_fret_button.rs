@@ -602,6 +602,131 @@ fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> 
     }
 }
 
+fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> FretButtonStyle {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(180.0)),
+    );
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-button-hover",
+        |cx| {
+            vec![
+                fret_ui_shadcn::Button::new("Button")
+                    .variant(variant)
+                    .into_element(cx),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let semantics = ui.semantics_snapshot_arc().expect("semantics snapshot");
+    let button_bounds = semantics
+        .nodes
+        .iter()
+        .find(|n| format!("{:?}", n.role) == "Button")
+        .map(|n| n.bounds)
+        .unwrap_or(bounds);
+
+    let center = Point::new(
+        Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+        Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
+            position: center,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    // Re-render so hover state is reflected in chrome props.
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-button-hover",
+        |cx| {
+            vec![
+                fret_ui_shadcn::Button::new("Button")
+                    .variant(variant)
+                    .into_element(cx),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let (rect, background, opacity, border, border_color, corner_radii) =
+        find_button_quad_style(&scene, button_bounds);
+
+    let mut text_color: Option<Rgba> = None;
+    for op in scene.ops() {
+        if let SceneOp::Text { origin, color, .. } = *op {
+            if rect.contains(origin) {
+                text_color = Some(color_to_rgba(color));
+                break;
+            }
+        }
+    }
+
+    FretButtonStyle {
+        rect: [
+            round3(rect.origin.x.0),
+            round3(rect.origin.y.0),
+            round3(rect.size.width.0),
+            round3(rect.size.height.0),
+        ],
+        background: color_to_rgba(background),
+        opacity,
+        border: [
+            round3(border.top.0),
+            round3(border.right.0),
+            round3(border.bottom.0),
+            round3(border.left.0),
+        ],
+        border_color: color_to_rgba(border_color),
+        corner_radii: [
+            round3(corner_radii.top_left.0),
+            round3(corner_radii.top_right.0),
+            round3(corner_radii.bottom_right.0),
+            round3(corner_radii.bottom_left.0),
+        ],
+        text_color,
+    }
+}
+
 fn extract_fret_button_style_disabled(variant: fret_ui_shadcn::ButtonVariant) -> FretButtonStyle {
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -736,6 +861,14 @@ fn web_vs_fret_button_default_pressed_matches_web() {
     let web_style = extract_web_button_style(&web);
     let fret_style = extract_fret_button_style_pressed(fret_ui_shadcn::ButtonVariant::Default);
     assert_button_styles_match_web("button-default.pressed", web_style, fret_style);
+}
+
+#[test]
+fn web_vs_fret_button_default_hover_matches_web() {
+    let web = read_web_golden("button-default.hover");
+    let web_style = extract_web_button_style(&web);
+    let fret_style = extract_fret_button_style_hovered(fret_ui_shadcn::ButtonVariant::Default);
+    assert_button_styles_match_web("button-default.hover", web_style, fret_style);
 }
 
 #[test]
