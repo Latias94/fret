@@ -2542,7 +2542,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -2886,9 +2886,9 @@ impl UiVirtualListWindowV1 {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiVirtualListWindowSourceV1 {
+    Prepaint,
     #[serde(other)]
     Layout,
-    Prepaint,
 }
 
 impl Default for UiVirtualListWindowSourceV1 {
@@ -4624,11 +4624,11 @@ impl UiHitTestSnapshotV1 {
 
         let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
-            by_root.insert(layer.root, *layer);
+            by_root.insert(layer.root, layer.clone());
         }
 
         for root in &hit_test.active_layer_roots {
-            let info = by_root.get(root).copied();
+            let info = by_root.get(root);
             scope_roots.push(UiHitTestScopeRootV1 {
                 kind: "layer_root".to_string(),
                 root: key_to_u64(*root),
