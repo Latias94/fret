@@ -52,8 +52,8 @@ Legend:
 
 ### UTF-16 ↔ UTF-8 conversion
 
-- [ ] Implement deterministic conversion + clamping utilities.
-- [ ] Add tests for mixed-script and emoji sequences (byte offsets remain valid).
+- [x] Implement deterministic conversion + clamping utilities.
+- [x] Add tests for mixed-script and emoji sequences (byte offsets remain valid).
 
 ### Observability (debug-only)
 
