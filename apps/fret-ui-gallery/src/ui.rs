@@ -1383,7 +1383,14 @@ fn preview_virtual_list_torture(
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-                    cx.container(container_props, |_cx| vec![row_label])
+                    let row_layout = container_props.layout;
+                    let container = cx.container(container_props, |_cx| vec![row_label]);
+                    let mut semantics = fret_ui::element::SemanticsProps::default();
+                    semantics.layout = row_layout;
+                    semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
+                        "ui-gallery-virtual-list-row-{index}-label"
+                    )));
+                    cx.semantics(semantics, |_cx| vec![container])
                 });
 
                 cx.virtual_list_keyed_retained_with_layout(
@@ -1423,7 +1430,14 @@ fn preview_virtual_list_torture(
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-                        cx.container(container_props, |_cx| vec![row_label])
+                        let row_layout = container_props.layout;
+                        let container = cx.container(container_props, |_cx| vec![row_label]);
+                        let mut semantics = fret_ui::element::SemanticsProps::default();
+                        semantics.layout = row_layout;
+                        semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
+                            "ui-gallery-virtual-list-row-{index}-label"
+                        )));
+                        cx.semantics(semantics, |_cx| vec![container])
                     },
                 )
             }
