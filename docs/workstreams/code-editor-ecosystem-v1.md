@@ -157,6 +157,11 @@ Exit criteria:
   - backspace/arrow keys (command-path),
   - and does not “double-insert” on `compositionend` + `input`.
 
+Implemented (partial evidence):
+
+- UTF-16 ↔ UTF-8 deterministic conversion + clamping:
+  - `crates/fret-core/src/utf.rs` (unit tests included)
+
 ### M2 — Word boundary mode seam (runtime mechanism; ecosystem policy)
 
 Exit criteria:
