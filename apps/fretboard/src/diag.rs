@@ -931,21 +931,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             if rest.is_empty() {
                 return Err(
-                    "missing suite name or script paths (try: fretboard diag suite ui-gallery)"
+                    "missing suite name or script paths (try: fretboard diag suite ui-gallery | fretboard diag suite docking-arbitration)"
                         .to_string(),
                 );
             }
 
-            let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
-                ui_gallery_suite_scripts()
-                    .into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect()
-            } else {
-                rest.into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect()
-            };
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            enum BuiltinSuite {
+                UiGallery,
+                DockingArbitration,
+            }
+
+            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
+                if rest.len() == 1 && rest[0] == "ui-gallery" {
+                    (
+                        ui_gallery_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
+                    (
+                        docking_arbitration_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::DockingArbitration),
+                    )
+                } else {
+                    (
+                        rest.into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        None,
+                    )
+                };
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -1047,7 +1068,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         || check_overlay_synthesis_min.is_some()
                         || check_viewport_input_min.is_some()
                         || check_dock_drag_min.is_some()
-                        || check_viewport_capture_min.is_some())
+                        || check_viewport_capture_min.is_some()
+                        || builtin_suite == Some(BuiltinSuite::DockingArbitration))
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -1061,6 +1083,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             src.display()
                         )
                     })?;
+
+                    let (suite_viewport_input_min, suite_dock_drag_min, suite_viewport_capture_min) =
+                        if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
+                            docking_arbitration_script_default_gates(&src)
+                        } else {
+                            (None, None, None)
+                        };
                     apply_post_run_checks(
                         &bundle_path,
                         check_stale_paint_test_id.as_deref(),
@@ -1071,9 +1100,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
-                        check_viewport_input_min,
-                        check_dock_drag_min,
-                        check_viewport_capture_min,
+                        check_viewport_input_min.or(suite_viewport_input_min),
+                        check_dock_drag_min.or(suite_dock_drag_min),
+                        check_viewport_capture_min.or(suite_viewport_capture_min),
                         warmup_frames,
                     )?;
                 }
@@ -2583,6 +2612,29 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
         "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
     ]
+}
+
+fn docking_arbitration_suite_scripts() -> [&'static str; 2] {
+    [
+        "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
+        "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
+    ]
+}
+
+fn docking_arbitration_script_default_gates(
+    script: &Path,
+) -> (Option<u64>, Option<u64>, Option<u64>) {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return (None, None, None);
+    };
+
+    match name {
+        "docking-arbitration-demo-split-viewports.json" => (Some(1), None, None),
+        "docking-arbitration-demo-modal-dock-drag-viewport-capture.json" => {
+            (Some(1), Some(1), Some(1))
+        }
+        _ => (None, None, None),
+    }
 }
 
 fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {

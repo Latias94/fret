@@ -88,6 +88,12 @@ Each TODO is labeled:
     - script: `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
     - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-tab-drag-anchor-left`, `dock-arb-dialog-*`, `dock-arb-popover-*`)
 
+- [x] DMV1-reg-032 Add a built-in diag suite for docking arbitration scripts.
+  - Target: a single `fretboard diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
+  - Evidence:
+    - scripts: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`, `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+    - runner: `apps/fretboard/src/diag.rs` (`diag suite docking-arbitration`)
+
 ## P2 — Unification Opportunities (Optional)
 
 - [ ] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.

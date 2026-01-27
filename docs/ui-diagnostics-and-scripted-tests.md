@@ -519,6 +519,10 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 - `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
 - `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
 
+You can run them as a built-in suite:
+
+- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+
 ### View-cache regression gating
 
 Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
