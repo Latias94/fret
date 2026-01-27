@@ -116,6 +116,10 @@ Each TODO is labeled:
     - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_focus_outside_can_be_prevented_via_dismiss_handler`)
     - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_focus_outside_can_be_prevented_via_dismiss_handler`)
 
+- [x] OIA2-test-039 Click-through outside-press can be prevented without blocking underlay activation (dropdown menu).
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_click_through_outside_press_can_be_prevented_and_still_activates_underlay`)
+
 - [x] OIA2-test-013 Close transition disables pointer-move observers and timers (combobox popover).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/combobox.rs` (`combobox_close_transition_disables_pointer_move_and_timer_events`)
