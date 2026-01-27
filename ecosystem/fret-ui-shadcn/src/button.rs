@@ -130,7 +130,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                         "primary.active.background",
                         ColorFallback::ThemeTokenAlphaMul {
                             key: "primary",
-                            mul: 0.8,
+                            mul: 0.9,
                         },
                     ),
                 ),
@@ -158,7 +158,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                         "destructive.active.background",
                         ColorFallback::ThemeTokenAlphaMul {
                             key: "destructive",
-                            mul: 0.8,
+                            mul: 0.9,
                         },
                     ),
                 ),
@@ -191,7 +191,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                     "secondary.active.background",
                     ColorFallback::ThemeTokenAlphaMul {
                         key: "secondary",
-                        mul: 0.7,
+                        mul: 0.8,
                     },
                 ),
             ),
@@ -210,16 +210,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                 WidgetStates::HOVERED,
                 token("accent", ColorFallback::ThemeHoverBackground),
             )
-            .when(
-                WidgetStates::ACTIVE,
-                token(
-                    "accent.active.background",
-                    ColorFallback::ThemeTokenAlphaMul {
-                        key: "accent",
-                        mul: 0.8,
-                    },
-                ),
-            ),
+            .when(WidgetStates::ACTIVE, token("accent", ColorFallback::ThemeHoverBackground)),
             border_color: WidgetStateProperty::new(token(
                 "border",
                 ColorFallback::ThemePanelBorder,
@@ -239,16 +230,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                     WidgetStates::HOVERED,
                     token("accent", ColorFallback::ThemeHoverBackground),
                 )
-                .when(
-                    WidgetStates::ACTIVE,
-                    token(
-                        "accent.active.background",
-                        ColorFallback::ThemeTokenAlphaMul {
-                            key: "accent",
-                            mul: 0.8,
-                        },
-                    ),
-                ),
+                .when(WidgetStates::ACTIVE, token("accent", ColorFallback::ThemeHoverBackground)),
             border_color: WidgetStateProperty::new(transparent.clone()),
             foreground: WidgetStateProperty::new(token(
                 "foreground",
