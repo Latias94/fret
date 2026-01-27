@@ -108,7 +108,25 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                 // offset. This does not force a layout pass.
                 cx.invalidate_self(inv);
                 if needs_visible_range_rerender {
-                    cx.notify();
+                    let retained_host = crate::elements::with_window_state(
+                        &mut *cx.app,
+                        window,
+                        |window_state| {
+                            let retained = window_state
+                                .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
+                                    this.element,
+                                );
+                            if retained {
+                                window_state
+                                    .mark_retained_virtual_list_needs_reconcile(this.element);
+                            }
+                            retained
+                        },
+                    );
+
+                    if !retained_host {
+                        cx.notify();
+                    }
                 }
                 cx.request_redraw();
                 cx.stop_propagation();
