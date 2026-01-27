@@ -63,6 +63,7 @@ fn publish_snapshot(
         ui_has_modal: false,
         window_arbitration: None,
         focus_is_text_input: ui.focus_is_text_input(),
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,

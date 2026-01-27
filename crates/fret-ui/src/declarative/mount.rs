@@ -1026,6 +1026,15 @@ fn mount_element<H: UiHost>(
         }
     }
 
+    match &element.kind {
+        ElementKind::TextInputRegion(props) => {
+            ui.set_node_text_boundary_mode_override(node, props.text_boundary_mode_override);
+        }
+        _ => {
+            ui.set_node_text_boundary_mode_override(node, None);
+        }
+    }
+
     let instance = match element.kind {
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
@@ -1041,6 +1050,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Anchored(p) => ElementInstance::Anchored(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
+        ElementKind::TextInputRegion(p) => ElementInstance::TextInputRegion(p),
         ElementKind::InternalDragRegion(p) => ElementInstance::InternalDragRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),

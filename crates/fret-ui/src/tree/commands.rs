@@ -46,11 +46,18 @@ impl<H: UiHost> UiTree<H> {
             ui_has_modal: barrier_root.is_some(),
             window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(),
+            text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
+            if let Some(mode) = app
+                .global::<fret_runtime::WindowTextBoundaryModeService>()
+                .and_then(|svc| svc.mode(window))
+            {
+                input_ctx.text_boundary_mode = mode;
+            }
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()
                 .and_then(|svc| svc.snapshot(window))
@@ -204,6 +211,14 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         for id in widget_commands {
+            if id.as_str() == "focus.menu_bar" {
+                let present = app
+                    .global::<fret_runtime::WindowMenuBarFocusService>()
+                    .is_some_and(|svc| svc.present(window));
+                snapshot.insert(id, present);
+                continue;
+            }
+
             let mut availability = self.command_availability_from_node(app, input_ctx, start, &id);
             if availability == CommandAvailability::NotHandled
                 && matches!(id.as_str(), "focus.next" | "focus.previous")
@@ -259,11 +274,18 @@ impl<H: UiHost> UiTree<H> {
             ui_has_modal: barrier_root.is_some(),
             window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(),
+            text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
+            if let Some(mode) = app
+                .global::<fret_runtime::WindowTextBoundaryModeService>()
+                .and_then(|svc| svc.mode(window))
+            {
+                input_ctx.text_boundary_mode = mode;
+            }
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()
                 .and_then(|svc| svc.snapshot(window))
@@ -397,10 +419,17 @@ impl<H: UiHost> UiTree<H> {
                 ui_has_modal: barrier_root.is_some(),
                 window_arbitration: None,
                 focus_is_text_input: self.focus_is_text_input(),
+                text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
                 edit_can_undo: true,
                 edit_can_redo: true,
                 dispatch_phase: InputDispatchPhase::Bubble,
             };
+            if let Some(mode) = app
+                .global::<fret_runtime::WindowTextBoundaryModeService>()
+                .and_then(|svc| svc.mode(window))
+            {
+                input_ctx.text_boundary_mode = mode;
+            }
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()
                 .and_then(|svc| svc.snapshot(window))
@@ -419,6 +448,8 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+
+            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
 
         handled

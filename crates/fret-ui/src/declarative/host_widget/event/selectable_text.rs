@@ -102,6 +102,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                         &props.rich.text,
                         state,
                         command,
+                        cx.input_ctx.text_boundary_mode,
                     );
                     match outcome {
                         crate::text_surface::SelectableTextCommandOutcome::Handled {
@@ -178,63 +179,12 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 .blob
                 .map(|blob| cx.services.hit_test_point(blob, local));
 
-            fn char_at(text: &str, idx: usize) -> Option<char> {
-                if idx >= text.len() {
-                    return None;
-                }
-                let next = crate::text_edit::utf8::next_char_boundary(text, idx);
-                text.get(idx..next).and_then(|s| s.chars().next())
-            }
-
-            fn select_word(text: &str, idx: usize) -> (usize, usize) {
-                if text.is_empty() {
-                    return (0, 0);
-                }
-                let mut idx = crate::text_edit::utf8::clamp_to_char_boundary(text, idx);
-                if idx >= text.len() {
-                    idx = crate::text_edit::utf8::prev_char_boundary(text, idx);
-                }
-
-                // Hit-testing can return a caret stop at the end of the word. If the current char
-                // is whitespace but the previous is a word char, prefer selecting the previous word.
-                if char_at(text, idx).is_some_and(|c| c.is_whitespace()) && idx > 0 {
-                    let prev = crate::text_edit::utf8::prev_char_boundary(text, idx);
-                    if char_at(text, prev).is_some_and(crate::text_edit::utf8::is_word_char) {
-                        idx = prev;
-                    }
-                }
-
-                let Some(ch) = char_at(text, idx) else {
-                    return (0, 0);
-                };
-
-                if crate::text_edit::utf8::is_word_char(ch) {
-                    (
-                        crate::text_edit::utf8::move_word_left(text, idx),
-                        crate::text_edit::utf8::move_word_right(text, idx),
-                    )
-                } else if ch.is_whitespace() {
-                    let mut start = idx;
-                    while start > 0 {
-                        let prev = crate::text_edit::utf8::prev_char_boundary(text, start);
-                        if char_at(text, prev).is_some_and(|c| c.is_whitespace()) {
-                            start = prev;
-                        } else {
-                            break;
-                        }
-                    }
-                    let mut end = crate::text_edit::utf8::next_char_boundary(text, idx);
-                    while end < text.len() {
-                        if char_at(text, end).is_some_and(|c| c.is_whitespace()) {
-                            end = crate::text_edit::utf8::next_char_boundary(text, end);
-                        } else {
-                            break;
-                        }
-                    }
-                    (start, end)
-                } else {
-                    (idx, crate::text_edit::utf8::next_char_boundary(text, idx))
-                }
+            fn select_word(
+                text: &str,
+                idx: usize,
+                mode: fret_runtime::TextBoundaryMode,
+            ) -> (usize, usize) {
+                crate::text_edit::utf8::select_word_range(text, idx, mode)
             }
 
             fn select_line(text: &str, idx: usize) -> (usize, usize) {
@@ -253,6 +203,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 (start, end)
             }
 
+            let boundary_mode = cx.input_ctx.text_boundary_mode;
             crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -269,7 +220,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
 
                     let idx = hit.index.min(props.rich.text.len());
                     let (anchor, caret) = match *click_count {
-                        2 => select_word(&props.rich.text, idx),
+                        2 => select_word(&props.rich.text, idx, boundary_mode),
                         3 => select_line(&props.rich.text, idx),
                         _ => {
                             let caret = idx;

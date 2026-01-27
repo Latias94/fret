@@ -85,7 +85,11 @@ impl<H: UiHost> Widget<H> for TextInput {
                 cx.stop_propagation();
             }
             Event::Pointer(fret_core::PointerEvent::Down {
-                button, position, ..
+                button,
+                position,
+                click_count,
+                modifiers,
+                ..
             }) => {
                 if *button != MouseButton::Left {
                     return;
@@ -96,11 +100,34 @@ impl<H: UiHost> Widget<H> for TextInput {
                 let padding = self.chrome_style.padding.left;
                 let local_x =
                     Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
-                self.caret = self
+                let caret = self
                     .text_blob
                     .map(|blob| cx.services.hit_test_x(blob, local_x))
                     .unwrap_or_else(|| self.caret_from_x(local_x));
-                self.selection_anchor = self.caret;
+
+                self.caret = caret;
+                match *click_count {
+                    2 => {
+                        let (anchor, caret) = crate::text_edit::utf8::select_word_range(
+                            self.text.as_str(),
+                            caret,
+                            cx.input_ctx.text_boundary_mode,
+                        );
+                        self.selection_anchor = anchor;
+                        self.caret = caret;
+                    }
+                    3 => {
+                        let (anchor, caret) =
+                            crate::text_edit::utf8::select_line_range(self.text.as_str(), caret);
+                        self.selection_anchor = anchor;
+                        self.caret = caret;
+                    }
+                    _ => {
+                        if !modifiers.shift {
+                            self.selection_anchor = self.caret;
+                        }
+                    }
+                }
                 self.clear_ime_composition();
                 cx.invalidate_self(Invalidation::Layout);
                 cx.request_redraw();
@@ -170,6 +197,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 &mut self.edit_state(),
                                 "text.delete_backward",
                                 false,
+                                cx.input_ctx.text_boundary_mode,
                             );
                             let delta = crate::text_edit::commands::singleline_ui_delta(
                                 "text.delete_backward",
@@ -182,6 +210,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 &mut self.edit_state(),
                                 "text.delete_forward",
                                 false,
+                                cx.input_ctx.text_boundary_mode,
                             );
                             let delta = crate::text_edit::commands::singleline_ui_delta(
                                 "text.delete_forward",
@@ -201,6 +230,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 &mut self.edit_state(),
                                 command,
                                 false,
+                                cx.input_ctx.text_boundary_mode,
                             );
                             let delta =
                                 crate::text_edit::commands::singleline_ui_delta(command, outcome);
@@ -218,6 +248,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 &mut self.edit_state(),
                                 command,
                                 false,
+                                cx.input_ctx.text_boundary_mode,
                             );
                             let delta =
                                 crate::text_edit::commands::singleline_ui_delta(command, outcome);
@@ -233,6 +264,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 &mut self.edit_state(),
                                 command,
                                 false,
+                                cx.input_ctx.text_boundary_mode,
                             );
                             let delta =
                                 crate::text_edit::commands::singleline_ui_delta(command, outcome);
@@ -248,6 +280,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 &mut self.edit_state(),
                                 command,
                                 false,
+                                cx.input_ctx.text_boundary_mode,
                             );
                             let delta =
                                 crate::text_edit::commands::singleline_ui_delta(command, outcome);
@@ -414,6 +447,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.edit_state(),
                     "text.move_home",
                     is_ime_composing,
+                    cx.input_ctx.text_boundary_mode,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
@@ -425,6 +459,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.edit_state(),
                     "text.move_end",
                     is_ime_composing,
+                    cx.input_ctx.text_boundary_mode,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
@@ -436,6 +471,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.edit_state(),
                     "text.select_home",
                     is_ime_composing,
+                    cx.input_ctx.text_boundary_mode,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
@@ -447,6 +483,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.edit_state(),
                     "text.select_end",
                     is_ime_composing,
+                    cx.input_ctx.text_boundary_mode,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 self.apply_singleline_ui_delta(cx, delta);
@@ -458,6 +495,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.edit_state(),
                     cmd,
                     is_ime_composing,
+                    cx.input_ctx.text_boundary_mode,
                 );
                 let delta = crate::text_edit::commands::singleline_ui_delta(cmd, outcome);
                 if !delta.handled {

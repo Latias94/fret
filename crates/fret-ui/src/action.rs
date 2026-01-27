@@ -231,6 +231,7 @@ pub trait UiActionHost {
     fn push_effect(&mut self, effect: Effect);
     fn request_redraw(&mut self, window: AppWindowId);
     fn next_timer_token(&mut self) -> TimerToken;
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken;
 
     /// Mark the nearest view-cache root for `cx.target` as dirty (GPUI-style `notify`).
     ///
@@ -353,6 +354,10 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
     fn next_timer_token(&mut self) -> TimerToken {
         self.app.next_timer_token()
     }
+
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+        self.app.next_clipboard_token()
+    }
 }
 
 impl<'a, H: UiHost> UiDragActionHost for UiActionHostAdapter<'a, H> {
@@ -461,6 +466,30 @@ pub type OnDismissiblePointerMove =
 pub(crate) struct DismissibleActionHooks {
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
+}
+
+pub type OnTextInputRegionTextInput =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &str) -> bool + 'static>;
+
+pub type OnTextInputRegionIme =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, &fret_core::ImeEvent) -> bool + 'static>;
+
+pub type OnTextInputRegionClipboardText =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, fret_core::ClipboardToken, &str) -> bool + 'static>;
+
+pub type OnTextInputRegionClipboardUnavailable =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, fret_core::ClipboardToken) -> bool + 'static>;
+
+pub type OnTextInputRegionSetSelection =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, u32, u32) -> bool + 'static>;
+
+#[derive(Default)]
+pub(crate) struct TextInputRegionActionHooks {
+    pub on_text_input: Option<OnTextInputRegionTextInput>,
+    pub on_ime: Option<OnTextInputRegionIme>,
+    pub on_clipboard_text: Option<OnTextInputRegionClipboardText>,
+    pub on_clipboard_unavailable: Option<OnTextInputRegionClipboardUnavailable>,
+    pub on_set_selection: Option<OnTextInputRegionSetSelection>,
 }
 
 pub type OnPointerDown =
