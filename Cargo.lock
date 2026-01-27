@@ -1009,6 +1009,7 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
+ "fret-undo",
 ]
 
 [[package]]
@@ -1024,6 +1025,9 @@ name = "fret-code-editor-view"
 version = "0.1.0"
 dependencies = [
  "fret-code-editor-buffer",
+ "fret-runtime",
+ "unicode-ident",
+ "unicode-segmentation",
 ]
 
 [[package]]
