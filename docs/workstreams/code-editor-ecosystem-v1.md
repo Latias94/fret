@@ -169,6 +169,15 @@ Exit criteria:
   - double-click select-word behavior,
   - triple-click select-line behavior.
 
+Implemented (evidence):
+
+- `crates/fret-runtime/src/window_text_boundary_mode.rs` (`WindowTextBoundaryModeService`)
+- `crates/fret-ui/src/element.rs` (`TextInputRegionProps::text_boundary_mode_override`)
+- `crates/fret-ui/src/tree/dispatch.rs` (`focus_text_boundary_mode_override`)
+- Tests:
+  - `crates/fret-ui/src/text_edit.rs` (Unicode/Identifier boundary unit tests)
+  - `crates/fret-ui/src/tree/tests/window_input_context_snapshot.rs`
+
 ### M3 — Editor surface MVP (native first, windowed)
 
 Exit criteria:
@@ -178,6 +187,20 @@ Exit criteria:
   - supports caret + selection + clipboard + undo hooks,
   - integrates IME preedit and cursor-area effects (native).
 - Row text is prepared and cached per visible window (no whole-doc blob).
+
+Implemented (evidence):
+
+- Crate split:
+  - `ecosystem/fret-code-editor-buffer`
+  - `ecosystem/fret-code-editor-view`
+  - `ecosystem/fret-code-editor`
+- Surface + caches:
+  - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor`, row text cache, torture overlay)
+  - `crates/fret-ui/src/canvas.rs` / `crates/fret-ui/src/element.rs` (`CanvasCachePolicy.shared_text`)
+- Harness pages:
+  - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
+  - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
+  - `apps/fret-ui-gallery/src/docs.rs`
 
 ### M4 — Incremental highlighting (visible-window materialization)
 
@@ -238,24 +261,24 @@ Legend:
 
 ### 2) Word boundaries seam (ADR 0194)
 
-- [ ] Add/standardize `TextBoundaryMode` definition (location TBD; likely `fret-runtime` input context).
-- [ ] Add window-scoped snapshot for the mode (`InputContext`).
-- [ ] Provide an override stack service (push/pop token) for overlays and focused surfaces.
+- [x] Add/standardize `TextBoundaryMode` definition (`fret-runtime` input context).
+- [x] Add window-scoped snapshot for the mode (`InputContext`).
+- [x] Provide a focused-surface override via `TextInputRegion` (stack-based override remains optional).
 - [ ] Ensure `TextInput`, `TextArea`, `SelectableText` consult the mode for:
   - word move/select commands,
   - double-click selection,
   - triple-click line selection.
-- [ ] Define test cases for Unicode and identifier modes.
+- [x] Define test cases for Unicode and identifier modes.
 
 ### 3) Windowed editor surface (ADR 0190/0193)
 
-- [ ] Choose v1 surface implementation strategy:
+- [x] Choose v1 surface implementation strategy:
   - paint-driven windowed surface (stable tree, `Scroll` + `Canvas`), or
   - VirtualList-based rows (only if composability is required early).
-- [ ] Define row cache keys and budgets (text blobs + shaping caches + token spans).
-- [ ] Define selection/caret painting layers (paint-only where possible).
-- [ ] Define IME preedit rendering strategy (inline underline + caret anchoring).
-- [ ] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
+- [x] Define row cache keys and budgets (viewport-bounded caches; shared text cache configurable).
+- [x] Define selection/caret painting layers (paint-only where possible).
+- [x] Define IME preedit rendering strategy (inline preedit + caret anchoring).
+- [x] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
 
 ### 4) Document model (buffer) and undo hooks (ADR 0193 / ADR 0136)
 
