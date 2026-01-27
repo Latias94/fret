@@ -25,6 +25,8 @@ type OpenStep =
   | { action: "move"; x: number; y: number }
   | { action: "tabTo"; selector: string; maxTabs: number }
   | { action: "attr"; selector: string; name: string; value: string }
+  | { action: "mouseDown"; selector: string }
+  | { action: "mouseUp"; selector: string }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
   | { action: "type"; selector: string; text: string }
@@ -549,13 +551,29 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "mouseDown") {
+      if (!valueRaw) {
+        throw new Error(`invalid --openSteps entry "${part}" (empty selector for mouseDown)`)
+      }
+      out.push({ action: "mouseDown", selector: valueRaw })
+      continue
+    }
+
+    if (actionRaw === "mouseUp") {
+      if (!valueRaw) {
+        throw new Error(`invalid --openSteps entry "${part}" (empty selector for mouseUp)`)
+      }
+      out.push({ action: "mouseUp", selector: valueRaw })
+      continue
+    }
+
     if (
       actionRaw !== "click" &&
       actionRaw !== "hover" &&
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|attr|wait|waitFor|move)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|attr|mouseDown|mouseUp|wait|waitFor|move)`
       )
     }
 
@@ -1291,6 +1309,12 @@ async function applySteps(
       await page.mouse.move(point.x, point.y, { steps: 4 })
     } else if (step.action === "contextmenu") {
       await page.mouse.click(point.x, point.y, { button: "right", delay: 10 })
+    } else if (step.action === "mouseDown") {
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+      await page.mouse.down({ button: "left" })
+    } else if (step.action === "mouseUp") {
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+      await page.mouse.up({ button: "left" })
     } else if (step.action === "keys") {
       await page.focus(step.selector)
       for (const chord of step.keys) {
@@ -1467,6 +1491,12 @@ async function applyOpenSteps(
       await page.mouse.move(point.x, point.y, { steps: 4 })
     } else if (step.action === "contextmenu") {
       await page.mouse.click(point.x, point.y, { button: "right", delay: 10 })
+    } else if (step.action === "mouseDown") {
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+      await page.mouse.down({ button: "left" })
+    } else if (step.action === "mouseUp") {
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+      await page.mouse.up({ button: "left" })
     } else if (step.action === "keys") {
       await page.focus(step.selector)
       for (const chord of step.keys) {
