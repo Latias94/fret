@@ -1,6 +1,8 @@
 use fret_core::{AppWindowId, Rect};
 use fret_runtime::Model;
-use fret_ui::action::{OnDismissRequest, OnDismissiblePointerMove};
+use fret_ui::action::{
+    OnCloseAutoFocus, OnDismissRequest, OnDismissiblePointerMove, OnOpenAutoFocus,
+};
 use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
@@ -83,6 +85,8 @@ pub struct OverlayRequest {
     /// Whether this overlay should close when the OS window is resized (or scale factor changes).
     pub close_on_window_resize: bool,
     pub open: Option<Model<bool>>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub dismissible_on_dismiss_request: Option<OnDismissRequest>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
@@ -108,6 +112,8 @@ impl std::fmt::Debug for OverlayRequest {
                 &self.disable_outside_pointer_events,
             )
             .field("open", &self.open)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field(
                 "dismissible_on_dismiss_request",
                 &self.dismissible_on_dismiss_request.is_some(),
@@ -143,6 +149,8 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -187,6 +195,8 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -213,6 +223,8 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -240,6 +252,8 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -261,6 +275,8 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
@@ -463,6 +479,8 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
+                        on_open_auto_focus: request.on_open_auto_focus,
+                        on_close_auto_focus: request.on_close_auto_focus,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
@@ -486,6 +504,8 @@ impl OverlayController {
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
+                        on_open_auto_focus: request.on_open_auto_focus,
+                        on_close_auto_focus: request.on_close_auto_focus,
                         on_dismiss_request: request.dismissible_on_dismiss_request,
                         children: request.children,
                     },
@@ -505,6 +525,7 @@ impl OverlayController {
                     window_overlays::TooltipRequest {
                         id: request.id,
                         root_name,
+                        interactive: request.presence.interactive,
                         trigger: request.trigger,
                         open,
                         present: request.presence.present,
@@ -529,6 +550,7 @@ impl OverlayController {
                     window_overlays::HoverOverlayRequest {
                         id: request.id,
                         root_name,
+                        interactive: request.presence.interactive,
                         trigger,
                         open,
                         present: request.presence.present,
