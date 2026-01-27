@@ -1847,16 +1847,15 @@ mod tests {
 
                             vec![
                                 underlay,
-                                HoverCard::new_controllable(
-                                    cx,
-                                    Some(open.clone()),
-                                    false,
-                                    trigger,
-                                    content,
-                                )
-                                .open_delay_frames(0)
-                                .close_delay_frames(0)
-                                .into_element(cx),
+                                HoverCard::new(trigger, content)
+                                    .open(Some(open))
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
+                                    )
+                                    .window_margin(Px(0.0))
+                                    .into_element(cx),
                             ]
                         },
                     )]
@@ -2007,6 +2006,234 @@ mod tests {
             ui.focus(),
             Some(underlay_node),
             "expected focus to move to the underlay during click-through close transition"
+        );
+    }
+
+    #[test]
+    fn hover_card_outside_press_is_click_through_and_closes_on_leave() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut dyn fret_core::UiServices,
+                      frame: u64| {
+            app.set_frame_id(FrameId(frame));
+            app.set_tick_id(TickId(frame));
+
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "hover-card-outside-press-click-through",
+                |cx| {
+                    let underlay_id_out = underlay_id.clone();
+                    let underlay_clicked = underlay_clicked.clone();
+                    let open = open.clone();
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Relative;
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let underlay = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(600.0));
+                                        layout.inset.top = Some(Px(420.0));
+                                        layout.size.width = Length::Px(Px(160.0));
+                                        layout.size.height = Length::Px(Px(80.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                {
+                                    let underlay_id_out = underlay_id_out.clone();
+                                    let underlay_clicked = underlay_clicked.clone();
+                                    move |cx, _st, id| {
+                                        underlay_id_out.set(Some(id));
+                                        cx.pressable_toggle_bool(&underlay_clicked);
+                                        Vec::new()
+                                    }
+                                },
+                            );
+
+                            let trigger = cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(0.0));
+                                        layout.inset.top = Some(Px(0.0));
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |_cx, _st| Vec::new(),
+                            );
+
+                            let content = cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::Panel,
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        HoverCardContent::new(vec![
+                                            ui::raw_text(cx, "card").into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                    ]
+                                },
+                            );
+
+                            vec![
+                                underlay,
+                                HoverCard::new(trigger, content)
+                                    .open(Some(open))
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
+                                    )
+                                    .window_margin(Px(0.0))
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        };
+
+        // Frame 1: mount and establish element/node mappings.
+        render(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let underlay_element = underlay_id.get().expect("underlay element id");
+        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
+            .expect("underlay node");
+
+        // Hover trigger to open (open_delay=0).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(12.0), Px(12.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: open model should flip to true.
+        render(&mut ui, &mut app, &mut services, 2);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected hover card to open on hover"
+        );
+
+        let underlay_pos = Point::new(Px(680.0), Px(460.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 3/4: allow leave to propagate; hover card should close and the outside click should
+        // activate + focus the underlay (click-through, non-modal).
+        render(&mut ui, &mut app, &mut services, 3);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        render(&mut ui, &mut app, &mut services, 4);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            app.models().get_copied(&underlay_clicked),
+            Some(true),
+            "expected outside press to reach the underlay (click-through)"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected focus to move to the underlay on click-through outside press"
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected hover card to close after leaving the hover region"
+        );
+
+        let arbitration = OverlayController::arbitration_snapshot(&ui);
+        assert_eq!(
+            arbitration.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
         );
     }
 }
