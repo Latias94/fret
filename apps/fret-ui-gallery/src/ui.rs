@@ -1159,6 +1159,15 @@ fn preview_virtual_list_torture(
 ) -> Vec<AnyElement> {
     let len: usize = 10_000;
 
+    let minimal_harness =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_MINIMAL").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let known_heights =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS").filter(|v| !v.is_empty()) {
             Some(v) => {
@@ -1186,81 +1195,89 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
-    let header_editing_row = cx
-        .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+    let header_editing_row = (!minimal_harness)
+        .then(|| {
+            cx.get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                .flatten()
+        })
         .flatten();
 
-    let jump_input = {
-        let mut props = fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
-        props.a11y_label = Some(Arc::<str>::from("Jump to row"));
-        props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
-        props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
-        props.layout.size.width = fret_ui::element::Length::Fill;
-        cx.text_input(props)
-    };
+    let controls = (!minimal_harness).then(|| {
+        let jump_input = {
+            let mut props =
+                fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
+            props.a11y_label = Some(Arc::<str>::from("Jump to row"));
+            props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
+            props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
+            props.layout.size.width = fret_ui::element::Length::Fill;
+            cx.text_input(props)
+        };
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
-            .items_center(),
-        |cx| {
-            let jump_model = virtual_list_torture_jump.clone();
-            let scroll_for_jump = virtual_list_torture_scroll.clone();
-            let on_jump: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                let raw = host
-                    .models_mut()
-                    .get_cloned(&jump_model)
-                    .unwrap_or_default();
-                let index = raw.trim().parse::<usize>().unwrap_or(0);
-                scroll_for_jump.scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
-                host.request_redraw(action_cx.window);
-            });
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N2)
+                .items_center(),
+            |cx| {
+                let jump_model = virtual_list_torture_jump.clone();
+                let scroll_for_jump = virtual_list_torture_scroll.clone();
+                let on_jump: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let raw = host
+                            .models_mut()
+                            .get_cloned(&jump_model)
+                            .unwrap_or_default();
+                        let index = raw.trim().parse::<usize>().unwrap_or(0);
+                        scroll_for_jump
+                            .scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
+                        host.request_redraw(action_cx.window);
+                    });
 
-            let scroll_for_bottom = virtual_list_torture_scroll.clone();
-            let on_bottom: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    scroll_for_bottom.scroll_to_bottom();
-                    host.request_redraw(action_cx.window);
-                });
+                let scroll_for_bottom = virtual_list_torture_scroll.clone();
+                let on_bottom: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        scroll_for_bottom.scroll_to_bottom();
+                        host.request_redraw(action_cx.window);
+                    });
 
-            let edit_row_for_clear = virtual_list_torture_edit_row.clone();
-            let edit_text_for_clear = virtual_list_torture_edit_text.clone();
-            let on_clear_edit: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
-                    let _ = host
-                        .models_mut()
-                        .update(&edit_text_for_clear, |v| v.clear());
-                    host.request_redraw(action_cx.window);
-                });
+                let edit_row_for_clear = virtual_list_torture_edit_row.clone();
+                let edit_text_for_clear = virtual_list_torture_edit_text.clone();
+                let on_clear_edit: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
+                        let _ = host
+                            .models_mut()
+                            .update(&edit_text_for_clear, |v| v.clear());
+                        host.request_redraw(action_cx.window);
+                    });
 
-            vec![
-                jump_input,
-                shadcn::Button::new("Jump")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-jump-button")
-                    .on_activate(on_jump)
-                    .into_element(cx),
-                shadcn::Button::new("Bottom")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-bottom-button")
-                    .on_activate(on_bottom)
-                    .into_element(cx),
-                shadcn::Button::new("Clear edit")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-clear-edit-button")
-                    .on_activate(on_clear_edit)
-                    .into_element(cx),
-            ]
-        },
-    );
+                vec![
+                    jump_input,
+                    shadcn::Button::new("Jump")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-jump-button")
+                        .on_activate(on_jump)
+                        .into_element(cx),
+                    shadcn::Button::new("Bottom")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-bottom-button")
+                        .on_activate(on_bottom)
+                        .into_element(cx),
+                    shadcn::Button::new("Clear edit")
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-clear-edit-button")
+                        .on_activate(on_clear_edit)
+                        .into_element(cx),
+                ]
+            },
+        )
+    });
 
-    let editing_indicator = {
+    let editing_indicator = (!minimal_harness).then(|| {
         let label = if let Some(row) = header_editing_row {
             Arc::<str>::from(format!("editing_row={row}"))
         } else {
@@ -1282,7 +1299,7 @@ fn preview_virtual_list_torture(
                 }
             },
         )
-    };
+    });
 
     let header = stack::vstack(
         cx,
@@ -1290,7 +1307,7 @@ fn preview_virtual_list_torture(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
         |cx| {
-            vec![
+            let mut out = vec![
                 cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
                 cx.text(if retained_host {
                     "Mode: retained host (virt-003 prototype; item subtrees can reattach without rerendering the parent cache root)."
@@ -1302,9 +1319,20 @@ fn preview_virtual_list_torture(
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
-                controls,
-                editing_indicator,
-            ]
+            ];
+
+            if minimal_harness {
+                out.push(cx.text("Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
+            } else {
+                if let Some(controls) = controls {
+                    out.push(controls);
+                }
+                if let Some(editing_indicator) = editing_indicator {
+                    out.push(editing_indicator);
+                }
+            }
+
+            out
         },
     );
 
@@ -1327,7 +1355,77 @@ fn preview_virtual_list_torture(
     };
 
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-        let list = if retained_host {
+        let list = if minimal_harness {
+            if retained_host {
+                let theme = theme.clone();
+                let key_at = Arc::new(|i| i as fret_ui::ItemKey);
+                let row = Arc::new(move |cx: &mut ElementContext<'_, App>, index: usize| {
+                    let zebra = (index % 2) == 0;
+                    let background = if zebra {
+                        theme.color_required("muted")
+                    } else {
+                        theme.color_required("background")
+                    };
+
+                    let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                    let row_label = cx.text(format!("Row {index}"));
+
+                    let mut container_props = decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(background))
+                            .p(Space::N2),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(height_hint)),
+                    );
+                    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                    cx.container(container_props, |_cx| vec![row_label])
+                });
+
+                cx.virtual_list_keyed_retained_with_layout(
+                    list_layout,
+                    len,
+                    options,
+                    &virtual_list_torture_scroll,
+                    key_at,
+                    row,
+                )
+            } else {
+                cx.virtual_list_keyed_with_layout(
+                    list_layout,
+                    len,
+                    options,
+                    &virtual_list_torture_scroll,
+                    |i| i as fret_ui::ItemKey,
+                    |cx, index| {
+                        let zebra = (index % 2) == 0;
+                        let background = if zebra {
+                            theme.color_required("muted")
+                        } else {
+                            theme.color_required("background")
+                        };
+
+                        let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                        let row_label = cx.text(format!("Row {index}"));
+
+                        let mut container_props = decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(background))
+                                .p(Space::N2),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(height_hint)),
+                        );
+                        container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                        cx.container(container_props, |_cx| vec![row_label])
+                    },
+                )
+            }
+        } else if retained_host {
             let theme = theme.clone();
             let edit_row = virtual_list_torture_edit_row.clone();
             let edit_text = virtual_list_torture_edit_text.clone();
