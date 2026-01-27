@@ -161,6 +161,15 @@ Implemented (partial evidence):
 
 - UTF-16 ↔ UTF-8 deterministic conversion + clamping:
   - `crates/fret-core/src/utf.rs` (unit tests included)
+- Hidden textarea IME bridge (wasm32):
+  - `crates/fret-platform-web/src/wasm.rs` (`WebPlatformServices` handles `Effect::ImeAllow` / `Effect::ImeSetCursorArea`)
+- Harness page (web UI gallery):
+  - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`)
+  - `apps/fret-ui-gallery/src/ui.rs` (`preview_web_ime_harness`)
+- WASM build plumbing for the harness:
+  - `.cargo/config.toml` (selects `getrandom_backend="wasm_js"` for `wasm32-unknown-unknown`)
+  - `crates/fret-launch/Cargo.toml` (wasm `getrandom` dependency)
+  - `apps/fret-ui-gallery/Cargo.toml` (avoid native `tree-sitter` deps for wasm)
 
 ### M2 — Word boundary mode seam (runtime mechanism; ecosystem policy)
 
