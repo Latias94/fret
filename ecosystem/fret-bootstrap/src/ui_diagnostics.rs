@@ -34,6 +34,7 @@ pub struct UiDiagnosticsConfig {
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
     pub max_gating_trace_entries: usize,
+    pub screenshot_on_dump: bool,
 }
 
 impl Default for UiDiagnosticsConfig {
@@ -114,6 +115,7 @@ impl Default for UiDiagnosticsConfig {
             .and_then(|v| v.parse().ok())
             .unwrap_or(200)
             .clamp(0, 2000);
+        let screenshot_on_dump = env_flag_default_false("FRET_DIAG_SCREENSHOT");
 
         Self {
             enabled,
@@ -138,6 +140,7 @@ impl Default for UiDiagnosticsConfig {
             redact_text,
             max_debug_string_bytes,
             max_gating_trace_entries,
+            screenshot_on_dump,
         }
     }
 }
@@ -1420,24 +1423,17 @@ impl UiDiagnosticsService {
 
     pub fn record_snapshot(
         &mut self,
-        app: &mut App,
+        app: &App,
         window: AppWindowId,
         bounds: Rect,
         scale_factor: f32,
         ui: &UiTree<App>,
+        element_runtime: Option<&ElementRuntime>,
         scene: &Scene,
     ) {
         if !self.is_enabled() {
             return;
         }
-
-        let overlay_stack = Some(overlay_stack_snapshot_for_window(app, window, ui));
-        let element_runtime = app.global::<ElementRuntime>();
-        let overlay_stack = if let Some(runtime) = element_runtime {
-            overlay_stack.map(|snap| snap.with_element_paths(window, runtime))
-        } else {
-            overlay_stack
-        };
 
         let last_pointer_position = self
             .per_window
@@ -1543,7 +1539,6 @@ impl UiDiagnosticsService {
                 hit_test,
                 element_diag,
                 semantics,
-                overlay_stack,
                 self.cfg.max_gating_trace_entries,
             ),
             changed_models,
@@ -1679,6 +1674,9 @@ impl UiDiagnosticsService {
             return None;
         }
         let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+        if self.cfg.screenshot_on_dump {
+            let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
+        }
         self.last_dump_dir = Some(dir.clone());
         Some(dir)
     }
@@ -2544,7 +2542,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -2606,15 +2604,6 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
-    /// Best-effort policy-level overlay stack snapshot for the window.
-    ///
-    /// This is intended as a debugging seam that helps connect low-level layer/arbitration state
-    /// to higher-level overlay concepts (popover/modal/tooltip/hover), without relying on logs.
-    #[serde(default)]
-    pub overlay_stack: Option<UiOverlayStackSnapshotV1>,
-    /// Cross-linked, script-friendly summary of how input arbitration relates to the overlay stack.
-    #[serde(default)]
-    pub overlay_arbitration_summary: Option<UiOverlayArbitrationSummaryV1>,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
     ///
     /// This is intended for debugging cross-surface inconsistencies (menus vs palette vs buttons)
@@ -2642,7 +2631,6 @@ impl UiTreeDebugSnapshotV1 {
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
         semantics: Option<UiSemanticsSnapshotV1>,
-        overlay_stack: Option<UiOverlayStackSnapshotV1>,
         max_gating_trace_entries: usize,
     ) -> Self {
         let contained_relayout_roots: HashSet<fret_core::NodeId> = ui
@@ -2650,10 +2638,6 @@ impl UiTreeDebugSnapshotV1 {
             .iter()
             .copied()
             .collect();
-        let input_arbitration =
-            UiInputArbitrationSnapshotV1::from_snapshot(ui.input_arbitration_snapshot());
-        let overlay_arbitration_summary =
-            overlay_arbitration_summary(&input_arbitration, overlay_stack.as_ref());
         Self {
             stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
             invalidation_walks: ui
@@ -2736,9 +2720,9 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiLayoutEngineSolveV1::from_solve)
                 .collect(),
-            input_arbitration,
-            overlay_stack,
-            overlay_arbitration_summary,
+            input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
+                ui.input_arbitration_snapshot(),
+            ),
             command_gating_trace: command_gating_trace_for_window(
                 app,
                 window,
@@ -3033,183 +3017,6 @@ impl UiOverlaySynthesisEventV1 {
             source,
             outcome,
         }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiOverlayStackSnapshotV1 {
-    #[serde(default)]
-    pub stack: Vec<UiOverlayStackEntryV1>,
-    #[serde(default)]
-    pub topmost_overlay: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub topmost_overlay_path: Option<String>,
-    #[serde(default)]
-    pub topmost_popover: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub topmost_popover_path: Option<String>,
-    #[serde(default)]
-    pub topmost_modal: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub topmost_modal_path: Option<String>,
-    #[serde(default)]
-    pub topmost_pointer_occluding_overlay: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub topmost_pointer_occluding_overlay_path: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiOverlayStackEntryV1 {
-    /// Numeric layer id (stable across `Debug` formatting changes; not stable between runs).
-    #[serde(default)]
-    pub layer_id: u64,
-    #[serde(default)]
-    pub kind: String,
-    #[serde(default)]
-    pub element: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub element_path: Option<String>,
-    #[serde(default)]
-    pub open: bool,
-    #[serde(default)]
-    pub visible: bool,
-    #[serde(default)]
-    pub blocks_underlay_input: bool,
-    #[serde(default)]
-    pub hit_testable: bool,
-    #[serde(default)]
-    pub pointer_occlusion: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UiOverlayArbitrationSummaryV1 {
-    #[serde(default)]
-    pub pointer_occlusion: String,
-    #[serde(default)]
-    pub pointer_occlusion_layer_id: Option<u64>,
-    #[serde(default)]
-    pub topmost_pointer_occluding_overlay: Option<u64>,
-    #[serde(default)]
-    pub topmost_pointer_occluding_overlay_layer_id: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub topmost_pointer_occluding_overlay_path: Option<String>,
-    #[serde(default)]
-    pub mismatch: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mismatch_reason: Option<String>,
-}
-
-fn overlay_arbitration_summary(
-    input: &UiInputArbitrationSnapshotV1,
-    overlay: Option<&UiOverlayStackSnapshotV1>,
-) -> Option<UiOverlayArbitrationSummaryV1> {
-    let Some(overlay) = overlay else {
-        return None;
-    };
-
-    let topmost = overlay.topmost_pointer_occluding_overlay;
-    let topmost_layer_id = topmost.and_then(|id| {
-        overlay
-            .stack
-            .iter()
-            .find(|e| e.element == Some(id))
-            .map(|e| e.layer_id)
-    });
-
-    let mut mismatch = false;
-    let mut mismatch_reason: Option<String> = None;
-
-    if input.pointer_occlusion != "none" && topmost.is_none() {
-        mismatch = true;
-        mismatch_reason = Some(
-            "pointer occlusion is active but overlay stack has no occluding overlay".to_string(),
-        );
-    } else if input.pointer_occlusion_layer_id.is_some()
-        && topmost_layer_id.is_some()
-        && input.pointer_occlusion_layer_id != topmost_layer_id
-    {
-        mismatch = true;
-        mismatch_reason = Some(
-            "pointer occlusion layer id does not match topmost occluding overlay layer id"
-                .to_string(),
-        );
-    }
-
-    Some(UiOverlayArbitrationSummaryV1 {
-        pointer_occlusion: input.pointer_occlusion.clone(),
-        pointer_occlusion_layer_id: input.pointer_occlusion_layer_id,
-        topmost_pointer_occluding_overlay: topmost,
-        topmost_pointer_occluding_overlay_layer_id: topmost_layer_id,
-        topmost_pointer_occluding_overlay_path: overlay
-            .topmost_pointer_occluding_overlay_path
-            .clone(),
-        mismatch,
-        mismatch_reason,
-    })
-}
-
-fn overlay_stack_snapshot_for_window(
-    app: &mut App,
-    window: AppWindowId,
-    ui: &UiTree<App>,
-) -> UiOverlayStackSnapshotV1 {
-    let snap = fret_ui_kit::overlay_controller::OverlayController::stack_snapshot_for_window(
-        ui, app, window,
-    );
-
-    let stack: Vec<UiOverlayStackEntryV1> = snap
-        .stack
-        .into_iter()
-        .map(|e| UiOverlayStackEntryV1 {
-            layer_id: e.layer_id.data().as_ffi(),
-            kind: format!("{:?}", e.kind),
-            element: e.id.map(|id| id.0),
-            element_path: None,
-            open: e.open,
-            visible: e.visible,
-            blocks_underlay_input: e.blocks_underlay_input,
-            hit_testable: e.hit_testable,
-            pointer_occlusion: pointer_occlusion_label(e.pointer_occlusion),
-        })
-        .collect();
-
-    UiOverlayStackSnapshotV1 {
-        stack,
-        topmost_overlay: snap.topmost_overlay.map(|id| id.0),
-        topmost_overlay_path: None,
-        topmost_popover: snap.topmost_popover.map(|id| id.0),
-        topmost_popover_path: None,
-        topmost_modal: snap.topmost_modal.map(|id| id.0),
-        topmost_modal_path: None,
-        topmost_pointer_occluding_overlay: snap.topmost_pointer_occluding_overlay.map(|id| id.0),
-        topmost_pointer_occluding_overlay_path: None,
-    }
-}
-
-impl UiOverlayStackSnapshotV1 {
-    fn with_element_paths(mut self, window: AppWindowId, runtime: &ElementRuntime) -> Self {
-        for entry in &mut self.stack {
-            if let Some(id) = entry.element {
-                entry.element_path =
-                    runtime.debug_path_for_element(window, fret_ui::elements::GlobalElementId(id));
-            }
-        }
-
-        self.topmost_overlay_path = self.topmost_overlay.and_then(|id| {
-            runtime.debug_path_for_element(window, fret_ui::elements::GlobalElementId(id))
-        });
-        self.topmost_popover_path = self.topmost_popover.and_then(|id| {
-            runtime.debug_path_for_element(window, fret_ui::elements::GlobalElementId(id))
-        });
-        self.topmost_modal_path = self.topmost_modal.and_then(|id| {
-            runtime.debug_path_for_element(window, fret_ui::elements::GlobalElementId(id))
-        });
-        self.topmost_pointer_occluding_overlay_path =
-            self.topmost_pointer_occluding_overlay.and_then(|id| {
-                runtime.debug_path_for_element(window, fret_ui::elements::GlobalElementId(id))
-            });
-
-        self
     }
 }
 
@@ -4606,6 +4413,10 @@ pub struct UiLayerInfoV1 {
     #[serde(default)]
     pub pointer_occlusion: String,
     pub wants_pointer_down_outside_events: bool,
+    #[serde(default)]
+    pub consume_pointer_down_outside_events: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pointer_down_outside_branches: Vec<u64>,
     pub wants_pointer_move_events: bool,
     pub wants_timer_events: bool,
 }
@@ -4621,6 +4432,13 @@ impl UiLayerInfoV1 {
             hit_testable: layer.hit_testable,
             pointer_occlusion: pointer_occlusion_label(layer.pointer_occlusion),
             wants_pointer_down_outside_events: layer.wants_pointer_down_outside_events,
+            consume_pointer_down_outside_events: layer.consume_pointer_down_outside_events,
+            pointer_down_outside_branches: layer
+                .pointer_down_outside_branches
+                .into_iter()
+                .take(32)
+                .map(key_to_u64)
+                .collect(),
             wants_pointer_move_events: layer.wants_pointer_move_events,
             wants_timer_events: layer.wants_timer_events,
         }
@@ -4711,7 +4529,6 @@ impl UiHitTestSnapshotV1 {
         let mut scope_roots = Vec::new();
         if let Some(root) = hit_test.barrier_root {
             scope_roots.push(UiHitTestScopeRootV1 {
-                label: "modal_barrier_root".to_string(),
                 kind: "modal_barrier_root".to_string(),
                 root: key_to_u64(root),
                 layer_id: None,
@@ -4728,16 +4545,7 @@ impl UiHitTestSnapshotV1 {
 
         for root in &hit_test.active_layer_roots {
             let info = by_root.get(root).copied();
-            let label = info
-                .map(|l| {
-                    format!(
-                        "layer_root(pointer_occlusion={})",
-                        pointer_occlusion_label(l.pointer_occlusion)
-                    )
-                })
-                .unwrap_or_else(|| "layer_root".to_string());
             scope_roots.push(UiHitTestScopeRootV1 {
-                label,
                 kind: "layer_root".to_string(),
                 root: key_to_u64(*root),
                 layer_id: info.map(|l| l.id.data().as_ffi()),
@@ -4763,11 +4571,6 @@ impl UiHitTestSnapshotV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiHitTestScopeRootV1 {
-    /// Stable, script-friendly label for the scope root.
-    ///
-    /// This is intended for comparisons across refactors without relying on `Debug` formatting.
-    #[serde(default)]
-    pub label: String,
     /// Stable scope root kind (e.g. `modal_barrier_root`, `layer_root`).
     pub kind: String,
     /// Node id of the root (not stable between runs; treat as an in-run reference only).
@@ -4784,114 +4587,35 @@ pub struct UiHitTestScopeRootV1 {
     pub hit_testable: Option<bool>,
 }
 
-#[cfg(test)]
-mod hit_test_scope_root_label_tests {
-    use super::*;
-    use fret_core::NodeId;
-    use fret_ui::tree::{PointerOcclusion, UiDebugHitTest, UiDebugLayerInfo, UiLayerId};
-
-    #[test]
-    fn hit_test_scope_roots_include_stable_labels() {
-        let barrier_root = NodeId::default();
-        let layer_root = NodeId::default();
-        let layer = UiDebugLayerInfo {
-            id: UiLayerId::default(),
-            root: layer_root,
-            visible: true,
-            blocks_underlay_input: true,
-            hit_testable: true,
-            pointer_occlusion: PointerOcclusion::BlockMouseExceptScroll,
-            wants_pointer_down_outside_events: false,
-            wants_pointer_move_events: false,
-            wants_timer_events: false,
-        };
-        let hit_test = UiDebugHitTest {
-            hit: None,
-            active_layer_roots: vec![layer_root],
-            barrier_root: Some(barrier_root),
-        };
-        let snap = UiHitTestSnapshotV1::from_hit_test_with_layers(
-            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-            hit_test,
-            &[layer],
-        );
-        assert_eq!(snap.scope_roots.len(), 2);
-        assert!(
-            snap.scope_roots
-                .iter()
-                .any(|r| r.kind == "modal_barrier_root" && r.label == "modal_barrier_root")
-        );
-        assert!(
-            snap.scope_roots
-                .iter()
-                .any(|r| r.kind == "layer_root" && r.label.contains("pointer_occlusion="))
-        );
-    }
-}
-
-#[cfg(test)]
-mod overlay_arbitration_summary_tests {
-    use super::*;
-
-    #[test]
-    fn overlay_arbitration_summary_detects_layer_id_mismatch() {
-        let input = UiInputArbitrationSnapshotV1 {
-            modal_barrier_root: None,
-            pointer_occlusion: "block_mouse_except_scroll".to_string(),
-            pointer_occlusion_layer_id: Some(123),
-            pointer_capture_active: false,
-            pointer_capture_layer_id: None,
-            pointer_capture_multiple_layers: false,
-        };
-
-        let overlay = UiOverlayStackSnapshotV1 {
-            stack: vec![UiOverlayStackEntryV1 {
-                layer_id: 456,
-                kind: "Popover".to_string(),
-                element: Some(1),
-                element_path: None,
-                open: true,
-                visible: true,
-                blocks_underlay_input: true,
-                hit_testable: true,
-                pointer_occlusion: "block_mouse_except_scroll".to_string(),
-            }],
-            topmost_overlay: Some(1),
-            topmost_overlay_path: None,
-            topmost_popover: Some(1),
-            topmost_popover_path: None,
-            topmost_modal: None,
-            topmost_modal_path: None,
-            topmost_pointer_occluding_overlay: Some(1),
-            topmost_pointer_occluding_overlay_path: None,
-        };
-
-        let summary = overlay_arbitration_summary(&input, Some(&overlay)).expect("summary");
-        assert!(summary.mismatch);
-        assert!(
-            summary
-                .mismatch_reason
-                .as_deref()
-                .is_some_and(|r| r.contains("does not match")),
-            "expected mismatch reason"
-        );
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElementDiagnosticsSnapshotV1 {
     pub focused_element: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub focused_element_path: Option<String>,
+    pub focused_element_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub focused_element_visual_bounds: Option<RectV1>,
     pub active_text_selection: Option<(u64, u64)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub active_text_selection_path: Option<(String, String)>,
     pub hovered_pressable: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hovered_pressable_path: Option<String>,
+    pub hovered_pressable_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hovered_pressable_visual_bounds: Option<RectV1>,
     pub pressed_pressable: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pressed_pressable_path: Option<String>,
+    pub pressed_pressable_node: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_bounds: Option<RectV1>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pressed_pressable_visual_bounds: Option<RectV1>,
     pub hovered_hover_region: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hovered_hover_region_path: Option<String>,
@@ -4977,12 +4701,25 @@ impl ElementDiagnosticsSnapshotV1 {
         Self {
             focused_element: snapshot.focused_element.map(|id| id.0),
             focused_element_path,
+            focused_element_node: snapshot.focused_element_node.map(key_to_u64),
+            focused_element_bounds: snapshot.focused_element_bounds.map(RectV1::from),
+            focused_element_visual_bounds: snapshot.focused_element_visual_bounds.map(RectV1::from),
             active_text_selection: snapshot.active_text_selection.map(|(a, b)| (a.0, b.0)),
             active_text_selection_path,
             hovered_pressable: snapshot.hovered_pressable.map(|id| id.0),
             hovered_pressable_path,
+            hovered_pressable_node: snapshot.hovered_pressable_node.map(key_to_u64),
+            hovered_pressable_bounds: snapshot.hovered_pressable_bounds.map(RectV1::from),
+            hovered_pressable_visual_bounds: snapshot
+                .hovered_pressable_visual_bounds
+                .map(RectV1::from),
             pressed_pressable: snapshot.pressed_pressable.map(|id| id.0),
             pressed_pressable_path,
+            pressed_pressable_node: snapshot.pressed_pressable_node.map(key_to_u64),
+            pressed_pressable_bounds: snapshot.pressed_pressable_bounds.map(RectV1::from),
+            pressed_pressable_visual_bounds: snapshot
+                .pressed_pressable_visual_bounds
+                .map(RectV1::from),
             hovered_hover_region: snapshot.hovered_hover_region.map(|id| id.0),
             hovered_hover_region_path,
             wants_continuous_frames: snapshot.wants_continuous_frames,
@@ -5166,6 +4903,17 @@ fn unix_ms_now() -> u64 {
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or_default()
+}
+
+fn env_flag_default_false(name: &str) -> bool {
+    let Ok(v) = std::env::var(name) else {
+        return false;
+    };
+    let v = v.trim().to_ascii_lowercase();
+    if v.is_empty() {
+        return true;
+    }
+    !matches!(v.as_str(), "0" | "false" | "no" | "off")
 }
 
 fn env_flag_default_true(name: &str) -> bool {

@@ -39,6 +39,7 @@ Status legend:
 
 - `[x]` `Dispatcher` trait: define minimal portable surface (target: `crates/fret-runtime`, implemented at `crates/fret-runtime/src/execution.rs`)
 - `[x]` Desktop impl: implement `Dispatcher` in the desktop runner (target: `crates/fret-launch`, implemented at `crates/fret-launch/src/runner/desktop/dispatcher.rs`)
+- `[x]` Runner: route platform completions through the dispatcher background lane (target: `crates/fret-launch/src/runner/desktop/mod.rs`)
 - `[x]` Ergonomics: add ecosystem executors + inbox helpers (target: `ecosystem/*`, implemented as `ecosystem/fret-executor`)
 - `[x]` Driver boundary: drain inboxes at runner flush points via `InboxDrainRegistry` (desktop: `crates/fret-launch/src/runner/desktop/mod.rs`, web: `crates/fret-launch/src/runner/web.rs`)
 - `[x]` Observability: add tracing spans for dispatch/wake/drain points (dispatcher + driver boundary)
@@ -61,6 +62,7 @@ Status legend:
 
 - `[x]` Meet ADR 0190 acceptance criteria and flip status to `Accepted`
 - `[x]` Replace remaining bespoke channel+wake utilities in templates/examples
+- `[x]` Guardrails: add CI check that rejects raw `std::thread::{spawn,sleep}` and bespoke channels/timer crates in ecosystem/apps (`tools/check_execution_surface.ps1`)
 
 ## Proposed public surface (API sketch, non-binding)
 

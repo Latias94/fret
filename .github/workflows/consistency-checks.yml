@@ -25,3 +25,7 @@ jobs:
       - name: Check layering policy
         shell: pwsh
         run: pwsh -NoProfile -File tools/check_layering.ps1
+
+      - name: Check execution surface
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/check_execution_surface.ps1

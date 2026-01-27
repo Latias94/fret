@@ -31,7 +31,7 @@ Keep this list short and evidence-backed:
 - [x] OIA2-test-001 Dock drag closes/hides overlays (ADR 0072 baseline).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (dock drag overlay hygiene tests),
     `docs/adr/0072-docking-interaction-arbitration-matrix.md`
-- [~] OIA2-test-002 Expand docking drag × overlay hygiene edges (ADR 0072).
+- [x] OIA2-test-002 Expand docking drag × overlay hygiene edges (ADR 0072).
   - Target: cover “start drag while submenu open / while capture active / cross-window hover window”.
   - Evidence:
     - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends`)
@@ -54,14 +54,15 @@ Keep this list short and evidence-backed:
 - [x] OIA2-diag-010 Hit-test scope roots are exposed in diagnostics (baseline).
   - Evidence: `crates/fret-ui/src/tree/mod.rs` (`debug_hit_test`),
     `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
-- [ ] OIA2-diag-011 Add stable labels for scope roots (avoid relying on `Debug` formatting).
+- [x] OIA2-diag-011 Add stable labels for scope roots (avoid relying on `Debug` formatting).
   - Target: scripted comparisons remain resilient to formatting changes.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiHitTestSnapshotV1.scope_roots`)
 
 ## P0 — Policy Normalization (Reduce Future Refactor Risk)
 
-- [~] OIA2-pol-020 Consolidate menu-like overlay invariants into shared helpers.
-  - Status: partially consolidated; keep reducing special cases.
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
+- [x] OIA2-pol-020 Consolidate menu-like overlay invariants into shared helpers.
+  - Status: consolidated for v2; follow-ups should add new helpers instead of branching in-place.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (`resolve_dismissable_branch_nodes_for_popover`, `should_suspend_pointer_gating_for_capture`)
 
 ## Notes
 

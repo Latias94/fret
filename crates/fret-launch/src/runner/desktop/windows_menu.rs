@@ -290,16 +290,11 @@ pub(crate) fn set_window_menu_bar(
         .cloned()
         .unwrap_or_default();
     let fallback_input_ctx = InputContext::fallback(Platform::Windows, caps);
-    let gating = app
-        .global::<fret_runtime::WindowCommandGatingService>()
-        .and_then(|svc| svc.snapshot(app_window).cloned())
-        .unwrap_or_else(|| {
-            fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
-                app,
-                app_window,
-                fallback_input_ctx,
-            )
-        });
+    let gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+        app,
+        app_window,
+        fallback_input_ctx,
+    );
 
     let (menu, defs_by_id) = build_menu_bar(menu_bar, commands, keymap, gating.input_ctx())?;
 
@@ -361,7 +356,7 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
             let snapshot = svc
                 .and_then(|svc| svc.snapshot(window).cloned())
                 .unwrap_or_else(|| {
-                    fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+                    fret_runtime::snapshot_for_window_with_input_ctx_fallback(
                         app,
                         window,
                         fallback_input_ctx,

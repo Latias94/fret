@@ -1,6 +1,7 @@
 use fret_core::AppWindowId;
 use fret_runtime::{
-    CommandId, InputContext, Platform, PlatformCapabilities, WindowCommandGatingSnapshot,
+    CommandId, InputContext, InputDispatchPhase, Platform, PlatformCapabilities,
+    WindowCommandGatingService, WindowCommandGatingSnapshot,
 };
 use fret_ui::UiHost;
 
@@ -9,7 +10,16 @@ pub(crate) fn default_input_context<H: UiHost>(app: &H) -> InputContext {
         .global::<PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    InputContext::fallback(Platform::current(), caps)
+    InputContext {
+        platform: Platform::current(),
+        caps,
+        ui_has_modal: false,
+        window_arbitration: None,
+        focus_is_text_input: false,
+        edit_can_undo: true,
+        edit_can_redo: true,
+        dispatch_phase: InputDispatchPhase::Bubble,
+    }
 }
 
 pub(crate) fn snapshot_for_window<H: UiHost>(
@@ -17,11 +27,16 @@ pub(crate) fn snapshot_for_window<H: UiHost>(
     window: AppWindowId,
 ) -> WindowCommandGatingSnapshot {
     let fallback_input_ctx = default_input_context(app);
-    fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
-        app,
-        window,
-        fallback_input_ctx,
-    )
+    app.global::<WindowCommandGatingService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .unwrap_or_else(|| {
+            fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                app,
+                window,
+                fallback_input_ctx,
+            )
+        })
 }
 
 pub(crate) fn command_is_disabled_by_gating<H: UiHost>(

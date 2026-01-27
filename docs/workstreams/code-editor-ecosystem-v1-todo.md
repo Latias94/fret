@@ -1,0 +1,151 @@
+# Code Editor Ecosystem v1 — TODO Tracker
+
+Status: Active (workstream tracker)
+Last updated: 2026-01-27
+
+This is the checkbox tracker companion to:
+
+- `docs/workstreams/code-editor-ecosystem-v1.md`
+
+Normative contracts:
+
+- `docs/adr/0193-code-editor-ecosystem-v1.md`
+- `docs/adr/0194-text-navigation-and-word-boundaries-v1.md`
+- `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
+
+Legend:
+
+- [ ] pending
+- [~] in progress
+- [x] done
+- [!] blocked / needs decision
+
+---
+
+## M0 — Contracts Locked
+
+- [ ] Review ADR 0193 and confirm crate split and v1 baseline (windowed surface first).
+- [ ] Review ADR 0194 and confirm the preferred seam:
+  - window-scoped `InputContext.text_boundary_mode` + override stack.
+- [ ] Review ADR 0195 and confirm web strategy:
+  - hidden textarea bridge,
+  - `beforeinput` + `composition*` translation,
+  - proxy mode (no full document mirroring).
+- [ ] Add 1–3 evidence anchors per ADR (file paths / tests) once implementation starts.
+
+---
+
+## M1 — Web IME Bridge (wasm baseline)
+
+### DOM element lifecycle
+
+- [ ] Create the hidden textarea element (per window) and attach to the canvas overlay layer.
+- [ ] Define focus/blur rules and map them to `Effect::ImeAllow`.
+- [ ] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
+
+### Event translation
+
+- [ ] Translate `compositionstart/update/end` to `Event::Ime` (preedit/commit).
+- [ ] Translate `beforeinput`/`input` to `Event::TextInput` for committed insertions.
+- [ ] Filter control characters from `TextInput` (ADR 0012).
+- [ ] Implement command-path suppression to avoid “command executes + DOM inserts text”.
+
+### UTF-16 ↔ UTF-8 conversion
+
+- [ ] Implement deterministic conversion + clamping utilities.
+- [ ] Add tests for mixed-script and emoji sequences (byte offsets remain valid).
+
+### Observability (debug-only)
+
+- [ ] Counters: last `inputType`, whether suppressed, last composing state.
+- [ ] Counters: last caret-rect anchor and whether positioning was attempted.
+
+### Harness
+
+- [ ] Add a web harness/demo that exercises:
+  - preedit updates,
+  - commit,
+  - backspace/arrows,
+  - no double-insert on `compositionend`.
+
+---
+
+## M2 — Word Boundaries and Click Selection
+
+### Mode seam
+
+- [ ] Define `TextBoundaryMode` and wire it into window-scoped `InputContext`.
+- [ ] Implement override stack service (push/pop token) for focused surfaces/overlays.
+- [ ] Default mode is `UnicodeWord` unless overridden.
+
+### Command semantics
+
+- [ ] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
+- [ ] Ensure double-click selects word and triple-click selects logical line (ADR 0151 + ADR 0194).
+- [ ] Ensure composing selection operates on display text (ADR 0071).
+
+### Tests
+
+- [ ] Unicode word boundaries: Latin/CJK/emoji.
+- [ ] Identifier boundaries: underscores, digits, mixed scripts, punctuation.
+- [ ] Double/triple click selection under scroll offsets and transforms.
+
+---
+
+## M3 — Editor Surface MVP (native first, windowed)
+
+### Windowed surface model
+
+- [ ] Choose the v1 surface implementation:
+  - paint-driven windowed surface (preferred), or
+  - VirtualList rows (only if composability is required early).
+- [ ] Define overscan policy and scroll stability expectations.
+
+### Text preparation + caching
+
+- [ ] Prepare text per visible display row only (no monolithic document blob).
+- [ ] Define row cache keys and budgets (LRU or epoch-based).
+- [ ] Ensure theme-only changes remain paint-only (no reshaping).
+
+### Input/IME integration
+
+- [ ] Inline preedit rendering.
+- [ ] Caret rect reporting for `ImeSetCursorArea` (native).
+
+### Harness
+
+- [ ] Add a “scroll stability / no stale paint” torture harness entry (ui-gallery style).
+
+---
+
+## M4 — Buffer Model + Undo Hooks
+
+- [ ] Choose v1 buffer structure (rope / piece table / hybrid).
+- [ ] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
+- [ ] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
+- [ ] Lock document identity (URI-like) for multi-document workflows.
+
+---
+
+## M5 — Syntax Highlighting (incremental + visible-window materialization)
+
+- [ ] Define semantic token schema (highlight ids independent of theme colors).
+- [ ] Incremental update strategy (best-effort; visible window prioritized).
+- [ ] Materialize spans only for visible rows.
+- [ ] Theme changes update paint-only styles without reshaping.
+
+---
+
+## M6 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
+
+- [ ] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
+- [ ] Fold regions + placeholders without breaking caret/selection.
+- [ ] Inlays (injected display fragments) without mutating the underlying buffer.
+
+---
+
+## M7 — Retained Host / Composable Rows (only if required)
+
+- [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
+- [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+

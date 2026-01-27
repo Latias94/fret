@@ -69,6 +69,9 @@ This aligns `fret-runtime::WindowCommandActionAvailabilityService` with the `Com
 For menus / command palette / shortcut help, we want a single data seam:
 
 - `InputContext` (`WindowInputContextService`)
+  - Includes a window-scoped input arbitration snapshot (`InputContext.window_arbitration`) so
+    ecosystem policies (overlays, docking, viewport tools) can make consistent decisions without
+    reaching into global services.
 - explicit overrides (`WindowCommandEnabledService`)
 - dispatch-path availability (`WindowCommandActionAvailabilityService`)
 
