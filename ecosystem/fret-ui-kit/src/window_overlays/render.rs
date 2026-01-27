@@ -54,6 +54,10 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusActionHostAdapter<'a, H> {
     fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
         self.app.next_timer_token()
     }
+
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+        self.app.next_clipboard_token()
+    }
 }
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusActionHostAdapter<'a, H> {

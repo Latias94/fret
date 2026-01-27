@@ -2475,11 +2475,6 @@ impl DropdownMenu {
                                                             cx.window,
                                                         );
 
-                                                        let gating = crate::command_gating::snapshot_for_window(
-                                                            &*cx.app,
-                                                            cx.window,
-                                                        );
-
                                                         let mut rows: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
 
