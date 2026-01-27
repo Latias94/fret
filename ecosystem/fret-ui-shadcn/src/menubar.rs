@@ -1534,10 +1534,7 @@ impl MenubarMenuEntries {
 
                                                                     let mut bg = Color::TRANSPARENT;
                                                                     if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
-                                                                        );
+                                                                        bg = theme.color_required("accent");
                                                                     }
                                                                     let fg = if item_enabled {
                                                                         fg
@@ -1683,10 +1680,7 @@ impl MenubarMenuEntries {
 
                                                                     let mut bg = Color::TRANSPARENT;
                                                                     if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
-                                                                        );
+                                                                        bg = theme.color_required("accent");
                                                                     }
                                                                     let fg = if item_enabled {
                                                                         fg
@@ -1890,10 +1884,7 @@ impl MenubarMenuEntries {
                                                                         {
                                                                             destructive_bg
                                                                         } else {
-                                                                            alpha_mul(
-                                                                                theme.color_required("accent"),
-                                                                                0.9,
-                                                                            )
+                                                                            theme.color_required("accent")
                                                                         };
                                                                     }
                                                                     let fg = if item_enabled {
@@ -2029,10 +2020,7 @@ impl MenubarMenuEntries {
                                                                     let mut bg =
                                                                         Color::TRANSPARENT;
                                                                     if st.hovered || st.pressed || st.focused {
-                                                                        bg = alpha_mul(
-                                                                            theme.color_required("accent"),
-                                                                            0.9,
-                                                                        );
+                                                                        bg = theme.color_required("accent");
                                                                     }
                                                                     let fg = if item_enabled {
                                                                         fg
@@ -2464,10 +2452,7 @@ impl MenubarMenuEntries {
 
                                                                                 let mut bg = Color::TRANSPARENT;
                                                                                 if st.hovered || st.pressed || st.focused {
-                                                                                    bg = alpha_mul(
-                                                                                        theme.color_required("accent"),
-                                                                                        0.9,
-                                                                                    );
+                                                                                    bg = theme.color_required("accent");
                                                                                 }
                                                                                 let fg = if item_enabled {
                                                                                     fg
@@ -2600,10 +2585,7 @@ impl MenubarMenuEntries {
 
                                                                                 let mut bg = Color::TRANSPARENT;
                                                                                 if st.hovered || st.pressed || st.focused {
-                                                                                    bg = alpha_mul(
-                                                                                        theme.color_required("accent"),
-                                                                                        0.9,
-                                                                                    );
+                                                                                    bg = theme.color_required("accent");
                                                                                 }
                                                                                 let fg = if item_enabled {
                                                                                     fg
@@ -2731,10 +2713,7 @@ impl MenubarMenuEntries {
                                                                                     {
                                                                                         destructive_bg
                                                                                     } else {
-                                                                                        alpha_mul(
-                                                                                            theme.color_required("accent"),
-                                                                                            0.9,
-                                                                                        )
+                                                                                        theme.color_required("accent")
                                                                                     };
                                                                                 }
                                                                                 let fg = if item_enabled {

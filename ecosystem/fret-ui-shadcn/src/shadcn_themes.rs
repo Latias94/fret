@@ -68,7 +68,10 @@ struct ShadcnCssVars {
 
 /// Load a shadcn v4 "new-york-v4" theme preset.
 ///
-/// Theme source: `repo-ref/ui/apps/v4/public/r/styles/new-york-v4/theme-*.json` (vendored).
+/// Theme source:
+/// - Base palette: `repo-ref/ui/apps/v4/public/r/styles/new-york-v4/theme-*.json` (vendored).
+/// - App default overrides: `repo-ref/ui/apps/v4/styles/globals.css` (the web golden harness uses
+///   these as the effective runtime values).
 pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) -> ThemeConfig {
     let raw = match base {
         ShadcnBaseColor::Neutral => {
@@ -106,6 +109,16 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
             ShadcnColorScheme::Light => "oklch(0.97 0.01 17)".to_string(),
             ShadcnColorScheme::Dark => "oklch(0.58 0.22 27)".to_string(),
         });
+
+    // The upstream v4 registry theme JSONs do not fully match the values used by the upstream
+    // web app's `styles/globals.css`. Our web-vs-fret goldens are generated from that app, so we
+    // patch the delta here to keep the Rust runtime aligned.
+    if base == ShadcnBaseColor::Neutral && scheme == ShadcnColorScheme::Dark {
+        // Source: `repo-ref/ui/apps/v4/styles/globals.css`.
+        colors.insert("popover".to_string(), "oklch(0.269 0 0)".to_string());
+        colors.insert("accent".to_string(), "oklch(0.371 0 0)".to_string());
+        colors.insert("sidebar-ring".to_string(), "oklch(0.439 0 0)".to_string());
+    }
 
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius") {
