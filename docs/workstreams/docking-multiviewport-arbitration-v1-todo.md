@@ -40,9 +40,13 @@ Each TODO is labeled:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (records `ViewportInputEvent` into diagnostics)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.viewport_input`)
     - `apps/fretboard/src/diag.rs` (`--check-viewport-input-min`)
-- [ ] DMV1-diag-002 Export docking drag/capture ownership as a stable diagnostic record.
+- [x] DMV1-diag-002 Export docking drag/capture ownership as a stable diagnostic record.
   - Target: per-frame “dock drag active” + pointer owner (dock drag vs viewport capture vs none).
   - Rationale: most regressions are arbitration bugs; diagnostics must make ownership visible.
+  - Evidence:
+    - `crates/fret-runtime/src/interaction_diagnostics.rs` (`WindowInteractionDiagnosticsStore`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (records dock drag + viewport capture)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`debug.docking_interaction`)
 
 ## P0 — Conformance Tests (Multi-Viewport)
 
