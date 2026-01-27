@@ -127,15 +127,16 @@ See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed
   - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs`,
     `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
     `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`tooltip_does_not_request_observers_by_default`,
-    `tooltip_does_not_request_observers_while_closing`, `hover_overlay_is_click_through_while_closing`)
+    `tooltip_does_not_request_observers_while_closing`, `hover_overlay_is_pointer_transparent_while_closing`)
 - Pointer capture hides hover overlays and tooltips in the same window to avoid showing incidental
   overlays while drags/capture sessions are active.
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
     `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`pointer_capture_hides_hover_overlays_in_same_window`,
     `pointer_capture_hides_tooltips_in_same_window`)
-- Overlay request caching: hover overlays + tooltips remain per-frame and are not stored/synthesized
-  from cached declarations (avoids stale incidental overlays and removes unused cache growth).
-  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/{frame.rs,render.rs,state.rs}`
+- Overlay request caching: hover overlays + tooltips are synthesized from cached declarations under
+  view-cache reuse, but with a short TTL (`OVERLAY_CACHE_TTL_FRAMES`) so incidental overlays cannot
+  persist indefinitely when a producer subtree is suppressed.
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/{frame.rs,render.rs,state.rs,tests.rs}`
 - Menu ergonomics: ensure submenu timers (open/close/focus delay) and safe-hover pointer-move outcomes
   are routed consistently by installing timer + pointer-move handlers on the submenu trigger path.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/{root.rs,sub_trigger.rs}`

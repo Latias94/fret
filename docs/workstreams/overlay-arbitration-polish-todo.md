@@ -42,14 +42,14 @@ Each TODO is labeled:
 - [x] OVERLAY-life-002 Introduce authoritative presence for hover/tooltip overlays.
   - Target: make hover/tooltip safe under view-cache reuse without creating “ghost overlays” (authoritative `open/present` + liveness gate).
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`, `ecosystem/fret-ui-kit/src/window_overlays/render.rs`, `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
-  - Evidence: `crates/fret-ui/src/elements/queries.rs` (`element_is_live_in_current_frame`)
+  - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/state.rs` (`OVERLAY_CACHE_TTL_FRAMES`, `last_seen_frame`)
   - Evidence: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (hover/tooltip synthesis + closing interactivity)
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/tooltip.rs`, `ecosystem/fret-ui-kit/src/primitives/hover_card.rs` (API surface)
   - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-shadcn/src/hover_card.rs` (integration)
   - Checklist:
     - [x] Add `open: Model<bool>` + `present: bool` to `HoverOverlayRequest`/`TooltipRequest`
     - [x] Synthesize hover/tooltip requests from cached declarations under view-cache reuse
-    - [x] Add liveness gate to prevent ghost overlays (trigger must be live in current frame)
+    - [x] Add a short TTL liveness gate to prevent ghost incidental overlays under producer suppression
     - [x] Update ecosystem primitives + shadcn recipes to provide `open` + `present`
     - [x] Add regressions for cache-hit synthesis + close-transition interactivity
   - Notes: landing this surfaced a Radix parity dependency around menu initial focus targets:
