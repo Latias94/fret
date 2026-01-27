@@ -646,6 +646,7 @@ topics (if/when we implement them):
     - Scheduling: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/prepaint.rs` (`mark_retained_virtual_list_needs_reconcile`).
     - Input routing: `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` schedules retained-host reconcile on overscan escape instead of forcing `notify()` (keeps parent cache roots reusable).
     - Reconcile: `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
+    - Diagnostics: bundles export retained VirtualList reconcile deltas (`debug.retained_virtual_list_reconciles`) and frame counters (`debug.stats.retained_virtual_list_*`).
     - Tests: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_host_updates_window_without_rerendering_view_cache_root`).
     - Constraint: the host must be a layout barrier (non-`Auto` main-axis size), otherwise children reattach is skipped to preserve mount invariants.
   - Harness (window-boundary scroll):

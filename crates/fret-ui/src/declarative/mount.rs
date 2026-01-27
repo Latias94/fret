@@ -1388,6 +1388,8 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
+        let prev_items_len = props.visible_items.len();
+
         let mut existing_by_key: HashMap<crate::ItemKey, NodeId> = HashMap::new();
         {
             let current_children = ui.children(node);
@@ -1396,13 +1398,17 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             }
         }
 
+        let mut preserved: u32 = 0;
+        let mut attached: u32 = 0;
         let mut next_children: Vec<NodeId> = Vec::with_capacity(desired_items.len());
         for item in &desired_items {
             if let Some(existing) = existing_by_key.get(&item.key).copied() {
                 next_children.push(existing);
+                preserved = preserved.saturating_add(1);
                 continue;
             }
 
+            attached = attached.saturating_add(1);
             let child_element = {
                 let mut cx = crate::elements::ElementContext::new_for_existing_window_state(
                     app,
@@ -1431,6 +1437,20 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             );
             next_children.push(child_node);
         }
+
+        let detached =
+            (prev_items_len.saturating_sub(preserved as usize)).min(u32::MAX as usize) as u32;
+        ui.debug_record_retained_virtual_list_reconcile(
+            crate::tree::UiDebugRetainedVirtualListReconcile {
+                node,
+                element,
+                prev_items: prev_items_len.min(u32::MAX as usize) as u32,
+                next_items: desired_items.len().min(u32::MAX as usize) as u32,
+                preserved_items: preserved,
+                attached_items: attached,
+                detached_items: detached,
+            },
+        );
 
         ui.set_children_barrier(node, next_children.clone());
         window_frame.children.insert(node, next_children);
