@@ -1,4 +1,5 @@
 use fret_app::{App, CommandId, Model};
+use fret_code_editor as code_editor;
 use fret_code_view as code_view;
 use fret_core::{
     Color as CoreColor, Corners, DrawOrder, Edges, ImageId, Point, Px, Rect, SceneOp, Size,
@@ -541,6 +542,8 @@ fn page_preview(
             virtual_list_torture_scroll,
         ),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
+        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(cx, theme),
+        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(cx, theme),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
         PAGE_CHROME_TORTURE => preview_chrome_torture(
@@ -1756,6 +1759,154 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     vec![header, block]
 }
 
+fn code_editor_mvp_source() -> String {
+    [
+        "// Code Editor MVP\n",
+        "// Goals:\n",
+        "// - Validate TextInputRegion focus + TextInput/Ime events\n",
+        "// - Validate nested scrolling (editor owns its own scroll)\n",
+        "// - Provide a base surface for code-editor-ecosystem-v1 workstream\n",
+        "\n",
+        "fn main() {\n",
+        "    let mut sum = 0u64;\n",
+        "    for i in 0..10_000 {\n",
+        "        sum = sum.wrapping_add(i);\n",
+        "    }\n",
+        "    println!(\"sum={}\", sum);\n",
+        "}\n",
+        "\n",
+        "struct Point { x: f32, y: f32 }\n",
+        "\n",
+        "impl Point {\n",
+        "    fn len(&self) -> f32 {\n",
+        "        (self.x * self.x + self.y * self.y).sqrt()\n",
+        "    }\n",
+        "}\n",
+        "\n",
+        "// Try: mouse drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, IME.\n",
+    ]
+    .concat()
+}
+
+fn code_editor_torture_source() -> String {
+    static SOURCE: OnceLock<String> = OnceLock::new();
+    SOURCE
+        .get_or_init(|| {
+            let mut out = String::new();
+            out.push_str("// Code Editor Torture Harness\n");
+            out.push_str("// Generated content: many lines + deterministic prefixes\n\n");
+            for i in 0..20_000usize {
+                let _ = std::fmt::Write::write_fmt(
+                    &mut out,
+                    format_args!(
+                        "{i:05}: let value_{i} = {i}; // scrolling should never show stale lines\n"
+                    ),
+                );
+            }
+            out
+        })
+        .clone()
+}
+
+fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME)."),
+                cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
+            ]
+        },
+    );
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+        |h| h.clone(),
+    );
+
+    let editor = code_editor::CodeEditor::new(handle)
+        .overscan(32)
+        .into_element(cx);
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![editor],
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
+}
+
+fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
+                cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+            ]
+        },
+    );
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
+        |h| h.clone(),
+    );
+
+    let editor = code_editor::CodeEditor::new(handle)
+        .overscan(128)
+        .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+        .into_element(cx);
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![editor],
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-torture-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
+}
+
 fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
     use delinea::data::{Column, DataTable};
     use delinea::engine::ChartEngine;
@@ -2473,6 +2624,7 @@ fn preview_windowed_rows_surface_interactive_torture(
                     let handlers = WindowedRowsSurfacePointerHandlers {
                         on_pointer_down: Some(on_pointer_down),
                         on_pointer_move: Some(on_pointer_move),
+                        ..Default::default()
                     };
 
                     let mut props = WindowedRowsSurfaceProps::default();

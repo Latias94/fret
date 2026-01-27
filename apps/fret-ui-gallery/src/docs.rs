@@ -125,6 +125,50 @@ let block = CodeBlock::new(code).language("rust").show_line_numbers(true);
 ```
 "#;
 
+pub(crate) const DOC_CODE_EDITOR_MVP: &str = r#"
+## Code Editor (MVP)
+
+This page hosts a v1 MVP for a **paint-driven, windowed code editor surface**:
+
+- Owns its buffer + selection state (ecosystem crate, not `fret-ui`).
+- Uses a `TextInputRegion` seam to receive `TextInput` / `Ime` events while it draws its own text.
+- Focuses on validating the input/IME contract and scroll stability before performance work.
+"#;
+
+pub(crate) const USAGE_CODE_EDITOR_MVP: &str = r#"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle};
+
+let handle = CodeEditorHandle::new("fn main() {}\n");
+let editor = CodeEditor::new(handle).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_CODE_EDITOR_TORTURE: &str = r#"
+## Code Editor (torture harness)
+
+This page is a stress surface for the **windowed, paint-driven code editor**.
+
+Goals:
+
+- validate scroll stability (no “stale paint” / “looks not refreshed” regressions),
+- validate text blob caching stays bounded to the visible window,
+- provide a deterministic target for perf investigations.
+"#;
+
+pub(crate) const USAGE_CODE_EDITOR_TORTURE: &str = r#"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle, CodeEditorTorture};
+use fret_core::Px;
+
+let handle = CodeEditorHandle::new("...\n");
+let editor = CodeEditor::new(handle)
+    .overscan(128)
+    .torture(CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_CHART_TORTURE: &str = r#"
 ## Chart (torture harness)
 

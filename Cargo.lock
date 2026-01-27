@@ -1000,6 +1000,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-code-editor"
+version = "0.1.0"
+dependencies = [
+ "fret-code-editor-buffer",
+ "fret-code-editor-view",
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+]
+
+[[package]]
+name = "fret-code-editor-buffer"
+version = "0.1.0"
+dependencies = [
+ "thiserror 2.0.17",
+ "uuid",
+]
+
+[[package]]
+name = "fret-code-editor-view"
+version = "0.1.0"
+dependencies = [
+ "fret-code-editor-buffer",
+]
+
+[[package]]
 name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
@@ -1445,6 +1472,8 @@ dependencies = [
  "stacksafe",
  "taffy",
  "tracing",
+ "unicode-ident",
+ "unicode-segmentation",
  "virtualizer",
 ]
 
@@ -1490,6 +1519,7 @@ dependencies = [
  "fret-bootstrap",
  "fret-canvas",
  "fret-chart",
+ "fret-code-editor",
  "fret-code-view",
  "fret-core",
  "fret-icons",
