@@ -799,6 +799,7 @@ async function extractOne(page: puppeteer.Page) {
         },
         computedStyle: collectStyle(el),
         text: collectText(el) || undefined,
+        active: document.activeElement === el,
         children: [],
       };
 

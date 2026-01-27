@@ -33,6 +33,8 @@ struct WebNode {
     tag: String,
     rect: WebRect,
     #[serde(default)]
+    active: bool,
+    #[serde(default)]
     children: Vec<WebNode>,
 }
 

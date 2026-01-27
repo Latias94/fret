@@ -31,6 +31,8 @@ struct WebGoldenTheme {
     root: WebNode,
     #[serde(default)]
     portals: Vec<WebNode>,
+    #[serde(rename = "portalWrappers", default)]
+    portal_wrappers: Vec<WebNode>,
     #[serde(default)]
     viewport: Option<WebViewport>,
 }
@@ -57,9 +59,13 @@ struct WebNode {
     tag: String,
     #[serde(default)]
     attrs: BTreeMap<String, String>,
+    #[serde(default)]
+    active: bool,
     rect: WebRect,
     #[serde(rename = "computedStyle", default)]
     computed_style: BTreeMap<String, String>,
+    #[serde(default)]
+    text: Option<String>,
     #[allow(dead_code)]
     #[serde(default)]
     children: Vec<WebNode>,
@@ -798,6 +804,13 @@ fn dispatch_key_press(
 ) {
     dispatch_key_down(ui, app, services, key);
     dispatch_key_up(ui, app, services, key);
+}
+
+fn leftish_text_probe_point(bounds: Rect) -> Point {
+    Point::new(
+        Px(bounds.origin.x.0 + 40.0),
+        Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+    )
 }
 
 fn assert_overlay_chrome_matches(
@@ -2732,6 +2745,54 @@ struct WebHighlightedNodeChrome {
     fg: css_color::Rgba,
 }
 
+fn web_find_active_element<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
+    fn node_area(node: &WebNode) -> f32 {
+        node.rect.w * node.rect.h
+    }
+
+    fn collect<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        if node.active {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect(child, out);
+        }
+    }
+
+    let mut candidates: Vec<&WebNode> = Vec::new();
+    collect(&theme.root, &mut candidates);
+    for portal in &theme.portals {
+        collect(portal, &mut candidates);
+    }
+    for wrapper in &theme.portal_wrappers {
+        collect(wrapper, &mut candidates);
+    }
+
+    candidates
+        .into_iter()
+        .max_by(|a, b| node_area(a).total_cmp(&node_area(b)))
+        .expect("web activeElement")
+}
+
+fn web_find_active_element_chrome(theme: &WebGoldenTheme) -> WebHighlightedNodeChrome {
+    let active = web_find_active_element(theme);
+
+    let bg = active
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web active element backgroundColor");
+    let fg = active
+        .computed_style
+        .get("color")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web active element color");
+
+    WebHighlightedNodeChrome { bg, fg }
+}
+
 fn web_find_highlighted_listbox_option_chrome(
     theme: &WebGoldenTheme,
     item_slot: &str,
@@ -4453,7 +4514,7 @@ fn assert_dropdown_menu_demo_highlighted_item_background_matches_web(web_theme_n
         window,
         bounds,
         FrameId(1),
-        false,
+        true,
         |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
     );
 
@@ -4526,6 +4587,124 @@ fn web_vs_fret_dropdown_menu_demo_highlighted_item_background_matches_web() {
 #[test]
 fn web_vs_fret_dropdown_menu_demo_highlighted_item_background_matches_web_dark() {
     assert_dropdown_menu_demo_highlighted_item_background_matches_web("dark");
+}
+
+fn assert_dropdown_menu_demo_focused_item_chrome_matches_web(web_theme_name: &str) {
+    let web = read_web_golden_open("dropdown-menu-demo.focus-first");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let scheme = match web_theme_name {
+        "dark" => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        _ => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    };
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
+    );
+
+    let (snap, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Open"))
+        .expect("dropdown-menu trigger semantics (Open)");
+    ui.set_focus(Some(trigger.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
+    );
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            tick + 1 == settle_frames,
+            |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let focused = snap
+        .nodes
+        .iter()
+        .find(|n| n.flags.focused)
+        .expect("focused semantics node");
+    assert_eq!(
+        focused.role,
+        SemanticsRole::MenuItem,
+        "expected focused node to be a menu item after ArrowDown open",
+    );
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, focused.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("dropdown-menu-demo {web_theme_name}: focused item background quad")
+        });
+    assert_rgba_close(
+        &format!("dropdown-menu-demo {web_theme_name} focused item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        focused.bounds,
+        leftish_text_probe_point(focused.bounds),
+    )
+    .unwrap_or_else(|| panic!("dropdown-menu-demo {web_theme_name}: focused item text color"));
+    assert_rgba_close(
+        &format!("dropdown-menu-demo {web_theme_name} focused item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web() {
+    assert_dropdown_menu_demo_focused_item_chrome_matches_web("light");
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_dark() {
+    assert_dropdown_menu_demo_focused_item_chrome_matches_web("dark");
 }
 
 #[test]
@@ -8110,7 +8289,7 @@ fn assert_listbox_highlighted_option_chrome_matches_web(
         window,
         bounds,
         FrameId(1),
-        false,
+        true,
         |cx| vec![build(cx, &open)],
     );
     let _ = app.models_mut().update(&open, |v| *v = true);
@@ -8279,6 +8458,187 @@ fn web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_dark() {
         "command-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         build_shadcn_combobox_demo_page,
+    );
+}
+
+fn assert_listbox_focused_option_chrome_matches_web(
+    web_name: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+    a11y_label: &str,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    let (snap, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ComboBox && n.label.as_deref() == Some(a11y_label))
+        .expect("trigger semantics (combobox) by a11y label");
+    ui.set_focus(Some(trigger.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build(cx, &open)],
+    );
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            tick + 1 == settle_frames,
+            |cx| vec![build(cx, &open)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let option = snap
+        .nodes
+        .iter()
+        .find(|n| n.flags.focused && n.role == SemanticsRole::ListBoxOption)
+        .or_else(|| {
+            // Some widgets use an aria-activedescendant model where the listbox retains focus and
+            // the active option is indicated via `active_descendant`.
+            let focused_listbox = snap
+                .nodes
+                .iter()
+                .find(|n| n.flags.focused && n.role == SemanticsRole::ListBox)
+                .or_else(|| {
+                    snap.nodes
+                        .iter()
+                        .find(|n| n.role == SemanticsRole::ListBox && n.active_descendant.is_some())
+                });
+
+            let listbox = focused_listbox?;
+            let active_id = listbox.active_descendant?;
+            snap.nodes
+                .iter()
+                .find(|n| n.id == active_id && n.role == SemanticsRole::ListBoxOption)
+        })
+        .unwrap_or_else(|| {
+            let focused_roles: Vec<SemanticsRole> =
+                snap.nodes.iter().filter(|n| n.flags.focused).map(|n| n.role).collect();
+            let focused_listbox_active = snap
+                .nodes
+                .iter()
+                .find(|n| n.flags.focused && n.role == SemanticsRole::ListBox)
+                .and_then(|n| n.active_descendant);
+            let listbox_count = snap.nodes.iter().filter(|n| n.role == SemanticsRole::ListBox).count();
+            let option_count = snap
+                .nodes
+                .iter()
+                .filter(|n| n.role == SemanticsRole::ListBoxOption)
+                .count();
+            panic!(
+                "expected focused listbox option semantics node (or listbox active_descendant)\n  listbox_count={listbox_count}\n  option_count={option_count}\n  focused_roles={focused_roles:?}\n  focused_listbox_active_descendant={focused_listbox_active:?}"
+            )
+        });
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, option.bounds, expected.bg)
+        .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused option background quad"));
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} focused option background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        option.bounds,
+        leftish_text_probe_point(option.bounds),
+    )
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused option text color"));
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} focused option text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_focused_option_chrome_matches_web() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-demo.focus-first",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_demo_page,
+        "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_focused_option_chrome_matches_web_dark() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-demo.focus-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_demo_page,
+        "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_focused_option_chrome_matches_web() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-scrollable.focus-first",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_scrollable_page,
+        "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_focused_option_chrome_matches_web_dark() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-scrollable.focus-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_scrollable_page,
+        "Select",
     );
 }
 
@@ -8819,7 +9179,7 @@ fn assert_menubar_demo_highlighted_item_background_matches_web(web_theme_name: &
         |cx| vec![build_shadcn_menubar_demo(cx)],
     );
 
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let (snap, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
     let trigger = snap
         .nodes
         .iter()
@@ -8898,6 +9258,120 @@ fn web_vs_fret_menubar_demo_highlighted_item_background_matches_web() {
 #[test]
 fn web_vs_fret_menubar_demo_highlighted_item_background_matches_web_dark() {
     assert_menubar_demo_highlighted_item_background_matches_web("dark");
+}
+
+fn assert_menubar_demo_focused_item_chrome_matches_web(web_theme_name: &str) {
+    let web = read_web_golden_open("menubar-demo.focus-first");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let scheme = match web_theme_name {
+        "dark" => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        _ => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    };
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_shadcn_menubar_demo(cx)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("menubar trigger semantics (File)");
+    ui.set_focus(Some(trigger.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        true,
+        |cx| vec![build_shadcn_menubar_demo(cx)],
+    );
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            tick + 1 == settle_frames,
+            |cx| vec![build_shadcn_menubar_demo(cx)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let focused = snap
+        .nodes
+        .iter()
+        .find(|n| n.flags.focused)
+        .expect("focused semantics node");
+    assert_eq!(
+        focused.role,
+        SemanticsRole::MenuItem,
+        "expected focused node to be a menu item after ArrowDown open",
+    );
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, focused.bounds, expected.bg)
+        .unwrap_or_else(|| panic!("menubar-demo {web_theme_name}: focused item background quad"));
+    assert_rgba_close(
+        &format!("menubar-demo {web_theme_name} focused item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        focused.bounds,
+        leftish_text_probe_point(focused.bounds),
+    )
+    .unwrap_or_else(|| panic!("menubar-demo {web_theme_name}: focused item text color"));
+    assert_rgba_close(
+        &format!("menubar-demo {web_theme_name} focused item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_focused_item_chrome_matches_web() {
+    assert_menubar_demo_focused_item_chrome_matches_web("light");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_focused_item_chrome_matches_web_dark() {
+    assert_menubar_demo_focused_item_chrome_matches_web("dark");
 }
 
 fn build_shadcn_menubar_demo(cx: &mut ElementContext<'_, App>) -> AnyElement {

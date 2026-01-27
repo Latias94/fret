@@ -19,7 +19,7 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `462/462` (`100%`)
+- Keys referenced by tests: `466/466` (`100%`)
 - Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
   viewports, DPIs, fonts, and interaction state machines.
 
@@ -43,6 +43,8 @@ P0 (next):
   viewports so “what is gated” is explicit and auditable.
 - Add scripted interaction variants (hover/focus) for high-risk overlay families where geometry alone
   does not catch regressions (e.g. hovered item chrome, focus ring, active/pressed states).
+  - Current: `highlight-first` + `focus-first` variants are gated for Menubar/DropdownMenu and Select listboxes.
+  - Next: extend scripted variants to pressed/disabled and more overlay families (NavigationMenu, Popover, Tooltip).
 - Keep expanding constrained viewport variants only when they materially increase signal (max-height clamping,
   scroll buttons, truncation/wrap).
 
