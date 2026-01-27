@@ -77,6 +77,10 @@ Related:
 - [x] AUE-docs-045 Prefer direct `Px(...)` arguments in kit-level declarative helpers and goldens.
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/{icon,text_field}.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+- [x] AUE-docs-046 Remove remaining `MetricRef::Px(Px(...))` noise in apps/examples and shadcn surfaces.
+  - Evidence: `apps/fret-examples/src/{assets_demo,markdown_demo}.rs`
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/{command,hover_card}.rs`
 
 ## F. (Future) Proc-macro / Derive
 

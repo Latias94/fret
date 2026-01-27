@@ -5232,11 +5232,7 @@ fn preview_data_table_torture(
                         shadcn::DataTable::new()
                             .overscan(10)
                             .row_height(Px(28.0))
-                            .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .h_px(MetricRef::Px(Px(420.0))),
-                            )
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
                                 data.clone(),
@@ -5374,9 +5370,7 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     let mut container_props = decl_style::container_props(
         theme,
         ChromeRefinement::default(),
-        LayoutRefinement::default()
-            .w_full()
-            .h_px(MetricRef::Px(Px(460.0))),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -6126,8 +6120,8 @@ fn preview_overlay(
                                         ])
                                         .refine_layout(
                                             LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(360.0)))
-                                                .h_px(MetricRef::Px(Px(220.0))),
+                                                .w_px(Px(360.0))
+                                                .h_px(Px(220.0)),
                                         )
                                         .into_element(cx),
                                     ]
@@ -6148,11 +6142,7 @@ fn preview_overlay(
                 });
 
                 let scroll = shadcn::ScrollArea::new(vec![body])
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_px(MetricRef::Px(Px(240.0)))
-                            .h_px(MetricRef::Px(Px(160.0))),
-                    )
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))
                     .into_element(cx);
 
                 let scroll = cx.semantics(
