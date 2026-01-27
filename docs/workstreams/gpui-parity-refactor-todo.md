@@ -659,7 +659,8 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json`
     - Run with: `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
     - Expectation: crossing the overscan window boundary does not force a parent cache-root rerender; instead the retained host reconciles (attach/detach delta only).
-    - Evidence bundle (cache+shell, release, minimal harness; no `notify_call` dirtiness on boundary frames): `target/fret-diag-perf-vlist-window-boundary-retained-escape-known-cache-shell-minimal-no-notify/1769505824872-script-step-0047-wheel/bundle.json`
+    - Gate: `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 ...`
+    - Evidence bundle (cache+shell, release, minimal harness; includes `debug.retained_virtual_list_reconciles` and no `notify` dirtiness on reconcile frames): `target/fret-diag-vlist-retained-no-notify-gate/1769509063135-script-step-0047-wheel/bundle.json`
   - Plan (v1; fixed/known height only):
     - Add a runtime-owned `WindowedSurfaceHost` boundary that can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
     - Define an opt-in authoring API that stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
