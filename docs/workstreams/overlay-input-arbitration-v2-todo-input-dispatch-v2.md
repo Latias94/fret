@@ -136,6 +136,11 @@ Each TODO is labeled:
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`hover_card_close_transition_is_click_through`)
 
+- [x] OIA2-test-043 Outside-press remains click-through while a hover card is open (underlay activates + takes focus).
+  - Notes: Hover cards are hover-intent overlays (not dismissible layers). Outside clicks close via hover leave/blur rather than a dedicated dismissal hook.
+  - Evidence anchors:
+    - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`hover_card_outside_press_is_click_through_and_closes_on_leave`)
+
 - [x] OIA2-test-015 Close transition disables hover observers/timers (tooltip).
   - Evidence anchors:
     - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (`tooltip_close_transition_is_click_through`)
