@@ -19,6 +19,9 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
+};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
@@ -71,6 +74,55 @@ impl TabItem {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct TabsStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub label_color: OverrideSlot<ColorRef>,
+    pub state_layer_color: OverrideSlot<ColorRef>,
+    pub active_indicator_color: OverrideSlot<ColorRef>,
+}
+
+impl TabsStyle {
+    pub fn container_background(
+        mut self,
+        background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.container_background = Some(background);
+        self
+    }
+
+    pub fn label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.label_color = Some(color);
+        self
+    }
+
+    pub fn state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.state_layer_color = Some(color);
+        self
+    }
+
+    pub fn active_indicator_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.active_indicator_color = Some(color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.container_background.is_some() {
+            self.container_background = other.container_background;
+        }
+        if other.label_color.is_some() {
+            self.label_color = other.label_color;
+        }
+        if other.state_layer_color.is_some() {
+            self.state_layer_color = other.state_layer_color;
+        }
+        if other.active_indicator_color.is_some() {
+            self.active_indicator_color = other.active_indicator_color;
+        }
+        self
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Tabs {
     model: Model<Arc<str>>,
@@ -80,6 +132,7 @@ pub struct Tabs {
     disabled: bool,
     loop_navigation: bool,
     scrollable: bool,
+    style: TabsStyle,
 }
 
 impl Tabs {
@@ -92,6 +145,7 @@ impl Tabs {
             disabled: false,
             loop_navigation: true,
             scrollable: false,
+            style: TabsStyle::default(),
         }
     }
 
@@ -125,6 +179,11 @@ impl Tabs {
         self
     }
 
+    pub fn style(mut self, style: TabsStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Tabs {
             model,
@@ -134,6 +193,7 @@ impl Tabs {
             disabled,
             loop_navigation,
             scrollable,
+            style,
         } = self;
 
         cx.scope(|cx| {
@@ -169,7 +229,14 @@ impl Tabs {
             };
 
             let container_height = tabs_tokens::container_height(&theme);
-            let container_bg = tabs_tokens::container_background(&theme);
+            let container_bg = resolve_override_slot_with(
+                style.container_background.as_ref(),
+                disabled
+                    .then_some(WidgetStates::DISABLED)
+                    .unwrap_or_default(),
+                |color| color.resolve(&theme),
+                || tabs_tokens::container_background(&theme),
+            );
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;
@@ -209,6 +276,8 @@ impl Tabs {
                             container_id,
                             tab_count,
                             selected_idx,
+                            disabled,
+                            &style,
                         );
 
                         let roving = cx.roving_flex(props, move |cx| {
@@ -303,6 +372,7 @@ impl Tabs {
                                         tab_stop,
                                         disabled,
                                         scrollable,
+                                        &style,
                                     )
                                 })
                                 .collect::<Vec<_>>()
@@ -337,6 +407,7 @@ fn material_primary_tab<H: UiHost>(
     tab_stop: bool,
     disabled_group: bool,
     scrollable: bool,
+    style_override: &TabsStyle,
 ) -> AnyElement {
     let value = item.value.clone();
     let label = item.label.clone();
@@ -428,6 +499,11 @@ fn material_primary_tab<H: UiHost>(
                 let is_hovered = enabled && st.hovered;
                 let is_focused = enabled && st.focused && focus_visible;
 
+                let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                if selected {
+                    states |= WidgetStates::SELECTED;
+                }
+
                 let interaction = if is_pressed {
                     tabs_tokens::TabInteraction::Pressed
                 } else if is_focused {
@@ -438,9 +514,18 @@ fn material_primary_tab<H: UiHost>(
                     tabs_tokens::TabInteraction::Default
                 };
 
-                let label_color = tabs_tokens::label_color(theme, selected, interaction);
-                let state_layer_color =
-                    tabs_tokens::state_layer_color(theme, selected, interaction);
+                let label_color = resolve_override_slot_with(
+                    style_override.label_color.as_ref(),
+                    states,
+                    |color| color.resolve(theme),
+                    || tabs_tokens::label_color(theme, selected, interaction),
+                );
+                let state_layer_color = resolve_override_slot_with(
+                    style_override.state_layer_color.as_ref(),
+                    states,
+                    |color| color.resolve(theme),
+                    || tabs_tokens::state_layer_color(theme, selected, interaction),
+                );
                 let state_layer_target =
                     tabs_tokens::state_layer_opacity(theme, selected, interaction);
                 let ripple_base_opacity = tabs_tokens::pressed_state_layer_opacity(theme, selected);
@@ -516,6 +601,8 @@ fn primary_tab_list_indicator<H: UiHost>(
     container_id: GlobalElementId,
     tab_count: usize,
     selected_idx: Option<usize>,
+    disabled: bool,
+    style_override: &TabsStyle,
 ) -> AnyElement {
     #[derive(Debug, Default, Clone)]
     struct TabListIndicatorRuntime {
@@ -535,16 +622,34 @@ fn primary_tab_list_indicator<H: UiHost>(
             })
             .and_then(|tab_id| cx.last_bounds_for_element(tab_id));
 
+        let mut states = WidgetStates::empty();
+        if disabled {
+            states |= WidgetStates::DISABLED;
+        }
+        if selected_idx.is_some() {
+            states |= WidgetStates::SELECTED;
+        }
+
         let (target_x, target_width, target_height, color) = if tab_count > 0 {
             if let Some(tab_bounds) = tab_bounds {
                 let height = tabs_tokens::active_indicator_height(theme);
-                let color = tabs_tokens::active_indicator_color(theme);
+                let color = resolve_override_slot_with(
+                    style_override.active_indicator_color.as_ref(),
+                    states,
+                    |color| color.resolve(theme),
+                    || tabs_tokens::active_indicator_color(theme),
+                );
                 let x = tab_bounds.origin.x.0 - container_bounds.origin.x.0;
                 (x, tab_bounds.size.width.0, height.0, color)
             } else if let Some(idx) = selected_idx {
                 let tab_width_px = container_bounds.size.width.0 / (tab_count as f32);
                 let height = tabs_tokens::active_indicator_height(theme);
-                let color = tabs_tokens::active_indicator_color(theme);
+                let color = resolve_override_slot_with(
+                    style_override.active_indicator_color.as_ref(),
+                    states,
+                    |color| color.resolve(theme),
+                    || tabs_tokens::active_indicator_color(theme),
+                );
                 (tab_width_px * (idx as f32), tab_width_px, height.0, color)
             } else {
                 (0.0, 0.0, 0.0, Color::TRANSPARENT)

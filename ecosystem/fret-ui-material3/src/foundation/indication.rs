@@ -114,7 +114,7 @@ pub fn advance_indication_for_pressable<H: UiHost>(
     use crate::motion::ms_to_frames;
 
     let ripple_config = inherited_ripple_configuration(cx);
-    let mut ripple_enabled = true;
+    let mut ripple_enabled = ripple_base_opacity > 0.0;
     let mut ripple_base_opacity = ripple_base_opacity;
     let mut ripple_color_override: Option<Color> = None;
     match ripple_config {
@@ -297,7 +297,7 @@ pub fn advance_indication_for_pressable_with_ripple_bounds<H: UiHost>(
     use crate::motion::ms_to_frames;
 
     let ripple_config = inherited_ripple_configuration(cx);
-    let mut ripple_enabled = true;
+    let mut ripple_enabled = ripple_base_opacity > 0.0;
     let mut ripple_base_opacity = ripple_base_opacity;
     let mut ripple_color_override: Option<Color> = None;
     match ripple_config {

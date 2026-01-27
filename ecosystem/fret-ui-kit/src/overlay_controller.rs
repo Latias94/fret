@@ -58,7 +58,7 @@ pub enum OverlayKind {
 pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
-    pub style: window_overlays::ToastLayerStyle,
+    pub style: Option<window_overlays::ToastLayerStyle>,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -286,7 +286,7 @@ impl OverlayRequest {
             toast_layer: Some(ToastLayerSpec {
                 store,
                 position: window_overlays::ToastPosition::default(),
-                style: window_overlays::ToastLayerStyle::default(),
+                style: None,
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -319,7 +319,7 @@ impl OverlayRequest {
             .toast_layer
             .as_mut()
             .expect("toast_style requires a ToastLayer request");
-        spec.style = style;
+        spec.style = Some(style);
         self
     }
 
@@ -579,13 +579,15 @@ impl OverlayController {
 
                 let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
                     .position(spec.position)
-                    .style(spec.style)
                     .root_name(root_name);
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
                 }
                 if let Some(gap) = spec.gap {
                     toast_req = toast_req.gap(gap);
+                }
+                if let Some(style) = spec.style {
+                    toast_req = toast_req.style(style);
                 }
                 if let Some(width) = spec.toast_min_width {
                     toast_req = toast_req.toast_min_width(width);

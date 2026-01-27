@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-popover-trigger" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "dock-arb-popover-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-popover-open" } },
+      "timeout_frames": 120
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "delta_x": 260.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-popover-closed" } },
+      "timeout_frames": 120
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+      "delta_x": 140.0,
+      "delta_y": 50.0,
+      "steps": 18
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-dialog-trigger" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "dock-arb-dialog-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dialog-open" } },
+      "timeout_frames": 120
+    },
+
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "dock-arb-underlay-probe" }
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "dock-arb-dialog-close" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dialog-closed" } },
+      "timeout_frames": 120
+    },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-modal-dock-drag-viewport-capture" }
+  ]
+}
+

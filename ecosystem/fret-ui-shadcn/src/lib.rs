@@ -170,7 +170,7 @@ pub use input_group::{
 pub use input_otp::{InputOtp, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
-    ItemMediaVariant, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
+    ItemMediaVariant, ItemSeparator, ItemSize, ItemStyle, ItemTitle, ItemVariant, item_group,
 };
 pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
@@ -181,8 +181,9 @@ pub use menubar::{
 };
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
-    NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
-    NavigationMenuViewport, navigation_menu, navigation_menu_list, navigation_menu_uncontrolled,
+    NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuStyle,
+    NavigationMenuTrigger, NavigationMenuViewport, navigation_menu, navigation_menu_list,
+    navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,

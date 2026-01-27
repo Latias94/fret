@@ -14,6 +14,7 @@ use std::env;
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Debug, Clone)]
 struct Args {
@@ -42,6 +43,7 @@ impl Args {
             "md.sys.shape.".to_string(),
             // MVP component prefixes we actively align today.
             "md.comp.button.".to_string(),
+            "md.comp.radio-button.".to_string(),
             "md.comp.checkbox.".to_string(),
             "md.comp.switch.".to_string(),
             "md.comp.icon-button.".to_string(),
@@ -50,6 +52,7 @@ impl Args {
             "md.comp.navigation-drawer.".to_string(),
             "md.comp.navigation-rail.".to_string(),
             "md.comp.menu.".to_string(),
+            "md.comp.list.".to_string(),
             "md.comp.plain-tooltip.".to_string(),
             "md.comp.rich-tooltip.".to_string(),
             "md.comp.snackbar.".to_string(),
@@ -88,18 +91,23 @@ impl Args {
 
         let sass_dir = if let Some(s) = sass_dir {
             s
-        } else if let Some(mw) =
-            material_web_dir.or_else(|| env::var("MATERIAL_WEB_DIR").ok().map(PathBuf::from))
-        {
-            mw.join("tokens")
+        } else {
+            let material_web_dir = material_web_dir
+                .or_else(|| env::var("MATERIAL_WEB_DIR").ok().map(PathBuf::from))
+                .or_else(|| default_material_web_dir(&crate_dir));
+
+            let Some(material_web_dir) = material_web_dir else {
+                return Err(format!(
+                    "missing input: pass --sass-dir <path> or --material-web-dir <path> (or set MATERIAL_WEB_DIR)\n\n{}",
+                    help()
+                ));
+            };
+
+            material_web_dir
+                .join("tokens")
                 .join("versions")
                 .join("v30_0")
                 .join("sass")
-        } else {
-            return Err(format!(
-                "missing input: pass --sass-dir <path> or --material-web-dir <path> (or set MATERIAL_WEB_DIR)\n\n{}",
-                help()
-            ));
         };
 
         Ok(Self {
@@ -120,7 +128,7 @@ fn help() -> String {
         "",
         "Options:",
         "--material-web-dir <path>   Path to material-web checkout (optional)",
-        "(or set MATERIAL_WEB_DIR)",
+        "(or set MATERIAL_WEB_DIR; if omitted we try to auto-discover repo-root/repo-ref via git)",
         "--sass-dir <path>           Path to v30 sassvars directory (overrides material-web-dir)",
         "--out <path>                Output Rust file path (default: crate src/tokens/material_web_v30.rs)",
         "--prefix <string>           Include only md.* keys with this prefix (repeatable)",
@@ -129,6 +137,50 @@ fn help() -> String {
         "",
     ]
     .join("\n")
+}
+
+fn default_material_web_dir(crate_dir: &Path) -> Option<PathBuf> {
+    let workspace_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf());
+
+    if let Some(workspace_root) = workspace_root.as_ref() {
+        let local = workspace_root.join("repo-ref").join("material-web");
+        if local.is_dir() {
+            return Some(local);
+        }
+    }
+
+    repo_root_from_git_common_dir(workspace_root.as_deref().unwrap_or(crate_dir))
+        .map(|repo_root| repo_root.join("repo-ref").join("material-web"))
+        .filter(|p| p.is_dir())
+}
+
+fn repo_root_from_git_common_dir(start_dir: &Path) -> Option<PathBuf> {
+    let output = Command::new("git")
+        .args(["rev-parse", "--git-common-dir"])
+        .current_dir(start_dir)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let raw = String::from_utf8_lossy(&output.stdout);
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let common_dir = PathBuf::from(trimmed);
+    let common_dir = if common_dir.is_absolute() {
+        common_dir
+    } else {
+        start_dir.join(common_dir)
+    };
+    let common_dir = common_dir.canonicalize().unwrap_or(common_dir);
+    common_dir.parent().map(|p| p.to_path_buf())
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -318,6 +370,12 @@ fn resolve_expr(
                     var: var.clone(),
                 });
             }
+            if module == "md-sys-color" || module == "md-ref-palette" {
+                return Ok(Expr::ModuleVar {
+                    module: module.clone(),
+                    var: var.clone(),
+                });
+            }
             let key = (module.clone(), var.clone());
             if !stack.insert(key.clone()) {
                 return Err(format!("cycle while resolving {module}.${var}").into());
@@ -422,6 +480,14 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     );
     emit_inject_comp_scalars(
         &mut out,
+        "inject_comp_radio_button_scalars",
+        "md.comp.radio-button.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.radio-button."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
         "inject_comp_checkbox_scalars",
         "md.comp.checkbox.",
         defs.iter()
@@ -486,6 +552,14 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     );
     emit_inject_comp_scalars(
         &mut out,
+        "inject_comp_list_scalars",
+        "md.comp.list.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.list."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
         "inject_comp_plain_tooltip_scalars",
         "md.comp.plain-tooltip.",
         defs.iter()
@@ -538,6 +612,152 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.filled-text-field.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.filled-text-field."))
+            .collect::<Vec<_>>(),
+    );
+
+    emit_copy_color_helper(&mut out);
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_button_colors_from_sys",
+        "md.comp.button.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.button."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_radio_button_colors_from_sys",
+        "md.comp.radio-button.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.radio-button."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_checkbox_colors_from_sys",
+        "md.comp.checkbox.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.checkbox."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_switch_colors_from_sys",
+        "md.comp.switch.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.switch."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_icon_button_colors_from_sys",
+        "md.comp.icon-button.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.icon-button."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_primary_navigation_tab_colors_from_sys",
+        "md.comp.primary-navigation-tab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.primary-navigation-tab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_navigation_bar_colors_from_sys",
+        "md.comp.navigation-bar.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.navigation-bar."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_navigation_drawer_colors_from_sys",
+        "md.comp.navigation-drawer.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.navigation-drawer."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_navigation_rail_colors_from_sys",
+        "md.comp.navigation-rail.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.navigation-rail."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_menu_colors_from_sys",
+        "md.comp.menu.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.menu."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_list_colors_from_sys",
+        "md.comp.list.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.list."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_plain_tooltip_colors_from_sys",
+        "md.comp.plain-tooltip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.plain-tooltip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_rich_tooltip_colors_from_sys",
+        "md.comp.rich-tooltip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.rich-tooltip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_snackbar_colors_from_sys",
+        "md.comp.snackbar.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.snackbar."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_outlined_text_field_colors_from_sys",
+        "md.comp.outlined-text-field.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-text-field."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_filled_text_field_colors_from_sys",
+        "md.comp.filled-text-field.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-text-field."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_dialog_colors_from_sys",
+        "md.comp.dialog.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.dialog."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_full_screen_dialog_colors_from_sys",
+        "md.comp.full-screen-dialog.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.full-screen-dialog."))
             .collect::<Vec<_>>(),
     );
 
@@ -770,6 +990,68 @@ fn emit_inject_comp_scalars(out: &mut String, fn_name: &str, prefix: &str, defs:
         }
     }
 
+    writeln!(out, "}}").ok();
+    writeln!(out).ok();
+}
+
+fn emit_copy_color_helper(out: &mut String) {
+    writeln!(
+        out,
+        "fn copy_color(cfg: &mut ThemeConfig, to_key: &str, from_key: &str) {{"
+    )
+    .ok();
+    writeln!(
+        out,
+        "    let Some(c) = cfg.colors.get(from_key).cloned() else {{"
+    )
+    .ok();
+    writeln!(out, "        return;").ok();
+    writeln!(out, "    }};").ok();
+    writeln!(out, "    cfg.colors.insert(to_key.to_string(), c);").ok();
+    writeln!(out, "}}").ok();
+    writeln!(out).ok();
+}
+
+fn emit_inject_comp_color_aliases(
+    out: &mut String,
+    fn_name: &str,
+    prefix: &str,
+    defs: Vec<&TokenDef>,
+) {
+    let mut pairs: Vec<(&str, String)> = Vec::new();
+    for d in defs {
+        let key = d.token_key.as_str();
+        let from = match &d.expr {
+            Expr::ModuleVar { module, var } if module == "md-sys-color" => {
+                let mut key = String::with_capacity("md.sys.color.".len() + var.len());
+                key.push_str("md.sys.color.");
+                key.push_str(var);
+                Some(key)
+            }
+            Expr::ModuleVar { module, var } if module == "md-ref-palette" => {
+                let mut key = String::with_capacity("md.ref.palette.".len() + var.len());
+                key.push_str("md.ref.palette.");
+                key.push_str(var);
+                Some(key)
+            }
+            _ => None,
+        };
+        let Some(from_key) = from else { continue };
+        pairs.push((key, from_key));
+    }
+
+    if pairs.is_empty() {
+        return;
+    }
+
+    pairs.sort_by(|a, b| a.0.cmp(b.0));
+    writeln!(out, "pub(crate) fn {fn_name}(cfg: &mut ThemeConfig) {{").ok();
+    writeln!(out, "    // Source: Material Web v30 sassvars").ok();
+    writeln!(out, "    // Prefix: `{prefix}`").ok();
+    writeln!(out).ok();
+    for (to_key, from_key) in pairs {
+        writeln!(out, "    copy_color(cfg, {to_key:?}, {from_key:?});").ok();
+    }
     writeln!(out, "}}").ok();
     writeln!(out).ok();
 }

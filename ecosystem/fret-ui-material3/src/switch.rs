@@ -14,6 +14,10 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
+};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
@@ -25,6 +29,52 @@ use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::switch as switch_tokens;
 
+#[derive(Debug, Clone, Default)]
+pub struct SwitchStyle {
+    pub track_color: OverrideSlot<ColorRef>,
+    pub handle_color: OverrideSlot<ColorRef>,
+    pub outline_color: OverrideSlot<ColorRef>,
+    pub state_layer_color: OverrideSlot<ColorRef>,
+}
+
+impl SwitchStyle {
+    pub fn track_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.track_color = Some(color);
+        self
+    }
+
+    pub fn handle_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.handle_color = Some(color);
+        self
+    }
+
+    pub fn outline_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.outline_color = Some(color);
+        self
+    }
+
+    pub fn state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.state_layer_color = Some(color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.track_color.is_some() {
+            self.track_color = other.track_color;
+        }
+        if other.handle_color.is_some() {
+            self.handle_color = other.handle_color;
+        }
+        if other.outline_color.is_some() {
+            self.outline_color = other.outline_color;
+        }
+        if other.state_layer_color.is_some() {
+            self.state_layer_color = other.state_layer_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Switch {
     selected: Model<bool>,
@@ -32,6 +82,7 @@ pub struct Switch {
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_activate: Option<OnActivate>,
+    style: SwitchStyle,
 }
 
 impl std::fmt::Debug for Switch {
@@ -41,6 +92,7 @@ impl std::fmt::Debug for Switch {
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
             .field("on_activate", &self.on_activate.is_some())
+            .field("style", &self.style)
             .finish()
     }
 }
@@ -53,6 +105,7 @@ impl Switch {
             a11y_label: None,
             test_id: None,
             on_activate: None,
+            style: SwitchStyle::default(),
         }
     }
 
@@ -74,6 +127,11 @@ impl Switch {
     /// Called after the switch toggles its `Model<bool>`.
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn style(mut self, style: SwitchStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -146,6 +204,11 @@ impl Switch {
                             .get_model_copied(&self.selected, Invalidation::Paint)
                             .unwrap_or(false);
 
+                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                        if selected {
+                            states |= WidgetStates::SELECTED;
+                        }
+
                         let interaction = interaction_state(is_pressed, is_hovered, is_focused);
 
                         let tokens_interaction = match interaction {
@@ -163,6 +226,12 @@ impl Switch {
                         );
                         let state_layer_color =
                             switch_tokens::state_layer_color(&theme, selected, tokens_interaction);
+                        let state_layer_color = resolve_override_slot_with(
+                            self.style.state_layer_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || state_layer_color,
+                        );
 
                         #[derive(Default)]
                         struct SwitchThumbRuntime {
@@ -196,8 +265,30 @@ impl Switch {
                             });
 
                         let geom = switch_geometry(size, thumb_t, pressed_t);
-                        let track =
-                            switch_track(cx, &theme, size, selected, enabled, interaction, geom);
+                        let mut chrome =
+                            switch_tokens::chrome(&theme, selected, enabled, tokens_interaction);
+                        let token_track_color = chrome.track_color;
+                        chrome.track_color = resolve_override_slot_with(
+                            self.style.track_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || token_track_color,
+                        );
+                        let token_handle_color = chrome.handle_color;
+                        chrome.handle_color = resolve_override_slot_with(
+                            self.style.handle_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || token_handle_color,
+                        );
+                        let token_outline_color = chrome.outline_color;
+                        chrome.outline_color = resolve_override_slot_opt_with(
+                            self.style.outline_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || token_outline_color,
+                        );
+                        let track = switch_track(cx, size, geom, chrome);
 
                         let ripple_base_opacity =
                             switch_tokens::pressed_state_layer_opacity(&theme, selected);
@@ -381,28 +472,17 @@ fn switch_geometry(size: SwitchSizeTokens, thumb_t: f32, pressed: f32) -> Switch
 
 fn switch_track<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     size: SwitchSizeTokens,
-    selected: bool,
-    enabled: bool,
-    interaction: Interaction,
     geom: SwitchGeometry,
+    chrome: switch_tokens::SwitchChrome,
 ) -> AnyElement {
-    let tokens_interaction = match interaction {
-        Interaction::None => switch_tokens::SwitchInteraction::None,
-        Interaction::Hovered => switch_tokens::SwitchInteraction::Hovered,
-        Interaction::Focused => switch_tokens::SwitchInteraction::Focused,
-        Interaction::Pressed => switch_tokens::SwitchInteraction::Pressed,
-    };
-    let colors = switch_tokens::chrome(theme, selected, enabled, tokens_interaction);
-
     let mut track = ContainerProps::default();
     track.layout.size.width = Length::Px(size.track_width);
     track.layout.size.height = Length::Px(size.track_height);
     track.layout.overflow = Overflow::Visible;
-    track.background = Some(colors.track_color);
+    track.background = Some(chrome.track_color);
     track.corner_radii = Corners::all(Px(9999.0));
-    if let Some(outline) = colors.outline_color {
+    if let Some(outline) = chrome.outline_color {
         track.border = Edges::all(size.track_outline_width);
         track.border_color = Some(outline);
     }
@@ -415,7 +495,7 @@ fn switch_track<H: UiHost>(
         handle.layout.size.width = Length::Px(geom.handle_width);
         handle.layout.size.height = Length::Px(geom.handle_height);
         handle.corner_radii = Corners::all(Px(9999.0));
-        handle.background = Some(colors.handle_color);
+        handle.background = Some(chrome.handle_color);
 
         vec![cx.container(handle, |_cx| Vec::new())]
     })

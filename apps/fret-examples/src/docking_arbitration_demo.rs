@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton, MouseButtons,
     Point, Rect, RenderTargetId, Scene, SceneOp, Size, UiServices, ViewportInputEvent,
@@ -8,8 +9,9 @@ use fret_core::{
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
-    handle_dock_window_created, render_and_bind_dock_panels,
+    DockViewportOverlayHooksService, create_dock_space_node_with_test_id,
+    handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+    render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
@@ -18,13 +20,80 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
+use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn as shadcn;
+use slotmap::KeyData;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 type ViewportKey = (AppWindowId, RenderTargetId);
+
+const DOCKING_ARBITRATION_TAB_BAR_H: Px = Px(28.0);
+const DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE: Px = Px(12.0);
+
+struct DockingArbitrationDragAnchor {
+    test_id: &'static str,
+}
+
+impl DockingArbitrationDragAnchor {
+    fn new(test_id: &'static str) -> Self {
+        Self { test_id }
+    }
+}
+
+impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationDragAnchor {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(fret_core::SemanticsRole::Group);
+        cx.set_test_id(self.test_id);
+    }
+}
+
+struct DockingArbitrationHarnessRoot {
+    dock_space: fret_core::NodeId,
+    left_anchor: fret_core::NodeId,
+    right_anchor: fret_core::NodeId,
+}
+
+impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        let bounds = cx.bounds;
+        let _ = cx.layout_in(self.dock_space, bounds);
+
+        let x_l = bounds.origin.x.0 + bounds.size.width.0 * 0.25;
+        let x_r = bounds.origin.x.0 + bounds.size.width.0 * 0.75;
+        let y = bounds.origin.y.0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
+
+        let half = DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE.0 * 0.5;
+        let rect = |x: f32| {
+            Rect::new(
+                Point::new(Px((x - half).max(bounds.origin.x.0)), Px(y - half)),
+                Size::new(
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                    DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                ),
+            )
+        };
+
+        let _ = cx.layout_in(self.left_anchor, rect(x_l));
+        let _ = cx.layout_in(self.right_anchor, rect(x_r));
+
+        cx.available
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        if let Some(bounds) = cx.child_bounds(self.dock_space) {
+            cx.paint(self.dock_space, bounds);
+        } else {
+            cx.paint(self.dock_space, cx.bounds);
+        }
+    }
+}
 
 #[derive(Default)]
 struct DemoViewportToolState {
@@ -65,8 +134,59 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
         bounds: Rect,
         panel: &fret_core::PanelKey,
     ) -> Option<fret_core::NodeId> {
-        if panel.kind.0 != "demo.controls" {
-            return None;
+        match panel.kind.0.as_str() {
+            "demo.viewport.left" => {
+                let root_name = "dock.panel.viewport_left";
+                return Some(render_cached_panel_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    root_name,
+                    |cx| {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        vec![cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                layout,
+                                role: fret_core::SemanticsRole::Viewport,
+                                test_id: Some(Arc::<str>::from("dock-arb-viewport-left")),
+                                ..Default::default()
+                            },
+                            |_cx| vec![],
+                        )]
+                    },
+                ));
+            }
+            "demo.viewport.right" => {
+                let root_name = "dock.panel.viewport_right";
+                return Some(render_cached_panel_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    root_name,
+                    |cx| {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        vec![cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                layout,
+                                role: fret_core::SemanticsRole::Viewport,
+                                test_id: Some(Arc::<str>::from("dock-arb-viewport-right")),
+                                ..Default::default()
+                            },
+                            |_cx| vec![],
+                        )]
+                    },
+                ));
+            }
+            "demo.controls" => {}
+            _ => return None,
         }
 
         let models = app
@@ -126,6 +246,16 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 
                 let popover_open = models.popover_open.clone();
                 let dialog_open = models.dialog_open.clone();
+                let popover_is_open = cx
+                    .app
+                    .models()
+                    .get_cloned(&popover_open)
+                    .unwrap_or(false);
+                let dialog_is_open = cx
+                    .app
+                    .models()
+                    .get_cloned(&dialog_open)
+                    .unwrap_or(false);
 
                 let popover = shadcn::Popover::new(popover_open.clone())
                     .auto_focus(true)
@@ -134,6 +264,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                         |cx| {
                             shadcn::Button::new("Open popover")
                                 .variant(shadcn::ButtonVariant::Outline)
+                                .test_id("dock-arb-popover-trigger")
                                 .toggle_model(popover_open.clone())
                                 .into_element(cx)
                         },
@@ -142,6 +273,7 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                                 cx.text("Non-modal overlay (Popover)."),
                                 shadcn::Button::new("Close")
                                     .variant(shadcn::ButtonVariant::Secondary)
+                                    .test_id("dock-arb-popover-close")
                                     .toggle_model(popover_open.clone())
                                     .into_element(cx),
                             ])
@@ -154,28 +286,43 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     |cx| {
                         shadcn::Button::new("Open modal dialog")
                             .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("dock-arb-dialog-trigger")
                             .toggle_model(dialog_open.clone())
                             .into_element(cx)
                     },
                     |cx| {
-                        shadcn::DialogContent::new(vec![
-                            shadcn::DialogHeader::new(vec![
-                                shadcn::DialogTitle::new("Dialog").into_element(cx),
-                                shadcn::DialogDescription::new(
-                                    "Modal barrier should block docking + viewport input.",
-                                )
-                                .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::DialogFooter::new(vec![
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(dialog_open.clone())
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                layout,
+                                role: fret_core::SemanticsRole::Dialog,
+                                test_id: Some(Arc::<str>::from("dock-arb-dialog-content")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![shadcn::DialogContent::new(vec![
+                                    shadcn::DialogHeader::new(vec![
+                                        shadcn::DialogTitle::new("Dialog").into_element(cx),
+                                        shadcn::DialogDescription::new(
+                                            "Modal barrier should block docking + viewport input.",
+                                        )
+                                        .into_element(cx),
+                                    ])
                                     .into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
+                                    shadcn::DialogFooter::new(vec![
+                                        shadcn::Button::new("Close")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("dock-arb-dialog-close")
+                                            .toggle_model(dialog_open.clone())
+                                            .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
+                                .into_element(cx)]
+                            },
+                        )
                     },
                 );
 
@@ -204,8 +351,48 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                         "Synth pointer: F1 toggle; I/J/K/L move; Space down/up; B right down/up; U/O wheel up/down (consumes these keys while enabled).",
                     ));
                     rows.push(cx.text(synth_debug.to_string()));
+                    rows.push(cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: fret_core::SemanticsRole::Text,
+                            test_id: Some(Arc::<str>::from(if popover_is_open {
+                                "dock-arb-popover-open"
+                            } else {
+                                "dock-arb-popover-closed"
+                            })),
+                            label: Some(Arc::<str>::from(if popover_is_open {
+                                "popover:open"
+                            } else {
+                                "popover:closed"
+                            })),
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text(if popover_is_open { "Popover: open" } else { "Popover: closed" })],
+                    ));
+                    rows.push(cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            role: fret_core::SemanticsRole::Text,
+                            test_id: Some(Arc::<str>::from(if dialog_is_open {
+                                "dock-arb-dialog-open"
+                            } else {
+                                "dock-arb-dialog-closed"
+                            })),
+                            label: Some(Arc::<str>::from(if dialog_is_open {
+                                "dialog:open"
+                            } else {
+                                "dialog:closed"
+                            })),
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text(if dialog_is_open { "Dialog: open" } else { "Dialog: closed" })],
+                    ));
                     rows.push(popover);
                     rows.push(dialog);
+                    rows.push(
+                        shadcn::Button::new("Underlay (modal barrier target)")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .test_id("dock-arb-underlay-probe")
+                            .into_element(cx),
+                    );
                     rows.push(cx.text("Layers (paint order):"));
                     for line in layer_lines.iter().cloned() {
                         rows.push(cx.text(line));
@@ -267,6 +454,7 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
 struct DockingArbitrationWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
+    dock_space: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
@@ -570,23 +758,38 @@ impl DockingArbitrationDriver {
             },
         );
 
-        DockingArbitrationWindowState { ui, root: None }
+        DockingArbitrationWindowState {
+            ui,
+            root: None,
+            dock_space: None,
+        }
     }
 
     fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
         use fret_core::{DockNode, PanelKey};
 
         app.with_global_mut(DockManager::default, |dock, _app| {
-            let viewport_panel = PanelKey::new("demo.viewport");
+            let viewport_left = PanelKey::new("demo.viewport.left");
+            let viewport_right = PanelKey::new("demo.viewport.right");
             let controls_panel = PanelKey::new("demo.controls");
 
-            dock.ensure_panel(&viewport_panel, || DockPanel {
-                title: "Viewport".to_string(),
+            dock.ensure_panel(&viewport_left, || DockPanel {
+                title: "Viewport Left".to_string(),
                 color: Color::TRANSPARENT,
                 viewport: Some(fret_docking::ViewportPanel {
-                    target: fret_core::RenderTargetId::default(),
+                    target: RenderTargetId::from(KeyData::from_ffi(1)),
                     target_px_size: (960, 540),
-                    fit: fret_core::ViewportFit::Contain,
+                    fit: fret_core::ViewportFit::Stretch,
+                    context_menu_enabled: true,
+                }),
+            });
+            dock.ensure_panel(&viewport_right, || DockPanel {
+                title: "Viewport Right".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: Some(fret_docking::ViewportPanel {
+                    target: RenderTargetId::from(KeyData::from_ffi(2)),
+                    target_px_size: (960, 540),
+                    fit: fret_core::ViewportFit::Stretch,
                     context_menu_enabled: true,
                 }),
             });
@@ -600,11 +803,29 @@ impl DockingArbitrationDriver {
                 return;
             }
 
-            let tabs = dock.graph.insert_node(DockNode::Tabs {
-                tabs: vec![viewport_panel, controls_panel],
+            let tabs_left = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![viewport_left],
                 active: 0,
             });
-            dock.graph.set_window_root(window, tabs);
+            let tabs_right = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![viewport_right],
+                active: 0,
+            });
+            let viewport_split = dock.graph.insert_node(DockNode::Split {
+                axis: fret_core::Axis::Horizontal,
+                children: vec![tabs_left, tabs_right],
+                fractions: vec![0.5, 0.5],
+            });
+            let tabs_controls = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![controls_panel],
+                active: 0,
+            });
+            let root = dock.graph.insert_node(DockNode::Split {
+                axis: fret_core::Axis::Vertical,
+                children: vec![viewport_split, tabs_controls],
+                fractions: vec![0.7, 0.3],
+            });
+            dock.graph.set_window_root(window, root);
         });
     }
 
@@ -753,10 +974,29 @@ impl DockingArbitrationDriver {
 
         OverlayController::begin_frame(app, window);
 
-        let dock_space = state.root.get_or_insert_with(|| {
-            let node = fret_docking::create_dock_space_node(&mut state.ui, window);
-            state.ui.set_root(node);
-            node
+        let dock_space = state.dock_space.get_or_insert_with(|| {
+            create_dock_space_node_with_test_id(&mut state.ui, window, "dock-arb-dock-space")
+        });
+        let _ = state.root.get_or_insert_with(|| {
+            let left_anchor = state
+                .ui
+                .create_node_retained(DockingArbitrationDragAnchor::new(
+                    "dock-arb-tab-drag-anchor-left",
+                ));
+            let right_anchor = state
+                .ui
+                .create_node_retained(DockingArbitrationDragAnchor::new(
+                    "dock-arb-tab-drag-anchor-right",
+                ));
+            let root = state
+                .ui
+                .create_node_retained(DockingArbitrationHarnessRoot {
+                    dock_space: *dock_space,
+                    left_anchor,
+                    right_anchor,
+                });
+            state.ui.set_root(root);
+            root
         });
 
         render_and_bind_dock_panels(&mut state.ui, app, services, window, bounds, *dock_space);
@@ -788,6 +1028,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
     ) {
         crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
         state.root = None;
+        state.dock_space = None;
     }
 
     fn handle_model_changes(
@@ -795,6 +1036,11 @@ impl WinitAppDriver for DockingArbitrationDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
+        context
+            .app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                svc.record_model_changes(context.window, changed);
+            });
         context
             .state
             .ui
@@ -806,6 +1052,11 @@ impl WinitAppDriver for DockingArbitrationDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
+        context
+            .app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                svc.record_global_changes(app, context.window, changed);
+            });
         context
             .state
             .ui
@@ -835,6 +1086,20 @@ impl WinitAppDriver for DockingArbitrationDriver {
             window,
             state,
         } = context;
+
+        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            if !svc.is_enabled() {
+                return false;
+            }
+            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                return true;
+            }
+            svc.maybe_intercept_event_for_picking(app, window, event)
+        });
+        if consumed {
+            return;
+        }
+
         if matches!(event, Event::WindowCloseRequested) {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
@@ -1099,6 +1364,10 @@ impl WinitAppDriver for DockingArbitrationDriver {
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_viewport_input(event.clone());
+        });
+
         let cursor_target_px = event
             .cursor_target_px_f32()
             .map(|(x, y)| format!("{x:.1},{y:.1}"))
@@ -1106,7 +1375,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
         let target_px_per_screen_px = event.target_px_per_screen_px().unwrap_or(0.0);
         let msg: Arc<str> = Arc::from(
             format!(
-                "{:?} cursor_px=({:.1},{:.1}) uv=({:.3},{:.3}) target_px=({}, {}) cursor_target_px=({}) target_px_per_screen_px={:.3} window={:?}",
+                "{:?} cursor_px=({:.1},{:.1}) uv=({:.3},{:.3}) target_px=({}, {}) cursor_target_px=({}) target_px_per_screen_px={:.3} target={:?} window={:?}",
                 event.kind,
                 event.cursor_px.x.0,
                 event.cursor_px.y.0,
@@ -1116,6 +1385,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 event.target_px.1,
                 cursor_target_px,
                 target_px_per_screen_px,
+                event.target,
                 event.window,
             )
             .into_boxed_str(),
@@ -1154,10 +1424,83 @@ impl WinitAppDriver for DockingArbitrationDriver {
 
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
+
+        let inspection_active = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                svc.wants_inspection_active(window)
+            });
+        state.ui.set_inspection_active(inspection_active);
+
+        let diag_enabled = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+        if diag_enabled {
+            app.with_global_mut_untracked(
+                fret_runtime::WindowInteractionDiagnosticsStore::default,
+                |store, app| store.begin_frame(window, app.frame_id()),
+            );
+        }
+
         scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.drive_script_for_window(app, window, bounds, semantics_snapshot, element_runtime)
+        });
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+
+        if injected_any {
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
+
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                let _ = state.ui.dispatch_command(app, services, &command);
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
+                            }
+                        }
+                        other => deferred_effects.push(other),
+                    }
+                }
+
+                if !applied_any_command {
+                    break;
+                }
+            }
+            for effect in deferred_effects {
+                app.push_effect(effect);
+            }
+
+            state.ui.request_semantics_snapshot();
+            let mut frame =
+                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
+        }
+
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
 
         if let Some(synth) = self.synth_pointers.get(&window)
@@ -1187,6 +1530,23 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 corner_radii: Corners::all(Px(2.0)),
             });
         }
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &state.ui,
+                element_runtime,
+                scene,
+            );
+            let _ = svc.maybe_dump_if_triggered();
+            if svc.is_enabled() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
+        });
     }
 
     fn window_create_spec(

@@ -10,8 +10,8 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, resolve_override_slot_opt,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot_opt,
 };
 
 use crate::layout as shadcn_layout;
@@ -119,8 +119,8 @@ impl ToggleGroupItem {
 
 #[derive(Debug, Clone, Default)]
 pub struct ToggleGroupStyle {
-    pub item_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub item_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub item_background: OverrideSlot<ColorRef>,
+    pub item_border_color: OverrideSlot<ColorRef>,
 }
 
 impl ToggleGroupStyle {

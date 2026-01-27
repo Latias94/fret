@@ -19,7 +19,7 @@ use fret_ui_kit::primitives::checkbox::{
 };
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, WidgetState,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt,
 };
 
@@ -61,9 +61,9 @@ fn checkbox_ring_color(theme: &Theme) -> Color {
 
 #[derive(Debug, Clone, Default)]
 pub struct CheckboxStyle {
-    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub background: OverrideSlot<ColorRef>,
+    pub border_color: OverrideSlot<ColorRef>,
+    pub foreground: OverrideSlot<ColorRef>,
 }
 
 impl CheckboxStyle {

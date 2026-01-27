@@ -356,6 +356,7 @@ This page validates the first Material 3 outcome-aligned component surface:
 
 - state layer (hover / pressed / focus) driven by Material tokens
 - bounded ripple (pointer-origin) driven by motion tokens
+- ADR 1159 style overrides via `ButtonStyle` (partial per-state overrides)
 
 This is intentionally *not* a full `@material/web` parity port: it focuses on the interaction + visual outcomes within Fret's retained scene model.
 "#;
@@ -439,6 +440,7 @@ This page validates a second Material 3 component:
 - token-driven icon color + container color (variants)
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `IconButtonStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_ICON_BUTTON: &str = r#"
@@ -461,6 +463,7 @@ This page validates a third Material 3 component:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `CheckboxStyle` (partial per-state overrides)
 
 Notes:
 - This is the control-only MVP (40px target, 18px box). Label-click behavior is a follow-up recipe.
@@ -485,6 +488,7 @@ This page validates a Material 3 switch surface:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus) centered on the thumb
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `SwitchStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_SWITCH: &str = r#"
@@ -506,8 +510,11 @@ This page validates a Material 3 radio button surface:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `RadioStyle` (partial per-state overrides)
 
 This page uses the group-value binding API (`Model<Option<Arc<str>>>`) so multiple items behave like a real radio group.
+
+This page also includes `RadioStyle` override previews for both `RadioGroup` (forwarded to items) and standalone `Radio`.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_RADIO: &str = r#"
@@ -529,6 +536,7 @@ This page validates Material 3 text field variants:
 - filled: token-driven filled container + active indicator + hover state layer
 - label + placeholder outcomes (best-effort)
 - outlined: animated label float + an outline "notch" patch (best-effort)
+- ADR 1159 style overrides via `TextFieldStyle` (partial per-state overrides)
 
 This is built on top of `fret-ui`'s `TextInput` mechanism widget (caret/selection/IME).
 "#;
@@ -554,6 +562,7 @@ This page validates a Material 3 primary navigation tabs surface:
 - roving focus + automatic activation (selection follows focus)
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `TabsStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TABS: &str = r#"

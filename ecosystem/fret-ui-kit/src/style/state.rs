@@ -127,3 +127,27 @@ impl<T> WidgetStateProperty<T> {
         &self.default
     }
 }
+
+/// Applies ADR 1159 "nullable per-state override" semantics for a single slot.
+///
+/// If the override is present and resolves to `Some(value)` for the current `states`, that value is
+/// returned. Otherwise the provided `default` is returned.
+pub fn resolve_slot<T: Clone>(
+    overrides: Option<&WidgetStateProperty<Option<T>>>,
+    default: T,
+    states: WidgetStates,
+) -> T {
+    if let Some(overrides) = overrides {
+        if let Some(value) = overrides.resolve(states).clone() {
+            return value;
+        }
+    }
+    default
+}
+
+/// Merges ADR 1159 slot overrides with shallow, right-biased precedence.
+pub fn merge_slot<T>(dst: &mut Option<T>, src: Option<T>) {
+    if src.is_some() {
+        *dst = src;
+    }
+}

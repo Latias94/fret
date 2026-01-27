@@ -1122,8 +1122,8 @@ impl DropdownMenu {
 
     /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
     ///
-    /// When set, Escape/outside-press dismissals route through this handler. To "prevent
-    /// default", do not close the `open` model inside the handler.
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
         self
@@ -1204,8 +1204,8 @@ impl DropdownMenu {
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
-                let first_item_focus_id_for_request = first_item_focus_id.clone();
                 let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id_for_initial_focus = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -2463,6 +2463,15 @@ impl DropdownMenu {
                                                         let _submenu_cfg = env.submenu_cfg.clone();
                                                         let _overlay_root_name_for_controls =
                                                             env.overlay_root_name_for_controls.clone();
+                                                        let gating = crate::command_gating::snapshot_for_window(
+                                                            &*cx.app,
+                                                            cx.window,
+                                                        );
+
+                                                        let gating = crate::command_gating::snapshot_for_window(
+                                                            &*cx.app,
+                                                            cx.window,
+                                                        );
 
                                                         let mut rows: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
@@ -2800,26 +2809,23 @@ impl DropdownMenu {
                                                         let test_id = item.test_id.clone();
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
-                                                        let disabled = item.disabled
-                                                            || crate::command_gating::command_is_disabled_by_gating(
-                                                                &*cx.app,
-                                                                &crate::command_gating::snapshot_for_window(
-                                                                    &*cx.app,
-                                                                    cx.window,
-                                                                ),
-                                                                command.as_ref(),
-                                                            );
-                                                                let leading = item.leading.clone();
-                                                                let trailing = item.trailing.clone();
-                                                                let variant = item.variant;
-                                                                let pad_left =
-                                                                    if item.inset { pad_x_inset } else { pad_x };
-                                                                let open = open_for_submenu.clone();
-                                                                let submenu_for_key =
-                                                                    submenu_models_for_panel.clone();
-                                                                let text_style = text_style.clone();
+                                                         let disabled = item.disabled
+                                                             || crate::command_gating::command_is_disabled_by_gating(
+                                                                 &*cx.app,
+                                                                 &gating,
+                                                                 command.as_ref(),
+                                                             );
+                                                        let leading = item.leading.clone();
+                                                        let trailing = item.trailing.clone();
+                                                        let variant = item.variant;
+                                                        let pad_left =
+                                                            if item.inset { pad_x_inset } else { pad_x };
+                                                        let open = open_for_submenu.clone();
+                                                        let submenu_for_key =
+                                                            submenu_models_for_panel.clone();
+                                                        let text_style = text_style.clone();
 
-                                                                        rows.push(cx.keyed(value.clone(), |cx| {
+                                                        rows.push(cx.keyed(value.clone(), |cx| {
                                                                     cx.pressable_with_id_props(
                                                                         |cx, st, item_id| {
                                                                             menu::sub_content::wire_item(
@@ -3069,8 +3075,8 @@ impl DropdownMenu {
                     overlay_children,
                     overlay_root_name,
                     menu::root::MenuInitialFocusTargets::new()
-                        .pointer_content_focus(content_focus_id.get())
-                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
+                        .keyboard_entry_focus(first_item_focus_id_for_initial_focus.get())
+                        .pointer_content_focus(Some(content_id_for_trigger)),
                     None,
                     None,
                     on_dismiss_request.clone(),
@@ -4028,8 +4034,9 @@ mod tests {
 
         let dismiss_calls = Arc::new(AtomicUsize::new(0));
         let dismiss_calls_for_handler = dismiss_calls.clone();
-        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, _reason| {
+        let handler: OnDismissRequest = Arc::new(move |_host, _action_cx, req| {
             dismiss_calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
         });
 
         let _ = render_frame_with_dismiss_handler(

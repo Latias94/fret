@@ -230,16 +230,15 @@ impl<H: UiHost> UiTree<H> {
                 }
                 continue;
             }
-            if self.dispatch_event_to_node_chain_observer(
+            self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
                 input_ctx,
                 layer_root,
                 event,
                 invalidation_visited,
-            ) {
-                *needs_redraw = true;
-            }
+            );
+            *needs_redraw = true;
             if barrier_root == Some(layer_root) {
                 hit_barrier = true;
             }
@@ -1016,7 +1015,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
-        let mut cursor_query_choice: Option<fret_core::CursorIcon> = None;
+        let mut cursor_choice_from_query = false;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
         let mut suppress_touch_up_outside_dispatch = false;
@@ -1240,27 +1239,6 @@ impl<H: UiHost> UiTree<H> {
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
                     }
-                }
-            }
-
-            if input_ctx.caps.ui.cursor_icons
-                && cursor_query_choice.is_none()
-                && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
-            {
-                let mut node = captured.or(hit_for_hover);
-                while let Some(id) = node {
-                    let (bounds, parent) = self
-                        .nodes
-                        .get(id)
-                        .map(|n| (n.bounds, n.parent))
-                        .unwrap_or_default();
-                    if let Some(icon) = self.with_widget_mut(id, |widget, _tree| {
-                        widget.cursor_icon_at(bounds, pos, &input_ctx)
-                    }) {
-                        cursor_query_choice = Some(icon);
-                        break;
-                    }
-                    node = parent;
                 }
             }
 
@@ -1567,6 +1545,15 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        if cursor_choice.is_none()
+            && input_ctx.caps.ui.cursor_icons
+            && matches!(event, Event::Pointer(_))
+            && let Some(hit) = pointer_hit
+        {
+            cursor_choice = self.cursor_icon_query_for_pointer_hit(hit, &input_ctx, event);
+            cursor_choice_from_query = cursor_choice.is_some();
+        }
+
         if !suppress_pointer_dispatch
             && matches!(
                 event,
@@ -1694,8 +1681,11 @@ impl<H: UiHost> UiTree<H> {
                         }
                     }
 
-                    if requested_cursor.is_some() && cursor_choice.is_none() {
-                        cursor_choice = requested_cursor;
+                    if let Some(requested_cursor) = requested_cursor
+                        && (cursor_choice.is_none() || cursor_choice_from_query)
+                    {
+                        cursor_choice = Some(requested_cursor);
+                        cursor_choice_from_query = false;
                     }
 
                     if stop_propagation {
@@ -1809,8 +1799,11 @@ impl<H: UiHost> UiTree<H> {
                         }
                     }
 
-                    if requested_cursor.is_some() && cursor_choice.is_none() {
-                        cursor_choice = requested_cursor;
+                    if let Some(requested_cursor) = requested_cursor
+                        && (cursor_choice.is_none() || cursor_choice_from_query)
+                    {
+                        cursor_choice = Some(requested_cursor);
+                        cursor_choice_from_query = false;
                     }
 
                     if stop_propagation {
@@ -2461,9 +2454,7 @@ impl<H: UiHost> UiTree<H> {
             && let Some(window) = self.window
             && matches!(event, Event::Pointer(_))
         {
-            let icon = cursor_choice
-                .or(cursor_query_choice)
-                .unwrap_or(fret_core::CursorIcon::Default);
+            let icon = cursor_choice.unwrap_or(fret_core::CursorIcon::Default);
             app.push_effect(Effect::CursorSetIcon { window, icon });
         }
 
@@ -2533,7 +2524,6 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
-
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
@@ -2871,5 +2861,36 @@ impl<H: UiHost> UiTree<H> {
             cur = self.nodes.get(id).and_then(|n| n.parent);
         }
         out
+    }
+
+    fn cursor_icon_query_for_pointer_hit(
+        &mut self,
+        start: NodeId,
+        input_ctx: &InputContext,
+        event: &Event,
+    ) -> Option<fret_core::CursorIcon> {
+        if event_position(event).is_none() {
+            return None;
+        }
+
+        let chain = self.build_mapped_event_chain(start, event);
+        for (node_id, mapped_event) in chain {
+            let Some(position) = event_position(&mapped_event) else {
+                continue;
+            };
+            let bounds = self
+                .nodes
+                .get(node_id)
+                .map(|n| n.bounds)
+                .unwrap_or_default();
+            let requested = self.with_widget_mut(node_id, |widget, _tree| {
+                widget.cursor_icon_at(bounds, position, input_ctx)
+            });
+            if requested.is_some() {
+                return requested;
+            }
+        }
+
+        None
     }
 }

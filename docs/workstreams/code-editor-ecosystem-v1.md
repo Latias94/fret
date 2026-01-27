@@ -10,6 +10,18 @@ It is intentionally non-authoritative; the normative contracts are:
 - `docs/adr/0194-text-navigation-and-word-boundaries-v1.md`
 - `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
 
+Non-normative upstream reference anchors (for concept mapping only; do not copy implementations):
+
+- Zed/GPUI (copyleft; architecture reference only):
+  - `repo-ref/zed/crates/editor/src/display_map.rs`
+  - `repo-ref/zed/crates/editor/src/editor.rs`
+  - `repo-ref/zed/crates/rope/src/rope.rs`
+  - `repo-ref/zed/crates/text/src/text.rs`
+- Monaco Editor (MIT; concept reference):
+  - `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/textModel.js`
+  - `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeTextBuffer.js`
+  - `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeBase.js`
+
 It also depends on existing locked contracts:
 
 - Text boundary + geometry queries: `docs/adr/0006-text-system.md`, `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`,
@@ -226,65 +238,32 @@ Legend:
 
 ### 2) Word boundaries seam (ADR 0194)
 
-- [x] Add/standardize `TextBoundaryMode` definition (in `fret-runtime` input context).
-- [x] Add window-scoped snapshot for the mode (`InputContext`).
-- [x] Provide an override stack service (push/pop token) for overlays and focused surfaces.
-- [x] Allow focused text input regions to override `TextBoundaryMode` (mechanism-only).
-- [x] Ensure `TextInput`, `TextArea`, `SelectableText` consult the mode for:
+- [ ] Add/standardize `TextBoundaryMode` definition (location TBD; likely `fret-runtime` input context).
+- [ ] Add window-scoped snapshot for the mode (`InputContext`).
+- [ ] Provide an override stack service (push/pop token) for overlays and focused surfaces.
+- [ ] Ensure `TextInput`, `TextArea`, `SelectableText` consult the mode for:
   - word move/select commands,
   - double-click selection,
   - triple-click line selection.
-- [~] Define test cases for Unicode and identifier modes (seed tests added; expand coverage).
-
-Evidence anchors:
-
-- `crates/fret-runtime/src/input.rs` (`InputContext.text_boundary_mode`, `TextBoundaryMode`)
-- `crates/fret-runtime/src/window_text_boundary_mode.rs` (`WindowTextBoundaryModeService`)
-- `crates/fret-ui/src/element.rs` (`TextInputRegionProps.text_boundary_mode_override`)
-- `crates/fret-ui/src/declarative/mount.rs` (mounts focused override into the runtime tree)
-- `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
-- `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
-- `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
+- [ ] Define test cases for Unicode and identifier modes.
 
 ### 3) Windowed editor surface (ADR 0190/0193)
 
-- [x] Choose v1 surface implementation strategy:
+- [ ] Choose v1 surface implementation strategy:
   - paint-driven windowed surface (stable tree, `Scroll` + `Canvas`), or
   - VirtualList-based rows (only if composability is required early).
-- [x] Implement a minimal editor surface vertical slice (fixed-height rows, no wrap):
-  - per-row text paint via windowed surface,
-  - caret + selection (mouse + keyboard),
-  - clipboard copy/paste (best-effort),
-  - IME preedit (overlay) + cursor-area reporting (best-effort).
-- [~] Define row cache keys and budgets (text blobs + shaping caches + token spans).
-- [~] Define selection/caret painting layers (paint-only where possible).
-- [~] Define IME preedit rendering strategy (inline underline + caret anchoring).
-- [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
-- [x] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
-
-Evidence anchors:
-
-- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor` row painting + input + per-canvas text cache policy)
-- `crates/fret-ui/src/element.rs` (`TextInputRegionProps`, `ElementKind::TextInputRegion`)
-- `crates/fret-ui/src/declarative/host_widget/event/text_input_region.rs` (IME/TextInput forwarding)
-- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (pointer up/cancel support)
-- `ecosystem/fret-code-editor-view/src/lib.rs` (baseline buffer↔display mapping)
-- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_MVP`)
-- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`)
-- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
-- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
+- [ ] Define row cache keys and budgets (text blobs + shaping caches + token spans).
+- [ ] Define selection/caret painting layers (paint-only where possible).
+- [ ] Define IME preedit rendering strategy (inline underline + caret anchoring).
+- [ ] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
 
 ### 4) Document model (buffer) and undo hooks (ADR 0193 / ADR 0136)
 
-- [~] Select v1 text buffer structure:
+- [ ] Select v1 text buffer structure:
   - rope, piece table, or hybrid (document decision).
 - [ ] Define edit operation vocabulary (insert/delete/replace) in UTF-8 byte indices.
 - [ ] Define transaction boundaries (begin/update/commit/cancel) compatible with `fret-undo`.
 - [ ] Define document identity (URI-like) and multi-document story for workspace shells.
-
-Evidence anchors:
-
-- `ecosystem/fret-code-editor-buffer/src/lib.rs` (`TextBuffer`, `Edit`, UTF-8 byte-index validation)
 
 ### 5) Syntax and highlighting (ADR 0193)
 

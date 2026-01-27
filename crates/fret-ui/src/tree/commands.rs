@@ -212,10 +212,10 @@ impl<H: UiHost> UiTree<H> {
 
         for id in widget_commands {
             if id.as_str() == "focus.menu_bar" {
-                let present = app
+                let available = app
                     .global::<fret_runtime::WindowMenuBarFocusService>()
                     .is_some_and(|svc| svc.present(window));
-                snapshot.insert(id, present);
+                snapshot.insert(id, available);
                 continue;
             }
 

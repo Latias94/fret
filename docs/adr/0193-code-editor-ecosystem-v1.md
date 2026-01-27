@@ -183,6 +183,24 @@ Zed is licensed under copyleft terms (AGPL/GPL files are present in `repo-ref/ze
 
 Monaco Editor is MIT-licensed; its “model/view split” and piece-tree concepts are used here as design references, not as code to be directly ported.
 
+## Upstream Reference Anchors (Non-Normative)
+
+These file paths exist solely to help readers map concepts to concrete upstream structures. They are not normative
+and must not be treated as “copy this implementation”.
+
+### Zed / GPUI (architecture reference only; do not copy code)
+
+- Display-map layering overview: `repo-ref/zed/crates/editor/src/display_map.rs`
+- Editor module decomposition (integration points): `repo-ref/zed/crates/editor/src/editor.rs`
+- Rope and large-buffer concerns: `repo-ref/zed/crates/rope/src/rope.rs`
+- Text buffer + history/transactions (conceptual reference): `repo-ref/zed/crates/text/src/text.rs`
+
+### Monaco Editor (MIT; concept reference)
+
+- Text model aggregation (events, decorations, undo integration): `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/textModel.js`
+- Piece-tree text buffer: `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeTextBuffer.js`
+- Piece-tree base and line-start metadata: `repo-ref/monaco-editor/node_modules/monaco-editor-core/esm/vs/editor/common/model/pieceTreeTextBuffer/pieceTreeBase.js`
+
 ## References
 
 - Runtime layering and “policy stays in ecosystem”: ADR 0066.
@@ -192,4 +210,3 @@ Monaco Editor is MIT-licensed; its “model/view split” and piece-tree concept
 - Attributed spans: ADR 0157 / ADR 0161.
 - Cache roots / dirty views / prepaint streams: ADR 1152 / ADR 0180 / ADR 0182.
 - Windowed virtual surfaces: ADR 0190 / ADR 0192.
-

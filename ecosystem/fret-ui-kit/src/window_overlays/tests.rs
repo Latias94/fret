@@ -3540,8 +3540,6 @@ fn tooltip_does_not_request_observers_by_default() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
-
     let mut services = FakeServices;
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3565,6 +3563,7 @@ fn tooltip_does_not_request_observers_by_default() {
     // unless the request explicitly opts into them.
     begin_frame(&mut app, window);
     let id = GlobalElementId(0xdead);
+    let open = app.models_mut().insert(true);
     request_tooltip_for_window(
         &mut app,
         window,
@@ -3573,7 +3572,7 @@ fn tooltip_does_not_request_observers_by_default() {
             root_name: tooltip_root_name(id),
             interactive: true,
             trigger: Some(id),
-            open: open.clone(),
+            open,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -3610,8 +3609,6 @@ fn tooltip_does_not_request_observers_while_closing() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(false);
-
     let mut services = FakeServices;
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3634,6 +3631,7 @@ fn tooltip_does_not_request_observers_while_closing() {
     // Install a tooltip layer that is still present but non-interactive (closing animation).
     begin_frame(&mut app, window);
     let id = GlobalElementId(0xdead);
+    let open = app.models_mut().insert(false);
     let handler: fret_ui::action::OnDismissRequest = Arc::new(|_host, _cx, _req| {});
     let on_pointer_move: fret_ui::action::OnDismissiblePointerMove =
         Arc::new(|_host, _cx, _move| false);
@@ -3645,7 +3643,7 @@ fn tooltip_does_not_request_observers_while_closing() {
             root_name: tooltip_root_name(id),
             interactive: false,
             trigger: Some(id),
-            open: open.clone(),
+            open,
             present: true,
             on_dismiss_request: Some(handler),
             on_pointer_move: Some(on_pointer_move),
@@ -3682,8 +3680,6 @@ fn hover_overlay_is_click_through_while_closing() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(false);
-
     let mut services = FakeServices;
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3706,6 +3702,7 @@ fn hover_overlay_is_click_through_while_closing() {
     // Install a hover overlay that is still present but non-interactive (closing animation).
     begin_frame(&mut app, window);
     let id = GlobalElementId(0xdead);
+    let open = app.models_mut().insert(false);
     request_hover_overlay_for_window(
         &mut app,
         window,
@@ -5396,7 +5393,7 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
-            open: open_b.clone(),
+            open: open_b,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -5739,7 +5736,7 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
             root_name: tooltip_root_name(trigger_b),
             interactive: true,
             trigger: Some(trigger_b),
-            open: open_b.clone(),
+            open: open_b,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -6723,7 +6720,7 @@ fn dock_drag_hides_tooltips_in_affected_window() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
-            open: open.clone(),
+            open: open,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -7704,7 +7701,7 @@ fn dock_drag_keeps_hover_overlays_hidden_after_capture_release_until_drag_ends()
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
-            open: open.clone(),
+            open,
             present: true,
             children: Vec::new(),
         },
@@ -7939,7 +7936,7 @@ fn pointer_capture_restores_hover_overlays_after_release() {
         window,
         bounds,
         open.clone(),
-        underlay_clicked.clone(),
+        underlay_clicked,
     );
     request_hover_overlay_for_window(
         &mut app,
@@ -7949,7 +7946,7 @@ fn pointer_capture_restores_hover_overlays_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
-            open: open.clone(),
+            open,
             present: true,
             children: Vec::new(),
         },
@@ -8185,7 +8182,7 @@ fn pointer_capture_restores_tooltips_after_release() {
         window,
         bounds,
         open.clone(),
-        underlay_clicked.clone(),
+        underlay_clicked,
     );
     request_tooltip_for_window(
         &mut app,
@@ -8195,7 +8192,7 @@ fn pointer_capture_restores_tooltips_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
-            open: open.clone(),
+            open,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -8342,7 +8339,7 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
-            open: open.clone(),
+            open,
             present: true,
             children: Vec::new(),
         },
@@ -8487,7 +8484,7 @@ fn viewport_capture_cancel_restores_hover_overlays() {
             root_name: hover_overlay_root_name(trigger),
             interactive: true,
             trigger,
-            open: open.clone(),
+            open,
             present: true,
             children: Vec::new(),
         },
@@ -8632,7 +8629,7 @@ fn viewport_capture_hides_tooltips_and_restores_after_release() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
-            open: open.clone(),
+            open,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -8777,7 +8774,7 @@ fn viewport_capture_cancel_restores_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
-            open: open.clone(),
+            open,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -9056,7 +9053,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
             root_name: tooltip_root_name(trigger),
             interactive: true,
             trigger: Some(trigger),
-            open: open.clone(),
+            open,
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,

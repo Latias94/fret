@@ -1,6 +1,6 @@
 # Material 3 / Expressive Alignment (TODO)
 
-Status: Draft / work-in-progress
+Status: Work-in-progress
 
 This workstream tracks **visual + interaction outcome alignment** for Material Design 3 (and
 Material 3 Expressive) in Fret.
@@ -37,6 +37,15 @@ Prefer reusing these primitives over re-inventing per-component state precedence
     `ecosystem/fret-ui-material3/src/tokens/list.rs` (`item_container_shape_for_interaction`),
     `ecosystem/fret-ui-material3/src/list.rs` (design variant aware shape selection),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_list`).
+- [ ] Expand Expressive coverage incrementally without inventing Fret-only component tokens:
+  - Treat `DynamicVariant::Expressive` as the source of truth for **palette/scheme** changes
+    (`md.sys.color.*`), independent of per-component `.expressive.*` tokens.
+  - As of Material Web v30 sassvars, `.expressive.` component tokens are only present for `List`
+    (shape + icon sizes). Do not add placeholder expressive tokens for other components yet.
+  - When upstream adds expressive component tokens, implement them by:
+    - importing via `material3_token_import` into `tokens/material_web_v30.rs`, and
+    - plumbing `MaterialDesignVariant` through the relevant typed token modules (like `tokens/list.rs`),
+      keeping component recipes unchanged.
 
 ## Non-goals (initially)
 
@@ -94,7 +103,10 @@ These files are primarily *shared policy primitives*, not one-off component layo
 ### Backlog extracted from the comparison
 
 - [ ] Add a `LocalTextStyle`-like scoped default helper in Material foundation (text style + icon size).
-- [ ] Land `foundation::elevation` (shadow + tonal overlay) and migrate `Surface`-like containers.
+- [x] Land `foundation::elevation` (shadow + tonal overlay) and migrate `Surface`-like containers.
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/elevation.rs`, `ecosystem/fret-ui-material3/src/foundation/surface.rs`,
+    `ecosystem/fret-ui-material3/src/dialog.rs`, `ecosystem/fret-ui-material3/src/menu.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`,
+    `ecosystem/fret-ui-material3/src/navigation_bar.rs`, `ecosystem/fret-ui-material3/src/navigation_drawer.rs`.
 - [ ] Decide the public surface for hoistable interaction sources (if any), and standardize “pressed origin” latching.
 - [ ] Audit which parts of minimum touch target policy should become a core `fret-ui` mechanism vs remain Material-only.
 - [ ] Decide whether we need a core pixel-snapping policy hook for non-1.0 scale factors (radio/checkbox drift class).
@@ -135,21 +147,26 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - Evidence: `ecosystem/fret-ui-material3/src/menu.rs`.
 - [x] Migrate `Radio` to the foundation indication path and remove non-Material fallbacks.
   - Evidence: `ecosystem/fret-ui-material3/src/radio.rs`.
-- [x] Remove non-Material fallbacks from `TextField` (foundation migration TBD).
-  - Evidence: `ecosystem/fret-ui-material3/src/text_field.rs`.
+- [x] Migrate `TextField` hover state layer to the foundation indication path.
+  - Evidence: `ecosystem/fret-ui-material3/src/text_field.rs`,
+    `ecosystem/fret-ui-material3/src/foundation/indication.rs`,
+    `ecosystem/fret-ui-material3/tests/text_field_hover.rs` (filled/error hover overlay, focus indicator thickness, disabled/outlined invariants, overlay survives focus).
 - [x] Add a regression test to prevent non-Material token fallbacks.
   - Evidence: `ecosystem/fret-ui-material3/src/lib.rs` (`material3_component_sources_do_not_fallback_to_non_material_tokens`).
 - [x] Add scene-level regression tests for radio alignment (dot + ripple origin).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
 - [x] Add a token audit tool (coverage report vs code + material-web sassvars).
   - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (filters allowlisted Fret-only keys,
-    expands format-string templates via `expand_key_templates`).
+    expands format-string templates via `expand_key_templates`, excludes `src/bin` from runtime scans, filters typography-only sassvar keys).
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.
 - [x] Add a Material 3 "state matrix" gallery page for manual regression.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_STATE_MATRIX`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_state_matrix`).
+- [x] Align core Material 3 components with the ecosystem `*Style` override surface (ADR 1159).
+  - Evidence: `docs/workstreams/material3-style-api-alignment-v1.md`,
+    `ecosystem/fret-ui-material3/src/{button,checkbox,icon_button,radio,switch,tabs,text_field}.rs`.
 - [ ] Migrate the remaining components and delete duplicated per-component helpers.
 
 ## Audit Anchors (Fret)
@@ -176,8 +193,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-switch.scss`.
 - [x] Inject `md.sys.color.*` via dynamic color scheme generation (including Expressive variant).
   - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_sys_colors`,
-    `ColorSchemeOptions`, `DynamicVariant`, `theme_config_with_colors`).
+    `ColorSchemeOptions`, `DynamicVariant`, `theme_config_with_colors`; includes fixed roles like `md.sys.color.primary-fixed*`).
 - [ ] Implement import pipeline from `repo-ref/material-web/tokens/versions/v30_0` into Fret theme configs.
+  - [x] Auto-discover `repo-ref/material-web` in git worktrees (fallback to `MATERIAL_WEB_DIR`).
+    - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (`default_material_web_dir`),
+      `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (`resolve_material_web_dir`).
   - [x] Generate sys motion + state (+ focus-indicator) injectors from Material Web sassvars.
     - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`,
       `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`,
@@ -193,6 +213,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
     - [x] Import `md.comp.button.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_button_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_button_scalars`).
+    - [x] Import `md.comp.radio-button.*` scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_radio_button_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_radio_button_scalars`).
     - [x] Import `md.comp.checkbox.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_checkbox_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_checkbox_scalars`).
@@ -205,9 +228,18 @@ These files are primarily *shared policy primitives*, not one-off component layo
     - [x] Import `md.comp.primary-navigation-tab.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_primary_navigation_tab_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_primary_navigation_tab_scalars`).
+    - [x] Import navigation surface scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_navigation_{bar,drawer,rail}_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_{bar,drawer,rail}_scalars`).
     - [x] Import `md.comp.menu.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_menu_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_menu_scalars`).
+    - [x] Import `md.comp.list.*` scalar tokens (non-color) from Material Web (includes Expressive shapes).
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_list_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_list_scalars`).
+    - [x] Import tooltip/snackbar scalar tokens (non-color) from Material Web.
+      - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_{plain,rich}_tooltip_scalars`, `inject_comp_snackbar_scalars`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_{plain,rich}_tooltip_scalars`, `inject_comp_snackbar_scalars`).
     - [x] Import `md.comp.(full-screen-)?dialog.*` scalar tokens (non-color) from Material Web.
       - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_dialog_scalars`,
         `inject_comp_full_screen_dialog_scalars`), `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_dialog_scalars`,
@@ -217,6 +249,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
         `inject_comp_filled_text_field_scalars`),
         `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_outlined_text_field_scalars`,
         `inject_comp_filled_text_field_scalars`).
+    - [x] Generate `md.comp.*` color alias injectors from Material Web and apply them on top of
+      dynamic `md.sys.color.*` generation (copy from `md.sys.color.*` / `md.ref.palette.*`).
+      - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`,
+        `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_comp_*_colors_from_sys`),
+        `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_*_colors_from_sys`).
     - [ ] Expand scalar import coverage for other MVP components.
     - [x] Represent corner sets via `ThemeConfig.corners` (per-corner radii); other structured tokens TBD.
 - [x] Add support for non-color/non-px token kinds needed by Material:
@@ -375,9 +412,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/snackbar.rs` (toast-layer motion tokens).
 - [ ] Overlay outcomes (menu, dialog, tooltip):
   - [x] Escape dismissal (menu dropdown)
-    - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu)
+    - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`).
   - [x] outside press dismissal (menu dropdown)
-    - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu)
+    - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`).
   - [x] focus trap/restore (modal) (currently validated via modal navigation drawer)
     - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (focus trap),
       `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (focus restore),
@@ -386,7 +425,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.comp.navigation-drawer.scrim.*` defaults),
       `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (token lookup + fade),
       `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-navigation-drawer.scss` (token note).
-  - [ ] click-through semantics (non-modal)
+  - [x] click-through semantics (non-modal)
+    - Evidence: `ecosystem/fret-ui-material3/src/tooltip.rs` (`tooltip_prim::tooltip_request`),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tooltip_is_click_through_and_does_not_block_underlay_activation_across_schemes`).
 
 ### Visual Outcomes
 
@@ -501,7 +542,29 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Extend the interaction harness with quad-level signatures to catch geometry jitter after animations settle.
   - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_quad_geometry_signature`),
     tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`*_pressed_scene_structure_is_stable`).
-- [ ] Add golden-style visual snapshots per component state (light/dark, density variants).
+- [x] Verify Tabs pressed-scene stability across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tabs_pressed_scene_structure_is_stable`).
+- [x] Verify Radio pressed-scene stability across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`radio_pressed_scene_structure_is_stable`).
+- [x] Verify IconButton pressed-scene stability across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`icon_button_pressed_scene_structure_is_stable`).
+- [x] Verify Switch pressed-scene stability across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`switch_pressed_scene_structure_is_stable`).
+- [x] Verify Checkbox pressed-scene stability across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`checkbox_pressed_scene_structure_is_stable`).
+- [x] Verify Menu pressed-scene stability across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`menu_pressed_scene_structure_is_stable`).
+- [x] Verify TextField hover/focus invariants across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/text_field_hover.rs` (multi-scheme regression matrix).
+- [x] Verify modal overlay focus trap/restore across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dialog_focus_is_contained_and_restored_across_schemes`,
+    `modal_navigation_drawer_focus_is_contained_and_restored_across_schemes`).
+- [x] Verify tooltip hover open/close and dropdown menu dismissal across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tooltip_opens_and_closes_on_hover_across_schemes`,
+    `dropdown_menu_dismisses_and_restores_focus_across_schemes`).
+- [x] Add golden-style visual snapshots per component state (light/dark, density variants).
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_controls_suite_goldens_v1`, `material3_headless_overlays_suite_goldens_v1`, `material3_headless_text_field_suite_goldens_v1`),
+    `goldens/material3-headless/v1/material3-*.json` (controls suite, overlay suite, text-field suite; includes `scale1_0`/`scale1_25`/`scale2_0` variants).
 
 ## Proposed ADRs (drafts)
 

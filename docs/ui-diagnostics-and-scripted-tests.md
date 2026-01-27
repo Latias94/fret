@@ -248,6 +248,8 @@ At a high level:
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
   - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
+  - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0147)
+  - `debug.docking_interaction`: docking interaction ownership snapshot (dock drag + viewport capture)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
   - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals; includes optional `*_path` strings for key elements)
@@ -512,6 +514,11 @@ These scripts assert that stable semantics anchors exist *and* that their bounds
 window (`bounds_within_window`), which is a fast way to catch “layout is broken / clipped to zero”
 regressions when a table suddenly “disappears”.
 
+The diagnostics harness also includes docking arbitration scripts (multi-viewport + modal):
+
+- `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
+- `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+
 ### View-cache regression gating
 
 Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
@@ -533,6 +540,16 @@ Some overlay regressions only show up when overlay requests must be synthesized 
 the synthesis seam", you can gate on synthesis events exported in `bundle.json`:
 
 - `--check-overlay-synthesis-min N` counts `debug.overlay_synthesis[].outcome == "synthesized"` events in snapshots after `--warmup-frames`.
+
+### Viewport input regression gating
+
+Some docking / embedded-viewport regressions only matter if viewport input forwarding actually happened
+(i.e. `Effect::ViewportInput` was emitted and drained). To avoid “it passed but never exercised viewport tooling”,
+you can gate on forwarded viewport input events exported in `bundle.json`:
+
+- `--check-viewport-input-min N` counts `debug.viewport_input[]` events in snapshots after `--warmup-frames`.
+- `--check-dock-drag-min N` counts snapshots where `debug.docking_interaction.dock_drag` is present.
+- `--check-viewport-capture-min N` counts snapshots where `debug.docking_interaction.viewport_capture` is present.
 
 ### Matrix runner (uncached vs cached)
 

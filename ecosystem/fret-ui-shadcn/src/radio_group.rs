@@ -15,7 +15,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, WidgetState,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Space, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
 
@@ -125,9 +125,9 @@ impl RadioGroupItem {
 
 #[derive(Debug, Clone, Default)]
 pub struct RadioGroupStyle {
-    pub icon_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub label_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub indicator_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub icon_border_color: OverrideSlot<ColorRef>,
+    pub label_color: OverrideSlot<ColorRef>,
+    pub indicator_color: OverrideSlot<ColorRef>,
 }
 
 impl RadioGroupStyle {

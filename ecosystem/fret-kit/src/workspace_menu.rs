@@ -869,7 +869,7 @@ fn request_menu_overlay<H: UiHost>(
             (children, Some(dismissible_on_pointer_move))
         });
 
-    let on_dismiss_request: Option<OnDismissRequest> = Some(Arc::new(move |host, acx, _reason| {
+    let on_dismiss_request: Option<OnDismissRequest> = Some(Arc::new(move |host, acx, _req| {
         let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
         let _ = host
             .models_mut()
@@ -877,6 +877,8 @@ fn request_menu_overlay<H: UiHost>(
         host.request_redraw(acx.window);
     }));
 
+    let initial_focus =
+        menu::root::MenuInitialFocusTargets::new().pointer_content_focus(content_focus_id.get());
     let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
         cx,
         trigger_id,
@@ -885,9 +887,7 @@ fn request_menu_overlay<H: UiHost>(
         overlay_presence,
         overlay_children,
         overlay_root_name,
-        menu::root::MenuInitialFocusTargets::new()
-            .pointer_content_focus(content_focus_id.get())
-            .keyboard_entry_focus(content_focus_id.get()),
+        initial_focus,
         None,
         None,
         on_dismiss_request,

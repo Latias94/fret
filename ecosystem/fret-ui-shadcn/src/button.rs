@@ -10,15 +10,15 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize,
-    Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverrideSlot,
+    Size as ComponentSize, Space, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 
 #[derive(Debug, Clone, Default)]
 pub struct ButtonStyle {
-    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub background: OverrideSlot<ColorRef>,
+    pub foreground: OverrideSlot<ColorRef>,
+    pub border_color: OverrideSlot<ColorRef>,
 }
 
 impl ButtonStyle {
