@@ -16,7 +16,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (time of writing):
 
-- shadcn-web `v4/new-york-v4`: `456/456` keys referenced (`100%`)
+- shadcn-web `v4/new-york-v4`: `459/459` keys referenced (`100%`)
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -117,8 +117,16 @@ Current policy:
 - Regression test: `crates/fret-ui/src/tree/tests/scroll_invalidation.rs`
   (`scroll_offset_changes_do_not_replay_paint_cache`).
 - Web golden extractor notes:
-  - `goldens/shadcn-web/scripts/extract-golden.mts` exports `aria-invalid` and supports scripted
-    attribute injection steps for variant snapshots (e.g. `*.invalid.json`).
+  - `goldens/shadcn-web/scripts/extract-golden.mts` exports `aria-invalid` and supports scripted attribute
+    injection steps for variant snapshots (e.g. `*.invalid.json`).
+
+Theme note (important for 1:1 conformance):
+
+- The upstream v4 web app uses `repo-ref/ui/apps/v4/styles/globals.css` as the effective runtime theme
+  values for the default `new-york-v4` harness pages (not a direct application of the v4 registry
+  `theme-*.json` files).
+- Fret mirrors this by patching the delta in `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` so the
+  web-vs-fret goldens stay aligned.
 
 ## Radix primitives: occlusion + focus restore
 
