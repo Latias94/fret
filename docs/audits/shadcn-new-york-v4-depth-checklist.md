@@ -103,15 +103,17 @@ Evidence anchors:
 ### Button (`button-default*`)
 
 - Disabled opacity: **Gated** (`button-default.disabled.json`)
+- Hovered background chrome: **Gated** (`button-default.hover.json`)
 - Pressed background chrome: **Gated** (`button-default.pressed.json`)
 
 Evidence anchors:
 
 - Goldens (state):
+  - `goldens/shadcn-web/v4/new-york-v4/button-default.hover.json`
   - `goldens/shadcn-web/v4/new-york-v4/button-default.pressed.json`
   - `goldens/shadcn-web/v4/new-york-v4/button-default.disabled.json`
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
-  (`web_vs_fret_button_default_pressed_matches_web`, `web_vs_fret_button_default_disabled_matches_web`)
+  (`web_vs_fret_button_default_hover_matches_web`, `web_vs_fret_button_default_pressed_matches_web`, `web_vs_fret_button_default_disabled_matches_web`)
 
 ## Charts (wrapper UI + interaction snapshots)
 
