@@ -894,6 +894,32 @@ impl<H, F> UiBuilder<crate::ui::ScrollAreaBox<H, F>> {
     }
 }
 
+impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.inner.axis = axis;
+        self
+    }
+
+    pub fn show_scrollbar_x(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_x = show;
+        self
+    }
+
+    pub fn show_scrollbar_y(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_y = show;
+        self
+    }
+
+    pub fn show_scrollbars(self, x: bool, y: bool) -> Self {
+        self.show_scrollbar_x(x).show_scrollbar_y(y)
+    }
+
+    pub fn handle(mut self, handle: ScrollHandle) -> Self {
+        self.inner.handle = Some(handle);
+        self
+    }
+}
+
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
@@ -952,6 +978,15 @@ impl<H: UiHost, F, I> UiBuilder<crate::ui::ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
