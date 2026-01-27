@@ -98,6 +98,21 @@ Evidence anchors:
   `web_vs_fret_combobox_demo_focused_option_chrome_matches_web`,
   `web_vs_fret_command_dialog_focused_item_chrome_matches_web`, and `*_dark` variants)
 
+## Controls: pressed / disabled states
+
+### Button (`button-default*`)
+
+- Disabled opacity: **Gated** (`button-default.disabled.json`)
+- Pressed background chrome: **Gated** (`button-default.pressed.json`)
+
+Evidence anchors:
+
+- Goldens (state):
+  - `goldens/shadcn-web/v4/new-york-v4/button-default.pressed.json`
+  - `goldens/shadcn-web/v4/new-york-v4/button-default.disabled.json`
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
+  (`web_vs_fret_button_default_pressed_matches_web`, `web_vs_fret_button_default_disabled_matches_web`)
+
 ## Charts (wrapper UI + interaction snapshots)
 
 - Tooltip panel geometry (wrapper): **Gated**
