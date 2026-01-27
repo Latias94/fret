@@ -211,6 +211,13 @@ impl<H: UiHost> UiTree<H> {
                 availability =
                     self.focus_traversal_command_availability(&active_layers, barrier_root);
             }
+            if availability == CommandAvailability::NotHandled && id.as_str() == "focus.menu_bar" {
+                let present = app
+                    .global::<fret_runtime::WindowMenuBarFocusService>()
+                    .is_some_and(|svc| svc.present(window));
+                snapshot.insert(id, present);
+                continue;
+            }
             match availability {
                 CommandAvailability::Available => {
                     snapshot.insert(id, true);
