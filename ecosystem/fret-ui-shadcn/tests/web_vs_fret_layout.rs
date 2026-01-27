@@ -27073,6 +27073,118 @@ fn web_vs_fret_layout_chart_area_interactive_fill_bounds_match_web() {
 }
 
 #[test]
+fn web_vs_fret_layout_chart_area_interactive_30d_curve_bounds_match_web() {
+    let desktop = &CHART_INTERACTIVE_DESKTOP[60..];
+    let mobile = &CHART_INTERACTIVE_MOBILE[60..];
+
+    let stacked: Vec<f32> = desktop
+        .iter()
+        .zip(mobile.iter())
+        .map(|(d, m)| d + m)
+        .collect();
+
+    assert_chart_series_curve_bounds_match_web(
+        "chart-area-interactive.30d",
+        &[
+            (
+                mobile,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &stacked,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_area_interactive_30d_fill_bounds_match_web() {
+    let desktop = &CHART_INTERACTIVE_DESKTOP[60..];
+    let mobile = &CHART_INTERACTIVE_MOBILE[60..];
+
+    let stacked: Vec<f32> = desktop
+        .iter()
+        .zip(mobile.iter())
+        .map(|(d, m)| d + m)
+        .collect();
+
+    assert_chart_stacked_area_fill_bounds_match_web(
+        "chart-area-interactive.30d",
+        &[
+            (
+                mobile,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &stacked,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_area_interactive_7d_curve_bounds_match_web() {
+    let desktop = &CHART_INTERACTIVE_DESKTOP[83..];
+    let mobile = &CHART_INTERACTIVE_MOBILE[83..];
+
+    let stacked: Vec<f32> = desktop
+        .iter()
+        .zip(mobile.iter())
+        .map(|(d, m)| d + m)
+        .collect();
+
+    assert_chart_series_curve_bounds_match_web(
+        "chart-area-interactive.7d",
+        &[
+            (
+                mobile,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &stacked,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_chart_area_interactive_7d_fill_bounds_match_web() {
+    let desktop = &CHART_INTERACTIVE_DESKTOP[83..];
+    let mobile = &CHART_INTERACTIVE_MOBILE[83..];
+
+    let stacked: Vec<f32> = desktop
+        .iter()
+        .zip(mobile.iter())
+        .map(|(d, m)| d + m)
+        .collect();
+
+    assert_chart_stacked_area_fill_bounds_match_web(
+        "chart-area-interactive.7d",
+        &[
+            (
+                mobile,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &stacked,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        None,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_chart_tooltip_indicator_line_geometry_matches_web() {
     assert_chart_tooltip_rect_matches_web(
         "chart-tooltip-indicator-line",
