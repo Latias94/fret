@@ -381,6 +381,31 @@ fn find_semantics_by_role<'a>(
         .unwrap_or_else(|| panic!("missing semantics node role={role:?}"))
 }
 
+fn assert_focus_cleared(ui: &UiTree<App>, snap: &fret_core::SemanticsSnapshot, context: &str) {
+    let focused: Vec<String> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.flags.focused)
+        .map(|n| {
+            format!(
+                "{:?}:{:?}",
+                n.role,
+                n.label.as_deref().unwrap_or("<unlabeled>")
+            )
+        })
+        .collect();
+    assert!(
+        focused.is_empty(),
+        "{context}: expected semantics focus to be cleared, got focused={focused:?} ui_focus={:?}",
+        ui.focus()
+    );
+    assert_eq!(
+        ui.focus(),
+        None,
+        "{context}: expected UiTree focus to be cleared"
+    );
+}
+
 fn has_semantics_role(snap: &fret_core::SemanticsSnapshot, role: SemanticsRole) -> bool {
     snap.nodes.iter().any(|n| n.role == role)
 }
@@ -1523,11 +1548,7 @@ fn radix_web_menubar_submenu_outside_click_close_matches_fret() {
             .all(|n| n.label.as_deref().is_none_or(|l| l != "Email link")),
         "submenu content should be closed after outside click"
     );
-    assert!(
-        snap.nodes.iter().all(|n| !n.flags.focused),
-        "expected focus to be cleared after closing the menubar via outside click"
-    );
-    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
+    assert_focus_cleared(&ui, &snap, "menubar submenu outside click close");
 }
 
 #[test]
@@ -6644,11 +6665,7 @@ fn radix_web_context_menu_submenu_arrowleft_escape_close_matches_fret() {
         .semantics_snapshot()
         .cloned()
         .expect("semantics snapshot");
-    assert!(
-        snap.nodes.iter().all(|n| !n.flags.focused),
-        "expected focus to be cleared after closing the context menu"
-    );
-    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
+    assert_focus_cleared(&ui, &snap, "context menu escape close");
 }
 
 #[test]
@@ -7190,11 +7207,7 @@ fn radix_web_context_menu_outside_click_close_matches_fret() {
         .semantics_snapshot()
         .cloned()
         .expect("semantics snapshot");
-    assert!(
-        snap.nodes.iter().all(|n| !n.flags.focused),
-        "expected focus to be cleared after closing the context menu"
-    );
-    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
+    assert_focus_cleared(&ui, &snap, "context menu outside click close");
 }
 
 #[test]
@@ -7399,9 +7412,5 @@ fn radix_web_context_menu_submenu_outside_click_close_matches_fret() {
             .all(|n| n.label.as_deref().is_none_or(|l| l != "Save Page...")),
         "expected context menu submenu content to be absent after outside click"
     );
-    assert!(
-        snap.nodes.iter().all(|n| !n.flags.focused),
-        "expected focus to be cleared after closing the context menu"
-    );
-    assert_eq!(ui.focus(), None, "expected UiTree focus to be cleared");
+    assert_focus_cleared(&ui, &snap, "context menu submenu outside click close");
 }

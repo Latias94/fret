@@ -130,7 +130,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                         "primary.active.background",
                         ColorFallback::ThemeTokenAlphaMul {
                             key: "primary",
-                            mul: 0.8,
+                            mul: 0.9,
                         },
                     ),
                 ),
