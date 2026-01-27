@@ -546,6 +546,7 @@ fn page_preview(
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
         PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(cx, theme),
         PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(cx, theme),
+        PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
         PAGE_CHROME_TORTURE => preview_chrome_torture(
@@ -1657,6 +1658,199 @@ fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
     );
 
     vec![header, panel]
+}
+
+fn preview_web_ime_harness(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    text_input: Model<String>,
+    text_area: Model<String>,
+) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct ImeHarnessState {
+        committed: String,
+        preedit: Option<String>,
+        ime_enabled: bool,
+        text_input_count: u64,
+        ime_commit_count: u64,
+        ime_preedit_count: u64,
+        ime_enabled_count: u64,
+        ime_disabled_count: u64,
+        last: String,
+    }
+
+    let state = cx.with_state(
+        || std::rc::Rc::new(std::cell::RefCell::new(ImeHarnessState::default())),
+        |st| st.clone(),
+    );
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: validate the wasm textarea IME bridge (ADR 0195)."),
+                cx.text("Try: CJK IME preedit → commit; ensure no double insert on compositionend + input."),
+                cx.text("Click inside the region to focus it (IME should enable)."),
+            ]
+        },
+    );
+
+    let inputs = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default().w_full(),
+        ),
+        |cx| {
+            let body = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N2),
+                |cx| {
+                    vec![
+                        cx.text("Editable widgets (sanity check):"),
+                        shadcn::Input::new(text_input)
+                            .a11y_label("Web IME input")
+                            .placeholder("Type here (IME should work on web)")
+                            .into_element(cx),
+                        shadcn::Textarea::new(text_area)
+                            .a11y_label("Web IME textarea")
+                            .into_element(cx),
+                    ]
+                },
+            );
+            vec![body]
+        },
+    );
+
+    let mut region_props = fret_ui::element::TextInputRegionProps::default();
+    region_props.layout.size.width = fret_ui::element::Length::Fill;
+    region_props.layout.size.height = fret_ui::element::Length::Fill;
+
+    let region = cx.text_input_region(region_props, |cx| {
+        let state_for_text_input = state.clone();
+        cx.text_input_region_on_text_input(std::sync::Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  text: &str| {
+                let mut st = state_for_text_input.borrow_mut();
+                st.text_input_count = st.text_input_count.saturating_add(1);
+                st.last = format!("TextInput({:?})", text);
+                st.committed.push_str(text);
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            },
+        ));
+
+        let state_for_ime = state.clone();
+        cx.text_input_region_on_ime(std::sync::Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  ime: &fret_core::ImeEvent| {
+                let mut st = state_for_ime.borrow_mut();
+                match ime {
+                    fret_core::ImeEvent::Enabled => {
+                        st.ime_enabled = true;
+                        st.ime_enabled_count = st.ime_enabled_count.saturating_add(1);
+                        st.last = "Ime(Enabled)".to_string();
+                    }
+                    fret_core::ImeEvent::Disabled => {
+                        st.ime_enabled = false;
+                        st.preedit = None;
+                        st.ime_disabled_count = st.ime_disabled_count.saturating_add(1);
+                        st.last = "Ime(Disabled)".to_string();
+                    }
+                    fret_core::ImeEvent::Commit(text) => {
+                        st.ime_commit_count = st.ime_commit_count.saturating_add(1);
+                        st.last = format!("Ime(Commit({:?}))", text);
+                        st.committed.push_str(text);
+                        st.preedit = None;
+                    }
+                    fret_core::ImeEvent::Preedit { text, .. } => {
+                        st.ime_preedit_count = st.ime_preedit_count.saturating_add(1);
+                        st.last = format!("Ime(Preedit({:?}))", text);
+                        st.preedit = (!text.is_empty()).then(|| text.clone());
+                    }
+                }
+
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            },
+        ));
+
+        let st = state.borrow();
+        let committed_tail = {
+            const MAX_CHARS: usize = 120;
+            let total = st.committed.chars().count();
+            if total <= MAX_CHARS {
+                st.committed.clone()
+            } else {
+                let tail: String = st
+                    .committed
+                    .chars()
+                    .skip(total.saturating_sub(MAX_CHARS))
+                    .collect();
+                format!("…{tail}")
+            }
+        };
+
+        let preedit = st
+            .preedit
+            .as_deref()
+            .unwrap_or("<none>");
+        let ime_enabled = st.ime_enabled as u8;
+
+        let panel = cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .border_1()
+                    .rounded(Radius::Md)
+                    .bg(ColorRef::Color(theme.color_required("background"))),
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_px(MetricRef::Px(Px(240.0))),
+            ),
+            |cx| {
+                let body = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N2),
+                    |cx| {
+                        vec![
+                            cx.text(format!("ime_enabled={ime_enabled}")),
+                            cx.text(format!("preedit={preedit:?}")),
+                            cx.text(format!("committed_tail={committed_tail:?}")),
+                            cx.text(format!("last_event={:?}", st.last)),
+                            cx.text(format!(
+                                "counts: text_input={} ime_commit={} ime_preedit={} enabled={} disabled={}",
+                                st.text_input_count,
+                                st.ime_commit_count,
+                                st.ime_preedit_count,
+                                st.ime_enabled_count,
+                                st.ime_disabled_count
+                            )),
+                        ]
+                    },
+                );
+                vec![body]
+            },
+        );
+
+        vec![panel]
+    });
+
+    vec![header, inputs, region]
 }
 
 fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
