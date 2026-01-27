@@ -1721,6 +1721,14 @@ impl<H: UiHost> UiTree<H> {
                             stop_propagation: false,
                         };
                         widget.event(&mut cx, &event_for_node);
+                        if cx.requested_cursor.is_none()
+                            && matches!(event_for_node, Event::Pointer(_))
+                            && cx.input_ctx.caps.ui.cursor_icons
+                            && let Some(position) = event_position(&event_for_node)
+                        {
+                            cx.requested_cursor =
+                                widget.cursor_icon_at(bounds, position, &cx.input_ctx);
+                        }
                         (
                             cx.invalidations,
                             cx.requested_focus,
@@ -2492,6 +2500,7 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
