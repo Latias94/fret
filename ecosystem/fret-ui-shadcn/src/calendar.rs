@@ -924,7 +924,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         grid_text_style.clone(),
                     )
                 })
-                .collect()
+                .collect::<Vec<_>>()
         })
         .gap(Space::N4)
         .items_start()
@@ -961,7 +961,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         grid_text_style.clone(),
                     )
                 })
-                .collect()
+                .collect::<Vec<_>>()
         })
         .gap(Space::N4)
         .items_start()

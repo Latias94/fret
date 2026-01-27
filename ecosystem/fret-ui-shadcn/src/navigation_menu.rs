@@ -993,6 +993,7 @@ impl NavigationMenu {
                                                 vec![label.into_element(cx)]
                                             });
 
+                                        let fg_ref_for_chevron = fg_ref.clone();
                                         let chevron_rotation = if is_open { 180.0 } else { 0.0 };
                                         let chevron_size = Px(12.0); // Tailwind `size-3`
                                         let chevron_center =
@@ -1025,7 +1026,7 @@ impl NavigationMenu {
                                                     cx,
                                                     ids::ui::CHEVRON_DOWN,
                                                     Some(chevron_size),
-                                                    Some(ColorRef::Color(fg)),
+                                                    Some(fg_ref_for_chevron.clone()),
                                                 )]
                                             },
                                         );
