@@ -69,7 +69,7 @@ Evidence anchors:
 - Option row height: **Gated**
 - Scroll button height: **Gated**
 - Constrained viewport variants: **Gated** (e.g. `select-scrollable.vp1440x240`, `combobox-demo.vp1440x240`)
-- Hovered/active option chrome: **Not gated**
+- Hovered/active option chrome: **Gated** (`*.highlight-first.open.json`)
 
 Evidence anchors:
 
@@ -77,6 +77,14 @@ Evidence anchors:
   (`assert_select_scrollable_listbox_option_height_matches`,
   `assert_select_scrollable_scroll_button_height_matches`,
   `assert_combobox_demo_listbox_option_height_matches`)
+- Goldens (state):
+  - `goldens/shadcn-web/v4/new-york-v4/select-demo.highlight-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/select-scrollable.highlight-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/combobox-demo.highlight-first.open.json`
+- Gates (state): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_select_demo_highlighted_option_chrome_matches_web`,
+  `web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web`,
+  `web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web`, and `*_dark` variants)
 
 ## Charts (wrapper UI + interaction snapshots)
 

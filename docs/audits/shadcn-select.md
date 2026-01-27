@@ -74,10 +74,16 @@ examples in `repo-ref/ui`.
   `web_vs_fret_select_scrollable_small_viewport_shadow_matches_web`, `web_vs_fret_select_scrollable_small_viewport_shadow_matches_web_dark`,
   `web_vs_fret_select_scrollable_tiny_viewport_surface_colors_match_web`, `web_vs_fret_select_scrollable_tiny_viewport_surface_colors_match_web_dark`,
   `web_vs_fret_select_scrollable_tiny_viewport_shadow_matches_web`, `web_vs_fret_select_scrollable_tiny_viewport_shadow_matches_web_dark`).
+- Highlighted option chrome gates (hover/highlight background + text color): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_select_demo_highlighted_option_chrome_matches_web`, `web_vs_fret_select_demo_highlighted_option_chrome_matches_web_dark`,
+  `web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web`, `web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web_dark`).
 - Web goldens (placement + scroll-button geometry): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   - Evidence:
     - `goldens/shadcn-web/v4/new-york-v4/select-demo.open.json`
     - `goldens/shadcn-web/v4/new-york-v4/select-scrollable.open.json`
+    - Highlight-state goldens:
+      - `goldens/shadcn-web/v4/new-york-v4/select-demo.highlight-first.open.json`
+      - `goldens/shadcn-web/v4/new-york-v4/select-scrollable.highlight-first.open.json`
   - Gates:
     - `web_vs_fret_select_demo_overlay_placement_matches`
     - `web_vs_fret_select_demo_open_option_metrics_match`
