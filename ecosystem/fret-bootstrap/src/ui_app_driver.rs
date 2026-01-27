@@ -2448,6 +2448,13 @@ fn ui_app_accessibility_set_value_text<S>(
 }
 
 fn ui_app_viewport_input<S>(driver: &mut UiAppDriver<S>, app: &mut App, event: ViewportInputEvent) {
+    #[cfg(feature = "diagnostics")]
+    {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_viewport_input(event);
+        });
+    }
+
     if let Some(f) = driver.viewport_input {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {
