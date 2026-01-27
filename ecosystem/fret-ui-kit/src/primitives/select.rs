@@ -205,6 +205,45 @@ pub fn select_listbox_semantics_id<H: UiHost>(
     })
 }
 
+/// Input-modality-gated initial focus targets for a select-like overlay.
+///
+/// This mirrors the Radix/shadcn "hand feel" contract:
+/// - pointer-open focuses the content container (not the active/selected entry)
+/// - keyboard-open focuses the selected/active entry when available
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct SelectInitialFocusTargets {
+    pointer_content_focus: Option<GlobalElementId>,
+    keyboard_entry_focus: Option<GlobalElementId>,
+}
+
+impl SelectInitialFocusTargets {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn pointer_content_focus(mut self, focus: Option<GlobalElementId>) -> Self {
+        self.pointer_content_focus = focus;
+        self
+    }
+
+    pub fn keyboard_entry_focus(mut self, focus: Option<GlobalElementId>) -> Self {
+        self.keyboard_entry_focus = focus;
+        self
+    }
+
+    pub fn resolve<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        window: AppWindowId,
+    ) -> Option<GlobalElementId> {
+        if fret_ui::input_modality::is_keyboard(cx.app, Some(window)) {
+            self.keyboard_entry_focus.or(self.pointer_content_focus)
+        } else {
+            self.pointer_content_focus
+        }
+    }
+}
+
 /// Builds the select listbox element using a stable call path.
 ///
 /// Use this instead of calling `ElementContext::pressable_with_id_props` directly when you need to
@@ -1330,7 +1369,10 @@ mod tests {
     use std::cell::Cell;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size};
+    use fret_core::{
+        AppWindowId, Event, Modifiers, MouseButtons, Point, PointerEvent, PointerId, PointerType,
+        Px, Rect, Size,
+    };
     use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
     use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
     use std::time::Duration;
@@ -1355,6 +1397,56 @@ mod tests {
                 .open(Some(controlled.clone()))
                 .default_open(false);
             assert_eq!(root.open_model(cx), controlled);
+        });
+    }
+
+    #[test]
+    fn select_initial_focus_targets_gate_by_input_modality() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let pointer_focus = GlobalElementId(0x111);
+            let keyboard_focus = GlobalElementId(0x222);
+
+            // Pointer modality: prefer pointer content focus.
+            fret_ui::input_modality::update_for_event(
+                cx.app,
+                window,
+                &Event::Pointer(PointerEvent::Move {
+                    position: Point::new(Px(1.0), Px(2.0)),
+                    buttons: MouseButtons::default(),
+                    modifiers: Modifiers::default(),
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            assert_eq!(
+                SelectInitialFocusTargets::new()
+                    .pointer_content_focus(Some(pointer_focus))
+                    .keyboard_entry_focus(Some(keyboard_focus))
+                    .resolve(cx, window),
+                Some(pointer_focus)
+            );
+
+            // Keyboard modality: prefer keyboard entry focus.
+            fret_ui::input_modality::update_for_event(
+                cx.app,
+                window,
+                &Event::KeyDown {
+                    key: fret_core::KeyCode::KeyA,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            assert_eq!(
+                SelectInitialFocusTargets::new()
+                    .pointer_content_focus(Some(pointer_focus))
+                    .keyboard_entry_focus(Some(keyboard_focus))
+                    .resolve(cx, window),
+                Some(keyboard_focus)
+            );
         });
     }
 
