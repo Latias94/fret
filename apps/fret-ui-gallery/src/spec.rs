@@ -97,6 +97,8 @@ pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
+pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
+pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
 pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
@@ -155,6 +157,8 @@ pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
+pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
+pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
 pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
@@ -356,6 +360,33 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CODE_VIEW_TORTURE,
                 docs::USAGE_CODE_VIEW_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_CODE_EDITOR_MVP,
+                "Code Editor (MVP)",
+                "Code Editor / TextInputRegion MVP",
+                "fret-code-editor (ecosystem surface)",
+                CMD_NAV_CODE_EDITOR_MVP,
+                &["code", "editor", "ime", "text-input", "windowed-rows"],
+                docs::DOC_CODE_EDITOR_MVP,
+                docs::USAGE_CODE_EDITOR_MVP,
+            ),
+            PageSpec::new(
+                PAGE_CODE_EDITOR_TORTURE,
+                "Code Editor (Torture)",
+                "Code Editor / Scroll Stability Harness",
+                "fret-code-editor (windowed surface + caching)",
+                CMD_NAV_CODE_EDITOR_TORTURE,
+                &[
+                    "code",
+                    "editor",
+                    "scroll",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_CODE_EDITOR_TORTURE,
+                docs::USAGE_CODE_EDITOR_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CHART_TORTURE,

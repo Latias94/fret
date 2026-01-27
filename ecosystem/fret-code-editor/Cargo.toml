@@ -1,0 +1,19 @@
+[package]
+name = "fret-code-editor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../fret-ui-kit" }
+fret-code-editor-buffer = { path = "../fret-code-editor-buffer" }
+fret-code-editor-view = { path = "../fret-code-editor-view" }
+
