@@ -36,6 +36,7 @@ Current:
 - Series-geometry gates (engine math, not full rendering):
   - `chart-bar-default`: bar rect layout matches web (nice Y domain + single-series bar geometry).
   - Line/area curves: bounds match web for a first batch of variants (natural/linear/step + stacking/expand stacking).
+    Stacked area fill bounds are also gated to catch baseline drift.
     These gates still take the web plot rect (grid bounds) as input, so they validate scale + curve math rather than
     the full chart layout stack (axes/ticks/margins).
 - Radial/radar geometry gates (engine math, not full rendering):
@@ -44,7 +45,7 @@ Current:
 - Interactive chart pages:
   - `chart-line-interactive`: monotone curve bounds match web (default active series).
   - `chart-bar-interactive`: single-series bar rect layout matches web (default active series).
-  - `chart-area-interactive`: smoke gate asserts both stacked area curves stay within the plot rect
+  - `chart-area-interactive`: stacked area curve + fill bounds match web (mobile + mobile+desktop)
     (full stacked-curve math + interaction states still pending).
 - Known gap: `chart-tooltip-advanced` currently needs a small height shim on the “Total” row to match web output.
   This likely points to a line-height / box-model mismatch that should be fixed at the text/layout layer instead of

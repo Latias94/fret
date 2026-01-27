@@ -24822,6 +24822,28 @@ fn web_find_chart_series_curves<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
     out
 }
 
+fn web_find_chart_area_fills<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
+    let mut out = find_all(root, &|n| {
+        n.tag == "path"
+            && n.class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("recharts-area-area"))
+    });
+    out.sort_by(|a, b| {
+        a.rect
+            .y
+            .partial_cmp(&b.rect.y)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.rect
+                    .x
+                    .partial_cmp(&b.rect.x)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+    out
+}
+
 fn web_find_chart_bar_rects<'a>(root: &'a WebNode) -> Vec<&'a WebNode> {
     let mut out = find_all(root, &|n| {
         n.tag == "path"
@@ -26625,6 +26647,103 @@ fn assert_chart_series_curve_bounds_match_web(
     }
 }
 
+fn assert_chart_stacked_area_fill_bounds_match_web(
+    web_name: &str,
+    stacked_series: &[(&[f32], fret_ui_shadcn::recharts_geometry::CurveKind)],
+    y_tick_count: usize,
+    domain_max: Option<f32>,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_chart = web_find_chart_container(&theme.root);
+    let web_plot = web_find_chart_grid(web_chart);
+    let web_fills = web_find_chart_area_fills(web_chart);
+    assert_eq!(
+        web_fills.len(),
+        stacked_series.len(),
+        "{web_name}: expected {} area fill(s), got {}",
+        stacked_series.len(),
+        web_fills.len()
+    );
+
+    let plot = Rect::new(
+        Point::new(Px(web_plot.rect.x), Px(web_plot.rect.y)),
+        CoreSize::new(Px(web_plot.rect.w), Px(web_plot.rect.h)),
+    );
+
+    let domain_max = domain_max.unwrap_or_else(|| {
+        let mut all = Vec::new();
+        for (values, _) in stacked_series {
+            all.extend_from_slice(values);
+        }
+        fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(&all, y_tick_count)
+    });
+
+    fn union_rect(a: Rect, b: Rect) -> Rect {
+        let min_x = a.origin.x.0.min(b.origin.x.0);
+        let min_y = a.origin.y.0.min(b.origin.y.0);
+        let max_x = (a.origin.x.0 + a.size.width.0).max(b.origin.x.0 + b.size.width.0);
+        let max_y = (a.origin.y.0 + a.size.height.0).max(b.origin.y.0 + b.size.height.0);
+        Rect::new(
+            Point::new(Px(min_x), Px(min_y)),
+            CoreSize::new(Px(max_x - min_x), Px(max_y - min_y)),
+        )
+    }
+
+    let mut curve_bounds: Vec<Rect> = stacked_series
+        .iter()
+        .enumerate()
+        .map(|(i, (values, kind))| {
+            fret_ui_shadcn::recharts_geometry::line_curve_bounds(plot, values, *kind, domain_max)
+                .unwrap_or_else(|| {
+                    panic!("{web_name}: failed to compute curve bounds for series {i}")
+                })
+        })
+        .collect();
+
+    let plot_bottom = plot.origin.y.0 + plot.size.height.0;
+    let mut expected: Vec<Rect> = curve_bounds
+        .iter()
+        .enumerate()
+        .map(|(i, top)| {
+            let baseline = if i == 0 {
+                Rect::new(
+                    Point::new(Px(top.origin.x.0), Px(plot_bottom)),
+                    CoreSize::new(Px(top.size.width.0), Px(0.0)),
+                )
+            } else {
+                curve_bounds[i - 1]
+            };
+            union_rect(*top, baseline)
+        })
+        .collect();
+
+    expected.sort_by(|a, b| {
+        a.origin
+            .y
+            .0
+            .partial_cmp(&b.origin.y.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| {
+                a.origin
+                    .x
+                    .0
+                    .partial_cmp(&b.origin.x.0)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+    });
+
+    for (i, (expected, web_fill)) in expected.iter().zip(web_fills.iter()).enumerate() {
+        assert_rect_close_px(
+            &format!("{web_name} fill-{i}"),
+            *expected,
+            web_fill.rect,
+            1.0,
+        );
+    }
+}
+
 #[test]
 fn web_vs_fret_layout_chart_line_variants_curve_bounds_match_web() {
     let month_desktop = [186.0_f32, 305.0, 237.0, 73.0, 209.0, 214.0];
@@ -26721,6 +26840,21 @@ const CHART_INTERACTIVE_DESKTOP: [f32; 91] = [
     149.0_f32, 103.0_f32, 446.0_f32,
 ];
 
+const CHART_INTERACTIVE_MOBILE: [f32; 91] = [
+    150.0_f32, 180.0_f32, 120.0_f32, 260.0_f32, 290.0_f32, 340.0_f32, 180.0_f32, 320.0_f32,
+    110.0_f32, 190.0_f32, 350.0_f32, 210.0_f32, 380.0_f32, 220.0_f32, 170.0_f32, 190.0_f32,
+    360.0_f32, 410.0_f32, 180.0_f32, 150.0_f32, 200.0_f32, 170.0_f32, 230.0_f32, 290.0_f32,
+    250.0_f32, 130.0_f32, 420.0_f32, 180.0_f32, 240.0_f32, 380.0_f32, 220.0_f32, 310.0_f32,
+    190.0_f32, 420.0_f32, 390.0_f32, 520.0_f32, 300.0_f32, 210.0_f32, 180.0_f32, 330.0_f32,
+    270.0_f32, 240.0_f32, 160.0_f32, 490.0_f32, 380.0_f32, 400.0_f32, 420.0_f32, 350.0_f32,
+    180.0_f32, 230.0_f32, 140.0_f32, 120.0_f32, 290.0_f32, 220.0_f32, 250.0_f32, 170.0_f32,
+    460.0_f32, 190.0_f32, 130.0_f32, 280.0_f32, 230.0_f32, 200.0_f32, 410.0_f32, 160.0_f32,
+    380.0_f32, 140.0_f32, 250.0_f32, 370.0_f32, 320.0_f32, 480.0_f32, 200.0_f32, 150.0_f32,
+    420.0_f32, 130.0_f32, 380.0_f32, 350.0_f32, 310.0_f32, 520.0_f32, 170.0_f32, 290.0_f32,
+    450.0_f32, 210.0_f32, 270.0_f32, 530.0_f32, 180.0_f32, 190.0_f32, 380.0_f32, 490.0_f32,
+    200.0_f32, 160.0_f32, 400.0_f32,
+];
+
 #[test]
 fn web_vs_fret_layout_chart_line_interactive_curve_bounds_match_web() {
     assert_chart_series_curve_bounds_match_web(
@@ -26765,6 +26899,7 @@ fn web_vs_fret_layout_chart_area_variants_curve_bounds_match_web() {
     for web_name in cases {
         let tick_count = if web_name == "chart-area-axes" { 3 } else { 5 };
         assert_chart_series_curve_bounds_match_web(web_name, stacked_series, tick_count, None);
+        assert_chart_stacked_area_fill_bounds_match_web(web_name, stacked_series, tick_count, None);
     }
 
     assert_chart_series_curve_bounds_match_web(
@@ -26820,31 +26955,76 @@ fn web_vs_fret_layout_chart_area_stacked_expand_curve_bounds_match_web() {
         5,
         Some(1.0),
     );
+
+    assert_chart_stacked_area_fill_bounds_match_web(
+        "chart-area-stacked-expand",
+        &[
+            (
+                &other_top[..],
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &mobile_top[..],
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &desktop_top[..],
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        Some(1.0),
+    );
 }
 
 #[test]
-fn web_vs_fret_layout_chart_area_interactive_curves_within_plot() {
-    let web_name = "chart-area-interactive";
-    let web = read_web_golden(web_name);
-    let theme = web_theme(&web);
+fn web_vs_fret_layout_chart_area_interactive_curve_bounds_match_web() {
+    let stacked: Vec<f32> = CHART_INTERACTIVE_DESKTOP
+        .iter()
+        .zip(CHART_INTERACTIVE_MOBILE.iter())
+        .map(|(d, m)| d + m)
+        .collect();
 
-    let chart = web_find_chart_container(&theme.root);
-    let plot = web_find_chart_plot_rect(chart);
-    let curves = web_find_chart_series_curves(chart);
-    assert_eq!(
-        curves.len(),
-        2,
-        "{web_name}: expected 2 area curve(s), got {}",
-        curves.len()
+    assert_chart_series_curve_bounds_match_web(
+        "chart-area-interactive",
+        &[
+            (
+                &CHART_INTERACTIVE_MOBILE,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &stacked,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        None,
     );
+}
 
-    for (i, curve) in curves.iter().enumerate() {
-        assert!(
-            rect_contains(plot, curve.rect),
-            "{web_name}: curve-{i} is outside plot rect (plot={plot:?}, curve={:?})",
-            curve.rect
-        );
-    }
+#[test]
+fn web_vs_fret_layout_chart_area_interactive_fill_bounds_match_web() {
+    let stacked: Vec<f32> = CHART_INTERACTIVE_DESKTOP
+        .iter()
+        .zip(CHART_INTERACTIVE_MOBILE.iter())
+        .map(|(d, m)| d + m)
+        .collect();
+
+    assert_chart_stacked_area_fill_bounds_match_web(
+        "chart-area-interactive",
+        &[
+            (
+                &CHART_INTERACTIVE_MOBILE,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+            (
+                &stacked,
+                fret_ui_shadcn::recharts_geometry::CurveKind::Natural,
+            ),
+        ],
+        5,
+        None,
+    );
 }
 
 #[test]
