@@ -2809,7 +2809,7 @@ fn preview_material3_gallery(
             let hover_style = material3::TextFieldStyle::default()
                 .outline_color(
                     fret_ui_kit::WidgetStateProperty::new(None)
-                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover)),
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover.clone())),
                 )
                 .label_color(
                     fret_ui_kit::WidgetStateProperty::new(None)
