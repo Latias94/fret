@@ -2585,7 +2585,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -3124,6 +3124,29 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowSourceV1 {
+    Prepaint,
+    #[serde(other)]
+    Layout,
+}
+
+impl Default for UiVirtualListWindowSourceV1 {
+    fn default() -> Self {
+        Self::Layout
+    }
+}
+
+impl UiVirtualListWindowSourceV1 {
+    fn from_source(source: fret_ui::tree::UiDebugVirtualListWindowSource) -> Self {
+        match source {
+            fret_ui::tree::UiDebugVirtualListWindowSource::Layout => Self::Layout,
+            fret_ui::tree::UiDebugVirtualListWindowSource::Prepaint => Self::Prepaint,
         }
     }
 }
