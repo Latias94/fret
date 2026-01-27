@@ -5,10 +5,10 @@ use crate::elements::ElementContext;
 use crate::virtual_list::VirtualRange;
 use crate::{ItemKey, UiHost};
 
-pub(crate) type RetainedVirtualListKeyAtFn = Arc<dyn Fn(usize) -> ItemKey + Send + Sync>;
+pub(crate) type RetainedVirtualListKeyAtFn = Arc<dyn Fn(usize) -> ItemKey>;
 
 pub(crate) type RetainedVirtualListRowFn<H> =
-    Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement + Send + Sync>;
+    Arc<dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement>;
 
 pub(crate) type RetainedVirtualListRangeExtractor = fn(VirtualRange) -> Vec<usize>;
 
