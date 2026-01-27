@@ -24,7 +24,6 @@ fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-code-view = { path = "../../ecosystem/fret-code-view" }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor" }
-fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-kit = { path = "../../ecosystem/fret-kit" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
@@ -47,4 +46,8 @@ stacksafe.workspace = true
 wgpu.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+fret-markdown = { path = "../../ecosystem/fret-markdown" }
 web-sys = { version = "0.3", features = ["Window", "Location"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }

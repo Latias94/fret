@@ -169,6 +169,31 @@ let editor = CodeEditor::new(handle)
 ```
 "#;
 
+pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
+## Web IME (harness)
+
+This page exists to validate the wasm IME bridge contract (ADR 0195):
+
+- a hidden textarea is used as the browser-owned IME target,
+- `composition*` drives `Event::Ime::{Preedit,Commit}`,
+- committed insertions arrive as `Event::TextInput` (no control characters),
+- and we avoid **double-insert** on `compositionend` + `input`.
+
+Try:
+
+- CJK IME composition (preedit updates, commit),
+- emoji input,
+- backspace/arrows while composing,
+- and verify the committed buffer does not duplicate inserts.
+"#;
+
+pub(crate) const USAGE_WEB_IME_HARNESS: &str = r#"
+```rust
+// Click the region to focus it. On wasm, it should focus a hidden textarea via `Effect::ImeAllow`.
+// Use an IME to ensure `Event::Ime` and `Event::TextInput` are routed correctly.
+```
+"#;
+
 pub(crate) const DOC_CHART_TORTURE: &str = r#"
 ## Chart (torture harness)
 
