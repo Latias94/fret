@@ -19,7 +19,7 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `468/468` (`100%`)
+- Keys referenced by tests: `470/470` (`100%`)
 - Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
   viewports, DPIs, fonts, and interaction state machines.
 
