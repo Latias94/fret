@@ -2585,7 +2585,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -2910,7 +2910,7 @@ impl UiViewportInputEventV1 {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum UiViewportInputKindV1 {
     PointerMove {
