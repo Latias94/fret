@@ -27,9 +27,7 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
 
-use crate::foundation::elevation::{
-    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
-};
+use crate::foundation::surface::material_surface_style;
 use crate::motion::ms_to_frames;
 use crate::tokens::tooltip as tooltip_tokens;
 
@@ -323,10 +321,16 @@ impl PlainTooltip {
         let corner_radii = Corners::all(radius);
         // Material Web v30 plain tooltip tokens do not include elevation; keep it flat by default.
         let elevation = Px(0.0);
-        let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
         let shadow_color = tooltip_tokens::shadow_color(&theme);
-        let shadow =
-            shadow_for_elevation_with_color(&theme, elevation, Some(shadow_color), corner_radii);
+        let surface = material_surface_style(
+            &theme,
+            container_bg,
+            elevation,
+            Some(shadow_color),
+            corner_radii,
+        );
+        let container_bg = surface.background;
+        let shadow = surface.shadow;
 
         let body_small = theme
             .text_style_by_key("md.sys.typescale.body-small")

@@ -15,8 +15,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Size, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 
 use crate::{CommandItem, CommandList, CommandPalette, Popover, PopoverContent};
@@ -28,9 +28,9 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 
 #[derive(Debug, Clone, Default)]
 pub struct ComboboxStyle {
-    pub trigger_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub trigger_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub trigger_background: OverrideSlot<ColorRef>,
+    pub trigger_foreground: OverrideSlot<ColorRef>,
+    pub trigger_border_color: OverrideSlot<ColorRef>,
 }
 
 impl ComboboxStyle {

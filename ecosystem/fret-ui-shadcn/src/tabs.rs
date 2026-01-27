@@ -12,8 +12,9 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
+    resolve_override_slot_opt, ui,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -134,9 +135,9 @@ pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
 #[derive(Debug, Clone, Default)]
 pub struct TabsStyle {
-    pub trigger_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub trigger_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub trigger_background: OverrideSlot<ColorRef>,
+    pub trigger_foreground: OverrideSlot<ColorRef>,
+    pub trigger_border_color: OverrideSlot<ColorRef>,
 }
 
 impl TabsStyle {

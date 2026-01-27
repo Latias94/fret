@@ -2366,20 +2366,57 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    let theme = fret_ui::Theme::global(&*cx.app).clone();
+
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::ButtonVariant,
                label: &'static str| {
+        let theme = theme.clone();
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
+                let hover_container = theme.color_required("md.sys.color.tertiary-container");
+                let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
+                let hover_style = material3::ButtonStyle::default()
+                    .container_background(WidgetStateProperty::new(None).when(
+                        WidgetStates::HOVERED,
+                        Some(ColorRef::Color(hover_container)),
+                    ))
+                    .label_color(
+                        WidgetStateProperty::new(None)
+                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_label))),
+                    );
+
+                let accent = fret_core::Color {
+                    r: 0.9,
+                    g: 0.2,
+                    b: 0.9,
+                    a: 1.0,
+                };
+                let override_style = material3::ButtonStyle::default()
+                    .label_color(WidgetStateProperty::new(Some(ColorRef::Color(accent))))
+                    .state_layer_color(
+                        WidgetStateProperty::new(None)
+                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+                    );
                 vec![
                     material3::Button::new(label)
                         .variant(variant)
                         .into_element(cx),
+                    material3::Button::new("Override")
+                        .variant(variant)
+                        .style(override_style)
+                        .into_element(cx),
                     material3::Button::new("Disabled")
                         .variant(variant)
                         .disabled(true)
+                        .into_element(cx),
+                    material3::Button::new("Hover Override")
+                        .variant(variant)
+                        .style(hover_style)
                         .into_element(cx),
                 ]
             },
@@ -2448,6 +2485,23 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         |cx| {
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover_icon = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.on-tertiary-container"),
+            );
+            let hover_container = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.tertiary-container"),
+            );
+            let hover_style = material3::IconButtonStyle::default()
+                .container_background(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_container)),
+                )
+                .icon_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                );
+
             vec![
                 material3::IconButton::new(ids::ui::SEARCH)
                     .a11y_label("Search")
@@ -2458,6 +2512,10 @@ fn preview_material3_gallery(
                 material3::IconButton::new(ids::ui::CLOSE)
                     .a11y_label("Close")
                     .into_element(cx),
+                material3::IconButton::new(ids::ui::SEARCH)
+                    .a11y_label("Override")
+                    .style(hover_style)
+                    .into_element(cx),
             ]
         },
     ));
@@ -2467,23 +2525,107 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N3).items_center(),
         |cx| {
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover_container = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.tertiary-container"),
+            );
+            let hover_icon = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.on-tertiary-container"),
+            );
+            let hover_outline =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_style = material3::CheckboxStyle::default()
+                .container_background(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_container)),
+                )
+                .icon_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                )
+                .outline_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_outline)),
+                );
+
             vec![
                 material3::Checkbox::new(material3_checkbox.clone())
                     .a11y_label("Checkbox")
                     .into_element(cx),
+                material3::Checkbox::new(material3_checkbox.clone())
+                    .a11y_label("Checkbox Override")
+                    .style(hover_style)
+                    .into_element(cx),
                 material3::Switch::new(material3_switch.clone())
                     .a11y_label("Switch")
                     .into_element(cx),
-                material3::RadioGroup::new(material3_radio_value.clone())
-                    .a11y_label("Radio Group")
-                    .items(vec![
-                        material3::RadioGroupItem::new("Alpha").a11y_label("Radio Alpha"),
-                        material3::RadioGroupItem::new("Beta").a11y_label("Radio Beta"),
-                        material3::RadioGroupItem::new("Charlie")
-                            .a11y_label("Radio Charlie")
-                            .disabled(true),
-                    ])
+                material3::Switch::new(material3_switch.clone())
+                    .a11y_label("Switch Override")
+                    .style({
+                        let theme = fret_ui::Theme::global(&*cx.app).clone();
+                        let hover_track = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.tertiary-container"),
+                        );
+                        let hover_handle = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.on-tertiary-container"),
+                        );
+                        material3::SwitchStyle::default()
+                            .track_color(
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_track)),
+                            )
+                            .handle_color(
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_handle)),
+                            )
+                    })
                     .into_element(cx),
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default().gap(Space::N1).items_start(),
+                    |cx| {
+                        let items = vec![
+                            material3::RadioGroupItem::new("Alpha").a11y_label("Radio Alpha"),
+                            material3::RadioGroupItem::new("Beta").a11y_label("Radio Beta"),
+                            material3::RadioGroupItem::new("Charlie")
+                                .a11y_label("Radio Charlie")
+                                .disabled(true),
+                        ];
+
+                        let theme = fret_ui::Theme::global(&*cx.app).clone();
+                        let hover_icon = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.tertiary"),
+                        );
+                        let hover_state_layer = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.tertiary"),
+                        );
+                        let hover_style = material3::RadioStyle::default()
+                            .icon_color(
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                            )
+                            .state_layer_color(
+                                fret_ui_kit::WidgetStateProperty::new(None).when(
+                                    fret_ui_kit::WidgetStates::HOVERED,
+                                    Some(hover_state_layer),
+                                ),
+                            );
+
+                        vec![
+                            cx.text("Radio Group"),
+                            material3::RadioGroup::new(material3_radio_value.clone())
+                                .a11y_label("Radio Group")
+                                .items(items.clone())
+                                .into_element(cx),
+                            cx.text("Radio Group Override"),
+                            material3::RadioGroup::new(material3_radio_value.clone())
+                                .a11y_label("Radio Group Override")
+                                .style(hover_style)
+                                .items(items)
+                                .into_element(cx),
+                        ]
+                    },
+                ),
             ]
         },
     ));
@@ -2505,26 +2647,87 @@ fn preview_material3_gallery(
             ]
         },
     ));
-    out.push(
-        material3::TextField::new(material3_text_field_value)
-            .label("Label")
-            .placeholder("Placeholder")
-            .disabled(disabled)
-            .error(error)
-            .into_element(cx),
-    );
+    out.push(stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N1).items_start(),
+        |cx| {
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_style = material3::TextFieldStyle::default()
+                .outline_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover)),
+                )
+                .label_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover)),
+                );
+
+            vec![
+                cx.text("Text Field"),
+                material3::TextField::new(material3_text_field_value.clone())
+                    .label("Label")
+                    .placeholder("Placeholder")
+                    .disabled(disabled)
+                    .error(error)
+                    .into_element(cx),
+                cx.text("Text Field Override"),
+                material3::TextField::new(material3_text_field_value)
+                    .label("Label")
+                    .placeholder("Placeholder")
+                    .style(hover_style)
+                    .disabled(disabled)
+                    .error(error)
+                    .into_element(cx),
+            ]
+        },
+    ));
 
     out.push(cx.text("— Tabs —"));
-    out.push(
-        material3::Tabs::new(material3_tabs_value)
-            .a11y_label("Tabs")
-            .items(vec![
+    out.push(stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N1).items_start(),
+        |cx| {
+            let items = vec![
                 material3::TabItem::new("overview", "Overview"),
                 material3::TabItem::new("security", "Security"),
                 material3::TabItem::new("settings", "Settings"),
-            ])
-            .into_element(cx),
-    );
+            ];
+
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover_label =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_state_layer =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let indicator =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_style = material3::TabsStyle::default()
+                .label_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_label)),
+                )
+                .state_layer_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_state_layer)),
+                )
+                .active_indicator_color(fret_ui_kit::WidgetStateProperty::new(Some(indicator)));
+
+            vec![
+                cx.text("Tabs"),
+                material3::Tabs::new(material3_tabs_value.clone())
+                    .a11y_label("Tabs")
+                    .items(items.clone())
+                    .into_element(cx),
+                cx.text("Tabs Override"),
+                material3::Tabs::new(material3_tabs_value)
+                    .a11y_label("Tabs Override")
+                    .style(hover_style)
+                    .items(items)
+                    .into_element(cx),
+            ]
+        },
+    ));
 
     out.push(cx.text("— Navigation Bar —"));
     out.push(
@@ -2868,6 +3071,7 @@ fn preview_material3_touch_targets(
 
 fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_icons::ids;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::IconButtonVariant,
@@ -2876,10 +3080,34 @@ fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
+                let override_style = material3::IconButtonStyle::default()
+                    .icon_color(WidgetStateProperty::new(None).when(
+                        WidgetStates::HOVERED,
+                        Some(ColorRef::Color(fret_core::Color {
+                            r: 0.9,
+                            g: 0.2,
+                            b: 0.9,
+                            a: 1.0,
+                        })),
+                    ))
+                    .state_layer_color(WidgetStateProperty::new(None).when(
+                        WidgetStates::HOVERED,
+                        Some(ColorRef::Color(fret_core::Color {
+                            r: 0.9,
+                            g: 0.2,
+                            b: 0.9,
+                            a: 1.0,
+                        })),
+                    ));
                 vec![
                     material3::IconButton::new(ids::ui::CLOSE)
                         .variant(variant)
                         .a11y_label(label)
+                        .into_element(cx),
+                    material3::IconButton::new(ids::ui::CLOSE)
+                        .variant(variant)
+                        .a11y_label("Override")
+                        .style(override_style)
                         .into_element(cx),
                     material3::IconButton::new(ids::ui::CLOSE)
                         .variant(variant)
@@ -2938,6 +3166,8 @@ fn preview_material3_checkbox(
     cx: &mut ElementContext<'_, App>,
     checked: Model<bool>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let value = cx
         .get_model_copied(&checked, Invalidation::Layout)
         .unwrap_or(false);
@@ -2946,10 +3176,34 @@ fn preview_material3_checkbox(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         move |cx| {
+            let override_style = material3::CheckboxStyle::default()
+                .icon_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.2,
+                        g: 0.8,
+                        b: 0.4,
+                        a: 1.0,
+                    })),
+                ))
+                .outline_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.2,
+                        g: 0.8,
+                        b: 0.4,
+                        a: 1.0,
+                    })),
+                ));
             vec![
                 material3::Checkbox::new(checked.clone())
                     .a11y_label("Material 3 Checkbox")
                     .test_id("ui-gallery-material3-checkbox")
+                    .into_element(cx),
+                material3::Checkbox::new(checked.clone())
+                    .a11y_label("Material 3 Checkbox (override)")
+                    .style(override_style)
+                    .test_id("ui-gallery-material3-checkbox-overridden")
                     .into_element(cx),
                 cx.text(format!("checked={}", value as u8)),
                 material3::Checkbox::new(checked.clone())
@@ -2971,6 +3225,8 @@ fn preview_material3_switch(
     cx: &mut ElementContext<'_, App>,
     selected: Model<bool>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let value = cx
         .get_model_copied(&selected, Invalidation::Layout)
         .unwrap_or(false);
@@ -2979,10 +3235,34 @@ fn preview_material3_switch(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         move |cx| {
+            let override_style = material3::SwitchStyle::default()
+                .track_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.2,
+                        g: 0.8,
+                        b: 0.4,
+                        a: 1.0,
+                    })),
+                ))
+                .state_layer_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::HOVERED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.9,
+                        g: 0.2,
+                        b: 0.9,
+                        a: 1.0,
+                    })),
+                ));
             vec![
                 material3::Switch::new(selected.clone())
                     .a11y_label("Material 3 Switch")
                     .test_id("ui-gallery-material3-switch")
+                    .into_element(cx),
+                material3::Switch::new(selected.clone())
+                    .a11y_label("Material 3 Switch (override)")
+                    .style(override_style)
+                    .test_id("ui-gallery-material3-switch-overridden")
                     .into_element(cx),
                 cx.text(format!("selected={}", value as u8)),
                 material3::Switch::new(selected.clone())
@@ -3004,17 +3284,39 @@ fn preview_material3_radio(
     cx: &mut ElementContext<'_, App>,
     group_value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct RadioPageModels {
+        standalone_selected: Option<Model<bool>>,
+    }
+
+    let standalone_selected = cx.with_state(RadioPageModels::default, |st| {
+        st.standalone_selected.clone()
+    });
+    let standalone_selected = match standalone_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(RadioPageModels::default, |st| {
+                st.standalone_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
     let current = cx
         .get_model_cloned(&group_value, Invalidation::Layout)
         .flatten()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
+    let group_value_for_row = group_value.clone();
     let row = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N4).items_center(),
         move |cx| {
             vec![
-                material3::RadioGroup::new(group_value.clone())
+                material3::RadioGroup::new(group_value_for_row.clone())
                     .a11y_label("Material 3 RadioGroup")
                     .orientation(material3::RadioGroupOrientation::Horizontal)
                     .gap(Px(8.0))
@@ -3036,11 +3338,82 @@ fn preview_material3_radio(
         },
     );
 
+    let override_style = material3::RadioStyle::default()
+        .icon_color(WidgetStateProperty::new(None).when(
+            WidgetStates::SELECTED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            })),
+        ))
+        .state_layer_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ));
+
+    let group_value_for_group_overridden = group_value.clone();
+    let override_style_for_group = override_style.clone();
+    let override_style_for_standalone = override_style.clone();
+    let group_overridden = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                material3::RadioGroup::new(group_value_for_group_overridden.clone())
+                    .a11y_label("Material 3 RadioGroup (override)")
+                    .style(override_style_for_group.clone())
+                    .orientation(material3::RadioGroupOrientation::Horizontal)
+                    .gap(Px(8.0))
+                    .items(vec![
+                        material3::RadioGroupItem::new("Alpha")
+                            .a11y_label("Radio Alpha (override)")
+                            .test_id("ui-gallery-material3-radio-a-overridden"),
+                        material3::RadioGroupItem::new("Beta")
+                            .a11y_label("Radio Beta (override)")
+                            .test_id("ui-gallery-material3-radio-b-overridden"),
+                        material3::RadioGroupItem::new("Charlie")
+                            .a11y_label("Radio Charlie (disabled)")
+                            .disabled(true)
+                            .test_id("ui-gallery-material3-radio-c-disabled-overridden"),
+                    ])
+                    .into_element(cx),
+            ]
+        },
+    );
+    let standalone = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                material3::Radio::new(standalone_selected.clone())
+                    .a11y_label("Material 3 Radio (standalone)")
+                    .test_id("ui-gallery-material3-radio-standalone")
+                    .into_element(cx),
+                material3::Radio::new(standalone_selected.clone())
+                    .a11y_label("Material 3 Radio (override)")
+                    .style(override_style_for_standalone.clone())
+                    .test_id("ui-gallery-material3-radio-standalone-overridden")
+                    .into_element(cx),
+            ]
+        },
+    );
+
     vec![
         cx.text(
             "Material 3 Radio: group-value binding + roving focus + typeahead + state layer + bounded ripple.",
         ),
         row,
+        cx.text("Override preview: RadioGroup::style(...) using RadioStyle."),
+        group_overridden,
+        cx.text("Override preview: standalone Radio::style(...) using RadioStyle."),
+        standalone,
     ]
 }
 
@@ -3050,6 +3423,8 @@ fn preview_material3_text_field(
     disabled: Model<bool>,
     error: Model<bool>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let disabled_now = cx
         .get_model_copied(&disabled, Invalidation::Layout)
         .unwrap_or(false);
@@ -3104,7 +3479,7 @@ fn preview_material3_text_field(
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
-    let filled_field = material3::TextField::new(value)
+    let filled_field = material3::TextField::new(value.clone())
         .variant(material3::TextFieldVariant::Filled)
         .label("Email")
         .placeholder("name@example.com")
@@ -3115,15 +3490,66 @@ fn preview_material3_text_field(
         .into_element(cx);
 
     let filled_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Filled").into_element(cx),
-            shadcn::CardDescription::new(
-                "Active indicator bottom border + filled container + hover state layer (best-effort).",
-            )
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Filled").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Active indicator bottom border + filled container + hover state layer via foundation indication (best-effort).",
+                )
                 .into_element(cx),
+            ])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![filled_field]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let override_style = material3::TextFieldStyle::default()
+        .outline_color(WidgetStateProperty::new(None).when(
+            WidgetStates::FOCUS_VISIBLE,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            })),
+        ))
+        .caret_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            },
+        ))))
+        .placeholder_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ));
+    let override_field = material3::TextField::new(value)
+        .variant(material3::TextFieldVariant::Outlined)
+        .label("Override")
+        .placeholder("Hover/focus to see overrides")
+        .supporting_text("Caret + focus outline + hover placeholder via TextFieldStyle")
+        .style(override_style)
+        .disabled(disabled_now)
+        .error(error_now)
+        .test_id("ui-gallery-material3-text-field-overridden")
+        .into_element(cx);
+    let override_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Override").into_element(cx),
+            shadcn::CardDescription::new(
+                "ADR 1159: partial per-state overrides via TextFieldStyle.",
+            )
+            .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![filled_field]).into_element(cx),
+        shadcn::CardContent::new(vec![override_field]).into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
@@ -3135,6 +3561,7 @@ fn preview_material3_text_field(
         toggles,
         outlined_card,
         filled_card,
+        override_card,
     ]
 }
 
@@ -3142,6 +3569,8 @@ fn preview_material3_tabs(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let current = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
@@ -3163,6 +3592,52 @@ fn preview_material3_tabs(
         ])
         .into_element(cx);
 
+    let override_style = material3::TabsStyle::default()
+        .label_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ))
+        .state_layer_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ))
+        .active_indicator_color(WidgetStateProperty::new(None).when(
+            WidgetStates::SELECTED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            })),
+        ));
+    let fixed_tabs_overridden = material3::Tabs::new(value.clone())
+        .a11y_label("Material 3 Tabs (overridden)")
+        .test_id("ui-gallery-material3-tabs-overridden")
+        .style(override_style)
+        .items(vec![
+            material3::TabItem::new("overview", "Overview")
+                .a11y_label("Tab Overview")
+                .test_id("ui-gallery-material3-tab-overview-overridden"),
+            material3::TabItem::new("settings", "Settings")
+                .a11y_label("Tab Settings")
+                .test_id("ui-gallery-material3-tab-settings-overridden"),
+            material3::TabItem::new("disabled", "Disabled")
+                .disabled(true)
+                .a11y_label("Tab Disabled")
+                .test_id("ui-gallery-material3-tab-disabled-overridden"),
+        ])
+        .into_element(cx);
+
     let scrollable_tabs = material3::Tabs::new(value)
         .a11y_label("Material 3 Tabs (scrollable)")
         .test_id("ui-gallery-material3-tabs-scrollable")
@@ -3181,6 +3656,10 @@ fn preview_material3_tabs(
     vec![
         cx.text("Material 3 Tabs: roving focus + state layer + bounded ripple."),
         fixed_tabs,
+        cx.text(
+            "Override preview: hover label/state-layer + active-indicator color via TabsStyle.",
+        ),
+        fixed_tabs_overridden,
         cx.text("Scrollable/variable width preview (measurement-driven indicator)."),
         scrollable_tabs,
         cx.text(format!("value={}", current.as_ref())),

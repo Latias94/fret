@@ -31,8 +31,8 @@ use fret_ui_kit::recipes::input::{
 };
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, OverrideSlot, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -535,9 +535,9 @@ struct BorderWidthOverride {
 
 #[derive(Debug, Clone, Default)]
 pub struct SelectStyle {
-    pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub option_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub option_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub trigger_border_color: OverrideSlot<ColorRef>,
+    pub option_background: OverrideSlot<ColorRef>,
+    pub option_foreground: OverrideSlot<ColorRef>,
 }
 
 impl SelectStyle {

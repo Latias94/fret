@@ -17,6 +17,10 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
+};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
@@ -43,12 +47,62 @@ pub enum ButtonSize {
     Small,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct ButtonStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub label_color: OverrideSlot<ColorRef>,
+    pub outline_color: OverrideSlot<ColorRef>,
+    pub state_layer_color: OverrideSlot<ColorRef>,
+}
+
+impl ButtonStyle {
+    pub fn container_background(
+        mut self,
+        background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.container_background = Some(background);
+        self
+    }
+
+    pub fn label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.label_color = Some(color);
+        self
+    }
+
+    pub fn outline_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.outline_color = Some(color);
+        self
+    }
+
+    pub fn state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.state_layer_color = Some(color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.container_background.is_some() {
+            self.container_background = other.container_background;
+        }
+        if other.label_color.is_some() {
+            self.label_color = other.label_color;
+        }
+        if other.outline_color.is_some() {
+            self.outline_color = other.outline_color;
+        }
+        if other.state_layer_color.is_some() {
+            self.state_layer_color = other.state_layer_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Button {
     label: Arc<str>,
     variant: ButtonVariant,
     size: ButtonSize,
     on_activate: Option<OnActivate>,
+    style: ButtonStyle,
     disabled: bool,
     test_id: Option<Arc<str>>,
 }
@@ -60,6 +114,7 @@ impl std::fmt::Debug for Button {
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("on_activate", &self.on_activate.is_some())
+            .field("style", &self.style)
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id)
             .finish()
@@ -73,6 +128,7 @@ impl Button {
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             on_activate: None,
+            style: ButtonStyle::default(),
             disabled: false,
             test_id: None,
         }
@@ -90,6 +146,11 @@ impl Button {
 
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn style(mut self, style: ButtonStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -165,18 +226,36 @@ impl Button {
                             InteractionState::Pressed => button_tokens::ButtonInteraction::Pressed,
                         });
 
-                        let label_color = button_tokens::label_color(&theme, self.variant, enabled);
+                        let states = WidgetStates::from_pressable(cx, st, enabled);
+                        let label_color = resolve_override_slot_with(
+                            self.style.label_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || button_tokens::label_color(&theme, self.variant, enabled),
+                        );
                         let container_bg = button_tokens::container_background(
                             &theme,
                             self.variant,
                             enabled,
                             label_color,
                         );
+                        let container_bg = resolve_override_slot_opt_with(
+                            self.style.container_background.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || container_bg,
+                        );
                         let state_layer_color = button_tokens::state_layer_color(
                             &theme,
                             self.variant,
                             label_color,
                             token_interaction,
+                        );
+                        let state_layer_color = resolve_override_slot_with(
+                            self.style.state_layer_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || state_layer_color,
                         );
                         let state_layer_target = token_interaction
                             .map(|i| button_tokens::state_layer_opacity(&theme, self.variant, i))
@@ -202,6 +281,15 @@ impl Button {
                         let content = material_button_content(cx, size_tokens, label);
 
                         let outline = button_outline(&theme, self.variant, enabled);
+                        let outline = outline.map(|mut outline| {
+                            outline.color = resolve_override_slot_with(
+                                self.style.outline_color.as_ref(),
+                                states,
+                                |color| color.resolve(&theme),
+                                || outline.color,
+                            );
+                            outline
+                        });
                         let chrome = material_button_chrome(
                             cx,
                             container_bg,
@@ -249,7 +337,8 @@ fn material_button_label<H: UiHost>(
     color: Color,
 ) -> AnyElement {
     let style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
+        .text_style_by_key("md.comp.button.label-text")
+        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
         .or_else(|| theme.text_style_by_key("text_style.button"))
         .unwrap_or_else(|| fret_core::TextStyle::default());
 

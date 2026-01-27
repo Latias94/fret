@@ -115,6 +115,36 @@ pub(crate) fn supporting_text_color(
     }
 }
 
+pub(crate) fn hover_state_layer(
+    theme: &Theme,
+    variant: TextFieldVariant,
+    error: bool,
+) -> Option<(Color, f32)> {
+    match variant {
+        TextFieldVariant::Outlined => None,
+        TextFieldVariant::Filled => {
+            let (color_key, opacity_key) = if error {
+                (
+                    "md.comp.filled-text-field.error.hover.state-layer.color",
+                    "md.comp.filled-text-field.error.hover.state-layer.opacity",
+                )
+            } else {
+                (
+                    "md.comp.filled-text-field.hover.state-layer.color",
+                    "md.comp.filled-text-field.hover.state-layer.opacity",
+                )
+            };
+
+            let color = theme
+                .color_by_key(color_key)
+                .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
+                .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
+            let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
+            Some((color, opacity))
+        }
+    }
+}
+
 fn outlined_text_input_style(
     theme: &Theme,
     focused: bool,
@@ -247,25 +277,6 @@ fn filled_text_input_style(
         let opacity = theme
             .number_by_key("md.comp.filled-text-field.disabled.container.opacity")
             .unwrap_or(0.04);
-        background = blend_over(background, overlay, opacity);
-    } else if hovered {
-        let (color_key, opacity_key) = if error {
-            (
-                "md.comp.filled-text-field.error.hover.state-layer.color",
-                "md.comp.filled-text-field.error.hover.state-layer.opacity",
-            )
-        } else {
-            (
-                "md.comp.filled-text-field.hover.state-layer.color",
-                "md.comp.filled-text-field.hover.state-layer.opacity",
-            )
-        };
-
-        let overlay = theme
-            .color_by_key(color_key)
-            .or_else(|| theme.color_by_key("md.sys.color.on-surface"))
-            .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
-        let opacity = theme.number_by_key(opacity_key).unwrap_or(0.08);
         background = blend_over(background, overlay, opacity);
     }
     style.background = background;

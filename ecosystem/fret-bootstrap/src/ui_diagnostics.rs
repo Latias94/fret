@@ -2558,6 +2558,19 @@ pub struct UiInputArbitrationSnapshotV1 {
     pub pointer_capture_multiple_layers: bool,
 }
 
+impl Default for UiInputArbitrationSnapshotV1 {
+    fn default() -> Self {
+        Self {
+            modal_barrier_root: None,
+            pointer_occlusion: "none".to_string(),
+            pointer_occlusion_layer_id: None,
+            pointer_capture_active: false,
+            pointer_capture_layer_id: None,
+            pointer_capture_multiple_layers: false,
+        }
+    }
+}
+
 impl UiInputArbitrationSnapshotV1 {
     fn from_snapshot(snapshot: fret_ui::tree::UiInputArbitrationSnapshot) -> Self {
         Self {
@@ -4540,11 +4553,11 @@ impl UiHitTestSnapshotV1 {
 
         let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
-            by_root.insert(layer.root, *layer);
+            by_root.insert(layer.root, layer.clone());
         }
 
         for root in &hit_test.active_layer_roots {
-            let info = by_root.get(root).copied();
+            let info = by_root.get(root);
             scope_roots.push(UiHitTestScopeRootV1 {
                 kind: "layer_root".to_string(),
                 root: key_to_u64(*root),

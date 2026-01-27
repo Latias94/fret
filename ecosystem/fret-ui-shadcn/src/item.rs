@@ -9,7 +9,10 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
+    WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt, ui,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ItemVariant {
@@ -408,6 +411,35 @@ pub struct Item {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: ItemStyle,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ItemStyle {
+    pub background: OverrideSlot<ColorRef>,
+    pub border_color: OverrideSlot<ColorRef>,
+}
+
+impl ItemStyle {
+    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.border_color = Some(border_color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.background.is_some() {
+            self.background = other.background;
+        }
+        if other.border_color.is_some() {
+            self.border_color = other.border_color;
+        }
+        self
+    }
 }
 
 impl Item {
@@ -421,6 +453,7 @@ impl Item {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default().w_full(),
+            style: ItemStyle::default(),
         }
     }
 
@@ -451,6 +484,11 @@ impl Item {
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn style(mut self, style: ItemStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -485,6 +523,7 @@ impl Item {
         let user_chrome = self.chrome;
         let user_bg_override = user_chrome.background.is_some();
         let user_border_override = user_chrome.border_color.is_some();
+        let style = self.style;
         let padding = match size {
             ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N4),
             ItemSize::Sm => ChromeRefinement::default().px(Space::N4).py(Space::N3),
@@ -501,18 +540,20 @@ impl Item {
                 move |cx, st| {
                     cx.pressable_dispatch_command_if_enabled_opt(on_click);
 
-                    let hovered = st.hovered && enabled;
-                    let pressed = st.pressed && enabled;
+                    let states = WidgetStates::from_pressable(cx, st, enabled);
 
-                    let bg = if !enabled {
-                        base_bg
-                    } else if pressed {
-                        Some(pressed_bg)
-                    } else if hovered {
-                        Some(hover_bg)
-                    } else {
-                        base_bg
-                    };
+                    let bg_defaults = WidgetStateProperty::new(base_bg.map(ColorRef::Color))
+                        .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_bg)))
+                        .when(WidgetStates::ACTIVE, Some(ColorRef::Color(pressed_bg)));
+                    let border_defaults = WidgetStateProperty::new(ColorRef::Color(border_color));
+
+                    let bg =
+                        resolve_override_slot_opt(style.background.as_ref(), &bg_defaults, states);
+                    let border_ref = resolve_override_slot(
+                        style.border_color.as_ref(),
+                        &border_defaults,
+                        states,
+                    );
 
                     let mut chrome = padding.clone().merge(ChromeRefinement {
                         radius: Some(MetricRef::Px(radius)),
@@ -521,10 +562,10 @@ impl Item {
                     });
 
                     if !user_bg_override {
-                        chrome.background = bg.map(ColorRef::Color);
+                        chrome.background = bg;
                     }
                     if !user_border_override {
-                        chrome.border_color = Some(ColorRef::Color(border_color));
+                        chrome.border_color = Some(border_ref);
                     }
                     chrome = chrome.merge(user_chrome.clone());
 
@@ -560,11 +601,24 @@ impl Item {
                 ..Default::default()
             });
 
+            let bg_defaults = WidgetStateProperty::new(base_bg.map(ColorRef::Color));
+            let border_defaults = WidgetStateProperty::new(ColorRef::Color(border_color));
+            let bg = resolve_override_slot_opt(
+                style.background.as_ref(),
+                &bg_defaults,
+                WidgetStates::empty(),
+            );
+            let border_ref = resolve_override_slot(
+                style.border_color.as_ref(),
+                &border_defaults,
+                WidgetStates::empty(),
+            );
+
             if !user_bg_override {
-                chrome.background = base_bg.map(ColorRef::Color);
+                chrome.background = bg;
             }
             if !user_border_override {
-                chrome.border_color = Some(ColorRef::Color(border_color));
+                chrome.border_color = Some(border_ref);
             }
             chrome = chrome.merge(user_chrome);
 
@@ -587,5 +641,35 @@ impl Item {
                 )]
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn item_style_merge_is_right_biased() {
+        let red = Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+        let green = Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        };
+
+        let base =
+            ItemStyle::default().background(WidgetStateProperty::new(Some(ColorRef::Color(red))));
+        let other = ItemStyle::default()
+            .border_color(WidgetStateProperty::new(Some(ColorRef::Color(green))));
+
+        let merged = base.merged(other);
+        assert!(merged.background.is_some());
+        assert!(merged.border_color.is_some());
     }
 }

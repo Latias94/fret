@@ -17,7 +17,7 @@ use fret_ui_kit::primitives::switch::{
     switch_a11y, switch_checked_from_optional_bool, switch_use_checked_model, toggle_optional_bool,
 };
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, WidgetState,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
 
@@ -77,9 +77,9 @@ fn switch_ring_color(theme: &Theme) -> Color {
 
 #[derive(Debug, Clone, Default)]
 pub struct SwitchStyle {
-    pub track_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub thumb_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub track_background: OverrideSlot<ColorRef>,
+    pub thumb_background: OverrideSlot<ColorRef>,
+    pub border_color: OverrideSlot<ColorRef>,
 }
 
 impl SwitchStyle {

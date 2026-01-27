@@ -20,7 +20,8 @@ use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, ui,
+    OverrideSlot, Radius, Space, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, resolve_override_slot_opt, ui,
 };
 
 use crate::overlay_motion;
@@ -464,6 +465,40 @@ impl NavigationMenuList {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct NavigationMenuStyle {
+    pub trigger_background: OverrideSlot<ColorRef>,
+    pub trigger_foreground: OverrideSlot<ColorRef>,
+}
+
+impl NavigationMenuStyle {
+    pub fn trigger_background(
+        mut self,
+        trigger_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_background = Some(trigger_background);
+        self
+    }
+
+    pub fn trigger_foreground(
+        mut self,
+        trigger_foreground: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_foreground = Some(trigger_foreground);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.trigger_background.is_some() {
+            self.trigger_background = other.trigger_background;
+        }
+        if other.trigger_foreground.is_some() {
+            self.trigger_foreground = other.trigger_foreground;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct NavigationMenu {
     model: Option<Model<Option<Arc<str>>>>,
@@ -474,6 +509,7 @@ pub struct NavigationMenu {
     indicator: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: NavigationMenuStyle,
     config: radix_navigation_menu::NavigationMenuConfig,
 }
 
@@ -502,6 +538,7 @@ impl NavigationMenu {
             indicator: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
         }
     }
@@ -516,6 +553,7 @@ impl NavigationMenu {
             indicator: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
         }
     }
@@ -571,6 +609,11 @@ impl NavigationMenu {
         self
     }
 
+    pub fn style(mut self, style: NavigationMenuStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn config(mut self, config: radix_navigation_menu::NavigationMenuConfig) -> Self {
         self.config = config;
         self
@@ -585,6 +628,7 @@ impl NavigationMenu {
         let indicator_enabled = self.indicator;
         let chrome = self.chrome;
         let layout = self.layout;
+        let style = self.style;
         let cfg = self.config;
 
         let value_model =
@@ -602,6 +646,18 @@ impl NavigationMenu {
         let trigger_fg = nav_menu_trigger_fg(&theme);
         let trigger_fg_muted = nav_menu_trigger_fg_muted(&theme);
         let trigger_text_style = nav_menu_trigger_text_style(&theme);
+        let default_trigger_bg = WidgetStateProperty::new(None)
+            .when(
+                WidgetStates::HOVERED,
+                Some(ColorRef::Color(trigger_bg_hover)),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                Some(ColorRef::Color(trigger_bg_hover)),
+            )
+            .when(WidgetStates::OPEN, Some(ColorRef::Color(trigger_bg_hover)));
+        let default_trigger_fg = WidgetStateProperty::new(ColorRef::Color(trigger_fg))
+            .when(WidgetStates::DISABLED, ColorRef::Color(trigger_fg_muted));
 
         let viewport_bg = nav_menu_viewport_bg(&theme);
         let viewport_border = nav_menu_viewport_border(&theme);
@@ -748,6 +804,10 @@ impl NavigationMenu {
             let value_for_viewport = value_model.clone();
             let trigger_text_style_for_list = trigger_text_style.clone();
             let nav_ctx_for_list = nav_ctx.clone();
+            let theme_for_list = theme.clone();
+            let default_trigger_bg_for_list = default_trigger_bg.clone();
+            let default_trigger_fg_for_list = default_trigger_fg.clone();
+            let style_for_list = style.clone();
 
             let list = cx.flex(list_props, move |cx| {
                 items_for_children
@@ -759,6 +819,10 @@ impl NavigationMenu {
                         let disabled = menu_disabled || item.disabled;
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
+                        let theme_for_item = theme_for_list.clone();
+                        let default_trigger_bg = default_trigger_bg_for_list.clone();
+                        let default_trigger_fg = default_trigger_fg_for_list.clone();
+                        let style_override = style_for_list.clone();
 
                         cx.keyed(item_value.clone(), |cx| {
                             let trigger_text_style = trigger_text_style_for_item.clone();
@@ -788,15 +852,24 @@ impl NavigationMenu {
                                     pressable,
                                     pointer_props,
                                     move |cx, st, is_open| {
-                                        let hovered = st.hovered && !st.pressed;
-                                        let pressed = st.pressed;
-                                        let fg = if disabled {
-                                            trigger_fg_muted
-                                        } else {
-                                            trigger_fg
-                                        };
-                                        let bg = (hovered || pressed || is_open)
-                                            .then_some(trigger_bg_hover);
+                                        let mut states =
+                                            WidgetStates::from_pressable(cx, st, !disabled);
+                                        states.set(WidgetState::Open, is_open);
+
+                                        let fg_ref = resolve_override_slot(
+                                            style_override.trigger_foreground.as_ref(),
+                                            &default_trigger_fg,
+                                            states,
+                                        );
+                                        let bg_ref = resolve_override_slot_opt(
+                                            style_override.trigger_background.as_ref(),
+                                            &default_trigger_bg,
+                                            states,
+                                        );
+
+                                        let bg = bg_ref
+                                            .as_ref()
+                                            .map(|color| color.resolve(&theme_for_item));
 
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Auto;
@@ -823,7 +896,7 @@ impl NavigationMenu {
                                                 let mut label = ui::label(cx, item_label.clone())
                                                     .text_size_px(style.size)
                                                     .font_weight(style.weight)
-                                                    .text_color(ColorRef::Color(fg))
+                                                    .text_color(fg_ref.clone())
                                                     .nowrap();
                                                 if let Some(line_height) = style.line_height {
                                                     label = label.line_height_px(line_height);

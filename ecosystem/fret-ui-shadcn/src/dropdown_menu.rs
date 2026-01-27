@@ -1205,6 +1205,7 @@ impl DropdownMenu {
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id_for_initial_focus = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
 
                 let (overlay_children, dismissible_on_pointer_move) =
@@ -1679,7 +1680,7 @@ impl DropdownMenu {
                                                                             cx,
                                                                             checked.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -1812,7 +1813,7 @@ impl DropdownMenu {
                                                                             group_value.clone(),
                                                                             value.clone(),
                                                                         );
-                                                                        cx.pressable_dispatch_command_opt(command.clone());
+                                                                        cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                         if close_on_select {
                                                                             cx.pressable_set_bool(
                                                                                 &open,
@@ -1970,7 +1971,7 @@ impl DropdownMenu {
                                                                 }
 
                                                                 if !has_submenu && !disabled {
-                                                                    cx.pressable_dispatch_command_opt(command.clone());
+                                                                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                     if close_on_select {
                                                                         cx.pressable_set_bool(&open, false);
                                                                     }
@@ -2462,6 +2463,10 @@ impl DropdownMenu {
                                                         let _submenu_cfg = env.submenu_cfg.clone();
                                                         let _overlay_root_name_for_controls =
                                                             env.overlay_root_name_for_controls.clone();
+                                                        let gating = crate::command_gating::snapshot_for_window(
+                                                            &*cx.app,
+                                                            cx.window,
+                                                        );
 
                                                         let mut rows: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
@@ -2606,7 +2611,7 @@ impl DropdownMenu {
                                                                                     checked.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2719,7 +2724,7 @@ impl DropdownMenu {
                                                                                     value.clone(),
                                                                                 );
                                                                             }
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -2824,7 +2829,7 @@ impl DropdownMenu {
                                                                                 disabled,
                                                                                 &submenu_for_key,
                                                                             );
-                                                                            cx.pressable_dispatch_command_opt(command.clone());
+                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                                                                             if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
@@ -3064,7 +3069,11 @@ impl DropdownMenu {
                     overlay_presence,
                     overlay_children,
                     overlay_root_name,
-                    Some(content_id_for_trigger),
+                    menu::root::MenuInitialFocusTargets::new()
+                        .keyboard_entry_focus(first_item_focus_id_for_initial_focus.get())
+                        .pointer_content_focus(Some(content_id_for_trigger)),
+                    None,
+                    None,
                     on_dismiss_request.clone(),
                     dismissible_on_pointer_move,
                     modal,

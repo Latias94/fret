@@ -1,8 +1,10 @@
 use std::{
     any::{Any, TypeId},
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
+    path::{Path, PathBuf},
 };
 
+use fret_core::MouseButtons;
 use fret_core::{
     AppWindowId, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, NodeId, Point,
     PointerEvent, PointerId, PointerType, Px, Rect, Scene, SceneOp, Size, Transform2D, UiServices,
@@ -14,9 +16,16 @@ use fret_runtime::{
 };
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{Theme, UiTree};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_material3::tokens::v30::{
+    ColorSchemeOptions, DynamicVariant, SchemeMode, TypographyOptions, theme_config_with_colors,
+};
+use serde::{Deserialize, Serialize};
 
 mod interaction_harness;
-use interaction_harness::{QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_signature};
+use interaction_harness::{
+    QuadGeomSig, SceneSig, scene_quad_geometry_signature, scene_quad_signature, scene_signature,
+};
 
 #[derive(Default)]
 struct TestHost {
@@ -327,6 +336,289 @@ fn find_first_bounds_with_size(
     None
 }
 
+fn apply_material_theme(app: &mut TestHost, mode: SchemeMode, variant: DynamicVariant) {
+    let mut colors = ColorSchemeOptions::default();
+    colors.mode = mode;
+    colors.variant = variant;
+
+    let cfg = theme_config_with_colors(TypographyOptions::default(), colors);
+    Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+}
+
+fn repo_root() -> PathBuf {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    manifest_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .map(Path::to_path_buf)
+        .expect("repo root")
+}
+
+fn material3_goldens_dir() -> PathBuf {
+    repo_root()
+        .join("goldens")
+        .join("material3-headless")
+        .join("v1")
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct Material3HeadlessGoldenV1 {
+    signature: Vec<SceneOpSigV1>,
+    quads: Vec<QuadV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct Material3HeadlessSuiteV1 {
+    cases: BTreeMap<String, Material3HeadlessGoldenV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum SceneOpSigV1 {
+    PushTransform,
+    PopTransform,
+    PushOpacity,
+    PopOpacity,
+    PushLayer,
+    PopLayer,
+    PushClipRect,
+    PushClipRRect,
+    PopClip,
+    PushEffect,
+    PopEffect,
+    Quad { order: u32 },
+    Image { order: u32 },
+    ImageRegion { order: u32 },
+    MaskImage { order: u32 },
+    SvgMaskIcon { order: u32 },
+    SvgImage { order: u32 },
+    Text { order: u32 },
+    Path { order: u32 },
+    ViewportSurface { order: u32 },
+}
+
+impl From<SceneSig> for SceneOpSigV1 {
+    fn from(sig: SceneSig) -> Self {
+        match sig {
+            SceneSig::PushTransform => Self::PushTransform,
+            SceneSig::PopTransform => Self::PopTransform,
+            SceneSig::PushOpacity => Self::PushOpacity,
+            SceneSig::PopOpacity => Self::PopOpacity,
+            SceneSig::PushLayer => Self::PushLayer,
+            SceneSig::PopLayer => Self::PopLayer,
+            SceneSig::PushClipRect => Self::PushClipRect,
+            SceneSig::PushClipRRect => Self::PushClipRRect,
+            SceneSig::PopClip => Self::PopClip,
+            SceneSig::PushEffect => Self::PushEffect,
+            SceneSig::PopEffect => Self::PopEffect,
+            SceneSig::Quad(order) => Self::Quad { order: order.0 },
+            SceneSig::Image(order) => Self::Image { order: order.0 },
+            SceneSig::ImageRegion(order) => Self::ImageRegion { order: order.0 },
+            SceneSig::MaskImage(order) => Self::MaskImage { order: order.0 },
+            SceneSig::SvgMaskIcon(order) => Self::SvgMaskIcon { order: order.0 },
+            SceneSig::SvgImage(order) => Self::SvgImage { order: order.0 },
+            SceneSig::Text(order) => Self::Text { order: order.0 },
+            SceneSig::Path(order) => Self::Path { order: order.0 },
+            SceneSig::ViewportSurface(order) => Self::ViewportSurface { order: order.0 },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+struct QuadV1 {
+    order: u32,
+    rect: [i32; 4],
+    background: [i32; 4],
+    border: [i32; 4],
+    corner_radii: [i32; 4],
+}
+
+impl From<interaction_harness::QuadSig> for QuadV1 {
+    fn from(quad: interaction_harness::QuadSig) -> Self {
+        Self {
+            order: quad.order.0,
+            rect: [quad.rect.x, quad.rect.y, quad.rect.w, quad.rect.h],
+            background: [
+                quad.background.r,
+                quad.background.g,
+                quad.background.b,
+                quad.background.a,
+            ],
+            border: [
+                quad.border.top,
+                quad.border.right,
+                quad.border.bottom,
+                quad.border.left,
+            ],
+            corner_radii: [
+                quad.corner_radii.top_left,
+                quad.corner_radii.top_right,
+                quad.corner_radii.bottom_right,
+                quad.corner_radii.bottom_left,
+            ],
+        }
+    }
+}
+
+fn material3_scene_snapshot_v1(scene: &Scene) -> Material3HeadlessGoldenV1 {
+    Material3HeadlessGoldenV1 {
+        signature: scene_signature(scene)
+            .into_iter()
+            .map(SceneOpSigV1::from)
+            .collect(),
+        quads: scene_quad_signature(scene)
+            .into_iter()
+            .map(QuadV1::from)
+            .collect(),
+    }
+}
+
+fn settle_material3_scene_snapshot_v1(
+    app: &mut TestHost,
+    ui: &mut UiTree<TestHost>,
+    services: &mut dyn UiServices,
+    bounds: Rect,
+    scale_factor: f32,
+    settle_from_frame: usize,
+    total_frames: usize,
+    stable_message: &str,
+    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) -> Material3HeadlessGoldenV1 {
+    let mut settled: Option<Material3HeadlessGoldenV1> = None;
+    for frame in 0..total_frames {
+        app.advance_frame();
+        let root = render(ui, app, services);
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, scale_factor);
+
+        let mut scene = Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, scale_factor);
+
+        if frame < settle_from_frame {
+            continue;
+        }
+
+        let snapshot = material3_scene_snapshot_v1(&scene);
+        if let Some(prev) = settled.as_ref() {
+            assert_eq!(snapshot, *prev, "{stable_message}");
+        } else {
+            settled = Some(snapshot);
+        }
+    }
+
+    settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
+}
+
+fn write_or_assert_material3_suite_v1(name: &str, suite: &Material3HeadlessSuiteV1) {
+    let path = material3_goldens_dir().join(format!("{name}.json"));
+
+    if std::env::var_os("FRET_UPDATE_GOLDENS").is_some() {
+        std::fs::create_dir_all(material3_goldens_dir()).expect("create material3 goldens dir");
+        let json = serde_json::to_string_pretty(suite).expect("serialize material3 suite golden");
+        std::fs::write(&path, json).expect("write material3 suite golden");
+        return;
+    }
+
+    let golden_json = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+        panic!(
+            "missing material3 suite golden: {}\nerror: {err}\n\nTo (re)generate:\n  $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment -- material3_headless\n",
+            path.display()
+        )
+    });
+    let golden: Material3HeadlessSuiteV1 =
+        serde_json::from_str(&golden_json).expect("parse material3 suite golden");
+
+    assert_eq!(
+        *suite,
+        golden,
+        "material3 suite golden mismatch: {}\n\nTo update:\n  $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment -- material3_headless",
+        path.display()
+    );
+}
+
+fn run_overlay_frame(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    capture_semantics: bool,
+    render: impl FnOnce(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) {
+    use fret_ui_kit::OverlayController;
+
+    app.advance_frame();
+    OverlayController::begin_frame(app, window);
+
+    let root = render(ui, app, services);
+    ui.set_root(root);
+    OverlayController::render(ui, app, services, window, bounds);
+
+    if capture_semantics {
+        ui.request_semantics_snapshot();
+    }
+    ui.layout_all(app, services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(app, services, bounds, &mut scene, 1.0);
+}
+
+fn run_overlay_frame_scaled(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    scale_factor: f32,
+    capture_semantics: bool,
+    render: impl FnOnce(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) {
+    use fret_ui_kit::OverlayController;
+
+    app.advance_frame();
+    OverlayController::begin_frame(app, window);
+
+    let root = render(ui, app, services);
+    ui.set_root(root);
+    OverlayController::render(ui, app, services, window, bounds);
+
+    if capture_semantics {
+        ui.request_semantics_snapshot();
+    }
+    ui.layout_all(app, services, bounds, scale_factor);
+
+    let mut scene = Scene::default();
+    ui.paint_all(app, services, bounds, &mut scene, scale_factor);
+}
+
+fn run_overlay_frame_with_scene_scaled(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    scale_factor: f32,
+    capture_semantics: bool,
+    render: impl FnOnce(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) -> Scene {
+    use fret_ui_kit::OverlayController;
+
+    app.advance_frame();
+    OverlayController::begin_frame(app, window);
+
+    let root = render(ui, app, services);
+    ui.set_root(root);
+    OverlayController::render(ui, app, services, window, bounds);
+
+    if capture_semantics {
+        ui.request_semantics_snapshot();
+    }
+    ui.layout_all(app, services, bounds, scale_factor);
+
+    let mut scene = Scene::default();
+    ui.paint_all(app, services, bounds, &mut scene, scale_factor);
+    scene
+}
+
 fn pointer_down(pointer_id: PointerId, position: Point) -> Event {
     Event::Pointer(PointerEvent::Down {
         pointer_id,
@@ -334,6 +626,16 @@ fn pointer_down(pointer_id: PointerId, position: Point) -> Event {
         button: MouseButton::Left,
         modifiers: Modifiers::default(),
         click_count: 1,
+        pointer_type: PointerType::Mouse,
+    })
+}
+
+fn pointer_move(pointer_id: PointerId, position: Point) -> Event {
+    Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: MouseButtons::default(),
+        modifiers: Modifiers::default(),
         pointer_type: PointerType::Mouse,
     })
 }
@@ -1107,110 +1409,123 @@ fn tabs_pressed_scene_structure_is_stable() {
 
     use fret_ui_material3::{TabItem, Tabs};
 
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
-
-    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
-        fret_ui_material3::tokens::v30::TypographyOptions::default(),
-        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
-    );
-    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
-
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
-
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(360.0), Px(240.0)),
-    );
-
-    let selected = app.models_mut().insert(Arc::<str>::from("b"));
-    let items = vec![
-        TabItem::new("a", "A").test_id("tab-a"),
-        TabItem::new("b", "B").test_id("tab-b"),
-        TabItem::new("c", "C").test_id("tab-c"),
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
     ];
 
-    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-            let tabs = Tabs::new(selected.clone())
-                .items(items.clone())
-                .a11y_label("tabs")
-                .into_element(cx);
-            vec![with_padding(cx, Px(24.0), tabs)]
-        })
-    };
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
 
-    let root = render(&mut ui, &mut app, &mut services);
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
 
-    let tab_b: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("tab-b") {
-                    Some(node.id)
-                } else {
-                    None
-                }
-            })
-        })
-        .expect("expected tab-b in semantics snapshot");
-    let tab_b_bounds = ui
-        .debug_node_visual_bounds(tab_b)
-        .expect("expected tab-b visual bounds");
-    let press_at = Point::new(
-        Px(tab_b_bounds.origin.x.0 + tab_b_bounds.size.width.0 * 0.5),
-        Px(tab_b_bounds.origin.y.0 + tab_b_bounds.size.height.0 * 0.5),
-    );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(240.0)),
+        );
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), press_at),
-    );
+        let selected = app.models_mut().insert(Arc::<str>::from("b"));
+        let items = vec![
+            TabItem::new("a", "A").test_id("tab-a"),
+            TabItem::new("b", "B").test_id("tab-b"),
+            TabItem::new("c", "C").test_id("tab-c"),
+        ];
 
-    let mut baseline_structure: Option<Vec<SceneSig>> = None;
-    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
-    for frame in 0..24 {
-        app.advance_frame();
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let tabs = Tabs::new(selected.clone())
+                        .items(items.clone())
+                        .a11y_label("tabs")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(24.0), tabs)]
+                })
+            };
+
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let tab_b: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("tab-b") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected tab-b in semantics snapshot");
+        let tab_b_bounds = ui
+            .debug_node_visual_bounds(tab_b)
+            .expect("expected tab-b visual bounds");
+        let press_at = Point::new(
+            Px(tab_b_bounds.origin.x.0 + tab_b_bounds.size.width.0 * 0.5),
+            Px(tab_b_bounds.origin.y.0 + tab_b_bounds.size.height.0 * 0.5),
+        );
 
-        if frame >= 2 && frame < 7 {
-            let sig = scene_signature(&scene);
-            if let Some(prev) = baseline_structure.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected Tabs to keep a stable scene structure while pressed"
-                );
-            } else {
-                baseline_structure = Some(sig);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut baseline_structure: Option<Vec<SceneSig>> = None;
+        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+        for frame in 0..24 {
+            app.advance_frame();
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            if frame >= 2 && frame < 7 {
+                let sig = scene_signature(&scene);
+                if let Some(prev) = baseline_structure.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Tabs to keep a stable scene structure while pressed ({label})"
+                    );
+                } else {
+                    baseline_structure = Some(sig);
+                }
+            }
+
+            if frame >= 16 {
+                let sig = scene_quad_geometry_signature(&scene);
+                if let Some(prev) = baseline_quads.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Tabs to keep stable quad geometry after animations settle ({label})"
+                    );
+                } else {
+                    baseline_quads = Some(sig);
+                }
             }
         }
 
-        if frame >= 16 {
-            let sig = scene_quad_geometry_signature(&scene);
-            if let Some(prev) = baseline_quads.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected Tabs to keep stable quad geometry after animations settle"
-                );
-            } else {
-                baseline_quads = Some(sig);
-            }
-        }
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
     }
-
-    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
 }
 
 #[test]
@@ -1218,309 +1533,2279 @@ fn icon_button_pressed_scene_structure_is_stable() {
     use fret_icons::ids;
     use fret_ui_material3::IconButton;
 
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
 
-    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
-        fret_ui_material3::tokens::v30::TypographyOptions::default(),
-        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
-    );
-    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
 
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(320.0), Px(240.0)),
-    );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
 
-    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-            let button = IconButton::new(ids::ui::CHECK)
-                .a11y_label("icon button")
-                .test_id("icon-button")
-                .into_element(cx);
-            vec![with_padding(cx, Px(32.0), button)]
-        })
-    };
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let button = IconButton::new(ids::ui::CHECK)
+                        .a11y_label("icon button")
+                        .test_id("icon-button")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), button)]
+                })
+            };
 
-    let root = render(&mut ui, &mut app, &mut services);
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let button_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("icon-button") {
-                    Some(node.id)
-                } else {
-                    None
-                }
-            })
-        })
-        .expect("expected icon-button in semantics snapshot");
-    let button_bounds = ui
-        .debug_node_visual_bounds(button_node)
-        .expect("expected icon-button visual bounds");
-    let press_at = Point::new(
-        Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
-        Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
-    );
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), press_at),
-    );
-
-    let mut baseline_structure: Option<Vec<SceneSig>> = None;
-    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
-    for frame in 0..24 {
-        app.advance_frame();
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let button_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("icon-button") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected icon-button in semantics snapshot");
+        let button_bounds = ui
+            .debug_node_visual_bounds(button_node)
+            .expect("expected icon-button visual bounds");
+        let press_at = Point::new(
+            Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+            Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+        );
 
-        if frame >= 2 && frame < 7 {
-            let sig = scene_signature(&scene);
-            if let Some(prev) = baseline_structure.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected IconButton to keep a stable scene structure while pressed"
-                );
-            } else {
-                baseline_structure = Some(sig);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut baseline_structure: Option<Vec<SceneSig>> = None;
+        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+        for frame in 0..24 {
+            app.advance_frame();
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            if frame >= 2 && frame < 7 {
+                let sig = scene_signature(&scene);
+                if let Some(prev) = baseline_structure.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected IconButton to keep a stable scene structure while pressed ({label})"
+                    );
+                } else {
+                    baseline_structure = Some(sig);
+                }
+            }
+
+            if frame >= 16 {
+                let sig = scene_quad_geometry_signature(&scene);
+                if let Some(prev) = baseline_quads.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected IconButton to keep stable quad geometry after animations settle ({label})"
+                    );
+                } else {
+                    baseline_quads = Some(sig);
+                }
             }
         }
 
-        if frame >= 16 {
-            let sig = scene_quad_geometry_signature(&scene);
-            if let Some(prev) = baseline_quads.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected IconButton to keep stable quad geometry after animations settle"
-                );
-            } else {
-                baseline_quads = Some(sig);
-            }
-        }
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
     }
-
-    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
 }
 
 #[test]
 fn switch_pressed_scene_structure_is_stable() {
     use fret_ui_material3::Switch;
 
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
 
-    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
-        fret_ui_material3::tokens::v30::TypographyOptions::default(),
-        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
-    );
-    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
 
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(320.0), Px(240.0)),
-    );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
 
-    let selected = app.models_mut().insert(false);
-    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-            let switch = Switch::new(selected.clone())
-                .a11y_label("switch")
-                .test_id("switch")
-                .into_element(cx);
-            vec![with_padding(cx, Px(32.0), switch)]
-        })
-    };
+        let selected = app.models_mut().insert(false);
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let switch = Switch::new(selected.clone())
+                        .a11y_label("switch")
+                        .test_id("switch")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), switch)]
+                })
+            };
 
-    let root = render(&mut ui, &mut app, &mut services);
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let switch_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("switch") {
-                    Some(node.id)
-                } else {
-                    None
-                }
-            })
-        })
-        .expect("expected switch in semantics snapshot");
-    let switch_bounds = ui
-        .debug_node_visual_bounds(switch_node)
-        .expect("expected switch visual bounds");
-    let press_at = Point::new(
-        Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
-        Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
-    );
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), press_at),
-    );
-
-    let mut baseline_structure: Option<Vec<SceneSig>> = None;
-    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
-    for frame in 0..24 {
-        app.advance_frame();
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let switch_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("switch") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected switch in semantics snapshot");
+        let switch_bounds = ui
+            .debug_node_visual_bounds(switch_node)
+            .expect("expected switch visual bounds");
+        let press_at = Point::new(
+            Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+            Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+        );
 
-        if frame >= 2 && frame < 7 {
-            let sig = scene_signature(&scene);
-            if let Some(prev) = baseline_structure.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected Switch to keep a stable scene structure while pressed"
-                );
-            } else {
-                baseline_structure = Some(sig);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut baseline_structure: Option<Vec<SceneSig>> = None;
+        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+        for frame in 0..24 {
+            app.advance_frame();
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            if frame >= 2 && frame < 7 {
+                let sig = scene_signature(&scene);
+                if let Some(prev) = baseline_structure.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Switch to keep a stable scene structure while pressed ({label})"
+                    );
+                } else {
+                    baseline_structure = Some(sig);
+                }
+            }
+
+            if frame >= 16 {
+                let sig = scene_quad_geometry_signature(&scene);
+                if let Some(prev) = baseline_quads.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Switch to keep stable quad geometry after animations settle ({label})"
+                    );
+                } else {
+                    baseline_quads = Some(sig);
+                }
             }
         }
 
-        if frame >= 16 {
-            let sig = scene_quad_geometry_signature(&scene);
-            if let Some(prev) = baseline_quads.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected Switch to keep stable quad geometry after animations settle"
-                );
-            } else {
-                baseline_quads = Some(sig);
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+    }
+}
+
+#[test]
+fn checkbox_pressed_scene_structure_is_stable() {
+    use fret_ui_material3::Checkbox;
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+
+        let checked = app.models_mut().insert(false);
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let checkbox = Checkbox::new(checked.clone())
+                        .a11y_label("checkbox")
+                        .test_id("checkbox")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), checkbox)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let checkbox_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("checkbox") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected checkbox in semantics snapshot");
+        let checkbox_bounds = ui
+            .debug_node_visual_bounds(checkbox_node)
+            .expect("expected checkbox visual bounds");
+        let press_at = Point::new(
+            Px(checkbox_bounds.origin.x.0 + checkbox_bounds.size.width.0 * 0.5),
+            Px(checkbox_bounds.origin.y.0 + checkbox_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut baseline_structure: Option<Vec<SceneSig>> = None;
+        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+        for frame in 0..24 {
+            app.advance_frame();
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            if frame >= 2 && frame < 7 {
+                let sig = scene_signature(&scene);
+                if let Some(prev) = baseline_structure.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Checkbox to keep a stable scene structure while pressed ({label})"
+                    );
+                } else {
+                    baseline_structure = Some(sig);
+                }
             }
+
+            if frame >= 16 {
+                let sig = scene_quad_geometry_signature(&scene);
+                if let Some(prev) = baseline_quads.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Checkbox to keep stable quad geometry after animations settle ({label})"
+                    );
+                } else {
+                    baseline_quads = Some(sig);
+                }
+            }
+        }
+
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+    }
+}
+
+#[test]
+fn menu_pressed_scene_structure_is_stable() {
+    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(260.0)),
+        );
+
+        let entries = vec![
+            MenuEntry::Item(MenuItem::new("A").test_id("menu-item-a")),
+            MenuEntry::Item(MenuItem::new("B").test_id("menu-item-b")),
+            MenuEntry::Item(MenuItem::new("C").test_id("menu-item-c")),
+        ];
+
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let menu = Menu::new()
+                        .entries(entries.clone())
+                        .a11y_label("menu")
+                        .test_id("menu")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(24.0), menu)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let item_b: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("menu-item-b") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected menu-item-b in semantics snapshot");
+        let item_bounds = ui
+            .debug_node_visual_bounds(item_b)
+            .expect("expected menu-item-b visual bounds");
+        let press_at = Point::new(
+            Px(item_bounds.origin.x.0 + item_bounds.size.width.0 * 0.5),
+            Px(item_bounds.origin.y.0 + item_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut baseline_structure: Option<Vec<SceneSig>> = None;
+        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+        for frame in 0..24 {
+            app.advance_frame();
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            if frame >= 2 && frame < 7 {
+                let sig = scene_signature(&scene);
+                if let Some(prev) = baseline_structure.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Menu to keep a stable scene structure while pressed ({label})"
+                    );
+                } else {
+                    baseline_structure = Some(sig);
+                }
+            }
+
+            if frame >= 16 {
+                let sig = scene_quad_geometry_signature(&scene);
+                if let Some(prev) = baseline_quads.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Menu to keep stable quad geometry after animations settle ({label})"
+                    );
+                } else {
+                    baseline_quads = Some(sig);
+                }
+            }
+        }
+
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+    }
+}
+
+#[test]
+fn dialog_focus_is_contained_and_restored_across_schemes() {
+    use fret_ui_material3::{Button, Dialog, DialogAction};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(320.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let dialog = Dialog::new(open.clone())
+                        .headline("Dialog")
+                        .supporting_text("Body")
+                        .actions(vec![DialogAction::new("OK").test_id("dialog-ok")])
+                        .test_id("dialog")
+                        .into_element(
+                            cx,
+                            |cx| {
+                                let trigger = Button::new("Open dialog")
+                                    .test_id("dialog-trigger")
+                                    .into_element(cx);
+                                with_padding(cx, Px(24.0), trigger)
+                            },
+                            |_cx| Vec::new(),
+                        );
+                    vec![dialog]
+                })
+            };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                assert_eq!(snapshot.barrier_root, None);
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("dialog-trigger") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected dialog-trigger in semantics snapshot ({label})"));
+        ui.set_focus(Some(trigger_node));
+        assert_eq!(ui.focus(), Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot");
+        assert!(
+            snapshot.barrier_root.is_some(),
+            "expected modal barrier root while dialog is open ({label})"
+        );
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("dialog-scrim")),
+            "expected dialog scrim node while dialog is open ({label})"
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected focus to move into dialog layer while open ({label})"
+        );
+
+        ui.set_focus(Some(trigger_node));
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected modal barrier to enforce focus containment ({label})"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected focus to restore to trigger on close ({label})"
+        );
+
+        let mut saw_barrier_cleared = false;
+        for _ in 0..40 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+
+            let snapshot = ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot");
+            if snapshot.barrier_root.is_none() {
+                saw_barrier_cleared = true;
+                break;
+            }
+        }
+        assert!(
+            saw_barrier_cleared,
+            "expected dialog barrier to unmount after close transition ({label})"
+        );
+    }
+}
+
+#[test]
+fn modal_navigation_drawer_focus_is_contained_and_restored_across_schemes() {
+    use fret_ui_material3::{Button, ModalNavigationDrawer};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(360.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let drawer = ModalNavigationDrawer::new(open.clone())
+                        .test_id("drawer")
+                        .into_element(
+                            cx,
+                            |cx| {
+                                Button::new("Drawer item")
+                                    .test_id("drawer-item")
+                                    .into_element(cx)
+                            },
+                            |cx| {
+                                let trigger = Button::new("Open drawer")
+                                    .test_id("drawer-trigger")
+                                    .into_element(cx);
+                                with_padding(cx, Px(24.0), trigger)
+                            },
+                        );
+                    vec![drawer]
+                })
+            };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                assert_eq!(snapshot.barrier_root, None);
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("drawer-trigger") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected drawer-trigger in semantics snapshot ({label})"));
+        ui.set_focus(Some(trigger_node));
+        assert_eq!(ui.focus(), Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot");
+        assert!(
+            snapshot.barrier_root.is_some(),
+            "expected modal barrier root while drawer is open ({label})"
+        );
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("drawer-scrim")),
+            "expected drawer scrim node while drawer is open ({label})"
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected focus to move into drawer layer while open ({label})"
+        );
+
+        ui.set_focus(Some(trigger_node));
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected modal barrier to enforce focus containment ({label})"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected focus to restore to trigger on close ({label})"
+        );
+
+        let mut saw_barrier_cleared = false;
+        for _ in 0..60 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+
+            let snapshot = ui
+                .semantics_snapshot()
+                .expect("expected semantics snapshot");
+            if snapshot.barrier_root.is_none() {
+                saw_barrier_cleared = true;
+                break;
+            }
+        }
+        assert!(
+            saw_barrier_cleared,
+            "expected drawer barrier to unmount after close transition ({label})"
+        );
+    }
+}
+
+#[test]
+fn tooltip_opens_and_closes_on_hover_across_schemes() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Button, PlainTooltip, TooltipProvider};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(320.0)),
+        );
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(0)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let trigger = Button::new("Trigger")
+                                .test_id("tooltip-trigger")
+                                .into_element(cx);
+                            let tooltip = PlainTooltip::new(trigger, "Tip")
+                                .open_delay_frames(Some(0))
+                                .close_delay_frames(Some(0))
+                                .into_element(cx);
+                            vec![with_padding(cx, Px(24.0), tooltip)]
+                        })
+                })
+            },
+        );
+
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("tooltip-trigger") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected tooltip-trigger in semantics snapshot ({label})"));
+        let trigger_bounds = ui
+            .debug_node_visual_bounds(trigger_node)
+            .expect("expected tooltip-trigger bounds");
+        let hover_at = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_move(PointerId(1), hover_at),
+        );
+
+        let mut opened = false;
+        for _ in 0..6 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            TooltipProvider::new()
+                                .delay_duration_frames(0)
+                                .skip_delay_duration_frames(0)
+                                .with(cx, |cx| {
+                                    let trigger = Button::new("Trigger")
+                                        .test_id("tooltip-trigger")
+                                        .into_element(cx);
+                                    let tooltip = PlainTooltip::new(trigger, "Tip")
+                                        .open_delay_frames(Some(0))
+                                        .close_delay_frames(Some(0))
+                                        .into_element(cx);
+                                    vec![with_padding(cx, Px(24.0), tooltip)]
+                                })
+                        },
+                    )
+                },
+            );
+
+            let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+            if stack.stack.iter().any(|entry| {
+                entry.kind == OverlayStackEntryKind::Tooltip && entry.open && entry.visible
+            }) {
+                opened = true;
+                break;
+            }
+        }
+        assert!(opened, "expected tooltip to open on hover ({label})");
+
+        let unhover_at = Point::new(Px(1.0), Px(1.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_move(PointerId(1), unhover_at),
+        );
+
+        let mut closed = false;
+        for _ in 0..6 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            TooltipProvider::new()
+                                .delay_duration_frames(0)
+                                .skip_delay_duration_frames(0)
+                                .with(cx, |cx| {
+                                    let trigger = Button::new("Trigger")
+                                        .test_id("tooltip-trigger")
+                                        .into_element(cx);
+                                    let tooltip = PlainTooltip::new(trigger, "Tip")
+                                        .open_delay_frames(Some(0))
+                                        .close_delay_frames(Some(0))
+                                        .into_element(cx);
+                                    vec![with_padding(cx, Px(24.0), tooltip)]
+                                })
+                        },
+                    )
+                },
+            );
+
+            let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+            if !stack
+                .stack
+                .iter()
+                .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.visible)
+            {
+                closed = true;
+                break;
+            }
+        }
+        assert!(closed, "expected tooltip to close after unhover ({label})");
+    }
+}
+
+#[test]
+fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_schemes() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Button, PlainTooltip, TooltipProvider};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(420.0)),
+        );
+
+        let underlay_toggled = app.models_mut().insert(false);
+        let underlay_toggled_for_render = underlay_toggled.clone();
+        let render = move |ui: &mut UiTree<TestHost>,
+                           app: &mut TestHost,
+                           services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                TooltipProvider::new()
+                    .delay_duration_frames(0)
+                    .skip_delay_duration_frames(0)
+                    .with(cx, |cx| {
+                        let trigger = Button::new("Trigger")
+                            .test_id("tooltip-trigger")
+                            .into_element(cx);
+                        let tooltip = PlainTooltip::new(trigger, "Tip")
+                            .open_delay_frames(Some(0))
+                            .close_delay_frames(Some(0))
+                            .into_element(cx);
+
+                        let underlay_toggled = underlay_toggled_for_render.clone();
+                        let underlay = cx.pressable(
+                            fret_ui::element::PressableProps {
+                                layout: {
+                                    let mut l = fret_ui::element::LayoutStyle::default();
+                                    l.size.width = fret_ui::element::Length::Px(Px(160.0));
+                                    l.size.height = fret_ui::element::Length::Px(Px(40.0));
+                                    l
+                                },
+                                a11y: fret_ui::element::PressableA11y {
+                                    test_id: Some(std::sync::Arc::<str>::from("tooltip-underlay")),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            move |cx, _st| {
+                                cx.pressable_toggle_bool(&underlay_toggled);
+                                Vec::new()
+                            },
+                        );
+
+                        let mut props = fret_ui::element::FlexProps::default();
+                        props.direction = fret_core::Axis::Vertical;
+                        props.gap = Px(24.0);
+                        vec![cx.flex(props, move |_cx| vec![tooltip, underlay])]
+                    })
+            })
+        };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("tooltip-trigger") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected tooltip-trigger in semantics snapshot ({label})"));
+        let trigger_bounds = ui
+            .debug_node_visual_bounds(trigger_node)
+            .expect("expected tooltip-trigger bounds");
+        let hover_at = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        let underlay_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("tooltip-underlay") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected tooltip-underlay in semantics snapshot ({label})"));
+        let underlay_bounds = ui
+            .debug_node_visual_bounds(underlay_node)
+            .expect("expected tooltip-underlay bounds");
+        let click_at = Point::new(
+            Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5),
+            Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_move(PointerId(1), hover_at),
+        );
+
+        let mut opened = false;
+        for _ in 0..8 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| render(ui, app, services),
+            );
+            let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+            if stack
+                .stack
+                .iter()
+                .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.visible)
+            {
+                opened = true;
+                break;
+            }
+        }
+        assert!(opened, "expected tooltip to open on hover ({label})");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), click_at),
+        );
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&underlay_toggled),
+            Some(true),
+            "expected tooltip to be click-through and allow underlay activation ({label})"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected underlay to receive focus when clicking through tooltip ({label})"
+        );
+
+        let mut closed = false;
+        for _ in 0..16 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| render(ui, app, services),
+            );
+            let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+            if !stack
+                .stack
+                .iter()
+                .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.visible)
+            {
+                closed = true;
+                break;
+            }
+        }
+        assert!(
+            closed,
+            "expected tooltip to close after outside press without blocking underlay ({label})"
+        );
+    }
+}
+
+#[test]
+fn material3_headless_controls_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{Button, Checkbox, Switch};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(320.0)),
+            );
+
+            let checkbox_checked = app.models_mut().insert(true);
+            let checkbox_unchecked = app.models_mut().insert(false);
+            let switch_on = app.models_mut().insert(true);
+            let switch_off = app.models_mut().insert(false);
+
+            let render = |ui: &mut UiTree<TestHost>,
+                          app: &mut TestHost,
+                          services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let mut props = FlexProps::default();
+                    props.direction = fret_core::Axis::Vertical;
+                    props.gap = Px(16.0);
+
+                    let content = cx.flex(props, |cx| {
+                        vec![
+                            Button::new("Filled").test_id("btn-filled").into_element(cx),
+                            Button::new("Filled (disabled)")
+                                .disabled(true)
+                                .test_id("btn-filled-disabled")
+                                .into_element(cx),
+                            Checkbox::new(checkbox_checked.clone())
+                                .a11y_label("checkbox checked")
+                                .test_id("cb-checked")
+                                .into_element(cx),
+                            Checkbox::new(checkbox_unchecked.clone())
+                                .a11y_label("checkbox unchecked")
+                                .test_id("cb-unchecked")
+                                .into_element(cx),
+                            Switch::new(switch_on.clone())
+                                .a11y_label("switch on")
+                                .test_id("sw-on")
+                                .into_element(cx),
+                            Switch::new(switch_off.clone())
+                                .a11y_label("switch off")
+                                .test_id("sw-off")
+                                .into_element(cx),
+                        ]
+                    });
+
+                    vec![with_padding(cx, Px(24.0), content)]
+                })
+            };
+
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+            ui.set_focus(None);
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+
+            let btn_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("btn-filled")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected btn-filled in semantics snapshot ({label}, {scale})")
+                });
+            let btn_bounds = ui
+                .debug_node_visual_bounds(btn_node)
+                .unwrap_or_else(|| panic!("expected btn-filled bounds ({label}, {scale})"));
+            let btn_center = Point::new(
+                Px(btn_bounds.origin.x.0 + btn_bounds.size.width.0 * 0.5),
+                Px(btn_bounds.origin.y.0 + btn_bounds.size.height.0 * 0.5),
+            );
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            let idle_message = format!(
+                "expected the Material3 controls idle scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &idle_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), btn_center),
+            );
+
+            let hover_message = format!(
+                "expected the Material3 controls hover scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "hover_btn_filled".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &hover_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+            ui.set_focus(Some(btn_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+            let focus_visible_message = format!(
+                "expected the Material3 controls focus-visible scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "focus_visible_btn_filled".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &focus_visible_message,
+                    &render,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-controls.{scale}.{label}"),
+                &suite,
+            );
         }
     }
+}
 
-    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
+#[test]
+fn material3_headless_overlays_suite_goldens_v1() {
+    use fret_ui::element::{CrossAlign, FlexProps, Length, MainAlign};
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::menu::{MenuEntry, MenuItem};
+    use fret_ui_material3::{Button, DropdownMenu, PlainTooltip, TooltipProvider};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(860.0), Px(520.0)),
+            );
+
+            let open = app.models_mut().insert(true);
+            let open_model = open.clone();
+
+            let render = move |ui: &mut UiTree<TestHost>,
+                               app: &mut TestHost,
+                               services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(0)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let tooltip_trigger = Button::new("Tooltip")
+                                .test_id("tooltip-trigger")
+                                .into_element(cx);
+                            let tooltip = PlainTooltip::new(tooltip_trigger, "Tip")
+                                .open_delay_frames(Some(0))
+                                .close_delay_frames(Some(0))
+                                .into_element(cx);
+
+                            let menu = DropdownMenu::new(open_model.clone())
+                                .a11y_label("menu")
+                                .test_id("dropdown")
+                                .into_element(
+                                    cx,
+                                    |cx| {
+                                        Button::new("Menu")
+                                            .test_id("dropdown-trigger")
+                                            .into_element(cx)
+                                    },
+                                    |_cx| {
+                                        vec![
+                                            MenuEntry::Item(
+                                                MenuItem::new("A").test_id("dropdown-item-a"),
+                                            ),
+                                            MenuEntry::Item(
+                                                MenuItem::new("B").test_id("dropdown-item-b"),
+                                            ),
+                                            MenuEntry::Item(
+                                                MenuItem::new("C").test_id("dropdown-item-c"),
+                                            ),
+                                        ]
+                                    },
+                                );
+
+                            let mut props = FlexProps::default();
+                            props.layout.size.width = Length::Fill;
+                            props.direction = fret_core::Axis::Horizontal;
+                            props.gap = Px(48.0);
+                            props.justify = MainAlign::SpaceBetween;
+                            props.align = CrossAlign::Center;
+
+                            let content = cx.flex(props, move |_cx| vec![tooltip, menu]);
+                            vec![with_padding(cx, Px(24.0), content)]
+                        })
+                })
+            };
+
+            run_overlay_frame_scaled(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                scale_factor,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+
+            let tooltip_trigger_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("tooltip-trigger")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected tooltip-trigger in semantics snapshot ({label}, {scale})")
+                });
+            let tooltip_trigger_bounds = ui
+                .debug_node_visual_bounds(tooltip_trigger_node)
+                .expect("expected tooltip-trigger bounds");
+            let hover_at = Point::new(
+                Px(tooltip_trigger_bounds.origin.x.0 + tooltip_trigger_bounds.size.width.0 * 0.5),
+                Px(tooltip_trigger_bounds.origin.y.0 + tooltip_trigger_bounds.size.height.0 * 0.5),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), hover_at),
+            );
+
+            let mut opened = false;
+            for _ in 0..12 {
+                run_overlay_frame_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    false,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                let tooltip_open = stack.stack.iter().any(|entry| {
+                    entry.kind == OverlayStackEntryKind::Tooltip && entry.open && entry.visible
+                });
+                let menu_open = stack.stack.iter().any(|entry| {
+                    entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+                });
+                if tooltip_open && menu_open {
+                    opened = true;
+                    break;
+                }
+            }
+            assert!(
+                opened,
+                "expected both tooltip and menu overlays to be open ({label}, {scale})"
+            );
+
+            let mut settled: Option<Material3HeadlessGoldenV1> = None;
+            for frame in 0..80 {
+                let scene = run_overlay_frame_with_scene_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    false,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                if frame < 44 {
+                    continue;
+                }
+
+                let snapshot = material3_scene_snapshot_v1(&scene);
+                if let Some(prev) = settled.as_ref() {
+                    assert_eq!(
+                        snapshot, *prev,
+                        "expected the Material3 overlays scene to be stable after animations settle ({label}, {scale})"
+                    );
+                } else {
+                    settled = Some(snapshot);
+                }
+            }
+
+            let Some(snapshot) = settled else {
+                panic!("expected a settled overlays snapshot ({label}, {scale})");
+            };
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            cases.insert("both_open".to_string(), snapshot);
+            let suite = Material3HeadlessSuiteV1 { cases };
+
+            write_or_assert_material3_suite_v1(
+                &format!("material3-overlays.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_text_field_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{TextField, TextFieldVariant};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            for (case_name, hover_id, focus_id) in [
+                ("idle", None, None),
+                ("hover_outlined", Some("tf-outlined"), None),
+                ("focus_visible_outlined", None, Some("tf-outlined")),
+                ("hover_filled", Some("tf-filled"), None),
+                ("focus_visible_filled", None, Some("tf-filled")),
+            ] {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(640.0), Px(520.0)),
+                );
+
+                let outlined_empty = app.models_mut().insert(String::new());
+                let outlined_populated = app.models_mut().insert("Hello".to_string());
+                let filled_empty = app.models_mut().insert(String::new());
+                let filled_populated = app.models_mut().insert("Hello".to_string());
+
+                let render = |ui: &mut UiTree<TestHost>,
+                              app: &mut TestHost,
+                              services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(12.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    TextField::new(outlined_empty.clone())
+                                        .variant(TextFieldVariant::Outlined)
+                                        .label("Outlined")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .test_id("tf-outlined")
+                                        .into_element(cx),
+                                    TextField::new(outlined_empty.clone())
+                                        .variant(TextFieldVariant::Outlined)
+                                        .label("Outlined (error)")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .error(true)
+                                        .test_id("tf-outlined-error")
+                                        .into_element(cx),
+                                    TextField::new(outlined_empty.clone())
+                                        .variant(TextFieldVariant::Outlined)
+                                        .label("Outlined (disabled)")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .disabled(true)
+                                        .test_id("tf-outlined-disabled")
+                                        .into_element(cx),
+                                    TextField::new(outlined_populated.clone())
+                                        .variant(TextFieldVariant::Outlined)
+                                        .label("Outlined (populated)")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .test_id("tf-outlined-populated")
+                                        .into_element(cx),
+                                    TextField::new(filled_empty.clone())
+                                        .variant(TextFieldVariant::Filled)
+                                        .label("Filled")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .test_id("tf-filled")
+                                        .into_element(cx),
+                                    TextField::new(filled_empty.clone())
+                                        .variant(TextFieldVariant::Filled)
+                                        .label("Filled (error)")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .error(true)
+                                        .test_id("tf-filled-error")
+                                        .into_element(cx),
+                                    TextField::new(filled_empty.clone())
+                                        .variant(TextFieldVariant::Filled)
+                                        .label("Filled (disabled)")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .disabled(true)
+                                        .test_id("tf-filled-disabled")
+                                        .into_element(cx),
+                                    TextField::new(filled_populated.clone())
+                                        .variant(TextFieldVariant::Filled)
+                                        .label("Filled (populated)")
+                                        .placeholder("Placeholder")
+                                        .supporting_text("Supporting")
+                                        .test_id("tf-filled-populated")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let root = render(&mut ui, &mut app, &mut services);
+                ui.set_root(root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                if case_name == "idle" {
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+                    );
+                }
+
+                if let Some(test_id) = hover_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
+                            )
+                        });
+                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
+                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
+                    });
+                    let hover_at = Point::new(
+                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
+                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                    );
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), hover_at),
+                    );
+                }
+
+                if let Some(test_id) = focus_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
+                            )
+                        });
+                    ui.set_focus(Some(node_id));
+                    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                }
+
+                let mut settled: Option<Material3HeadlessGoldenV1> = None;
+                for frame in 0..64 {
+                    app.advance_frame();
+                    let root = render(&mut ui, &mut app, &mut services);
+                    ui.set_root(root);
+                    ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                    let mut scene = Scene::default();
+                    ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+                    if frame < 28 {
+                        continue;
+                    }
+
+                    let snapshot = material3_scene_snapshot_v1(&scene);
+                    if let Some(prev) = settled.as_ref() {
+                        assert_eq!(
+                            snapshot, *prev,
+                            "expected text field scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                        );
+                    } else {
+                        settled = Some(snapshot);
+                    }
+                }
+
+                let Some(snapshot) = settled else {
+                    panic!(
+                        "expected a settled text field snapshot ({label}, {scale}, {case_name})"
+                    );
+                };
+                cases.insert(case_name.to_string(), snapshot);
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-text-field.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn dropdown_menu_dismisses_and_restores_focus_across_schemes() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::DropdownMenu;
+    use fret_ui_material3::menu::{MenuEntry, MenuItem};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(420.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let underlay_toggled = app.models_mut().insert(false);
+
+        let open_model = open.clone();
+        let underlay_model = underlay_toggled.clone();
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let menu = DropdownMenu::new(open_model.clone())
+                        .a11y_label("menu")
+                        .test_id("dropdown")
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.pressable_with_id(
+                                    fret_ui::element::PressableProps {
+                                        layout: {
+                                            let mut l = fret_ui::element::LayoutStyle::default();
+                                            l.size.width = fret_ui::element::Length::Px(Px(120.0));
+                                            l.size.height = fret_ui::element::Length::Px(Px(40.0));
+                                            l
+                                        },
+                                        a11y: fret_ui::element::PressableA11y {
+                                            test_id: Some(std::sync::Arc::<str>::from(
+                                                "dropdown-trigger",
+                                            )),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx, _st, _id| Vec::new(),
+                                )
+                            },
+                            |_cx| {
+                                vec![
+                                    MenuEntry::Item(MenuItem::new("A").test_id("dropdown-item-a")),
+                                    MenuEntry::Item(MenuItem::new("B").test_id("dropdown-item-b")),
+                                    MenuEntry::Item(MenuItem::new("C").test_id("dropdown-item-c")),
+                                ]
+                            },
+                        );
+
+                    let underlay_toggled = underlay_model.clone();
+                    let underlay = cx.pressable(
+                        fret_ui::element::PressableProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = fret_ui::element::Length::Px(Px(160.0));
+                                l.size.height = fret_ui::element::Length::Px(Px(40.0));
+                                l
+                            },
+                            a11y: fret_ui::element::PressableA11y {
+                                test_id: Some(std::sync::Arc::<str>::from("underlay-toggle")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_toggle_bool(&underlay_toggled);
+                            Vec::new()
+                        },
+                    );
+
+                    let mut props = fret_ui::element::FlexProps::default();
+                    props.direction = fret_core::Axis::Vertical;
+                    props.gap = Px(24.0);
+                    vec![cx.flex(props, move |_cx| vec![menu, underlay])]
+                })
+            };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("dropdown-trigger") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected dropdown-trigger in semantics snapshot ({label})"));
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        assert!(
+            stack
+                .stack
+                .iter()
+                .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open),
+            "expected dropdown menu overlay to be open ({label})"
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Escape));
+        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Escape));
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected dropdown menu to close on Escape ({label})"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected dropdown menu to restore focus to trigger on Escape ({label})"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let underlay_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("underlay-toggle") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .unwrap_or_else(|| panic!("expected underlay-toggle in semantics snapshot ({label})"));
+        let underlay_bounds = ui
+            .debug_node_visual_bounds(underlay_node)
+            .expect("expected underlay-toggle bounds");
+        let click_at = Point::new(
+            Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5),
+            Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), click_at),
+        );
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected dropdown menu to close on outside press ({label})"
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_toggled),
+            Some(false),
+            "expected dropdown menu to prevent underlay activation on outside press ({label})"
+        );
+
+        let mut saw_unmount = false;
+        for _ in 0..60 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| render(ui, app, services),
+            );
+            let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+            if !stack
+                .stack
+                .iter()
+                .any(|e| e.kind == OverlayStackEntryKind::Popover && e.visible)
+            {
+                saw_unmount = true;
+                break;
+            }
+        }
+        assert!(
+            saw_unmount,
+            "expected dropdown menu popover layer to unmount after close ({label})"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected dropdown menu to restore focus to trigger on outside press ({label})"
+        );
+    }
+}
+
+fn scale_segment(scale_factor: f32) -> &'static str {
+    if (scale_factor - 1.0).abs() < 1e-6 {
+        "scale1_0"
+    } else if (scale_factor - 1.25).abs() < 1e-6 {
+        "scale1_25"
+    } else if (scale_factor - 2.0).abs() < 1e-6 {
+        "scale2_0"
+    } else {
+        panic!("unsupported scale factor: {scale_factor}");
+    }
 }
 
 #[test]
 fn radio_pressed_scene_structure_is_stable() {
     use fret_ui_material3::Radio;
 
-    let mut app = TestHost::default();
-    app.set_global(PlatformCapabilities::default());
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
 
-    let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
-        fret_ui_material3::tokens::v30::TypographyOptions::default(),
-        fret_ui_material3::tokens::v30::ColorSchemeOptions::default(),
-    );
-    Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
 
-    let window = AppWindowId::default();
-    let mut services = FakeUiServices::default();
-    let mut ui: UiTree<TestHost> = UiTree::new();
-    ui.set_window(window);
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
 
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(320.0), Px(240.0)),
-    );
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
 
-    let selected = app.models_mut().insert(false);
-    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
-        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
-            let radio = Radio::new(selected.clone())
-                .a11y_label("radio")
-                .test_id("radio")
-                .into_element(cx);
-            vec![with_padding(cx, Px(32.0), radio)]
-        })
-    };
+        let selected = app.models_mut().insert(false);
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let radio = Radio::new(selected.clone())
+                        .a11y_label("radio")
+                        .test_id("radio")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), radio)]
+                })
+            };
 
-    let root = render(&mut ui, &mut app, &mut services);
-    ui.set_root(root);
-    ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let radio_node: NodeId = ui
-        .semantics_snapshot()
-        .and_then(|snapshot| {
-            snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("radio") {
-                    Some(node.id)
-                } else {
-                    None
-                }
-            })
-        })
-        .expect("expected radio in semantics snapshot");
-    let radio_bounds = ui
-        .debug_node_visual_bounds(radio_node)
-        .expect("expected radio visual bounds");
-    let press_at = Point::new(
-        Px(radio_bounds.origin.x.0 + radio_bounds.size.width.0 * 0.5),
-        Px(radio_bounds.origin.y.0 + radio_bounds.size.height.0 * 0.5),
-    );
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &pointer_down(PointerId(1), press_at),
-    );
-
-    let mut baseline_structure: Option<Vec<SceneSig>> = None;
-    let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
-    for frame in 0..24 {
-        app.advance_frame();
         let root = render(&mut ui, &mut app, &mut services);
         ui.set_root(root);
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let mut scene = Scene::default();
-        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let radio_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    if node.test_id.as_deref() == Some("radio") {
+                        Some(node.id)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .expect("expected radio in semantics snapshot");
+        let radio_bounds = ui
+            .debug_node_visual_bounds(radio_node)
+            .expect("expected radio visual bounds");
+        let press_at = Point::new(
+            Px(radio_bounds.origin.x.0 + radio_bounds.size.width.0 * 0.5),
+            Px(radio_bounds.origin.y.0 + radio_bounds.size.height.0 * 0.5),
+        );
 
-        if frame >= 2 && frame < 7 {
-            let sig = scene_signature(&scene);
-            if let Some(prev) = baseline_structure.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected Radio to keep a stable scene structure while pressed"
-                );
-            } else {
-                baseline_structure = Some(sig);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), press_at),
+        );
+
+        let mut baseline_structure: Option<Vec<SceneSig>> = None;
+        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
+        for frame in 0..24 {
+            app.advance_frame();
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            if frame >= 2 && frame < 7 {
+                let sig = scene_signature(&scene);
+                if let Some(prev) = baseline_structure.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Radio to keep a stable scene structure while pressed ({label})"
+                    );
+                } else {
+                    baseline_structure = Some(sig);
+                }
+            }
+
+            if frame >= 16 {
+                let sig = scene_quad_geometry_signature(&scene);
+                if let Some(prev) = baseline_quads.as_ref() {
+                    assert_eq!(
+                        sig, *prev,
+                        "expected Radio to keep stable quad geometry after animations settle ({label})"
+                    );
+                } else {
+                    baseline_quads = Some(sig);
+                }
             }
         }
 
-        if frame >= 16 {
-            let sig = scene_quad_geometry_signature(&scene);
-            if let Some(prev) = baseline_quads.as_ref() {
-                assert_eq!(
-                    sig, *prev,
-                    "expected Radio to keep stable quad geometry after animations settle"
-                );
-            } else {
-                baseline_quads = Some(sig);
-            }
-        }
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
     }
-
-    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
 }

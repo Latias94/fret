@@ -141,7 +141,7 @@ theme keys under `component.<control>.*`.
 ## Implementation Guidance (component authors)
 
 - Use `WidgetStateProperty<T>` as the primary “state → style” resolver.
-- If you accept overrides, expose `*Style` structs with `Option<WidgetStateProperty<...>>` fields
-  and `merged()` (right-biased) semantics.
+- If you accept overrides, expose `*Style` structs with `OverrideSlot<T>` fields
+  (`Option<WidgetStateProperty<Option<T>>>`) and `merged()` (right-biased) semantics.
 - Prefer consuming semantic base keys via `Theme::color_by_key` and only add new theme keys when
   the fallback is insufficient.
