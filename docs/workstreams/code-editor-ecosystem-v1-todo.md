@@ -39,16 +39,16 @@ Legend:
 
 ### DOM element lifecycle
 
-- [ ] Create the hidden textarea element (per window) and attach to the canvas overlay layer.
-- [ ] Define focus/blur rules and map them to `Effect::ImeAllow`.
-- [ ] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
+- [~] Create the hidden textarea element (currently global; TODO per-window + canvas overlay attachment).
+- [x] Define focus/blur rules and map them to `Effect::ImeAllow`.
+- [x] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
 
 ### Event translation
 
-- [ ] Translate `compositionstart/update/end` to `Event::Ime` (preedit/commit).
-- [ ] Translate `beforeinput`/`input` to `Event::TextInput` for committed insertions.
-- [ ] Filter control characters from `TextInput` (ADR 0012).
-- [ ] Implement command-path suppression to avoid “command executes + DOM inserts text”.
+- [x] Translate `compositionstart/update/end` to `Event::Ime` (preedit/commit).
+- [x] Translate `beforeinput`/`input` to `Event::TextInput` for committed insertions.
+- [x] Filter control characters from `TextInput` (ADR 0012).
+- [~] Implement command-path suppression to avoid “command executes + DOM inserts text” (shortcut suppression landed; keep auditing edge cases).
 
 ### UTF-16 ↔ UTF-8 conversion
 
@@ -62,7 +62,7 @@ Legend:
 
 ### Harness
 
-- [ ] Add a web harness/demo that exercises:
+- [x] Add a web harness/demo that exercises:
   - preedit updates,
   - commit,
   - backspace/arrows,
