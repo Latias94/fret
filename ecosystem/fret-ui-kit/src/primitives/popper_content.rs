@@ -138,23 +138,6 @@ pub fn popper_wrapper_at_autosize<H: UiHost>(
     )
 }
 
-/// Render an autosizing popper wrapper positioned at `origin`.
-///
-/// This wrapper uses `overflow: visible` and relies on its children to determine its size.
-pub fn popper_wrapper_at_autosize<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    origin: Point,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
-    cx.container(
-        ContainerProps {
-            layout: popper_wrapper_layout_autosize(origin),
-            ..Default::default()
-        },
-        f,
-    )
-}
-
 /// Render a popper wrapper that contains a panel, and optionally returns additional wrapper
 /// children (like an arrow element) alongside the panel.
 ///

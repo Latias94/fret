@@ -142,6 +142,10 @@ maps naturally to a new ecosystem crate built on top of `fret-ui-shadcn`:
   - (Done) `Combobox` (shadcn recipe) listbox height is gated against `shadcn-web` open snapshots. Evidence: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (combobox-demo open variants).
   - (Done) `Select` listbox width parity is gated against shadcn-web: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
     (`web_vs_fret_select_scrollable_listbox_width_matches`).
+  - (Done) Overlay close focus restoration honors Radix `onCloseAutoFocus` outcomes even when the
+    overlay unmounts after motion (teardown path respects `preventDefault`). Evidence:
+    `ecosystem/fret-ui-kit/src/window_overlays/{state.rs,render.rs}` and the radix timeline parity
+    gates in `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
   - (Done) `NavigationMenu` opt-in indicator `shadow-md` token is gated against shadcn-web. Evidence:
     `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_indicator_shadow_matches_web*`)
     + `goldens/shadcn-web/v4/new-york-v4/navigation-menu-demo-indicator.open.json`.
