@@ -644,13 +644,15 @@ topics (if/when we implement them):
   - Progress (v1 prototype; fixed/known height only):
     - Runtime host state: `crates/fret-ui/src/windowed_surface_host.rs` (`RetainedVirtualListHostMarker`, `RetainedVirtualListHostCallbacks`).
     - Scheduling: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/prepaint.rs` (`mark_retained_virtual_list_needs_reconcile`).
+    - Input routing: `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` schedules retained-host reconcile on overscan escape instead of forcing `notify()` (keeps parent cache roots reusable).
     - Reconcile: `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
     - Tests: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_host_updates_window_without_rerendering_view_cache_root`).
     - Constraint: the host must be a layout barrier (non-`Auto` main-axis size), otherwise children reattach is skipped to preserve mount invariants.
   - Harness (window-boundary scroll):
     - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json`
-    - Run with: `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+    - Run with: `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
     - Expectation: crossing the overscan window boundary does not force a parent cache-root rerender; instead the retained host reconciles (attach/detach delta only).
+    - Evidence bundle (cache+shell, release, minimal harness; no `notify_call` dirtiness on boundary frames): `target/fret-diag-perf-vlist-window-boundary-retained-escape-known-cache-shell-minimal-no-notify/1769505824872-script-step-0047-wheel/bundle.json`
   - Plan (v1; fixed/known height only):
     - Add a runtime-owned `WindowedSurfaceHost` boundary that can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
     - Define an opt-in authoring API that stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
