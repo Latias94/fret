@@ -1991,7 +1991,7 @@ fn setup_app_with_shadcn_theme(app: &mut App) {
     );
 }
 
-fn render_frame(
+fn render_frame<I, F>(
     ui: &mut UiTree<App>,
     app: &mut App,
     services: &mut dyn fret_core::UiServices,
@@ -1999,8 +1999,11 @@ fn render_frame(
     bounds: Rect,
     frame_id: FrameId,
     request_semantics: bool,
-    render: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) {
+    render: F,
+) where
+    F: FnOnce(&mut ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     app.set_frame_id(frame_id);
     OverlayController::begin_frame(app, window);
     let root = fret_ui::declarative::render_root(

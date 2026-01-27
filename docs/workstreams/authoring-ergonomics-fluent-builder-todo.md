@@ -156,6 +156,11 @@ Related:
   - Evidence: `ecosystem/fret-ui-shadcn/src/tooltip.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`
   - Evidence: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`
   - Evidence: `apps/fret-ui-gallery/src/{ui,docs}.rs`
+- [x] AUE-iter-109 Make render harness callbacks accept iterable output (avoid forcing `-> Vec<AnyElement>`).
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs`
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/popper_content.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/src/command.rs`
+  - Evidence: `ecosystem/fret-ui-shadcn/tests/{snapshots,web_vs_fret_overlay_chrome,web_vs_fret_overlay_placement,radix_web_overlay_geometry,radix_web_primitives_state}.rs`
 
 ## H. Adoption Audit — `ui::text` in `fret-ui-shadcn`
 

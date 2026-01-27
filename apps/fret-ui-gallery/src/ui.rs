@@ -735,11 +735,15 @@ fn page_preview(
     .into_element(cx)
 }
 
-fn material3_scoped_page(
+fn material3_scoped_page<I, F>(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
-    content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) -> Vec<AnyElement> {
+    content: F,
+) -> Vec<AnyElement>
+where
+    F: FnOnce(&mut ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     let enabled = cx
         .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);
