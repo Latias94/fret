@@ -34,6 +34,7 @@ Expose a per-control `*Style` struct that:
 For interactive controls, prefer:
 
 - `Option<WidgetStateProperty<Option<T>>>`
+- Prefer using the alias `fret_ui_kit::OverrideSlot<T>` in Rust code for readability.
 
 The inner `Option<T>` enables **partial overrides**:
 

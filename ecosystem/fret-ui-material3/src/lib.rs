@@ -20,6 +20,7 @@ pub mod navigation_bar;
 pub mod navigation_drawer;
 pub mod navigation_rail;
 pub mod radio;
+pub mod select;
 pub mod snackbar;
 pub mod switch;
 pub mod tabs;
@@ -28,23 +29,24 @@ pub mod theme;
 pub mod tokens;
 pub mod tooltip;
 
-pub use button::{Button, ButtonVariant};
-pub use checkbox::Checkbox;
+pub use button::{Button, ButtonStyle, ButtonVariant};
+pub use checkbox::{Checkbox, CheckboxStyle};
 pub use context::{MaterialDesignVariant, with_material_design_variant};
 pub use dialog::{Dialog, DialogAction};
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
-pub use icon_button::{IconButton, IconButtonSize, IconButtonVariant};
+pub use icon_button::{IconButton, IconButtonSize, IconButtonStyle, IconButtonVariant};
 pub use list::{List, ListItem};
 pub use menu::{Menu, MenuEntry, MenuItem};
 pub use modal_navigation_drawer::ModalNavigationDrawer;
 pub use navigation_bar::{NavigationBar, NavigationBarItem};
 pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant};
 pub use navigation_rail::{NavigationRail, NavigationRailItem};
-pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation};
+pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation, RadioStyle};
+pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
 pub use snackbar::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};
-pub use switch::Switch;
-pub use tabs::{TabItem, Tabs};
-pub use text_field::{TextField, TextFieldVariant};
+pub use switch::{Switch, SwitchStyle};
+pub use tabs::{TabItem, Tabs, TabsStyle};
+pub use text_field::{TextField, TextFieldStyle, TextFieldVariant};
 pub use tooltip::{PlainTooltip, TooltipAlign, TooltipProvider, TooltipSide};
 
 pub mod context {
@@ -121,6 +123,7 @@ mod tests {
             include_str!("navigation_drawer.rs"),
             include_str!("navigation_rail.rs"),
             include_str!("radio.rs"),
+            include_str!("select.rs"),
             include_str!("snackbar.rs"),
             include_str!("switch.rs"),
             include_str!("tabs.rs"),

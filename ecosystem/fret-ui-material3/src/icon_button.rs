@@ -15,6 +15,10 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{SvgSource, Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
+};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
@@ -41,6 +45,55 @@ pub enum IconButtonSize {
     Small,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct IconButtonStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub icon_color: OverrideSlot<ColorRef>,
+    pub outline_color: OverrideSlot<ColorRef>,
+    pub state_layer_color: OverrideSlot<ColorRef>,
+}
+
+impl IconButtonStyle {
+    pub fn container_background(
+        mut self,
+        background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.container_background = Some(background);
+        self
+    }
+
+    pub fn icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.icon_color = Some(color);
+        self
+    }
+
+    pub fn outline_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.outline_color = Some(color);
+        self
+    }
+
+    pub fn state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.state_layer_color = Some(color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.container_background.is_some() {
+            self.container_background = other.container_background;
+        }
+        if other.icon_color.is_some() {
+            self.icon_color = other.icon_color;
+        }
+        if other.outline_color.is_some() {
+            self.outline_color = other.outline_color;
+        }
+        if other.state_layer_color.is_some() {
+            self.state_layer_color = other.state_layer_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct IconButton {
     icon: IconId,
@@ -49,6 +102,7 @@ pub struct IconButton {
     toggle: bool,
     selected: bool,
     on_activate: Option<OnActivate>,
+    style: IconButtonStyle,
     disabled: bool,
     test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
@@ -62,6 +116,7 @@ impl std::fmt::Debug for IconButton {
             .field("size", &self.size)
             .field("selected", &self.selected)
             .field("on_activate", &self.on_activate.is_some())
+            .field("style", &self.style)
             .field("disabled", &self.disabled)
             .field("test_id", &self.test_id)
             .finish()
@@ -77,6 +132,7 @@ impl IconButton {
             toggle: false,
             selected: false,
             on_activate: None,
+            style: IconButtonStyle::default(),
             disabled: false,
             test_id: None,
             a11y_label: None,
@@ -110,6 +166,11 @@ impl IconButton {
 
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn style(mut self, style: IconButtonStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -191,6 +252,12 @@ impl IconButton {
                             enabled,
                             interaction,
                         );
+                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                        if self.toggle && self.selected {
+                            states |= WidgetStates::SELECTED;
+                        }
+                        let colors =
+                            apply_icon_button_style_overrides(&theme, states, &self.style, colors);
 
                         let state_layer_target = state_layer_target_opacity(
                             &theme,
@@ -393,6 +460,41 @@ fn icon_button_colors(
         state_layer_color,
         outline,
     }
+}
+
+fn apply_icon_button_style_overrides(
+    theme: &Theme,
+    states: WidgetStates,
+    style_override: &IconButtonStyle,
+    mut colors: IconButtonColors,
+) -> IconButtonColors {
+    colors.background = resolve_override_slot_opt_with(
+        style_override.container_background.as_ref(),
+        states,
+        |color| color.resolve(theme),
+        || colors.background,
+    );
+    colors.icon_color = resolve_override_slot_with(
+        style_override.icon_color.as_ref(),
+        states,
+        |color| color.resolve(theme),
+        || colors.icon_color,
+    );
+    colors.state_layer_color = resolve_override_slot_with(
+        style_override.state_layer_color.as_ref(),
+        states,
+        |color| color.resolve(theme),
+        || colors.state_layer_color,
+    );
+    if let Some(outline) = colors.outline.as_mut() {
+        outline.color = resolve_override_slot_with(
+            style_override.outline_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || outline.color,
+        );
+    }
+    colors
 }
 
 fn material_icon_button_chrome<H: UiHost>(

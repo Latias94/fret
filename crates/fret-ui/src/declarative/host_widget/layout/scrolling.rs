@@ -384,6 +384,7 @@ impl ElementHostWidget {
 
             cx.tree
                 .debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
+                    source: crate::tree::UiDebugVirtualListWindowSource::Layout,
                     node: cx.node,
                     element: self.element,
                     axis,
@@ -407,20 +408,34 @@ impl ElementHostWidget {
         }
 
         if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
-            // Virtual list visible-item sets are computed during the declarative render pass. If
-            // the current visible window is outside the previously rendered overscan window,
-            // ensure the nearest view-cache root re-renders on the next frame so it can rebuild
-            // the visible items.
-            //
-            // Important: avoid forcing an additional "contained relayout" pass in the current
-            // frame. We only need to mark the view-cache reuse gate as dirty and schedule a
-            // redraw; the rerender frame will rebuild children and propagate structural
-            // invalidations normally.
-            cx.tree.mark_nearest_view_cache_root_needs_rerender(
-                cx.node,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-            );
+            let retained_host =
+                crate::elements::with_window_state(&mut *cx.app, window, |window_state| {
+                    let retained = window_state
+                        .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
+                        self.element,
+                    );
+                    if retained {
+                        window_state.mark_retained_virtual_list_needs_reconcile(self.element);
+                    }
+                    retained
+                });
+
+            if !retained_host {
+                // Virtual list visible-item sets are computed during the declarative render pass.
+                // If the current visible window is outside the previously rendered overscan
+                // window, ensure the nearest view-cache root re-renders on the next frame so it
+                // can rebuild the visible items.
+                //
+                // Important: avoid forcing an additional "contained relayout" pass in the current
+                // frame. We only need to mark the view-cache reuse gate as dirty and schedule a
+                // redraw; the rerender frame will rebuild children and propagate structural
+                // invalidations normally.
+                cx.tree.mark_nearest_view_cache_root_needs_rerender(
+                    cx.node,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                );
+            }
             needs_redraw = true;
         }
 

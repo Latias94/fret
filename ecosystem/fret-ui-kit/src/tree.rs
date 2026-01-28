@@ -76,8 +76,8 @@ impl TreeItem {
         self
     }
 
-    pub fn children(mut self, children: Vec<TreeItem>) -> Self {
-        self.children = children;
+    pub fn children(mut self, children: impl IntoIterator<Item = TreeItem>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 

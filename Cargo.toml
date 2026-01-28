@@ -40,6 +40,8 @@ web-time = "1"
 cosmic-text = "0.16.0"
 parley = "0.7.0"
 unicode-script = "0.5.8"
+unicode-segmentation = "1.12.0"
+unicode-ident = "1.0.13"
 arboard = "3.4.1"
 rfd = "0.17"
 webbrowser = "1.0.4"
@@ -63,6 +65,7 @@ kurbo = "0.11"
 pulldown-cmark = "0.13"
 mdstream = "0.2.0"
 mathjax_svg = "3.2.0"
+getrandom = "0.3"
 tree-sitter = "0.26.3"
 tree-sitter-highlight = "0.26.3"
 tree-sitter-bash = "0.25"
@@ -105,3 +108,9 @@ zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 # GPUI applies a similar per-package opt-level override for Taffy.
 [profile.dev.package.taffy]
 opt-level = 3
+
+# Windows/MSVC note: the shadcn test suite can produce very large test binaries.
+# Keeping test debuginfo to line-tables only avoids hitting `link.exe` PDB size limits while
+# preserving usable backtraces.
+[profile.test]
+debug = 1

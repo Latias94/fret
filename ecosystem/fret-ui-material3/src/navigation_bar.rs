@@ -22,9 +22,6 @@ use fret_ui::element::{
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
-use crate::foundation::elevation::{
-    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
-};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
@@ -32,6 +29,7 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::surface::material_surface_style;
 use crate::motion::SpringAnimator;
 use crate::tokens::navigation_bar as nav_tokens;
 
@@ -170,15 +168,17 @@ impl NavigationBar {
             let container_height = nav_tokens::container_height(&theme);
             let container_bg = nav_tokens::container_background(&theme);
             let elevation = nav_tokens::container_elevation(&theme);
-            let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
             let shadow_color = nav_tokens::container_shadow_color(&theme);
             let corner_radii = nav_tokens::container_shape(&theme);
-            let shadow = shadow_for_elevation_with_color(
+            let surface = material_surface_style(
                 &theme,
+                container_bg,
                 elevation,
                 Some(shadow_color),
                 corner_radii,
             );
+            let container_bg = surface.background;
+            let shadow = surface.shadow;
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Horizontal;

@@ -375,17 +375,17 @@ impl Popover {
                     let anchor_fallback = overlay::anchor_bounds_for_element(cx, anchor_id);
                     if anchor_fallback.is_none() {
                         if modal {
-                            return vec![
-                                radix_popover::popover_modal_barrier_with_dismiss_handler(
-                                    cx,
-                                    open_for_barrier.clone(),
-                                    true,
-                                    on_dismiss_request_for_children.clone(),
-                                    Vec::new(),
-                                ),
-                            ];
+                            return [radix_popover::popover_modal_barrier_with_dismiss_handler(
+                                cx,
+                                open_for_barrier.clone(),
+                                true,
+                                on_dismiss_request_for_children.clone(),
+                                Vec::new(),
+                            )]
+                            .into_iter()
+                            .collect::<fret_ui::element::Elements>();
                         }
-                        return Vec::new();
+                        return std::iter::empty().collect::<fret_ui::element::Elements>();
                     }
 
                     let inner_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
@@ -532,15 +532,17 @@ impl Popover {
                     );
 
                     if modal {
-                        radix_popover::popover_modal_layer_children_with_dismiss_handler(
+                        radix_popover::popover_modal_layer_elements_with_dismiss_handler(
                             cx,
                             open_for_barrier.clone(),
                             on_dismiss_request_for_children.clone(),
-                            Vec::new(),
+                            [],
                             overlay_content,
                         )
                     } else {
-                        vec![overlay_content]
+                        [overlay_content]
+                            .into_iter()
+                            .collect::<fret_ui::element::Elements>()
                     }
                 });
 

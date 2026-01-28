@@ -23,3 +23,4 @@ serde.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
+serde_json.workspace = true

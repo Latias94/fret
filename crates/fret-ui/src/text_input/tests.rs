@@ -140,6 +140,78 @@ fn text_input_hover_sets_text_cursor_effect() {
 }
 
 #[test]
+fn text_input_double_click_selection_respects_text_boundary_mode() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut input = TextInput::new();
+    input.text = "can't".to_string();
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    cx.input_ctx.text_boundary_mode = fret_runtime::TextBoundaryMode::UnicodeWord;
+
+    input.event(
+        &mut cx,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(5.0), Px(5.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        (input.selection_anchor, input.caret),
+        (0, 5),
+        "Unicode word mode should select the whole word"
+    );
+
+    let mut input = TextInput::new();
+    input.text = "can't".to_string();
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    cx.input_ctx.text_boundary_mode = fret_runtime::TextBoundaryMode::Identifier;
+
+    input.event(
+        &mut cx,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(5.0), Px(5.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        (input.selection_anchor, input.caret),
+        (0, 3),
+        "Identifier mode should stop at the apostrophe"
+    );
+}
+
+#[test]
 fn text_input_renders_placeholder_when_empty() {
     let window = AppWindowId::default();
 

@@ -16,6 +16,10 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
+    resolve_override_slot_with,
+};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
@@ -24,6 +28,55 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::tokens::checkbox as checkbox_tokens;
 
+#[derive(Debug, Clone, Default)]
+pub struct CheckboxStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub outline_color: OverrideSlot<ColorRef>,
+    pub icon_color: OverrideSlot<ColorRef>,
+    pub state_layer_color: OverrideSlot<ColorRef>,
+}
+
+impl CheckboxStyle {
+    pub fn container_background(
+        mut self,
+        background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.container_background = Some(background);
+        self
+    }
+
+    pub fn outline_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.outline_color = Some(color);
+        self
+    }
+
+    pub fn icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.icon_color = Some(color);
+        self
+    }
+
+    pub fn state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.state_layer_color = Some(color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.container_background.is_some() {
+            self.container_background = other.container_background;
+        }
+        if other.outline_color.is_some() {
+            self.outline_color = other.outline_color;
+        }
+        if other.icon_color.is_some() {
+            self.icon_color = other.icon_color;
+        }
+        if other.state_layer_color.is_some() {
+            self.state_layer_color = other.state_layer_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Checkbox {
     checked: Model<bool>,
@@ -31,6 +84,7 @@ pub struct Checkbox {
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_activate: Option<OnActivate>,
+    style: CheckboxStyle,
 }
 
 impl std::fmt::Debug for Checkbox {
@@ -40,6 +94,7 @@ impl std::fmt::Debug for Checkbox {
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
             .field("on_activate", &self.on_activate.is_some())
+            .field("style", &self.style)
             .finish()
     }
 }
@@ -52,6 +107,7 @@ impl Checkbox {
             a11y_label: None,
             test_id: None,
             on_activate: None,
+            style: CheckboxStyle::default(),
         }
     }
 
@@ -73,6 +129,11 @@ impl Checkbox {
     /// Called after the checkbox toggles its `Model<bool>`.
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn style(mut self, style: CheckboxStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -147,8 +208,35 @@ impl Checkbox {
                             .get_model_copied(&self.checked, Invalidation::Paint)
                             .unwrap_or(false);
 
+                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                        if checked {
+                            states |= WidgetStates::SELECTED;
+                        }
+
                         let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                        let chrome = checkbox_tokens::chrome(&theme, checked, enabled, interaction);
+                        let mut chrome =
+                            checkbox_tokens::chrome(&theme, checked, enabled, interaction);
+                        let token_container_bg = chrome.container_bg;
+                        chrome.container_bg = resolve_override_slot_opt_with(
+                            self.style.container_background.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || token_container_bg,
+                        );
+                        let token_outline_color = chrome.outline_color;
+                        chrome.outline_color = resolve_override_slot_opt_with(
+                            self.style.outline_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || token_outline_color,
+                        );
+                        let token_icon_color = chrome.icon_color;
+                        chrome.icon_color = resolve_override_slot_with(
+                            self.style.icon_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || token_icon_color,
+                        );
 
                         let state_layer_target = checkbox_tokens::state_layer_target_opacity(
                             &theme,
@@ -158,6 +246,12 @@ impl Checkbox {
                         );
                         let state_layer_color =
                             checkbox_tokens::state_layer_color(&theme, checked, interaction);
+                        let state_layer_color = resolve_override_slot_with(
+                            self.style.state_layer_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || state_layer_color,
+                        );
 
                         let ripple_base_opacity =
                             checkbox_tokens::pressed_state_layer_opacity(&theme, checked);

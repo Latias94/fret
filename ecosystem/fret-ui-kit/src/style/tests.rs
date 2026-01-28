@@ -108,6 +108,50 @@ fn resolve_override_slot_opt_returns_override_when_present() {
 }
 
 #[test]
+fn resolve_override_slot_with_falls_back_when_override_is_none() {
+    let overrides = WidgetStateProperty::new(Some(99)).when(WidgetStates::HOVERED, None);
+
+    assert_eq!(
+        super::resolve_override_slot_with(Some(&overrides), WidgetStates::empty(), |v| *v, || 10),
+        99
+    );
+    assert_eq!(
+        super::resolve_override_slot_with(Some(&overrides), WidgetStates::HOVERED, |v| *v, || 20),
+        20
+    );
+}
+
+#[test]
+fn resolve_override_slot_opt_with_returns_override_when_present() {
+    let overrides = WidgetStateProperty::new(None).when(WidgetStates::HOVERED, Some(30));
+
+    assert_eq!(
+        super::resolve_override_slot_opt_with(
+            Some(&overrides),
+            WidgetStates::empty(),
+            |v| *v,
+            || { Some(10) }
+        ),
+        Some(10)
+    );
+    assert_eq!(
+        super::resolve_override_slot_opt_with(
+            Some(&overrides),
+            WidgetStates::HOVERED,
+            |v| *v,
+            || Some(20)
+        ),
+        Some(30)
+    );
+}
+
+#[test]
+fn merge_override_slot_is_right_biased() {
+    assert_eq!(super::merge_override_slot::<u32>(Some(1), None), Some(1));
+    assert_eq!(super::merge_override_slot::<u32>(Some(1), Some(2)), Some(2));
+}
+
+#[test]
 fn color_fallback_theme_token_alpha_mul_derives_from_base_token() {
     let mut app = fret_app::App::default();
 

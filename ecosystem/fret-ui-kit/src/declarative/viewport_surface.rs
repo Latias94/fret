@@ -60,31 +60,18 @@ fn push_viewport_input(
     clamped: bool,
 ) -> bool {
     let mapping = mapping_for(host.bounds(), props);
-    let event = if clamped {
-        ViewportInputEvent::from_mapping_window_point_clamped(
-            window,
-            props.target,
-            &mapping,
-            pixels_per_point,
-            pointer_id,
-            pointer_type,
-            position,
-            kind,
-        )
-    } else {
-        let Some(event) = ViewportInputEvent::from_mapping_window_point(
-            window,
-            props.target,
-            &mapping,
-            pixels_per_point,
-            pointer_id,
-            pointer_type,
-            position,
-            kind,
-        ) else {
-            return false;
-        };
-        event
+    let Some(event) = ViewportInputEvent::from_mapping_window_point_maybe_clamped(
+        window,
+        props.target,
+        &mapping,
+        pixels_per_point,
+        pointer_id,
+        pointer_type,
+        position,
+        kind,
+        clamped,
+    ) else {
+        return false;
     };
 
     host.push_effect(Effect::ViewportInput(event));

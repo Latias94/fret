@@ -145,18 +145,23 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
     };
 
     let mut by_window: HashMap<AppWindowId, WindowCommandGatingSnapshot> = HashMap::new();
-    let svc = app.global::<fret_runtime::WindowCommandGatingService>();
     for window in windows {
-        let fallback_input_ctx = InputContext::fallback(Platform::Macos, caps.clone());
-        let snapshot = svc
-            .and_then(|svc| svc.snapshot(window).cloned())
-            .unwrap_or_else(|| {
-                fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                    app,
-                    window,
-                    fallback_input_ctx,
-                )
-            });
+        let fallback_input_ctx = InputContext {
+            platform: Platform::Macos,
+            caps: caps.clone(),
+            ui_has_modal: false,
+            window_arbitration: None,
+            focus_is_text_input: false,
+            text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+            edit_can_undo: true,
+            edit_can_redo: true,
+            dispatch_phase: InputDispatchPhase::Bubble,
+        };
+        let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+            app,
+            window,
+            fallback_input_ctx,
+        );
         by_window.insert(window, snapshot);
     }
 
@@ -193,6 +198,7 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         ui_has_modal: false,
         window_arbitration: None,
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,
@@ -677,6 +683,7 @@ extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BO
         ui_has_modal: false,
         window_arbitration: None,
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,

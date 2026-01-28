@@ -6,6 +6,7 @@ use fret_kit::interop::embedded_viewport as embedded;
 use fret_kit::prelude::*;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
+use fret_ui::element::AnyElementIterExt as _;
 
 const CMD_ADD: &str = "todo-interop-kit.add";
 const CMD_CLEAR_DONE: &str = "todo-interop-kit.clear_done";
@@ -180,10 +181,16 @@ fn todo_panel(
         .on_click(CMD_CLEAR_DONE)
         .into_element(cx);
 
-    let list = todos.iter().map(|t| todo_row(cx, theme, t)).elements();
+    let list = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+        let mut out = Vec::new();
+        for t in todos {
+            out.push(todo_row(cx, theme, t));
+        }
+        out
+    });
 
     let body = shadcn::CardContent::new([
-        stack::hstack_iter(
+        stack::hstack(
             cx,
             stack::HStackProps::default()
                 .gap(Space::N2)
@@ -191,7 +198,7 @@ fn todo_panel(
                 .layout(LayoutRefinement::default().w_full()),
             move |_cx| [draft, add, clear_done],
         ),
-        cx.column(fret_ui::element::ColumnProps::default(), move |_cx| list),
+        list,
     ]);
 
     shadcn::Card::new([header.into_element(cx), body.into_element(cx)])

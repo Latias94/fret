@@ -14,6 +14,10 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot_with,
+};
 
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::text_field as text_field_tokens;
@@ -23,6 +27,82 @@ pub enum TextFieldVariant {
     #[default]
     Outlined,
     Filled,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TextFieldStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub outline_color: OverrideSlot<ColorRef>,
+    pub text_color: OverrideSlot<ColorRef>,
+    pub placeholder_color: OverrideSlot<ColorRef>,
+    pub caret_color: OverrideSlot<ColorRef>,
+    pub label_color: OverrideSlot<ColorRef>,
+    pub supporting_text_color: OverrideSlot<ColorRef>,
+}
+
+impl TextFieldStyle {
+    pub fn container_background(
+        mut self,
+        background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.container_background = Some(background);
+        self
+    }
+
+    pub fn outline_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.outline_color = Some(color);
+        self
+    }
+
+    pub fn text_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.text_color = Some(color);
+        self
+    }
+
+    pub fn placeholder_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.placeholder_color = Some(color);
+        self
+    }
+
+    pub fn caret_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.caret_color = Some(color);
+        self
+    }
+
+    pub fn label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.label_color = Some(color);
+        self
+    }
+
+    pub fn supporting_text_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.supporting_text_color = Some(color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.container_background.is_some() {
+            self.container_background = other.container_background;
+        }
+        if other.outline_color.is_some() {
+            self.outline_color = other.outline_color;
+        }
+        if other.text_color.is_some() {
+            self.text_color = other.text_color;
+        }
+        if other.placeholder_color.is_some() {
+            self.placeholder_color = other.placeholder_color;
+        }
+        if other.caret_color.is_some() {
+            self.caret_color = other.caret_color;
+        }
+        if other.label_color.is_some() {
+            self.label_color = other.label_color;
+        }
+        if other.supporting_text_color.is_some() {
+            self.supporting_text_color = other.supporting_text_color;
+        }
+        self
+    }
 }
 
 #[derive(Debug, Default)]
@@ -38,6 +118,7 @@ pub struct TextField {
     label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     supporting_text: Option<Arc<str>>,
+    style: TextFieldStyle,
     disabled: bool,
     error: bool,
     a11y_label: Option<Arc<str>>,
@@ -51,6 +132,7 @@ impl std::fmt::Debug for TextField {
             .field("label", &self.label)
             .field("placeholder", &self.placeholder)
             .field("supporting_text", &self.supporting_text)
+            .field("style", &self.style)
             .field("disabled", &self.disabled)
             .field("error", &self.error)
             .field("a11y_label", &self.a11y_label)
@@ -67,6 +149,7 @@ impl TextField {
             label: None,
             placeholder: None,
             supporting_text: None,
+            style: TextFieldStyle::default(),
             disabled: false,
             error: false,
             a11y_label: None,
@@ -91,6 +174,11 @@ impl TextField {
 
     pub fn supporting_text(mut self, text: impl Into<Arc<str>>) -> Self {
         self.supporting_text = Some(text.into());
+        self
+    }
+
+    pub fn style(mut self, style: TextFieldStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -133,6 +221,7 @@ impl TextField {
             let label = self.label.clone();
             let placeholder = self.placeholder.clone();
             let supporting_text = self.supporting_text.clone();
+            let style_override = self.style;
             let disabled = self.disabled;
             let error = self.error;
             let a11y_label = self
@@ -147,6 +236,7 @@ impl TextField {
 
                 let mut focused = false;
                 let mut input_id = GlobalElementId(0);
+                let mut states = WidgetStates::empty();
                 let mut input_bg = theme
                     .color_by_key("md.sys.color.surface")
                     .unwrap_or_else(|| theme.color_required("md.sys.color.surface"));
@@ -170,52 +260,115 @@ impl TextField {
                         let mut children: Vec<AnyElement> = Vec::new();
 
                         let input = cx.named("text_input", |cx| {
-                            let id = cx.root_id();
-                            input_id = id;
-                            focused = cx.is_focused_element(id);
-
                             let populated = cx
                                 .get_model_cloned(&model, Invalidation::Layout)
                                 .map(|v| !v.is_empty())
                                 .unwrap_or(false);
 
-                            let show_placeholder = if label.is_some() {
-                                focused && !populated
-                            } else {
-                                true
-                            };
+                            let mut container = ContainerProps::default();
+                            container.layout.size.width = Length::Fill;
+                            container.layout.size.height = Length::Px(height);
+                            container.layout.overflow = Overflow::Clip;
 
-                            let mut props = TextInputProps::new(model.clone());
-                            props.layout.size.width = Length::Fill;
-                            props.layout.size.height = Length::Px(height);
-                            props.a11y_label = a11y_label.clone();
-                            props.a11y_role = Some(SemanticsRole::TextField);
-                            props.test_id = test_id.clone();
-                            props.placeholder = if show_placeholder {
-                                placeholder.clone()
-                            } else {
-                                None
-                            };
+                            let state_layer = (hovered && !disabled)
+                                .then(|| {
+                                    text_field_tokens::hover_state_layer(
+                                        &theme,
+                                        variant_for_children,
+                                        error,
+                                    )
+                                })
+                                .flatten()
+                                .map(|(color, opacity)| {
+                                    let mut out = color;
+                                    out.a = (out.a * opacity).clamp(0.0, 1.0);
+                                    out
+                                })
+                                .filter(|c| c.a > 0.0);
 
-                            let chrome = text_field_tokens::text_input_style(
-                                &theme,
-                                variant_for_children,
-                                focused,
-                                hovered,
-                                disabled,
-                                error,
-                            );
-                            input_bg = chrome.background;
-                            outline_width_for_notch = match variant_for_children {
-                                TextFieldVariant::Outlined => chrome.border.top,
-                                TextFieldVariant::Filled => Px(0.0),
-                            };
-                            props.chrome = chrome;
-                            props.text_style = theme
-                                .text_style_by_key("md.sys.typescale.body-large")
-                                .unwrap_or(TextStyle::default());
+                            let text_input = cx.text_input_with_id_props(|cx, id| {
+                                input_id = id;
+                                focused = cx.is_focused_element(id);
+                                states = text_field_widget_states(cx, hovered, focused, disabled);
 
-                            cx.text_input(props)
+                                let mut chrome = text_field_tokens::text_input_style(
+                                    &theme,
+                                    variant_for_children,
+                                    focused,
+                                    hovered,
+                                    disabled,
+                                    error,
+                                );
+                                apply_text_field_input_overrides(
+                                    &theme,
+                                    states,
+                                    &style_override,
+                                    &mut chrome,
+                                );
+
+                                input_bg = chrome.background;
+                                outline_width_for_notch = match variant_for_children {
+                                    TextFieldVariant::Outlined => chrome.border.top,
+                                    TextFieldVariant::Filled => Px(0.0),
+                                };
+
+                                container.background =
+                                    (chrome.background.a > 0.0).then_some(chrome.background);
+                                container.corner_radii = chrome.corner_radii;
+                                container.border = chrome.border;
+                                container.border_color = Some(chrome.border_color);
+
+                                chrome.background = Color::TRANSPARENT;
+                                chrome.border = Edges::all(Px(0.0));
+                                chrome.border_color = Color::TRANSPARENT;
+                                chrome.border_color_focused = Color::TRANSPARENT;
+
+                                let show_placeholder = if label.is_some() {
+                                    focused && !populated
+                                } else {
+                                    true
+                                };
+
+                                let mut props = TextInputProps::new(model.clone());
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.height = Length::Fill;
+                                props.a11y_label = a11y_label.clone();
+                                props.a11y_role = Some(SemanticsRole::TextField);
+                                props.test_id = test_id.clone();
+                                props.placeholder = if show_placeholder {
+                                    placeholder.clone()
+                                } else {
+                                    None
+                                };
+                                props.chrome = chrome;
+                                props.text_style = theme
+                                    .text_style_by_key("md.sys.typescale.body-large")
+                                    .unwrap_or(TextStyle::default());
+
+                                props
+                            });
+
+                            let overlay = state_layer.map(|background| {
+                                let mut overlay_layout = fret_ui::element::LayoutStyle::default();
+                                overlay_layout.position = fret_ui::element::PositionStyle::Absolute;
+                                overlay_layout.inset.top = Some(Px(0.0));
+                                overlay_layout.inset.right = Some(Px(0.0));
+                                overlay_layout.inset.bottom = Some(Px(0.0));
+                                overlay_layout.inset.left = Some(Px(0.0));
+
+                                let mut overlay = ContainerProps::default();
+                                overlay.layout = overlay_layout;
+                                overlay.background = Some(background);
+                                overlay.corner_radii = container.corner_radii;
+                                cx.container(overlay, |_cx| Vec::new())
+                            });
+
+                            match overlay {
+                                Some(overlay) => {
+                                    cx.container(container, move |_cx| vec![overlay, text_input])
+                                }
+                                None => cx.container(container, move |_cx| vec![text_input]),
+                            }
                         });
 
                         let populated = cx
@@ -265,6 +418,8 @@ impl TextField {
                                 variant_for_children,
                                 label.clone(),
                                 progress,
+                                states,
+                                &style_override,
                                 hovered,
                                 disabled,
                                 error,
@@ -281,6 +436,8 @@ impl TextField {
                                 &theme,
                                 variant_for_children,
                                 text.clone(),
+                                states,
+                                &style_override,
                                 hovered,
                                 disabled,
                                 error,
@@ -344,6 +501,8 @@ fn text_field_label<H: UiHost>(
     variant: TextFieldVariant,
     text: Arc<str>,
     progress: f32,
+    states: WidgetStates,
+    style_override: &TextFieldStyle,
     hovered: bool,
     disabled: bool,
     error: bool,
@@ -401,8 +560,15 @@ fn text_field_label<H: UiHost>(
                     layout: fret_ui::element::LayoutStyle::default(),
                     text: text.clone(),
                     style,
-                    color: Some(text_field_tokens::label_color(
-                        theme, variant, hovered, disabled, error, focused,
+                    color: Some(resolve_override_slot_with(
+                        style_override.label_color.as_ref(),
+                        states,
+                        |color| color.resolve(theme),
+                        || {
+                            text_field_tokens::label_color(
+                                theme, variant, hovered, disabled, error, focused,
+                            )
+                        },
                     )),
                     wrap: TextWrap::None,
                     overflow: TextOverflow::Clip,
@@ -417,6 +583,8 @@ fn text_field_supporting_text<H: UiHost>(
     theme: &Theme,
     variant: TextFieldVariant,
     text: Arc<str>,
+    states: WidgetStates,
+    style_override: &TextFieldStyle,
     hovered: bool,
     disabled: bool,
     error: bool,
@@ -430,10 +598,83 @@ fn text_field_supporting_text<H: UiHost>(
         layout,
         text,
         style: theme.text_style_by_key("md.sys.typescale.body-small"),
-        color: Some(text_field_tokens::supporting_text_color(
-            theme, variant, hovered, disabled, error, focused,
+        color: Some(resolve_override_slot_with(
+            style_override.supporting_text_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || {
+                text_field_tokens::supporting_text_color(
+                    theme, variant, hovered, disabled, error, focused,
+                )
+            },
         )),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
     })
+}
+
+fn text_field_widget_states<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    hovered: bool,
+    focused: bool,
+    disabled: bool,
+) -> WidgetStates {
+    let mut states = WidgetStates::empty();
+    states.set(WidgetState::Disabled, disabled);
+    states.set(WidgetState::Hovered, hovered && !disabled);
+    states.set(WidgetState::Focused, focused && !disabled);
+    states.set(
+        WidgetState::FocusVisible,
+        focused && !disabled && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
+    );
+    states
+}
+
+fn apply_text_field_input_overrides(
+    theme: &Theme,
+    states: WidgetStates,
+    style_override: &TextFieldStyle,
+    chrome: &mut fret_ui::TextInputStyle,
+) {
+    if let Some(background) = style_override
+        .container_background
+        .as_ref()
+        .and_then(|slot| slot.resolve(states).as_ref())
+    {
+        chrome.background = background.resolve(theme);
+    }
+
+    if let Some(outline) = style_override
+        .outline_color
+        .as_ref()
+        .and_then(|slot| slot.resolve(states).as_ref())
+    {
+        let outline = outline.resolve(theme);
+        chrome.border_color = outline;
+        chrome.border_color_focused = outline;
+    }
+
+    if let Some(text_color) = style_override
+        .text_color
+        .as_ref()
+        .and_then(|slot| slot.resolve(states).as_ref())
+    {
+        chrome.text_color = text_color.resolve(theme);
+    }
+
+    if let Some(placeholder) = style_override
+        .placeholder_color
+        .as_ref()
+        .and_then(|slot| slot.resolve(states).as_ref())
+    {
+        chrome.placeholder_color = placeholder.resolve(theme);
+    }
+
+    if let Some(caret_color) = style_override
+        .caret_color
+        .as_ref()
+        .and_then(|slot| slot.resolve(states).as_ref())
+    {
+        chrome.caret_color = caret_color.resolve(theme);
+    }
 }

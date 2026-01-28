@@ -865,8 +865,9 @@ pub fn tooltip_request(
     id: GlobalElementId,
     open: Model<bool>,
     presence: OverlayPresence,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
+    let children: Vec<AnyElement> = children.into_iter().collect();
     let mut request = OverlayRequest::tooltip(id, open, presence, children);
     request.root_name = Some(tooltip_root_name(id));
     request

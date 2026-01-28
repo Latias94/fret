@@ -34,6 +34,7 @@ surface for user code and higher-level kits.
 For any slot that varies by widget state (background/foreground/border/ring/etc.), use:
 
 - `Option<WidgetStateProperty<Option<T>>>`
+- Prefer using the alias `fret_ui_kit::OverrideSlot<T>` in Rust code for readability.
 
 Meaning:
 
@@ -86,4 +87,3 @@ Evidence anchors:
 - State resolution primitive: `docs/adr/1158-state-driven-style-resolution-v1.md`
 - Shared patterns: `docs/shadcn-style-override-patterns.md`
 - Implementations: `ecosystem/fret-ui-shadcn/src/{button,checkbox,radio_group,select,slider,switch,toggle,toggle_group,tabs,input}.rs`
-

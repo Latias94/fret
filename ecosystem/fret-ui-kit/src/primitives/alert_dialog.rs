@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use fret_runtime::Model;
 use fret_runtime::ModelId;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
-use fret_ui::element::{AnyElement, LayoutStyle};
+use fret_ui::element::{AnyElement, Elements, LayoutStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -119,7 +119,7 @@ impl AlertDialogRoot {
         id: GlobalElementId,
         trigger: GlobalElementId,
         presence: OverlayPresence,
-        children: Vec<AnyElement>,
+        children: impl IntoIterator<Item = AnyElement>,
     ) -> OverlayRequest {
         let open = self.open_model(cx);
         let options = self.dialog_options(cx);
@@ -257,23 +257,23 @@ pub fn alert_dialog_modal_barrier_layout() -> LayoutStyle {
 pub fn alert_dialog_modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     dialog_prim::modal_barrier(cx, open, false, children)
 }
 
 /// Convenience helper to assemble alert dialog overlay children in a Radix-like order: barrier then
 /// content.
-pub fn alert_dialog_modal_layer_children<H: UiHost>(
+pub fn alert_dialog_modal_layer_elements<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         alert_dialog_modal_barrier(cx, open, barrier_children),
         content,
-    ]
+    ])
 }
 
 /// Stamps Radix-like trigger relationships:
@@ -294,7 +294,7 @@ pub fn alert_dialog_modal_request_with_options(
     open: Model<bool>,
     presence: OverlayPresence,
     options: DialogOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     dialog_prim::modal_dialog_request_with_options(id, trigger, open, presence, options, children)
 }

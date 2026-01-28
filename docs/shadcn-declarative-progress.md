@@ -14,6 +14,44 @@ Related trackers:
 
 - Cross-repo priorities: `docs/roadmap.md`, `docs/todo-tracker.md`
 - Web conformance harness: `docs/shadcn-web-goldens.md`, `docs/audits/shadcn-web-layout-conformance.md`
+- new-york-v4 coverage snapshot: `docs/audits/shadcn-new-york-v4-coverage.md`
+- new-york-v4 alignment notes: `docs/audits/shadcn-new-york-v4-alignment.md`
+
+Current golden parity snapshot (new-york-v4):
+
+- Keys referenced by tests: `471/471` (`100%`)
+- Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
+  viewports, DPIs, fonts, and interaction state machines.
+
+## Near-Term Roadmap (shadcn-web v4/new-york-v4)
+
+Strategy: fill **breadth first** (one canonical viewport per page), then add a small set of targeted
+viewport/DPI stress variants for the highest-risk families (menus, listboxes, calendars, typography).
+
+Decision note (scope + sequencing):
+
+- We do **not** wait for 100% component breadth before adding resolution/viewport stress variants.
+  For overlay families (menus/listboxes/popovers/dialogs) and typography, the “constrained viewport” gates
+  are part of the *first* meaningful parity check because they validate max-height clamping, scroll buttons,
+  truncation/wrap behavior, and “menu height” as a styling outcome.
+- We *do* keep the **DPI/font-metrics** dimension small until breadth is higher, because it tends to be
+  more sensitive and is best added once core geometry is stable.
+
+P0 (next):
+
+- Consolidate a **depth checklist** for interaction states (hover/focus/active/open) and constrained
+  viewports so “what is gated” is explicit and auditable.
+- Add scripted interaction variants (hover/focus) for high-risk overlay families where geometry alone
+  does not catch regressions (e.g. hovered item chrome, focus ring, active/pressed states).
+  - Current: `highlight-first` + `focus-first` variants are gated for Menubar/DropdownMenu and Select listboxes.
+  - Next: extend scripted variants to pressed/disabled and more overlay families (NavigationMenu, Popover, Tooltip).
+- Keep expanding constrained viewport variants only when they materially increase signal (max-height clamping,
+  scroll buttons, truncation/wrap).
+
+P2:
+
+- Add a small, targeted DPI/font-metrics matrix once the interaction-state gates are stable (typography +
+  menus/listboxes first).
 
 ## Scope
 
@@ -317,7 +355,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | item | `item` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`item-avatar`) |
 | kbd | `kbd` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`kbd-demo`) |
 | label | `label` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`label-demo`) |
-| menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
+| menubar | `menubar` | Present | In review | Click-to-open; hover switching; Escape close focus is gated against radix timelines; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/{radix_web_primitives_state,web_vs_fret_overlay_placement}.rs` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
 | navigation-menu | `navigation_menu` | Present | In review | Mobile `viewport` mode + anchored placement; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (navigation-menu-demo.* open variants) |
 | pagination | `pagination` | Present | Unreviewed |  |

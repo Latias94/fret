@@ -57,32 +57,51 @@ Each TODO is labeled:
     - the other viewport does not receive forwarded input for the same pointer.
   - Suggested location: `ecosystem/fret-docking/src/dock/tests.rs`
   - Evidence: `ecosystem/fret-docking/src/dock/tests.rs` (`split_viewports_forward_input_to_captured_viewport`)
-- [ ] DMV1-test-011 Add a unit regression for dock drag suppressing competing viewport forwarding (ADR 0072).
+- [x] DMV1-test-011 Add a unit regression for dock drag suppressing competing viewport forwarding (ADR 0072).
   - Assertions:
     - while a dock drag is active, viewport input forwarding is suppressed for other interactions in the window,
       and the suppression reason is diagnosable.
+  - Evidence:
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_suppresses_viewport_hover_and_wheel_forwarding`)
 
 ## P0 — Refactor Guardrails (Multi-pointer Ready)
 
-- [ ] DMV1-ref-020 Make viewport capture pointer-keyed in docking (`PointerId -> ViewportCaptureState`).
+- [x] DMV1-ref-020 Make viewport capture pointer-keyed in docking (`PointerId -> ViewportCaptureState`).
   - Rationale: ADR 0072/0165 explicitly require pointer-keyed ownership; single `Option` is a trap for later.
   - Evidence anchors:
-    - current capture: `ecosystem/fret-docking/src/dock/space.rs`
+    - current capture: `ecosystem/fret-docking/src/dock/space.rs` (`viewport_capture: HashMap<PointerId, ViewportCaptureState>`)
     - viewport capture types: `ecosystem/fret-docking/src/dock/viewport.rs`
+    - conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`viewport_capture_does_not_clear_on_other_pointer_up`)
   - Done when: tests cover two concurrent pointer streams (even if only synthetic) without panics or state leaks.
 
-## P1 — Scripted Regressions (UI Gallery)
+## P1 — Scripted Regressions (Diagnostics Harness)
 
-- [ ] DMV1-reg-030 Add a UI Gallery scenario for “split viewports” and a scripted diag test.
+- [x] DMV1-reg-030 Add a scripted diag test for “split viewports” (docking arbitration demo).
   - Target: ensure the table stakes work via `fretboard diag` (no manual repro).
+  - Evidence:
+    - script: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
+    - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-viewport-left`, `dock-arb-viewport-right`)
   - Notes: keep scripts small; prefer `--check-*` gates over log scraping.
-- [ ] DMV1-reg-031 Add a UI Gallery scenario for “dock drag + modal barrier + viewport capture”.
-  - Target: one script that asserts: modal blocks underlay; dock drag closes menus; viewport forwarding suppressed.
+- [x] DMV1-reg-031 Add a scripted diag test for “dock drag + modal barrier + viewport capture” (docking arbitration demo).
+  - Target: one script that exercises: dock drag hygiene, modal barrier toggling, viewport capture.
+  - Evidence:
+    - script: `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+    - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-tab-drag-anchor-left`, `dock-arb-dialog-*`, `dock-arb-popover-*`)
+
+- [x] DMV1-reg-032 Add a built-in diag suite for docking arbitration scripts.
+  - Target: a single `fretboard diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
+  - Evidence:
+    - scripts: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`, `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+    - runner: `apps/fretboard/src/diag.rs` (`diag suite docking-arbitration`)
 
 ## P2 — Unification Opportunities (Optional)
 
-- [ ] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.
+- [x] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.
   - Candidates:
     - `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`
     - `ecosystem/fret-docking/src/dock/viewport.rs`
+  - Evidence:
+    - `crates/fret-core/src/input.rs` (`ViewportInputEvent::from_mapping_window_point_maybe_clamped`)
+    - `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs` (uses `from_mapping_window_point_maybe_clamped`)
+    - `ecosystem/fret-docking/src/dock/viewport.rs` (uses `from_mapping_window_point_maybe_clamped`)
   - Guardrail: do not move policy into `crates/*`; keep helper in ecosystem unless it becomes a true contract.

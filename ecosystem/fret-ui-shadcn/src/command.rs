@@ -6,10 +6,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    AppWindowId, Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole,
-    TextStyle,
+    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextStyle,
 };
 use fret_icons::ids;
+use fret_runtime::WindowCommandGatingService;
 use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
@@ -53,33 +53,19 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         .global::<PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    let mut ctx = InputContext::fallback(Platform::current(), caps);
-    // Best-effort: the command palette itself is typically presented in a modal dialog.
-    ctx.ui_has_modal = true;
-    // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
-    ctx.focus_is_text_input = false;
-    ctx.dispatch_phase = InputDispatchPhase::Bubble;
-    ctx
-}
-
-fn command_palette_gating_snapshot<H: UiHost>(
-    app: &H,
-    window: AppWindowId,
-) -> WindowCommandGatingSnapshot {
-    let fallback_input_ctx = command_palette_input_context(app);
-    let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
-        app,
-        window,
-        fallback_input_ctx,
-    );
-
-    // Best-effort: treat the command palette as a global discovery surface, even when the window
-    // input context reflects focus in the palette input itself.
-    let mut input_ctx = snapshot.input_ctx().clone();
-    input_ctx.ui_has_modal = true;
-    input_ctx.focus_is_text_input = false;
-    input_ctx.dispatch_phase = InputDispatchPhase::Bubble;
-    snapshot.with_input_ctx(input_ctx)
+    InputContext {
+        platform: Platform::current(),
+        caps,
+        // Best-effort: the command palette itself is typically presented in a modal dialog.
+        ui_has_modal: true,
+        window_arbitration: None,
+        // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
+        focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+        edit_can_undo: true,
+        edit_can_redo: true,
+        dispatch_phase: InputDispatchPhase::Bubble,
+    }
 }
 
 fn command_item_from_meta_with_gating<H: UiHost>(
@@ -131,7 +117,28 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     options: CommandCatalogOptions,
 ) -> Vec<CommandEntry> {
-    let gating = command_palette_gating_snapshot(&*cx.app, cx.window);
+    let fallback_input_ctx = command_palette_input_context(&*cx.app);
+    let snapshot = cx
+        .app
+        .global::<WindowCommandGatingService>()
+        .and_then(|svc| svc.snapshot(cx.window))
+        .cloned()
+        .unwrap_or_else(|| {
+            fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                &*cx.app,
+                cx.window,
+                fallback_input_ctx,
+            )
+        });
+
+    // Best-effort: treat the command palette as a global discovery surface, even when the window
+    // input context reflects focus in the palette input itself.
+    let mut input_ctx = snapshot.input_ctx().clone();
+    input_ctx.ui_has_modal = true;
+    input_ctx.focus_is_text_input = false;
+    input_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+
+    let gating = snapshot.with_input_ctx(input_ctx);
     command_entries_from_host_commands_with_gating_snapshot(cx, options, &gating)
 }
 
@@ -499,10 +506,7 @@ impl std::fmt::Debug for Command {
 }
 
 impl Command {
-    pub fn new<I>(children: I) -> Self
-    where
-        I: IntoIterator<Item = AnyElement>,
-    {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -525,12 +529,12 @@ impl Command {
 
         let base = ChromeRefinement::default()
             .rounded(Radius::Lg)
-            .merge(ChromeRefinement {
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border(&theme))),
-                background: Some(ColorRef::Color(bg(&theme))),
-                ..Default::default()
-            })
+            .merge(
+                ChromeRefinement::default()
+                    .border_width(Px(1.0))
+                    .border_color(ColorRef::Color(border(&theme)))
+                    .bg(ColorRef::Color(bg(&theme))),
+            )
             .merge(self.chrome);
 
         let props = decl_style::container_props(&theme, base, self.layout);
@@ -825,10 +829,7 @@ impl CommandItem {
         self
     }
 
-    pub fn children<I>(mut self, children: I) -> Self
-    where
-        I: IntoIterator<Item = AnyElement>,
-    {
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
         self
     }
@@ -851,7 +852,8 @@ impl std::fmt::Debug for CommandGroup {
 }
 
 impl CommandGroup {
-    pub fn new(items: Vec<CommandItem>) -> Self {
+    pub fn new(items: impl IntoIterator<Item = CommandItem>) -> Self {
+        let items = items.into_iter().collect();
         Self {
             heading: None,
             items,
@@ -1005,7 +1007,8 @@ impl std::fmt::Debug for CommandList {
 }
 
 impl CommandList {
-    pub fn new(items: Vec<CommandItem>) -> Self {
+    pub fn new(items: impl IntoIterator<Item = CommandItem>) -> Self {
+        let items = items.into_iter().collect();
         Self {
             items,
             disabled: false,
@@ -1090,10 +1093,7 @@ impl CommandList {
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_h(MetricRef::Px(row_h))
-                    .min_w_0(),
+                LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
             );
 
             let scroll = self.scroll;
@@ -1452,7 +1452,7 @@ impl std::fmt::Debug for CommandPalette {
 }
 
 impl CommandPalette {
-    pub fn new(model: Model<String>, items: Vec<CommandItem>) -> Self {
+    pub fn new(model: Model<String>, items: impl IntoIterator<Item = CommandItem>) -> Self {
         Self {
             model,
             entries: items.into_iter().map(CommandEntry::Item).collect(),
@@ -1463,9 +1463,9 @@ impl CommandPalette {
             placeholder: None,
             input_role: Some(SemanticsRole::ComboBox),
             input_expanded: None,
-            input_wrapper_h: MetricRef::Px(Px(36.0)),
-            input_h: MetricRef::Px(Px(40.0)),
-            input_icon_size: MetricRef::Px(Px(16.0)),
+            input_wrapper_h: Px(36.0).into(),
+            input_h: Px(40.0).into(),
+            input_icon_size: Px(16.0).into(),
             item_pad_y: MetricRef::space(Space::N1p5),
             group_pad_x: MetricRef::space(Space::N1),
             group_pad_y: MetricRef::space(Space::N1),
@@ -1487,7 +1487,7 @@ impl CommandPalette {
         cx: &mut ElementContext<'_, H>,
         query: Option<Model<String>>,
         default_query: String,
-        items: Vec<CommandItem>,
+        items: impl IntoIterator<Item = CommandItem>,
     ) -> Self {
         let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
         Self::new(query, items)
@@ -1501,9 +1501,9 @@ impl CommandPalette {
     /// - `[&_[cmdk-item]]:py-3`
     /// - `[&_[cmdk-group]]:px-2`
     pub fn command_dialog_defaults(mut self) -> Self {
-        self.input_wrapper_h = MetricRef::Px(Px(48.0));
-        self.input_h = MetricRef::Px(Px(48.0));
-        self.input_icon_size = MetricRef::Px(Px(20.0));
+        self.input_wrapper_h = Px(48.0).into();
+        self.input_h = Px(48.0).into();
+        self.input_icon_size = Px(20.0).into();
         self.item_pad_y = MetricRef::space(Space::N3);
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
@@ -1521,8 +1521,8 @@ impl CommandPalette {
         self
     }
 
-    pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
-        self.entries = entries;
+    pub fn entries(mut self, entries: impl IntoIterator<Item = CommandEntry>) -> Self {
+        self.entries = entries.into_iter().collect();
         self
     }
 
@@ -1615,8 +1615,6 @@ impl CommandPalette {
             let (render_rows, items) =
                 command_palette_render_rows_for_query(self.entries, query.as_str());
 
-            let gating = command_palette_gating_snapshot(&*cx.app, cx.window);
-
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
                 query.as_str().hash(&mut hasher);
@@ -1648,13 +1646,6 @@ impl CommandPalette {
                                     .unwrap_or("")
                                     .hash(&mut hasher);
                                 item.disabled.hash(&mut hasher);
-                                if let Some(command) = item.command.as_ref() {
-                                    let disabled_by_gating =
-                                        cx.app.commands().get(command.clone()).is_some_and(
-                                            |meta| !gating.is_enabled_for_command(command, meta),
-                                        );
-                                    disabled_by_gating.hash(&mut hasher);
-                                }
                                 item.command
                                     .as_ref()
                                     .map(|c| c.as_str())
@@ -1670,16 +1661,8 @@ impl CommandPalette {
             let (entries, disabled_flags): (Vec<PaletteEntry>, Vec<bool>) = items
                 .iter()
                 .map(|i| {
-                    let disabled_by_gating = i.command.as_ref().is_some_and(|command| {
-                        cx.app
-                            .commands()
-                            .get(command.clone())
-                            .is_some_and(|meta| !gating.is_enabled_for_command(command, meta))
-                    });
-                    let disabled = disabled
-                        || i.disabled
-                        || disabled_by_gating
-                        || (i.command.is_none() && i.on_select.is_none());
+                    let disabled =
+                        disabled || i.disabled || (i.command.is_none() && i.on_select.is_none());
                     (
                         PaletteEntry {
                             value: i.value.clone(),
@@ -1753,16 +1736,13 @@ impl CommandPalette {
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
 
             let bg_hover = item_bg_hover(&theme);
-            let bg_selected = alpha_mul(bg_hover, 0.85);
+            let bg_selected = bg_hover;
             let fg = theme.color_required("foreground");
             let fg_disabled = alpha_mul(fg, 0.5);
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_h(MetricRef::Px(row_h))
-                    .min_w_0(),
+                LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
             );
 
             let mut key_counts: HashMap<RowKey, u32> = HashMap::new();
@@ -2377,7 +2357,11 @@ impl std::fmt::Debug for CommandDialog {
 }
 
 impl CommandDialog {
-    pub fn new(open: Model<bool>, query: Model<String>, items: Vec<CommandItem>) -> Self {
+    pub fn new(
+        open: Model<bool>,
+        query: Model<String>,
+        items: impl IntoIterator<Item = CommandItem>,
+    ) -> Self {
         Self {
             open,
             query,
@@ -2399,7 +2383,7 @@ impl CommandDialog {
         default_open: bool,
         query: Option<Model<String>>,
         default_query: String,
-        items: Vec<CommandItem>,
+        items: impl IntoIterator<Item = CommandItem>,
     ) -> Self {
         let open = radix_dialog::DialogRoot::new()
             .open(open)
@@ -2426,8 +2410,8 @@ impl CommandDialog {
         }
     }
 
-    pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
-        self.entries = entries;
+    pub fn entries(mut self, entries: impl IntoIterator<Item = CommandEntry>) -> Self {
+        self.entries = entries.into_iter().collect();
         self
     }
 
@@ -2544,11 +2528,7 @@ impl CommandDialog {
                 .disabled(disabled)
                 .wrap(wrap)
                 .empty_text(empty_text)
-                .refine_scroll_layout(
-                    LayoutRefinement::default()
-                        .h_px(MetricRef::Px(list_h))
-                        .max_h(MetricRef::Px(list_h)),
-                )
+                .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h))
                 .into_element(cx);
 
             DialogContent::new(vec![palette])
@@ -2564,11 +2544,9 @@ struct CommandPaletteState {
     items_fingerprint: u64,
 }
 
-pub fn command<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
+pub fn command<H: UiHost, I, F>(cx: &mut ElementContext<'_, H>, f: F) -> AnyElement
 where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
     Command::new(f(cx)).into_element(cx)
@@ -2586,7 +2564,7 @@ mod tests {
         SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_runtime::{
         CommandScope, WindowCommandActionAvailabilityService, WindowCommandEnabledService,
     };
@@ -2773,83 +2751,6 @@ mod tests {
     }
 
     #[test]
-    fn command_palette_items_respect_widget_action_availability_snapshot() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
-
-        let cmd = CommandId::from("test.widget-action");
-        app.commands_mut().register(
-            cmd.clone(),
-            CommandMeta::new("Widget Action").with_scope(CommandScope::Widget),
-        );
-
-        app.set_global(WindowCommandActionAvailabilityService::default());
-        app.with_global_mut(
-            WindowCommandActionAvailabilityService::default,
-            |svc, _app| {
-                let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
-                snapshot.insert(cmd.clone(), false);
-                svc.set_snapshot(window, snapshot);
-            },
-        );
-
-        let called = app.models_mut().insert(false);
-        let on_select_action: fret_ui::action::OnActivate = Arc::new({
-            let called = called.clone();
-            move |host, cx, _reason| {
-                let _ = host.models_mut().update(&called, |v| *v = true);
-                host.request_redraw(cx.window);
-            }
-        });
-
-        let model = app.models_mut().insert(String::new());
-        let items = vec![
-            CommandItem::new("Widget Action")
-                .on_select(cmd)
-                .on_select_action(on_select_action),
-        ];
-        let mut services = FakeServices::default();
-        let root = render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds(),
-            model,
-            items,
-        );
-
-        let input = ui
-            .first_focusable_descendant_including_declarative(&mut app, window, root)
-            .expect("focusable text input");
-        ui.set_focus(Some(input));
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &fret_core::Event::KeyDown {
-                key: KeyCode::Enter,
-                modifiers: Modifiers::default(),
-                repeat: false,
-            },
-        );
-
-        let effects = app.flush_effects();
-        assert!(
-            !effects
-                .iter()
-                .any(|e| matches!(e, fret_runtime::Effect::Command { .. })),
-            "expected disabled command palette item to not dispatch Effect::Command; effects={effects:?}"
-        );
-        assert!(
-            !called.read_ref(&app, |v| *v).expect("read called"),
-            "expected disabled command palette item to not fire on_select_action"
-        );
-    }
-
-    #[test]
     fn host_command_entries_prefer_window_command_gating_snapshot_when_present() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2878,7 +2779,7 @@ mod tests {
                 let enabled_overrides: HashMap<CommandId, bool> = HashMap::new();
                 let mut availability: HashMap<CommandId, bool> = HashMap::new();
                 availability.insert(cmd.clone(), false);
-                let _token = svc.push_snapshot(
+                svc.set_snapshot(
                     window,
                     WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
                         .with_action_availability(Some(Arc::new(availability))),

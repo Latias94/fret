@@ -117,6 +117,15 @@ struct ViewportPanelIdRegistry {
     id: Option<GlobalElementId>,
 }
 
+#[derive(Default)]
+struct IndicatorTrackIdRegistry {
+    id: Option<GlobalElementId>,
+}
+
+#[derive(Default)]
+struct IndicatorDiamondIdRegistry {
+    id: Option<GlobalElementId>,
+}
 /// Registers the viewport content element id for a given value.
 ///
 /// This mirrors Radix's internal "viewport content map" concept: each content instance is keyed by
@@ -164,6 +173,46 @@ pub fn navigation_menu_viewport_panel_id<H: UiHost>(
     root_id: GlobalElementId,
 ) -> Option<GlobalElementId> {
     cx.with_state_for(root_id, ViewportPanelIdRegistry::default, |st| st.id)
+}
+
+/// Registers the indicator track element id for the root.
+///
+/// Recipes can use this to associate diagnostics / golden assertions with the rendered indicator.
+pub fn navigation_menu_register_indicator_track_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    indicator_track_id: GlobalElementId,
+) {
+    cx.with_state_for(root_id, IndicatorTrackIdRegistry::default, |st| {
+        st.id = Some(indicator_track_id);
+    });
+}
+
+/// Returns the last registered indicator track element id for the root.
+pub fn navigation_menu_indicator_track_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+) -> Option<GlobalElementId> {
+    cx.with_state_for(root_id, IndicatorTrackIdRegistry::default, |st| st.id)
+}
+
+/// Registers the indicator diamond element id for the root.
+pub fn navigation_menu_register_indicator_diamond_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    indicator_diamond_id: GlobalElementId,
+) {
+    cx.with_state_for(root_id, IndicatorDiamondIdRegistry::default, |st| {
+        st.id = Some(indicator_diamond_id);
+    });
+}
+
+/// Returns the last registered indicator diamond element id for the root.
+pub fn navigation_menu_indicator_diamond_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+) -> Option<GlobalElementId> {
+    cx.with_state_for(root_id, IndicatorDiamondIdRegistry::default, |st| st.id)
 }
 
 fn navigation_menu_viewport_content_semantics_id_in_scope<H: UiHost>(
@@ -442,6 +491,10 @@ pub struct NavigationMenuViewportOverlayLayout {
 pub struct NavigationMenuViewportOverlayRequestArgs {
     pub window_margin: Px,
     pub placement: popper::PopperContentPlacement,
+    /// Optional override for the anchor element used to place the viewport panel.
+    ///
+    /// When `None`, placement uses the active trigger bounds.
+    pub placement_anchor_override: Option<GlobalElementId>,
     pub content_size: Size,
     pub indicator_size: Px,
 }
@@ -482,27 +535,52 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         let Some(value) = selected_value else {
             return Vec::new();
         };
-        let anchor_id = navigation_menu_trigger_id(cx, root_id, value);
-        let anchor = anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
-        let Some(anchor) = anchor else {
+        let trigger_anchor_id = navigation_menu_trigger_id(cx, root_id, value);
+        let trigger_anchor = trigger_anchor_id.and_then(|id| {
+            cx.last_bounds_for_element(id)
+                .or_else(|| cx.last_visual_bounds_for_element(id))
+        });
+        let Some(trigger_anchor) = trigger_anchor else {
             return Vec::new();
         };
 
+        let placement_anchor = args
+            .placement_anchor_override
+            .and_then(|id| {
+                cx.last_bounds_for_element(id)
+                    .or_else(|| cx.last_visual_bounds_for_element(id))
+            })
+            .map(|override_anchor| match args.placement.side {
+                Side::Top | Side::Bottom => Rect::new(
+                    Point::new(override_anchor.origin.x, trigger_anchor.origin.y),
+                    Size::new(override_anchor.size.width, trigger_anchor.size.height),
+                ),
+                Side::Left | Side::Right => Rect::new(
+                    Point::new(trigger_anchor.origin.x, override_anchor.origin.y),
+                    Size::new(trigger_anchor.size.width, override_anchor.size.height),
+                ),
+            })
+            .unwrap_or(trigger_anchor);
+
         let popper_layout = popper::popper_content_layout_unclamped(
             overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin),
-            anchor,
+            placement_anchor,
             args.content_size,
             args.placement,
         );
         let placed = popper_layout.rect;
 
         let transform_origin =
-            popper::popper_content_transform_origin(&popper_layout, anchor, None);
-        let indicator_rect =
-            navigation_menu_indicator_rect(anchor, placed, popper_layout.side, args.indicator_size);
+            popper::popper_content_transform_origin(&popper_layout, placement_anchor, None);
+        let indicator_rect = navigation_menu_indicator_rect(
+            trigger_anchor,
+            placed,
+            popper_layout.side,
+            args.indicator_size,
+        );
 
         let layout = NavigationMenuViewportOverlayLayout {
-            anchor,
+            anchor: trigger_anchor,
             placed,
             side: popper_layout.side,
             transform_origin,

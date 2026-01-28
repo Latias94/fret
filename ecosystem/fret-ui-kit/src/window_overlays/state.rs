@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::{FrameId, Model};
-use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::tree::{PointerOcclusion, UiLayerId};
 use fret_ui::{UiHost, UiTree};
 
@@ -33,11 +32,11 @@ pub(super) struct ActivePopover {
     pub(super) root_name: String,
     pub(super) trigger: GlobalElementId,
     pub(super) initial_focus: Option<GlobalElementId>,
-    pub(super) on_open_auto_focus: Option<OnOpenAutoFocus>,
-    pub(super) on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub(super) pending_initial_focus: bool,
     pub(super) consume_outside_pointer_events: bool,
     pub(super) disable_outside_pointer_events: bool,
+    pub(super) close_auto_focus_handled: bool,
+    pub(super) close_auto_focus_prevented: bool,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) last_focus: Option<NodeId>,
@@ -48,12 +47,10 @@ pub(super) struct ActiveModal {
     pub(super) root_name: String,
     pub(super) trigger: Option<GlobalElementId>,
     pub(super) initial_focus: Option<GlobalElementId>,
-    pub(super) on_open_auto_focus: Option<OnOpenAutoFocus>,
-    pub(super) on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
-    pub(super) pending_close_focus: Option<GlobalElementId>,
-    pub(super) skip_default_close_focus: bool,
+    pub(super) close_auto_focus_handled: bool,
+    pub(super) close_auto_focus_prevented: bool,
     pub(super) pending_initial_focus: bool,
 }
 
@@ -147,10 +144,10 @@ impl OverlayLayerState {
         Self {
             present,
             interactive,
-            // Non-modal overlays may remain mounted during close transitions (`present=true`).
-            // Use `interactive` as the authority for observer/timer participation so close
-            // transitions remain inert and click-through.
-            wants_timer_events: interactive,
+            // Non-modal overlays may rely on timers for small interaction policies (e.g. submenu
+            // safe-hover close delays). Keeping this enabled avoids requiring per-overlay opt-in
+            // plumbing while the overlay policy surface is still evolving.
+            wants_timer_events: present,
         }
     }
 
@@ -232,6 +229,7 @@ pub(super) struct NonModalDismissibleLayerPolicy {
     pub dismissable_branches: Vec<NodeId>,
     pub consume_outside_pointer_events: bool,
     pub disable_outside_pointer_events: bool,
+    pub wants_pointer_move_events: bool,
 }
 
 pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(
@@ -264,19 +262,12 @@ pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(
             PointerOcclusion::None
         },
     );
-    ui.set_layer_wants_pointer_move_events(layer, interactive);
+    ui.set_layer_wants_pointer_move_events(layer, interactive && policy.wants_pointer_move_events);
 }
 
-pub(super) fn apply_modal_layer<H: UiHost>(
-    ui: &mut UiTree<H>,
-    layer: UiLayerId,
-    present: bool,
-    open: bool,
-) {
-    // Keep pointer barrier semantics driven by `present` (block click-through during close
-    // transitions), but drive focus containment from `open` so close autofocus can restore focus
-    // to the underlay while the barrier still blocks pointer input (Radix-style).
-    ui.set_layer_blocks_underlay_focus(layer, present && open);
+pub(super) fn apply_modal_layer<H: UiHost>(ui: &mut UiTree<H>, layer: UiLayerId, present: bool) {
+    // For modal overlays, `present` is the authority for barrier semantics. This intentionally
+    // ignores the per-overlay open model so close transitions can keep the underlay inert.
     apply_overlay_layer_state(
         ui,
         layer,

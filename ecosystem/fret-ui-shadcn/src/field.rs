@@ -93,6 +93,7 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::SemanticFlex(props) => Some(props.flex.layout.flex.grow),
         ElementKind::Pressable(props) => Some(props.layout.flex.grow),
         ElementKind::PointerRegion(props) => Some(props.layout.flex.grow),
+        ElementKind::TextInputRegion(props) => Some(props.layout.flex.grow),
         ElementKind::InternalDragRegion(props) => Some(props.layout.flex.grow),
         ElementKind::Opacity(props) => Some(props.layout.flex.grow),
         ElementKind::InteractivityGate(props) => Some(props.layout.flex.grow),
@@ -439,7 +440,7 @@ impl FieldGroup {
     }
 
     pub fn gap_px(mut self, px: Px) -> Self {
-        self.gap = Some(MetricRef::Px(px));
+        self.gap = Some(px.into());
         self
     }
 
@@ -723,10 +724,7 @@ impl FieldSeparator {
 
         let layout = decl_style::layout_style(
             &theme,
-            LayoutRefinement::default()
-                .relative()
-                .w_full()
-                .h_px(MetricRef::Px(h)),
+            LayoutRefinement::default().relative().w_full().h_px(h),
         );
 
         cx.container(

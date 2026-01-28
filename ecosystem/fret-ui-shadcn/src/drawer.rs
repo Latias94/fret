@@ -22,7 +22,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Space};
 
 const DRAWER_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
@@ -216,9 +216,7 @@ impl DrawerContent {
                 .overflow_visible(),
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default()
                 .w_full()
-                .max_h(MetricRef::Px(drawer_vertical_max_height(
-                    cx.bounds.size.height,
-                )))
+                .max_h(drawer_vertical_max_height(cx.bounds.size.height))
                 .overflow_visible(),
         };
         let layout = base_layout.merge(self.layout);
@@ -441,7 +439,8 @@ impl Drawer {
     ///   style.
     /// - When enabled, releasing a drag will settle to the nearest snap point; dragging far enough
     ///   down will still close the drawer.
-    pub fn snap_points(mut self, points: Vec<DrawerSnapPoint>) -> Self {
+    pub fn snap_points(mut self, points: impl IntoIterator<Item = DrawerSnapPoint>) -> Self {
+        let points: Vec<DrawerSnapPoint> = points.into_iter().collect();
         let points = normalize_snap_points(points);
         self.snap_points = if points.is_empty() {
             None

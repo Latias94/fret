@@ -58,6 +58,7 @@ pub enum OverlayKind {
 pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
+    pub style: window_overlays::ToastLayerStyle,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -91,6 +92,8 @@ pub struct OverlayRequest {
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub children: Vec<AnyElement>,
     pub toast_layer: Option<ToastLayerSpec>,
 }
@@ -124,6 +127,8 @@ impl std::fmt::Debug for OverlayRequest {
             )
             .field("presence", &self.presence)
             .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("children_len", &self.children.len())
             .field("toast_layer", &self.toast_layer)
             .finish()
@@ -155,6 +160,8 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -201,6 +208,8 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -229,6 +238,8 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -258,6 +269,8 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children: children.into_iter().collect(),
             toast_layer: None,
         }
@@ -281,10 +294,13 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children: Vec::new(),
             toast_layer: Some(ToastLayerSpec {
                 store,
                 position: window_overlays::ToastPosition::default(),
+                style: window_overlays::ToastLayerStyle::default(),
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -309,6 +325,15 @@ impl OverlayRequest {
             .as_mut()
             .expect("toast_position requires a ToastLayer request");
         spec.position = position;
+        self
+    }
+
+    pub fn toast_style(mut self, style: window_overlays::ToastLayerStyle) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_style requires a ToastLayer request");
+        spec.style = style;
         self
     }
 
@@ -348,8 +373,11 @@ impl OverlayRequest {
         self
     }
 
-    pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
-        self.dismissable_branches = branches;
+    pub fn dismissable_branches(
+        mut self,
+        branches: impl IntoIterator<Item = GlobalElementId>,
+    ) -> Self {
+        self.dismissable_branches = branches.into_iter().collect();
         self
     }
 
@@ -568,6 +596,7 @@ impl OverlayController {
 
                 let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
                     .position(spec.position)
+                    .style(spec.style)
                     .root_name(root_name);
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
@@ -586,7 +615,7 @@ impl OverlayController {
         }
     }
 
-    pub fn render<H: UiHost>(
+    pub fn render<H: UiHost + 'static>(
         ui: &mut UiTree<H>,
         app: &mut H,
         services: &mut dyn fret_core::UiServices,
@@ -775,6 +804,22 @@ impl OverlayController {
             open_ticks,
             close_ticks,
             ease,
+        )
+    }
+
+    pub fn transition_with_durations_and_cubic_bezier<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+        bezier: fret_ui::theme::CubicBezier,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_and_cubic_bezier(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+            bezier,
         )
     }
 

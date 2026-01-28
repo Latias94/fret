@@ -289,8 +289,18 @@ pub(crate) fn set_window_menu_bar(
         .global::<fret_runtime::PlatformCapabilities>()
         .cloned()
         .unwrap_or_default();
-    let fallback_input_ctx = InputContext::fallback(Platform::Windows, caps);
-    let gating = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+    let fallback_input_ctx = InputContext {
+        platform: Platform::Windows,
+        caps,
+        ui_has_modal: false,
+        window_arbitration: None,
+        focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+        edit_can_undo: true,
+        edit_can_redo: true,
+        dispatch_phase: Default::default(),
+    };
+    let gating = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
         app,
         app_window,
         fallback_input_ctx,
@@ -350,18 +360,23 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
         };
 
         let mut by_hwnd: HashMap<isize, WindowCommandGatingSnapshot> = HashMap::new();
-        let svc = app.global::<fret_runtime::WindowCommandGatingService>();
         for (hwnd, window) in windows {
-            let fallback_input_ctx = InputContext::fallback(Platform::Windows, caps.clone());
-            let snapshot = svc
-                .and_then(|svc| svc.snapshot(window).cloned())
-                .unwrap_or_else(|| {
-                    fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                        app,
-                        window,
-                        fallback_input_ctx,
-                    )
-                });
+            let fallback_input_ctx = InputContext {
+                platform: Platform::Windows,
+                caps: caps.clone(),
+                ui_has_modal: false,
+                window_arbitration: None,
+                focus_is_text_input: false,
+                text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+                edit_can_undo: true,
+                edit_can_redo: true,
+                dispatch_phase: Default::default(),
+            };
+            let snapshot = fret_runtime::snapshot_for_window_with_input_ctx_fallback(
+                app,
+                window,
+                fallback_input_ctx,
+            );
             by_hwnd.insert(hwnd, snapshot);
         }
 

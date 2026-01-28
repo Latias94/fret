@@ -10,7 +10,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 
@@ -34,12 +34,10 @@ fn table_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
-fn row_min_h(theme: &Theme) -> MetricRef {
-    MetricRef::Px(
-        theme
-            .metric_by_key("component.table.row_min_h")
-            .unwrap_or(fret_core::Px(40.0)),
-    )
+fn row_min_h(theme: &Theme) -> fret_core::Px {
+    theme
+        .metric_by_key("component.table.row_min_h")
+        .unwrap_or(fret_core::Px(40.0))
 }
 
 fn border_color(theme: &Theme) -> fret_core::Color {

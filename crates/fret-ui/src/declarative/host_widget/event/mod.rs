@@ -12,6 +12,7 @@ mod scroll;
 mod scrollbar;
 mod selectable_text;
 mod text;
+mod text_input_region;
 mod wheel_region;
 
 pub(super) fn invalidate_scroll_handle_bindings<H: UiHost>(
@@ -56,7 +57,9 @@ impl ElementHostWidget {
 
         let is_text_input = matches!(
             instance,
-            ElementInstance::TextInput(_) | ElementInstance::TextArea(_)
+            ElementInstance::TextInput(_)
+                | ElementInstance::TextArea(_)
+                | ElementInstance::TextInputRegion(_)
         );
 
         if hooks::handle_timer_event(self, cx, window, event) {
@@ -84,6 +87,9 @@ impl ElementHostWidget {
             }
             ElementInstance::TextArea(props) => {
                 text::handle_text_area(self, cx, props, event);
+            }
+            ElementInstance::TextInputRegion(props) => {
+                text_input_region::handle_text_input_region(self, cx, window, props, event);
             }
             ElementInstance::ResizablePanelGroup(props) => {
                 text::handle_resizable_panel_group(self, cx, props, event);

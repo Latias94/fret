@@ -11,6 +11,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use fret_ui_material3::tokens::v30;
 
@@ -163,7 +164,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if mw.is_empty() {
                         continue;
                     }
-                    let missing = mw.difference(&injected).cloned().collect::<BTreeSet<_>>();
+                    let missing = mw
+                        .difference(&injected)
+                        .filter(|k| !should_ignore_material_web_missing_key(k))
+                        .cloned()
+                        .collect::<BTreeSet<_>>();
                     if !missing.is_empty() {
                         missing_by_prefix.insert(prefix, missing);
                     }
@@ -192,7 +197,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         eprintln!(
             "note: material-web checkout not found. Set --material-web-dir <path> or MATERIAL_WEB_DIR.\n\
-                  Expected default: <workspace>/repo-ref/material-web"
+                  Expected default: <repo-root>/repo-ref/material-web (or <workspace>/repo-ref/material-web when present)"
         );
     }
 
@@ -494,6 +499,11 @@ fn extract_used_keys_from_rs_tree(dir: &Path) -> Result<KeyScan, Box<dyn std::er
             let entry = entry?;
             let p = entry.path();
             if p.is_dir() {
+                // Developer tools under `src/bin` are allowed to reference "md.*" keys for
+                // reporting/diagnostics and should not influence the runtime token coverage scan.
+                if p.file_name() == Some(OsStr::new("bin")) {
+                    continue;
+                }
                 stack.push(p);
                 continue;
             }
@@ -595,7 +605,39 @@ fn resolve_material_web_dir(
         }
     }
     let default = workspace_root.join("repo-ref").join("material-web");
-    default.is_dir().then_some(default)
+    if default.is_dir() {
+        return Some(default);
+    }
+
+    repo_root_from_git_common_dir(workspace_root)
+        .map(|repo_root| repo_root.join("repo-ref").join("material-web"))
+        .filter(|p| p.is_dir())
+}
+
+fn repo_root_from_git_common_dir(start_dir: &Path) -> Option<PathBuf> {
+    let output = Command::new("git")
+        .args(["rev-parse", "--git-common-dir"])
+        .current_dir(start_dir)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let raw = String::from_utf8_lossy(&output.stdout);
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let common_dir = PathBuf::from(trimmed);
+    let common_dir = if common_dir.is_absolute() {
+        common_dir
+    } else {
+        start_dir.join(common_dir)
+    };
+    let common_dir = common_dir.canonicalize().unwrap_or(common_dir);
+    common_dir.parent().map(|p| p.to_path_buf())
 }
 
 fn default_expected_prefixes() -> &'static [&'static str] {
@@ -612,7 +654,6 @@ fn default_expected_prefixes() -> &'static [&'static str] {
         "md.sys.state.",
         "md.sys.motion.",
         "md.sys.shape.",
-        "md.sys.typescale.",
         "md.sys.color.",
     ]
 }
@@ -665,6 +706,31 @@ fn group_prefix(key: &str) -> &str {
         };
     }
     "other"
+}
+
+fn should_ignore_material_web_missing_key(key: &str) -> bool {
+    // Material Web exposes many typography tokens as individual scalars (size, line-height, ...).
+    // Fret represents typography via `ThemeConfig.text_styles` (TextStyle), so these are expected
+    // to be "missing" when comparing raw sassvar keys.
+    let last = key.rsplit('.').next().unwrap_or(key);
+    if matches!(last, "font" | "line-height" | "size" | "tracking" | "type") {
+        return true;
+    }
+
+    // Material Web also includes group keys for nested token objects (e.g. the spring specs).
+    // We only inject the leaf scalars (`...damping`, `...stiffness`).
+    if let Some(rest) = key.strip_prefix("md.sys.motion.spring.") {
+        if !rest.ends_with(".damping") && !rest.ends_with(".stiffness") {
+            return true;
+        }
+    }
+
+    // Material Web path tokens are structured objects; Fret doesn't import them yet.
+    if key == "md.sys.motion.path" {
+        return true;
+    }
+
+    false
 }
 
 fn is_prefix_only_key(key: &str) -> bool {

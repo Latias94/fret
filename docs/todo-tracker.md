@@ -78,6 +78,19 @@ It complements (but does not replace) ADRs:
 
 ## P1 - Text System v2 (Parley / Attributed Spans)
 
+## P1 - shadcn/ui + Radix conformance (Goldens)
+
+- **Keep extending golden coverage across primitives (1:1 with upstream boundaries)**
+  - Goal: for each upstream shadcn/Radix primitive, gate (a) layout/geometry, (b) chrome (colors/border/radius/shadows), (c) behavior (focus + dismissal) across the viewports it is sensitive to.
+  - Upstream reference: `repo-ref/ui/apps/v4` (shadcn/ui v4), `repo-ref/primitives` (Radix primitives).
+  - Code: `ecosystem/fret-ui-shadcn/src/*`, `ecosystem/fret-ui-kit/src/primitives/*`.
+  - Tests:
+    - Geometry/layout: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+    - Overlay placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+    - Overlay chrome (including “menu height” via portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    - Radix behavior timelines: `ecosystem/fret-ui-shadcn/tests/radix_web_overlay_geometry.rs`
+  - Next: prioritize remaining overlay-heavy primitives (Menu / Popover / Select / NavigationMenu variants) before adding a broad viewport matrix for every component.
+
 - **Unify rich text under attributed spans (shaping vs paint split)**
   - Goal: make Markdown/code highlighting structurally compatible with wrapping and geometry queries without “many Text nodes”.
   - ADRs: `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`
@@ -218,6 +231,19 @@ It complements (but does not replace) ADRs:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`
       - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-keyboard-open-close.light.json`
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-keyboard-open-close.light.json`
+
+## P0 - Docking / Multi-Window Tear-off
+
+- **ImGui-style multi-window tear-off parity (macOS-first, but cross-platform)**
+  - Goal: editor-grade “tear off → hover another window → re-dock → close empty window” experience.
+  - Workstream:
+    - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity.md`
+    - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
+    - macOS detail: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
+  - Contract gates:
+    - `docs/adr/0013-docking-ops-and-persistence.md`
+    - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+    - `docs/adr/0072-docking-interaction-arbitration-matrix.md`
     - Added Fret gates covering submenu ArrowRight open + ArrowLeft close + focus restore:
       `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added/updated Radix Vega timeline state gates for:

@@ -4,6 +4,7 @@
 //! be shared across UI kits and component ecosystems.
 
 pub mod calendar;
+pub mod calendar_solar_hijri;
 pub mod checked_state;
 pub mod cmdk_score;
 pub mod cmdk_selection;

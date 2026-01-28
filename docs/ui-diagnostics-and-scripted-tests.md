@@ -247,14 +247,14 @@ At a high level:
   - `debug.layout_engine_solves`: per-frame layout engine solves (roots + solve/measure time + top measure hotspots)
   - `debug.invalidation_walks`: top invalidation walks (roots, sources, and optional `detail` taxonomy)
   - `debug.cache_roots`: view-cache root stats (reuse + paint replay ops, optional `reuse_reason`, and `contained_relayout_in_frame` to flag which roots were re-laid out in the post-pass)
+  - `debug.prepaint_actions`: prepaint-driven invalidations and scheduling requests (useful for ADR 0190 “ephemeral prepaint items” workflows)
+  - `debug.virtual_list_windows`: VirtualList window telemetry (used to triage scroll-induced work)
+    - `debug.virtual_list_windows[*].source`: whether the record was emitted from `layout` or `prepaint`
   - `debug.overlay_synthesis`: overlay cached-synthesis events (which overlays were synthesized from cached declarations, and why synthesis was suppressed)
   - `debug.viewport_input`: forwarded viewport input events (`Effect::ViewportInput`, ADR 0147)
   - `debug.docking_interaction`: docking interaction ownership snapshot (dock drag + viewport capture)
   - `debug.layers_in_paint_order`: overlay roots / barrier behavior / hit-test intent
   - `debug.hit_test`: last pointer position + hit summary
-    - `debug.hit_test.scope_roots[]` includes stable `label` strings plus occlusion/hit-test metadata (prefer this over raw node ids).
-  - `debug.overlay_stack`: best-effort overlay stack snapshot (popover/modal/tooltip/hover), with optional `*_path` strings for overlay elements
-  - `debug.overlay_arbitration_summary`: cross-linked summary between `input_arbitration` and `overlay_stack` (includes mismatch detection for easier triage)
   - `debug.element_runtime`: `ElementRuntime` window-level state (focus/selection/observed models/globals; includes optional `*_path` strings for key elements)
   - `debug.semantics`: the exported semantics snapshot (ADR 0033) when enabled
 
@@ -517,6 +517,15 @@ These scripts assert that stable semantics anchors exist *and* that their bounds
 window (`bounds_within_window`), which is a fast way to catch “layout is broken / clipped to zero”
 regressions when a table suddenly “disappears”.
 
+The diagnostics harness also includes docking arbitration scripts (multi-viewport + modal):
+
+- `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
+- `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+
+You can run them as a built-in suite:
+
+- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+
 ### View-cache regression gating
 
 Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,
@@ -546,6 +555,8 @@ Some docking / embedded-viewport regressions only matter if viewport input forwa
 you can gate on forwarded viewport input events exported in `bundle.json`:
 
 - `--check-viewport-input-min N` counts `debug.viewport_input[]` events in snapshots after `--warmup-frames`.
+- `--check-dock-drag-min N` counts snapshots where `debug.docking_interaction.dock_drag` is present.
+- `--check-viewport-capture-min N` counts snapshots where `debug.docking_interaction.viewport_capture` is present.
 
 ### Matrix runner (uncached vs cached)
 

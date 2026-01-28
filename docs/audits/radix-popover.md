@@ -43,7 +43,7 @@ Fret does not use React context. Instead, popover behavior is composed via:
 - Pass: Dismissal (escape/outside/focus-outside) is handled by the shared window overlay policy.
 - Pass: Dismissals can be intercepted (Radix `DismissableLayer` "preventDefault" outcome) via
   `popover_request_with_dismiss_handler(...)` and `popover_request_with_anchor_and_dismiss_handler(...)`.
-  For the modal variant, `popover_modal_layer_children_with_dismiss_handler(...)` routes modal
+  For the modal variant, `popover_modal_layer_elements_with_dismiss_handler(...)` routes modal
   barrier presses through the same `OnDismissRequest` contract.
 - Pass: Custom anchor is supported by treating the anchor element as a dismissable branch and
   using its bounds for placement.
@@ -54,8 +54,8 @@ Fret does not use React context. Instead, popover behavior is composed via:
 
 - Pass: A Radix-named `PopoverContent` wiring helper exists for non-shadcn users:
   `popover_request_with_anchor(...)` (or `popover_request_with_anchor_and_dismiss_handler(...)`) for
-  `DismissableLayerBranch` alignment and `popover_modal_layer_children(...)` (or
-  `popover_modal_layer_children_with_dismiss_handler(...)`) for the modal barrier outcome.
+  `DismissableLayerBranch` alignment and `popover_modal_layer_elements(...)` (or
+  `popover_modal_layer_elements_with_dismiss_handler(...)`) for the modal barrier outcome.
 
 ## Conformance gates
 

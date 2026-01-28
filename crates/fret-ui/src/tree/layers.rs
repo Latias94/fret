@@ -238,6 +238,21 @@ impl<H: UiHost> UiTree<H> {
         l.pointer_occlusion = occlusion;
     }
 
+    pub fn set_layer_blocks_underlay_focus(&mut self, layer: UiLayerId, blocks: bool) {
+        let prev = self.layers.get(layer).map(|l| l.blocks_underlay_focus);
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.blocks_underlay_focus = blocks;
+
+        if prev != Some(blocks) {
+            let (active_roots, barrier_root) = self.active_focus_layers();
+            if barrier_root.is_some() {
+                self.enforce_focus_barrier_scope(&active_roots);
+            }
+        }
+    }
+
     pub fn is_layer_visible(&self, layer: UiLayerId) -> bool {
         self.layers.get(layer).is_some_and(|l| l.visible)
     }

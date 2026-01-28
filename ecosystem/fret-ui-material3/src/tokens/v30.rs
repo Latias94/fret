@@ -107,6 +107,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     material_web_v30::inject_sys_motion(cfg);
     material_web_v30::inject_sys_shape(cfg);
     material_web_v30::inject_sys_typescale(cfg, typography);
+    inject_comp_button_text_styles(cfg);
     inject_comp_button_scalars(cfg);
     inject_comp_icon_button_scalars(cfg);
     inject_comp_checkbox_scalars(cfg);
@@ -114,6 +115,8 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_radio_button_scalars(cfg);
     inject_comp_outlined_text_field_scalars(cfg);
     inject_comp_filled_text_field_scalars(cfg);
+    inject_comp_outlined_select_scalars(cfg);
+    inject_comp_filled_select_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
     inject_comp_navigation_bar_scalars(cfg);
     inject_comp_navigation_drawer_scalars(cfg);
@@ -130,6 +133,23 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     // represent the intended M3 defaults. Prefer Neutral-Variant10 at 50% opacity for scrims.
     cfg.numbers
         .insert("md.comp.navigation-drawer.scrim.opacity".to_string(), 0.5);
+}
+
+fn inject_comp_button_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() else {
+        return;
+    };
+
+    for key in [
+        "md.comp.button.label-text",
+        "md.comp.button.xsmall.label-text",
+        "md.comp.button.small.label-text",
+        "md.comp.button.medium.label-text",
+        "md.comp.button.large.label-text",
+        "md.comp.button.xlarge.label-text",
+    ] {
+        cfg.text_styles.insert(key.to_string(), label_large.clone());
+    }
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -164,6 +184,11 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
         "md.ref.palette.neutral-variant10",
         theme.palettes.neutral_variant.tone(10),
     );
+    insert_color(
+        cfg,
+        "md.ref.palette.neutral-variant20",
+        theme.palettes.neutral_variant.tone(20),
+    );
 
     insert_color(cfg, "md.sys.color.primary", scheme.primary);
     insert_color(cfg, "md.sys.color.on-primary", scheme.on_primary);
@@ -178,6 +203,26 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
         scheme.on_primary_container,
     );
     insert_color(cfg, "md.sys.color.inverse-primary", scheme.inverse_primary);
+    insert_color(
+        cfg,
+        "md.sys.color.primary-fixed",
+        theme.palettes.primary.tone(90),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.primary-fixed-dim",
+        theme.palettes.primary.tone(80),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.on-primary-fixed",
+        theme.palettes.primary.tone(10),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.on-primary-fixed-variant",
+        theme.palettes.primary.tone(30),
+    );
 
     insert_color(cfg, "md.sys.color.secondary", scheme.secondary);
     insert_color(cfg, "md.sys.color.on-secondary", scheme.on_secondary);
@@ -191,6 +236,26 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
         "md.sys.color.on-secondary-container",
         scheme.on_secondary_container,
     );
+    insert_color(
+        cfg,
+        "md.sys.color.secondary-fixed",
+        theme.palettes.secondary.tone(90),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.secondary-fixed-dim",
+        theme.palettes.secondary.tone(80),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.on-secondary-fixed",
+        theme.palettes.secondary.tone(10),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.on-secondary-fixed-variant",
+        theme.palettes.secondary.tone(30),
+    );
 
     insert_color(cfg, "md.sys.color.tertiary", scheme.tertiary);
     insert_color(cfg, "md.sys.color.on-tertiary", scheme.on_tertiary);
@@ -203,6 +268,26 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
         cfg,
         "md.sys.color.on-tertiary-container",
         scheme.on_tertiary_container,
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.tertiary-fixed",
+        theme.palettes.tertiary.tone(90),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.tertiary-fixed-dim",
+        theme.palettes.tertiary.tone(80),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.on-tertiary-fixed",
+        theme.palettes.tertiary.tone(10),
+    );
+    insert_color(
+        cfg,
+        "md.sys.color.on-tertiary-fixed-variant",
+        theme.palettes.tertiary.tone(30),
     );
 
     insert_color(cfg, "md.sys.color.error", scheme.error);
@@ -218,6 +303,7 @@ pub fn inject_sys_colors(cfg: &mut ThemeConfig, options: ColorSchemeOptions) {
     insert_color(cfg, "md.sys.color.surface-dim", scheme.surface_dim);
     insert_color(cfg, "md.sys.color.surface-bright", scheme.surface_bright);
     insert_color(cfg, "md.sys.color.surface-tint", scheme.surface_tint);
+    insert_color(cfg, "md.sys.color.surface-tint-color", scheme.surface_tint);
     insert_color(
         cfg,
         "md.sys.color.surface-container-lowest",
@@ -290,6 +376,8 @@ pub fn theme_config_with_colors(
     inject_comp_radio_button_colors_from_sys(&mut cfg);
     inject_comp_outlined_text_field_colors_from_sys(&mut cfg);
     inject_comp_filled_text_field_colors_from_sys(&mut cfg);
+    inject_comp_outlined_select_colors_from_sys(&mut cfg);
+    inject_comp_filled_select_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
     inject_comp_navigation_bar_colors_from_sys(&mut cfg);
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
@@ -494,6 +582,7 @@ fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.button.text.disabled.label-text.color",
         "md.sys.color.on-surface",
     );
+    material_web_v30::inject_comp_button_colors_from_sys(cfg);
 }
 
 fn inject_comp_icon_button_scalars(cfg: &mut ThemeConfig) {
@@ -879,6 +968,7 @@ fn inject_comp_icon_button_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.icon-button.outlined.selected.disabled.container.color",
         "md.sys.color.on-surface",
     );
+    material_web_v30::inject_comp_icon_button_colors_from_sys(cfg);
 }
 
 fn copy_color(cfg: &mut ThemeConfig, to_key: &str, from_key: &str) {
@@ -983,6 +1073,7 @@ fn inject_comp_checkbox_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.checkbox.focus.indicator.color",
         "md.sys.color.secondary",
     );
+    material_web_v30::inject_comp_checkbox_colors_from_sys(cfg);
 }
 
 fn inject_comp_switch_scalars(cfg: &mut ThemeConfig) {
@@ -1161,6 +1252,7 @@ fn inject_comp_switch_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.switch.focus.indicator.color",
         "md.sys.color.secondary",
     );
+    material_web_v30::inject_comp_switch_colors_from_sys(cfg);
 }
 
 fn inject_comp_radio_button_scalars(cfg: &mut ThemeConfig) {
@@ -1196,6 +1288,7 @@ fn inject_comp_radio_button_scalars(cfg: &mut ThemeConfig) {
             0.1,
         );
     }
+    material_web_v30::inject_comp_radio_button_scalars(cfg);
 }
 
 fn inject_comp_radio_button_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -1283,6 +1376,7 @@ fn inject_comp_radio_button_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.radio-button.unselected.pressed.state-layer.color",
         "md.sys.color.primary",
     );
+    material_web_v30::inject_comp_radio_button_colors_from_sys(cfg);
 }
 
 fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
@@ -1291,6 +1385,14 @@ fn inject_comp_outlined_text_field_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_text_field_scalars(cfg);
+}
+
+fn inject_comp_outlined_select_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_select_scalars(cfg);
+}
+
+fn inject_comp_filled_select_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_select_scalars(cfg);
 }
 
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
@@ -1411,6 +1513,7 @@ fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
         "md.comp.list.list-item.selected.pressed.container.expressive.shape".to_string(),
         Corners::all(Px(16.0)),
     );
+    material_web_v30::inject_comp_list_scalars(cfg);
 }
 
 fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
@@ -1576,6 +1679,7 @@ fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.outlined-text-field.error.focus.supporting-text.color",
         "md.sys.color.error",
     );
+    material_web_v30::inject_comp_outlined_text_field_colors_from_sys(cfg);
 }
 
 fn inject_comp_filled_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -1765,6 +1869,15 @@ fn inject_comp_filled_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.filled-text-field.error.focus.supporting-text.color",
         "md.sys.color.error",
     );
+    material_web_v30::inject_comp_filled_text_field_colors_from_sys(cfg);
+}
+
+fn inject_comp_outlined_select_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_select_colors_from_sys(cfg);
+}
+
+fn inject_comp_filled_select_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_select_colors_from_sys(cfg);
 }
 
 fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -1859,6 +1972,7 @@ fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.primary-navigation-tab.with-label-text.inactive.pressed.label-text.color",
         "md.sys.color.on-surface",
     );
+    material_web_v30::inject_comp_primary_navigation_tab_colors_from_sys(cfg);
 }
 
 fn inject_comp_navigation_bar_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2000,6 +2114,7 @@ fn inject_comp_navigation_bar_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.navigation-bar.inactive.pressed.state-layer.color",
         "md.sys.color.on-surface",
     );
+    material_web_v30::inject_comp_navigation_bar_colors_from_sys(cfg);
 }
 
 fn inject_comp_navigation_drawer_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2163,6 +2278,7 @@ fn inject_comp_navigation_drawer_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.color.on-surface",
     );
 
+    material_web_v30::inject_comp_navigation_drawer_colors_from_sys(cfg);
     copy_color(
         cfg,
         "md.comp.navigation-drawer.scrim.color",
@@ -2295,6 +2411,7 @@ fn inject_comp_navigation_rail_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.navigation-rail.inactive.pressed.state-layer.color",
         "md.sys.color.on-surface",
     );
+    material_web_v30::inject_comp_navigation_rail_colors_from_sys(cfg);
 }
 
 fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2359,6 +2476,7 @@ fn inject_comp_menu_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.menu.list-item.pressed.state-layer.color",
         "md.sys.color.on-surface",
     );
+    material_web_v30::inject_comp_menu_colors_from_sys(cfg);
 }
 
 fn inject_comp_list_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2562,6 +2680,7 @@ fn inject_comp_list_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.list.list-item.selected.disabled.container.opacity",
         "md.sys.state.disabled.state-layer-opacity",
     );
+    material_web_v30::inject_comp_list_colors_from_sys(cfg);
 }
 
 fn inject_comp_plain_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2577,6 +2696,7 @@ fn inject_comp_plain_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.plain-tooltip.supporting-text.color",
         "md.sys.color.inverse-on-surface",
     );
+    material_web_v30::inject_comp_plain_tooltip_colors_from_sys(cfg);
 }
 
 fn inject_comp_rich_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2644,6 +2764,7 @@ fn inject_comp_rich_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.rich-tooltip.supporting-text.color",
         "md.sys.color.on-surface-variant",
     );
+    material_web_v30::inject_comp_rich_tooltip_colors_from_sys(cfg);
 }
 
 fn inject_comp_snackbar_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2737,6 +2858,7 @@ fn inject_comp_snackbar_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.snackbar.icon.pressed.state-layer.color",
         "md.sys.color.inverse-on-surface",
     );
+    material_web_v30::inject_comp_snackbar_colors_from_sys(cfg);
 }
 
 fn inject_comp_dialog_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2824,6 +2946,7 @@ fn inject_comp_dialog_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.dialog.subhead.color",
         "md.sys.color.on-surface",
     );
+    material_web_v30::inject_comp_dialog_colors_from_sys(cfg);
 }
 
 fn inject_comp_full_screen_dialog_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2937,6 +3060,7 @@ fn inject_comp_full_screen_dialog_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.comp.full-screen-dialog.with-divider.divider.color",
         "md.sys.color.surface-variant",
     );
+    material_web_v30::inject_comp_full_screen_dialog_colors_from_sys(cfg);
 }
 
 #[cfg(test)]

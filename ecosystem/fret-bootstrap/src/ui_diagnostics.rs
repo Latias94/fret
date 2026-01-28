@@ -2612,7 +2612,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -2628,6 +2628,20 @@ pub struct UiInputArbitrationSnapshotV1 {
     pub pointer_capture_layer_id: Option<u64>,
     #[serde(default)]
     pub pointer_capture_multiple_layers: bool,
+}
+
+impl Default for UiInputArbitrationSnapshotV1 {
+    fn default() -> Self {
+        Self {
+            modal_barrier_root: None,
+            focus_barrier_root: None,
+            pointer_occlusion: "none".to_string(),
+            pointer_occlusion_layer_id: None,
+            pointer_capture_active: false,
+            pointer_capture_layer_id: None,
+            pointer_capture_multiple_layers: false,
+        }
+    }
 }
 
 impl UiInputArbitrationSnapshotV1 {
@@ -2658,7 +2672,11 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
     #[serde(default)]
+    pub retained_virtual_list_reconciles: Vec<UiRetainedVirtualListReconcileV1>,
+    #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
+    #[serde(default)]
+    pub prepaint_actions: Vec<UiPrepaintActionV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
@@ -2745,10 +2763,20 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiVirtualListWindowV1::from_window)
                 .collect(),
+            retained_virtual_list_reconciles: ui
+                .debug_retained_virtual_list_reconciles()
+                .iter()
+                .map(UiRetainedVirtualListReconcileV1::from_record)
+                .collect(),
             scroll_handle_changes: ui
                 .debug_scroll_handle_changes()
                 .iter()
                 .map(UiScrollHandleChangeV1::from_change)
+                .collect(),
+            prepaint_actions: ui
+                .debug_prepaint_actions()
+                .iter()
+                .map(UiPrepaintActionV1::from_action)
                 .collect(),
             model_change_hotspots: ui
                 .debug_model_change_hotspots()
@@ -3086,6 +3114,8 @@ impl UiVirtualRangeV1 {
 pub struct UiVirtualListWindowV1 {
     pub node: u64,
     pub element: u64,
+    #[serde(default)]
+    pub source: UiVirtualListWindowSourceV1,
     pub axis: UiAxisV1,
     #[serde(default)]
     pub is_probe_layout: bool,
@@ -3117,6 +3147,7 @@ impl UiVirtualListWindowV1 {
         Self {
             node: key_to_u64(window.node),
             element: window.element.0,
+            source: UiVirtualListWindowSourceV1::from_source(window.source),
             axis: UiAxisV1::from_axis(window.axis),
             is_probe_layout: window.is_probe_layout,
             items_len: window.items_len as u64,
@@ -3134,6 +3165,54 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiRetainedVirtualListReconcileV1 {
+    pub node: u64,
+    pub element: u64,
+    pub prev_items: u64,
+    pub next_items: u64,
+    pub preserved_items: u64,
+    pub attached_items: u64,
+    pub detached_items: u64,
+}
+
+impl UiRetainedVirtualListReconcileV1 {
+    fn from_record(record: &fret_ui::tree::UiDebugRetainedVirtualListReconcile) -> Self {
+        Self {
+            node: key_to_u64(record.node),
+            element: record.element.0,
+            prev_items: record.prev_items as u64,
+            next_items: record.next_items as u64,
+            preserved_items: record.preserved_items as u64,
+            attached_items: record.attached_items as u64,
+            detached_items: record.detached_items as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowSourceV1 {
+    Prepaint,
+    #[serde(other)]
+    Layout,
+}
+
+impl Default for UiVirtualListWindowSourceV1 {
+    fn default() -> Self {
+        Self::Layout
+    }
+}
+
+impl UiVirtualListWindowSourceV1 {
+    fn from_source(source: fret_ui::tree::UiDebugVirtualListWindowSource) -> Self {
+        match source {
+            fret_ui::tree::UiDebugVirtualListWindowSource::Layout => Self::Layout,
+            fret_ui::tree::UiDebugVirtualListWindowSource::Prepaint => Self::Prepaint,
         }
     }
 }
@@ -3229,6 +3308,57 @@ impl UiScrollHandleChangeV1 {
                 .map(key_to_u64)
                 .collect(),
             upgraded_to_layout_bindings: change.upgraded_to_layout_bindings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPrepaintActionKindV1 {
+    Invalidate,
+    RequestRedraw,
+    RequestAnimationFrame,
+}
+
+impl UiPrepaintActionKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugPrepaintActionKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugPrepaintActionKind::Invalidate => Self::Invalidate,
+            fret_ui::tree::UiDebugPrepaintActionKind::RequestRedraw => Self::RequestRedraw,
+            fret_ui::tree::UiDebugPrepaintActionKind::RequestAnimationFrame => {
+                Self::RequestAnimationFrame
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPrepaintActionV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_node: Option<u64>,
+    pub kind: UiPrepaintActionKindV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub invalidation: Option<String>,
+    #[serde(default)]
+    pub frame_id: u64,
+}
+
+impl UiPrepaintActionV1 {
+    fn from_action(action: &fret_ui::tree::UiDebugPrepaintAction) -> Self {
+        let invalidation = action.invalidation.map(|inv| match inv {
+            fret_ui::Invalidation::Layout => "layout",
+            fret_ui::Invalidation::Paint => "paint",
+            fret_ui::Invalidation::HitTest => "hit_test",
+            fret_ui::Invalidation::HitTestOnly => "hit_test_only",
+        });
+
+        Self {
+            node: key_to_u64(action.node),
+            target_node: action.target.map(key_to_u64),
+            kind: UiPrepaintActionKindV1::from_kind(action.kind),
+            invalidation: invalidation.map(|s| s.to_string()),
+            frame_id: action.frame_id.0,
         }
     }
 }
@@ -4601,6 +4731,12 @@ pub struct UiFrameStatsV1 {
     pub virtual_list_visible_range_checks: u32,
     #[serde(default)]
     pub virtual_list_visible_range_refreshes: u32,
+    #[serde(default)]
+    pub retained_virtual_list_reconciles: u32,
+    #[serde(default)]
+    pub retained_virtual_list_attached_items: u32,
+    #[serde(default)]
+    pub retained_virtual_list_detached_items: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -4661,6 +4797,9 @@ impl UiFrameStatsV1 {
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
             virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
             virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
+            retained_virtual_list_reconciles: stats.retained_virtual_list_reconciles,
+            retained_virtual_list_attached_items: stats.retained_virtual_list_attached_items,
+            retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
@@ -4810,9 +4949,9 @@ impl UiHitTestSnapshotV1 {
             });
         }
 
-        let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
+        let mut by_root: HashMap<NodeId, &UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
-            by_root.insert(layer.root, layer.clone());
+            by_root.insert(layer.root, layer);
         }
 
         if let Some(root) = focus_barrier_root {

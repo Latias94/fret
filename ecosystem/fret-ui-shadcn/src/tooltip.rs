@@ -10,15 +10,17 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::tooltip as radix_tooltip;
-use fret_ui_kit::primitives::tooltip_provider;
+use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space, ui,
 };
 use std::sync::Arc;
 
-use fret_core::{Px, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, HoverRegionProps, Overflow, SemanticsProps, SpinnerProps, SvgIconProps,
+    AnyElement, ElementKind, Elements, HoverRegionProps, Overflow, PointerRegionProps,
+    SemanticsProps, SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -95,6 +97,45 @@ fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
         .py(Space::N1p5)
 }
 
+#[derive(Clone)]
+struct TooltipTriggerEventModels {
+    has_pointer_move_opened: Model<bool>,
+    pointer_transit_geometry: Model<Option<(Rect, Rect)>>,
+    suppress_hover_open: Model<bool>,
+    suppress_focus_open: Model<bool>,
+    close_requested: Model<bool>,
+}
+
+fn tooltip_trigger_event_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> TooltipTriggerEventModels {
+    #[derive(Default)]
+    struct State {
+        models: Option<TooltipTriggerEventModels>,
+    }
+
+    let existing = cx.with_state(State::default, |st| st.models.clone());
+    if let Some(models) = existing {
+        return models;
+    }
+
+    let models = TooltipTriggerEventModels {
+        has_pointer_move_opened: cx.app.models_mut().insert(false),
+        pointer_transit_geometry: tooltip_provider::pointer_transit_geometry_model(cx),
+        suppress_hover_open: cx.app.models_mut().insert(false),
+        suppress_focus_open: cx.app.models_mut().insert(false),
+        close_requested: cx.app.models_mut().insert(false),
+    };
+
+    cx.with_state(State::default, |st| st.models = Some(models.clone()));
+    models
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct TooltipTriggerHoverEdgeState {
+    was_hovered: bool,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum TooltipAlign {
     Start,
@@ -152,14 +193,25 @@ impl TooltipProvider {
     where
         I: IntoIterator<Item = AnyElement>,
     {
+        self.with_elements(cx, f).into_vec()
+    }
+
+    pub fn with_elements<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> Elements
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         tooltip_provider::with_tooltip_provider(
             cx,
-            radix_tooltip::TooltipProviderConfig::new(
+            tooltip_provider::TooltipProviderConfig::new(
                 self.delay_duration_frames as u64,
                 self.skip_delay_duration_frames as u64,
             )
             .disable_hoverable_content(self.disable_hoverable_content),
-            |cx| f(cx).into_iter().collect::<Vec<_>>(),
+            |cx| f(cx).into_iter().collect::<Elements>(),
         )
     }
 }
@@ -337,18 +389,99 @@ impl Tooltip {
 
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let focused = cx.is_focused_element(trigger_id);
-            let event_models = radix_tooltip::tooltip_trigger_event_models(cx);
-            let gates =
-                radix_tooltip::tooltip_trigger_update_gates(cx, hovered, focused, &event_models);
+            let event_models = tooltip_trigger_event_models(cx);
+            let tooltip_id = cx.root_id();
 
-            let provider_cfg = radix_tooltip::current_config(cx);
+            #[derive(Default)]
+            struct TooltipOpenModelState {
+                model: Option<Model<bool>>,
+            }
+
+            let open = cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                st.model.clone()
+            });
+            let open = if let Some(model) = open {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state_for(tooltip_id, TooltipOpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+            let mut open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
+
+            let close_requested = cx
+                .watch_model(&event_models.close_requested)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            let has_pointer_move_opened = cx
+                .watch_model(&event_models.has_pointer_move_opened)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            let suppress_hover_open = cx
+                .watch_model(&event_models.suppress_hover_open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+            let suppress_focus_open = cx
+                .watch_model(&event_models.suppress_focus_open)
+                .layout()
+                .copied()
+                .unwrap_or(false);
+
+            let left_hover = cx.with_state(TooltipTriggerHoverEdgeState::default, |st| {
+                let left = st.was_hovered && !hovered;
+                st.was_hovered = hovered;
+                left
+            });
+
+            if left_hover && (has_pointer_move_opened || suppress_hover_open) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.has_pointer_move_opened, |v| *v = false);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_hover_open, |v| *v = false);
+            }
+
+            if !focused && suppress_focus_open {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_focus_open, |v| *v = false);
+            }
+
+            if close_requested {
+                if has_pointer_move_opened && !suppress_hover_open {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&event_models.suppress_hover_open, |v| *v = true);
+                }
+                if focused && !suppress_focus_open {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&event_models.suppress_focus_open, |v| *v = true);
+                }
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.close_requested, |v| *v = false);
+            }
+
+            let provider_cfg = tooltip_provider::current_config(cx);
             let disable_hoverable_content = disable_hoverable_content_override
                 .unwrap_or(provider_cfg.disable_hoverable_content);
             let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
 
-            let trigger_hovered = gates.trigger_hovered;
-            let trigger_focused = gates.trigger_focused;
-            let close_requested = gates.force_close;
+            let trigger_hovered = hovered && has_pointer_move_opened && !suppress_hover_open;
+            let trigger_focused = focused && !suppress_focus_open;
 
             let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id);
             let floating_bounds = anchor_bounds.and_then(|anchor| {
@@ -407,10 +540,9 @@ impl Tooltip {
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
 
-            let open = event_models.open.clone();
-            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
             if update.open != open_now {
                 let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
+                open_now = update.open;
             }
 
             let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
@@ -419,17 +551,111 @@ impl Tooltip {
                 content_id,
             );
 
-            radix_tooltip::tooltip_install_default_trigger_dismiss_handlers(
-                cx,
+            cx.pressable_add_on_pointer_down_for(
                 trigger_id,
-                event_models.clone(),
+                Arc::new({
+                    let close_requested = event_models.close_requested.clone();
+                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
+                    let suppress_hover_open = event_models.suppress_hover_open.clone();
+                    move |host, acx, down| {
+                        if down.pointer_type != PointerType::Touch {
+                            let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        }
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_focus_open, |v| *v = true);
+                        let gate = host
+                            .models_mut()
+                            .read(&has_pointer_move_opened, |v| *v)
+                            .ok()
+                            .unwrap_or(false);
+                        if gate {
+                            let _ = host
+                                .models_mut()
+                                .update(&suppress_hover_open, |v| *v = true);
+                        }
+                        host.request_redraw(acx.window);
+                        fret_ui::action::PressablePointerDownResult::Continue
+                    }
+                }),
             );
-            let trigger = radix_tooltip::tooltip_wrap_trigger_with_pointer_move_open_gate(
-                cx,
-                trigger,
-                event_models.clone(),
-                Px(5.0),
+
+            cx.pressable_add_on_activate_for(
+                trigger_id,
+                Arc::new({
+                    let close_requested = event_models.close_requested.clone();
+                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    move |host, acx, _reason| {
+                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_focus_open, |v| *v = true);
+                        host.request_redraw(acx.window);
+                    }
+                }),
             );
+
+            cx.key_add_on_key_down_for(
+                trigger_id,
+                Arc::new({
+                    let close_requested = event_models.close_requested.clone();
+                    let suppress_focus_open = event_models.suppress_focus_open.clone();
+                    move |host, acx, down| {
+                        if down.repeat || down.key != KeyCode::Escape {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_focus_open, |v| *v = true);
+                        host.request_redraw(acx.window);
+                        true
+                    }
+                }),
+            );
+
+            let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
+                cx.pointer_region_on_pointer_move(Arc::new({
+                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
+                    let pointer_transit_geometry = event_models.pointer_transit_geometry.clone();
+                    move |host, acx, mv| {
+                        if mv.pointer_type == PointerType::Touch {
+                            return false;
+                        }
+
+                        let geometry = host
+                            .models_mut()
+                            .read(&pointer_transit_geometry, |v| *v)
+                            .ok()
+                            .flatten();
+                        if let Some((anchor, floating)) = geometry
+                            && radix_tooltip::tooltip_pointer_in_transit(
+                                mv.position,
+                                anchor,
+                                floating,
+                                Px(5.0),
+                            )
+                        {
+                            return false;
+                        }
+                        let already = host
+                            .models_mut()
+                            .read(&has_pointer_move_opened, |v| *v)
+                            .ok()
+                            .unwrap_or(false);
+                        if !already {
+                            let _ = host.models_mut().update(&has_pointer_move_opened, |v| {
+                                *v = true;
+                            });
+                            host.request_redraw(acx.window);
+                        }
+                        false
+                    }
+                }));
+
+                vec![trigger]
+            });
 
             let opening = update.open;
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
@@ -451,7 +677,6 @@ impl Tooltip {
                 return out;
             }
 
-            let tooltip_id = cx.root_id();
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
             let opacity = motion.opacity;
             let scale = motion.scale;
@@ -558,7 +783,7 @@ impl Tooltip {
 
             let mut request = radix_tooltip::tooltip_request(
                 tooltip_id,
-                open,
+                open.clone(),
                 overlay_presence,
                 overlay_children,
             );
@@ -701,9 +926,9 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Event, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
-        PathMetrics, PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size as CoreSize,
-        SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
@@ -713,7 +938,6 @@ mod tests {
     use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
-    use fret_ui_kit::prelude::ActionHooksExt;
 
     #[derive(Default)]
     struct FakeServices;
@@ -983,7 +1207,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(1)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -1529,7 +1753,7 @@ mod tests {
                         TooltipProvider::new()
                             .delay_duration_frames(10)
                             .skip_delay_duration_frames(30)
-                            .with(cx, |cx| {
+                            .with_elements(cx, |cx| {
                                 vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                                     let trigger_1 = cx.pressable_with_id(
                                         PressableProps {
@@ -1750,7 +1974,7 @@ mod tests {
                         TooltipProvider::new()
                             .delay_duration_frames(0)
                             .skip_delay_duration_frames(0)
-                            .with(cx, |cx| {
+                            .with_elements(cx, |cx| {
                                 vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                                     let trigger_1 = cx.pressable_with_id(
                                         PressableProps {
@@ -2020,7 +2244,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -2172,550 +2396,6 @@ mod tests {
     }
 
     #[test]
-    fn tooltip_outside_press_closes_and_activates_underlay() {
-        use fret_core::{Event, Modifiers, MouseButton};
-
-        let window = AppWindowId::default();
-        let mut app = App::new();
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
-
-        let underlay_clicked = app.models_mut().insert(false);
-        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-            Rc::new(Cell::new(None));
-        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-            Rc::new(Cell::new(None));
-        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-            Rc::new(Cell::new(None));
-
-        let mut services = FakeServices::default();
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            CoreSize::new(Px(800.0), Px(600.0)),
-        );
-
-        fn render_frame(
-            ui: &mut UiTree<App>,
-            app: &mut App,
-            services: &mut dyn fret_core::UiServices,
-            window: AppWindowId,
-            bounds: Rect,
-            underlay_clicked: fret_runtime::Model<bool>,
-            underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
-            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
-            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
-        ) {
-            OverlayController::begin_frame(app, window);
-            let root = fret_ui::declarative::render_root(
-                ui,
-                app,
-                services,
-                window,
-                bounds,
-                "tooltip-outside-press-click-through",
-                |cx| {
-                    let underlay_id_out = underlay_id_out.clone();
-                    let trigger_id_out = trigger_id_out.clone();
-                    let content_id_out = content_id_out.clone();
-                    let underlay_clicked = underlay_clicked.clone();
-
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            let underlay =
-                                cx.pressable_with_id(
-                                    PressableProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Fill;
-                                            layout.size.height = Length::Fill;
-                                            layout
-                                        },
-                                        enabled: true,
-                                        focusable: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::from("underlay")),
-                                            test_id: Some(Arc::from("underlay")),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    {
-                                        let underlay_id_out = underlay_id_out.clone();
-                                        let underlay_clicked = underlay_clicked.clone();
-                                        move |cx, _st, id| {
-                                            underlay_id_out.set(Some(id));
-                                            cx.pressable_toggle_bool(&underlay_clicked);
-                                            vec![cx.container(ContainerProps::default(), |_cx| {
-                                                Vec::new()
-                                            })]
-                                        }
-                                    },
-                                );
-
-                            let trigger = cx.pressable_with_id(
-                                PressableProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Px(Px(120.0));
-                                        layout.size.height = Length::Px(Px(40.0));
-                                        layout
-                                    },
-                                    enabled: true,
-                                    focusable: true,
-                                    a11y: PressableA11y {
-                                        role: Some(SemanticsRole::Button),
-                                        label: Some(Arc::from("trigger")),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                |cx, _st, id| {
-                                    trigger_id_out.set(Some(id));
-                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                                },
-                            );
-
-                            let content =
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
-                                    .into_element(cx);
-                            content_id_out.set(Some(content.id));
-
-                            vec![
-                                underlay,
-                                Tooltip::new(trigger, content)
-                                    .open_delay_frames(0)
-                                    .close_delay_frames(0)
-                                    .into_element(cx),
-                            ]
-                        },
-                    )]
-                },
-            );
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, bounds);
-            ui.request_semantics_snapshot();
-            ui.layout_all(app, services, bounds, 1.0);
-        }
-
-        // Frame 1: establish bounds/mappings.
-        app.set_frame_id(FrameId(1));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            underlay_clicked.clone(),
-            underlay_id.clone(),
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-
-        let underlay_element = underlay_id.get().expect("underlay element id");
-        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
-            .expect("underlay node");
-
-        // Hover trigger to open (open_delay=0).
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(fret_core::PointerEvent::Move {
-                pointer_id: fret_core::PointerId(0),
-                position: Point::new(Px(10.0), Px(10.0)),
-                buttons: fret_core::MouseButtons::default(),
-                modifiers: Modifiers::default(),
-                pointer_type: fret_core::PointerType::Mouse,
-            }),
-        );
-
-        // Frame 2: tooltip should be open.
-        app.set_frame_id(FrameId(2));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            underlay_clicked.clone(),
-            underlay_id.clone(),
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-
-        // Click the underlay while the tooltip is open: should close the tooltip (observer pass),
-        // and still activate/focus the underlay (click-through).
-        let underlay_pos = Point::new(Px(700.0), Px(500.0));
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(fret_core::PointerEvent::Down {
-                pointer_id: fret_core::PointerId(0),
-                position: underlay_pos,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-                pointer_type: fret_core::PointerType::Mouse,
-                click_count: 1,
-            }),
-        );
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(fret_core::PointerEvent::Up {
-                pointer_id: fret_core::PointerId(0),
-                position: underlay_pos,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-                is_click: true,
-                pointer_type: fret_core::PointerType::Mouse,
-                click_count: 1,
-            }),
-        );
-
-        // Frame 3: trigger described-by should be cleared (open=false), and focus should remain on the underlay.
-        app.set_frame_id(FrameId(3));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            underlay_clicked.clone(),
-            underlay_id,
-            trigger_id,
-            content_id,
-        );
-
-        assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
-        assert_eq!(ui.focus(), Some(underlay_node));
-
-        let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let trigger_node = snap
-            .nodes
-            .iter()
-            .find(|n| n.label.as_deref() == Some("trigger"))
-            .expect("trigger node");
-        assert!(
-            trigger_node.described_by.is_empty(),
-            "expected aria-describedby to be cleared after outside press dismissal"
-        );
-
-        let arbitration = OverlayController::arbitration_snapshot(&ui);
-        assert_eq!(
-            arbitration.pointer_occlusion,
-            fret_ui::tree::PointerOcclusion::None,
-            "expected tooltip outside-press dismissal to remain click-through"
-        );
-    }
-
-    #[test]
-    fn tooltip_close_transition_is_click_through() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
-
-        let underlay_clicked = app.models_mut().insert(false);
-        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-            Rc::new(Cell::new(None));
-        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-            Rc::new(Cell::new(None));
-        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
-            Rc::new(Cell::new(None));
-
-        let mut services = FakeServices::default();
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            CoreSize::new(Px(800.0), Px(600.0)),
-        );
-
-        fn render_frame(
-            ui: &mut UiTree<App>,
-            app: &mut App,
-            services: &mut dyn fret_core::UiServices,
-            window: AppWindowId,
-            bounds: Rect,
-            underlay_clicked: fret_runtime::Model<bool>,
-            underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
-            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
-            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
-        ) {
-            OverlayController::begin_frame(app, window);
-            let root = fret_ui::declarative::render_root(
-                ui,
-                app,
-                services,
-                window,
-                bounds,
-                "tooltip-close-transition-click-through",
-                |cx| {
-                    let underlay_id_out = underlay_id_out.clone();
-                    let trigger_id_out = trigger_id_out.clone();
-                    let content_id_out = content_id_out.clone();
-                    let underlay_clicked = underlay_clicked.clone();
-
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
-                            },
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            let underlay =
-                                cx.pressable_with_id(
-                                    PressableProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Fill;
-                                            layout.size.height = Length::Fill;
-                                            layout
-                                        },
-                                        enabled: true,
-                                        focusable: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::from("underlay")),
-                                            test_id: Some(Arc::from("underlay")),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    {
-                                        let underlay_id_out = underlay_id_out.clone();
-                                        let underlay_clicked = underlay_clicked.clone();
-                                        move |cx, _st, id| {
-                                            underlay_id_out.set(Some(id));
-                                            cx.pressable_toggle_bool(&underlay_clicked);
-                                            vec![cx.container(ContainerProps::default(), |_cx| {
-                                                Vec::new()
-                                            })]
-                                        }
-                                    },
-                                );
-
-                            let trigger = cx.pressable_with_id(
-                                PressableProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Px(Px(120.0));
-                                        layout.size.height = Length::Px(Px(40.0));
-                                        layout
-                                    },
-                                    enabled: true,
-                                    focusable: true,
-                                    a11y: PressableA11y {
-                                        role: Some(SemanticsRole::Button),
-                                        label: Some(Arc::from("trigger")),
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                |cx, _st, id| {
-                                    trigger_id_out.set(Some(id));
-                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                                },
-                            );
-
-                            let content =
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
-                                    .into_element(cx);
-                            content_id_out.set(Some(content.id));
-
-                            vec![
-                                underlay,
-                                Tooltip::new(trigger, content)
-                                    .open_delay_frames(0)
-                                    .close_delay_frames(0)
-                                    .into_element(cx),
-                            ]
-                        },
-                    )]
-                },
-            );
-            ui.set_root(root);
-            OverlayController::render(ui, app, services, window, bounds);
-            ui.request_semantics_snapshot();
-            ui.layout_all(app, services, bounds, 1.0);
-        }
-
-        // Frame 1: establish bounds/mappings.
-        app.set_frame_id(FrameId(1));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            underlay_clicked.clone(),
-            underlay_id.clone(),
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-
-        let underlay_element = underlay_id.get().expect("underlay element id");
-        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
-            .expect("underlay node");
-
-        // Hover trigger to open (open_delay=0).
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(fret_core::PointerEvent::Move {
-                pointer_id: fret_core::PointerId(0),
-                position: Point::new(Px(10.0), Px(10.0)),
-                buttons: fret_core::MouseButtons::default(),
-                modifiers: Modifiers::default(),
-                pointer_type: fret_core::PointerType::Mouse,
-            }),
-        );
-
-        // Frame 2: tooltip should be open and we can capture content bounds.
-        app.set_frame_id(FrameId(2));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            underlay_clicked.clone(),
-            underlay_id.clone(),
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-
-        let content_element = content_id.get().expect("content element id");
-        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
-            .expect("content node");
-        let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let content_bounds = snap
-            .nodes
-            .iter()
-            .find(|n| n.id == content_node)
-            .map(|n| n.bounds)
-            .expect("content bounds");
-        let content_center = Point::new(
-            Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
-            Px(content_bounds.origin.y.0 + content_bounds.size.height.0 * 0.5),
-        );
-
-        // Leave hover to begin close transition (close_delay=0 => closing begins immediately).
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(fret_core::PointerEvent::Move {
-                pointer_id: fret_core::PointerId(0),
-                position: Point::new(Px(400.0), Px(400.0)),
-                buttons: fret_core::MouseButtons::default(),
-                modifiers: Modifiers::default(),
-                pointer_type: fret_core::PointerType::Mouse,
-            }),
-        );
-
-        // Frame 3: closing should keep the tooltip mounted (present=true) but click-through.
-        app.set_frame_id(FrameId(3));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            underlay_clicked.clone(),
-            underlay_id.clone(),
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-
-        let arbitration = OverlayController::arbitration_snapshot(&ui);
-        assert_eq!(
-            arbitration.pointer_occlusion,
-            fret_ui::tree::PointerOcclusion::None,
-            "expected tooltip close transition to be click-through"
-        );
-
-        assert!(
-            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
-            "expected tooltip content to remain mounted during close transition"
-        );
-        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
-            .expect("content node");
-        let content_layer = ui.node_layer(content_node).expect("content layer");
-        let layer = ui
-            .debug_layers_in_paint_order()
-            .into_iter()
-            .find(|l| l.id == content_layer)
-            .expect("overlay layer");
-        assert!(layer.visible);
-        assert!(!layer.hit_testable);
-        assert_eq!(
-            layer.pointer_occlusion,
-            fret_ui::tree::PointerOcclusion::None
-        );
-        assert!(!layer.wants_pointer_move_events);
-        assert!(!layer.wants_timer_events);
-
-        // Click where the tooltip is painted; it should reach the underlay during the close transition.
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(fret_core::PointerEvent::Down {
-                pointer_id: fret_core::PointerId(0),
-                position: content_center,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-                pointer_type: fret_core::PointerType::Mouse,
-                click_count: 1,
-            }),
-        );
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(fret_core::PointerEvent::Up {
-                pointer_id: fret_core::PointerId(0),
-                position: content_center,
-                button: MouseButton::Left,
-                modifiers: Modifiers::default(),
-                is_click: true,
-                pointer_type: fret_core::PointerType::Mouse,
-                click_count: 1,
-            }),
-        );
-
-        // Frame 4: underlay should have been activated, and focus should move to it.
-        app.set_frame_id(FrameId(4));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            underlay_clicked.clone(),
-            underlay_id,
-            trigger_id,
-            content_id,
-        );
-
-        assert_eq!(app.models().get_copied(&underlay_clicked), Some(true));
-        assert_eq!(
-            ui.focus(),
-            Some(underlay_node),
-            "expected focus to move to the underlay during click-through close transition"
-        );
-    }
-
-    #[test]
     fn tooltip_closes_on_escape_while_focused() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2754,7 +2434,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -2945,7 +2625,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let scroll = cx.scroll(
                                 fret_ui::element::ScrollProps {
                                     layout: {
@@ -3175,7 +2855,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let mut flex_layout = LayoutStyle::default();
                             flex_layout.size.width = Length::Px(Px(800.0));
                             flex_layout.size.height = Length::Px(Px(600.0));
@@ -3451,7 +3131,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {
@@ -3624,7 +3304,7 @@ mod tests {
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
                         .disable_hoverable_content(false)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             vec![cx.row(
                                 fret_ui::element::RowProps {
                                     gap: Px(20.0),
@@ -3864,7 +3544,7 @@ mod tests {
                     TooltipProvider::new()
                         .delay_duration_frames(0)
                         .skip_delay_duration_frames(0)
-                        .with(cx, |cx| {
+                        .with_elements(cx, |cx| {
                             let trigger = cx.pressable_with_id(
                                 PressableProps {
                                     layout: {

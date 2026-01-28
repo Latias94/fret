@@ -16,6 +16,7 @@ pub mod streaming;
 pub mod svg;
 pub mod text;
 pub mod time;
+pub mod utf;
 pub mod vector_path;
 pub mod viewport;
 pub mod window;

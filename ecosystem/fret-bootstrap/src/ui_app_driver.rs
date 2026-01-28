@@ -953,11 +953,11 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
     );
 
     let open = models.open.clone();
-    let children = dialog_prim::modal_dialog_layer_children(
+    let children = dialog_prim::modal_dialog_layer_elements(
         cx,
         open.clone(),
         dialog_prim::DialogOptions::default(),
-        vec![barrier_bg],
+        [barrier_bg],
         content,
     );
 
@@ -966,7 +966,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
         None,
         open,
         fret_ui_kit::OverlayPresence::instant(true),
-        children,
+        children.into_vec(),
     );
     req.root_name = Some("bootstrap.preferences".to_string());
     OverlayController::request(cx, req);

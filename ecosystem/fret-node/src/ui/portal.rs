@@ -349,7 +349,7 @@ impl<P, C> NodeGraphPortalHost<P, C> {
     }
 }
 
-impl<H: UiHost, P, C, R> Widget<H> for NodeGraphPortalHost<P, C>
+impl<H: UiHost + 'static, P, C, R> Widget<H> for NodeGraphPortalHost<P, C>
 where
     P: for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> R,
     R: Into<Elements>,

@@ -124,11 +124,15 @@ where
 /// Render an autosizing popper wrapper positioned at `origin`.
 ///
 /// This wrapper uses `overflow: visible` and relies on its children to determine its size.
-pub fn popper_wrapper_at_autosize<H: UiHost>(
+pub fn popper_wrapper_at_autosize<H: UiHost, I, F>(
     cx: &mut ElementContext<'_, H>,
     origin: Point,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+    f: F,
+) -> AnyElement
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     cx.container(
         ContainerProps {
             layout: popper_wrapper_layout_autosize(origin),

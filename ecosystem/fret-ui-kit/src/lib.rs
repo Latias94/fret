@@ -40,9 +40,10 @@ pub use edges4::{Edges4, MarginEdge};
 pub use sizing::{Sizable, Size};
 pub use style::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, LengthRefinement,
-    MetricRef, OverflowRefinement, Radius, ShadowPreset, SignedMetricRef, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, merge_override_slot, resolve_override_slot,
-    resolve_override_slot_opt,
+    MetricRef, OverflowRefinement, OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+    resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+    resolve_override_slot_with, resolve_slot,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
@@ -85,9 +86,10 @@ pub mod prelude {
 
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge,
-        MetricRef, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
-        WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, resolve_override_slot,
-        resolve_override_slot_opt,
+        MetricRef, OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt,
+        UiExt, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
+        resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
+        resolve_override_slot_with, resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};

@@ -825,6 +825,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             })?;
 
                         let screenshot_dir = self.diag_bundle_screenshots.poll_request_dir();
+
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
                         let ui_cmd = renderer.render_scene(

@@ -14,7 +14,8 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::slider as radix_slider;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, WidgetState, WidgetStateProperty, WidgetStates,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverrideSlot, WidgetState, WidgetStateProperty,
+    WidgetStates,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -25,13 +26,13 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 #[derive(Debug, Clone)]
 pub struct SliderStyle {
     pub track_height: Option<Px>,
-    pub track_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub track_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub range_background: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub track_background: OverrideSlot<ColorRef>,
+    pub track_border_color: OverrideSlot<ColorRef>,
+    pub range_background: OverrideSlot<ColorRef>,
     pub thumb_size: Option<Px>,
-    pub thumb_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub thumb_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub thumb_ring_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub thumb_background: OverrideSlot<ColorRef>,
+    pub thumb_border_color: OverrideSlot<ColorRef>,
+    pub thumb_ring_color: OverrideSlot<ColorRef>,
 }
 
 impl Default for SliderStyle {
