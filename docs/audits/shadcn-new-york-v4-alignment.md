@@ -271,6 +271,10 @@ Recent fixes:
 - The viewport panel keeps `overflow: visible` so drop shadows match CSS `box-shadow` footprint; radius clipping is applied by an inner `overflow: clip` container with the same corner radii so content still clips correctly.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
+  - Chrome (viewport surface colors): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web`, `web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web_dark`).
+  - Chrome (indicator shadow insets): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_navigation_menu_demo_indicator_shadow_insets_match_web`, `web_vs_fret_navigation_menu_demo_indicator_shadow_insets_match_web_dark`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`).
 
 ### `Input`

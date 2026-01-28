@@ -1101,12 +1101,13 @@ impl NavigationMenu {
                 let window_margin = nav_menu_viewport_window_margin(&theme);
                 let indicator_size = if indicator_enabled { side_offset } else { Px(0.0) };
                 let indicator_diamond_size = nav_menu_indicator_diamond_size(&theme);
-                let indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(2.0));
                 let indicator_diamond_corners = {
                     let mut corners = Corners::all(Px(0.0));
                     corners.top_left = Px(2.0);
                     corners
                 };
+                let mut indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(0.0));
+                indicator_diamond_shadow.corner_radii = indicator_diamond_corners;
 
                 let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
                 let measured = selected_local

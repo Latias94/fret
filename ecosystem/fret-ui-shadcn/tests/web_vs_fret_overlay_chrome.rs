@@ -2138,11 +2138,14 @@ fn assert_navigation_menu_indicator_shadow_insets_match(
     let diamond_bounds = bounds_for_element(&mut app, window, diamond_id).unwrap_or_else(|| {
         panic!("missing fret bounds for navigation-menu indicator diamond id {diamond_id:?}")
     });
-    let near = bounds_center(diamond_bounds);
-    let panel_rect = find_best_solid_quad_near_point(&scene, near)
-        .expect("painted quad for navigation-menu indicator diamond");
+    let panel_rect = diamond_bounds;
 
     let candidates = fret_drop_shadow_insets_candidates(&scene, panel_rect);
+    maybe_dump_shadow_candidates(
+        &format!("{web_name} {web_theme_name} navigation-menu-indicator"),
+        &expected,
+        &candidates,
+    );
     assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
 }
 
@@ -7544,6 +7547,114 @@ fn web_vs_fret_navigation_menu_demo_surface_colors_match_web_dark() {
             let el = NavigationMenu::new(model.clone())
                 .viewport(false)
                 .indicator(false)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_surface_colors_match(
+        "navigation-menu-demo-indicator",
+        "navigation-menu-viewport",
+        "open",
+        "Home",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(true)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web_dark() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_viewport_surface_colors_match(
+        "navigation-menu-demo-indicator",
+        "navigation-menu-viewport",
+        "open",
+        "Home",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(true)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_indicator_shadow_insets_match_web() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_indicator_shadow_insets_match(
+        "navigation-menu-demo-indicator",
+        "navigation-menu-indicator",
+        "visible",
+        "Home",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(true)
+                .items(vec![NavigationMenuItem::new(
+                    "home",
+                    "Home",
+                    vec![cx.text("Content")],
+                )])
+                .into_element(cx);
+            root_id_out.set(Some(el.id));
+            el
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_indicator_shadow_insets_match_web_dark() {
+    use fret_ui_shadcn::{NavigationMenu, NavigationMenuItem};
+
+    assert_navigation_menu_indicator_shadow_insets_match(
+        "navigation-menu-demo-indicator",
+        "navigation-menu-indicator",
+        "visible",
+        "Home",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        |cx, model, root_id_out| {
+            let el = NavigationMenu::new(model.clone())
+                .viewport(true)
+                .indicator(true)
                 .items(vec![NavigationMenuItem::new(
                     "home",
                     "Home",
