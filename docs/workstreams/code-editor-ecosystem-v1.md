@@ -317,6 +317,7 @@ Evidence anchors:
 - [~] Define selection/caret painting layers (paint-only where possible).
 - [~] Define IME preedit rendering strategy (inline underline + caret anchoring).
 - [~] Ensure `ImeSetCursorArea` caret rect accounts for preedit cursor (best-effort).
+- [x] Cancel inline preedit deterministically on selection/navigation actions (v1 policy).
 - [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
 - [x] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
 
