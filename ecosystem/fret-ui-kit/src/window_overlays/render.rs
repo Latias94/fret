@@ -103,6 +103,42 @@ fn should_suspend_pointer_gating_for_capture(
         && (disable_outside_pointer_events || consume_outside_pointer_events)
 }
 
+struct OverlayFocusHost<'a, H: UiHost> {
+    ui: &'a mut UiTree<H>,
+    app: &'a mut H,
+    window: AppWindowId,
+}
+
+impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+        self.app.models_mut()
+    }
+
+    fn push_effect(&mut self, effect: fret_runtime::Effect) {
+        self.app.push_effect(effect);
+    }
+
+    fn request_redraw(&mut self, window: AppWindowId) {
+        self.app.request_redraw(window);
+    }
+
+    fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+        self.app.next_timer_token()
+    }
+
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+        self.app.next_clipboard_token()
+    }
+}
+
+impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusHost<'a, H> {
+    fn request_focus(&mut self, target: fret_ui::elements::GlobalElementId) {
+        if let Some(node) = fret_ui::elements::node_for_element(self.app, self.window, target) {
+            self.ui.set_focus(Some(node));
+        }
+    }
+}
+
 pub fn render<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     app: &mut H,
