@@ -1,5 +1,34 @@
 use super::*;
 
+#[derive(Clone)]
+struct VirtualListPrepaintInputs {
+    element: GlobalElementId,
+    axis: fret_core::Axis,
+    len: usize,
+    items_revision: u64,
+    measure_mode: crate::element::VirtualListMeasureMode,
+    overscan: usize,
+    estimate_row_height: Px,
+    gap: Px,
+    scroll_margin: Px,
+    scroll_handle: crate::scroll::VirtualListScrollHandle,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct VirtualListPrepaintWindowUpdate {
+    prev_items_revision: u64,
+    prev_viewport: Px,
+    prev_offset: Px,
+    prev_window_range: Option<crate::virtual_list::VirtualRange>,
+    render_window_range: Option<crate::virtual_list::VirtualRange>,
+    window_range: Option<crate::virtual_list::VirtualRange>,
+    viewport: Px,
+    offset: Px,
+    deferred_scroll_to_item: bool,
+    window_mismatch: bool,
+    content_extent: Px,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct InteractionCacheEntry {
     pub(super) generation: u64,
@@ -58,6 +87,219 @@ impl InteractionCacheState {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn prepaint_virtual_list_window_from_interaction_record(
+        &mut self,
+        app: &mut H,
+        record: &InteractionRecord,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+        if !record.can_scroll_descendant_into_view {
+            return;
+        }
+
+        let Some(inputs) = crate::declarative::frame::with_element_record_for_node(
+            app,
+            window,
+            record.node,
+            |element_record| match &element_record.instance {
+                crate::declarative::frame::ElementInstance::VirtualList(props) => {
+                    Some(VirtualListPrepaintInputs {
+                        element: element_record.element,
+                        axis: props.axis,
+                        len: props.len,
+                        items_revision: props.items_revision,
+                        measure_mode: props.measure_mode,
+                        overscan: props.overscan,
+                        estimate_row_height: props.estimate_row_height,
+                        gap: props.gap,
+                        scroll_margin: props.scroll_margin,
+                        scroll_handle: props.scroll_handle.clone(),
+                    })
+                }
+                _ => None,
+            },
+        )
+        .flatten() else {
+            return;
+        };
+
+        let viewport = match inputs.axis {
+            fret_core::Axis::Vertical => Px(record.bounds.size.height.0.max(0.0)),
+            fret_core::Axis::Horizontal => Px(record.bounds.size.width.0.max(0.0)),
+        };
+        if viewport.0 <= 0.0 || inputs.len == 0 {
+            return;
+        }
+
+        let offset_point = inputs.scroll_handle.offset();
+        let offset_axis = match inputs.axis {
+            fret_core::Axis::Vertical => offset_point.y,
+            fret_core::Axis::Horizontal => offset_point.x,
+        };
+        let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some();
+
+        let update = crate::elements::with_element_state(
+            &mut *app,
+            window,
+            inputs.element,
+            crate::element::VirtualListState::default,
+            |state| {
+                let prev_items_revision = state.items_revision;
+                let prev_viewport = match inputs.axis {
+                    fret_core::Axis::Vertical => state.viewport_h,
+                    fret_core::Axis::Horizontal => state.viewport_w,
+                };
+                let prev_offset = match inputs.axis {
+                    fret_core::Axis::Vertical => state.offset_y,
+                    fret_core::Axis::Horizontal => state.offset_x,
+                };
+                let prev_window_range = state.window_range;
+                let render_window_range = state.render_window_range;
+
+                state.metrics.ensure_with_mode(
+                    inputs.measure_mode,
+                    inputs.len,
+                    inputs.estimate_row_height,
+                    inputs.gap,
+                    inputs.scroll_margin,
+                );
+                state.items_revision = inputs.items_revision;
+
+                let content_extent = state.metrics.total_height();
+                let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+                match inputs.axis {
+                    fret_core::Axis::Vertical => {
+                        state.offset_y = offset_axis;
+                        state.viewport_h = viewport;
+                    }
+                    fret_core::Axis::Horizontal => {
+                        state.offset_x = offset_axis;
+                        state.viewport_w = viewport;
+                    }
+                }
+                if viewport.0 > 0.0 {
+                    state.has_final_viewport = true;
+                }
+
+                let window_range =
+                    state
+                        .metrics
+                        .visible_range(offset_axis, viewport, inputs.overscan);
+                state.window_range = window_range;
+
+                let window_mismatch = if let Some(visible) =
+                    state.metrics.visible_range(offset_axis, viewport, 0)
+                {
+                    match render_window_range.or(window_range).filter(|r| {
+                        r.count == inputs.len
+                            && r.overscan == inputs.overscan
+                            && r.start_index <= r.end_index
+                            && r.end_index < r.count
+                    }) {
+                        None => false,
+                        Some(rendered) => {
+                            let rendered_start =
+                                rendered.start_index.saturating_sub(rendered.overscan);
+                            let rendered_end = (rendered.end_index + rendered.overscan)
+                                .min(rendered.count.saturating_sub(1));
+                            visible.start_index < rendered_start || visible.end_index > rendered_end
+                        }
+                    }
+                } else {
+                    false
+                };
+
+                VirtualListPrepaintWindowUpdate {
+                    prev_items_revision,
+                    prev_viewport,
+                    prev_offset,
+                    prev_window_range,
+                    render_window_range,
+                    window_range,
+                    viewport,
+                    offset: offset_axis,
+                    deferred_scroll_to_item,
+                    window_mismatch,
+                    content_extent,
+                }
+            },
+        );
+
+        inputs
+            .scroll_handle
+            .set_viewport_size_internal(record.bounds.size);
+        let content_size = match inputs.axis {
+            fret_core::Axis::Vertical => Size::new(record.bounds.size.width, update.content_extent),
+            fret_core::Axis::Horizontal => {
+                Size::new(update.content_extent, record.bounds.size.height)
+            }
+        };
+        inputs.scroll_handle.set_content_size_internal(content_size);
+        let prev_offset_point = inputs.scroll_handle.offset();
+        match inputs.axis {
+            fret_core::Axis::Vertical => {
+                inputs
+                    .scroll_handle
+                    .set_offset_internal(fret_core::Point::new(prev_offset_point.x, update.offset));
+            }
+            fret_core::Axis::Horizontal => {
+                inputs
+                    .scroll_handle
+                    .set_offset_internal(fret_core::Point::new(update.offset, prev_offset_point.y));
+            }
+        }
+
+        if self.debug_enabled {
+            self.debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
+                source: crate::tree::UiDebugVirtualListWindowSource::Prepaint,
+                node: record.node,
+                element: inputs.element,
+                axis: inputs.axis,
+                is_probe_layout: false,
+                items_len: inputs.len,
+                items_revision: inputs.items_revision,
+                prev_items_revision: update.prev_items_revision,
+                measure_mode: inputs.measure_mode,
+                overscan: inputs.overscan,
+                viewport: update.viewport,
+                prev_viewport: update.prev_viewport,
+                offset: update.offset,
+                prev_offset: update.prev_offset,
+                window_range: update.window_range,
+                prev_window_range: update.prev_window_range,
+                render_window_range: update.render_window_range,
+                deferred_scroll_to_item: update.deferred_scroll_to_item,
+                deferred_scroll_consumed: false,
+                window_mismatch: update.window_mismatch,
+            });
+        }
+
+        if self.view_cache_active() && update.window_mismatch {
+            let retained_host =
+                crate::elements::with_window_state(&mut *app, window, |window_state| {
+                    let retained = window_state
+                        .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
+                        inputs.element,
+                    );
+                    if retained {
+                        window_state.mark_retained_virtual_list_needs_reconcile(inputs.element);
+                    }
+                    retained
+                });
+
+            if !retained_host {
+                self.mark_nearest_view_cache_root_needs_rerender(
+                    record.node,
+                    UiDebugInvalidationSource::Other,
+                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                );
+            }
+            self.request_redraw_coalesced(app);
+        }
+    }
+
     fn apply_interaction_record(&mut self, record: &InteractionRecord) {
         let Some(n) = self.nodes.get_mut(record.node) else {
             return;
@@ -189,6 +431,7 @@ impl<H: UiHost> UiTree<H> {
                 for record in &replay {
                     self.interaction_cache.records.push(*record);
                     self.apply_interaction_record(record);
+                    self.prepaint_virtual_list_window_from_interaction_record(app, record);
                 }
                 let end = self.interaction_cache.records.len();
 
@@ -258,6 +501,7 @@ impl<H: UiHost> UiTree<H> {
         };
         self.interaction_cache.records.push(record);
         self.apply_interaction_record(&record);
+        self.prepaint_virtual_list_window_from_interaction_record(app, &record);
 
         let mut children_buf = SmallNodeList::<32>::default();
         if let Some(children) = self.nodes.get(node).map(|n| n.children.as_slice()) {
@@ -278,5 +522,123 @@ impl<H: UiHost> UiTree<H> {
                 });
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct NoopWidget;
+    impl Widget<crate::test_host::TestHost> for NoopWidget {}
+
+    #[test]
+    fn prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape() {
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        ui.set_debug_enabled(true);
+
+        let cache_root = ui.create_node(NoopWidget);
+        ui.nodes[cache_root].view_cache.enabled = true;
+        ui.set_root(cache_root);
+
+        let element = GlobalElementId(1);
+        let vlist_node = ui.create_node_for_element(element, NoopWidget);
+        ui.add_child(cache_root, vlist_node);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(40.0)),
+        );
+        ui.nodes[vlist_node].bounds = bounds;
+
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+        crate::declarative::frame::with_window_frame_mut(&mut app, window, |frame| {
+            frame.instances.insert(
+                vlist_node,
+                crate::declarative::frame::ElementRecord {
+                    element,
+                    instance: crate::declarative::frame::ElementInstance::VirtualList(
+                        crate::element::VirtualListProps {
+                            layout: crate::element::LayoutStyle::default(),
+                            axis: fret_core::Axis::Vertical,
+                            len: 1000,
+                            items_revision: 1,
+                            estimate_row_height: Px(10.0),
+                            measure_mode: crate::element::VirtualListMeasureMode::Fixed,
+                            key_cache: crate::element::VirtualListKeyCacheMode::VisibleOnly,
+                            overscan: 10,
+                            scroll_margin: Px(0.0),
+                            gap: Px(0.0),
+                            scroll_handle: scroll_handle.clone(),
+                            visible_items: Vec::new(),
+                        },
+                    ),
+                },
+            );
+        });
+
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::VirtualListState::default,
+            |state| {
+                state.render_window_range = Some(crate::virtual_list::VirtualRange {
+                    start_index: 0,
+                    end_index: 20,
+                    overscan: 10,
+                    count: 1000,
+                });
+                state.viewport_h = bounds.size.height;
+            },
+        );
+
+        scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(220.0)));
+
+        let record = InteractionRecord {
+            node: vlist_node,
+            bounds,
+            render_transform_inv: None,
+            children_render_transform_inv: None,
+            clips_hit_test: true,
+            clip_hit_test_corner_radii: None,
+            is_focusable: false,
+            focus_traversal_children: true,
+            can_scroll_descendant_into_view: true,
+        };
+
+        ui.prepaint_virtual_list_window_from_interaction_record(&mut app, &record);
+        assert!(
+            !ui.nodes[cache_root].view_cache_needs_rerender,
+            "expected overscan-contained offset changes to avoid dirtying the cache root"
+        );
+
+        scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(620.0)));
+        ui.prepaint_virtual_list_window_from_interaction_record(&mut app, &record);
+        assert!(
+            ui.nodes[cache_root].view_cache_needs_rerender,
+            "expected prepaint window escape to dirty the nearest cache root"
+        );
+
+        let last = ui
+            .debug_virtual_list_windows()
+            .last()
+            .expect("expected a debug virtual list window record");
+        assert!(
+            matches!(
+                last.source,
+                crate::tree::UiDebugVirtualListWindowSource::Prepaint
+            ),
+            "expected the debug window record to be sourced from prepaint"
+        );
+        assert!(
+            last.window_mismatch,
+            "expected the last prepaint window update to report a mismatch"
+        );
     }
 }
