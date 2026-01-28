@@ -991,42 +991,58 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 DockingArbitration,
             }
 
-            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if rest.len() == 1
-                && rest[0] == "ui-gallery"
-            {
-                (
-                    ui_gallery_suite_scripts()
-                        .into_iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect(),
-                    Some(BuiltinSuite::UiGallery),
-                )
-            } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
-                (
-                    vec![resolve_path(
-                        &workspace_root,
-                        PathBuf::from(
-                            "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-                        ),
-                    )],
-                    Some(BuiltinSuite::UiGallery),
-                )
-            } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
-                (
-                    docking_arbitration_suite_scripts()
-                        .into_iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect(),
-                    Some(BuiltinSuite::DockingArbitration),
-                )
-            } else {
-                (
-                    rest.into_iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect(),
-                    None,
-                )
-            };
+            let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
+            let is_ui_gallery_virt_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
+            let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
+
+            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
+                if is_ui_gallery_suite {
+                    (
+                        ui_gallery_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_virt_retained_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_docking_arbitration_suite {
+                    (
+                        docking_arbitration_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::DockingArbitration),
+                    )
+                } else {
+                    (
+                        rest.into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        None,
+                    )
+                };
+
+            if is_ui_gallery_virt_retained_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(64));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+            }
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
