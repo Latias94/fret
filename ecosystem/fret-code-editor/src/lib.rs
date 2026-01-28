@@ -9,7 +9,7 @@ use std::ops::Range;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_code_editor_buffer::{DocId, Edit, TextBuffer};
+use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
     DisplayPoint, byte_to_display_point, display_point_to_byte, move_word_left, move_word_right,
     select_word_range,
@@ -33,7 +33,7 @@ use fret_ui_kit::declarative::windowed_rows_surface::{
     WindowedRowsSurfacePointerHandlers, WindowedRowsSurfaceProps,
     windowed_rows_surface_with_pointer_region,
 };
-use fret_undo::{InvertibleTransaction, UndoHistory, UndoRecord};
+use fret_undo::{CoalesceKey, InvertibleTransaction, UndoHistory, UndoRecord};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Selection {
@@ -67,21 +67,48 @@ pub struct PreeditState {
 
 #[derive(Debug, Clone)]
 struct CodeEditorTx {
-    edit: Edit,
+    buffer_tx: TextBufferTx,
     selection: Selection,
-    inverse_edit: Edit,
     inverse_selection: Selection,
 }
 
 impl InvertibleTransaction for CodeEditorTx {
     fn invert(&self) -> Self {
         Self {
-            edit: self.inverse_edit.clone(),
+            buffer_tx: self.buffer_tx.invert(),
             selection: self.inverse_selection,
-            inverse_edit: self.edit.clone(),
             inverse_selection: self.selection,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UndoGroupKind {
+    Typing,
+    Paste,
+    Cut,
+    Backspace,
+    DeleteForward,
+}
+
+impl UndoGroupKind {
+    fn coalesce_key(self) -> CoalesceKey {
+        match self {
+            Self::Typing => CoalesceKey::from("code-editor.typing"),
+            Self::Paste => CoalesceKey::from("code-editor.paste"),
+            Self::Cut => CoalesceKey::from("code-editor.cut"),
+            Self::Backspace => CoalesceKey::from("code-editor.backspace"),
+            Self::DeleteForward => CoalesceKey::from("code-editor.delete_forward"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct UndoGroup {
+    kind: UndoGroupKind,
+    before_selection: Selection,
+    tx: TextBufferTransaction,
+    coalesce_key: CoalesceKey,
 }
 
 #[derive(Debug, Clone)]
@@ -90,6 +117,7 @@ struct CodeEditorState {
     selection: Selection,
     preedit: Option<PreeditState>,
     undo: UndoHistory<CodeEditorTx>,
+    undo_group: Option<UndoGroup>,
     dragging: bool,
     drag_pointer: Option<fret_core::PointerId>,
     last_bounds: Option<Rect>,
@@ -116,6 +144,7 @@ impl CodeEditorHandle {
                 selection: Selection::default(),
                 preedit: None,
                 undo: UndoHistory::with_limit(512),
+                undo_group: None,
                 dragging: false,
                 drag_pointer: None,
                 last_bounds: None,
@@ -240,6 +269,7 @@ impl CodeEditor {
                     st.last_bounds = Some(bounds);
                     st.dragging = true;
                     st.drag_pointer = Some(down.pointer_id);
+                    st.undo_group = None;
 
                     let caret = caret_for_pointer(&st.buffer, row, bounds, down.position, cell_w);
                     match down.click_count {
@@ -311,6 +341,7 @@ impl CodeEditor {
                     if !st.dragging {
                         return false;
                     }
+                    st.undo_group = None;
 
                     let bounds = host.bounds();
                     st.last_bounds = Some(bounds);
@@ -350,6 +381,7 @@ impl CodeEditor {
                     let mut st = on_pointer_up_state.borrow_mut();
                     st.dragging = false;
                     st.drag_pointer = None;
+                    st.undo_group = None;
                     host.release_pointer_capture();
                     host.notify(action_cx);
                     host.request_redraw(action_cx.window);
@@ -365,6 +397,7 @@ impl CodeEditor {
                         st.dragging = false;
                         st.drag_pointer = None;
                     }
+                    st.undo_group = None;
                     host.release_pointer_capture();
                     host.notify(action_cx);
                     host.request_redraw(action_cx.window);
@@ -423,6 +456,7 @@ impl CodeEditor {
                                     focus: end,
                                 };
                                 st.preedit = None;
+                                st.undo_group = None;
                                 did = true;
                             }
                             "text.copy" => {
@@ -493,8 +527,7 @@ impl CodeEditor {
             let text_cache_max_entries = viewport_rows
                 .saturating_add(overscan.saturating_mul(2))
                 .saturating_add(128)
-                .max(256)
-                .min(8_192);
+                .clamp(256, 8_192);
             surface_props.canvas.cache_policy = CanvasCachePolicy {
                 text: CanvasCacheTuning {
                     keep_frames: 60,
@@ -508,8 +541,6 @@ impl CodeEditor {
                 let scroll_handle = scroll_handle.clone();
                 let scroll_dir = scroll_dir.clone();
                 let text_style = text_style.clone();
-                let overlay_bg = overlay_bg;
-                let text_cache_max_entries = text_cache_max_entries;
                 let hook: OnWindowedRowsPaintFrame = Arc::new(
                     move |painter: &mut fret_ui::canvas::CanvasPainter<'_>,
                           frame: WindowedRowsPaintFrame| {
@@ -618,7 +649,11 @@ impl CodeEditor {
                                 st.preedit = None;
                             }
                             fret_core::ImeEvent::Commit(text) => {
-                                let _ = insert_text(&mut st, text.as_str());
+                                let _ = insert_text_with_kind(
+                                    &mut st,
+                                    text.as_str(),
+                                    UndoGroupKind::Typing,
+                                );
                                 st.preedit = None;
                             }
                             fret_core::ImeEvent::Preedit { text, cursor } => {
@@ -656,7 +691,7 @@ impl CodeEditor {
                           _token: ClipboardToken,
                           text: &str| {
                         let mut st = clipboard_state.borrow_mut();
-                        let _ = insert_text(&mut st, text);
+                        let _ = insert_text_with_kind(&mut st, text, UndoGroupKind::Paste);
                         push_caret_rect_effect(
                             host,
                             action_cx,
@@ -794,6 +829,10 @@ fn push_caret_rect_effect(
 }
 
 fn insert_text(st: &mut CodeEditorState, text: &str) -> Option<()> {
+    insert_text_with_kind(st, text, UndoGroupKind::Typing)
+}
+
+fn insert_text_with_kind(st: &mut CodeEditorState, text: &str, kind: UndoGroupKind) -> Option<()> {
     if text.is_empty() {
         return None;
     }
@@ -803,6 +842,7 @@ fn insert_text(st: &mut CodeEditorState, text: &str) -> Option<()> {
     let caret = start.saturating_add(text.len()).min(st.buffer.len_bytes());
     apply_and_record_edit(
         st,
+        kind,
         Edit::Replace {
             range: start..end,
             text: text.to_string(),
@@ -839,6 +879,7 @@ fn next_char_boundary(text: &str, mut idx: usize) -> usize {
     idx
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_key_down(
     host: &mut dyn fret_ui::action::UiFocusActionHost,
     action_cx: ActionCx,
@@ -858,15 +899,19 @@ fn handle_key_down(
     match key {
         KeyCode::ArrowLeft => {
             move_caret_left(&mut st, shift);
+            st.undo_group = None;
         }
         KeyCode::ArrowRight => {
             move_caret_right(&mut st, shift);
+            st.undo_group = None;
         }
         KeyCode::ArrowUp => {
             move_caret_vertical(&mut st, -1, shift);
+            st.undo_group = None;
         }
         KeyCode::ArrowDown => {
             move_caret_vertical(&mut st, 1, shift);
+            st.undo_group = None;
         }
         KeyCode::Backspace => {
             delete_backward(&mut st);
@@ -926,6 +971,7 @@ fn delete_backward(st: &mut CodeEditorState) {
     if start != end {
         let _ = apply_and_record_edit(
             st,
+            UndoGroupKind::Backspace,
             Edit::Delete { range: start..end },
             Selection {
                 anchor: start,
@@ -942,6 +988,7 @@ fn delete_backward(st: &mut CodeEditorState) {
     let prev = prev_char_boundary(st.buffer.text(), caret);
     let _ = apply_and_record_edit(
         st,
+        UndoGroupKind::Backspace,
         Edit::Delete { range: prev..caret },
         Selection {
             anchor: prev,
@@ -957,6 +1004,7 @@ fn delete_forward(st: &mut CodeEditorState) {
     if start != end {
         let _ = apply_and_record_edit(
             st,
+            UndoGroupKind::DeleteForward,
             Edit::Delete { range: start..end },
             Selection {
                 anchor: start,
@@ -973,6 +1021,7 @@ fn delete_forward(st: &mut CodeEditorState) {
     }
     let _ = apply_and_record_edit(
         st,
+        UndoGroupKind::DeleteForward,
         Edit::Delete { range: caret..next },
         Selection {
             anchor: caret,
@@ -1029,37 +1078,38 @@ fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool) {
 
 fn apply_and_record_edit(
     st: &mut CodeEditorState,
+    kind: UndoGroupKind,
     edit: Edit,
     next_selection: Selection,
 ) -> Option<()> {
-    let before_selection = st.selection;
-    let inverse_edit = match &edit {
-        Edit::Insert { at, text } => Edit::Delete {
-            range: (*at)..at.saturating_add(text.len()),
-        },
-        Edit::Delete { range } => Edit::Insert {
-            at: range.start,
-            text: st.buffer.text().get(range.clone())?.to_string(),
-        },
-        Edit::Replace { range, text } => Edit::Replace {
-            range: range.start..range.start.saturating_add(text.len()),
-            text: st.buffer.text().get(range.clone())?.to_string(),
-        },
-    };
+    if !st.selection.is_caret() {
+        st.undo_group = None;
+    }
+    if st.undo_group.as_ref().is_none_or(|g| g.kind != kind) {
+        st.undo_group = Some(UndoGroup {
+            kind,
+            before_selection: st.selection,
+            tx: TextBufferTransaction::default(),
+            coalesce_key: kind.coalesce_key(),
+        });
+    }
 
     st.preedit = None;
-    st.buffer.apply(edit.clone()).ok()?;
+    let group = st.undo_group.as_mut().expect("undo group must exist");
+    st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?;
     st.selection = next_selection;
-    st.undo.record(UndoRecord::new(CodeEditorTx {
-        edit,
+    let record = UndoRecord::new(CodeEditorTx {
+        buffer_tx: group.tx.snapshot(),
         selection: next_selection,
-        inverse_edit,
-        inverse_selection: before_selection,
-    }));
+        inverse_selection: group.before_selection,
+    })
+    .coalesce_key(group.coalesce_key.clone());
+    st.undo.record_or_coalesce(record);
     Some(())
 }
 
 fn undo(st: &mut CodeEditorState) -> bool {
+    st.undo_group = None;
     let (buffer, selection, preedit, history) = (
         &mut st.buffer,
         &mut st.selection,
@@ -1069,7 +1119,7 @@ fn undo(st: &mut CodeEditorState) -> bool {
     let mut applied = false;
     let _ = history.undo_invertible(|record| {
         *preedit = None;
-        if buffer.apply(record.tx.edit.clone()).is_ok() {
+        if buffer.apply_tx(&record.tx.buffer_tx).is_ok() {
             *selection = record.tx.selection;
             applied = true;
         }
@@ -1079,6 +1129,7 @@ fn undo(st: &mut CodeEditorState) -> bool {
 }
 
 fn redo(st: &mut CodeEditorState) -> bool {
+    st.undo_group = None;
     let (buffer, selection, preedit, history) = (
         &mut st.buffer,
         &mut st.selection,
@@ -1088,7 +1139,7 @@ fn redo(st: &mut CodeEditorState) -> bool {
     let mut applied = false;
     let _ = history.redo_invertible(|record| {
         *preedit = None;
-        if buffer.apply(record.tx.edit.clone()).is_ok() {
+        if buffer.apply_tx(&record.tx.buffer_tx).is_ok() {
             *selection = record.tx.selection;
             applied = true;
         }
@@ -1100,6 +1151,7 @@ fn redo(st: &mut CodeEditorState) -> bool {
 fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
     let text = st.buffer.text();
     let mode = TextBoundaryMode::Identifier;
+    st.undo_group = None;
 
     let (sel_start, sel_end) = {
         let r = st.selection.normalized();
@@ -1141,6 +1193,7 @@ fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool 
     let end = range.end.min(st.buffer.len_bytes());
     apply_and_record_edit(
         st,
+        UndoGroupKind::Cut,
         Edit::Delete { range: start..end },
         Selection {
             anchor: start,
@@ -1150,6 +1203,7 @@ fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool 
     .is_some()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paint_row(
     painter: &mut fret_ui::canvas::CanvasPainter<'_>,
     st: &mut CodeEditorState,
