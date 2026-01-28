@@ -48,23 +48,31 @@ Evidence anchors:
 - Menu content insets + overall menu height: **Gated**
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
-- Hovered/highlighted item chrome: **Not gated** (missing shadcn-web state goldens)
-- Keyboard roving focus visuals: **Not gated** (missing shadcn-web state goldens)
+- Hovered/highlighted item chrome (bg/fg): **Gated** (`*.highlight-first.open.json`)
+- Keyboard roving focus visuals (focused item bg/fg): **Gated** (`*.focus-first.open.json`)
 
 Evidence anchors:
 
 - Goldens:
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo*.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo*.open.json`
-- Goldens (state): **missing** (recommended next additions)
+- Goldens (state):
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.focus-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.focus-first.open.json`
+  - Note: `context-menu-demo.focus-first` is captured by opening via pointer context menu and then
+    forcing focus onto the first `[role='menuitem']` (scripted `steps=keys=[role='menuitem']@Home`),
+    because the upstream `context-menu-demo` does not reliably open from the keyboard in our
+    extractor harness.
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
   (`assert_dropdown_menu_demo_constrained_scroll_state_matches`,
   `assert_context_menu_demo_constrained_scroll_state_matches`)
-  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (panel chrome + shadows + surface colors only; no state-item chrome yet)
+  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (item state chrome)
+  (`web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`,
+  `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`,
+  `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`, plus `*_dark` variants).
 
 ### Select / Combobox listboxes
 

@@ -164,6 +164,10 @@ Conformance gates:
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_dropdown_menu_panel_chrome_matches`).
 - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`).
+- Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_dark`).
+- Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_dark`).
 - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`).
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_checkboxes_overlay_placement_matches`, `web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches`).
@@ -208,6 +212,10 @@ Recent fixes:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_shadow_matches_web`, `web_vs_fret_context_menu_demo_shadow_matches_web_dark`).
+  - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark`).
+  - Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark`).
   - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_context_menu_demo_submenu_shadow_matches_web_dark`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_overlay_placement_matches`, `web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matches`).

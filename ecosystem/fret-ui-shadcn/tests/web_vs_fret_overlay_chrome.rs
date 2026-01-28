@@ -3379,6 +3379,23 @@ fn largest_semantics_node<'a>(
     })
 }
 
+fn fret_find_topmost_menu_item_in_menu<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    menu_bounds: Rect,
+) -> Option<&'a fret_core::SemanticsNode> {
+    snap.nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::MenuItem)
+        .filter(|n| rect_intersection_area(n.bounds, menu_bounds) > 0.01)
+        .min_by(|a, b| {
+            let ay = a.bounds.origin.y.0;
+            let by = b.bounds.origin.y.0;
+            let ax = a.bounds.origin.x.0;
+            let bx = b.bounds.origin.x.0;
+            ay.total_cmp(&by).then_with(|| ax.total_cmp(&bx))
+        })
+}
+
 fn hover_open_at(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -4812,6 +4829,345 @@ fn web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark() {
     );
 }
 
+fn build_shadcn_dropdown_menu_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+        DropdownMenuLabel, DropdownMenuShortcut,
+    };
+
+    DropdownMenu::new(open.clone())
+        // new-york-v4 dropdown-menu-demo: `DropdownMenuContent className="w-56"`.
+        .min_width(Px(224.0))
+        .into_element(
+            cx,
+            |cx| {
+                Button::new("Open")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |cx| {
+                vec![
+                    DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("Profile")
+                            .trailing(DropdownMenuShortcut::new("⇧⌘P").into_element(cx)),
+                    ),
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("Billing")
+                            .trailing(DropdownMenuShortcut::new("⌘B").into_element(cx)),
+                    ),
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("Settings")
+                            .trailing(DropdownMenuShortcut::new("⌘S").into_element(cx)),
+                    ),
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("Keyboard shortcuts")
+                            .trailing(DropdownMenuShortcut::new("⌘K").into_element(cx)),
+                    ),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Team")),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Invite users").submenu(vec![
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                    ])),
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("New Team")
+                            .trailing(DropdownMenuShortcut::new("⌘+T").into_element(cx)),
+                    ),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Support")),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("API").disabled(true)),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new("Log out")
+                            .trailing(DropdownMenuShortcut::new("⇧⌘Q").into_element(cx)),
+                    ),
+                ]
+            },
+        )
+}
+
+fn render_dropdown_menu_demo_settled(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    frame_id_base: u64,
+    open: &Model<bool>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            FrameId(frame_id_base + tick),
+            tick + 1 == settle_frames,
+            |cx| vec![build_shadcn_dropdown_menu_demo(cx, open)],
+        );
+    }
+    paint_frame(ui, app, services, bounds)
+}
+
+fn assert_dropdown_menu_highlighted_item_chrome_matches_web(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open("dropdown-menu-demo.highlight-first");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_highlighted_menu_item_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let (snap2, _) = render_dropdown_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        &open,
+    );
+
+    let menu = largest_semantics_node(&snap2, SemanticsRole::Menu)
+        .expect("dropdown-menu menu semantics node (largest)");
+    let item = fret_find_topmost_menu_item_in_menu(&snap2, menu.bounds)
+        .expect("dropdown-menu first menu item semantics node");
+
+    hover_open_at(&mut ui, &mut app, &mut services, bounds_center(item.bounds));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(200),
+        true,
+        |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let menu = largest_semantics_node(&snap, SemanticsRole::Menu)
+        .expect("dropdown-menu menu semantics node (largest)");
+    let item = fret_find_topmost_menu_item_in_menu(&snap, menu.bounds)
+        .expect("dropdown-menu first menu item semantics node after hover");
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, item.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!(
+                "dropdown-menu-demo.highlight-first {web_theme_name}: highlighted menu item background quad"
+            )
+        });
+    assert_rgba_close(
+        &format!(
+            "dropdown-menu-demo.highlight-first {web_theme_name} highlighted menu item background"
+        ),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        item.bounds,
+        leftish_text_probe_point(item.bounds),
+    )
+    .unwrap_or_else(|| {
+        panic!(
+            "dropdown-menu-demo.highlight-first {web_theme_name}: highlighted menu item text color"
+        )
+    });
+    assert_rgba_close(
+        &format!(
+            "dropdown-menu-demo.highlight-first {web_theme_name} highlighted menu item text color"
+        ),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+fn assert_dropdown_menu_focused_item_chrome_matches_web(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open("dropdown-menu-demo.focus-first");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let (snap2, _) = render_dropdown_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        &open,
+    );
+
+    let menu = largest_semantics_node(&snap2, SemanticsRole::Menu)
+        .expect("dropdown-menu menu semantics node (largest)");
+    let item = fret_find_topmost_menu_item_in_menu(&snap2, menu.bounds)
+        .expect("dropdown-menu first menu item semantics node");
+
+    ui.set_focus(Some(item.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(200),
+        true,
+        |cx| vec![build_shadcn_dropdown_menu_demo(cx, &open)],
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let menu = largest_semantics_node(&snap, SemanticsRole::Menu)
+        .expect("dropdown-menu menu semantics node (largest)");
+    let fallback = fret_find_topmost_menu_item_in_menu(&snap, menu.bounds)
+        .expect("dropdown-menu first menu item semantics node after focus");
+    let focused = fret_find_active_menu_item(&snap).unwrap_or(fallback);
+    let focused = focused;
+    if focused.role != SemanticsRole::MenuItem {
+        let focused_roles: Vec<SemanticsRole> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.flags.focused)
+            .map(|n| n.role)
+            .collect();
+        panic!(
+            "dropdown-menu-demo.focus-first {web_theme_name}: expected focused menu item semantics node\n  focused_roles={focused_roles:?}"
+        );
+    }
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, focused.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!(
+                "dropdown-menu-demo.focus-first {web_theme_name}: focused menu item background quad"
+            )
+        });
+    assert_rgba_close(
+        &format!("dropdown-menu-demo.focus-first {web_theme_name} focused menu item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        focused.bounds,
+        leftish_text_probe_point(focused.bounds),
+    )
+    .unwrap_or_else(|| {
+        panic!("dropdown-menu-demo.focus-first {web_theme_name}: focused menu item text color")
+    });
+    assert_rgba_close(
+        &format!("dropdown-menu-demo.focus-first {web_theme_name} focused menu item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web() {
+    assert_dropdown_menu_highlighted_item_chrome_matches_web(
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_dark() {
+    assert_dropdown_menu_highlighted_item_chrome_matches_web(
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web() {
+    assert_dropdown_menu_focused_item_chrome_matches_web(
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_dark() {
+    assert_dropdown_menu_focused_item_chrome_matches_web(
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
 #[test]
 fn web_vs_fret_dropdown_menu_demo_submenu_surface_colors_match_web() {
     use fret_ui_shadcn::{Button, DropdownMenu, DropdownMenuEntry, DropdownMenuItem};
@@ -5163,6 +5519,434 @@ fn web_vs_fret_context_menu_demo_surface_colors_match_web_dark() {
                     |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Copy"))],
                 )
         },
+    );
+}
+
+fn build_shadcn_context_menu_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+    checked_bookmarks: Model<bool>,
+    checked_full_urls: Model<bool>,
+    radio_person: Model<Option<Arc<str>>>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry,
+        ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec,
+        ContextMenuShortcut,
+    };
+
+    ContextMenu::new(open.clone())
+        // new-york-v4 context-menu-demo: `ContextMenuContent className="w-52"`.
+        .min_width(Px(208.0))
+        // new-york-v4 context-menu-demo: `ContextMenuSubContent className="w-44"`.
+        .submenu_min_width(Px(176.0))
+        .into_element(
+            cx,
+            |cx| {
+                Button::new("Right click here")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx)
+            },
+            |cx| {
+                vec![
+                    ContextMenuEntry::Item(
+                        ContextMenuItem::new("Back")
+                            .inset(true)
+                            .trailing(ContextMenuShortcut::new("⌘[").into_element(cx)),
+                    ),
+                    ContextMenuEntry::Item(
+                        ContextMenuItem::new("Forward")
+                            .inset(true)
+                            .disabled(true)
+                            .trailing(ContextMenuShortcut::new("⌘]").into_element(cx)),
+                    ),
+                    ContextMenuEntry::Item(
+                        ContextMenuItem::new("Reload")
+                            .inset(true)
+                            .trailing(ContextMenuShortcut::new("⌘R").into_element(cx)),
+                    ),
+                    ContextMenuEntry::Item(ContextMenuItem::new("More Tools").inset(true).submenu(
+                        vec![
+                            ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                            ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                            ContextMenuEntry::Separator,
+                            ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                            ContextMenuEntry::Separator,
+                            ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
+                                fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                            )),
+                        ],
+                    )),
+                    ContextMenuEntry::Separator,
+                    ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                        checked_bookmarks,
+                        "Show Bookmarks",
+                    )),
+                    ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                        checked_full_urls,
+                        "Show Full URLs",
+                    )),
+                    ContextMenuEntry::Separator,
+                    ContextMenuEntry::Label(ContextMenuLabel::new("People").inset(true)),
+                    ContextMenuEntry::RadioGroup(
+                        ContextMenuRadioGroup::new(radio_person)
+                            .item(ContextMenuRadioItemSpec::new("pedro", "Pedro Duarte"))
+                            .item(ContextMenuRadioItemSpec::new("colm", "Colm Tuite")),
+                    ),
+                ]
+            },
+        )
+}
+
+fn render_context_menu_demo_settled(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    frame_id_base: u64,
+    open: &Model<bool>,
+    checked_bookmarks: Model<bool>,
+    checked_full_urls: Model<bool>,
+    radio_person: Model<Option<Arc<str>>>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            FrameId(frame_id_base + tick),
+            tick + 1 == settle_frames,
+            |cx| {
+                vec![build_shadcn_context_menu_demo(
+                    cx,
+                    open,
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                )]
+            },
+        );
+    }
+    paint_frame(ui, app, services, bounds)
+}
+
+fn assert_context_menu_highlighted_item_chrome_matches_web(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open("context-menu-demo.highlight-first");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_highlighted_menu_item_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(false);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(true);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
+        .expect("context-menu trigger semantics node");
+
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let (snap2, _) = render_context_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        &open,
+        checked_bookmarks.clone(),
+        checked_full_urls.clone(),
+        radio_person.clone(),
+    );
+
+    let back = snap2
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Back"))
+        .expect("context-menu Back item semantics node");
+
+    hover_open_at(&mut ui, &mut app, &mut services, bounds_center(back.bounds));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(200),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let back = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Back"))
+        .expect("context-menu Back item semantics node after hover");
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, back.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("context-menu-demo.highlight-first {web_theme_name}: highlighted menu item background quad")
+        });
+    assert_rgba_close(
+        &format!(
+            "context-menu-demo.highlight-first {web_theme_name} highlighted menu item background"
+        ),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        back.bounds,
+        leftish_text_probe_point(back.bounds),
+    )
+    .unwrap_or_else(|| {
+        panic!(
+            "context-menu-demo.highlight-first {web_theme_name}: highlighted menu item text color"
+        )
+    });
+    assert_rgba_close(
+        &format!(
+            "context-menu-demo.highlight-first {web_theme_name} highlighted menu item text color"
+        ),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+fn assert_context_menu_focused_item_chrome_matches_web(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open("context-menu-demo.focus-first");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(false);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(true);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
+        .expect("context-menu trigger semantics node");
+
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let (snap2, _) = render_context_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        &open,
+        checked_bookmarks.clone(),
+        checked_full_urls.clone(),
+        radio_person.clone(),
+    );
+
+    let back = snap2
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Back"))
+        .expect("context-menu Back item semantics node");
+
+    ui.set_focus(Some(back.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(200),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let focused = fret_find_active_menu_item(&snap).unwrap_or_else(|| {
+        let focused_roles: Vec<SemanticsRole> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.flags.focused)
+            .map(|n| n.role)
+            .collect();
+        panic!(
+            "context-menu-demo.focus-first {web_theme_name}: expected focused menu item semantics node\n  focused_roles={focused_roles:?}"
+        )
+    });
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, focused.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!(
+                "context-menu-demo.focus-first {web_theme_name}: focused menu item background quad"
+            )
+        });
+    assert_rgba_close(
+        &format!("context-menu-demo.focus-first {web_theme_name} focused menu item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        focused.bounds,
+        leftish_text_probe_point(focused.bounds),
+    )
+    .unwrap_or_else(|| {
+        panic!("context-menu-demo.focus-first {web_theme_name}: focused menu item text color")
+    });
+    assert_rgba_close(
+        &format!("context-menu-demo.focus-first {web_theme_name} focused menu item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web() {
+    assert_context_menu_highlighted_item_chrome_matches_web(
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark() {
+    assert_context_menu_highlighted_item_chrome_matches_web(
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web() {
+    assert_context_menu_focused_item_chrome_matches_web(
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark() {
+    assert_context_menu_focused_item_chrome_matches_web(
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
 }
 
