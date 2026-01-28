@@ -4774,6 +4774,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         };
 
+        dock_tearoff_log(format_args!(
+            "[follow-stop] window={:?} source={:?} cursor={:?} raise_on_macos={}",
+            follow.window, follow.source_window, self.cursor_screen_pos, _raise_on_macos
+        ));
+
         let caps = self
             .app
             .global::<PlatformCapabilities>()

@@ -75,6 +75,21 @@ Each TODO is labeled:
   - Acceptance:
     - Escape during dock drag cancels and stops follow.
     - Mouse-up outside any window completes drop and stops follow.
+  - Validation recipe (manual):
+    - Run a docking demo with logs enabled (macOS only):
+      - `FRET_DOCK_TEAROFF_LOG=1 FRET_MACOS_CURSOR_TRACE=1 cargo run -p fret-demo --bin docking_arbitration_demo`
+      - Optional: also set `FRET_MACOS_WINDOW_LOG=1` if you suspect ordering/focus issues.
+    - Start a dock tear-off (create a DockFloating OS window) and ensure follow-mode is active:
+      - Drag a tab out of the window while holding LMB so a new OS window is created.
+      - Move the cursor: the floating window should follow (and the log should contain `[follow-move]` lines).
+    - Cancel via Escape while the drag is active:
+      - Press Escape (without releasing the mouse first).
+      - Expected: the drag session ends and the floating window stops following immediately.
+    - Sanity-check after cancel:
+      - Move the cursor around: the window should not keep moving.
+      - Try another tear-off immediately: follow should still work (no broken internal state).
+    - Log confirmation (macOS):
+      - `target/fret-dock-tearoff.log` should include a `[follow-stop]` line around the time you pressed Escape.
 
 ## P1 — Cross-platform robustness and capability modeling
 
