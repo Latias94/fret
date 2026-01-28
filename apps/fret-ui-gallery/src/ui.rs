@@ -667,6 +667,9 @@ fn page_preview(
         PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_radio(cx, material3_radio_value)
         }),
+        PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_select(cx)
+        }),
         PAGE_MATERIAL3_TEXT_FIELD => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_text_field(
@@ -3655,6 +3658,84 @@ fn preview_material3_radio(
         group_overridden,
         cx.text("Override preview: standalone Radio::style(...) using RadioStyle."),
         standalone,
+    ]
+}
+
+fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct SelectPageModels {
+        selected: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let selected = cx.with_state(SelectPageModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha").test_id("ui-gallery-material3-select-a"),
+        material3::SelectItem::new("beta", "Beta").test_id("ui-gallery-material3-select-b"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("ui-gallery-material3-select-c-disabled"),
+    ]
+    .into();
+
+    let default = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select")
+        .placeholder("Pick one")
+        .items(items.clone())
+        .test_id("ui-gallery-material3-select")
+        .into_element(cx);
+
+    let primary = theme.color_required("md.sys.color.primary");
+    let primary_container = theme.color_required("md.sys.color.primary-container");
+    let secondary_container = theme.color_required("md.sys.color.secondary-container");
+
+    let override_style = material3::SelectStyle::default()
+        .container_background(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::OPEN, Some(ColorRef::Color(primary_container))),
+        )
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::FOCUS_VISIBLE, Some(ColorRef::Color(primary))),
+        )
+        .trailing_icon_color(
+            WidgetStateProperty::new(None).when(WidgetStates::OPEN, Some(ColorRef::Color(primary))),
+        )
+        .menu_selected_container_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            secondary_container,
+        ))));
+
+    let overridden = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select (override)")
+        .placeholder("Pick one")
+        .items(items)
+        .style(override_style)
+        .test_id("ui-gallery-material3-select-overridden")
+        .into_element(cx);
+
+    vec![
+        cx.text(
+            "Material 3 Select: token-driven trigger + listbox overlay + ADR 1159 style overrides.",
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |_cx| vec![default, overridden],
+        ),
     ]
 }
 

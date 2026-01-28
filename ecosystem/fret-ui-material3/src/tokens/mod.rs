@@ -17,6 +17,7 @@ pub(crate) mod navigation_bar;
 pub(crate) mod navigation_drawer;
 pub(crate) mod navigation_rail;
 pub(crate) mod radio;
+pub(crate) mod select;
 pub(crate) mod snackbar;
 pub(crate) mod switch;
 pub(crate) mod tabs;

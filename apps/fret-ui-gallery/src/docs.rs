@@ -483,6 +483,34 @@ let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_SELECT: &str = r#"
+## Material 3 Select (MVP)
+
+This page validates a Material 3 select surface:
+
+- token-driven trigger outcomes via `md.comp.{outlined,filled}-select.*`
+- listbox overlay anchored to the trigger (Escape / outside press dismissal)
+- ADR 1159 style overrides via `SelectStyle` (partial per-state overrides)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SELECT: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let model = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::SelectItem::new("a", "Option A"),
+    m3::SelectItem::new("b", "Option B"),
+];
+
+let select = m3::Select::new(model)
+    .placeholder("Pick one")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 ## Material 3 Text Field (MVP)
 

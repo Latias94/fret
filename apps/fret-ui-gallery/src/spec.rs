@@ -136,6 +136,7 @@ pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
 pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
 pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
+pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
 pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
 pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_BAR: &str = "material3_navigation_bar";
@@ -196,6 +197,7 @@ pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
 pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
 pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
+pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
 pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
 pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
 pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_BAR: &str =
@@ -819,6 +821,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["material3", "radio", "state-layer", "ripple", "forms"],
                 docs::DOC_MATERIAL3_RADIO,
                 docs::USAGE_MATERIAL3_RADIO,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SELECT,
+                "Select",
+                "Material 3 Select (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SELECT,
+                &["material3", "select", "listbox", "forms", "overlay"],
+                docs::DOC_MATERIAL3_SELECT,
+                docs::USAGE_MATERIAL3_SELECT,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TEXT_FIELD,

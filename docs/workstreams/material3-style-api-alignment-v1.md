@@ -102,7 +102,7 @@ wired into the crate and therefore do not represent the current public surface.
 
 | Component | File | Has `*Style` | Has `.style(...)` | ADR 1159 shape | Notes |
 |---|---|---:|---:|---:|---|
-| Select | N/A | No | N/A | No | Pilot removed; needs a fresh implementation on `md.sys.*` / `md.comp.*` tokens + an ADR 1159-style surface before enabling. |
+| Select | `ecosystem/fret-ui-material3/src/select.rs` | Yes (`SelectStyle`) | Yes | Yes | Re-introduced on `md.sys.*` / `md.comp.*` tokens (including `md.comp.{outlined,filled}-select.*`) with a listbox overlay. |
 | RadioGroup | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Group is implemented by composing `Radio` items and forwarding `RadioStyle` into each item. |
 | Button | `ecosystem/fret-ui-material3/src/button.rs` | Yes (`ButtonStyle`) | Yes | Yes | Style overrides apply to the existing token-derived defaults. |
 | IconButton | `ecosystem/fret-ui-material3/src/icon_button.rs` | Yes (`IconButtonStyle`) | Yes | Yes | Supports toggle `selected` via `WidgetStates::SELECTED`. |
@@ -132,8 +132,8 @@ There were early, ADR-1159-shaped experiments in-tree (`select.rs`, `radio_group
 not exported from the crate and did not follow the current `md.*` token namespace decision.
 
 - [x] Delete these modules entirely (they were not exported and used deprecated `material3.*` keys).
-- [ ] Re-introduce `Select` on top of the current foundation + `md.*` tokens when we are ready to
-  commit to its public surface.
+- [x] Re-introduce `Select` on top of the current foundation + `md.*` tokens.
+  - Evidence: `ecosystem/fret-ui-material3/src/select.rs`, `ecosystem/fret-ui-material3/src/tokens/select.rs`.
 
 ### M3SA-010 — Shared resolution helpers (kit-level)
 
