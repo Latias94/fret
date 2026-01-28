@@ -30,16 +30,18 @@ Each TODO is labeled:
 
 ## P0 — User-visible parity blockers
 
-- [ ] DW-P0-ux-001 Auto-close empty dock-floating OS windows after re-dock.
+- [x] DW-P0-ux-001 Auto-close empty dock-floating OS windows after re-dock.
   - Goal: when the last panel leaves a DockFloating OS window via `DockOp::MovePanel`, close the OS window.
   - Rationale: avoids “empty shell windows” and matches ImGui-class multi-window UX.
   - Constraints:
     - `fret-core` remains pure; window close is a runtime/app policy.
     - Only close windows created for docking (avoid closing app-owned auxiliary windows).
   - Evidence anchors:
-    - Ops wiring: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`, `handle_dock_window_created`)
+    - Registry + close emission: `ecosystem/fret-docking/src/runtime.rs` (`DockFloatingOsWindowRegistry`, `handle_dock_op`)
+    - Tear-off window registration: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_window_created`)
     - Graph queries: `crates/fret-core/src/dock.rs` (`collect_panels_in_window`, window roots)
     - Window close effects: `crates/fret-runtime/src/effect.rs` (`WindowRequest::Close`)
+    - Regression: `ecosystem/fret-docking/src/runtime.rs` (`redock_from_dock_floating_window_auto_closes_empty_os_window`)
   - Acceptance:
     - Tear off a tab into a new OS window, then re-dock it into main → the floating OS window closes.
     - Drag the last remaining tab out of a floating window → source window closes without leaving a blank shell.
@@ -70,7 +72,7 @@ Each TODO is labeled:
 
 ## P1 — Cross-platform robustness and capability modeling
 
-- [ ] DW-P1-caps-001 Add capability quality signals for window hover + positioning.
+- [~] DW-P1-caps-001 Add capability quality signals for window hover + positioning.
   - Goal: avoid implicit assumptions that all native backends have reliable:
     - window-under-cursor selection,
     - `set_outer_position`,
@@ -80,11 +82,14 @@ Each TODO is labeled:
     - `ui.window_set_outer_position: none|best_effort|reliable`
     - `ui.window_z_level: none|best_effort|reliable`
   - Rationale: Wayland and sandboxed contexts require graceful degradation.
-  - Remaining work (implementation):
-    - Add fields to `PlatformCapabilities` and thread them into `InputContext`/`when`.
-    - Populate per-backend values (desktop: Windows/macOS/Linux; web: `none`).
-    - Gate docking tear-off follow-mode + hovered-window selection strategy using these signals
-      (avoid platform branches inside widgets/policies).
+  - Evidence anchors:
+    - Capability keys + enums: `crates/fret-runtime/src/capabilities.rs`
+    - Re-exports: `crates/fret-runtime/src/lib.rs`
+    - Backend values + clamp: `crates/fret-launch/src/runner/desktop/mod.rs`, `crates/fret-launch/src/runner/web.rs`
+    - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/mod.rs`
+  - Remaining work:
+    - Thread the signals into docking/UI policy gating (e.g. `allow_tear_off` and “follow-mode” UX promises),
+      so behavior degrades by capability instead of by platform forks inside widgets.
 
 - [ ] DW-P1-win-002 Windows placement correctness under DPI and decorations.
   - Goal: initial window placement for tear-off aligns with cursor grab and respects non-client offsets.
