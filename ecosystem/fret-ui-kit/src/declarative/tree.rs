@@ -437,13 +437,18 @@ where
                     let select_cmd =
                         enabled.then(|| CommandId::new(format!("tree.select.{}", entry.id)));
 
-                    let mut row_el = cx.pressable(
+                    let debug_test_id: Option<Arc<str>> = row_test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{prefix}-{}", entry.id)));
+
+                    let row_el = cx.pressable(
                         PressableProps {
                             enabled,
                             a11y: PressableA11y {
                                 role: Some(SemanticsRole::TreeItem),
                                 label: Some(entry.label.clone()),
                                 selected: is_selected,
+                                test_id: debug_test_id.clone(),
                                 ..Default::default()
                             },
                             ..Default::default()
@@ -522,19 +527,6 @@ where
                             )]
                         },
                     );
-
-                    if let Some(prefix) = row_test_id_prefix.as_ref() {
-                        let test_id: Arc<str> = Arc::from(format!("{prefix}-{}", entry.id));
-                        let inner = row_el;
-                        row_el = cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                role: SemanticsRole::Group,
-                                test_id: Some(test_id),
-                                ..Default::default()
-                            },
-                            move |_cx| vec![inner],
-                        );
-                    }
 
                     row_el
                 });
