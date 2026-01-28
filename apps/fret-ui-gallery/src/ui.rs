@@ -6036,12 +6036,26 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 ..Default::default()
             },
             |cx| {
-                vec![fret_ui_kit::declarative::tree::tree_view(
-                    cx,
-                    items,
-                    state,
-                    fret_ui_kit::Size::Medium,
-                )]
+                let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
+                    .filter(|v| !v.is_empty())
+                    .is_some();
+
+                if retained {
+                    vec![fret_ui_kit::declarative::tree::tree_view_retained(
+                        cx,
+                        items,
+                        state,
+                        fret_ui_kit::Size::Medium,
+                        Some(Arc::<str>::from("ui-gallery-tree-row")),
+                    )]
+                } else {
+                    vec![fret_ui_kit::declarative::tree::tree_view(
+                        cx,
+                        items,
+                        state,
+                        fret_ui_kit::Size::Medium,
+                    )]
+                }
             },
         )]
     });
