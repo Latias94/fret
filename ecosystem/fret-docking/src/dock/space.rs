@@ -990,8 +990,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
             cx.node,
         );
         let dock_space_node = cx.node;
-        let allow_tear_off =
-            cx.input_ctx.caps.ui.window_tear_off && cx.input_ctx.caps.ui.multi_window;
+        let allow_tear_off = cx.input_ctx.caps.ui.window_tear_off
+            && cx.input_ctx.caps.ui.multi_window
+            && cx.input_ctx.caps.ui.window_hover_detection
+                != fret_runtime::WindowHoverDetectionQuality::None;
         let window_input_arbitration = cx.input_ctx.window_arbitration();
         let pointer_occlusion = cx.input_ctx.window_pointer_occlusion();
         let foreign_capture_active = window_input_arbitration.is_some_and(|snapshot| {
