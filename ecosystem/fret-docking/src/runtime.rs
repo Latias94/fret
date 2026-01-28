@@ -761,6 +761,55 @@ mod tests {
     }
 
     #[test]
+    fn before_close_window_merges_dock_floating_panels_into_target_window() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+
+            let tabs_a = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("main.placeholder")],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs_a);
+
+            let tabs_b = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_b, tabs_b);
+        });
+
+        assert!(
+            handle_dock_before_close_window(&mut app, window_b, window_a),
+            "expected before_close hook to allow closing after merging"
+        );
+
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.window_root(window_b).is_none(),
+            "expected closing window root to be removed after merge"
+        );
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            "expected panel to be merged into target window"
+        );
+    }
+
+    #[test]
     fn request_float_canceled_by_close_panel_closes_created_window() {
         let window_a = AppWindowId::from(KeyData::from_ffi(1));
         let window_b = AppWindowId::from(KeyData::from_ffi(2));
