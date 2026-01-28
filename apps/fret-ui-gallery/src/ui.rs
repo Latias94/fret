@@ -62,10 +62,21 @@ pub(crate) fn sidebar_view(
         },
     );
 
-    let query_input = shadcn::Input::new(nav_query)
-        .a11y_label("Search components")
-        .placeholder("Search (id / tag)")
-        .into_element(cx);
+    let query_input = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-nav-search")),
+            ..Default::default()
+        },
+        |cx| {
+            vec![
+                shadcn::Input::new(nav_query)
+                    .a11y_label("Search components")
+                    .placeholder("Search (id / tag)")
+                    .into_element(cx),
+            ]
+        },
+    );
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
     for group in PAGE_GROUPS {
