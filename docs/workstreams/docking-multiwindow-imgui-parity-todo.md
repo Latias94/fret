@@ -55,11 +55,13 @@ Each TODO is labeled:
   - Acceptance:
     - During a dock drag, move outside all windows and back: hover/drop target selection remains correct.
 
-- [ ] DW-P0-ux-003 Close button semantics: closing a dock-floating OS window merges its content back.
+- [x] DW-P0-ux-003 Close button semantics: closing a dock-floating OS window merges its content back.
   - Goal: closing a dock-floating window should not discard panels; it should merge into a stable target window.
   - Evidence anchors:
     - Hook: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_before_close_window`)
     - Runner: `crates/fret-launch/src/runner/desktop/mod.rs` (`before_close_window` call path)
+    - Demo wiring: `apps/fret-examples/src/docking_demo.rs` (`before_close_window`), `apps/fret-examples/src/docking_arbitration_demo.rs` (`before_close_window`)
+    - Regression: `ecosystem/fret-docking/src/runtime.rs` (`before_close_window_merges_dock_floating_panels_into_target_window`)
   - Acceptance:
     - Close a floating window via OS close button → its panels reappear in main window.
 
