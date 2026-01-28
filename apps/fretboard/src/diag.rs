@@ -72,6 +72,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_viewport_capture_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
+    let mut check_retained_vlist_scroll_window_dirty_max: Option<u64> = None;
     let mut compare_eps_px: f32 = 0.5;
     let mut compare_ignore_bounds: bool = false;
     let mut compare_ignore_scene_fingerprint: bool = false;
@@ -429,6 +430,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_retained_vlist_attach_detach_max = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --check-retained-vlist-attach-detach-max".to_string()
                 })?);
+                i += 1;
+            }
+            "--check-retained-vlist-scroll-window-dirty-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-retained-vlist-scroll-window-dirty-max"
+                            .to_string(),
+                    );
+                };
+                check_retained_vlist_scroll_window_dirty_max =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-retained-vlist-scroll-window-dirty-max"
+                            .to_string()
+                    })?);
                 i += 1;
             }
             "--compare-eps-px" => {
@@ -866,6 +882,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_viewport_capture_min.is_some()
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
+                    || check_retained_vlist_scroll_window_dirty_max.is_some()
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -893,6 +910,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_viewport_capture_min,
                         check_retained_vlist_reconcile_no_notify_min,
                         check_retained_vlist_attach_detach_max,
+                        check_retained_vlist_scroll_window_dirty_max,
                         warmup_frames,
                     )?;
                 }
@@ -1105,6 +1123,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let retained_vlist_attach_detach_max_for_script =
                     check_retained_vlist_attach_detach_max
                         .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                let retained_vlist_scroll_window_dirty_max_for_script =
+                    check_retained_vlist_scroll_window_dirty_max
+                        .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
@@ -1116,7 +1137,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_dock_drag_min.is_some()
                     || check_viewport_capture_min.is_some()
                     || retained_vlist_gate_for_script.is_some()
-                    || retained_vlist_attach_detach_max_for_script.is_some();
+                    || retained_vlist_attach_detach_max_for_script.is_some()
+                    || retained_vlist_scroll_window_dirty_max_for_script.is_some();
 
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration);
@@ -1156,6 +1178,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script,
                         retained_vlist_attach_detach_max_for_script,
+                        retained_vlist_scroll_window_dirty_max_for_script,
                         warmup_frames,
                     )?;
                 }
@@ -1820,6 +1843,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_bundle_for_retained_vlist_attach_detach_max(
                     bundle_path.as_path(),
                     max_delta,
+                    warmup_frames,
+                )?;
+            }
+            if let Some(max) = check_retained_vlist_scroll_window_dirty_max {
+                check_bundle_for_retained_vlist_scroll_window_dirty_max(
+                    bundle_path.as_path(),
+                    max,
                     warmup_frames,
                 )?;
             }
@@ -2931,6 +2961,7 @@ fn apply_post_run_checks(
     check_viewport_capture_min: Option<u64>,
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
+    check_retained_vlist_scroll_window_dirty_max: Option<u64>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -2983,6 +3014,9 @@ fn apply_post_run_checks(
     }
     if let Some(max_delta) = check_retained_vlist_attach_detach_max {
         check_bundle_for_retained_vlist_attach_detach_max(bundle_path, max_delta, warmup_frames)?;
+    }
+    if let Some(max) = check_retained_vlist_scroll_window_dirty_max {
+        check_bundle_for_retained_vlist_scroll_window_dirty_max(bundle_path, max, warmup_frames)?;
     }
     if check_gc_sweep_liveness {
         check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
@@ -6154,6 +6188,114 @@ fn check_bundle_for_retained_vlist_attach_detach_max_json(
     Err(msg)
 }
 
+fn check_bundle_for_retained_vlist_scroll_window_dirty_max(
+    bundle_path: &Path,
+    max_offenders: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_retained_vlist_scroll_window_dirty_max_json(
+        &bundle,
+        bundle_path,
+        max_offenders,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_retained_vlist_scroll_window_dirty_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    max_offenders: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut offenders: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut offender_lines: Vec<String> = Vec::new();
+    let mut reconcile_events: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let list_count = s
+                .get("debug")
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.len() as u64)
+                .unwrap_or(0);
+            let stats_count = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            reconcile_events = reconcile_events.saturating_add(list_count.max(stats_count));
+
+            let dirty_views = s
+                .get("debug")
+                .and_then(|v| v.get("dirty_views"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            for dv in dirty_views {
+                let detail = dv
+                    .get("detail")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                if detail == "scroll_handle_window_update" {
+                    offenders = offenders.saturating_add(1);
+                    let root_node = dv.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let source = dv
+                        .get("source")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default();
+                    offender_lines.push(format!(
+                        "frame_id={frame_id} dirty_view_root_node={root_node} source={source} detail={detail}"
+                    ));
+                    break;
+                }
+            }
+        }
+    }
+
+    if offenders > max_offenders {
+        let mut msg = String::new();
+        msg.push_str(
+            "retained virtual-list reconcile should not require scroll-window dirty views\n",
+        );
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        msg.push_str(&format!(
+            "max_offenders={max_offenders} offenders={offenders} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots} reconcile_events={reconcile_events}\n"
+        ));
+        for line in offender_lines.into_iter().take(10) {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    Ok(())
+}
+
 fn check_bundle_for_viewport_input_min(
     bundle_path: &Path,
     min_events: u64,
@@ -8542,6 +8684,60 @@ mod tests {
         )
         .expect_err("expected missing reconcile events");
         assert!(err.contains("expected at least 1 retained virtual-list reconcile event"));
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_scroll_window_dirty_max_passes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "stats": { "retained_virtual_list_reconciles": 1 },
+                        "dirty_views": []
+                    }
+                }]
+            }]
+        });
+
+        check_bundle_for_retained_vlist_scroll_window_dirty_max_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            0,
+        )
+        .expect("expected no scroll-window dirty views");
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_scroll_window_dirty_max_fails_when_exceeded() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "stats": { "retained_virtual_list_reconciles": 1 },
+                        "dirty_views": [
+                            { "root_node": 12, "source": "other", "detail": "scroll_handle_window_update" }
+                        ]
+                    }
+                }]
+            }]
+        });
+
+        let err = check_bundle_for_retained_vlist_scroll_window_dirty_max_json(
+            &bundle,
+            Path::new("bundle.json"),
+            0,
+            0,
+        )
+        .expect_err("expected scroll-window dirty views to fail");
+        assert!(err.contains("should not require scroll-window dirty views"));
+        assert!(err.contains("offenders=1"));
     }
 
     #[test]
