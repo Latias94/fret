@@ -157,7 +157,16 @@ Suggested initial slot sets:
 - Menu / MenuItem: container + item background/foreground + selection state.
 
 - [ ] For each component, document which slots are public and which remain policy-only.
-- [ ] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
+- [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
+
+Widget state conventions (v1):
+
+- `WidgetStates::OPEN` is used for "overlay is open / expanded" presentation state of a *trigger*
+  (e.g. Select trigger, Menu trigger). It is not a selection state.
+- `WidgetStates::SELECTED` is used for "this option/tab is the current value" (e.g. Select option,
+  Tabs active tab) and for boolean "checked/on" controls (Checkbox/Switch/Radio/IconButton toggles).
+- Overlays (Menu/Select listbox) should usually treat `SELECTED` as belonging to the *option row*,
+  not to the overlay container.
 
 ### M3SA-200 — Implement `*Style` surfaces per component (incremental)
 
