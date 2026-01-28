@@ -2,25 +2,29 @@ use std::sync::Arc;
 
 use fret_core::Transform2D;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
+use fret_icons::ids;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, Model, Platform, PlatformCapabilities,
     WindowCommandGatingService, WindowCommandGatingSnapshot,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
-    PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
+    AnyElement, ContainerProps, Elements, FlexProps, LayoutStyle, Length, MainAlign,
+    PointerRegionProps, PressableA11y, PressableProps, RenderTransformProps, SizeStyle, StackProps,
     VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
+use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, ui,
+    OverrideSlot, Radius, Space, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, resolve_override_slot_opt, ui,
 };
 
 use crate::overlay_motion;
@@ -36,6 +40,7 @@ fn navigation_menu_input_context<H: UiHost>(app: &H) -> InputContext {
         ui_has_modal: false,
         window_arbitration: None,
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,
@@ -55,12 +60,18 @@ fn command_is_disabled_by_gating<H: UiHost>(
 fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.navigation_menu.trigger.text_px")
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX))
+        .or_else(|| theme.metric_by_key("metric.font.size"))
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
+        .unwrap_or_else(|| theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_PX));
     let line_height = theme
         .metric_by_key("component.navigation_menu.trigger.line_height")
+        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
+        .or_else(|| theme.metric_by_key("metric.font.line_height"))
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
+        .unwrap_or_else(|| {
+            theme.metric_required(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+        });
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -74,7 +85,7 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
 fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_x")
-        .unwrap_or_else(|| MetricRef::space(Space::N3).resolve(theme))
+        .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
 fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
@@ -112,7 +123,7 @@ fn nav_menu_viewport_border(theme: &Theme) -> Color {
 fn nav_menu_viewport_side_offset(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.viewport.side_offset")
-        .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(theme))
+        .unwrap_or(Px(6.0))
 }
 
 fn nav_menu_viewport_window_margin(theme: &Theme) -> Px {
@@ -128,10 +139,10 @@ fn nav_menu_content_switch_slide_px(theme: &Theme) -> Px {
         .unwrap_or(Px(208.0))
 }
 
-fn nav_menu_indicator_size(theme: &Theme) -> Px {
+fn nav_menu_indicator_diamond_size(theme: &Theme) -> Px {
     theme
-        .metric_by_key("component.navigation_menu.indicator.size")
-        .unwrap_or(Px(14.0))
+        .metric_by_key("component.navigation_menu.indicator.diamond_size")
+        .unwrap_or(Px(8.0))
 }
 
 /// shadcn/ui `NavigationMenuViewport` (v4).
@@ -162,8 +173,8 @@ impl NavigationMenuViewport {
 
 /// shadcn/ui `NavigationMenuIndicator` (v4).
 ///
-/// Upstream renders this as an opt-in child. Fret currently renders an indicator by default to
-/// match the new-york look, but exposes an opt-out switch for parity-sensitive recipes.
+/// Upstream renders this as an opt-in child. Fret does not render the indicator by default; enable
+/// it via [`NavigationMenu::indicator`] or [`NavigationMenu::indicator_component`] when needed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NavigationMenuIndicator {
     enabled: bool,
@@ -206,8 +217,8 @@ impl NavigationMenuTrigger {
         }
     }
 
-    pub fn children(self) -> Vec<AnyElement> {
-        self.children
+    pub fn children(self) -> Elements {
+        Elements::from(self.children)
     }
 }
 
@@ -385,8 +396,8 @@ impl NavigationMenuContent {
         }
     }
 
-    pub fn children(self) -> Vec<AnyElement> {
-        self.children
+    pub fn children(self) -> Elements {
+        Elements::from(self.children)
     }
 }
 
@@ -403,8 +414,9 @@ impl NavigationMenuItem {
     pub fn new(
         value: impl Into<Arc<str>>,
         label: impl Into<Arc<str>>,
-        content: Vec<AnyElement>,
+        content: impl IntoIterator<Item = AnyElement>,
     ) -> Self {
+        let content = content.into_iter().collect();
         Self {
             value: value.into(),
             label: label.into(),
@@ -420,7 +432,7 @@ impl NavigationMenuItem {
     }
 
     pub fn trigger(mut self, trigger: NavigationMenuTrigger) -> Self {
-        self.trigger = Some(trigger.children());
+        self.trigger = Some(trigger.children().into_vec());
         self
     }
 
@@ -430,7 +442,7 @@ impl NavigationMenuItem {
     }
 
     pub fn content(mut self, content: NavigationMenuContent) -> Self {
-        self.content = content.children();
+        self.content = content.children().into_vec();
         self
     }
 
@@ -450,17 +462,53 @@ pub struct NavigationMenuList {
 }
 
 impl NavigationMenuList {
-    pub fn new(items: Vec<NavigationMenuItem>) -> Self {
-        Self { items }
+    pub fn new(items: impl IntoIterator<Item = NavigationMenuItem>) -> Self {
+        Self {
+            items: items.into_iter().collect(),
+        }
     }
 
-    pub fn items(mut self, items: Vec<NavigationMenuItem>) -> Self {
-        self.items = items;
+    pub fn items(mut self, items: impl IntoIterator<Item = NavigationMenuItem>) -> Self {
+        self.items = items.into_iter().collect();
         self
     }
 
     pub fn into_items(self) -> Vec<NavigationMenuItem> {
         self.items
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct NavigationMenuStyle {
+    pub trigger_background: OverrideSlot<ColorRef>,
+    pub trigger_foreground: OverrideSlot<ColorRef>,
+}
+
+impl NavigationMenuStyle {
+    pub fn trigger_background(
+        mut self,
+        trigger_background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_background = Some(trigger_background);
+        self
+    }
+
+    pub fn trigger_foreground(
+        mut self,
+        trigger_foreground: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.trigger_foreground = Some(trigger_foreground);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.trigger_background.is_some() {
+            self.trigger_background = other.trigger_background;
+        }
+        if other.trigger_foreground.is_some() {
+            self.trigger_foreground = other.trigger_foreground;
+        }
+        self
     }
 }
 
@@ -474,6 +522,7 @@ pub struct NavigationMenu {
     indicator: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    style: NavigationMenuStyle,
     config: radix_navigation_menu::NavigationMenuConfig,
 }
 
@@ -499,9 +548,10 @@ impl NavigationMenu {
             items: Vec::new(),
             disabled: false,
             viewport: true,
-            indicator: true,
+            indicator: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
         }
     }
@@ -513,15 +563,16 @@ impl NavigationMenu {
             items: Vec::new(),
             disabled: false,
             viewport: true,
-            indicator: true,
+            indicator: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            style: NavigationMenuStyle::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
         }
     }
 
-    pub fn items(mut self, items: Vec<NavigationMenuItem>) -> Self {
-        self.items = items;
+    pub fn items(mut self, items: impl IntoIterator<Item = NavigationMenuItem>) -> Self {
+        self.items = items.into_iter().collect();
         self
     }
 
@@ -571,6 +622,11 @@ impl NavigationMenu {
         self
     }
 
+    pub fn style(mut self, style: NavigationMenuStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     pub fn config(mut self, config: radix_navigation_menu::NavigationMenuConfig) -> Self {
         self.config = config;
         self
@@ -585,6 +641,7 @@ impl NavigationMenu {
         let indicator_enabled = self.indicator;
         let chrome = self.chrome;
         let layout = self.layout;
+        let style = self.style;
         let cfg = self.config;
 
         let value_model =
@@ -602,6 +659,18 @@ impl NavigationMenu {
         let trigger_fg = nav_menu_trigger_fg(&theme);
         let trigger_fg_muted = nav_menu_trigger_fg_muted(&theme);
         let trigger_text_style = nav_menu_trigger_text_style(&theme);
+        let default_trigger_bg = WidgetStateProperty::new(None)
+            .when(
+                WidgetStates::HOVERED,
+                Some(ColorRef::Color(trigger_bg_hover)),
+            )
+            .when(
+                WidgetStates::ACTIVE,
+                Some(ColorRef::Color(trigger_bg_hover)),
+            )
+            .when(WidgetStates::OPEN, Some(ColorRef::Color(trigger_bg_hover)));
+        let default_trigger_fg = WidgetStateProperty::new(ColorRef::Color(trigger_fg))
+            .when(WidgetStates::DISABLED, ColorRef::Color(trigger_fg_muted));
 
         let viewport_bg = nav_menu_viewport_bg(&theme);
         let viewport_border = nav_menu_viewport_border(&theme);
@@ -610,7 +679,7 @@ impl NavigationMenu {
             .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
         let root_gap = MetricRef::space(Space::N3).resolve(&theme);
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
-        let viewport_shadow = decl_style::shadow_sm(&theme, viewport_radius);
+        let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
         let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
         let content_pad_left = MetricRef::space(Space::N2).resolve(&theme);
         let content_pad_right = MetricRef::space(Space::N2p5).resolve(&theme);
@@ -736,7 +805,7 @@ impl NavigationMenu {
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
+                gap: Px(4.0), // Tailwind `space-x-1`
                 padding: Edges::all(Px(0.0)),
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Center,
@@ -748,6 +817,10 @@ impl NavigationMenu {
             let value_for_viewport = value_model.clone();
             let trigger_text_style_for_list = trigger_text_style.clone();
             let nav_ctx_for_list = nav_ctx.clone();
+            let theme_for_list = theme.clone();
+            let default_trigger_bg_for_list = default_trigger_bg.clone();
+            let default_trigger_fg_for_list = default_trigger_fg.clone();
+            let style_for_list = style.clone();
 
             let list = cx.flex(list_props, move |cx| {
                 items_for_children
@@ -759,6 +832,10 @@ impl NavigationMenu {
                         let disabled = menu_disabled || item.disabled;
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
+                        let theme_for_item = theme_for_list.clone();
+                        let default_trigger_bg = default_trigger_bg_for_list.clone();
+                        let default_trigger_fg = default_trigger_fg_for_list.clone();
+                        let style_override = style_for_list.clone();
 
                         cx.keyed(item_value.clone(), |cx| {
                             let trigger_text_style = trigger_text_style_for_item.clone();
@@ -779,6 +856,78 @@ impl NavigationMenu {
 
                             let trigger_children = item.trigger.clone();
                             let item_label = item.label.clone();
+                            if item.content.is_empty() {
+                                // shadcn/ui demo uses a `NavigationMenuLink` for items with no
+                                // content (e.g. "Docs"), styled via `navigationMenuTriggerStyle()`.
+                                // These should behave like a link (no chevron, no open/close).
+                                let trigger_text_style = trigger_text_style.clone();
+                                let trigger_children = trigger_children.clone();
+
+                                return cx.pressable(pressable, move |cx, st| {
+                                    let hovered = st.hovered && !st.pressed;
+                                    let pressed = st.pressed;
+                                    let fg = if disabled {
+                                        trigger_fg_muted
+                                    } else {
+                                        trigger_fg
+                                    };
+                                    let bg = (hovered || pressed).then_some(trigger_bg_hover);
+
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Auto;
+
+                                    let wrapper = ContainerProps {
+                                        layout,
+                                        padding: Edges {
+                                            top: trigger_pad_y,
+                                            right: trigger_pad_x,
+                                            bottom: trigger_pad_y,
+                                            left: trigger_pad_x,
+                                        },
+                                        background: bg,
+                                        shadow: None,
+                                        border: Edges::all(Px(0.0)),
+                                        border_color: None,
+                                        corner_radii: Corners::all(trigger_radius),
+                                        ..Default::default()
+                                    };
+
+                                    let content_children =
+                                        trigger_children.clone().unwrap_or_else(|| {
+                                            let style = trigger_text_style.clone();
+                                            let mut label = ui::label(cx, item_label.clone())
+                                                .text_size_px(style.size)
+                                                .font_weight(style.weight)
+                                                .text_color(ColorRef::Color(fg))
+                                                .nowrap();
+                                            if let Some(line_height) = style.line_height {
+                                                label = label.line_height_px(line_height);
+                                            }
+                                            if let Some(letter_spacing_em) = style.letter_spacing_em
+                                            {
+                                                label = label
+                                                    .letter_spacing_em(letter_spacing_em);
+                                            }
+                                            vec![label.into_element(cx)]
+                                        });
+
+                                    let row = cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(0.0),
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Center,
+                                            align: fret_ui::element::CrossAlign::Center,
+                                            wrap: false,
+                                            ..Default::default()
+                                        },
+                                        move |_cx| content_children,
+                                    );
+
+                                    vec![cx.container(wrapper, move |_cx| vec![row])]
+                                });
+                            }
                             radix_navigation_menu::NavigationMenuTrigger::new(item_value.clone())
                                 .label(label.clone())
                                 .disabled(disabled)
@@ -788,15 +937,24 @@ impl NavigationMenu {
                                     pressable,
                                     pointer_props,
                                     move |cx, st, is_open| {
-                                        let hovered = st.hovered && !st.pressed;
-                                        let pressed = st.pressed;
-                                        let fg = if disabled {
-                                            trigger_fg_muted
-                                        } else {
-                                            trigger_fg
-                                        };
-                                        let bg = (hovered || pressed || is_open)
-                                            .then_some(trigger_bg_hover);
+                                        let mut states =
+                                            WidgetStates::from_pressable(cx, st, !disabled);
+                                        states.set(WidgetState::Open, is_open);
+
+                                        let fg_ref = resolve_override_slot(
+                                            style_override.trigger_foreground.as_ref(),
+                                            &default_trigger_fg,
+                                            states,
+                                        );
+                                        let bg_ref = resolve_override_slot_opt(
+                                            style_override.trigger_background.as_ref(),
+                                            &default_trigger_bg,
+                                            states,
+                                        );
+
+                                        let bg = bg_ref
+                                            .as_ref()
+                                            .map(|color| color.resolve(&theme_for_item));
 
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Auto;
@@ -823,7 +981,7 @@ impl NavigationMenu {
                                                 let mut label = ui::label(cx, item_label.clone())
                                                     .text_size_px(style.size)
                                                     .font_weight(style.weight)
-                                                    .text_color(ColorRef::Color(fg))
+                                                    .text_color(fg_ref.clone())
                                                     .nowrap();
                                                 if let Some(line_height) = style.line_height {
                                                     label = label.line_height_px(line_height);
@@ -836,7 +994,80 @@ impl NavigationMenu {
                                                 vec![label.into_element(cx)]
                                             });
 
-                                        vec![cx.container(wrapper, move |_cx| content_children)]
+                                        let fg_ref_for_chevron = fg_ref.clone();
+                                        let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                                        let chevron_size = Px(12.0); // Tailwind `size-3`
+                                        let chevron_center =
+                                            Point::new(Px(chevron_size.0 * 0.5), Px(chevron_size.0 * 0.5));
+                                        let chevron_transform = Transform2D::rotation_about_degrees(
+                                            chevron_rotation,
+                                            chevron_center,
+                                        );
+
+                                        let chevron = cx.visual_transform_props(
+                                            VisualTransformProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size = SizeStyle {
+                                                        width: Length::Px(chevron_size),
+                                                        height: Length::Px(chevron_size),
+                                                        ..Default::default()
+                                                    };
+                                                    layout.flex.shrink = 0.0;
+                                                    layout.position = fret_ui::element::PositionStyle::Relative;
+                                                    layout.inset.top = Some(Px(1.0)); // `top-[1px]`
+                                                    layout.margin.left =
+                                                        fret_ui::element::MarginEdge::Px(Px(4.0)); // `ml-1`
+                                                    layout
+                                                },
+                                                transform: chevron_transform,
+                                            },
+                                            move |cx| {
+                                                vec![decl_icon::icon_with(
+                                                    cx,
+                                                    ids::ui::CHEVRON_DOWN,
+                                                    Some(chevron_size),
+                                                    Some(fg_ref_for_chevron.clone()),
+                                                )]
+                                            },
+                                        );
+
+                                        let mut row_children = content_children;
+                                        // Upstream adds a literal `" "` text node between the label
+                                        // and the chevron icon, in addition to `ml-1` on the icon.
+                                        // We model that as a deterministic, non-semantic spacer.
+                                        row_children.push(cx.container(
+                                            ContainerProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size = SizeStyle {
+                                                        width: Length::Px(Px(4.0)),
+                                                        height: Length::Px(Px(0.0)),
+                                                        ..Default::default()
+                                                    };
+                                                    layout.flex.shrink = 0.0;
+                                                    layout
+                                                },
+                                                ..Default::default()
+                                            },
+                                            |_cx| Vec::new(),
+                                        ));
+                                        row_children.push(chevron);
+                                        let row = cx.flex(
+                                            FlexProps {
+                                                layout: LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(0.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Center,
+                                                align: fret_ui::element::CrossAlign::Center,
+                                                wrap: false,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| row_children,
+                                        );
+
+                                        vec![cx.container(wrapper, move |_cx| vec![row])]
                                     },
                                 )
                         })
@@ -868,10 +1099,13 @@ impl NavigationMenu {
             if overlay_presence.present {
                 let side_offset = nav_menu_viewport_side_offset(&theme);
                 let window_margin = nav_menu_viewport_window_margin(&theme);
-                let indicator_size = if indicator_enabled {
-                    nav_menu_indicator_size(&theme)
-                } else {
-                    Px(0.0)
+                let indicator_size = if indicator_enabled { side_offset } else { Px(0.0) };
+                let indicator_diamond_size = nav_menu_indicator_diamond_size(&theme);
+                let indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(2.0));
+                let indicator_diamond_corners = {
+                    let mut corners = Corners::all(Px(0.0));
+                    corners.top_left = Px(2.0);
+                    corners
                 };
 
                 let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
@@ -915,10 +1149,10 @@ impl NavigationMenu {
                 let content_switch = content_switch.clone();
                 let content_switch_slide_px = content_switch_slide_px;
 
-                let panel_props = if viewport_enabled {
+                let mut panel_props = if viewport_enabled {
                     ContainerProps {
                         layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Clip,
+                            overflow: fret_ui::element::Overflow::Visible,
                             ..Default::default()
                         },
                         padding: Edges::all(Px(0.0)),
@@ -932,7 +1166,7 @@ impl NavigationMenu {
                 } else {
                     ContainerProps {
                         layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Clip,
+                            overflow: fret_ui::element::Overflow::Visible,
                             ..Default::default()
                         },
                         padding: Edges::all(Px(0.0)),
@@ -944,6 +1178,16 @@ impl NavigationMenu {
                         ..Default::default()
                     }
                 };
+                if viewport_enabled {
+                    // Match shadcn/ui + Radix: the viewport panel is sized by the measured content
+                    // dimensions (CSS vars). Tailwind preflight uses `box-sizing: border-box`, so
+                    // the viewport border is included in those dimensions.
+                    //
+                    // We apply this even when the first measurement hasn't been observed yet so
+                    // popper placement and panel layout remain consistent across frames.
+                    panel_props.layout.size.width = Length::Px(content_size.width);
+                    panel_props.layout.size.height = Length::Px(content_size.height);
+                }
 
                 let placement = popper::PopperContentPlacement::new(
                     direction_prim::use_direction_in_scope(cx, None),
@@ -955,6 +1199,7 @@ impl NavigationMenu {
                 let args = radix_navigation_menu::NavigationMenuViewportOverlayRequestArgs {
                     window_margin,
                     placement,
+                    placement_anchor_override: viewport_enabled.then_some(root_id),
                     content_size,
                     indicator_size,
                 };
@@ -992,12 +1237,16 @@ impl NavigationMenu {
                         let content_switch = content_switch;
                         let content_switch_slide_px = content_switch_slide_px;
                         let content_padding = content_padding;
+                        let indicator_diamond_shadow = indicator_diamond_shadow;
+                        let indicator_diamond_corners = indicator_diamond_corners;
+                        let viewport_enabled = viewport_enabled;
+                        let selected_value_for_registry: Arc<str> = Arc::from(selected_value_key);
 
                         let content =
                             radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
                                 cx,
                                 selected_value_key,
-                                move |cx, _st, _content_id| {
+                                move |cx, _st, content_id| {
                                 let root_state_for_hover = root_state_for_hover.clone();
                                 let value_for_hover = value_for_hover.clone();
                                 cx.pressable_on_hover_change(Arc::new(
@@ -1018,18 +1267,51 @@ impl NavigationMenu {
                                     },
                                 ));
 
+                                let root_id_for_registry = root_id;
+                                let value_for_registry = selected_value_for_registry.clone();
+                                let content_id_for_registry = content_id;
+                                let viewport_enabled_for_registry = viewport_enabled;
                                 let children = vec![cx.container(panel_props, move |cx| {
+                                    let mut clip_layout = LayoutStyle::default();
+                                    clip_layout.overflow = fret_ui::element::Overflow::Clip;
+
+                                    let clip_props = ContainerProps {
+                                        layout: clip_layout,
+                                        corner_radii: Corners::all(viewport_radius),
+                                        ..Default::default()
+                                    };
+
+                                    vec![cx.container(clip_props, move |cx| {
                                     let Some((t, forward, from_children)) = content_switch.clone()
                                     else {
                                         let children = viewport_children.clone();
-                                        return vec![cx.container(
-                                            ContainerProps {
-                                                layout: LayoutStyle::default(),
-                                                padding: content_padding,
-                                                ..Default::default()
-                                            },
-                                            move |_cx| children,
-                                        )];
+                                        let body = cx.keyed("viewport-body", |cx| {
+                                            let layout = LayoutStyle::default();
+                                            cx.container(
+                                                ContainerProps {
+                                                    layout,
+                                                    padding: content_padding,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| children,
+                                            )
+                                        });
+                                        if viewport_enabled_for_registry {
+                                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                cx,
+                                                root_id_for_registry,
+                                                value_for_registry.clone(),
+                                                body.id,
+                                            );
+                                        } else {
+                                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                cx,
+                                                root_id_for_registry,
+                                                value_for_registry.clone(),
+                                                content_id_for_registry,
+                                            );
+                                        }
+                                        return vec![body];
                                     };
 
                                     let to_children = viewport_children.clone();
@@ -1042,52 +1324,61 @@ impl NavigationMenu {
                                         (slide * t, -slide * (1.0 - t))
                                     };
 
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size = SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    };
-                                    layout.overflow = fret_ui::element::Overflow::Clip;
-                                    let layout_for_layers = layout;
+                                    let value_for_registry_for_layers = value_for_registry.clone();
 
-                                    vec![cx.stack_props(
+                                    // In shadcn/ui (Radix), `NavigationMenuContent` keeps its
+                                    // intrinsic size even during switch animations. In Fret, we
+                                    // must preserve that intrinsic sizing so overlay placement can
+                                    // converge to the same bounds and so viewport sizing can
+                                    // observe the real content size (not the previous panel size).
+                                    let mut layout_for_layers = LayoutStyle::default();
+                                    layout_for_layers.overflow = fret_ui::element::Overflow::Clip;
+
+                                    let stack = cx.stack_props(
                                         StackProps {
                                             layout: layout_for_layers,
                                         },
                                         move |cx| {
-                                            let mut layer_layout = LayoutStyle::default();
-                                            layer_layout.size = SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            };
+                                            let layer_layout = LayoutStyle::default();
 
                                             let from_opacity = 1.0 - t;
                                             let to_opacity = t;
 
-                                            let from_children = vec![cx.container(
-                                                ContainerProps {
-                                                    layout: LayoutStyle::default(),
-                                                    padding: content_padding,
-                                                    ..Default::default()
-                                                },
-                                                {
-                                                    let from_children = from_children.clone();
-                                                    move |_cx| from_children
-                                                },
-                                            )];
-                                            let to_children = vec![cx.container(
-                                                ContainerProps {
-                                                    layout: LayoutStyle::default(),
-                                                    padding: content_padding,
-                                                    ..Default::default()
-                                                },
-                                                {
-                                                    let to_children = to_children.clone();
-                                                    move |_cx| to_children
-                                                },
-                                            )];
+                                            let from_children = vec![cx.keyed("from-body", |cx| {
+                                                cx.container(
+                                                    ContainerProps {
+                                                        layout: LayoutStyle::default(),
+                                                        padding: content_padding,
+                                                        ..Default::default()
+                                                    },
+                                                    {
+                                                        let from_children = from_children.clone();
+                                                        move |_cx| from_children
+                                                    },
+                                                )
+                                            })];
+                                            let to_body = cx.keyed("to-body", |cx| {
+                                                cx.container(
+                                                    ContainerProps {
+                                                        layout: LayoutStyle::default(),
+                                                        padding: content_padding,
+                                                        ..Default::default()
+                                                    },
+                                                    {
+                                                        let to_children = to_children.clone();
+                                                        move |_cx| to_children
+                                                    },
+                                                )
+                                            });
+                                            if viewport_enabled_for_registry {
+                                                radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                    cx,
+                                                    root_id_for_registry,
+                                                    value_for_registry_for_layers.clone(),
+                                                    to_body.id,
+                                                );
+                                            }
+                                            let to_children = vec![to_body];
 
                                             let from = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
                                                 cx,
@@ -1119,7 +1410,24 @@ impl NavigationMenu {
 
                                             vec![from, to]
                                         },
-                                    )]
+                                    );
+                                    if viewport_enabled_for_registry {
+                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                            cx,
+                                            root_id_for_registry,
+                                            value_for_registry.clone(),
+                                            stack.id,
+                                        );
+                                    } else {
+                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                            cx,
+                                            root_id_for_registry,
+                                            value_for_registry.clone(),
+                                            content_id_for_registry,
+                                        );
+                                    }
+                                    vec![stack]
+                                })]
                                 })];
 
                                 (
@@ -1136,25 +1444,19 @@ impl NavigationMenu {
                             },
                         );
 
-                        if let Some(selected_value) = selected_value_for_content_id.clone() {
-                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                cx,
-                                root_id,
-                                selected_value,
-                                content.id,
-                            );
-                        }
-
                         let transform = overlay_motion::shadcn_zoom_transform_with_scale(
                             layout.transform_origin,
                             scale,
                         );
 
-                        let panel = popper_content::popper_wrapper_panel_at(
+                        // `NavigationMenuContent` (desktop) and `NavigationMenuViewport` (mobile)
+                        // are intrinsically sized in Radix/shadcn. Use an autosizing wrapper so we
+                        // don't have to provide a fixed `placed.size` up-front (which would
+                        // otherwise lock the content to an estimated/previous size during switch
+                        // interactions).
+                        let panel = popper_content::popper_wrapper_at_autosize(
                             cx,
-                            layout.placed,
-                            Edges::all(Px(0.0)),
-                            fret_ui::element::Overflow::Visible,
+                            layout.placed.origin,
                             move |_cx| vec![content],
                         );
 
@@ -1172,24 +1474,34 @@ impl NavigationMenu {
                                 cx,
                                 layout.indicator_rect,
                                 Edges::all(Px(0.0)),
-                                fret_ui::element::Overflow::Visible,
+                                fret_ui::element::Overflow::Clip,
                                 move |cx| {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size = SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
+                                    let track_w = layout.indicator_rect.size.width.0.max(0.0);
+                                    let track_h = layout.indicator_rect.size.height.0.max(0.0);
+
+                                    let diamond_size = indicator_diamond_size.0.max(0.0);
+                                    let diamond_left = ((track_w - diamond_size) * 0.5).max(0.0);
+                                    // Tailwind `top-[60%]` uses percentage units. In CSS, relative
+                                    // positioning percentage offsets resolve against the containing
+                                    // block's size (the indicator track), not the element's own size.
+                                    let diamond_top = (track_h - diamond_size + track_h * 0.60).max(0.0);
+
+                                    let mut diamond_layout = LayoutStyle::default();
+                                    diamond_layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    diamond_layout.inset.left = Some(Px(diamond_left));
+                                    diamond_layout.inset.top = Some(Px(diamond_top));
+                                    diamond_layout.size = SizeStyle {
+                                        width: Length::Px(Px(diamond_size)),
+                                        height: Length::Px(Px(diamond_size)),
                                         ..Default::default()
                                     };
 
-                                    let center = Point::new(
-                                        Px(indicator_size.0 * 0.5),
-                                        Px(indicator_size.0 * 0.5),
-                                    );
+                                    let center = Point::new(Px(diamond_size * 0.5), Px(diamond_size * 0.5));
                                     let rotate = Transform2D::rotation_about_degrees(45.0, center);
 
-                                    vec![cx.visual_transform_props(
+                                    let diamond = cx.visual_transform_props(
                                         VisualTransformProps {
-                                            layout,
+                                            layout: diamond_layout,
                                             transform: rotate,
                                         },
                                         move |cx| {
@@ -1199,22 +1511,36 @@ impl NavigationMenu {
                                                 height: Length::Fill,
                                                 ..Default::default()
                                             };
+
                                             vec![cx.container(
                                                 ContainerProps {
                                                     layout,
                                                     padding: Edges::all(Px(0.0)),
-                                                    background: Some(viewport_bg),
-                                                    shadow: None,
-                                                    border: Edges::all(Px(1.0)),
-                                                    border_color: Some(viewport_border),
-                                                    corner_radii: Corners::all(Px(2.0)),
+                                                    background: Some(viewport_border),
+                                                    shadow: Some(indicator_diamond_shadow),
+                                                    border: Edges::all(Px(0.0)),
+                                                    border_color: None,
+                                                    corner_radii: indicator_diamond_corners,
                                                     ..Default::default()
                                                 },
                                                 |_cx| Vec::new(),
                                             )]
                                         },
-                                    )]
+                                    );
+
+                                    radix_navigation_menu::navigation_menu_register_indicator_diamond_id(
+                                        cx,
+                                        root_id,
+                                        diamond.id,
+                                    );
+
+                                    vec![diamond]
                                 },
+                            );
+                            radix_navigation_menu::navigation_menu_register_indicator_track_id(
+                                cx,
+                                root_id,
+                                indicator.id,
                             );
                             children.push(indicator);
                         }
@@ -1250,26 +1576,35 @@ impl NavigationMenu {
     }
 }
 
-pub fn navigation_menu<H: UiHost>(
+pub fn navigation_menu<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = NavigationMenuItem>,
+{
     NavigationMenu::new(model).items(f(cx)).into_element(cx)
 }
 
-pub fn navigation_menu_list<H: UiHost>(
+pub fn navigation_menu_list<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
-) -> NavigationMenuList {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> NavigationMenuList
+where
+    I: IntoIterator<Item = NavigationMenuItem>,
+{
     NavigationMenuList::new(f(cx))
 }
 
-pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = NavigationMenuItem>,
+{
     NavigationMenu::uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)
@@ -1349,7 +1684,12 @@ mod tests {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
     }
 
-    fn assert_align_start(dir: LayoutDirection, anchor: Rect, panel: Rect) {
+    fn assert_align_start_for_desired_width(
+        dir: LayoutDirection,
+        anchor: Rect,
+        panel: Rect,
+        desired_width: Px,
+    ) {
         let eps = 0.75;
         match dir {
             LayoutDirection::Ltr => {
@@ -1359,51 +1699,14 @@ mod tests {
                 );
             }
             LayoutDirection::Rtl => {
-                let panel_right = panel.origin.x.0 + panel.size.width.0;
                 let anchor_right = anchor.origin.x.0 + anchor.size.width.0;
+                let expected_left = anchor_right - desired_width.0;
                 assert!(
-                    (panel_right - anchor_right).abs() <= eps,
-                    "expected RTL start alignment (panel.right == anchor.right); anchor={anchor:?} panel={panel:?}",
+                    (panel.origin.x.0 - expected_left).abs() <= eps,
+                    "expected RTL start alignment (panel.left == anchor.right - desired_width); desired_width={desired_width:?} anchor={anchor:?} panel={panel:?}",
                 );
             }
         }
-    }
-
-    fn find_overlay_panel_bounds(ui: &UiTree<App>, window_bounds: Rect, point: Point) -> Rect {
-        let hit = ui.debug_hit_test(point);
-        let Some(hit_node) = hit.hit else {
-            panic!("expected hit at point={point:?} (window={window_bounds:?})");
-        };
-
-        let path = ui.debug_node_path(hit_node);
-        for node in path.iter().copied().rev() {
-            let Some(bounds) = ui.debug_node_bounds(node) else {
-                continue;
-            };
-
-            if !bounds.contains(point) {
-                continue;
-            }
-
-            let is_fullscreen =
-                bounds.origin == window_bounds.origin && bounds.size == window_bounds.size;
-            if is_fullscreen {
-                continue;
-            }
-
-            if bounds.size.width.0 >= 100.0
-                && bounds.size.height.0 >= 80.0
-                && bounds.size.width.0 <= window_bounds.size.width.0 - 1.0
-                && bounds.size.height.0 <= window_bounds.size.height.0 - 1.0
-            {
-                return bounds;
-            }
-        }
-
-        panic!(
-            "expected to find an overlay panel bounds in hit path; point={point:?} hit_node={hit_node:?} path_len={}",
-            path.len()
-        );
     }
 
     #[test]
@@ -1947,31 +2250,65 @@ mod tests {
                 ui.layout_all(app, services, bounds, 1.0);
             };
 
-            // Two frames: first establishes trigger bounds; second mounts the overlay anchored to them.
+            // Three frames:
+            // - frame 1 establishes trigger/root bounds,
+            // - frame 2 mounts the overlay and records viewport content bounds,
+            // - frame 3 uses last-frame content bounds to drive viewport sizing.
+            render_frame(&mut ui, &mut app, &mut services);
             render_frame(&mut ui, &mut app, &mut services);
             render_frame(&mut ui, &mut app, &mut services);
 
-            let snap = ui.semantics_snapshot().expect("semantics snapshot");
-            let alpha_btn = snap
-                .nodes
-                .iter()
-                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
-                .expect("alpha button semantics");
-            let anchor = alpha_btn.bounds;
-
-            let probe = Point::new(
-                Px(anchor.origin.x.0 + anchor.size.width.0 * 0.5),
-                Px(anchor.origin.y.0 + anchor.size.height.0 + 60.0),
+            let overlay_stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+            assert!(
+                overlay_stack.topmost_popover.is_some(),
+                "expected a popover overlay for the navigation menu viewport; snapshot={overlay_stack:?}"
             );
-            let panel = find_overlay_panel_bounds(&ui, bounds, probe);
+            let popover_layer = overlay_stack
+                .stack
+                .iter()
+                .rev()
+                .find(|e| e.kind == fret_ui_kit::OverlayStackEntryKind::Popover && e.visible)
+                .expect("expected a visible popover layer entry");
+            assert!(
+                popover_layer.hit_testable,
+                "expected navigation menu popover to be hit-testable; entry={popover_layer:?} snapshot={overlay_stack:?}"
+            );
+
+            let root_id = overlay_stack
+                .topmost_popover
+                .expect("expected a popover overlay id");
+            let anchor = fret_ui::elements::bounds_for_element(&mut app, window, root_id)
+                .expect("expected navigation menu root bounds");
+            let viewport_panel_id = fret_ui::elements::with_element_cx(
+                &mut app,
+                window,
+                bounds,
+                "navigation-menu-dir",
+                |cx| radix_navigation_menu::navigation_menu_viewport_panel_id(cx, root_id),
+            )
+            .expect("expected viewport panel id for navigation menu root");
+            let panel = fret_ui::elements::bounds_for_element(&mut app, window, viewport_panel_id)
+                .expect("expected viewport panel bounds");
             (anchor, panel)
         }
 
+        let desired_width = Px(320.0);
+
         let (ltr_anchor, ltr_panel) = run(LayoutDirection::Ltr);
-        assert_align_start(LayoutDirection::Ltr, ltr_anchor, ltr_panel);
+        assert_align_start_for_desired_width(
+            LayoutDirection::Ltr,
+            ltr_anchor,
+            ltr_panel,
+            desired_width,
+        );
 
         let (rtl_anchor, rtl_panel) = run(LayoutDirection::Rtl);
-        assert_align_start(LayoutDirection::Rtl, rtl_anchor, rtl_panel);
+        assert_align_start_for_desired_width(
+            LayoutDirection::Rtl,
+            rtl_anchor,
+            rtl_panel,
+            desired_width,
+        );
     }
 
     #[test]

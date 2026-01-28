@@ -12,8 +12,9 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
+    resolve_override_slot_opt, ui,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -134,9 +135,9 @@ pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
 #[derive(Debug, Clone, Default)]
 pub struct TabsStyle {
-    pub trigger_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub trigger_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub trigger_background: OverrideSlot<ColorRef>,
+    pub trigger_foreground: OverrideSlot<ColorRef>,
+    pub trigger_border_color: OverrideSlot<ColorRef>,
 }
 
 impl TabsStyle {
@@ -725,7 +726,7 @@ impl Tabs {
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
                 .bg(ColorRef::Color(tabs_list_bg(&theme))),
-            LayoutRefinement::default().h_px(MetricRef::Px(list_height)),
+            LayoutRefinement::default().h_px(list_height),
         );
         list_props.padding = Edges::all(list_padding);
         if list_full_width {
@@ -823,7 +824,7 @@ impl Tabs {
                                     &theme,
                                     LayoutRefinement::default()
                                         .flex_1()
-                                        .h_px(MetricRef::Px(trigger_h)),
+                                        .h_px(trigger_h),
                                 );
 
                                 let mut out: Vec<AnyElement> =
@@ -1066,19 +1067,25 @@ impl Tabs {
     }
 }
 
-pub fn tabs<H: UiHost>(
+pub fn tabs<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = TabsItem>,
+{
     Tabs::new(model).items(f(cx)).into_element(cx)
 }
 
-pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = TabsItem>,
+{
     Tabs::uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)

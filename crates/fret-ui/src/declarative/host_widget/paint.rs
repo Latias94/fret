@@ -1022,6 +1022,21 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::PopClip);
                 }
             }
+            ElementInstance::TextInputRegion(props) => {
+                let clip = matches!(props.layout.overflow, Overflow::Clip);
+                if clip {
+                    cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                }
+
+                for &child in cx.children {
+                    let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
+                    cx.paint(child, bounds);
+                }
+
+                if clip {
+                    cx.scene.push(SceneOp::PopClip);
+                }
+            }
             ElementInstance::InternalDragRegion(props) => {
                 let clip = matches!(props.layout.overflow, Overflow::Clip);
                 if clip {

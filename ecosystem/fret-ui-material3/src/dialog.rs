@@ -22,12 +22,10 @@ use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
-use crate::foundation::elevation::{
-    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
-};
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::surface::material_surface_style;
 use crate::motion;
 use crate::tokens::dialog as dialog_tokens;
 
@@ -314,12 +312,15 @@ impl Dialog {
         self
     }
 
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         underlay: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        content: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
@@ -374,14 +375,16 @@ impl Dialog {
                 let container_bg = dialog_tokens::container_background(&theme);
                 let container_shape = dialog_tokens::container_shape(&theme);
                 let elevation = dialog_tokens::container_elevation(&theme);
-                let container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
                 let shadow_color = dialog_tokens::container_shadow_color(&theme);
-                let shadow = shadow_for_elevation_with_color(
+                let surface = material_surface_style(
                     &theme,
+                    container_bg,
                     elevation,
                     Some(shadow_color),
                     container_shape,
                 );
+                let container_bg = surface.background;
+                let shadow = surface.shadow;
 
                 let headline_color = dialog_tokens::headline_color(&theme);
                 let supporting_color = dialog_tokens::supporting_text_color(&theme);

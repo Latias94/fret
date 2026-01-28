@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
@@ -10,7 +10,10 @@ use fret_core::{
 use fret_runtime::{Effect, PlatformCapabilities};
 use wasm_bindgen::JsCast as _;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
-use web_sys::{Document, Event as WebSysEvent, EventTarget, HtmlElement, HtmlInputElement, Node};
+use web_sys::{
+    Document, Event as WebSysEvent, EventTarget, HtmlElement, HtmlInputElement,
+    HtmlTextAreaElement, InputEvent, KeyboardEvent, Node,
+};
 
 type WebChangeCallback = wasm_bindgen::closure::Closure<dyn FnMut(WebSysEvent)>;
 type WebWaker = Rc<dyn Fn()>;
@@ -32,6 +35,7 @@ pub struct WebPlatformServices {
     fired_timeouts: Rc<RefCell<Vec<TimerToken>>>,
     timers: HashMap<TimerToken, WebTimer>,
     file_dialogs: Rc<RefCell<WebFileDialogState>>,
+    ime: Option<WebImeBridge>,
     waker: Option<WebWaker>,
 }
 
@@ -42,6 +46,7 @@ impl std::fmt::Debug for WebPlatformServices {
             .field("fired_timeouts", &"<Rc<RefCell<Vec<TimerToken>>>>")
             .field("timers", &self.timers)
             .field("file_dialogs", &"<Rc<RefCell<WebFileDialogState>>>")
+            .field("ime", &self.ime)
             .finish()
     }
 }
@@ -51,6 +56,401 @@ struct WebTimer {
     id: i32,
     repeat: Option<Duration>,
     callback: wasm_bindgen::closure::Closure<dyn FnMut()>,
+}
+
+struct WebImeBridge {
+    textarea: HtmlTextAreaElement,
+    enabled: bool,
+    composing: Rc<Cell<bool>>,
+    suppress_next_input: Rc<Cell<bool>>,
+    queued_events: Rc<RefCell<Vec<Event>>>,
+    waker: Option<WebWaker>,
+    listeners: Vec<(String, WebChangeCallback)>,
+    last_cursor_area: Option<fret_core::Rect>,
+}
+
+impl std::fmt::Debug for WebImeBridge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WebImeBridge")
+            .field("enabled", &self.enabled)
+            .field("composing", &self.composing.get())
+            .field("listeners", &self.listeners.len())
+            .field("last_cursor_area", &self.last_cursor_area)
+            .finish()
+    }
+}
+
+impl WebImeBridge {
+    fn ensure(
+        document: &Document,
+        queued_events: Rc<RefCell<Vec<Event>>>,
+        waker: Option<WebWaker>,
+    ) -> Option<Self> {
+        let Ok(el) = document.create_element("textarea") else {
+            return None;
+        };
+        let Ok(textarea) = el.dyn_into::<HtmlTextAreaElement>() else {
+            return None;
+        };
+
+        textarea.set_spellcheck(false);
+        textarea.set_value("");
+        textarea.set_tab_index(-1);
+
+        let textarea_el: HtmlElement = textarea.clone().unchecked_into();
+        let _ = textarea_el.set_attribute("autocapitalize", "off");
+        let _ = textarea_el.set_attribute("autocomplete", "off");
+        let _ = textarea_el.set_attribute("autocorrect", "off");
+        let style = textarea_el.style();
+        let _ = style.set_property("position", "fixed");
+        let _ = style.set_property("left", "0px");
+        let _ = style.set_property("top", "0px");
+        let _ = style.set_property("opacity", "0");
+        let _ = style.set_property("width", "1px");
+        let _ = style.set_property("height", "1px");
+        let _ = style.set_property("pointer-events", "none");
+        let _ = style.set_property("z-index", "2147483647");
+        let _ = textarea_el.set_attribute("aria-hidden", "true");
+
+        if let Some(body) = document.body() {
+            let _ = body.append_child(&textarea_el);
+        }
+
+        let composing = Rc::new(Cell::new(false));
+        let suppress_next_input = Rc::new(Cell::new(false));
+
+        let mut bridge = Self {
+            textarea,
+            enabled: false,
+            composing,
+            suppress_next_input,
+            queued_events,
+            waker,
+            listeners: Vec::new(),
+            last_cursor_area: None,
+        };
+        bridge.install_listeners();
+        Some(bridge)
+    }
+
+    fn wake(&self) {
+        if let Some(wake) = self.waker.as_ref() {
+            wake();
+        }
+    }
+
+    fn push_event(&self, event: Event) {
+        self.queued_events.borrow_mut().push(event);
+        self.wake();
+    }
+
+    fn install_listeners(&mut self) {
+        let target: EventTarget = self.textarea.clone().unchecked_into();
+
+        // Key events: needed because the textarea becomes the focused element while IME is enabled.
+        {
+            let textarea = self.textarea.clone();
+            let suppress_next_input = self.suppress_next_input.clone();
+            let queue = self.queued_events.clone();
+            let wake = self.waker.clone();
+            let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
+                let Ok(k) = e.dyn_into::<KeyboardEvent>() else {
+                    return;
+                };
+
+                // Keep focus in the UI runtime; do not let the browser tab away.
+                if k.key() == "Tab" {
+                    k.prevent_default();
+                }
+
+                let alt_gr = k.get_modifier_state("AltGraph");
+                let mut modifiers = fret_core::Modifiers {
+                    shift: k.shift_key(),
+                    ctrl: k.ctrl_key(),
+                    alt: k.alt_key(),
+                    alt_gr,
+                    meta: k.meta_key(),
+                };
+                if modifiers.alt_gr {
+                    modifiers.ctrl = false;
+                    modifiers.alt = false;
+                }
+
+                let key = k
+                    .code()
+                    .parse::<fret_core::KeyCode>()
+                    .unwrap_or(fret_core::KeyCode::Unidentified);
+
+                // When IME is enabled we route editor shortcuts through the UI runtime. Prevent
+                // the browser from applying default text editing to the hidden textarea (notably
+                // paste), which would otherwise produce extra `input` events.
+                if (modifiers.ctrl || modifiers.meta)
+                    && matches!(
+                        key,
+                        fret_core::KeyCode::KeyA
+                            | fret_core::KeyCode::KeyC
+                            | fret_core::KeyCode::KeyV
+                            | fret_core::KeyCode::KeyX
+                            | fret_core::KeyCode::KeyY
+                            | fret_core::KeyCode::KeyZ
+                    )
+                {
+                    k.prevent_default();
+                    suppress_next_input.set(true);
+                    textarea.set_value("");
+                }
+
+                let event = Event::KeyDown {
+                    key,
+                    modifiers,
+                    repeat: k.repeat(),
+                };
+                queue.borrow_mut().push(event);
+                if let Some(wake) = wake.as_ref() {
+                    wake();
+                }
+            })
+                as Box<dyn FnMut(WebSysEvent)>);
+            let _ = target.add_event_listener_with_callback("keydown", cb.as_ref().unchecked_ref());
+            self.listeners.push(("keydown".to_string(), cb));
+        }
+
+        {
+            let queue = self.queued_events.clone();
+            let wake = self.waker.clone();
+            let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
+                let Ok(k) = e.dyn_into::<KeyboardEvent>() else {
+                    return;
+                };
+
+                let alt_gr = k.get_modifier_state("AltGraph");
+                let mut modifiers = fret_core::Modifiers {
+                    shift: k.shift_key(),
+                    ctrl: k.ctrl_key(),
+                    alt: k.alt_key(),
+                    alt_gr,
+                    meta: k.meta_key(),
+                };
+                if modifiers.alt_gr {
+                    modifiers.ctrl = false;
+                    modifiers.alt = false;
+                }
+
+                let key = k
+                    .code()
+                    .parse::<fret_core::KeyCode>()
+                    .unwrap_or(fret_core::KeyCode::Unidentified);
+
+                let event = Event::KeyUp { key, modifiers };
+                queue.borrow_mut().push(event);
+                if let Some(wake) = wake.as_ref() {
+                    wake();
+                }
+            })
+                as Box<dyn FnMut(WebSysEvent)>);
+            let _ = target.add_event_listener_with_callback("keyup", cb.as_ref().unchecked_ref());
+            self.listeners.push(("keyup".to_string(), cb));
+        }
+
+        // Composition events → `Event::Ime`.
+        {
+            let composing = self.composing.clone();
+            let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
+                composing.set(true);
+            })
+                as Box<dyn FnMut(WebSysEvent)>);
+            let _ = target
+                .add_event_listener_with_callback("compositionstart", cb.as_ref().unchecked_ref());
+            self.listeners.push(("compositionstart".to_string(), cb));
+        }
+
+        {
+            let textarea = self.textarea.clone();
+            let composing = self.composing.clone();
+            let queue = self.queued_events.clone();
+            let wake = self.waker.clone();
+            let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
+                if !composing.get() {
+                    // Some browsers may fire update without start; treat as composing.
+                    composing.set(true);
+                }
+                let text = textarea.value();
+                let cursor = textarea
+                    .selection_start()
+                    .ok()
+                    .flatten()
+                    .zip(textarea.selection_end().ok().flatten())
+                    .map(|(s, e)| {
+                        let (start, end) = fret_core::utf::utf16_range_to_utf8_byte_range(
+                            text.as_str(),
+                            s as usize,
+                            e as usize,
+                        );
+                        (start, end)
+                    });
+
+                queue
+                    .borrow_mut()
+                    .push(Event::Ime(fret_core::ImeEvent::Preedit { text, cursor }));
+                if let Some(wake) = wake.as_ref() {
+                    wake();
+                }
+            })
+                as Box<dyn FnMut(WebSysEvent)>);
+            let _ = target
+                .add_event_listener_with_callback("compositionupdate", cb.as_ref().unchecked_ref());
+            self.listeners.push(("compositionupdate".to_string(), cb));
+        }
+
+        {
+            let textarea = self.textarea.clone();
+            let composing = self.composing.clone();
+            let suppress_next_input = self.suppress_next_input.clone();
+            let queue = self.queued_events.clone();
+            let wake = self.waker.clone();
+            let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
+                composing.set(false);
+                suppress_next_input.set(true);
+
+                let text = textarea.value();
+                textarea.set_value("");
+
+                if let Some(committed) = sanitize_text_input(&text) {
+                    queue
+                        .borrow_mut()
+                        .push(Event::Ime(fret_core::ImeEvent::Commit(committed)));
+                }
+                queue
+                    .borrow_mut()
+                    .push(Event::Ime(fret_core::ImeEvent::Preedit {
+                        text: String::new(),
+                        cursor: None,
+                    }));
+                if let Some(wake) = wake.as_ref() {
+                    wake();
+                }
+            })
+                as Box<dyn FnMut(WebSysEvent)>);
+            let _ = target
+                .add_event_listener_with_callback("compositionend", cb.as_ref().unchecked_ref());
+            self.listeners.push(("compositionend".to_string(), cb));
+        }
+
+        // Input events → `Event::TextInput` for committed insertion.
+        {
+            let textarea = self.textarea.clone();
+            let composing = self.composing.clone();
+            let suppress_next_input = self.suppress_next_input.clone();
+            let queue = self.queued_events.clone();
+            let wake = self.waker.clone();
+            let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
+                if composing.get() {
+                    return;
+                }
+                if suppress_next_input.replace(false) {
+                    textarea.set_value("");
+                    return;
+                }
+
+                let Ok(input) = e.dyn_into::<InputEvent>() else {
+                    return;
+                };
+
+                // Prefer the explicit data payload; fall back to reading the textarea value.
+                let mut text = input.data().unwrap_or_default();
+                if text.is_empty() {
+                    text = textarea.value();
+                }
+                textarea.set_value("");
+
+                if let Some(text) = sanitize_text_input(&text) {
+                    queue.borrow_mut().push(Event::TextInput(text));
+                    if let Some(wake) = wake.as_ref() {
+                        wake();
+                    }
+                }
+            })
+                as Box<dyn FnMut(WebSysEvent)>);
+            let _ = target.add_event_listener_with_callback("input", cb.as_ref().unchecked_ref());
+            self.listeners.push(("input".to_string(), cb));
+        }
+
+        // Prefer `beforeinput` for simple insertions so we can keep the textarea empty and avoid
+        // relying on the post-mutation `input` event for common typing paths (ADR 0195).
+        {
+            let textarea = self.textarea.clone();
+            let composing = self.composing.clone();
+            let suppress_next_input = self.suppress_next_input.clone();
+            let queue = self.queued_events.clone();
+            let wake = self.waker.clone();
+            let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
+                if composing.get() {
+                    return;
+                }
+                if suppress_next_input.replace(false) {
+                    textarea.set_value("");
+                    return;
+                }
+
+                let Ok(input) = e.dyn_into::<InputEvent>() else {
+                    return;
+                };
+                if input.is_composing() {
+                    return;
+                }
+
+                let input_type = input.input_type();
+                if !input_type.starts_with("insert") {
+                    return;
+                }
+
+                let data = input.data().unwrap_or_default();
+                if data.is_empty() {
+                    return;
+                }
+
+                if let Some(text) = sanitize_text_input(&data) {
+                    input.prevent_default();
+                    textarea.set_value("");
+                    queue.borrow_mut().push(Event::TextInput(text));
+                    if let Some(wake) = wake.as_ref() {
+                        wake();
+                    }
+                }
+            })
+                as Box<dyn FnMut(WebSysEvent)>);
+            let _ =
+                target.add_event_listener_with_callback("beforeinput", cb.as_ref().unchecked_ref());
+            self.listeners.push(("beforeinput".to_string(), cb));
+        }
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        if self.enabled == enabled {
+            return;
+        }
+        self.enabled = enabled;
+
+        if enabled {
+            let _ = self.textarea.focus();
+            self.push_event(Event::Ime(fret_core::ImeEvent::Enabled));
+            return;
+        }
+
+        let _ = self.textarea.blur();
+        self.textarea.set_value("");
+        self.composing.set(false);
+        self.suppress_next_input.set(false);
+        self.push_event(Event::Ime(fret_core::ImeEvent::Disabled));
+    }
+
+    fn set_cursor_area(&mut self, rect: fret_core::Rect) {
+        self.last_cursor_area = Some(rect);
+        let textarea_el: HtmlElement = self.textarea.clone().unchecked_into();
+        let style = textarea_el.style();
+        let _ = style.set_property("left", &format!("{}px", rect.origin.x.0.max(0.0)));
+        let _ = style.set_property("top", &format!("{}px", rect.origin.y.0.max(0.0)));
+    }
 }
 
 #[derive(Debug, Default)]
@@ -92,6 +492,26 @@ impl WebPlatformServices {
         let mut unhandled: Vec<Effect> = Vec::new();
         for effect in effects {
             match effect {
+                Effect::ImeAllow { enabled, .. } => {
+                    let Some(document) = document() else {
+                        continue;
+                    };
+                    if self.ime.is_none() {
+                        self.ime = WebImeBridge::ensure(
+                            &document,
+                            self.queued_events.clone(),
+                            self.waker.clone(),
+                        );
+                    }
+                    if let Some(bridge) = self.ime.as_mut() {
+                        bridge.set_enabled(enabled);
+                    }
+                }
+                Effect::ImeSetCursorArea { rect, .. } => {
+                    if let Some(bridge) = self.ime.as_mut() {
+                        bridge.set_cursor_area(rect);
+                    }
+                }
                 Effect::SetTimer {
                     token,
                     after,
@@ -468,5 +888,16 @@ impl WebPlatformServices {
     fn ms(duration: Duration) -> i32 {
         let ms = duration.as_millis().min(i32::MAX as u128);
         i32::try_from(ms).unwrap_or(i32::MAX)
+    }
+}
+
+fn sanitize_text_input(text: &str) -> Option<String> {
+    // Contract: `Event::TextInput` represents committed insertion text and must not include
+    // control characters. Keys like Backspace/Enter/Tab must be handled via `KeyDown` + commands.
+    let filtered: String = text.chars().filter(|ch| !ch.is_control()).collect();
+    if filtered.is_empty() {
+        None
+    } else {
+        Some(filtered)
     }
 }

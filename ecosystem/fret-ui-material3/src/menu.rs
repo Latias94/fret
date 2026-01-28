@@ -21,11 +21,11 @@ use fret_ui::elements::ElementContext;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{Theme, UiHost};
 
-use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::surface::material_surface_style;
 use crate::tokens::menu as menu_tokens;
 
 #[derive(Debug, Clone)]
@@ -175,8 +175,10 @@ impl Menu {
             let shadow_color = menu_tokens::container_shadow_color(&theme);
             let r = menu_tokens::container_shape_radius(&theme);
             let corner = Corners::all(r);
-            let shadow =
-                shadow_for_elevation_with_color(&theme, elevation, Some(shadow_color), corner);
+            let surface =
+                material_surface_style(&theme, container_bg, elevation, Some(shadow_color), corner);
+            let container_bg = surface.background;
+            let shadow = surface.shadow;
 
             cx.semantics(sem, move |cx| {
                 vec![cx.container(

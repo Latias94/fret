@@ -16,7 +16,10 @@ pub use chrome::{
 };
 pub use layout::{LayoutRefinement, LengthRefinement, SizeRefinement};
 pub use refs::{ColorRef, MetricRef, SignedMetricRef};
-pub use slots::{merge_override_slot, resolve_override_slot, resolve_override_slot_opt};
-pub use state::{WidgetState, WidgetStateProperty, WidgetStates};
+pub use slots::{
+    OverrideSlot, merge_override_slot, resolve_override_slot, resolve_override_slot_opt,
+    resolve_override_slot_opt_with, resolve_override_slot_with,
+};
+pub use state::{WidgetState, WidgetStateProperty, WidgetStates, merge_slot, resolve_slot};
 pub use tokens::{ColorFallback, MetricFallback, Radius, Space};
 pub use vocab::{Items, Justify, OverflowRefinement};

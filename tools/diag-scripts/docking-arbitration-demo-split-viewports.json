@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "padding_px": 4.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-viewport-left" },
+      "delta_x": 160.0,
+      "delta_y": 60.0,
+      "steps": 18
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+      "delta_x": -160.0,
+      "delta_y": 40.0,
+      "steps": 18
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-split-viewports" }
+  ]
+}
+

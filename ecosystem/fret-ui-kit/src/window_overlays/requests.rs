@@ -502,6 +502,11 @@ impl HoverOverlayRequest {
         self.interactive = interactive;
         self
     }
+
+    pub fn present(mut self, present: bool) -> Self {
+        self.present = present;
+        self
+    }
 }
 
 impl std::fmt::Debug for HoverOverlayRequest {
@@ -566,6 +571,11 @@ impl TooltipRequest {
 
     pub fn trigger(mut self, trigger: Option<GlobalElementId>) -> Self {
         self.trigger = trigger;
+        self
+    }
+
+    pub fn present(mut self, present: bool) -> Self {
+        self.present = present;
         self
     }
 

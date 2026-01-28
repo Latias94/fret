@@ -50,7 +50,7 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - [x] SDSR-011 Worktree: introduce and export `ButtonStyle` (override background/foreground/border with per-state properties).
 
 - [x] SDSR-020 Define a shared “style struct” pattern for shadcn controls:
-  - `*Style` structs with `Option<WidgetStateProperty<...>>` fields.
+  - `*Style` structs with `OverrideSlot<T>` fields (`Option<WidgetStateProperty<Option<T>>>`).
   - `merged()` semantics (right-biased overrides, no deep merge).
   - Per-control `style(...)` builder method.
 
@@ -103,14 +103,11 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 - [x] SDSR-400 Avoid heap allocations in hot paths (e.g. store overrides inline or in smallvec; measure before changing).
 - [x] SDSR-410 Add utilities to compute `WidgetStates` from `PressableState` + focus-visible policy (reduce copy/paste).
 
-### P5 — Material 3 Pilot (Ecosystem)
+### P5 — Material 3 Consumer (moved)
 
-- [x] SDSR-500 Material3: add `fret-ui-material3` pilot crate.
-- [x] SDSR-510 Material3: implement a minimal `Button` (Filled/Outlined/Text) using ADR 1159 style shape.
-- [x] SDSR-520 Material3: document pilot token keys (`material3.button.*`).
-- [x] SDSR-530 Material3: implement `Checkbox` + per-state `CheckboxStyle`.
-- [x] SDSR-540 Material3: implement `Switch` + per-state `SwitchStyle`.
-- [x] SDSR-550 Material3: implement `RadioGroup` + per-state `RadioGroupStyle`.
+Material 3 is tracked in a dedicated workstream so this document can stay design-system-agnostic:
+
+- `docs/workstreams/material3-style-api-alignment-v1.md`
 
 Note: Material3 has since evolved into a broader Compose-inspired foundation refactor using the
 `md.sys.*` / `md.comp.*` token namespaces. The authoritative tracking docs are the Material3
@@ -124,7 +121,10 @@ This snapshot focuses on “state → style” authoring consistency, not full v
 
 - `ecosystem/fret-ui-shadcn/src/button.rs`
 - `ecosystem/fret-ui-shadcn/src/checkbox.rs`
+- `ecosystem/fret-ui-shadcn/src/combobox.rs`
 - `ecosystem/fret-ui-shadcn/src/input.rs`
+- `ecosystem/fret-ui-shadcn/src/item.rs`
+- `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/radio_group.rs`
 - `ecosystem/fret-ui-shadcn/src/select.rs`
 - `ecosystem/fret-ui-shadcn/src/slider.rs`
@@ -143,13 +143,10 @@ This snapshot focuses on “state → style” authoring consistency, not full v
 - `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`
 - `ecosystem/fret-ui-shadcn/src/calendar.rs`
 - `ecosystem/fret-ui-shadcn/src/calendar_range.rs`
-- `ecosystem/fret-ui-shadcn/src/combobox.rs`
 - `ecosystem/fret-ui-shadcn/src/command.rs`
 - `ecosystem/fret-ui-shadcn/src/context_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/dialog.rs`
 - `ecosystem/fret-ui-shadcn/src/input_group.rs`
-- `ecosystem/fret-ui-shadcn/src/item.rs`
-- `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
 - `ecosystem/fret-ui-shadcn/src/pagination.rs`
 - `ecosystem/fret-ui-shadcn/src/sidebar.rs`
 
@@ -193,10 +190,11 @@ This snapshot focuses on “state → style” authoring consistency, not full v
 - `ecosystem/fret-ui-shadcn/src/slider.rs`
 - `ecosystem/fret-ui-shadcn/src/toggle_group.rs`
 - `ecosystem/fret-ui-material3/src/button.rs`
+- `ecosystem/fret-ui-material3/src/icon_button.rs`
 - `ecosystem/fret-ui-material3/src/checkbox.rs`
 - `ecosystem/fret-ui-material3/src/switch.rs`
-- `ecosystem/fret-ui-material3/src/radio_group.rs`
-- `ecosystem/fret-ui-material3/src/select.rs`
+- `ecosystem/fret-ui-material3/src/radio.rs`
+- `ecosystem/fret-ui-material3/src/tabs.rs`
 - `ecosystem/fret-ui-material3/src/text_field.rs`
 - SDSR-210 decision: keep Tooltip/HoverCard styling policy-only in v1 (theme tokens + overlay motion); no `WidgetStates`-driven surface overrides yet because the trigger is user-supplied and the content surface is not an interactive control.
 - SDSR-410 evidence: `WidgetStates::from_pressable(...)` in `ecosystem/fret-ui-kit/src/style/state.rs`, applied in `ecosystem/fret-ui-shadcn/src/tabs.rs`, `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`, `ecosystem/fret-ui-shadcn/src/menubar.rs`.
@@ -207,97 +205,3 @@ This snapshot focuses on “state → style” authoring consistency, not full v
 - SDSR-150/151: `SwitchStyle` + `WidgetStates` in `ecosystem/fret-ui-shadcn/src/switch.rs` and `ecosystem/fret-ui-shadcn/src/lib.rs`
 - SDSR-160/161: `RadioGroupStyle` + `WidgetStates` in `ecosystem/fret-ui-shadcn/src/radio_group.rs` and `ecosystem/fret-ui-shadcn/src/lib.rs`
 - SDSR-170/171: `SelectStyle` + `WidgetStates` in `ecosystem/fret-ui-shadcn/src/select.rs` and `ecosystem/fret-ui-shadcn/src/lib.rs`
-
-## Material3 Pilot Token Keys (v0)
-
-This pilot intentionally starts with a small set of keys and falls back to existing theme tokens
-when missing.
-
-- Filled:
-  - `material3.button.filled.container`
-  - `material3.button.filled.label`
-  - `material3.button.filled.disabled.container`
-  - `material3.button.filled.disabled.label`
-- Outlined:
-  - `material3.button.outlined.label`
-  - `material3.button.outlined.outline`
-  - `material3.button.outlined.focus.outline`
-  - `material3.button.outlined.disabled.label`
-  - `material3.button.outlined.disabled.outline`
-- Text:
-  - `material3.button.text.label`
-  - `material3.button.text.disabled.label`
-- Shared state layers:
-  - `material3.button.state_layer.hover`
-  - `material3.button.state_layer.pressed`
-
-- Checkbox:
-  - `material3.checkbox.size`
-  - `material3.checkbox.radius`
-  - `material3.checkbox.outline`
-  - `material3.checkbox.focus.outline`
-  - `material3.checkbox.disabled.outline`
-  - `material3.checkbox.selected.container`
-  - `material3.checkbox.selected.outline`
-  - `material3.checkbox.selected.indicator`
-  - `material3.checkbox.label`
-  - `material3.checkbox.disabled.label`
-  - `material3.checkbox.state_layer.hover`
-  - `material3.checkbox.state_layer.pressed`
-
-- Switch:
-  - `material3.switch.track_h`
-  - `material3.switch.track_w`
-  - `material3.switch.thumb`
-  - `material3.switch.padding`
-  - `material3.switch.track.off`
-  - `material3.switch.track.on`
-  - `material3.switch.track.disabled`
-  - `material3.switch.thumb.off`
-  - `material3.switch.thumb.on`
-  - `material3.switch.thumb.disabled`
-  - `material3.switch.outline`
-  - `material3.switch.focus.outline`
-  - `material3.switch.disabled.outline`
-  - `material3.switch.label`
-  - `material3.switch.disabled.label`
-
-- Radio:
-  - `material3.radio.icon`
-  - `material3.radio.outline`
-  - `material3.radio.focus.outline`
-  - `material3.radio.disabled.outline`
-  - `material3.radio.selected.outline`
-  - `material3.radio.selected.indicator`
-  - `material3.radio.disabled.indicator`
-  - `material3.radio.label`
-  - `material3.radio.disabled.label`
-  - `material3.radio.state_layer.hover`
-  - `material3.radio.state_layer.pressed`
-
-- Select:
-  - `material3.select.trigger.container`
-  - `material3.select.trigger.disabled.container`
-  - `material3.select.trigger.label`
-  - `material3.select.trigger.disabled.label`
-  - `material3.select.trigger.outline`
-  - `material3.select.trigger.focus.outline`
-  - `material3.select.trigger.open.outline`
-  - `material3.select.trigger.disabled.outline`
-  - `material3.select.option.label`
-  - `material3.select.option.disabled.label`
-  - `material3.select.option.state_layer.hover`
-  - `material3.select.option.state_layer.pressed`
-  - `material3.select.option.state_layer.selected`
-
-- TextField:
-  - `material3.text_field.container`
-  - `material3.text_field.disabled.container`
-  - `material3.text_field.outline`
-  - `material3.text_field.disabled.outline`
-  - `material3.text_field.focus.outline`
-  - `material3.text_field.focus.ring`
-  - `material3.text_field.text`
-  - `material3.text_field.disabled.text`
-  - `material3.text_field.placeholder`
-  - `material3.text_field.disabled.placeholder`

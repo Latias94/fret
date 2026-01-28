@@ -316,12 +316,12 @@ impl Dialog {
                         .initial_focus(None)
                         .on_open_auto_focus(on_open_auto_focus.clone())
                         .on_close_auto_focus(on_close_auto_focus.clone());
-                    radix_dialog::modal_dialog_layer_children_with_dismiss_handler(
+                    radix_dialog::modal_dialog_layer_elements_with_dismiss_handler(
                         cx,
                         open_for_children.clone(),
                         dialog_options,
                         on_dismiss_request_for_barrier.clone(),
-                        vec![barrier],
+                        [barrier],
                         dialog,
                     )
                 });
@@ -493,7 +493,7 @@ impl DialogClose {
 
                 // new-york-v4: `rounded-xs opacity-70 hover:opacity-100` (no default hover bg).
                 let mut chrome = ChromeRefinement::default();
-                chrome.radius = Some(MetricRef::Px(radius));
+                chrome.radius = Some(radius.into());
                 if !user_bg_override {
                     chrome.background = Some(ColorRef::Color(Color::TRANSPARENT));
                 }

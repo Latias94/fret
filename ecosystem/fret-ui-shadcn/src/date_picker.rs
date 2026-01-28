@@ -382,11 +382,12 @@ mod tests {
             1,
         );
 
+        let trigger_label: Arc<str> = Arc::from("2026-01-15");
         let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
         let trigger_node = snap1
             .nodes
             .iter()
-            .find(|n| n.label.as_deref() == Some("2026-01-15"))
+            .find(|n| n.label.as_deref() == Some(trigger_label.as_ref()))
             .map(|n| n.id)
             .expect("trigger semantics node");
         ui.set_focus(Some(trigger_node));
@@ -411,7 +412,7 @@ mod tests {
             .iter()
             .find(|n| n.id == focused)
             .expect("focused semantics node");
-        assert_eq!(focused_sem.label.as_deref(), Some("2026-01-15"));
+        assert_eq!(focused_sem.test_id.as_deref(), Some(trigger_label.as_ref()));
         assert!(
             focused_sem.flags.selected,
             "expected focused day to be selected"

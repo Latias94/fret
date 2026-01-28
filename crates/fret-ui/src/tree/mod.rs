@@ -106,6 +106,7 @@ struct Node<H: UiHost> {
     prepaint_hit_test: Option<PrepaintHitTestCache>,
     view_cache: ViewCacheFlags,
     view_cache_needs_rerender: bool,
+    text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
 }
 
 #[derive(Debug, Clone)]
@@ -144,6 +145,7 @@ impl<H: UiHost> Node<H> {
             prepaint_hit_test: None,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
+            text_boundary_mode_override: None,
         }
     }
 
@@ -403,6 +405,7 @@ pub enum PointerOcclusion {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct UiInputArbitrationSnapshot {
     pub modal_barrier_root: Option<NodeId>,
+    pub focus_barrier_root: Option<NodeId>,
     pub pointer_occlusion: PointerOcclusion,
     pub pointer_occlusion_layer: Option<UiLayerId>,
     pub pointer_capture_active: bool,
@@ -1862,6 +1865,15 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn enforce_focus_barrier_scope(&mut self, active_roots: &[NodeId]) {
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+        {
+            self.focus = None;
+        }
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -2049,11 +2061,6 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
-    fn notify_target_for_node(&self, node: NodeId) -> NodeId {
-        self.nearest_view_cache_root(node)
-            .unwrap_or_else(|| self.node_root(node).unwrap_or(node))
-    }
-
     fn collapse_observation_index_to_view_cache_roots(
         &self,
         mut index: ObservationIndex,
@@ -2210,6 +2217,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn input_arbitration_snapshot(&self) -> UiInputArbitrationSnapshot {
         let (_active, barrier_root) = self.active_input_layers();
+        let (_focus_active, focus_barrier_root) = self.active_focus_layers();
 
         let (pointer_occlusion_layer, pointer_occlusion) = self
             .topmost_pointer_occlusion_layer(barrier_root)
@@ -2241,6 +2249,7 @@ impl<H: UiHost> UiTree<H> {
 
         UiInputArbitrationSnapshot {
             modal_barrier_root: barrier_root,
+            focus_barrier_root,
             pointer_occlusion,
             pointer_occlusion_layer,
             pointer_capture_active,
@@ -2255,6 +2264,7 @@ impl<H: UiHost> UiTree<H> {
         let snapshot = self.input_arbitration_snapshot();
         fret_runtime::WindowInputArbitrationSnapshot {
             modal_barrier_root: snapshot.modal_barrier_root,
+            focus_barrier_root: snapshot.focus_barrier_root,
             pointer_occlusion: match snapshot.pointer_occlusion {
                 PointerOcclusion::None => fret_runtime::WindowPointerOcclusion::None,
                 PointerOcclusion::BlockMouse => fret_runtime::WindowPointerOcclusion::BlockMouse,
@@ -2548,23 +2558,6 @@ impl<H: UiHost> UiTree<H> {
                 Invalidation::HitTest,
                 UiDebugInvalidationSource::Other,
             );
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn debug_sever_child_edge_without_invalidation(
-        &mut self,
-        parent: NodeId,
-        child: NodeId,
-    ) {
-        let Some(parent_node) = self.nodes.get_mut(parent) else {
-            return;
-        };
-        parent_node.children.retain(|&c| c != child);
-        if let Some(child_node) = self.nodes.get_mut(child) {
-            if child_node.parent == Some(parent) {
-                child_node.parent = None;
-            }
         }
     }
 
@@ -3740,6 +3733,23 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(crate) fn set_node_text_boundary_mode_override(
+        &mut self,
+        node: NodeId,
+        mode: Option<fret_runtime::TextBoundaryMode>,
+    ) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.text_boundary_mode_override = mode;
+        }
+    }
+
+    fn focus_text_boundary_mode_override(&self) -> Option<fret_runtime::TextBoundaryMode> {
+        let focus = self.focus?;
+        self.nodes
+            .get(focus)
+            .and_then(|n| n.text_boundary_mode_override)
+    }
+
     fn cleanup_node_resources(&mut self, services: &mut dyn UiServices, node: NodeId) {
         let widget = self.nodes.get_mut(node).and_then(|n| n.widget.take());
         if let Some(mut widget) = widget {
@@ -4688,6 +4698,15 @@ impl<H: UiHost> UiTree<H> {
         }
         let barrier_root = barrier_index.map(|idx| self.layers[visible_layers[idx]].root);
 
+        let mut focus_barrier_index: Option<usize> = None;
+        for (idx, layer) in visible_layers.iter().enumerate() {
+            if self.layers[*layer].blocks_underlay_focus {
+                focus_barrier_index = Some(idx);
+            }
+        }
+        let focus_barrier_root =
+            focus_barrier_index.map(|idx| self.layers[visible_layers[idx]].root);
+
         let mut roots: Vec<SemanticsRoot> = Vec::with_capacity(visible_layers.len());
         for (z, layer_id) in visible_layers.iter().enumerate() {
             let layer = &self.layers[*layer_id];
@@ -4921,6 +4940,7 @@ impl<H: UiHost> UiTree<H> {
             window,
             roots,
             barrier_root,
+            focus_barrier_root,
             focus,
             captured,
             nodes,

@@ -22,14 +22,12 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
-use crate::foundation::elevation::{
-    apply_surface_tint_if_surface, shadow_for_elevation_with_color,
-};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::surface::material_surface_style;
 use crate::tokens::navigation_drawer as drawer_tokens;
 
 #[derive(Debug, Clone)]
@@ -174,12 +172,13 @@ impl NavigationDrawer {
             let container_w = drawer_tokens::container_width(&theme);
             let item_h_pad = drawer_tokens::item_horizontal_padding(&theme);
 
-            let mut container_bg = drawer_tokens::container_background(&theme, variant);
+            let container_bg = drawer_tokens::container_background(&theme, variant);
             let elevation = drawer_tokens::container_elevation(&theme, variant);
-            container_bg = apply_surface_tint_if_surface(&theme, container_bg, elevation);
-
             let container_shape = drawer_tokens::container_shape(&theme);
-            let shadow = shadow_for_elevation_with_color(&theme, elevation, None, container_shape);
+            let surface =
+                material_surface_style(&theme, container_bg, elevation, None, container_shape);
+            let container_bg = surface.background;
+            let shadow = surface.shadow;
 
             let mut props = RovingFlexProps::default();
             props.flex.direction = Axis::Vertical;

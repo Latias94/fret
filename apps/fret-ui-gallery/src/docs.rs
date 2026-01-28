@@ -125,6 +125,75 @@ let block = CodeBlock::new(code).language("rust").show_line_numbers(true);
 ```
 "#;
 
+pub(crate) const DOC_CODE_EDITOR_MVP: &str = r#"
+## Code Editor (MVP)
+
+This page hosts a v1 MVP for a **paint-driven, windowed code editor surface**:
+
+- Owns its buffer + selection state (ecosystem crate, not `fret-ui`).
+- Uses a `TextInputRegion` seam to receive `TextInput` / `Ime` events while it draws its own text.
+- Focuses on validating the input/IME contract and scroll stability before performance work.
+"#;
+
+pub(crate) const USAGE_CODE_EDITOR_MVP: &str = r#"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle};
+
+let handle = CodeEditorHandle::new("fn main() {}\n");
+let editor = CodeEditor::new(handle).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_CODE_EDITOR_TORTURE: &str = r#"
+## Code Editor (torture harness)
+
+This page is a stress surface for the **windowed, paint-driven code editor**.
+
+Goals:
+
+- validate scroll stability (no “stale paint” / “looks not refreshed” regressions),
+- validate text blob caching stays bounded to the visible window,
+- provide a deterministic target for perf investigations.
+"#;
+
+pub(crate) const USAGE_CODE_EDITOR_TORTURE: &str = r#"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle, CodeEditorTorture};
+use fret_core::Px;
+
+let handle = CodeEditorHandle::new("...\n");
+let editor = CodeEditor::new(handle)
+    .overscan(128)
+    .torture(CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
+## Web IME (harness)
+
+This page exists to validate the wasm IME bridge contract (ADR 0195):
+
+- a hidden textarea is used as the browser-owned IME target,
+- `composition*` drives `Event::Ime::{Preedit,Commit}`,
+- committed insertions arrive as `Event::TextInput` (no control characters),
+- and we avoid **double-insert** on `compositionend` + `input`.
+
+Try:
+
+- CJK IME composition (preedit updates, commit),
+- emoji input,
+- backspace/arrows while composing,
+- and verify the committed buffer does not duplicate inserts.
+"#;
+
+pub(crate) const USAGE_WEB_IME_HARNESS: &str = r#"
+```rust
+// Click the region to focus it. On wasm, it should focus a hidden textarea via `Effect::ImeAllow`.
+// Use an IME to ensure `Event::Ime` and `Event::TextInput` are routed correctly.
+```
+"#;
+
 pub(crate) const DOC_CHART_TORTURE: &str = r#"
 ## Chart (torture harness)
 
@@ -312,6 +381,7 @@ This page validates the first Material 3 outcome-aligned component surface:
 
 - state layer (hover / pressed / focus) driven by Material tokens
 - bounded ripple (pointer-origin) driven by motion tokens
+- ADR 1159 style overrides via `ButtonStyle` (partial per-state overrides)
 
 This is intentionally *not* a full `@material/web` parity port: it focuses on the interaction + visual outcomes within Fret's retained scene model.
 "#;
@@ -395,6 +465,7 @@ This page validates a second Material 3 component:
 - token-driven icon color + container color (variants)
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `IconButtonStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_ICON_BUTTON: &str = r#"
@@ -417,6 +488,7 @@ This page validates a third Material 3 component:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `CheckboxStyle` (partial per-state overrides)
 
 Notes:
 - This is the control-only MVP (40px target, 18px box). Label-click behavior is a follow-up recipe.
@@ -441,6 +513,7 @@ This page validates a Material 3 switch surface:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus) centered on the thumb
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `SwitchStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_SWITCH: &str = r#"
@@ -462,8 +535,11 @@ This page validates a Material 3 radio button surface:
 - token-driven sizing + colors
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `RadioStyle` (partial per-state overrides)
 
 This page uses the group-value binding API (`Model<Option<Arc<str>>>`) so multiple items behave like a real radio group.
+
+This page also includes `RadioStyle` override previews for both `RadioGroup` (forwarded to items) and standalone `Radio`.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_RADIO: &str = r#"
@@ -476,6 +552,34 @@ let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_SELECT: &str = r#"
+## Material 3 Select (MVP)
+
+This page validates a Material 3 select surface:
+
+- token-driven trigger outcomes via `md.comp.{outlined,filled}-select.*`
+- listbox overlay anchored to the trigger (Escape / outside press dismissal)
+- ADR 1159 style overrides via `SelectStyle` (partial per-state overrides)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SELECT: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let model = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::SelectItem::new("a", "Option A"),
+    m3::SelectItem::new("b", "Option B"),
+];
+
+let select = m3::Select::new(model)
+    .placeholder("Pick one")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 ## Material 3 Text Field (MVP)
 
@@ -485,6 +589,7 @@ This page validates Material 3 text field variants:
 - filled: token-driven filled container + active indicator + hover state layer
 - label + placeholder outcomes (best-effort)
 - outlined: animated label float + an outline "notch" patch (best-effort)
+- ADR 1159 style overrides via `TextFieldStyle` (partial per-state overrides)
 
 This is built on top of `fret-ui`'s `TextInput` mechanism widget (caret/selection/IME).
 "#;
@@ -510,6 +615,7 @@ This page validates a Material 3 primary navigation tabs surface:
 - roving focus + automatic activation (selection follows focus)
 - state layer (hover / pressed / focus)
 - bounded ripple (pointer-origin)
+- ADR 1159 style overrides via `TabsStyle` (partial per-state overrides)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TABS: &str = r#"
@@ -752,10 +858,10 @@ pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
 ```rust
 use fret_ui_material3 as m3;
 
-m3::TooltipProvider::new().with(cx, |cx| {
+m3::TooltipProvider::new().with_elements(cx, |cx| {
     let trigger = m3::Button::new("Hover me").into_element(cx);
-    vec![m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
-});
+    [m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+})
 ```
 "#;
 
@@ -1181,7 +1287,7 @@ Scrollable region with custom scrollbars and nested content.
 pub(crate) const USAGE_SCROLL_AREA: &str = r#"
 ```rust
 let body = stack::vstack(cx, stack::VStackProps::default(), |_cx| items);
-let scroll = shadcn::ScrollArea::new(vec![body]).into_element(cx);
+let scroll = shadcn::ScrollArea::new([body]).into_element(cx);
 ```
 "#;
 

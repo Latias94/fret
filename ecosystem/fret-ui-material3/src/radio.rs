@@ -19,6 +19,9 @@ use fret_ui::element::{
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
+};
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
@@ -82,6 +85,7 @@ pub struct RadioGroup {
     loop_navigation: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    style: RadioStyle,
 }
 
 impl RadioGroup {
@@ -96,6 +100,7 @@ impl RadioGroup {
             loop_navigation: true,
             a11y_label: None,
             test_id: None,
+            style: RadioStyle::default(),
         }
     }
 
@@ -129,6 +134,11 @@ impl RadioGroup {
         self
     }
 
+    pub fn style(mut self, style: RadioStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
     /// Configure the prefix-buffer typeahead timeout in `TickId` units (default: `60`).
     pub fn typeahead_timeout_ticks(mut self, ticks: u64) -> Self {
         self.typeahead_timeout_ticks = ticks.max(1);
@@ -149,6 +159,7 @@ impl RadioGroup {
             let label = self.a11y_label.clone();
             let test_id = self.test_id.clone();
             let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+            let style = self.style.clone();
 
             let values: Arc<[Arc<str>]> =
                 Arc::from(items.iter().map(|it| it.value.clone()).collect::<Vec<_>>());
@@ -289,6 +300,7 @@ impl RadioGroup {
                         .enumerate()
                         .map(|(idx, it)| {
                             let mut radio = Radio::new_value(it.value.clone(), model.clone())
+                                .style(style.clone())
                                 .disabled(disabled_group || it.disabled);
                             if let Some(label) = it.a11y_label.as_ref() {
                                 radio = radio.a11y_label(label.clone());
@@ -484,6 +496,34 @@ enum RadioSelectionModel {
     },
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct RadioStyle {
+    pub icon_color: OverrideSlot<ColorRef>,
+    pub state_layer_color: OverrideSlot<ColorRef>,
+}
+
+impl RadioStyle {
+    pub fn icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.icon_color = Some(color);
+        self
+    }
+
+    pub fn state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.state_layer_color = Some(color);
+        self
+    }
+
+    pub fn merged(mut self, other: Self) -> Self {
+        if other.icon_color.is_some() {
+            self.icon_color = other.icon_color;
+        }
+        if other.state_layer_color.is_some() {
+            self.state_layer_color = other.state_layer_color;
+        }
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Radio {
     selection: RadioSelectionModel,
@@ -494,6 +534,7 @@ pub struct Radio {
     a11y_pos_in_set: Option<u32>,
     a11y_set_size: Option<u32>,
     on_activate: Option<OnActivate>,
+    style: RadioStyle,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -509,6 +550,7 @@ impl std::fmt::Debug for Radio {
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
             .field("on_activate", &self.on_activate.is_some())
+            .field("style", &self.style)
             .finish()
     }
 }
@@ -527,6 +569,7 @@ impl Radio {
             a11y_pos_in_set: None,
             a11y_set_size: None,
             on_activate: None,
+            style: RadioStyle::default(),
         }
     }
 
@@ -544,6 +587,7 @@ impl Radio {
             a11y_pos_in_set: None,
             a11y_set_size: None,
             on_activate: None,
+            style: RadioStyle::default(),
         }
     }
 
@@ -598,6 +642,11 @@ impl Radio {
     /// Called after the radio updates its selection model.
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn style(mut self, style: RadioStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -729,6 +778,11 @@ impl Radio {
                                 .is_some_and(|v| v.as_ref() == value.as_ref()),
                         };
 
+                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
+                        if checked {
+                            states |= WidgetStates::SELECTED;
+                        }
+
                         let state_layer_target = radio_tokens::state_layer_target_opacity(
                             &theme,
                             checked,
@@ -737,6 +791,12 @@ impl Radio {
                         );
                         let state_layer_color =
                             radio_tokens::state_layer_color(&theme, checked, tokens_interaction);
+                        let state_layer_color = resolve_override_slot_with(
+                            self.style.state_layer_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || state_layer_color,
+                        );
                         let indication_config = material_pressable_indication_config(
                             &theme,
                             Some(Px(size.state_layer.0 * 0.5)),
@@ -789,6 +849,12 @@ impl Radio {
 
                         let icon_color =
                             radio_tokens::icon_color(&theme, checked, enabled, tokens_interaction);
+                        let icon_color = resolve_override_slot_with(
+                            self.style.icon_color.as_ref(),
+                            states,
+                            |color| color.resolve(&theme),
+                            || icon_color,
+                        );
                         let icon = radio_icon(cx, &theme, size, checked, icon_color, dot_scale);
 
                         let chrome = material_radio_chrome(cx, size, vec![overlay, icon]);

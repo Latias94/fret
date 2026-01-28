@@ -1421,6 +1421,19 @@ impl UiDiagnosticsService {
         ring.push_event(&self.cfg, recorded);
     }
 
+    pub fn record_viewport_input(&mut self, event: fret_core::ViewportInputEvent) {
+        if !self.is_enabled() {
+            return;
+        }
+
+        let ring = self.per_window.entry(event.window).or_default();
+        if ring.viewport_input_this_frame.len() >= self.cfg.max_events {
+            return;
+        }
+        ring.viewport_input_this_frame
+            .push(UiViewportInputEventV1::from_event(event));
+    }
+
     pub fn record_snapshot(
         &mut self,
         app: &App,
@@ -1474,6 +1487,7 @@ impl UiDiagnosticsService {
             });
 
         let ring = self.per_window.entry(window).or_default();
+        let viewport_input = std::mem::take(&mut ring.viewport_input_this_frame);
 
         let changed_models = std::mem::take(&mut ring.last_changed_models);
         let changed_model_sources_top = if cfg!(debug_assertions) && !changed_models.is_empty() {
@@ -1521,6 +1535,18 @@ impl UiDiagnosticsService {
             })
         };
 
+        let mut debug = UiTreeDebugSnapshotV1::from_tree(
+            app,
+            window,
+            ui,
+            element_runtime,
+            hit_test,
+            element_diag,
+            semantics,
+            self.cfg.max_gating_trace_entries,
+        );
+        debug.viewport_input = viewport_input;
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -1531,16 +1557,7 @@ impl UiDiagnosticsService {
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
             scene_fingerprint: scene.fingerprint(),
-            debug: UiTreeDebugSnapshotV1::from_tree(
-                app,
-                window,
-                ui,
-                element_runtime,
-                hit_test,
-                element_diag,
-                semantics,
-                self.cfg.max_gating_trace_entries,
-            ),
+            debug,
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
             changed_model_sources_top,
@@ -1897,6 +1914,7 @@ struct WindowRing {
     last_pointer_position: Option<Point>,
     events: VecDeque<RecordedUiEventV1>,
     snapshots: VecDeque<UiDiagnosticsSnapshotV1>,
+    viewport_input_this_frame: Vec<UiViewportInputEventV1>,
     last_changed_models: Vec<u64>,
     last_changed_globals: Vec<String>,
 }
@@ -1913,6 +1931,7 @@ impl WindowRing {
         self.last_pointer_position = None;
         self.events.clear();
         self.snapshots.clear();
+        self.viewport_input_this_frame.clear();
         self.last_changed_models.clear();
         self.last_changed_globals.clear();
     }
@@ -2369,6 +2388,19 @@ impl Default for UiMouseButtonV1 {
     }
 }
 
+impl UiMouseButtonV1 {
+    fn from_button(button: fret_core::MouseButton) -> Self {
+        match button {
+            fret_core::MouseButton::Left => Self::Left,
+            fret_core::MouseButton::Right => Self::Right,
+            fret_core::MouseButton::Middle => Self::Middle,
+            fret_core::MouseButton::Back
+            | fret_core::MouseButton::Forward
+            | fret_core::MouseButton::Other(_) => Self::Left,
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 pub struct UiKeyModifiersV1 {
     #[serde(default)]
@@ -2381,6 +2413,17 @@ pub struct UiKeyModifiersV1 {
     pub meta: bool,
 }
 
+impl UiKeyModifiersV1 {
+    fn from_modifiers(modifiers: fret_core::Modifiers) -> Self {
+        Self {
+            shift: modifiers.shift,
+            ctrl: modifiers.ctrl,
+            alt: modifiers.alt,
+            meta: modifiers.meta,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -2389,6 +2432,23 @@ pub enum UiPredicateV1 {
     },
     FocusIs {
         target: UiSelectorV1,
+    },
+    /// Matches the current modal/pointer barrier root and focus barrier root (if any).
+    ///
+    /// This is intentionally coarse-grained: scripts should be able to assert that close
+    /// transitions keep the pointer barrier active while releasing focus containment (or vice
+    /// versa) without needing stable node ids.
+    BarrierRoots {
+        #[serde(default)]
+        barrier_root: UiOptionalRootStateV1,
+        #[serde(default)]
+        focus_barrier_root: UiOptionalRootStateV1,
+        /// When set, additionally enforces whether the two roots are equal.
+        ///
+        /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
+        /// - `false`: requires `barrier_root != focus_barrier_root`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        require_equal: Option<bool>,
     },
     /// True when the target exists and its semantics bounds intersect the active window bounds.
     ///
@@ -2405,6 +2465,16 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         padding_px: f32,
     },
+}
+
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOptionalRootStateV1 {
+    /// Do not assert anything about the root (accept both `Some` and `None`).
+    #[default]
+    Any,
+    None,
+    Some,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2542,10 +2612,12 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
+    #[serde(default)]
+    pub focus_barrier_root: Option<u64>,
     #[serde(default)]
     pub pointer_occlusion: String,
     #[serde(default)]
@@ -2558,10 +2630,25 @@ pub struct UiInputArbitrationSnapshotV1 {
     pub pointer_capture_multiple_layers: bool,
 }
 
+impl Default for UiInputArbitrationSnapshotV1 {
+    fn default() -> Self {
+        Self {
+            modal_barrier_root: None,
+            focus_barrier_root: None,
+            pointer_occlusion: "none".to_string(),
+            pointer_occlusion_layer_id: None,
+            pointer_capture_active: false,
+            pointer_capture_layer_id: None,
+            pointer_capture_multiple_layers: false,
+        }
+    }
+}
+
 impl UiInputArbitrationSnapshotV1 {
     fn from_snapshot(snapshot: fret_ui::tree::UiInputArbitrationSnapshot) -> Self {
         Self {
             modal_barrier_root: snapshot.modal_barrier_root.map(key_to_u64),
+            focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
             pointer_occlusion: pointer_occlusion_label(snapshot.pointer_occlusion),
             pointer_occlusion_layer_id: snapshot
                 .pointer_occlusion_layer
@@ -2602,6 +2689,18 @@ pub struct UiTreeDebugSnapshotV1 {
     pub cache_roots: Vec<UiCacheRootStatsV1>,
     #[serde(default)]
     pub overlay_synthesis: Vec<UiOverlaySynthesisEventV1>,
+    /// Viewport input forwarding events observed during the current frame.
+    ///
+    /// This records `Effect::ViewportInput` deliveries (ADR 0147) so scripted diagnostics can
+    /// gate on “viewport tooling input was actually exercised” without scraping logs.
+    #[serde(default)]
+    pub viewport_input: Vec<UiViewportInputEventV1>,
+    /// Docking interaction ownership snapshot (best-effort).
+    ///
+    /// This is sourced from a frame-local diagnostics store populated by policy-heavy ecosystem
+    /// crates (e.g. docking), and is intended for debugging arbitration regressions without logs.
+    #[serde(default)]
+    pub docking_interaction: Option<UiDockingInteractionSnapshotV1>,
     #[serde(default)]
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]
@@ -2724,6 +2823,11 @@ impl UiTreeDebugSnapshotV1 {
                         .collect()
                 })
                 .unwrap_or_default(),
+            viewport_input: Vec::new(),
+            docking_interaction: app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .and_then(|store| store.docking_for_window(window, app.frame_id()))
+                .map(UiDockingInteractionSnapshotV1::from_snapshot),
             removed_subtrees: ui
                 .debug_removed_subtrees()
                 .iter()
@@ -2765,6 +2869,181 @@ impl UiTreeDebugSnapshotV1 {
             hit_test,
             element_runtime: element_runtime_snapshot,
             semantics,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiDockingInteractionSnapshotV1 {
+    #[serde(default)]
+    pub dock_drag: Option<UiDockDragDiagnosticsV1>,
+    #[serde(default)]
+    pub viewport_capture: Option<UiViewportCaptureDiagnosticsV1>,
+}
+
+impl UiDockingInteractionSnapshotV1 {
+    fn from_snapshot(snapshot: &fret_runtime::DockingInteractionDiagnostics) -> Self {
+        Self {
+            dock_drag: snapshot
+                .dock_drag
+                .map(UiDockDragDiagnosticsV1::from_snapshot),
+            viewport_capture: snapshot
+                .viewport_capture
+                .map(UiViewportCaptureDiagnosticsV1::from_snapshot),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockDragDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub source_window: u64,
+    pub current_window: u64,
+    pub dragging: bool,
+    pub cross_window_hover: bool,
+}
+
+impl UiDockDragDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockDragDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            source_window: snapshot.source_window.data().as_ffi(),
+            current_window: snapshot.current_window.data().as_ffi(),
+            dragging: snapshot.dragging,
+            cross_window_hover: snapshot.cross_window_hover,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiViewportCaptureDiagnosticsV1 {
+    pub pointer_id: u64,
+    pub target: u64,
+}
+
+impl UiViewportCaptureDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::ViewportCaptureDiagnostics) -> Self {
+        Self {
+            pointer_id: snapshot.pointer_id.0,
+            target: snapshot.target.data().as_ffi(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiViewportInputEventV1 {
+    pub target: u64,
+    pub pointer_id: u64,
+    pub pointer_type: String,
+    pub cursor_px: PointV1,
+    pub uv: (f32, f32),
+    pub target_px: (u32, u32),
+    pub kind: UiViewportInputKindV1,
+}
+
+impl UiViewportInputEventV1 {
+    fn from_event(event: fret_core::ViewportInputEvent) -> Self {
+        Self {
+            target: event.target.data().as_ffi(),
+            pointer_id: event.pointer_id.0 as u64,
+            pointer_type: viewport_pointer_type_label(event.pointer_type).to_string(),
+            cursor_px: PointV1::from(event.cursor_px),
+            uv: event.uv,
+            target_px: event.target_px,
+            kind: UiViewportInputKindV1::from_kind(event.kind),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum UiViewportInputKindV1 {
+    PointerMove {
+        buttons: UiMouseButtonsV1,
+        modifiers: UiKeyModifiersV1,
+    },
+    PointerDown {
+        button: UiMouseButtonV1,
+        modifiers: UiKeyModifiersV1,
+        click_count: u8,
+    },
+    PointerUp {
+        button: UiMouseButtonV1,
+        modifiers: UiKeyModifiersV1,
+        is_click: bool,
+        click_count: u8,
+    },
+    PointerCancel {
+        buttons: UiMouseButtonsV1,
+        modifiers: UiKeyModifiersV1,
+        reason: String,
+    },
+    Wheel {
+        delta: PointV1,
+        modifiers: UiKeyModifiersV1,
+    },
+}
+
+impl UiViewportInputKindV1 {
+    fn from_kind(kind: fret_core::ViewportInputKind) -> Self {
+        match kind {
+            fret_core::ViewportInputKind::PointerMove { buttons, modifiers } => Self::PointerMove {
+                buttons: UiMouseButtonsV1::from_buttons(buttons),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+            },
+            fret_core::ViewportInputKind::PointerDown {
+                button,
+                modifiers,
+                click_count,
+            } => Self::PointerDown {
+                button: UiMouseButtonV1::from_button(button),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+                click_count,
+            },
+            fret_core::ViewportInputKind::PointerUp {
+                button,
+                modifiers,
+                is_click,
+                click_count,
+            } => Self::PointerUp {
+                button: UiMouseButtonV1::from_button(button),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+                is_click,
+                click_count,
+            },
+            fret_core::ViewportInputKind::PointerCancel {
+                buttons,
+                modifiers,
+                reason,
+            } => Self::PointerCancel {
+                buttons: UiMouseButtonsV1::from_buttons(buttons),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+                reason: viewport_cancel_reason_label(reason).to_string(),
+            },
+            fret_core::ViewportInputKind::Wheel { delta, modifiers } => Self::Wheel {
+                delta: PointV1::from(delta),
+                modifiers: UiKeyModifiersV1::from_modifiers(modifiers),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiMouseButtonsV1 {
+    #[serde(default)]
+    pub left: bool,
+    #[serde(default)]
+    pub right: bool,
+    #[serde(default)]
+    pub middle: bool,
+}
+
+impl UiMouseButtonsV1 {
+    fn from_buttons(buttons: fret_core::MouseButtons) -> Self {
+        Self {
+            left: buttons.left,
+            right: buttons.right,
+            middle: buttons.middle,
         }
     }
 }
@@ -4211,6 +4490,8 @@ pub struct UiSemanticsSnapshotV1 {
     pub window: u64,
     pub roots: Vec<UiSemanticsRootV1>,
     pub barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
     pub focus: Option<u64>,
     pub captured: Option<u64>,
     pub nodes: Vec<UiSemanticsNodeV1>,
@@ -4284,6 +4565,7 @@ impl UiSemanticsSnapshotV1 {
                 })
                 .collect(),
             barrier_root: snapshot.barrier_root.map(key_to_u64),
+            focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
             focus: snapshot.focus.map(key_to_u64),
             captured: snapshot.captured.map(key_to_u64),
             nodes: snapshot
@@ -4631,6 +4913,8 @@ pub struct UiHitTestSnapshotV1 {
     pub hit: Option<u64>,
     pub active_layer_roots: Vec<u64>,
     pub barrier_root: Option<u64>,
+    #[serde(default)]
+    pub focus_barrier_root: Option<u64>,
     /// Stable, script-friendly labels for each scope root.
     ///
     /// Prefer this over `active_layer_roots` when validating behavior across refactors, since node
@@ -4642,13 +4926,15 @@ pub struct UiHitTestSnapshotV1 {
 impl UiHitTestSnapshotV1 {
     fn from_tree(position: Point, ui: &UiTree<App>) -> Self {
         let hit_test = ui.debug_hit_test(position);
+        let arbitration = ui.input_arbitration_snapshot();
         let layers = ui.debug_layers_in_paint_order();
-        Self::from_hit_test_with_layers(position, hit_test, &layers)
+        Self::from_hit_test_with_layers(position, hit_test, arbitration.focus_barrier_root, &layers)
     }
 
     fn from_hit_test_with_layers(
         position: Point,
         hit_test: UiDebugHitTest,
+        focus_barrier_root: Option<NodeId>,
         layers: &[UiDebugLayerInfo],
     ) -> Self {
         let mut scope_roots = Vec::new();
@@ -4663,9 +4949,21 @@ impl UiHitTestSnapshotV1 {
             });
         }
 
-        let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
+        let mut by_root: HashMap<NodeId, &UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
-            by_root.insert(layer.root, layer.clone());
+            by_root.insert(layer.root, layer);
+        }
+
+        if let Some(root) = focus_barrier_root {
+            let info = by_root.get(&root);
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "focus_barrier_root".to_string(),
+                root: key_to_u64(root),
+                layer_id: info.map(|l| l.id.data().as_ffi()),
+                pointer_occlusion: info.map(|l| pointer_occlusion_label(l.pointer_occlusion)),
+                blocks_underlay_input: info.map(|l| l.blocks_underlay_input),
+                hit_testable: info.map(|l| l.hit_testable),
+            });
         }
 
         for root in &hit_test.active_layer_roots {
@@ -4689,6 +4987,7 @@ impl UiHitTestSnapshotV1 {
                 .map(key_to_u64)
                 .collect(),
             barrier_root: hit_test.barrier_root.map(key_to_u64),
+            focus_barrier_root: focus_barrier_root.map(key_to_u64),
             scope_roots,
         }
     }
@@ -4992,6 +5291,21 @@ fn pointer_occlusion_label(occlusion: fret_ui::tree::PointerOcclusion) -> String
         fret_ui::tree::PointerOcclusion::BlockMouseExceptScroll => "block_mouse_except_scroll",
     }
     .to_string()
+}
+
+fn viewport_pointer_type_label(pointer_type: fret_core::PointerType) -> &'static str {
+    match pointer_type {
+        fret_core::PointerType::Mouse => "mouse",
+        fret_core::PointerType::Touch => "touch",
+        fret_core::PointerType::Pen => "pen",
+        fret_core::PointerType::Unknown => "unknown",
+    }
+}
+
+fn viewport_cancel_reason_label(reason: fret_core::PointerCancelReason) -> &'static str {
+    match reason {
+        fret_core::PointerCancelReason::LeftWindow => "left_window",
+    }
 }
 
 fn event_kind(event: &Event) -> String {
@@ -5387,6 +5701,34 @@ fn eval_predicate(
                 return false;
             };
             node.id == focus
+        }
+        UiPredicateV1::BarrierRoots {
+            barrier_root,
+            focus_barrier_root,
+            require_equal,
+        } => {
+            let barrier = snapshot.barrier_root.map(|n| n.data().as_ffi());
+            let focus_barrier = snapshot.focus_barrier_root.map(|n| n.data().as_ffi());
+
+            let matches_root_state = |state: UiOptionalRootStateV1, value: Option<u64>| match state
+            {
+                UiOptionalRootStateV1::Any => true,
+                UiOptionalRootStateV1::None => value.is_none(),
+                UiOptionalRootStateV1::Some => value.is_some(),
+            };
+
+            if !matches_root_state(*barrier_root, barrier) {
+                return false;
+            }
+            if !matches_root_state(*focus_barrier_root, focus_barrier) {
+                return false;
+            }
+
+            match require_equal {
+                None => true,
+                Some(true) => barrier == focus_barrier,
+                Some(false) => barrier != focus_barrier,
+            }
         }
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
@@ -6097,6 +6439,7 @@ mod tests {
                 },
             ],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6157,6 +6500,7 @@ mod tests {
                 },
             ],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6222,6 +6566,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6281,6 +6626,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(node_id(2)),
             captured: None,
             nodes: vec![
@@ -6341,6 +6687,7 @@ mod tests {
                 },
             ],
             barrier_root: Some(node_id(3)),
+            focus_barrier_root: Some(node_id(3)),
             focus: None,
             captured: None,
             nodes: vec![
@@ -6378,6 +6725,161 @@ mod tests {
         let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
+    }
+
+    #[test]
+    fn scripts_can_assert_barrier_root_and_focus_barrier_root_independently() {
+        let window = window_id(1);
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: Some(node_id(1)),
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node(
+                1,
+                None,
+                SemanticsRole::Window,
+                rect(0.0, 0.0, 100.0, 100.0),
+                "root",
+            )],
+        };
+
+        let pred = UiPredicateV1::BarrierRoots {
+            barrier_root: UiOptionalRootStateV1::Some,
+            focus_barrier_root: UiOptionalRootStateV1::None,
+            require_equal: Some(false),
+        };
+
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
+        );
+
+        let pred = UiPredicateV1::BarrierRoots {
+            barrier_root: UiOptionalRootStateV1::Some,
+            focus_barrier_root: UiOptionalRootStateV1::None,
+            require_equal: Some(true),
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            "expected require_equal=true to fail when the roots differ"
+        );
+    }
+
+    #[test]
+    fn scripts_can_assert_barrier_roots_via_drive_script() {
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.cfg.script_auto_dump = false;
+
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be >= UNIX_EPOCH")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("fret-diag-test-script-{}", unique));
+        std::fs::create_dir_all(&dir).expect("create temp test dir");
+        svc.cfg.out_dir = dir.clone();
+        svc.cfg.ready_path = dir.join("ready.touch");
+        svc.cfg.script_path = dir.join("script.json");
+        svc.cfg.script_trigger_path = dir.join("script.touch");
+        svc.cfg.script_result_path = dir.join("script.result.json");
+        svc.cfg.script_result_trigger_path = dir.join("script.result.touch");
+
+        let window = AppWindowId::default();
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: Some(node_id(1)),
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node(
+                1,
+                None,
+                SemanticsRole::Window,
+                rect(0.0, 0.0, 100.0, 100.0),
+                "root",
+            )],
+        };
+
+        let script: UiActionScriptV1 = serde_json::from_str(
+            r#"{
+                "schema_version": 1,
+                "steps": [
+                    {
+                        "type": "assert",
+                        "predicate": {
+                            "kind": "barrier_roots",
+                            "barrier_root": "some",
+                            "focus_barrier_root": "none",
+                            "require_equal": false
+                        }
+                    }
+                ]
+            }"#,
+        )
+        .expect("parse barrier_roots predicate");
+        svc.pending_script = Some(script);
+        svc.pending_script_run_id = Some(1);
+
+        let app = App::new();
+        let _ = svc.drive_script_for_window(&app, window, window_bounds, Some(&snapshot), None);
+
+        let bytes =
+            std::fs::read(&svc.cfg.script_result_path).expect("read script result json file");
+        let result: UiScriptResultV1 =
+            serde_json::from_slice(&bytes).expect("parse UiScriptResultV1");
+        assert!(
+            matches!(result.stage, UiScriptStageV1::Passed),
+            "expected drive_script to persist the passed result"
+        );
+    }
+
+    #[test]
+    fn hit_test_snapshot_exposes_focus_barrier_root() {
+        let position = Point::new(Px(1.0), Px(2.0));
+        let hit_test = UiDebugHitTest {
+            hit: None,
+            active_layer_roots: vec![node_id(10)],
+            barrier_root: Some(node_id(10)),
+        };
+
+        let snap = UiHitTestSnapshotV1::from_hit_test_with_layers(
+            position,
+            hit_test,
+            Some(node_id(11)),
+            &[],
+        );
+
+        assert_eq!(snap.barrier_root, Some(key_to_u64(node_id(10))));
+        assert_eq!(snap.focus_barrier_root, Some(key_to_u64(node_id(11))));
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| r.kind == "modal_barrier_root" && r.root == key_to_u64(node_id(10)))
+        );
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| { r.kind == "focus_barrier_root" && r.root == key_to_u64(node_id(11)) })
+        );
     }
 }
 

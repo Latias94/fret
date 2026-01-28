@@ -16,7 +16,7 @@ use fret_ui::element::{
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::GlobalWatchExt as _;
-use fret_ui_kit::{ColorRef, MetricRef, Space, ui};
+use fret_ui_kit::{ColorRef, Space, ui};
 use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -398,8 +398,8 @@ $$
 
             let spinner_box = |cx: &mut fret_ui::ElementContext<'_, App>| {
                 ui::container(cx, |cx| [cx.spinner()])
-                    .w_px(MetricRef::Px(size_px))
-                    .h_px(MetricRef::Px(size_px))
+                    .w_px(size_px)
+                    .h_px(size_px)
                     .into_element(cx)
             };
 

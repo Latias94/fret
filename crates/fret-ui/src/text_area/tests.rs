@@ -369,6 +369,74 @@ fn ime_commit_replaces_selection_and_clears_it() {
 }
 
 #[test]
+fn text_area_double_click_selection_respects_text_boundary_mode() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut area = TextArea::new("can't\nsecond".to_string());
+    area.caret = 0;
+    area.selection_anchor = 0;
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    cx.input_ctx.text_boundary_mode = fret_runtime::TextBoundaryMode::UnicodeWord;
+
+    area.event(
+        &mut cx,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(5.0), Px(5.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!((area.selection_anchor, area.caret), (0, 5));
+
+    let mut area = TextArea::new("can't\nsecond".to_string());
+    area.caret = 0;
+    area.selection_anchor = 0;
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    cx.input_ctx.text_boundary_mode = fret_runtime::TextBoundaryMode::Identifier;
+
+    area.event(
+        &mut cx,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(5.0), Px(5.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!((area.selection_anchor, area.caret), (0, 3));
+}
+
+#[test]
 fn preedit_does_not_mutate_buffer_until_commit() {
     let window = AppWindowId::default();
     let node = fret_core::NodeId::default();

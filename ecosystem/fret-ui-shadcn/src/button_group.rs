@@ -59,7 +59,8 @@ pub struct ButtonGroup {
 }
 
 impl ButtonGroup {
-    pub fn new(items: Vec<ButtonGroupItem>) -> Self {
+    pub fn new(items: impl IntoIterator<Item = ButtonGroupItem>) -> Self {
+        let items = items.into_iter().collect();
         Self {
             items,
             orientation: ButtonGroupOrientation::default(),
@@ -68,8 +69,8 @@ impl ButtonGroup {
         }
     }
 
-    pub fn items(mut self, items: Vec<ButtonGroupItem>) -> Self {
-        self.items = items;
+    pub fn items(mut self, items: impl IntoIterator<Item = ButtonGroupItem>) -> Self {
+        self.items = items.into_iter().collect();
         self
     }
 

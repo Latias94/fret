@@ -11,9 +11,9 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space,
-    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
-    resolve_override_slot_opt, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
+    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, resolve_override_slot_opt, ui,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -107,9 +107,9 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
 
 #[derive(Debug, Clone, Default)]
 pub struct ToggleStyle {
-    pub background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub background: OverrideSlot<ColorRef>,
+    pub foreground: OverrideSlot<ColorRef>,
+    pub border_color: OverrideSlot<ColorRef>,
 }
 
 impl ToggleStyle {
@@ -308,8 +308,8 @@ impl Toggle {
         let pressable_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .min_h(MetricRef::Px(min_h))
-                .min_w(MetricRef::Px(min_w))
+                .min_h(min_h)
+                .min_w(min_w)
                 .merge(layout),
         );
 
@@ -348,18 +348,14 @@ impl Toggle {
         let user_bg_override = chrome.background.is_some();
 
         let base_chrome = match variant {
-            ToggleVariant::Default => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(Color::TRANSPARENT)),
-                ..Default::default()
-            },
-            ToggleVariant::Outline => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border)),
-                ..Default::default()
-            },
+            ToggleVariant::Default => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(Color::TRANSPARENT)),
+            ToggleVariant::Outline => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(border)),
         }
         .merge(chrome);
 

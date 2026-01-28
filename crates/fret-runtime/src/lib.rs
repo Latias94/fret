@@ -11,6 +11,7 @@ pub mod font_catalog_cache;
 #[cfg(test)]
 mod font_config_tests;
 pub mod input;
+pub mod interaction_diagnostics;
 pub mod keymap;
 pub mod menu;
 pub mod model;
@@ -26,6 +27,7 @@ pub mod window_input_arbitration;
 pub mod window_input_context;
 pub mod window_menu_bar_focus;
 pub mod window_metrics;
+pub mod window_text_boundary_mode;
 
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
@@ -56,7 +58,11 @@ pub use fret_core::{
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
 pub use input::{
     DefaultAction, DefaultActionSet, InputContext, InputDispatchPhase, KeyChord, Platform,
-    format_chord, format_sequence,
+    TextBoundaryMode, format_chord, format_sequence,
+};
+pub use interaction_diagnostics::{
+    DockDragDiagnostics, DockingInteractionDiagnostics, ViewportCaptureDiagnostics,
+    WindowInteractionDiagnosticsStore,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
@@ -88,3 +94,4 @@ pub use window_input_arbitration::{WindowInputArbitrationSnapshot, WindowPointer
 pub use window_input_context::WindowInputContextService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
+pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};

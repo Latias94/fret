@@ -88,10 +88,10 @@ pub struct OverlayRequest {
     pub open: Option<Model<bool>>,
     pub dismissible_on_dismiss_request: Option<OnDismissRequest>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
-    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
-    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub presence: OverlayPresence,
     pub initial_focus: Option<GlobalElementId>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub children: Vec<AnyElement>,
     pub toast_layer: Option<ToastLayerSpec>,
 }
@@ -121,10 +121,10 @@ impl std::fmt::Debug for OverlayRequest {
                 "dismissible_on_pointer_move",
                 &self.dismissible_on_pointer_move.is_some(),
             )
-            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
-            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("presence", &self.presence)
             .field("initial_focus", &self.initial_focus)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("children_len", &self.children.len())
             .field("toast_layer", &self.toast_layer)
             .finish()
@@ -152,10 +152,10 @@ impl OverlayRequest {
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -198,10 +198,10 @@ impl OverlayRequest {
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -226,10 +226,10 @@ impl OverlayRequest {
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -255,10 +255,10 @@ impl OverlayRequest {
             open: Some(open),
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             presence,
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children: children.into_iter().collect(),
             toast_layer: None,
         }
@@ -278,10 +278,10 @@ impl OverlayRequest {
             open: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             presence: OverlayPresence::hidden(),
             initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             children: Vec::new(),
             toast_layer: Some(ToastLayerSpec {
                 store,
@@ -359,8 +359,11 @@ impl OverlayRequest {
         self
     }
 
-    pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
-        self.dismissable_branches = branches;
+    pub fn dismissable_branches(
+        mut self,
+        branches: impl IntoIterator<Item = GlobalElementId>,
+    ) -> Self {
+        self.dismissable_branches = branches.into_iter().collect();
         self
     }
 
@@ -579,8 +582,8 @@ impl OverlayController {
 
                 let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
                     .position(spec.position)
-                    .root_name(root_name)
-                    .style(spec.style);
+                    .style(spec.style)
+                    .root_name(root_name);
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
                 }

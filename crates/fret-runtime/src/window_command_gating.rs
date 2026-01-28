@@ -307,8 +307,10 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut base_ctx = InputContext::default();
-        base_ctx.focus_is_text_input = true;
+        let base_ctx = InputContext {
+            focus_is_text_input: true,
+            ..Default::default()
+        };
         svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
@@ -331,8 +333,10 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut base_ctx = InputContext::default();
-        base_ctx.focus_is_text_input = true;
+        let base_ctx = InputContext {
+            focus_is_text_input: true,
+            ..Default::default()
+        };
         svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
@@ -343,9 +347,11 @@ mod tests {
             "expected base snapshot to be visible"
         );
 
-        let mut overlay_ctx = InputContext::default();
-        overlay_ctx.ui_has_modal = true;
-        overlay_ctx.focus_is_text_input = false;
+        let overlay_ctx = InputContext {
+            ui_has_modal: true,
+            focus_is_text_input: false,
+            ..Default::default()
+        };
         let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
@@ -375,15 +381,19 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut outer_ctx = InputContext::default();
-        outer_ctx.focus_is_text_input = true;
+        let outer_ctx = InputContext {
+            focus_is_text_input: true,
+            ..Default::default()
+        };
         let token = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
         );
 
-        let mut base_ctx = InputContext::default();
-        base_ctx.ui_has_modal = true;
+        let base_ctx = InputContext {
+            ui_has_modal: true,
+            ..Default::default()
+        };
         svc.set_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
@@ -395,8 +405,7 @@ mod tests {
             "expected stack top to remain effective after set_snapshot"
         );
 
-        svc.remove_pushed_snapshot(window, token)
-            .expect("remove pushed snapshot");
+        svc.pop_snapshot(token).expect("remove pushed snapshot");
         assert!(
             svc.snapshot(window)
                 .is_some_and(|s| s.input_ctx().ui_has_modal && !s.input_ctx().focus_is_text_input),
@@ -409,15 +418,19 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut outer_ctx = InputContext::default();
-        outer_ctx.ui_has_modal = true;
+        let outer_ctx = InputContext {
+            ui_has_modal: true,
+            ..Default::default()
+        };
         let outer = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
         );
 
-        let mut inner_ctx = InputContext::default();
-        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner_ctx = InputContext {
+            dispatch_phase: crate::InputDispatchPhase::Capture,
+            ..Default::default()
+        };
         let inner = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
@@ -452,15 +465,19 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut base_ctx = InputContext::default();
-        base_ctx.focus_is_text_input = true;
+        let base_ctx = InputContext {
+            focus_is_text_input: true,
+            ..Default::default()
+        };
         svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
         );
 
-        let mut overlay_ctx = InputContext::default();
-        overlay_ctx.ui_has_modal = true;
+        let overlay_ctx = InputContext {
+            ui_has_modal: true,
+            ..Default::default()
+        };
         let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
@@ -485,17 +502,21 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut overlay_ctx = InputContext::default();
-        overlay_ctx.ui_has_modal = true;
-        overlay_ctx.focus_is_text_input = false;
+        let overlay_ctx = InputContext {
+            ui_has_modal: true,
+            focus_is_text_input: false,
+            ..Default::default()
+        };
         let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),
         );
 
-        let mut base_ctx = InputContext::default();
-        base_ctx.ui_has_modal = false;
-        base_ctx.focus_is_text_input = true;
+        let base_ctx = InputContext {
+            ui_has_modal: false,
+            focus_is_text_input: true,
+            ..Default::default()
+        };
         svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
@@ -521,22 +542,28 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut outer_ctx = InputContext::default();
-        outer_ctx.ui_has_modal = true;
+        let outer_ctx = InputContext {
+            ui_has_modal: true,
+            ..Default::default()
+        };
         let outer = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
         );
 
-        let mut inner_ctx = InputContext::default();
-        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner_ctx = InputContext {
+            dispatch_phase: crate::InputDispatchPhase::Capture,
+            ..Default::default()
+        };
         let inner = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
         );
 
-        let mut updated_outer_ctx = InputContext::default();
-        updated_outer_ctx.dispatch_phase = crate::InputDispatchPhase::Preview;
+        let updated_outer_ctx = InputContext {
+            dispatch_phase: crate::InputDispatchPhase::Preview,
+            ..Default::default()
+        };
         assert!(
             svc.update_pushed_snapshot(
                 outer,
@@ -570,15 +597,19 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut outer_ctx = InputContext::default();
-        outer_ctx.ui_has_modal = true;
+        let outer_ctx = InputContext {
+            ui_has_modal: true,
+            ..Default::default()
+        };
         let outer = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(outer_ctx, HashMap::new()),
         );
 
-        let mut inner_ctx = InputContext::default();
-        inner_ctx.dispatch_phase = crate::InputDispatchPhase::Capture;
+        let inner_ctx = InputContext {
+            dispatch_phase: crate::InputDispatchPhase::Capture,
+            ..Default::default()
+        };
         let inner = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(inner_ctx, HashMap::new()),
@@ -603,15 +634,19 @@ mod tests {
         let window = AppWindowId::default();
         let mut svc = WindowCommandGatingService::default();
 
-        let mut base_ctx = InputContext::default();
-        base_ctx.focus_is_text_input = true;
+        let base_ctx = InputContext {
+            focus_is_text_input: true,
+            ..Default::default()
+        };
         svc.set_base_snapshot(
             window,
             WindowCommandGatingSnapshot::new(base_ctx, HashMap::new()),
         );
 
-        let mut overlay_ctx = InputContext::default();
-        overlay_ctx.ui_has_modal = true;
+        let overlay_ctx = InputContext {
+            ui_has_modal: true,
+            ..Default::default()
+        };
         let handle = svc.push_snapshot(
             window,
             WindowCommandGatingSnapshot::new(overlay_ctx, HashMap::new()),

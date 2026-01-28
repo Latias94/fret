@@ -8,7 +8,7 @@ use fret_launch::{
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
-use fret_ui::element::{AnyElement, AnyElementIterExt as _};
+use fret_ui::element::AnyElement;
 use fret_ui::{Theme, UiFrameCx, UiTree};
 use fret_ui_kit::declarative as kit_decl;
 use fret_ui_kit::prelude::*;
@@ -414,7 +414,13 @@ fn todo_panel(
         .on_click(CMD_CLEAR_DONE)
         .into_element(cx);
 
-    let list = todos.iter().map(|t| todo_row(cx, theme, t)).elements();
+    let list = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+        let mut out = Vec::new();
+        for t in todos {
+            out.push(todo_row(cx, theme, t));
+        }
+        out
+    });
 
     let header =
         shadcn::CardHeader::new([shadcn::CardTitle::new("Todo").into_element(cx)]).into_element(cx);
@@ -425,7 +431,7 @@ fn todo_panel(
             .items_center()
             .w_full()
             .into_element(cx),
-        cx.column(fret_ui::element::ColumnProps::default(), move |_cx| list),
+        list,
     ])
     .into_element(cx);
 

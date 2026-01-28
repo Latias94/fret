@@ -205,6 +205,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                     self.app.next_timer_token()
                 }
+
+                fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+                    self.app.next_clipboard_token()
+                }
             }
 
             impl<H: UiHost> crate::action::UiFocusActionHost for CommandHookHost<'_, H> {
@@ -259,6 +263,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                             &props.rich.text,
                             state,
                             command.as_str(),
+                            cx.input_ctx.text_boundary_mode,
                         );
                         let range = match outcome {
                             crate::text_surface::SelectableTextCommandOutcome::Handled {

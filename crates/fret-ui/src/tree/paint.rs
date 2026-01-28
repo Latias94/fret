@@ -37,12 +37,13 @@ impl<H: UiHost> UiTree<H> {
                 .cloned()
                 .unwrap_or_default();
             let window_arbitration = self.window_input_arbitration_snapshot();
-            let input_ctx = InputContext {
+            let mut input_ctx = InputContext {
                 platform: Platform::current(),
                 caps,
                 ui_has_modal: barrier_root.is_some(),
                 window_arbitration: Some(window_arbitration),
                 focus_is_text_input,
+                text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
                 edit_can_undo: app
                     .global::<fret_runtime::WindowCommandAvailabilityService>()
                     .and_then(|svc| svc.snapshot(window))
@@ -55,6 +56,15 @@ impl<H: UiHost> UiTree<H> {
                     .unwrap_or(true),
                 dispatch_phase: InputDispatchPhase::Bubble,
             };
+            if let Some(mode) = app
+                .global::<fret_runtime::WindowTextBoundaryModeService>()
+                .and_then(|svc| svc.mode(window))
+            {
+                input_ctx.text_boundary_mode = mode;
+            }
+            if let Some(mode) = self.focus_text_boundary_mode_override() {
+                input_ctx.text_boundary_mode = mode;
+            }
             let needs_update = app
                 .global::<fret_runtime::WindowInputContextService>()
                 .and_then(|svc| svc.snapshot(window))

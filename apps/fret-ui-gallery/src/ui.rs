@@ -1,4 +1,5 @@
 use fret_app::{App, CommandId, Model};
+use fret_code_editor as code_editor;
 use fret_code_view as code_view;
 use fret_core::{
     Color as CoreColor, Corners, DrawOrder, Edges, ImageId, Point, Px, Rect, SceneOp, Size,
@@ -153,7 +154,7 @@ pub(crate) fn sidebar_view(
         let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
             nav_body
         } else {
-            shadcn::ScrollArea::new(vec![nav_body])
+            shadcn::ScrollArea::new([nav_body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         };
@@ -162,7 +163,7 @@ pub(crate) fn sidebar_view(
                 test_id: Some(Arc::<str>::from("ui-gallery-nav-scroll")),
                 ..Default::default()
             },
-            move |_cx| vec![nav_scroll],
+            move |_cx| [nav_scroll],
         )
     };
 
@@ -172,17 +173,15 @@ pub(crate) fn sidebar_view(
             ChromeRefinement::default()
                 .bg(ColorRef::Color(theme.color_required("muted")))
                 .p(Space::N4),
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(280.0)))
-                .h_full(),
+            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
         ),
         |cx| {
-            vec![stack::vstack(
+            [stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full().h_full())
                     .gap(Space::N4),
-                |_cx| vec![title_row, query_input, nav_scroll],
+                |_cx| [title_row, query_input, nav_scroll],
             )]
         },
     );
@@ -299,7 +298,7 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("neutral/light", "Neutral (light)"),
                     shadcn::SelectItem::new("neutral/dark", "Neutral (dark)"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
                 .into_element(cx);
 
             let copy_actions = stack::hstack(
@@ -329,10 +328,10 @@ pub(crate) fn content_view(
             let right = stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N3).items_center(),
-                |_cx| vec![theme_select, copy_actions],
+                |_cx| [theme_select, copy_actions],
             );
 
-            vec![left, right]
+            [left, right]
         },
     );
 
@@ -413,16 +412,16 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| vec![preview_panel, usage_panel, docs_panel],
+            |_cx| [preview_panel, usage_panel, docs_panel],
         )
     } else {
         shadcn::Tabs::new(content_tab)
             .refine_layout(LayoutRefinement::default().w_full())
             .list_full_width(true)
             .items([
-                shadcn::TabsItem::new("preview", "Preview", vec![preview_panel]),
-                shadcn::TabsItem::new("usage", "Usage", vec![usage_panel]),
-                shadcn::TabsItem::new("docs", "Notes", vec![docs_panel]),
+                shadcn::TabsItem::new("preview", "Preview", [preview_panel]),
+                shadcn::TabsItem::new("usage", "Usage", [usage_panel]),
+                shadcn::TabsItem::new("docs", "Notes", [docs_panel]),
             ])
             .into_element(cx)
     };
@@ -433,14 +432,14 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| vec![header, tabs],
+            |_cx| [header, tabs],
         )
     });
     let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            shadcn::ScrollArea::new(vec![body])
+            shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         })
@@ -455,7 +454,7 @@ pub(crate) fn content_view(
                     .p(Space::N6),
                 LayoutRefinement::default().w_full().h_full(),
             ),
-            |_cx| vec![content],
+            |_cx| [content],
         )
     })
 }
@@ -543,6 +542,9 @@ fn page_preview(
             virtual_list_torture_scroll,
         ),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
+        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(cx, theme),
+        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(cx, theme),
+        PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
         PAGE_CHROME_TORTURE => preview_chrome_torture(
@@ -669,6 +671,9 @@ fn page_preview(
         PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_radio(cx, material3_radio_value)
         }),
+        PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_select(cx)
+        }),
         PAGE_MATERIAL3_TEXT_FIELD => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_text_field(
@@ -737,11 +742,15 @@ fn page_preview(
     .into_element(cx)
 }
 
-fn material3_scoped_page(
+fn material3_scoped_page<I, F>(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
-    content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) -> Vec<AnyElement> {
+    content: F,
+) -> Vec<AnyElement>
+where
+    F: FnOnce(&mut ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     let enabled = cx
         .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);
@@ -1018,7 +1027,7 @@ fn preview_view_cache(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::PopoverContent::new(vec![
+                    shadcn::PopoverContent::new([
                         cx.text("Popover content"),
                         shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
@@ -1041,18 +1050,14 @@ fn preview_view_cache(
             }));
         }
 
-        let list = shadcn::ScrollArea::new(vec![stack::vstack(
+        let list = shadcn::ScrollArea::new([stack::vstack(
             cx,
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N1),
             |_cx| rows,
         )])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(cx);
 
         vec![
@@ -1126,7 +1131,7 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
                     .p(Space::N3),
                 LayoutRefinement::default().w_full(),
             ),
-            |cx| vec![cx.text(label)],
+            |cx| [cx.text(label)],
         )
     };
 
@@ -1479,6 +1484,7 @@ fn preview_virtual_list_torture(
                             });
                             host.request_redraw(action_cx.window);
                         });
+
                     let row_label = shadcn::Button::new(format!("Row {index}"))
                         .variant(shadcn::ButtonVariant::Ghost)
                         .size(shadcn::ButtonSize::Sm)
@@ -1501,7 +1507,7 @@ fn preview_virtual_list_torture(
                                 .layout(LayoutRefinement::default().w_full())
                                 .gap(Space::N2)
                                 .items_center(),
-                            |cx| vec![cx.text_input(props)],
+                            |cx| [cx.text_input(props)],
                         )
                     } else {
                         let edit_button = shadcn::Button::new("Edit")
@@ -1514,7 +1520,7 @@ fn preview_virtual_list_torture(
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![edit_button],
+                            |_cx| [edit_button],
                         )
                     };
 
@@ -1523,20 +1529,18 @@ fn preview_virtual_list_torture(
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
+                        LayoutRefinement::default().w_full().h_px(height_hint),
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                     cx.container(container_props, |cx| {
-                        vec![stack::hstack(
+                        [stack::hstack(
                             cx,
                             stack::HStackProps::default()
                                 .layout(LayoutRefinement::default().w_full().h_full())
                                 .gap(Space::N2)
                                 .items_center(),
-                            |_cx| vec![row_label, right],
+                            |_cx| [row_label, right],
                         )]
                     })
                 };
@@ -1546,7 +1550,7 @@ fn preview_virtual_list_torture(
                         CachedSubtreeProps::default()
                             .contained_layout(false)
                             .cache_key(index_u64),
-                        |cx| vec![row(cx)],
+                        |cx| [row(cx)],
                     )
                 } else {
                     row(cx)
@@ -1683,7 +1687,7 @@ fn preview_virtual_list_torture(
                 test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
                 ..Default::default()
             },
-            |_cx| vec![list],
+            |_cx| [list],
         );
 
         vec![list]
@@ -1754,6 +1758,347 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     );
 
     vec![header, block]
+}
+
+fn code_editor_mvp_source() -> String {
+    [
+        "// Code Editor MVP\n",
+        "// Goals:\n",
+        "// - Validate TextInputRegion focus + TextInput/Ime events\n",
+        "// - Validate nested scrolling (editor owns its own scroll)\n",
+        "// - Provide a base surface for code-editor-ecosystem-v1 workstream\n",
+        "\n",
+        "fn main() {\n",
+        "    let mut sum = 0u64;\n",
+        "    for i in 0..10_000 {\n",
+        "        sum = sum.wrapping_add(i);\n",
+        "    }\n",
+        "    println!(\"sum={}\", sum);\n",
+        "}\n",
+        "\n",
+        "struct Point { x: f32, y: f32 }\n",
+        "\n",
+        "impl Point {\n",
+        "    fn len(&self) -> f32 {\n",
+        "        (self.x * self.x + self.y * self.y).sqrt()\n",
+        "    }\n",
+        "}\n",
+        "\n",
+        "// Try: mouse drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, IME.\n",
+    ]
+    .concat()
+}
+
+fn code_editor_torture_source() -> String {
+    static SOURCE: OnceLock<String> = OnceLock::new();
+    SOURCE
+        .get_or_init(|| {
+            let mut out = String::new();
+            out.push_str("// Code Editor Torture Harness\n");
+            out.push_str("// Generated content: many lines + deterministic prefixes\n\n");
+            for i in 0..20_000usize {
+                let _ = std::fmt::Write::write_fmt(
+                    &mut out,
+                    format_args!(
+                        "{i:05}: let value_{i} = {i}; // scrolling should never show stale lines\n"
+                    ),
+                );
+            }
+            out
+        })
+        .clone()
+}
+
+fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME)."),
+                cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
+            ]
+        },
+    );
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+        |h| h.clone(),
+    );
+
+    let editor = code_editor::CodeEditor::new(handle)
+        .overscan(32)
+        .into_element(cx);
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![editor],
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
+}
+
+fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
+                cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+            ]
+        },
+    );
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
+        |h| h.clone(),
+    );
+
+    let editor = code_editor::CodeEditor::new(handle)
+        .overscan(128)
+        .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+        .into_element(cx);
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![editor],
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-torture-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
+}
+
+fn preview_web_ime_harness(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    text_input: Model<String>,
+    text_area: Model<String>,
+) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct ImeHarnessState {
+        committed: String,
+        preedit: Option<String>,
+        ime_enabled: bool,
+        text_input_count: u64,
+        ime_commit_count: u64,
+        ime_preedit_count: u64,
+        ime_enabled_count: u64,
+        ime_disabled_count: u64,
+        last: String,
+    }
+
+    let state = cx.with_state(
+        || std::rc::Rc::new(std::cell::RefCell::new(ImeHarnessState::default())),
+        |st| st.clone(),
+    );
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: validate the wasm textarea IME bridge (ADR 0195)."),
+                cx.text("Try: CJK IME preedit → commit; ensure no double insert on compositionend + input."),
+                cx.text("Click inside the region to focus it (IME should enable)."),
+            ]
+        },
+    );
+
+    let inputs = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default().w_full(),
+        ),
+        |cx| {
+            let body = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N2),
+                |cx| {
+                    vec![
+                        cx.text("Editable widgets (sanity check):"),
+                        shadcn::Input::new(text_input)
+                            .a11y_label("Web IME input")
+                            .placeholder("Type here (IME should work on web)")
+                            .into_element(cx),
+                        shadcn::Textarea::new(text_area)
+                            .a11y_label("Web IME textarea")
+                            .into_element(cx),
+                    ]
+                },
+            );
+            vec![body]
+        },
+    );
+
+    let mut region_props = fret_ui::element::TextInputRegionProps::default();
+    region_props.layout.size.width = fret_ui::element::Length::Fill;
+    region_props.layout.size.height = fret_ui::element::Length::Fill;
+
+    let region = cx.text_input_region(region_props, |cx| {
+        let state_for_text_input = state.clone();
+        cx.text_input_region_on_text_input(std::sync::Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  text: &str| {
+                let mut st = state_for_text_input.borrow_mut();
+                st.text_input_count = st.text_input_count.saturating_add(1);
+                st.last = format!("TextInput({:?})", text);
+                st.committed.push_str(text);
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            },
+        ));
+
+        let state_for_ime = state.clone();
+        cx.text_input_region_on_ime(std::sync::Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  ime: &fret_core::ImeEvent| {
+                let mut st = state_for_ime.borrow_mut();
+                match ime {
+                    fret_core::ImeEvent::Enabled => {
+                        st.ime_enabled = true;
+                        st.ime_enabled_count = st.ime_enabled_count.saturating_add(1);
+                        st.last = "Ime(Enabled)".to_string();
+                    }
+                    fret_core::ImeEvent::Disabled => {
+                        st.ime_enabled = false;
+                        st.preedit = None;
+                        st.ime_disabled_count = st.ime_disabled_count.saturating_add(1);
+                        st.last = "Ime(Disabled)".to_string();
+                    }
+                    fret_core::ImeEvent::Commit(text) => {
+                        st.ime_commit_count = st.ime_commit_count.saturating_add(1);
+                        st.last = format!("Ime(Commit({:?}))", text);
+                        st.committed.push_str(text);
+                        st.preedit = None;
+                    }
+                    fret_core::ImeEvent::Preedit { text, .. } => {
+                        st.ime_preedit_count = st.ime_preedit_count.saturating_add(1);
+                        st.last = format!("Ime(Preedit({:?}))", text);
+                        st.preedit = (!text.is_empty()).then(|| text.clone());
+                    }
+                }
+
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            },
+        ));
+
+        let st = state.borrow();
+        let committed_tail = {
+            const MAX_CHARS: usize = 120;
+            let total = st.committed.chars().count();
+            if total <= MAX_CHARS {
+                st.committed.clone()
+            } else {
+                let tail: String = st
+                    .committed
+                    .chars()
+                    .skip(total.saturating_sub(MAX_CHARS))
+                    .collect();
+                format!("…{tail}")
+            }
+        };
+
+        let preedit = st
+            .preedit
+            .as_deref()
+            .unwrap_or("<none>");
+        let ime_enabled = st.ime_enabled as u8;
+
+        let panel = cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .border_1()
+                    .rounded(Radius::Md)
+                    .bg(ColorRef::Color(theme.color_required("background"))),
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_px(MetricRef::Px(Px(240.0))),
+            ),
+            |cx| {
+                let body = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N2),
+                    |cx| {
+                        vec![
+                            cx.text(format!("ime_enabled={ime_enabled}")),
+                            cx.text(format!("preedit={preedit:?}")),
+                            cx.text(format!("committed_tail={committed_tail:?}")),
+                            cx.text(format!("last_event={:?}", st.last)),
+                            cx.text(format!(
+                                "counts: text_input={} ime_commit={} ime_preedit={} enabled={} disabled={}",
+                                st.text_input_count,
+                                st.ime_commit_count,
+                                st.ime_preedit_count,
+                                st.ime_enabled_count,
+                                st.ime_disabled_count
+                            )),
+                        ]
+                    },
+                );
+                vec![body]
+            },
+        );
+
+        vec![panel]
+    });
+
+    vec![header, inputs, region]
 }
 
 fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
@@ -2473,6 +2818,7 @@ fn preview_windowed_rows_surface_interactive_torture(
                     let handlers = WindowedRowsSurfacePointerHandlers {
                         on_pointer_down: Some(on_pointer_down),
                         on_pointer_move: Some(on_pointer_move),
+                        ..Default::default()
                     };
 
                     let mut props = WindowedRowsSurfaceProps::default();
@@ -2614,20 +2960,57 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    let theme = fret_ui::Theme::global(&*cx.app).clone();
+
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::ButtonVariant,
                label: &'static str| {
+        let theme = theme.clone();
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
+                let hover_container = theme.color_required("md.sys.color.tertiary-container");
+                let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
+                let hover_style = material3::ButtonStyle::default()
+                    .container_background(WidgetStateProperty::new(None).when(
+                        WidgetStates::HOVERED,
+                        Some(ColorRef::Color(hover_container)),
+                    ))
+                    .label_color(
+                        WidgetStateProperty::new(None)
+                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_label))),
+                    );
+
+                let accent = fret_core::Color {
+                    r: 0.9,
+                    g: 0.2,
+                    b: 0.9,
+                    a: 1.0,
+                };
+                let override_style = material3::ButtonStyle::default()
+                    .label_color(WidgetStateProperty::new(Some(ColorRef::Color(accent))))
+                    .state_layer_color(
+                        WidgetStateProperty::new(None)
+                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+                    );
                 vec![
                     material3::Button::new(label)
                         .variant(variant)
                         .into_element(cx),
+                    material3::Button::new("Override")
+                        .variant(variant)
+                        .style(override_style)
+                        .into_element(cx),
                     material3::Button::new("Disabled")
                         .variant(variant)
                         .disabled(true)
+                        .into_element(cx),
+                    material3::Button::new("Hover Override")
+                        .variant(variant)
+                        .style(hover_style)
                         .into_element(cx),
                 ]
             },
@@ -2696,6 +3079,23 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         |cx| {
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover_icon = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.on-tertiary-container"),
+            );
+            let hover_container = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.tertiary-container"),
+            );
+            let hover_style = material3::IconButtonStyle::default()
+                .container_background(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_container)),
+                )
+                .icon_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                );
+
             vec![
                 material3::IconButton::new(ids::ui::SEARCH)
                     .a11y_label("Search")
@@ -2706,6 +3106,10 @@ fn preview_material3_gallery(
                 material3::IconButton::new(ids::ui::CLOSE)
                     .a11y_label("Close")
                     .into_element(cx),
+                material3::IconButton::new(ids::ui::SEARCH)
+                    .a11y_label("Override")
+                    .style(hover_style)
+                    .into_element(cx),
             ]
         },
     ));
@@ -2715,23 +3119,107 @@ fn preview_material3_gallery(
         cx,
         stack::HStackProps::default().gap(Space::N3).items_center(),
         |cx| {
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover_container = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.tertiary-container"),
+            );
+            let hover_icon = fret_ui_shadcn::ColorRef::Color(
+                theme.color_required("md.sys.color.on-tertiary-container"),
+            );
+            let hover_outline =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_style = material3::CheckboxStyle::default()
+                .container_background(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_container)),
+                )
+                .icon_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                )
+                .outline_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_outline)),
+                );
+
             vec![
                 material3::Checkbox::new(material3_checkbox.clone())
                     .a11y_label("Checkbox")
                     .into_element(cx),
+                material3::Checkbox::new(material3_checkbox.clone())
+                    .a11y_label("Checkbox Override")
+                    .style(hover_style)
+                    .into_element(cx),
                 material3::Switch::new(material3_switch.clone())
                     .a11y_label("Switch")
                     .into_element(cx),
-                material3::RadioGroup::new(material3_radio_value.clone())
-                    .a11y_label("Radio Group")
-                    .items(vec![
-                        material3::RadioGroupItem::new("Alpha").a11y_label("Radio Alpha"),
-                        material3::RadioGroupItem::new("Beta").a11y_label("Radio Beta"),
-                        material3::RadioGroupItem::new("Charlie")
-                            .a11y_label("Radio Charlie")
-                            .disabled(true),
-                    ])
+                material3::Switch::new(material3_switch.clone())
+                    .a11y_label("Switch Override")
+                    .style({
+                        let theme = fret_ui::Theme::global(&*cx.app).clone();
+                        let hover_track = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.tertiary-container"),
+                        );
+                        let hover_handle = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.on-tertiary-container"),
+                        );
+                        material3::SwitchStyle::default()
+                            .track_color(
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_track)),
+                            )
+                            .handle_color(
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_handle)),
+                            )
+                    })
                     .into_element(cx),
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default().gap(Space::N1).items_start(),
+                    |cx| {
+                        let items = vec![
+                            material3::RadioGroupItem::new("Alpha").a11y_label("Radio Alpha"),
+                            material3::RadioGroupItem::new("Beta").a11y_label("Radio Beta"),
+                            material3::RadioGroupItem::new("Charlie")
+                                .a11y_label("Radio Charlie")
+                                .disabled(true),
+                        ];
+
+                        let theme = fret_ui::Theme::global(&*cx.app).clone();
+                        let hover_icon = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.tertiary"),
+                        );
+                        let hover_state_layer = fret_ui_shadcn::ColorRef::Color(
+                            theme.color_required("md.sys.color.tertiary"),
+                        );
+                        let hover_style = material3::RadioStyle::default()
+                            .icon_color(
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_icon)),
+                            )
+                            .state_layer_color(
+                                fret_ui_kit::WidgetStateProperty::new(None).when(
+                                    fret_ui_kit::WidgetStates::HOVERED,
+                                    Some(hover_state_layer),
+                                ),
+                            );
+
+                        vec![
+                            cx.text("Radio Group"),
+                            material3::RadioGroup::new(material3_radio_value.clone())
+                                .a11y_label("Radio Group")
+                                .items(items.clone())
+                                .into_element(cx),
+                            cx.text("Radio Group Override"),
+                            material3::RadioGroup::new(material3_radio_value.clone())
+                                .a11y_label("Radio Group Override")
+                                .style(hover_style)
+                                .items(items)
+                                .into_element(cx),
+                        ]
+                    },
+                ),
             ]
         },
     ));
@@ -2753,26 +3241,87 @@ fn preview_material3_gallery(
             ]
         },
     ));
-    out.push(
-        material3::TextField::new(material3_text_field_value)
-            .label("Label")
-            .placeholder("Placeholder")
-            .disabled(disabled)
-            .error(error)
-            .into_element(cx),
-    );
+    out.push(stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N1).items_start(),
+        |cx| {
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_style = material3::TextFieldStyle::default()
+                .outline_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover.clone())),
+                )
+                .label_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover)),
+                );
+
+            vec![
+                cx.text("Text Field"),
+                material3::TextField::new(material3_text_field_value.clone())
+                    .label("Label")
+                    .placeholder("Placeholder")
+                    .disabled(disabled)
+                    .error(error)
+                    .into_element(cx),
+                cx.text("Text Field Override"),
+                material3::TextField::new(material3_text_field_value)
+                    .label("Label")
+                    .placeholder("Placeholder")
+                    .style(hover_style)
+                    .disabled(disabled)
+                    .error(error)
+                    .into_element(cx),
+            ]
+        },
+    ));
 
     out.push(cx.text("— Tabs —"));
-    out.push(
-        material3::Tabs::new(material3_tabs_value)
-            .a11y_label("Tabs")
-            .items(vec![
+    out.push(stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N1).items_start(),
+        |cx| {
+            let items = vec![
                 material3::TabItem::new("overview", "Overview"),
                 material3::TabItem::new("security", "Security"),
                 material3::TabItem::new("settings", "Settings"),
-            ])
-            .into_element(cx),
-    );
+            ];
+
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let hover_label =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_state_layer =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let indicator =
+                fret_ui_shadcn::ColorRef::Color(theme.color_required("md.sys.color.tertiary"));
+            let hover_style = material3::TabsStyle::default()
+                .label_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_label)),
+                )
+                .state_layer_color(
+                    fret_ui_kit::WidgetStateProperty::new(None)
+                        .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_state_layer)),
+                )
+                .active_indicator_color(fret_ui_kit::WidgetStateProperty::new(Some(indicator)));
+
+            vec![
+                cx.text("Tabs"),
+                material3::Tabs::new(material3_tabs_value.clone())
+                    .a11y_label("Tabs")
+                    .items(items.clone())
+                    .into_element(cx),
+                cx.text("Tabs Override"),
+                material3::Tabs::new(material3_tabs_value)
+                    .a11y_label("Tabs Override")
+                    .style(hover_style)
+                    .items(items)
+                    .into_element(cx),
+            ]
+        },
+    ));
 
     out.push(cx.text("— Navigation Bar —"));
     out.push(
@@ -3024,11 +3573,7 @@ fn preview_material3_touch_targets(
             .into_element(cx),
             shadcn::CardContent::new(vec![stack]).into_element(cx),
         ])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(280.0)))
-                .min_w_0(),
-        )
+        .refine_layout(LayoutRefinement::default().w_px(Px(280.0)).min_w_0())
         .into_element(cx)
     };
 
@@ -3116,6 +3661,7 @@ fn preview_material3_touch_targets(
 
 fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_icons::ids;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
     let row = |cx: &mut ElementContext<'_, App>,
                variant: material3::IconButtonVariant,
@@ -3124,10 +3670,34 @@ fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
+                let override_style = material3::IconButtonStyle::default()
+                    .icon_color(WidgetStateProperty::new(None).when(
+                        WidgetStates::HOVERED,
+                        Some(ColorRef::Color(fret_core::Color {
+                            r: 0.9,
+                            g: 0.2,
+                            b: 0.9,
+                            a: 1.0,
+                        })),
+                    ))
+                    .state_layer_color(WidgetStateProperty::new(None).when(
+                        WidgetStates::HOVERED,
+                        Some(ColorRef::Color(fret_core::Color {
+                            r: 0.9,
+                            g: 0.2,
+                            b: 0.9,
+                            a: 1.0,
+                        })),
+                    ));
                 vec![
                     material3::IconButton::new(ids::ui::CLOSE)
                         .variant(variant)
                         .a11y_label(label)
+                        .into_element(cx),
+                    material3::IconButton::new(ids::ui::CLOSE)
+                        .variant(variant)
+                        .a11y_label("Override")
+                        .style(override_style)
                         .into_element(cx),
                     material3::IconButton::new(ids::ui::CLOSE)
                         .variant(variant)
@@ -3186,6 +3756,8 @@ fn preview_material3_checkbox(
     cx: &mut ElementContext<'_, App>,
     checked: Model<bool>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let value = cx
         .get_model_copied(&checked, Invalidation::Layout)
         .unwrap_or(false);
@@ -3194,10 +3766,34 @@ fn preview_material3_checkbox(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         move |cx| {
+            let override_style = material3::CheckboxStyle::default()
+                .icon_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.2,
+                        g: 0.8,
+                        b: 0.4,
+                        a: 1.0,
+                    })),
+                ))
+                .outline_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.2,
+                        g: 0.8,
+                        b: 0.4,
+                        a: 1.0,
+                    })),
+                ));
             vec![
                 material3::Checkbox::new(checked.clone())
                     .a11y_label("Material 3 Checkbox")
                     .test_id("ui-gallery-material3-checkbox")
+                    .into_element(cx),
+                material3::Checkbox::new(checked.clone())
+                    .a11y_label("Material 3 Checkbox (override)")
+                    .style(override_style)
+                    .test_id("ui-gallery-material3-checkbox-overridden")
                     .into_element(cx),
                 cx.text(format!("checked={}", value as u8)),
                 material3::Checkbox::new(checked.clone())
@@ -3219,6 +3815,8 @@ fn preview_material3_switch(
     cx: &mut ElementContext<'_, App>,
     selected: Model<bool>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let value = cx
         .get_model_copied(&selected, Invalidation::Layout)
         .unwrap_or(false);
@@ -3227,10 +3825,34 @@ fn preview_material3_switch(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         move |cx| {
+            let override_style = material3::SwitchStyle::default()
+                .track_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::SELECTED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.2,
+                        g: 0.8,
+                        b: 0.4,
+                        a: 1.0,
+                    })),
+                ))
+                .state_layer_color(WidgetStateProperty::new(None).when(
+                    WidgetStates::HOVERED,
+                    Some(ColorRef::Color(fret_core::Color {
+                        r: 0.9,
+                        g: 0.2,
+                        b: 0.9,
+                        a: 1.0,
+                    })),
+                ));
             vec![
                 material3::Switch::new(selected.clone())
                     .a11y_label("Material 3 Switch")
                     .test_id("ui-gallery-material3-switch")
+                    .into_element(cx),
+                material3::Switch::new(selected.clone())
+                    .a11y_label("Material 3 Switch (override)")
+                    .style(override_style)
+                    .test_id("ui-gallery-material3-switch-overridden")
                     .into_element(cx),
                 cx.text(format!("selected={}", value as u8)),
                 material3::Switch::new(selected.clone())
@@ -3252,17 +3874,39 @@ fn preview_material3_radio(
     cx: &mut ElementContext<'_, App>,
     group_value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct RadioPageModels {
+        standalone_selected: Option<Model<bool>>,
+    }
+
+    let standalone_selected = cx.with_state(RadioPageModels::default, |st| {
+        st.standalone_selected.clone()
+    });
+    let standalone_selected = match standalone_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(RadioPageModels::default, |st| {
+                st.standalone_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
     let current = cx
         .get_model_cloned(&group_value, Invalidation::Layout)
         .flatten()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
+    let group_value_for_row = group_value.clone();
     let row = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N4).items_center(),
         move |cx| {
             vec![
-                material3::RadioGroup::new(group_value.clone())
+                material3::RadioGroup::new(group_value_for_row.clone())
                     .a11y_label("Material 3 RadioGroup")
                     .orientation(material3::RadioGroupOrientation::Horizontal)
                     .gap(Px(8.0))
@@ -3284,11 +3928,160 @@ fn preview_material3_radio(
         },
     );
 
+    let override_style = material3::RadioStyle::default()
+        .icon_color(WidgetStateProperty::new(None).when(
+            WidgetStates::SELECTED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            })),
+        ))
+        .state_layer_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ));
+
+    let group_value_for_group_overridden = group_value.clone();
+    let override_style_for_group = override_style.clone();
+    let override_style_for_standalone = override_style.clone();
+    let group_overridden = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                material3::RadioGroup::new(group_value_for_group_overridden.clone())
+                    .a11y_label("Material 3 RadioGroup (override)")
+                    .style(override_style_for_group.clone())
+                    .orientation(material3::RadioGroupOrientation::Horizontal)
+                    .gap(Px(8.0))
+                    .items(vec![
+                        material3::RadioGroupItem::new("Alpha")
+                            .a11y_label("Radio Alpha (override)")
+                            .test_id("ui-gallery-material3-radio-a-overridden"),
+                        material3::RadioGroupItem::new("Beta")
+                            .a11y_label("Radio Beta (override)")
+                            .test_id("ui-gallery-material3-radio-b-overridden"),
+                        material3::RadioGroupItem::new("Charlie")
+                            .a11y_label("Radio Charlie (disabled)")
+                            .disabled(true)
+                            .test_id("ui-gallery-material3-radio-c-disabled-overridden"),
+                    ])
+                    .into_element(cx),
+            ]
+        },
+    );
+    let standalone = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                material3::Radio::new(standalone_selected.clone())
+                    .a11y_label("Material 3 Radio (standalone)")
+                    .test_id("ui-gallery-material3-radio-standalone")
+                    .into_element(cx),
+                material3::Radio::new(standalone_selected.clone())
+                    .a11y_label("Material 3 Radio (override)")
+                    .style(override_style_for_standalone.clone())
+                    .test_id("ui-gallery-material3-radio-standalone-overridden")
+                    .into_element(cx),
+            ]
+        },
+    );
+
     vec![
         cx.text(
             "Material 3 Radio: group-value binding + roving focus + typeahead + state layer + bounded ripple.",
         ),
         row,
+        cx.text("Override preview: RadioGroup::style(...) using RadioStyle."),
+        group_overridden,
+        cx.text("Override preview: standalone Radio::style(...) using RadioStyle."),
+        standalone,
+    ]
+}
+
+fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct SelectPageModels {
+        selected: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let selected = cx.with_state(SelectPageModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha").test_id("ui-gallery-material3-select-a"),
+        material3::SelectItem::new("beta", "Beta").test_id("ui-gallery-material3-select-b"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("ui-gallery-material3-select-c-disabled"),
+    ]
+    .into();
+
+    let default = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select")
+        .placeholder("Pick one")
+        .items(items.clone())
+        .test_id("ui-gallery-material3-select")
+        .into_element(cx);
+
+    let primary = theme.color_required("md.sys.color.primary");
+    let primary_container = theme.color_required("md.sys.color.primary-container");
+    let secondary_container = theme.color_required("md.sys.color.secondary-container");
+
+    let override_style = material3::SelectStyle::default()
+        .container_background(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::OPEN, Some(ColorRef::Color(primary_container))),
+        )
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::FOCUS_VISIBLE, Some(ColorRef::Color(primary))),
+        )
+        .trailing_icon_color(
+            WidgetStateProperty::new(None).when(WidgetStates::OPEN, Some(ColorRef::Color(primary))),
+        )
+        .menu_selected_container_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            secondary_container,
+        ))));
+
+    let overridden = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select (override)")
+        .placeholder("Pick one")
+        .items(items)
+        .style(override_style)
+        .test_id("ui-gallery-material3-select-overridden")
+        .into_element(cx);
+
+    vec![
+        cx.text(
+            "Material 3 Select: token-driven trigger + listbox overlay + ADR 1159 style overrides.",
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |_cx| vec![default, overridden],
+        ),
     ]
 }
 
@@ -3298,6 +4091,8 @@ fn preview_material3_text_field(
     disabled: Model<bool>,
     error: Model<bool>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let disabled_now = cx
         .get_model_copied(&disabled, Invalidation::Layout)
         .unwrap_or(false);
@@ -3352,7 +4147,7 @@ fn preview_material3_text_field(
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
-    let filled_field = material3::TextField::new(value)
+    let filled_field = material3::TextField::new(value.clone())
         .variant(material3::TextFieldVariant::Filled)
         .label("Email")
         .placeholder("name@example.com")
@@ -3363,15 +4158,66 @@ fn preview_material3_text_field(
         .into_element(cx);
 
     let filled_card = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Filled").into_element(cx),
-            shadcn::CardDescription::new(
-                "Active indicator bottom border + filled container + hover state layer (best-effort).",
-            )
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Filled").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Active indicator bottom border + filled container + hover state layer via foundation indication (best-effort).",
+                )
                 .into_element(cx),
+            ])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![filled_field]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let override_style = material3::TextFieldStyle::default()
+        .outline_color(WidgetStateProperty::new(None).when(
+            WidgetStates::FOCUS_VISIBLE,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            })),
+        ))
+        .caret_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            },
+        ))))
+        .placeholder_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ));
+    let override_field = material3::TextField::new(value)
+        .variant(material3::TextFieldVariant::Outlined)
+        .label("Override")
+        .placeholder("Hover/focus to see overrides")
+        .supporting_text("Caret + focus outline + hover placeholder via TextFieldStyle")
+        .style(override_style)
+        .disabled(disabled_now)
+        .error(error_now)
+        .test_id("ui-gallery-material3-text-field-overridden")
+        .into_element(cx);
+    let override_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Override").into_element(cx),
+            shadcn::CardDescription::new(
+                "ADR 1159: partial per-state overrides via TextFieldStyle.",
+            )
+            .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![filled_field]).into_element(cx),
+        shadcn::CardContent::new(vec![override_field]).into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
@@ -3383,6 +4229,7 @@ fn preview_material3_text_field(
         toggles,
         outlined_card,
         filled_card,
+        override_card,
     ]
 }
 
@@ -3390,6 +4237,8 @@ fn preview_material3_tabs(
     cx: &mut ElementContext<'_, App>,
     value: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
     let current = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
@@ -3411,6 +4260,52 @@ fn preview_material3_tabs(
         ])
         .into_element(cx);
 
+    let override_style = material3::TabsStyle::default()
+        .label_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ))
+        .state_layer_color(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.9,
+                g: 0.2,
+                b: 0.9,
+                a: 1.0,
+            })),
+        ))
+        .active_indicator_color(WidgetStateProperty::new(None).when(
+            WidgetStates::SELECTED,
+            Some(ColorRef::Color(fret_core::Color {
+                r: 0.2,
+                g: 0.8,
+                b: 0.4,
+                a: 1.0,
+            })),
+        ));
+    let fixed_tabs_overridden = material3::Tabs::new(value.clone())
+        .a11y_label("Material 3 Tabs (overridden)")
+        .test_id("ui-gallery-material3-tabs-overridden")
+        .style(override_style)
+        .items(vec![
+            material3::TabItem::new("overview", "Overview")
+                .a11y_label("Tab Overview")
+                .test_id("ui-gallery-material3-tab-overview-overridden"),
+            material3::TabItem::new("settings", "Settings")
+                .a11y_label("Tab Settings")
+                .test_id("ui-gallery-material3-tab-settings-overridden"),
+            material3::TabItem::new("disabled", "Disabled")
+                .disabled(true)
+                .a11y_label("Tab Disabled")
+                .test_id("ui-gallery-material3-tab-disabled-overridden"),
+        ])
+        .into_element(cx);
+
     let scrollable_tabs = material3::Tabs::new(value)
         .a11y_label("Material 3 Tabs (scrollable)")
         .test_id("ui-gallery-material3-tabs-scrollable")
@@ -3429,6 +4324,10 @@ fn preview_material3_tabs(
     vec![
         cx.text("Material 3 Tabs: roving focus + state layer + bounded ripple."),
         fixed_tabs,
+        cx.text(
+            "Override preview: hover label/state-layer + active-indicator color via TabsStyle.",
+        ),
+        fixed_tabs_overridden,
         cx.text("Scrollable/variable width preview (measurement-driven indicator)."),
         scrollable_tabs,
         cx.text(format!("value={}", current.as_ref())),
@@ -3507,7 +4406,7 @@ fn preview_material3_navigation_rail(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![rail],
+        move |_cx| [rail],
     );
 
     vec![
@@ -3556,7 +4455,7 @@ fn preview_material3_navigation_drawer(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![drawer],
+        move |_cx| [drawer],
     );
 
     vec![
@@ -3654,7 +4553,7 @@ fn preview_material3_modal_navigation_drawer(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![modal],
+        move |_cx| [modal],
     );
 
     vec![
@@ -3741,7 +4640,7 @@ fn preview_material3_dialog(
                     },
                 )
             },
-            |_cx| vec![],
+            |_cx| std::iter::empty::<AnyElement>(),
         );
 
     let last = cx
@@ -3759,7 +4658,7 @@ fn preview_material3_dialog(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![dialog],
+        move |_cx| [dialog],
     );
 
     vec![
@@ -3935,7 +4834,7 @@ fn preview_material3_list(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4)
             .items_stretch(),
-        move |_cx| vec![standard, expressive],
+        move |_cx| [standard, expressive],
     );
 
     vec![
@@ -4069,7 +4968,7 @@ fn preview_material3_snackbar(
 }
 
 fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let content = material3::TooltipProvider::new().with(cx, |cx| {
+    let content = material3::TooltipProvider::new().with_elements(cx, |cx| {
         let outlined = material3::ButtonVariant::Outlined;
 
         let top = material3::PlainTooltip::new(
@@ -4113,15 +5012,15 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .into_element(cx);
 
         vec![
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N4)
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| vec![top, right, bottom, left],
-            ),
-            cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
-        ]
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N4)
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| [top, right, bottom, left],
+                ),
+                cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
+            ]
     });
 
     let card = shadcn::Card::new(vec![
@@ -4202,7 +5101,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4)
             .items_stretch(),
-        |_cx| vec![left, right],
+        |_cx| [left, right],
     )]
 }
 
@@ -4211,7 +5110,7 @@ fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         |cx| {
-            vec![
+            [
                 shadcn::Badge::new("Default").into_element(cx),
                 shadcn::Badge::new("Secondary")
                     .variant(shadcn::BadgeVariant::Secondary)
@@ -4256,25 +5155,21 @@ fn preview_avatar(
             .when_image_missing_model(avatar_image.clone())
             .delay_ms(120)
             .into_element(cx);
-        shadcn::Avatar::new(vec![image, fallback]).into_element(cx)
+        shadcn::Avatar::new([image, fallback]).into_element(cx)
     };
 
-    let b = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("WK").into_element(cx)])
-        .into_element(cx);
+    let b =
+        shadcn::Avatar::new([shadcn::AvatarFallback::new("WK").into_element(cx)]).into_element(cx);
 
-    let c = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("?").into_element(cx)])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(48.0)))
-                .h_px(MetricRef::Px(Px(48.0))),
-        )
+    let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("?").into_element(cx)])
+        .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
         .into_element(cx);
 
     vec![
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N3).items_center(),
-            |_cx| vec![a, b, c],
+            |_cx| [a, b, c],
         ),
         cx.text("Tip: use AvatarImage when you have an ImageId; AvatarFallback covers missing/slow loads."),
     ]
@@ -4289,16 +5184,16 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |cx| {
             vec![
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(180.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new().into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
                     .into_element(cx),
             ]
         },
@@ -4332,12 +5227,8 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |_cx| items,
     );
 
-    let scroll = shadcn::ScrollArea::new(vec![body])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(240.0))),
-        )
+    let scroll = shadcn::ScrollArea::new([body])
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
         .into_element(cx);
 
     vec![
@@ -4356,26 +5247,27 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    shadcn::TooltipProvider::new().with(cx, |cx| {
-        let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
-            shadcn::Tooltip::new(
-                shadcn::Button::new(label)
-                    .variant(shadcn::ButtonVariant::Outline)
+    shadcn::TooltipProvider::new()
+        .with_elements(cx, |cx| {
+            let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
+                shadcn::Tooltip::new(
+                    shadcn::Button::new(label)
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into_element(cx),
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        format!("Tooltip on {label}"),
+                    )])
                     .into_element(cx),
-                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                    cx,
-                    format!("Tooltip on {label}"),
-                )])
-                .into_element(cx),
-            )
-            .arrow(true)
-            .side(side)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
-            .into_element(cx)
-        };
+                )
+                .arrow(true)
+                .side(side)
+                .open_delay_frames(10)
+                .close_delay_frames(10)
+                .into_element(cx)
+            };
 
-        vec![
+            vec![
             stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -4392,7 +5284,8 @@ fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 "Hover the buttons to validate hover intent, delay group, and overlay placement.",
             ),
         ]
-    })
+        })
+        .into_vec()
 }
 
 fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -4461,7 +5354,7 @@ fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         .p(Space::N3),
                     LayoutRefinement::default().w_full(),
                 ),
-                |_cx| vec![row],
+                |_cx| [row],
             )
         };
 
@@ -4608,7 +5501,7 @@ fn preview_forms(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N3),
-            |_cx| vec![input, textarea, toggles],
+            |_cx| [input, textarea, toggles],
         ),
         cx.text(
             "Tip: these are model-bound controls; values persist while you stay in the window.",
@@ -4639,7 +5532,7 @@ fn preview_select(
                 shadcn::SelectItem::new(value, label).test_id(test_id)
             })),
         )
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
         .into_element(cx);
 
     let selected = cx
@@ -4726,17 +5619,17 @@ fn preview_resizable(
                 .p(Space::N3),
             LayoutRefinement::default().w_full().h_full(),
         );
-        cx.container(props, move |cx| vec![cx.text(title)])
+        cx.container(props, move |cx| [cx.text(title)])
     };
 
     let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
         .axis(fret_core::Axis::Vertical)
-        .entries(vec![
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Viewport", "muted")])
+        .entries([
+            shadcn::ResizablePanel::new([boxy(cx, "Viewport", "muted")])
                 .min_px(Px(120.0))
                 .into(),
             shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Console", "card")])
+            shadcn::ResizablePanel::new([boxy(cx, "Console", "card")])
                 .min_px(Px(80.0))
                 .into(),
         ])
@@ -4744,11 +5637,7 @@ fn preview_resizable(
 
     let root = shadcn::ResizablePanelGroup::new(h_fractions)
         .axis(fret_core::Axis::Horizontal)
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(320.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
         .entries(vec![
             shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
                 .min_px(Px(140.0))
@@ -4873,11 +5762,7 @@ fn preview_data_table(
 
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(
             cx,
             assets.data.clone(),
@@ -5026,11 +5911,7 @@ fn preview_data_table_torture(
                         shadcn::DataTable::new()
                             .overscan(10)
                             .row_height(Px(28.0))
-                            .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .h_px(MetricRef::Px(Px(420.0))),
-                            )
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
                                 data.clone(),
@@ -5168,9 +6049,7 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     let mut container_props = decl_style::container_props(
         theme,
         ChromeRefinement::default(),
-        LayoutRefinement::default()
-            .w_full()
-            .h_px(MetricRef::Px(Px(460.0))),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -5196,11 +6075,7 @@ fn preview_data_grid(
 
         let grid =
             shadcn::experimental::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(Px(320.0))),
-                )
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
                 .into_element(
                     cx,
                     1,
@@ -5478,7 +6353,7 @@ fn preview_menus(
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| vec![dropdown, context_menu],
+            |_cx| [dropdown, context_menu],
         ),
         cx.text(format!("last action: {last}")),
     ]
@@ -5574,7 +6449,7 @@ fn preview_overlay(
                 test_id: Some(Arc::from("ui-gallery-overlay-last-action")),
                 ..Default::default()
             },
-            |cx| vec![cx.text(text)],
+            |cx| [cx.text(text)],
         )
     };
 
@@ -5924,8 +6799,8 @@ fn preview_overlay(
                                         ])
                                         .refine_layout(
                                             LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(360.0)))
-                                                .h_px(MetricRef::Px(Px(220.0))),
+                                                .w_px(Px(360.0))
+                                                .h_px(Px(220.0)),
                                         )
                                         .into_element(cx),
                                     ]
@@ -5946,11 +6821,7 @@ fn preview_overlay(
                 });
 
                 let scroll = shadcn::ScrollArea::new(vec![body])
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_px(MetricRef::Px(Px(240.0)))
-                            .h_px(MetricRef::Px(Px(160.0))),
-                    )
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))
                     .into_element(cx);
 
                 let scroll = cx.semantics(
@@ -5984,17 +6855,17 @@ fn preview_overlay(
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![dropdown, context_menu, overlay_reset],
+                            |_cx| [dropdown, context_menu, overlay_reset],
                         ),
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![tooltip, hover_card, popover, underlay, dialog],
+                            |_cx| [tooltip, hover_card, popover, underlay, dialog],
                         ),
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![alert_dialog, sheet],
+                            |_cx| [alert_dialog, sheet],
                         ),
                         portal_geometry,
                     ]
@@ -6014,7 +6885,7 @@ fn preview_overlay(
                     test_id: Some(Arc::from("ui-gallery-dialog-open")),
                     ..Default::default()
                 },
-                |cx| vec![cx.text("Dialog open")],
+                |cx| [cx.text("Dialog open")],
             ))
         } else {
             None
@@ -6048,7 +6919,7 @@ fn preview_overlay(
                     test_id: Some(Arc::from("ui-gallery-popover-dismissed")),
                     ..Default::default()
                 },
-                |cx| vec![cx.text("Popover dismissed")],
+                |cx| [cx.text("Popover dismissed")],
             ))
         } else {
             None

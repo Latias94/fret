@@ -953,11 +953,11 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
     );
 
     let open = models.open.clone();
-    let children = dialog_prim::modal_dialog_layer_children(
+    let children = dialog_prim::modal_dialog_layer_elements(
         cx,
         open.clone(),
         dialog_prim::DialogOptions::default(),
-        vec![barrier_bg],
+        [barrier_bg],
         content,
     );
 
@@ -966,7 +966,7 @@ fn drive_preferences_overlay(cx: &mut ElementContext<'_, App>) {
         None,
         open,
         fret_ui_kit::OverlayPresence::instant(true),
-        children,
+        children.into_vec(),
     );
     req.root_name = Some("bootstrap.preferences".to_string());
     OverlayController::request(cx, req);
@@ -1586,6 +1586,20 @@ fn ui_app_render<S>(
     hotpatch_trace_log(&format!(
         "ui_app_render: after begin_frame window={window:?}"
     ));
+
+    #[cfg(feature = "diagnostics")]
+    {
+        // Ensure optional diagnostics stores exist before layout/paint so ecosystem crates can
+        // publish frame-local records without allocating globals in production runs.
+        let enabled = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+        if enabled {
+            app.with_global_mut_untracked(
+                fret_runtime::WindowInteractionDiagnosticsStore::default,
+                |store, app| store.begin_frame(window, app.frame_id()),
+            );
+        }
+    }
 
     let view_started = hitch_config.map(|_| Instant::now());
     #[cfg(feature = "tracing")]
@@ -2448,6 +2462,13 @@ fn ui_app_accessibility_set_value_text<S>(
 }
 
 fn ui_app_viewport_input<S>(driver: &mut UiAppDriver<S>, app: &mut App, event: ViewportInputEvent) {
+    #[cfg(feature = "diagnostics")]
+    {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_viewport_input(event);
+        });
+    }
+
     if let Some(f) = driver.viewport_input {
         #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
         {

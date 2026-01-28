@@ -524,11 +524,18 @@ impl CanvasCache {
     }
 
     fn evict_shared_text(&mut self, services: &mut dyn fret_core::UiServices) {
-        const SHARED_TEXT_KEEP_FRAMES: u64 = 120;
-        const SHARED_TEXT_MAX_ENTRIES: usize = 4096;
-
         let now = self.frame;
+        let keep_frames = self.policy.shared_text.keep_frames;
+        let max_entries = self.policy.shared_text.max_entries;
+
         if self.shared_text_by_fingerprint.is_empty() {
+            return;
+        }
+
+        if max_entries == 0 {
+            for (_, entry) in self.shared_text_by_fingerprint.drain() {
+                services.text().release(entry.blob);
+            }
             return;
         }
 
@@ -537,7 +544,7 @@ impl CanvasCache {
             if entry.last_used_frame == now {
                 continue;
             }
-            if now.saturating_sub(entry.last_used_frame) > SHARED_TEXT_KEEP_FRAMES {
+            if now.saturating_sub(entry.last_used_frame) > keep_frames {
                 to_remove.push(key.clone());
             }
         }
@@ -548,7 +555,7 @@ impl CanvasCache {
             }
         }
 
-        if self.shared_text_by_fingerprint.len() <= SHARED_TEXT_MAX_ENTRIES {
+        if self.shared_text_by_fingerprint.len() <= max_entries {
             return;
         }
 
@@ -566,9 +573,7 @@ impl CanvasCache {
         candidates.sort_by_key(|(last_used, _)| *last_used);
 
         let mut idx = 0usize;
-        while self.shared_text_by_fingerprint.len() > SHARED_TEXT_MAX_ENTRIES
-            && idx < candidates.len()
-        {
+        while self.shared_text_by_fingerprint.len() > max_entries && idx < candidates.len() {
             let key = candidates[idx].1.clone();
             if let Some(entry) = self.shared_text_by_fingerprint.remove(&key) {
                 services.text().release(entry.blob);
@@ -730,7 +735,9 @@ impl CanvasCache {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
 
-        if let HostedTextContent::Plain(text) = &content {
+        if let HostedTextContent::Plain(text) = &content
+            && self.policy.shared_text.max_entries > 0
+        {
             let shared_key = SharedTextFingerprintKey {
                 content: SharedTextContentKey::Plain(Arc::clone(text)),
                 style: TextStyleCacheKey::from_style(&style),

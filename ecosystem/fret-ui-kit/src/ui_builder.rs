@@ -115,6 +115,12 @@ macro_rules! forward_layout_noargs {
 }
 
 impl UiBuilder<crate::ui::TextBox> {
+    pub fn text_xs(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Xs;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
     pub fn text_sm(mut self) -> Self {
         self.inner.preset = crate::ui::TextPreset::Sm;
         self.inner.wrap = TextWrap::Word;
@@ -293,6 +299,10 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
         self.style_with(ChromeRefinement::shadow_lg)
     }
 
+    pub fn shadow_xl(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_xl)
+    }
+
     pub fn debug_border(self, color: ColorRef) -> Self {
         self.style_with(|c| c.debug_border(color))
     }
@@ -339,6 +349,14 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
 
     pub fn rounded(self, radius: Radius) -> Self {
         self.style_with(|c| c.rounded(radius))
+    }
+
+    pub fn border_width(self, width: impl Into<MetricRef>) -> Self {
+        self.style_with(|c| c.border_width(width))
+    }
+
+    pub fn radius(self, radius: impl Into<MetricRef>) -> Self {
+        self.style_with(|c| c.radius(radius))
     }
 
     pub fn bg(self, color: ColorRef) -> Self {
@@ -404,8 +422,16 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.inset(space))
     }
 
+    pub fn inset_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.inset_px(px))
+    }
+
     pub fn top(self, space: Space) -> Self {
         self.layout_with(|l| l.top(space))
+    }
+
+    pub fn top_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.top_px(px))
     }
 
     pub fn top_neg(self, space: Space) -> Self {
@@ -416,12 +442,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.right(space))
     }
 
+    pub fn right_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.right_px(px))
+    }
+
     pub fn right_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.right_neg(space))
     }
 
     pub fn bottom(self, space: Space) -> Self {
         self.layout_with(|l| l.bottom(space))
+    }
+
+    pub fn bottom_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.bottom_px(px))
     }
 
     pub fn bottom_neg(self, space: Space) -> Self {
@@ -432,12 +466,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.left(space))
     }
 
+    pub fn left_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.left_px(px))
+    }
+
     pub fn left_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.left_neg(space))
     }
 
     pub fn m(self, space: Space) -> Self {
         self.layout_with(|l| l.m(space))
+    }
+
+    pub fn m_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.m_px(px))
     }
 
     pub fn m_neg(self, space: Space) -> Self {
@@ -448,12 +490,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.mx(space))
     }
 
+    pub fn mx_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mx_px(px))
+    }
+
     pub fn mx_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.mx_neg(space))
     }
 
     pub fn my(self, space: Space) -> Self {
         self.layout_with(|l| l.my(space))
+    }
+
+    pub fn my_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.my_px(px))
     }
 
     pub fn my_neg(self, space: Space) -> Self {
@@ -464,12 +514,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.mt(space))
     }
 
+    pub fn mt_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mt_px(px))
+    }
+
     pub fn mt_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.mt_neg(space))
     }
 
     pub fn mr(self, space: Space) -> Self {
         self.layout_with(|l| l.mr(space))
+    }
+
+    pub fn mr_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mr_px(px))
     }
 
     pub fn mr_neg(self, space: Space) -> Self {
@@ -480,12 +538,20 @@ impl<T: UiSupportsLayout> UiBuilder<T> {
         self.layout_with(|l| l.mb(space))
     }
 
+    pub fn mb_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.mb_px(px))
+    }
+
     pub fn mb_neg(self, space: Space) -> Self {
         self.layout_with(|l| l.mb_neg(space))
     }
 
     pub fn ml(self, space: Space) -> Self {
         self.layout_with(|l| l.ml(space))
+    }
+
+    pub fn ml_px(self, px: Px) -> Self {
+        self.layout_with(|l| l.ml_px(px))
     }
 
     pub fn ml_neg(self, space: Space) -> Self {
@@ -745,7 +811,100 @@ impl<H, F> UiBuilder<crate::ui::FlexBox<H, F>> {
     }
 }
 
+impl<H, B> UiBuilder<crate::ui::FlexBoxBuild<H, B>> {
+    pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
+        self.inner.gap = gap.into();
+        self
+    }
+
+    pub fn gap_px(self, gap: Px) -> Self {
+        self.gap(gap)
+    }
+
+    pub fn gap_metric(self, gap: MetricRef) -> Self {
+        self.gap(gap)
+    }
+
+    pub fn justify(mut self, justify: Justify) -> Self {
+        self.inner.justify = justify;
+        self
+    }
+
+    pub fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+
+    pub fn items(mut self, items: Items) -> Self {
+        self.inner.items = items;
+        self
+    }
+
+    pub fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
+    }
+
+    pub fn wrap(mut self) -> Self {
+        self.inner.wrap = true;
+        self
+    }
+
+    pub fn no_wrap(mut self) -> Self {
+        self.inner.wrap = false;
+        self
+    }
+}
+
 impl<H, F> UiBuilder<crate::ui::ScrollAreaBox<H, F>> {
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.inner.axis = axis;
+        self
+    }
+
+    pub fn show_scrollbar_x(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_x = show;
+        self
+    }
+
+    pub fn show_scrollbar_y(mut self, show: bool) -> Self {
+        self.inner.show_scrollbar_y = show;
+        self
+    }
+
+    pub fn show_scrollbars(self, x: bool, y: bool) -> Self {
+        self.show_scrollbar_x(x).show_scrollbar_y(y)
+    }
+
+    pub fn handle(mut self, handle: ScrollHandle) -> Self {
+        self.inner.handle = Some(handle);
+        self
+    }
+}
+
+impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
     pub fn axis(mut self, axis: ScrollAxis) -> Self {
         self.inner.axis = axis;
         self
@@ -787,6 +946,24 @@ where
     }
 }
 
+impl<H: UiHost, B> UiBuilder<crate::ui::FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiBuilder<crate::ui::ContainerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
 impl<H: UiHost, F, I> UiBuilder<crate::ui::ContainerBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -811,6 +988,15 @@ impl<H: UiHost, F, I> UiBuilder<crate::ui::ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator<Item = AnyElement>,
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.build().into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.build().into_element(cx)
@@ -889,7 +1075,7 @@ mod tests {
         let dummy = Dummy::default()
             .ui()
             .style_with(|mut c| {
-                c.min_height = Some(MetricRef::Px(Px(40.0)));
+                c.min_height = Some(Px(40.0).into());
                 c
             })
             .build();

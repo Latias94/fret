@@ -254,7 +254,7 @@ fn cached_modal_request_is_synthesized_when_open_without_rerender() {
     let mut services = FakeServices::default();
     let window = AppWindowId::default();
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         fret_core::Size::new(Px(200.0), Px(120.0)),
@@ -312,7 +312,7 @@ fn cached_popover_request_is_synthesized_when_open_without_rerender() {
     let mut services = FakeServices::default();
     let window = AppWindowId::default();
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         fret_core::Size::new(Px(200.0), Px(120.0)),
@@ -517,7 +517,7 @@ fn tooltip_is_pointer_transparent_and_does_not_request_observers_while_closing()
         TooltipRequest {
             id: tooltip_id,
             root_name: tooltip_root_name(tooltip_id),
-            interactive: false,
+            interactive: true,
             trigger: None,
             open,
             present: true,
@@ -591,7 +591,7 @@ fn hover_overlay_is_pointer_transparent_while_closing() {
         HoverOverlayRequest {
             id: hover_id,
             root_name: hover_overlay_root_name(hover_id),
-            interactive: false,
+            interactive: true,
             trigger,
             open,
             present: true,
@@ -3540,6 +3540,8 @@ fn tooltip_does_not_request_observers_by_default() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
+    let open = app.models_mut().insert(true);
+
     let mut services = FakeServices;
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3572,7 +3574,7 @@ fn tooltip_does_not_request_observers_by_default() {
             root_name: tooltip_root_name(id),
             interactive: true,
             trigger: Some(id),
-            open,
+            open: open.clone(),
             present: true,
             on_dismiss_request: None,
             on_pointer_move: None,
@@ -3609,6 +3611,8 @@ fn tooltip_does_not_request_observers_while_closing() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
+    let open = app.models_mut().insert(false);
+
     let mut services = FakeServices;
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
@@ -3643,7 +3647,7 @@ fn tooltip_does_not_request_observers_while_closing() {
             root_name: tooltip_root_name(id),
             interactive: false,
             trigger: Some(id),
-            open,
+            open: open.clone(),
             present: true,
             on_dismiss_request: Some(handler),
             on_pointer_move: Some(on_pointer_move),
@@ -3679,6 +3683,8 @@ fn hover_overlay_is_click_through_while_closing() {
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -5016,9 +5022,6 @@ fn dock_drag_cross_window_hides_overlays_in_source_and_current_window() {
     render(&mut ui_b, &mut app, &mut services, window_b, bounds);
     ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let _ = app.models_mut().update(&open_a, |v| *v = true);
-    let _ = app.models_mut().update(&open_b, |v| *v = true);
-
     request_hover_overlay_for_window(
         &mut app,
         window_a,
@@ -5472,9 +5475,6 @@ fn dock_drag_cross_window_leaving_current_window_restores_overlays_in_that_windo
     );
     render(&mut ui_b, &mut app, &mut services, window_b, bounds);
     ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let _ = app.models_mut().update(&open_a, |v| *v = true);
-    let _ = app.models_mut().update(&open_b, |v| *v = true);
 
     request_hover_overlay_for_window(
         &mut app,
@@ -6522,8 +6522,6 @@ fn dock_drag_hides_hover_overlays_in_affected_window() {
     render(&mut ui, &mut app, &mut services, window, bounds);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    let _ = app.models_mut().update(&open, |v| *v = true);
-
     request_hover_overlay_for_window(
         &mut app,
         window,
@@ -6645,8 +6643,6 @@ fn dock_drag_hides_tooltips_in_affected_window() {
     );
     render(&mut ui, &mut app, &mut services, window, bounds);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
-
-    let _ = app.models_mut().update(&open, |v| *v = true);
 
     request_tooltip_for_window(
         &mut app,
@@ -7830,7 +7826,7 @@ fn pointer_capture_restores_hover_overlays_after_release() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
 
     let mut services = FakeServices;
@@ -7975,7 +7971,7 @@ fn pointer_capture_hides_tooltips_in_same_window() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
 
     let mut services = FakeServices;
@@ -8075,7 +8071,7 @@ fn pointer_capture_restores_tooltips_after_release() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
     let underlay_clicked = app.models_mut().insert(false);
 
     let mut services = FakeServices;
@@ -8223,7 +8219,7 @@ fn viewport_capture_hides_hover_overlays_and_restores_after_release() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8369,7 +8365,7 @@ fn viewport_capture_cancel_restores_hover_overlays() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8514,7 +8510,7 @@ fn viewport_capture_hides_tooltips_and_restores_after_release() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8660,7 +8656,7 @@ fn viewport_capture_cancel_restores_tooltips() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -8806,7 +8802,7 @@ fn pointer_capture_multiple_roots_hides_hover_overlays_and_tooltips() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(

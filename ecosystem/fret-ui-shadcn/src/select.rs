@@ -31,8 +31,8 @@ use fret_ui_kit::recipes::input::{
 };
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space, WidgetState,
-    WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, OverrideSlot, Space,
+    WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -476,8 +476,10 @@ pub struct SelectGroup {
 }
 
 impl SelectGroup {
-    pub fn new(entries: Vec<SelectEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = SelectEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -535,9 +537,9 @@ struct BorderWidthOverride {
 
 #[derive(Debug, Clone, Default)]
 pub struct SelectStyle {
-    pub trigger_border_color: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub option_background: Option<WidgetStateProperty<Option<ColorRef>>>,
-    pub option_foreground: Option<WidgetStateProperty<Option<ColorRef>>>,
+    pub trigger_border_color: OverrideSlot<ColorRef>,
+    pub option_background: OverrideSlot<ColorRef>,
+    pub option_foreground: OverrideSlot<ColorRef>,
 }
 
 impl SelectStyle {
@@ -1010,7 +1012,7 @@ fn select_impl<H: UiHost>(
         let trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .h_px(MetricRef::Px(resolved.min_height))
+                .h_px(resolved.min_height)
                 .merge(layout),
         );
 
@@ -2466,13 +2468,13 @@ fn select_impl<H: UiHost>(
                             }
                         }
 
-                        radix_select::select_modal_layer_children_with_pointer_up_guard_and_dismiss_handler(
+                        radix_select::select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler(
                             cx,
                             open_for_barrier_children.clone(),
                             dismiss_on_overlay_press,
                             on_dismiss_request_for_overlay_children.clone(),
                             mouse_open_guard_for_barrier_children.clone(),
-                            vec![probe],
+                            [probe],
                             animated,
                         )
                     });
@@ -2502,7 +2504,7 @@ fn select_impl<H: UiHost>(
                             open_for_overlay.clone(),
                             true,
                             on_dismiss_request_for_overlay_children.clone(),
-                            vec![pointer_up_guard],
+                            [pointer_up_guard],
                         )]
                     });
 
@@ -2650,7 +2652,7 @@ mod tests {
     use fret_core::UiServices;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
-        PathMetrics,
+        PathMetrics, PointerEvent,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};

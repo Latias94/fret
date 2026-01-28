@@ -35,6 +35,8 @@ pub(super) struct ActivePopover {
     pub(super) pending_initial_focus: bool,
     pub(super) consume_outside_pointer_events: bool,
     pub(super) disable_outside_pointer_events: bool,
+    pub(super) close_auto_focus_handled: bool,
+    pub(super) close_auto_focus_prevented: bool,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
     pub(super) last_focus: Option<NodeId>,
@@ -47,6 +49,8 @@ pub(super) struct ActiveModal {
     pub(super) initial_focus: Option<GlobalElementId>,
     pub(super) open: bool,
     pub(super) restore_focus: Option<NodeId>,
+    pub(super) close_auto_focus_handled: bool,
+    pub(super) close_auto_focus_prevented: bool,
     pub(super) pending_initial_focus: bool,
 }
 

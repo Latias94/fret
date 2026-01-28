@@ -1,6 +1,6 @@
 # Material 3 Refactor: Style API Alignment v1 (Design-System-Agnostic Interfaces)
 
-Status: Draft / proposed
+Status: In progress (core controls aligned; overlay-heavy components pending)
 
 This workstream exists to ensure `ecosystem/fret-ui-material3` becomes a *reference consumer* of
 Fret’s ecosystem style authoring contracts, instead of inventing a parallel styling API.
@@ -72,13 +72,15 @@ Material 3 uses:
 
 Do **not** introduce a second Material namespace (e.g. `material3.*`) for the same outcomes.
 
-If older workstreams mention `material3.*`, treat them as deprecated notes and reconcile the docs.
+If older workstreams or legacy pilot code mention `material3.*`, treat them as deprecated notes and
+migrate them to `md.*` or delete them during the refactor.
 
 ## Contract: Material 3 component override shape (ADR 1159)
 
 For any slot that varies by widget state, use:
 
 - `Option<WidgetStateProperty<Option<T>>>`
+- Prefer using the alias `fret_ui_kit::OverrideSlot<T>` in Rust code for readability.
 
 Where:
 
@@ -94,17 +96,21 @@ All Material 3 `*Style` structs must provide:
 This snapshot is intentionally “API-shape only”: it tracks whether a component exposes a public
 ADR 1159-style override surface, not whether it is visually aligned with Material.
 
+Important: this snapshot only counts **exported** crate surfaces (reachable from
+`ecosystem/fret-ui-material3/src/lib.rs`). Some early experiments may exist in-tree but are not
+wired into the crate and therefore do not represent the current public surface.
+
 | Component | File | Has `*Style` | Has `.style(...)` | ADR 1159 shape | Notes |
 |---|---|---:|---:|---:|---|
-| Select | `ecosystem/fret-ui-material3/src/select.rs` | Yes (`SelectStyle`) | Yes | Yes | Trigger + option slots use `Option<WidgetStateProperty<Option<ColorRef>>>`. |
-| RadioGroup | `ecosystem/fret-ui-material3/src/radio_group.rs` | Yes (`RadioGroupStyle`) | Yes | Yes | Items + icon/label/indicator slots use ADR 1159 shape. |
-| Button | `ecosystem/fret-ui-material3/src/button.rs` | No | N/A | No | Uses foundation + tokens; needs a public `ButtonStyle` surface if we want consistent overrides. |
-| IconButton | `ecosystem/fret-ui-material3/src/icon_button.rs` | No | N/A | No | Same as Button. |
-| Checkbox | `ecosystem/fret-ui-material3/src/checkbox.rs` | No | N/A | No | Same; currently outcome-oriented implementation. |
-| Switch | `ecosystem/fret-ui-material3/src/switch.rs` | No | N/A | No | Same; currently outcome-oriented implementation. |
-| Radio | `ecosystem/fret-ui-material3/src/radio.rs` | No | N/A | No | Uses foundation + tokens; no public override surface yet. |
-| Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | No | N/A | No | Uses foundation + tokens; no public override surface yet. |
-| TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | No | N/A | No | Uses `md.*` tokens but does not expose ADR 1159-style overrides (also has `error` as a bespoke boolean). |
+| Select | `ecosystem/fret-ui-material3/src/select.rs` | Yes (`SelectStyle`) | Yes | Yes | Re-introduced on `md.sys.*` / `md.comp.*` tokens (including `md.comp.{outlined,filled}-select.*`) with a listbox overlay. |
+| RadioGroup | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Group is implemented by composing `Radio` items and forwarding `RadioStyle` into each item. |
+| Button | `ecosystem/fret-ui-material3/src/button.rs` | Yes (`ButtonStyle`) | Yes | Yes | Style overrides apply to the existing token-derived defaults. |
+| IconButton | `ecosystem/fret-ui-material3/src/icon_button.rs` | Yes (`IconButtonStyle`) | Yes | Yes | Supports toggle `selected` via `WidgetStates::SELECTED`. |
+| Checkbox | `ecosystem/fret-ui-material3/src/checkbox.rs` | Yes (`CheckboxStyle`) | Yes | Yes | Exposes container/outline/icon/state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
+| Switch | `ecosystem/fret-ui-material3/src/switch.rs` | Yes (`SwitchStyle`) | Yes | Yes | Exposes track/handle/outline/state-layer color overrides; maps `selected` to `WidgetStates::SELECTED`. |
+| Radio | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Exposes icon + state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
+| Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | Yes (`TabsStyle`) | Yes | Yes | Overrides: container/label/state-layer/active-indicator colors; maps active tab to `WidgetStates::SELECTED`. |
+| TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | Yes (`TextFieldStyle`) | Yes | Yes | Keeps `error` as a bespoke boolean; style overrides apply to the existing token-derived defaults. |
 | Menu | `ecosystem/fret-ui-material3/src/menu.rs` | No | N/A | No | Policy-heavy; needs a careful, minimal override surface if we expose one. |
 | Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | No | N/A | No | Same as Menu (overlay surface + motion + focus). |
 | Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | No | N/A | No | Often provider-driven; may stay policy-only in v1. |
@@ -116,19 +122,25 @@ Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked
 
 ### M3SA-000 — Doc alignment and tracking
 
-- [ ] Decide whether `docs/workstreams/state-driven-style-resolution-v1.md` should:
-  - (A) track Material 3 progress (as a consumer of ADR 1159), or
-  - (B) stop tracking Material 3 and only track cross-ecosystem primitives.
-- [ ] If (B), move any Material 3 token lists from the SDSR workstream into `material3-todo.md`.
-- [ ] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` evidence for ADR 1158/1159 to include Material 3
-  adoption once v1 `*Style` surfaces land across M3 controls.
+- [x] Choose (B): keep `docs/workstreams/state-driven-style-resolution-v1.md` focused on cross-ecosystem primitives; track Material 3 consumer alignment here.
+- [x] Remove deprecated v0 Material 3 token lists from the SDSR workstream (they used `material3.*` keys and are no longer authoritative).
+- [x] Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` evidence for ADR 1159 to include current Material 3 adoption.
+
+### M3SA-005 — Remove or migrate legacy pilot modules
+
+There were early, ADR-1159-shaped experiments in-tree (`select.rs`, `radio_group.rs`) that were
+not exported from the crate and did not follow the current `md.*` token namespace decision.
+
+- [x] Delete these modules entirely (they were not exported and used deprecated `material3.*` keys).
+- [x] Re-introduce `Select` on top of the current foundation + `md.*` tokens.
+  - Evidence: `ecosystem/fret-ui-material3/src/select.rs`, `ecosystem/fret-ui-material3/src/tokens/select.rs`.
 
 ### M3SA-010 — Shared resolution helpers (kit-level)
 
 Add small, design-system-agnostic helpers (prefer `fret-ui-kit`) to reduce per-component boilerplate:
 
-- [ ] `resolve_slot(overrides, defaults, states) -> T` for the ADR 1159 “nullable per-state” shape.
-- [ ] `merge_slot(self.field, other.field)` helper (optional) to standardize right-biased merge.
+- [x] `resolve_override_slot*` helpers in `fret-ui-kit` (including computed-default variants `resolve_override_slot_with` / `resolve_override_slot_opt_with`).
+- [x] `merge_override_slot(self.field, other.field)` helper to standardize right-biased merge.
 
 ### M3SA-100 — Define minimal `*Style` slot vocab for Material 3 controls
 
@@ -151,25 +163,31 @@ Suggested initial slot sets:
 
 Per component:
 
-- [ ] Export `*Style` in the module and in `ecosystem/fret-ui-material3/src/lib.rs` as needed.
-- [ ] Add `.style(style)` builder to the component.
-- [ ] Resolve theme-derived defaults first, then apply overrides at resolve-time.
-- [ ] Keep foundation-owned behavior (indication, motion scheme, token fallback chain) unchanged.
+- [x] Export `*Style` in the module and in `ecosystem/fret-ui-material3/src/lib.rs` as needed (done: Button/IconButton/Checkbox/Switch/Radio/Tabs/TextField).
+- [x] Add `.style(style)` builder to the component (done: Button/IconButton/Checkbox/Switch/Radio/Tabs/TextField).
+- [x] Resolve theme-derived defaults first, then apply overrides at resolve-time (done: Button/IconButton/Checkbox/Switch/Radio/Tabs/TextField).
+- [x] Keep foundation-owned behavior (indication, motion scheme, token fallback chain) unchanged.
+
+Recommended layering order (per slot):
+
+1. Token-derived defaults (`md.comp.*` → `md.sys.*`)
+2. Material tree-local context overrides (content color / motion scheme / ripple config) when applicable
+3. Component `*Style` overrides (ADR 1159 shape)
 
 Recommended order:
 
-- [ ] TextField (high value; currently bespoke)
-- [ ] Button
-- [ ] Checkbox / Switch / Radio
-- [ ] Tabs
+- [x] TextField (high value; currently bespoke)
+- [x] Button
+- [x] Checkbox / Switch / Radio
+- [x] Tabs
 - [ ] Menu / Dialog surfaces (only if the override surface remains small)
 
 ### M3SA-300 — Gallery validation pages
 
 For each component that gains a `*Style` surface:
 
-- [ ] Add a “Default vs Override” comparison block in `apps/fret-ui-gallery`.
-- [ ] Include at least one partial override example (hover-only or focus-ring-only).
+- [x] Add a “Default vs Override” comparison block in `apps/fret-ui-gallery` (done: Button/IconButton/Checkbox/Switch/Radio/Tabs/TextField).
+- [x] Include at least one partial override example (hover-only or focus-ring-only) (done: Button/IconButton/Checkbox/Switch/Radio/Tabs/TextField).
 
 ### M3SA-400 — Decide how to model “invalid/error” (TextField)
 
@@ -180,7 +198,7 @@ Options:
 - Option A (v1): keep `error` as a component-specific boolean/variant and do not add a new widget state.
 - Option B (v2): introduce `WidgetState::Invalid` (or a small extension mechanism) in kit-level primitives.
 
-- [ ] Pick v1 approach and document it.
+- [x] Pick Option A (v1): keep `error` as a component-specific boolean and do not add a new widget state; revisit `WidgetState::Invalid` in v2 if multiple ecosystems need it.
 
 ## Evidence anchors
 

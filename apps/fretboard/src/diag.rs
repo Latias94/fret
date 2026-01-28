@@ -67,6 +67,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
+    let mut check_viewport_input_min: Option<u64> = None;
+    let mut check_dock_drag_min: Option<u64> = None;
+    let mut check_viewport_capture_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
     let mut compare_eps_px: f32 = 0.5;
@@ -367,6 +370,39 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_overlay_synthesis_min =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-overlay-synthesis-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-viewport-input-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-viewport-input-min".to_string());
+                };
+                check_viewport_input_min = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --check-viewport-input-min".to_string())?,
+                );
+                i += 1;
+            }
+            "--check-dock-drag-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-dock-drag-min".to_string());
+                };
+                check_dock_drag_min = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --check-dock-drag-min".to_string())?,
+                );
+                i += 1;
+            }
+            "--check-viewport-capture-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-viewport-capture-min".to_string());
+                };
+                check_viewport_capture_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-viewport-capture-min".to_string()
                     })?);
                 i += 1;
             }
@@ -825,6 +861,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_overlay_synthesis_min.is_some()
+                    || check_viewport_input_min.is_some()
+                    || check_dock_drag_min.is_some()
+                    || check_viewport_capture_min.is_some()
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
                 {
@@ -849,6 +888,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
+                        check_viewport_input_min,
+                        check_dock_drag_min,
+                        check_viewport_capture_min,
                         check_retained_vlist_reconcile_no_notify_min,
                         check_retained_vlist_attach_detach_max,
                         warmup_frames,
@@ -920,32 +962,52 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             if rest.is_empty() {
                 return Err(
-                    "missing suite name or script paths (try: fretboard diag suite ui-gallery)"
+                    "missing suite name or script paths (try: fretboard diag suite ui-gallery | fretboard diag suite docking-arbitration)"
                         .to_string(),
                 );
             }
 
-            let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0].starts_with("ui-gallery") {
-                let scripts: Vec<&'static str> = match rest[0].as_str() {
-                    "ui-gallery" => ui_gallery_suite_scripts().to_vec(),
-                    "ui-gallery-virt-retained" => vec![
-                        "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-                    ],
-                    other => {
-                        return Err(format!(
-                            "unknown suite target: {other} (expected: ui-gallery|ui-gallery-virt-retained)"
-                        ));
-                    }
-                };
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            enum BuiltinSuite {
+                UiGallery,
+                DockingArbitration,
+            }
 
-                scripts
-                    .into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect()
+            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if rest.len() == 1
+                && rest[0] == "ui-gallery"
+            {
+                (
+                    ui_gallery_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    Some(BuiltinSuite::UiGallery),
+                )
+            } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
+                (
+                    vec![resolve_path(
+                        &workspace_root,
+                        PathBuf::from(
+                            "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                        ),
+                    )],
+                    Some(BuiltinSuite::UiGallery),
+                )
+            } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
+                (
+                    docking_arbitration_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    Some(BuiltinSuite::DockingArbitration),
+                )
             } else {
-                rest.into_iter()
-                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                    .collect()
+                (
+                    rest.into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    None,
+                )
             };
 
             let reuse_process = launch.is_none();
@@ -1050,9 +1112,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_overlay_synthesis_min.is_some()
-                    || retained_vlist_gate_for_script.is_some();
-                let wants_post_run_checks_for_script = wants_post_run_checks_for_script
+                    || check_viewport_input_min.is_some()
+                    || check_dock_drag_min.is_some()
+                    || check_viewport_capture_min.is_some()
+                    || retained_vlist_gate_for_script.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some();
+
+                let wants_post_run_checks_for_script = wants_post_run_checks_for_script
+                    || builtin_suite == Some(BuiltinSuite::DockingArbitration);
 
                 if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
                     let bundle_path = wait_for_bundle_json_from_script_result(
@@ -1067,6 +1134,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             src.display()
                         )
                     })?;
+
+                    let (suite_viewport_input_min, suite_dock_drag_min, suite_viewport_capture_min) =
+                        if builtin_suite == Some(BuiltinSuite::DockingArbitration) {
+                            docking_arbitration_script_default_gates(&src)
+                        } else {
+                            (None, None, None)
+                        };
                     apply_post_run_checks(
                         &bundle_path,
                         check_stale_paint_test_id.as_deref(),
@@ -1077,6 +1151,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
+                        check_viewport_input_min.or(suite_viewport_input_min),
+                        check_dock_drag_min.or(suite_dock_drag_min),
+                        check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script,
                         retained_vlist_attach_detach_max_for_script,
                         warmup_frames,
@@ -1715,6 +1792,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             {
                 check_bundle_for_overlay_synthesis_min(bundle_path.as_path(), min, warmup_frames)?;
             }
+            if let Some(min) = check_viewport_input_min
+                && min > 0
+            {
+                check_bundle_for_viewport_input_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
+            if let Some(min) = check_dock_drag_min
+                && min > 0
+            {
+                check_bundle_for_dock_drag_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
+            if let Some(min) = check_viewport_capture_min
+                && min > 0
+            {
+                check_bundle_for_viewport_capture_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
             if let Some(min) = check_retained_vlist_reconcile_no_notify_min
                 && min > 0
             {
@@ -1793,6 +1885,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 None => shell_reuse_enabled.then_some(1),
             };
 
+            // In matrix mode, treat `--check-viewport-input-min 0` as “disabled”.
+            let viewport_input_gate = match check_viewport_input_min {
+                Some(0) => None,
+                Some(v) => Some(v),
+                None => None,
+            };
+
             let uncached_out_dir = resolved_out_dir.join("uncached");
             let cached_out_dir = resolved_out_dir.join("cached");
 
@@ -1815,6 +1914,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 None,
                 None,
                 None,
+                viewport_input_gate,
+                viewport_input_gate
+                    .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+                None,
+                None,
             )?;
             let cached_bundles = run_script_suite_collect_bundles(
                 &scripts,
@@ -1830,6 +1934,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 overlay_synthesis_gate.map(|_| {
                     ui_gallery_script_requires_overlay_synthesis_gate as fn(&Path) -> bool
                 }),
+                viewport_input_gate,
+                viewport_input_gate
+                    .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
+                None,
+                None,
             )?;
 
             let mut ok = true;
@@ -1859,6 +1968,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "ignore_scene_fingerprint": compare_opts.ignore_scene_fingerprint,
                         "check_view_cache_reuse_min": reuse_gate,
                         "check_overlay_synthesis_min": overlay_synthesis_gate,
+                        "check_viewport_input_min": viewport_input_gate,
                     },
                     "comparisons": comparisons.iter().map(|(script, report)| serde_json::json!({
                         "script": script.display().to_string(),
@@ -1875,20 +1985,22 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 Ok(())
             } else if ok {
                 println!(
-                    "matrix: ok (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?})",
+                    "matrix: ok (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?}, check_viewport_input_min={:?})",
                     scripts.len(),
                     warmup_frames,
                     reuse_gate,
-                    overlay_synthesis_gate
+                    overlay_synthesis_gate,
+                    viewport_input_gate
                 );
                 Ok(())
             } else {
                 println!(
-                    "matrix: failed (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?})",
+                    "matrix: failed (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?}, check_viewport_input_min={:?})",
                     scripts.len(),
                     warmup_frames,
                     reuse_gate,
-                    overlay_synthesis_gate
+                    overlay_synthesis_gate,
+                    viewport_input_gate
                 );
                 for (script, report) in comparisons {
                     if report.ok {
@@ -2571,6 +2683,29 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
     ]
 }
 
+fn docking_arbitration_suite_scripts() -> [&'static str; 2] {
+    [
+        "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
+        "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
+    ]
+}
+
+fn docking_arbitration_script_default_gates(
+    script: &Path,
+) -> (Option<u64>, Option<u64>, Option<u64>) {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return (None, None, None);
+    };
+
+    match name {
+        "docking-arbitration-demo-split-viewports.json" => (Some(1), None, None),
+        "docking-arbitration-demo-modal-dock-drag-viewport-capture.json" => {
+            (Some(1), Some(1), Some(1))
+        }
+        _ => (None, None, None),
+    }
+}
+
 fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -2601,6 +2736,16 @@ fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {
             | "ui-gallery-dialog-escape-focus-restore.json"
             | "ui-gallery-menubar-keyboard-nav.json"
     )
+}
+
+fn ui_gallery_script_requires_viewport_input_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    // Viewport input forwarding is only expected in scripts that explicitly exercise viewport
+    // panels / docking viewport tooling scenarios.
+    name.contains("viewport") || name.contains("dock")
 }
 
 #[derive(Debug, Clone)]
@@ -2665,6 +2810,10 @@ fn run_script_suite_collect_bundles(
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     overlay_synthesis_gate_predicate: Option<fn(&Path) -> bool>,
+    check_viewport_input_min: Option<u64>,
+    viewport_input_gate_predicate: Option<fn(&Path) -> bool>,
+    check_dock_drag_min: Option<u64>,
+    check_viewport_capture_min: Option<u64>,
 ) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(&paths.out_dir).map_err(|e| e.to_string())?;
 
@@ -2739,6 +2888,26 @@ fn run_script_suite_collect_bundles(
                 check_bundle_for_overlay_synthesis_min(&bundle_path, min, warmup_frames)?;
             }
         }
+        if let Some(min) = check_viewport_input_min
+            && min > 0
+        {
+            let should_gate = viewport_input_gate_predicate
+                .map(|pred| pred(src))
+                .unwrap_or(true);
+            if should_gate {
+                check_bundle_for_viewport_input_min(&bundle_path, min, warmup_frames)?;
+            }
+        }
+        if let Some(min) = check_dock_drag_min
+            && min > 0
+        {
+            check_bundle_for_dock_drag_min(&bundle_path, min, warmup_frames)?;
+        }
+        if let Some(min) = check_viewport_capture_min
+            && min > 0
+        {
+            check_bundle_for_viewport_capture_min(&bundle_path, min, warmup_frames)?;
+        }
 
         bundle_paths.push(bundle_path);
     }
@@ -2757,6 +2926,9 @@ fn apply_post_run_checks(
     check_gc_sweep_liveness: bool,
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
+    check_viewport_input_min: Option<u64>,
+    check_dock_drag_min: Option<u64>,
+    check_viewport_capture_min: Option<u64>,
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
     warmup_frames: u64,
@@ -2788,6 +2960,21 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_overlay_synthesis_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_viewport_input_min
+        && min > 0
+    {
+        check_bundle_for_viewport_input_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_dock_drag_min
+        && min > 0
+    {
+        check_bundle_for_dock_drag_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_viewport_capture_min
+        && min > 0
+    {
+        check_bundle_for_viewport_capture_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_retained_vlist_reconcile_no_notify_min
         && min > 0
@@ -5698,8 +5885,8 @@ fn check_bundle_for_overlay_synthesis_min_json(
 
     Err(format!(
         "expected at least {min_synthesized_events} overlay synthesis events, got {synthesized_events} \
- (any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}).{suppressions} \
- bundle: {}",
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}).{suppressions} \
+bundle: {}",
         bundle_path.display()
     ))
 }
@@ -5965,6 +6152,199 @@ fn check_bundle_for_retained_vlist_attach_detach_max_json(
         msg.push('\n');
     }
     Err(msg)
+}
+
+fn check_bundle_for_viewport_input_min(
+    bundle_path: &Path,
+    min_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_viewport_input_min_json(&bundle, bundle_path, min_events, warmup_frames)
+}
+
+fn check_bundle_for_viewport_input_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_events: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut events: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let Some(arr) = s
+                .get("debug")
+                .and_then(|v| v.get("viewport_input"))
+                .and_then(|v| v.as_array())
+            else {
+                continue;
+            };
+
+            events = events.saturating_add(arr.len() as u64);
+            if events >= min_events {
+                return Ok(());
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_events} viewport input events, got {events} \
+(warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_dock_drag_min(
+    bundle_path: &Path,
+    min_active_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_dock_drag_min_json(&bundle, bundle_path, min_active_frames, warmup_frames)
+}
+
+fn check_bundle_for_dock_drag_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_active_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut active_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let Some(dock_drag) = s
+                .get("debug")
+                .and_then(|v| v.get("docking_interaction"))
+                .and_then(|v| v.get("dock_drag"))
+            else {
+                continue;
+            };
+            if dock_drag.is_object() {
+                active_frames = active_frames.saturating_add(1);
+                if active_frames >= min_active_frames {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_active_frames} snapshots with an active dock drag, got {active_frames} \
+(warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_viewport_capture_min(
+    bundle_path: &Path,
+    min_active_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_viewport_capture_min_json(
+        &bundle,
+        bundle_path,
+        min_active_frames,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_viewport_capture_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_active_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut active_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let Some(viewport_capture) = s
+                .get("debug")
+                .and_then(|v| v.get("docking_interaction"))
+                .and_then(|v| v.get("viewport_capture"))
+            else {
+                continue;
+            };
+            if viewport_capture.is_object() {
+                active_frames = active_frames.saturating_add(1);
+                if active_frames >= min_active_frames {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_active_frames} snapshots with an active viewport capture, got {active_frames} \
+(warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) bundle: {}",
+        bundle_path.display()
+    ))
 }
 
 fn bundle_stats_from_json_with_options(
@@ -8162,6 +8542,127 @@ mod tests {
         )
         .expect_err("expected missing reconcile events");
         assert!(err.contains("expected at least 1 retained virtual-list reconcile event"));
+    }
+
+    #[test]
+    fn check_bundle_for_viewport_input_min_counts_events() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "viewport_input": [
+                                    { "target": 1, "pointer_id": 0, "pointer_type": "mouse", "cursor_px": {"x": 1.0, "y": 2.0}, "uv": [0.0, 0.0], "target_px": [0, 0], "kind": { "type": "pointer_down", "button": "left", "modifiers": {}, "click_count": 1 } }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "viewport_input": [
+                                    { "target": 1, "pointer_id": 0, "pointer_type": "mouse", "cursor_px": {"x": 2.0, "y": 3.0}, "uv": [0.1, 0.1], "target_px": [10, 10], "kind": { "type": "pointer_move", "buttons": {"left": true, "right": false, "middle": false}, "modifiers": {} } }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_viewport_input_min_json(&bundle, Path::new("bundle.json"), 2, 0)
+            .expect("expected viewport_input>=2");
+    }
+
+    #[test]
+    fn check_bundle_for_viewport_input_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "viewport_input": [
+                                    { "target": 1, "pointer_id": 0, "pointer_type": "mouse", "cursor_px": {"x": 1.0, "y": 2.0}, "uv": [0.0, 0.0], "target_px": [0, 0], "kind": { "type": "pointer_down", "button": "left", "modifiers": {}, "click_count": 1 } }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "viewport_input": []
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err = check_bundle_for_viewport_input_min_json(&bundle, Path::new("bundle.json"), 1, 1)
+            .expect_err("expected viewport input < 1 due to warmup");
+        assert!(err.contains("expected at least 1 viewport input events"));
+        assert!(err.contains("got 0"));
+    }
+
+    #[test]
+    fn check_bundle_for_dock_drag_min_counts_active_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "docking_interaction": {
+                                    "dock_drag": { "pointer_id": 0, "source_window": 1, "current_window": 1, "dragging": true, "cross_window_hover": false },
+                                    "viewport_capture": null
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_dock_drag_min_json(&bundle, Path::new("bundle.json"), 1, 0)
+            .expect("expected dock_drag>=1");
+    }
+
+    #[test]
+    fn check_bundle_for_viewport_capture_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "docking_interaction": {
+                                    "dock_drag": null,
+                                    "viewport_capture": { "pointer_id": 0, "target": 2 }
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_viewport_capture_min_json(&bundle, Path::new("bundle.json"), 1, 1)
+                .expect_err("expected viewport_capture<1 due to warmup");
+        assert!(err.contains("expected at least 1 snapshots with an active viewport capture"));
+        assert!(err.contains("got 0"));
     }
 
     #[test]

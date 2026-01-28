@@ -200,6 +200,9 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::TextInputRegion(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::InternalDragRegion(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }

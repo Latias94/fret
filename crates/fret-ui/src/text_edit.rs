@@ -34,6 +34,10 @@ pub(crate) mod clipboard {
 }
 
 pub(crate) mod utf8 {
+    use unicode_segmentation::UnicodeSegmentation;
+
+    use fret_runtime::TextBoundaryMode;
+
     pub(crate) fn clamp_to_char_boundary(text: &str, idx: usize) -> usize {
         if idx >= text.len() {
             return text.len();
@@ -66,11 +70,140 @@ pub(crate) mod utf8 {
         idx + ch.len_utf8()
     }
 
-    pub(crate) fn is_word_char(ch: char) -> bool {
-        ch.is_alphanumeric() || ch == '_'
+    pub(crate) fn is_identifier_char(ch: char) -> bool {
+        ch == '_' || unicode_ident::is_xid_continue(ch)
     }
 
-    pub(crate) fn move_word_left(text: &str, idx: usize) -> usize {
+    fn char_at(text: &str, idx: usize) -> Option<char> {
+        let idx = clamp_to_char_boundary(text, idx);
+        text.get(idx..)?.chars().next()
+    }
+
+    fn is_unicode_word_char(text: &str, idx: usize) -> bool {
+        let idx = clamp_to_char_boundary(text, idx);
+        text.unicode_word_indices()
+            .any(|(start, word)| (start..start + word.len()).contains(&idx))
+    }
+
+    fn unicode_word_range_at(text: &str, idx: usize) -> Option<(usize, usize)> {
+        let idx = clamp_to_char_boundary(text, idx);
+        for (start, word) in text.unicode_word_indices() {
+            let end = start + word.len();
+            if (start..end).contains(&idx) {
+                return Some((start, end));
+            }
+        }
+        None
+    }
+
+    fn identifier_range_at(text: &str, idx: usize) -> Option<(usize, usize)> {
+        let idx = clamp_to_char_boundary(text, idx);
+        let ch = char_at(text, idx)?;
+        if !is_identifier_char(ch) {
+            return None;
+        }
+
+        let mut start = idx;
+        while start > 0 {
+            let prev = prev_char_boundary(text, start);
+            let prev_ch = char_at(text, prev).unwrap_or(' ');
+            if !is_identifier_char(prev_ch) {
+                break;
+            }
+            start = prev;
+        }
+
+        let mut end = next_char_boundary(text, idx);
+        while end < text.len() {
+            let next_ch = char_at(text, end).unwrap_or(' ');
+            if !is_identifier_char(next_ch) {
+                break;
+            }
+            end = next_char_boundary(text, end);
+        }
+
+        Some((start, end))
+    }
+
+    pub(crate) fn select_word_range(
+        text: &str,
+        idx: usize,
+        mode: TextBoundaryMode,
+    ) -> (usize, usize) {
+        if text.is_empty() {
+            return (0, 0);
+        }
+
+        let mut idx = clamp_to_char_boundary(text, idx).min(text.len());
+        if idx >= text.len() {
+            idx = prev_char_boundary(text, idx);
+        }
+
+        // Prefer selecting the previous word when clicking just after it.
+        if char_at(text, idx).is_some_and(|c| c.is_whitespace()) && idx > 0 {
+            let prev = prev_char_boundary(text, idx);
+            let prev_is_word = match mode {
+                TextBoundaryMode::UnicodeWord => is_unicode_word_char(text, prev),
+                TextBoundaryMode::Identifier => char_at(text, prev).is_some_and(is_identifier_char),
+            };
+            if prev_is_word {
+                idx = prev;
+            }
+        }
+
+        let Some(ch) = char_at(text, idx) else {
+            return (0, 0);
+        };
+
+        if ch.is_whitespace() {
+            let mut start = idx;
+            while start > 0 {
+                let prev = prev_char_boundary(text, start);
+                if char_at(text, prev).is_some_and(|c| c.is_whitespace()) {
+                    start = prev;
+                } else {
+                    break;
+                }
+            }
+            let mut end = next_char_boundary(text, idx);
+            while end < text.len() {
+                if char_at(text, end).is_some_and(|c| c.is_whitespace()) {
+                    end = next_char_boundary(text, end);
+                } else {
+                    break;
+                }
+            }
+            return (start, end);
+        }
+
+        match mode {
+            TextBoundaryMode::UnicodeWord => {
+                unicode_word_range_at(text, idx).unwrap_or((idx, next_char_boundary(text, idx)))
+            }
+            TextBoundaryMode::Identifier => {
+                identifier_range_at(text, idx).unwrap_or((idx, next_char_boundary(text, idx)))
+            }
+        }
+    }
+
+    pub(crate) fn select_line_range(text: &str, idx: usize) -> (usize, usize) {
+        if text.is_empty() {
+            return (0, 0);
+        }
+
+        let idx = clamp_to_char_boundary(text, idx).min(text.len());
+        let start = text[..idx]
+            .rfind('\n')
+            .map(|i| (i + 1).min(text.len()))
+            .unwrap_or(0);
+        let end = text[idx..]
+            .find('\n')
+            .map(|i| (idx + i).min(text.len()))
+            .unwrap_or(text.len());
+        (start, end)
+    }
+
+    pub(crate) fn move_word_left(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
         let mut i = prev_char_boundary(text, idx);
         while i > 0 {
             let prev = prev_char_boundary(text, i);
@@ -80,18 +213,22 @@ pub(crate) mod utf8 {
             }
             i = prev;
         }
-        while i > 0 {
-            let prev = prev_char_boundary(text, i);
-            let ch = text[prev..i].chars().next().unwrap_or(' ');
-            if !is_word_char(ch) {
-                break;
-            }
-            i = prev;
+
+        if i == 0 {
+            return 0;
         }
-        i
+
+        match mode {
+            TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
+                .map(|(start, _)| start)
+                .unwrap_or(i),
+            TextBoundaryMode::Identifier => identifier_range_at(text, i)
+                .map(|(start, _)| start)
+                .unwrap_or(i),
+        }
     }
 
-    pub(crate) fn move_word_right(text: &str, idx: usize) -> usize {
+    pub(crate) fn move_word_right(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
         let mut i = next_char_boundary(text, idx);
         while i < text.len() {
             let next = next_char_boundary(text, i);
@@ -101,15 +238,19 @@ pub(crate) mod utf8 {
             }
             i = next;
         }
-        while i < text.len() {
-            let next = next_char_boundary(text, i);
-            let ch = text[i..next].chars().next().unwrap_or(' ');
-            if !is_word_char(ch) {
-                break;
-            }
-            i = next;
+
+        if i >= text.len() {
+            return text.len();
         }
-        i
+
+        match mode {
+            TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
+                .map(|(_, end)| end)
+                .unwrap_or(i),
+            TextBoundaryMode::Identifier => identifier_range_at(text, i)
+                .map(|(_, end)| end)
+                .unwrap_or(i),
+        }
     }
 }
 
@@ -160,6 +301,7 @@ pub(crate) mod buffer {
 
 pub(crate) mod state {
     use super::{buffer, ime, utf8};
+    use fret_runtime::TextBoundaryMode;
 
     pub(crate) struct TextEditState<'a> {
         text: &'a mut String,
@@ -168,6 +310,7 @@ pub(crate) mod state {
         preedit: &'a mut String,
         preedit_cursor: &'a mut Option<(usize, usize)>,
         ime_replace_range: &'a mut Option<(usize, usize)>,
+        boundary_mode: TextBoundaryMode,
     }
 
     impl<'a> TextEditState<'a> {
@@ -186,7 +329,12 @@ pub(crate) mod state {
                 preedit,
                 preedit_cursor,
                 ime_replace_range,
+                boundary_mode: TextBoundaryMode::UnicodeWord,
             }
+        }
+
+        pub(crate) fn set_boundary_mode(&mut self, mode: TextBoundaryMode) {
+            self.boundary_mode = mode;
         }
 
         fn clamp_indexes(&mut self) {
@@ -255,13 +403,13 @@ pub(crate) mod state {
 
         pub(crate) fn move_word_left(&mut self, extend_selection: bool) -> bool {
             self.clamp_indexes();
-            let next = utf8::move_word_left(self.text, *self.caret);
+            let next = utf8::move_word_left(self.text, *self.caret, self.boundary_mode);
             self.move_caret_to(next, extend_selection)
         }
 
         pub(crate) fn move_word_right(&mut self, extend_selection: bool) -> bool {
             self.clamp_indexes();
-            let next = utf8::move_word_right(self.text, *self.caret);
+            let next = utf8::move_word_right(self.text, *self.caret, self.boundary_mode);
             self.move_caret_to(next, extend_selection)
         }
 
@@ -354,7 +502,7 @@ pub(crate) mod state {
             if *self.caret == 0 {
                 return false;
             }
-            let prev = utf8::move_word_left(self.text, *self.caret);
+            let prev = utf8::move_word_left(self.text, *self.caret, self.boundary_mode);
             self.text.replace_range(prev..*self.caret, "");
             *self.caret = prev;
             *self.selection_anchor = *self.caret;
@@ -371,7 +519,7 @@ pub(crate) mod state {
             if *self.caret >= self.text.len() {
                 return false;
             }
-            let next = utf8::move_word_right(self.text, *self.caret);
+            let next = utf8::move_word_right(self.text, *self.caret, self.boundary_mode);
             self.text.replace_range(*self.caret..next, "");
             *self.selection_anchor = *self.caret;
             self.clear_ime_composition();
@@ -383,6 +531,7 @@ pub(crate) mod state {
 pub(crate) mod commands {
     use super::clipboard;
     use super::state::TextEditState;
+    use fret_runtime::TextBoundaryMode;
 
     #[derive(Debug, Default, Clone, Copy)]
     pub(crate) struct Outcome {
@@ -477,7 +626,9 @@ pub(crate) mod commands {
         edit: &mut TextEditState<'_>,
         command: &str,
         is_ime_composing: bool,
+        boundary_mode: TextBoundaryMode,
     ) -> Outcome {
+        edit.set_boundary_mode(boundary_mode);
         match command {
             "text.select_all" => Outcome::paint(edit.select_all()),
             "text.move_left" => Outcome::paint(edit.move_left(false)),
@@ -771,5 +922,98 @@ pub(crate) mod ime {
                 ApplyResult::PreeditUpdated { starting }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod word_boundary_tests {
+    use super::utf8;
+    use fret_runtime::TextBoundaryMode;
+
+    #[test]
+    fn unicode_word_and_identifier_boundaries_differ_on_apostrophes() {
+        let text = "can't";
+
+        assert_eq!(
+            utf8::move_word_right(text, 0, TextBoundaryMode::UnicodeWord),
+            text.len()
+        );
+        assert_eq!(
+            utf8::move_word_right(text, 0, TextBoundaryMode::Identifier),
+            3
+        );
+
+        assert_eq!(
+            utf8::move_word_left(text, text.len(), TextBoundaryMode::UnicodeWord),
+            0
+        );
+        assert_eq!(
+            utf8::move_word_left(text, text.len(), TextBoundaryMode::Identifier),
+            4
+        );
+    }
+
+    #[test]
+    fn select_word_range_respects_boundary_mode() {
+        let text = "can't";
+        assert_eq!(
+            utf8::select_word_range(text, 1, TextBoundaryMode::UnicodeWord),
+            (0, text.len())
+        );
+        assert_eq!(
+            utf8::select_word_range(text, 1, TextBoundaryMode::Identifier),
+            (0, 3)
+        );
+    }
+
+    #[test]
+    fn identifier_selects_full_identifier_with_underscore_and_digits() {
+        let text = "foo_bar99 baz";
+        let idx = text.find('b').expect("expected identifier character");
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            (0, "foo_bar99".len())
+        );
+    }
+
+    #[test]
+    fn select_word_range_prefers_previous_word_when_clicking_whitespace_after_word() {
+        let text = "hello world";
+        let idx = text.find(' ').expect("expected whitespace");
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::UnicodeWord),
+            (0, "hello".len())
+        );
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            (0, "hello".len())
+        );
+    }
+
+    #[test]
+    fn select_word_range_selects_whitespace_runs() {
+        let text = "a   b";
+        assert_eq!(
+            utf8::select_word_range(text, 2, TextBoundaryMode::UnicodeWord),
+            (1, 4)
+        );
+        assert_eq!(
+            utf8::select_word_range(text, 2, TextBoundaryMode::Identifier),
+            (1, 4)
+        );
+    }
+
+    #[test]
+    fn identifier_treats_unicode_identifier_chars_as_word_members() {
+        let text = "变量名_foo";
+        let idx = text
+            .char_indices()
+            .nth(1)
+            .expect("expected a second char")
+            .0;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            (0, text.len())
+        );
     }
 }

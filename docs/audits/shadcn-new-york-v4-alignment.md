@@ -8,6 +8,69 @@ This audit tracks visual/behavior alignment gaps between:
 Goal: align **default outcomes** (spacing, sizing, truncation, focus ring, indicator slots, overlay chrome)
 for the `new-york-v4` preset, without expanding `fret-ui` mechanism scope.
 
+For coverage status (what is gated vs only has goldens), see:
+
+- `docs/audits/shadcn-new-york-v4-coverage.md`
+- Chart-specific audit: `docs/audits/shadcn-chart.md`
+- Depth checklist (interaction + constrained viewport targets): `docs/audits/shadcn-new-york-v4-depth-checklist.md`
+
+Coverage snapshot (time of writing):
+
+- shadcn-web `v4/new-york-v4`: `471/471` keys referenced (`100%`)
+
+Heuristic “where we already have gates” (top key families by prefix):
+
+- `chart` (84), `calendar` (34), `input` (27), `button` (26), `form` (19), `navigation` (17)
+
+## Executive summary (current status + next targets)
+
+This audit intentionally separates “breadth coverage” (what is gated at all) from “depth conformance”
+(how close we are to upstream across all variants, viewports, DPIs, and font metrics).
+
+### What is currently high-signal (already gated somewhere)
+
+These areas have multiple geometry + overlay placement/chrome gates and tend to catch regressions early:
+
+- **Menus / listboxes**: `DropdownMenu`, `Select`, `Menubar` (panel chrome, placement, constrained viewport
+  max-height behavior, and menu row height as a styling outcome).
+- **Sidebar blocks**: sidebar menu-button heights (including the “collapsed overrides size” rule), and a dialog
+  portal placement gate for `sidebar-13` (`*.open.json`).
+- **Calendar (single-month variants)**: day grid geometry + ARIA label strings; outside-days + week number
+  behaviors that are easy to drift when refactoring.
+- **Typography**: breadth gates for `typography-*` pages (geometry + recorded text style inputs; inline-code padding tolerates sub-pixel rounding).
+
+These gates do **not** imply full parity; they are simply the most effective early tripwires we have so far.
+
+Recent breadth wins:
+
+- **Auth blocks**: `login-*`, `signup-*`, `otp-*` now have shell container gates; `otp-01/02/03/05` also gate the
+  InputOtp row geometry (slot sizes + gaps).
+- **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
+- **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
+- **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
+- **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
+  - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,
+    `chart-tooltip-formatter`, `chart-tooltip-advanced`.
+  - Pie legend variant includes `chart-pie-legend` (recharts wrapper + shadcn `*:basis-1/4` layout).
+  - Hover-mid scripted snapshots now gate tooltip panel size and cursor rect geometry for the interactive line/bar pages.
+
+### Largest remaining gaps (by golden family)
+
+All golden keys are referenced by tests (breadth coverage is complete). Remaining work is primarily
+**depth**: making sure each family has high-signal gates (not just “exists / within bounds”) across
+the viewports and interaction states that shape behavior.
+
+### Recommended next alignment targets (P0 order)
+
+1. **Chart depth push**
+   - The `chart-*` pages are now all referenced by tests, but several gates are still “engine-math only”
+     (series bounds / bar rect math). Next step is to add higher-signal gates for tooltip/cursor/active
+     markers and stacked area outcomes.
+   - Plan + scope: `docs/audits/shadcn-chart.md`.
+
+When these are in place, it becomes much more cost-effective to add **DPI** and **viewport** variants as a
+second wave (because we can keep the matrix small and stable).
+
 ## How to validate
 
 - Run the component gallery: `cargo run -p fret-demo --bin components_gallery`
@@ -202,8 +265,10 @@ are caught as layout/style outcomes, not just placement drift).
   - `viewport=true` viewport panel: `rounded-md border shadow` with zoom motion `zoom-in-90` / `zoom-out-95`.
 
 Recent fixes:
-
-- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshot.
+- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshots, including hover-switch (`home-then-hover-components`).
+- `viewport=true` viewport geometry now matches shadcn-web mobile snapshots, including “click then hover” switching (`home-mobile-then-hover-components`) and the viewport/indicator chrome gates.
+- Geometry gates now measure the registered viewport panel element (via `navigation_menu_viewport_panel_id`) instead of relying on “largest overlay rect” heuristics. This avoids accidentally measuring motion wrappers / indicator siblings when overlays animate or when multiple popover layers exist.
+- The viewport panel keeps `overflow: visible` so drop shadows match CSS `box-shadow` footprint; radius clipping is applied by an inner `overflow: clip` container with the same corner radii so content still clips correctly.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`).

@@ -19,7 +19,7 @@ use std::sync::Arc;
 use fret_core::{Px, Rect};
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
+use fret_ui::element::{AnyElement, Elements, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -312,8 +312,9 @@ pub fn popover_request(
     open: Model<bool>,
     presence: OverlayPresence,
     options: PopoverOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
+    let children: Vec<AnyElement> = children.into_iter().collect();
     let mut request = match options.variant {
         PopoverVariant::NonModal => {
             OverlayRequest::dismissible_popover(id, trigger, open, presence, children)
@@ -343,7 +344,7 @@ pub fn popover_request_with_dismiss_handler(
     presence: OverlayPresence,
     options: PopoverOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request = popover_request(id, trigger, open, presence, options, children);
     request.dismissible_on_dismiss_request = on_dismiss_request;
@@ -363,7 +364,7 @@ pub fn popover_request_with_anchor(
     open: Model<bool>,
     presence: OverlayPresence,
     options: PopoverOptions,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request = popover_request(id, trigger, open, presence, options, children);
     if let Some(anchor) = anchor
@@ -384,7 +385,7 @@ pub fn popover_request_with_anchor_and_dismiss_handler(
     presence: OverlayPresence,
     options: PopoverOptions,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request =
         popover_request_with_anchor(id, trigger, anchor, open, presence, options, children);
@@ -408,7 +409,7 @@ pub fn popover_modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     popover_modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
@@ -420,7 +421,7 @@ pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost>(
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     dialog_prim::modal_barrier_with_dismiss_handler(
         cx,
@@ -436,28 +437,28 @@ pub fn popover_modal_barrier_with_dismiss_handler<H: UiHost>(
 ///
 /// This delegates to the Dialog barrier helpers, since Radix Popover's modal variant shares the
 /// same "hide others + block outside pointer events" outcome.
-pub fn popover_modal_layer_children<H: UiHost>(
+pub fn popover_modal_layer_elements<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         popover_modal_barrier(cx, open, true, barrier_children),
         content,
-    ]
+    ])
 }
 
 /// Convenience helper to assemble modal popover overlay children in a Radix-like order (barrier
 /// then content), while routing barrier presses through an optional dismiss handler.
-pub fn popover_modal_layer_children_with_dismiss_handler<H: UiHost>(
+pub fn popover_modal_layer_elements_with_dismiss_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         popover_modal_barrier_with_dismiss_handler(
             cx,
             open,
@@ -466,7 +467,7 @@ pub fn popover_modal_layer_children_with_dismiss_handler<H: UiHost>(
             barrier_children,
         ),
         content,
-    ]
+    ])
 }
 
 /// Builds an overlay request for a Radix-style non-modal popover.
@@ -477,7 +478,7 @@ pub fn dismissible_popover_request(
     trigger: GlobalElementId,
     open: Model<bool>,
     presence: OverlayPresence,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     popover_request(
         trigger,
@@ -768,7 +769,7 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
             let content: AnyElement = cx.container(Default::default(), |_cx| Vec::new());
             let children =
-                popover_modal_layer_children::<App>(cx, open.clone(), Vec::new(), content);
+                popover_modal_layer_elements::<App>(cx, open.clone(), [], content).into_vec();
             assert_eq!(children.len(), 2);
         });
     }
@@ -847,13 +848,14 @@ mod tests {
                     },
                     |_cx, _st| Vec::new(),
                 );
-                popover_modal_layer_children_with_dismiss_handler::<App>(
+                popover_modal_layer_elements_with_dismiss_handler::<App>(
                     cx,
                     open.clone(),
                     Some(handler.clone()),
-                    Vec::new(),
+                    [],
                     content,
                 )
+                .into_vec()
             });
 
         let req = popover_request(

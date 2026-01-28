@@ -159,8 +159,8 @@ impl ResizablePanelGroup {
         self
     }
 
-    pub fn entries(mut self, entries: Vec<ResizableEntry>) -> Self {
-        self.entries = entries;
+    pub fn entries(mut self, entries: impl IntoIterator<Item = ResizableEntry>) -> Self {
+        self.entries = entries.into_iter().collect();
         self
     }
 
@@ -228,11 +228,14 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     cx.resizable_panel_group(props, |_cx| children)
 }
 
-pub fn resizable_panel_group<H: UiHost>(
+pub fn resizable_panel_group<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<f32>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ResizableEntry>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = ResizableEntry>,
+{
     ResizablePanelGroup::new(model)
         .entries(f(cx))
         .into_element(cx)
