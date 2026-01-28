@@ -312,11 +312,11 @@ Evidence anchors:
   - per-row text paint via windowed surface,
   - caret + selection (mouse + keyboard),
   - clipboard copy/paste (best-effort),
-  - IME preedit (overlay) + cursor-area reporting (best-effort).
+  - IME preedit (inline underline) + cursor-area reporting (best-effort).
 - [~] Define row cache keys and budgets (text blobs + shaping caches + token spans).
 - [~] Define selection/caret painting layers (paint-only where possible).
-- [~] Define IME preedit rendering strategy (inline underline + caret anchoring).
-- [~] Ensure `ImeSetCursorArea` caret rect accounts for preedit cursor (best-effort).
+- [x] Implement inline IME preedit rendering (underline + optional range highlight).
+- [x] Ensure `ImeSetCursorArea` caret rect accounts for preedit cursor (best-effort).
 - [x] Cancel inline preedit deterministically on selection/navigation actions (v1 policy).
 - [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
 - [x] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
@@ -333,6 +333,7 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`caret_rect_for_selection` preedit cursor offset)
+- `ecosystem/fret-code-editor/src/lib.rs` (`paint_row`, `materialize_preedit_rich_text` underline)
 
 ### 4) Document model (buffer) and undo hooks (ADR 0193 / ADR 0136)
 

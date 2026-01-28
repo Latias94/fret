@@ -123,7 +123,7 @@ Evidence anchors:
 
 ### Input/IME integration
 
-- [x] Inline preedit rendering (best-effort overlay for v1).
+- [x] Inline preedit rendering (best-effort; underline + optional range highlight for v1).
 - [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
 - [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
 
