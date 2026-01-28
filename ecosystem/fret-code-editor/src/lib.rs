@@ -402,6 +402,7 @@ impl CodeEditor {
                     let caret_rect = caret_rect_for_selection(
                         &st.buffer,
                         st.selection,
+                        st.preedit.as_ref(),
                         row_h,
                         cell_w,
                         bounds,
@@ -448,6 +449,7 @@ impl CodeEditor {
                     let caret_rect = caret_rect_for_selection(
                         &st.buffer,
                         st.selection,
+                        st.preedit.as_ref(),
                         row_h,
                         cell_w,
                         bounds,
@@ -875,6 +877,7 @@ fn caret_for_pointer(
 fn caret_rect_for_selection(
     buf: &TextBuffer,
     sel: Selection,
+    preedit: Option<&PreeditState>,
     row_h: Px,
     cell_w: Px,
     bounds: Rect,
@@ -888,7 +891,11 @@ fn caret_rect_for_selection(
     let pt = byte_to_display_point(buf, caret);
     let offset = scroll_handle.offset();
     let y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
-    let x = Px(bounds.origin.x.0 + pt.col as f32 * cell_w.0);
+    let mut col = pt.col;
+    if let Some(preedit) = preedit {
+        col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+    }
+    let x = Px(bounds.origin.x.0 + col as f32 * cell_w.0);
     Some(Rect::new(
         fret_core::Point::new(x, y),
         Size::new(Px(1.0), row_h),
@@ -910,6 +917,7 @@ fn push_caret_rect_effect(
     if let Some(rect) = caret_rect_for_selection(
         &st.buffer,
         st.selection,
+        st.preedit.as_ref(),
         row_h,
         cell_w,
         bounds,
@@ -920,6 +928,15 @@ fn push_caret_rect_effect(
             rect,
         });
     }
+}
+
+fn preedit_cursor_offset_cols(preedit: &PreeditState) -> usize {
+    let mut end = preedit
+        .cursor
+        .map(|(_, end)| end)
+        .unwrap_or_else(|| preedit.text.len());
+    end = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, end).min(preedit.text.len());
+    preedit.text[..end].chars().count()
 }
 
 fn insert_text(st: &mut CodeEditorState, text: &str) -> Option<()> {
@@ -1376,7 +1393,11 @@ fn paint_row(
     if st.selection.is_caret() {
         let caret_pt = byte_to_display_point(&st.buffer, st.selection.caret());
         if caret_pt.row == row {
-            let x = Px(rect.origin.x.0 + caret_pt.col as f32 * cell_w.0);
+            let mut col = caret_pt.col;
+            if let Some(preedit) = &st.preedit {
+                col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+            }
+            let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
             let caret_rect = Rect::new(
                 fret_core::Point::new(x, rect.origin.y),
                 Size::new(Px(1.0), row_h),
@@ -1740,6 +1761,40 @@ mod tests {
         handle.replace_buffer(buffer);
 
         assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
+    }
+
+    #[test]
+    fn caret_rect_offsets_for_preedit_cursor() {
+        let doc = DocId::new();
+        let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
+        let sel = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        let preedit = PreeditState {
+            text: "ab".to_string(),
+            cursor: Some((0, 2)),
+        };
+
+        let scroll = fret_ui::scroll::ScrollHandle::default();
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(500.0), Px(500.0)),
+        );
+
+        let rect = caret_rect_for_selection(
+            &buffer,
+            sel,
+            Some(&preedit),
+            Px(20.0),
+            Px(10.0),
+            bounds,
+            &scroll,
+        )
+        .expect("caret rect");
+
+        assert_eq!(rect.origin.x, Px(20.0), "2 cols * 10px");
+        assert_eq!(rect.origin.y, Px(0.0));
     }
 
     #[cfg(feature = "syntax-rust")]
