@@ -63,9 +63,10 @@ Each TODO is labeled:
   - Acceptance:
     - Close a floating window via OS close button → its panels reappear in main window.
 
-- [ ] DW-P0-ux-004 “No stuck follow”: tear-off follow always stops on cancel paths.
+- [~] DW-P0-ux-004 “No stuck follow”: tear-off follow always stops on cancel paths.
   - Evidence anchors:
     - Follow state machine: `crates/fret-launch/src/runner/desktop/mod.rs` (`dock_tearoff_follow`, `stop_dock_tearoff_follow`)
+    - Cancel/drag end guard: `crates/fret-launch/src/runner/desktop/mod.rs` (`update_dock_tearoff_follow`)
     - Escape cancel: `crates/fret-ui/src/tree/dispatch.rs` and runner cancel path `crates/fret-launch/src/runner/desktop/app_handler.rs`
   - Acceptance:
     - Escape during dock drag cancels and stops follow.
