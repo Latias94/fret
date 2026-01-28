@@ -231,97 +231,6 @@ pub struct DismissiblePopoverRequest {
     pub children: Vec<AnyElement>,
 }
 
-impl DismissiblePopoverRequest {
-    pub fn new(
-        id: GlobalElementId,
-        trigger: GlobalElementId,
-        open: Model<bool>,
-        children: impl IntoIterator<Item = AnyElement>,
-    ) -> Self {
-        Self {
-            id,
-            root_name: super::popover_root_name(id),
-            trigger,
-            dismissable_branches: Vec::new(),
-            consume_outside_pointer_events: false,
-            disable_outside_pointer_events: false,
-            close_on_window_focus_lost: false,
-            close_on_window_resize: false,
-            open,
-            present: true,
-            initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
-            on_dismiss_request: None,
-            on_pointer_move: None,
-            children: children.into_iter().collect(),
-        }
-    }
-
-    pub fn root_name(mut self, root_name: impl Into<String>) -> Self {
-        self.root_name = root_name.into();
-        self
-    }
-
-    pub fn dismissable_branches(
-        mut self,
-        branches: impl IntoIterator<Item = GlobalElementId>,
-    ) -> Self {
-        self.dismissable_branches = branches.into_iter().collect();
-        self
-    }
-
-    pub fn consume_outside_pointer_events(mut self, enabled: bool) -> Self {
-        self.consume_outside_pointer_events = enabled;
-        self
-    }
-
-    pub fn disable_outside_pointer_events(mut self, enabled: bool) -> Self {
-        self.disable_outside_pointer_events = enabled;
-        self
-    }
-
-    pub fn close_on_window_focus_lost(mut self, enabled: bool) -> Self {
-        self.close_on_window_focus_lost = enabled;
-        self
-    }
-
-    pub fn close_on_window_resize(mut self, enabled: bool) -> Self {
-        self.close_on_window_resize = enabled;
-        self
-    }
-
-    pub fn present(mut self, present: bool) -> Self {
-        self.present = present;
-        self
-    }
-
-    pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
-        self.initial_focus = initial_focus;
-        self
-    }
-
-    pub fn on_open_auto_focus(mut self, on_open_auto_focus: Option<OnOpenAutoFocus>) -> Self {
-        self.on_open_auto_focus = on_open_auto_focus;
-        self
-    }
-
-    pub fn on_close_auto_focus(mut self, on_close_auto_focus: Option<OnCloseAutoFocus>) -> Self {
-        self.on_close_auto_focus = on_close_auto_focus;
-        self
-    }
-
-    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
-        self.on_dismiss_request = on_dismiss_request;
-        self
-    }
-
-    pub fn on_pointer_move(mut self, on_pointer_move: Option<OnDismissiblePointerMove>) -> Self {
-        self.on_pointer_move = on_pointer_move;
-        self
-    }
-}
-
 impl std::fmt::Debug for DismissiblePopoverRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DismissiblePopoverRequest")
@@ -370,74 +279,6 @@ pub struct ModalRequest {
     pub children: Vec<AnyElement>,
 }
 
-impl ModalRequest {
-    pub fn new(
-        id: GlobalElementId,
-        open: Model<bool>,
-        children: impl IntoIterator<Item = AnyElement>,
-    ) -> Self {
-        Self {
-            id,
-            root_name: super::modal_root_name(id),
-            trigger: None,
-            close_on_window_focus_lost: false,
-            close_on_window_resize: false,
-            open,
-            present: true,
-            initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
-            on_dismiss_request: None,
-            children: children.into_iter().collect(),
-        }
-    }
-
-    pub fn root_name(mut self, root_name: impl Into<String>) -> Self {
-        self.root_name = root_name.into();
-        self
-    }
-
-    pub fn trigger(mut self, trigger: Option<GlobalElementId>) -> Self {
-        self.trigger = trigger;
-        self
-    }
-
-    pub fn close_on_window_focus_lost(mut self, enabled: bool) -> Self {
-        self.close_on_window_focus_lost = enabled;
-        self
-    }
-
-    pub fn close_on_window_resize(mut self, enabled: bool) -> Self {
-        self.close_on_window_resize = enabled;
-        self
-    }
-
-    pub fn present(mut self, present: bool) -> Self {
-        self.present = present;
-        self
-    }
-
-    pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
-        self.initial_focus = initial_focus;
-        self
-    }
-
-    pub fn on_open_auto_focus(mut self, on_open_auto_focus: Option<OnOpenAutoFocus>) -> Self {
-        self.on_open_auto_focus = on_open_auto_focus;
-        self
-    }
-
-    pub fn on_close_auto_focus(mut self, on_close_auto_focus: Option<OnCloseAutoFocus>) -> Self {
-        self.on_close_auto_focus = on_close_auto_focus;
-        self
-    }
-
-    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
-        self.on_dismiss_request = on_dismiss_request;
-        self
-    }
-}
-
 impl std::fmt::Debug for ModalRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ModalRequest")
@@ -475,40 +316,6 @@ pub struct HoverOverlayRequest {
     pub children: Vec<AnyElement>,
 }
 
-impl HoverOverlayRequest {
-    pub fn new(
-        id: GlobalElementId,
-        trigger: GlobalElementId,
-        open: Model<bool>,
-        children: impl IntoIterator<Item = AnyElement>,
-    ) -> Self {
-        Self {
-            id,
-            root_name: super::hover_overlay_root_name(id),
-            interactive: true,
-            trigger,
-            open,
-            present: true,
-            children: children.into_iter().collect(),
-        }
-    }
-
-    pub fn root_name(mut self, root_name: impl Into<String>) -> Self {
-        self.root_name = root_name.into();
-        self
-    }
-
-    pub fn interactive(mut self, interactive: bool) -> Self {
-        self.interactive = interactive;
-        self
-    }
-
-    pub fn present(mut self, present: bool) -> Self {
-        self.present = present;
-        self
-    }
-}
-
 impl std::fmt::Debug for HoverOverlayRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HoverOverlayRequest")
@@ -538,56 +345,6 @@ pub struct TooltipRequest {
     pub on_dismiss_request: Option<OnDismissRequest>,
     pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
-}
-
-impl TooltipRequest {
-    pub fn new(
-        id: GlobalElementId,
-        open: Model<bool>,
-        children: impl IntoIterator<Item = AnyElement>,
-    ) -> Self {
-        Self {
-            id,
-            root_name: super::tooltip_root_name(id),
-            interactive: true,
-            trigger: None,
-            open,
-            present: true,
-            on_dismiss_request: None,
-            on_pointer_move: None,
-            children: children.into_iter().collect(),
-        }
-    }
-
-    pub fn root_name(mut self, root_name: impl Into<String>) -> Self {
-        self.root_name = root_name.into();
-        self
-    }
-
-    pub fn interactive(mut self, interactive: bool) -> Self {
-        self.interactive = interactive;
-        self
-    }
-
-    pub fn trigger(mut self, trigger: Option<GlobalElementId>) -> Self {
-        self.trigger = trigger;
-        self
-    }
-
-    pub fn present(mut self, present: bool) -> Self {
-        self.present = present;
-        self
-    }
-
-    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
-        self.on_dismiss_request = on_dismiss_request;
-        self
-    }
-
-    pub fn on_pointer_move(mut self, on_pointer_move: Option<OnDismissiblePointerMove>) -> Self {
-        self.on_pointer_move = on_pointer_move;
-        self
-    }
 }
 
 impl std::fmt::Debug for TooltipRequest {
