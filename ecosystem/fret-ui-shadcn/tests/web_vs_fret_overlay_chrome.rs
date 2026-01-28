@@ -567,6 +567,43 @@ fn find_best_solid_quad_within_matching_bg(
     best
 }
 
+fn find_best_solid_quad_near_point(scene: &Scene, point: Point) -> Option<Rect> {
+    let mut best_rect: Option<Rect> = None;
+    let mut best_area = f32::INFINITY;
+    let mut best_center_dist = f32::INFINITY;
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Quad {
+            rect, background, ..
+        } = *op
+        else {
+            return;
+        };
+
+        let rect = transform_rect_bounds(st.transform, rect);
+        let background = color_with_opacity(background, st.opacity);
+
+        if background.a < 0.5 {
+            return;
+        }
+        if !rect_contains_point_with_margin(rect, point, 6.0) {
+            return;
+        }
+
+        let area = rect_area(rect);
+        let center = bounds_center(rect);
+        let center_dist = (center.x.0 - point.x.0).abs() + (center.y.0 - point.y.0).abs();
+
+        if area < best_area || (area == best_area && center_dist < best_center_dist) {
+            best_area = area;
+            best_center_dist = center_dist;
+            best_rect = Some(rect);
+        }
+    });
+
+    best_rect
+}
+
 #[derive(Default)]
 struct FakeServices;
 

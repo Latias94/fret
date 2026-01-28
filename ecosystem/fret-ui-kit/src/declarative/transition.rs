@@ -2,7 +2,6 @@ use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::theme::CubicBezier;
-use std::panic::Location;
 
 use crate::headless::transition::{TransitionOutput, TransitionTimeline};
 

@@ -491,6 +491,10 @@ pub struct NavigationMenuViewportOverlayLayout {
 pub struct NavigationMenuViewportOverlayRequestArgs {
     pub window_margin: Px,
     pub placement: popper::PopperContentPlacement,
+    /// Optional override for the anchor element used to place the viewport panel.
+    ///
+    /// When `None`, placement uses the active trigger bounds.
+    pub placement_anchor_override: Option<GlobalElementId>,
     pub content_size: Size,
     pub indicator_size: Px,
 }

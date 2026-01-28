@@ -220,6 +220,7 @@ pub fn container_props(
         Some(ShadowPreset::Sm) => Some(shadow_sm(theme, shadow_radius)),
         Some(ShadowPreset::Md) => Some(shadow_md(theme, shadow_radius)),
         Some(ShadowPreset::Lg) => Some(shadow_lg(theme, shadow_radius)),
+        Some(ShadowPreset::Xl) => Some(shadow_xl(theme, shadow_radius)),
         None => None,
     };
 
@@ -300,6 +301,38 @@ fn shadow_layer_style(
         offset_y,
         blur,
         spread,
+    }
+}
+
+pub fn shadow(theme: &Theme, radius: Px) -> ShadowStyle {
+    // Tailwind default (`shadow`):
+    // `0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)`
+    let primary_color = shadow_color(theme, 0.10);
+    let primary = shadow_layer_style(
+        theme,
+        "component.shadow.default.offset_x",
+        "component.shadow.default.offset_y",
+        "component.shadow.default.spread",
+        "component.shadow.default.softness",
+        (Px(0.0), Px(1.0), Px(0.0), Px(3.0)),
+        primary_color,
+    );
+
+    let secondary_color = shadow_color(theme, 0.06);
+    let secondary = shadow_layer_style(
+        theme,
+        "component.shadow.default2.offset_x",
+        "component.shadow.default2.offset_y",
+        "component.shadow.default2.spread",
+        "component.shadow.default2.softness",
+        (Px(0.0), Px(1.0), Px(0.0), Px(2.0)),
+        secondary_color,
+    );
+
+    ShadowStyle {
+        primary,
+        secondary: Some(secondary),
+        corner_radii: Corners::all(radius),
     }
 }
 
@@ -390,6 +423,36 @@ pub fn shadow_lg(theme: &Theme, radius: Px) -> ShadowStyle {
         "component.shadow.lg2.spread",
         "component.shadow.lg2.softness",
         (Px(0.0), Px(4.0), Px(-4.0), Px(6.0)),
+        color,
+    );
+
+    ShadowStyle {
+        primary,
+        secondary: Some(secondary),
+        corner_radii: Corners::all(radius),
+    }
+}
+
+pub fn shadow_xl(theme: &Theme, radius: Px) -> ShadowStyle {
+    // Tailwind default (`shadow-xl`):
+    // `0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)`
+    let color = shadow_color(theme, 0.10);
+    let primary = shadow_layer_style(
+        theme,
+        "component.shadow.xl.offset_x",
+        "component.shadow.xl.offset_y",
+        "component.shadow.xl.spread",
+        "component.shadow.xl.softness",
+        (Px(0.0), Px(20.0), Px(-5.0), Px(25.0)),
+        color,
+    );
+    let secondary = shadow_layer_style(
+        theme,
+        "component.shadow.xl2.offset_x",
+        "component.shadow.xl2.offset_y",
+        "component.shadow.xl2.spread",
+        "component.shadow.xl2.softness",
+        (Px(0.0), Px(8.0), Px(-6.0), Px(10.0)),
         color,
     );
 
