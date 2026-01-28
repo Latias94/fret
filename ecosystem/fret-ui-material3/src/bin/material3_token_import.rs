@@ -22,6 +22,8 @@ struct Args {
     out: PathBuf,
     prefixes: Vec<String>,
     debug: bool,
+    check: bool,
+    rustfmt: bool,
 }
 
 impl Args {
@@ -64,6 +66,8 @@ impl Args {
             "md.comp.full-screen-dialog.".to_string(),
         ];
         let mut debug = false;
+        let mut check = false;
+        let mut rustfmt = true;
 
         while let Some(a) = args.next() {
             match a.as_str() {
@@ -84,6 +88,8 @@ impl Args {
                     prefixes.push(v);
                 }
                 "--debug" => debug = true,
+                "--check" => check = true,
+                "--no-rustfmt" => rustfmt = false,
                 "--help" => {
                     return Err(help());
                 }
@@ -117,6 +123,8 @@ impl Args {
             out,
             prefixes,
             debug,
+            check,
+            rustfmt,
         })
     }
 }
@@ -134,6 +142,8 @@ fn help() -> String {
         "--sass-dir <path>           Path to v30 sassvars directory (overrides material-web-dir)",
         "--out <path>                Output Rust file path (default: crate src/tokens/material_web_v30.rs)",
         "--prefix <string>           Include only md.* keys with this prefix (repeatable)",
+        "--check                     Verify output matches --out and exit non-zero if not",
+        "--no-rustfmt                Skip rustfmt formatting of the generated Rust file",
         "--debug                     Print details to stderr",
         "--help                      Show this help",
         "",
@@ -241,18 +251,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("import: sass_dir={}", args.sass_dir.display());
         eprintln!("import: out={}", args.out.display());
         eprintln!("import: prefixes={:?}", args.prefixes);
+        eprintln!("import: check={}", args.check);
+        eprintln!("import: rustfmt={}", args.rustfmt);
     }
 
-    let parsed = parse_sass_dir(&args.sass_dir)?;
-    let selected = select_tokens(&parsed, &args.prefixes);
+    let out_rs = generate_output(&args)?;
 
-    let resolved = resolve_all(selected, &parsed)?;
-    let out_rs = emit_rust(&resolved, &args.sass_dir);
+    if args.check {
+        let expected = fs::read_to_string(&args.out).map_err(|e| {
+            format!(
+                "check failed: unable to read output file {}\n{e}",
+                args.out.display()
+            )
+        })?;
+
+        if expected == out_rs {
+            if args.debug {
+                eprintln!("check: OK {}", args.out.display());
+            } else {
+                println!("OK {}", args.out.display());
+            }
+            return Ok(());
+        }
+
+        eprintln!(
+            "check failed: generated output differs from {}",
+            args.out.display()
+        );
+        eprintln!("hint: run without --check to update the file");
+        std::process::exit(1);
+    }
 
     if let Some(parent) = args.out.parent() {
         fs::create_dir_all(parent)?;
     }
     fs::write(&args.out, out_rs)?;
+    if args.rustfmt {
+        rustfmt_file(&args.out)?;
+    }
 
     if args.debug {
         eprintln!("import: wrote {}", args.out.display());
@@ -261,6 +297,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn generate_output(args: &Args) -> Result<String, Box<dyn std::error::Error>> {
+    let parsed = parse_sass_dir(&args.sass_dir)?;
+    let selected = select_tokens(&parsed, &args.prefixes);
+
+    let resolved = resolve_all(selected, &parsed)?;
+    let out_rs = emit_rust(&resolved, &args.sass_dir);
+
+    if !args.rustfmt {
+        return Ok(out_rs);
+    }
+
+    let tmp = args
+        .out
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .join("material_web_v30.__tmp_token_import.rs");
+
+    fs::write(&tmp, &out_rs)?;
+    let fmt_result = rustfmt_file(&tmp);
+    let formatted = fs::read_to_string(&tmp).unwrap_or(out_rs);
+    let _ = fs::remove_file(&tmp);
+    fmt_result?;
+
+    Ok(formatted)
+}
+
+fn rustfmt_file(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    let output = Command::new("rustfmt")
+        .args(["--edition", "2021"])
+        .arg(path)
+        .output()?;
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(format!("rustfmt failed for {}:\n{stderr}", path.display()).into())
 }
 
 fn parse_sass_dir(dir: &Path) -> Result<ParseOut, Box<dyn std::error::Error>> {

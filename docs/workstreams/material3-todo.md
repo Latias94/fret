@@ -198,6 +198,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - [x] Auto-discover `repo-ref/material-web` in git worktrees (fallback to `MATERIAL_WEB_DIR`).
     - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (`default_material_web_dir`),
       `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (`resolve_material_web_dir`).
+  - [x] Add a `--check` mode for `material3_token_import` to make the output reproducible (CI-friendly).
+    - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (`--check`, `generate_output`, `rustfmt_file`).
   - [x] Generate sys motion + state (+ focus-indicator) injectors from Material Web sassvars.
     - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`,
       `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`,
