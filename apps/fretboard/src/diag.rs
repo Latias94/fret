@@ -1009,6 +1009,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
             let is_ui_gallery_virt_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
+            let is_ui_gallery_tree_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-tree-retained";
             let is_ui_gallery_vlist_window_boundary_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
@@ -1028,6 +1030,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_tree_retained_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -1063,12 +1075,43 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if warmup_frames == 0 {
                     warmup_frames = 5;
                 }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_RETAINED")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VLIST_RETAINED".to_string(),
+                        "1".to_string(),
+                    ));
+                }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(64));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+            }
+
+            if is_ui_gallery_tree_retained_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_TREE_RETAINED")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_TREE_RETAINED".to_string(), "1".to_string()));
+                }
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_wheel_scroll_test_id =
+                    check_wheel_scroll_test_id.or(Some("ui-gallery-tree-row-0".to_string()));
+                check_stale_paint_test_id =
+                    check_stale_paint_test_id.or(Some("ui-gallery-tree-row-0".to_string()));
             }
 
             if is_ui_gallery_vlist_window_boundary_suite {
