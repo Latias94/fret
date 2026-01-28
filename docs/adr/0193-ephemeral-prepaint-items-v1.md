@@ -129,6 +129,9 @@ This enables tests and scripts to assert that a paint-only update stayed paint-o
 
 - `Widget::prepaint(PrepaintCx)` exists and is called for view-cache roots during the prepaint pass.
 - Bundles export `debug.prepaint_actions` as a bounded list of prepaint requests.
+- `PrepaintCx` can store and retrieve per-cache-root ephemeral outputs via a type-erased output store keyed by the cache
+  root's prepaint key. This provides a minimal substrate for window/chrome state that must update without structural
+  rerenders.
 - VirtualList window telemetry already exists in bundles, but window derivation is still render-driven (ADR 0190 gap).
 
 ## Rollout Plan
@@ -147,4 +150,3 @@ This enables tests and scripts to assert that a paint-only update stayed paint-o
   inexplicable; defer to ADR 0192 retained host boundaries instead.
 - **Global per-window ephemeral registry only**: too coarse; cache roots need local reuse keys and attribution for
   explainability.
-

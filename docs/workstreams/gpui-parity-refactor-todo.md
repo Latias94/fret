@@ -578,6 +578,11 @@ topics (if/when we implement them):
       - Anchors: `crates/fret-ui/src/widget.rs` (`PrepaintCx`, `Widget::prepaint`),
         `crates/fret-ui/src/tree/prepaint.rs` (prepaint traversal),
         `crates/fret-ui/src/tree/tests/prepaint.rs` (`prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache`).
+    - Prepaint can stash per-cache-root ephemeral outputs keyed by the cache root's prepaint key.
+      - This is a minimal “ephemeral prepaint items” substrate: it lets prepaint compute paint-only state without
+        mutating the declarative structure, and makes reuse safe by clearing outputs when the cache root key changes.
+      - Anchors: `crates/fret-ui/src/tree/mod.rs` (`PrepaintOutputs`), `crates/fret-ui/src/widget.rs` (`PrepaintCx::set_output`, `PrepaintCx::output`),
+        `crates/fret-ui/src/tree/tests/prepaint.rs` (`prepaint_output_store_is_keyed_by_cache_root_prepaint_key`).
     - Paint-cache replay now keeps descendant bounds in sync when a cached subtree translates (required for correct hit-testing + semantics under caching).
       - Anchors: `crates/fret-ui/src/tree/paint.rs` (paint-cache replay translates descendant bounds),
         `crates/fret-ui/src/tree/tests/paint_cache.rs` (`paint_cache_replay_translates_descendant_bounds_for_descendants`).
