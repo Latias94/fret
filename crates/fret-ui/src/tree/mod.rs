@@ -1972,11 +1972,6 @@ impl<H: UiHost> UiTree<H> {
         None
     }
 
-    fn notify_target_for_node(&self, node: NodeId) -> NodeId {
-        self.nearest_view_cache_root(node)
-            .unwrap_or_else(|| self.node_root(node).unwrap_or(node))
-    }
-
     fn collapse_observation_index_to_view_cache_roots(
         &self,
         mut index: ObservationIndex,
@@ -2471,23 +2466,6 @@ impl<H: UiHost> UiTree<H> {
                 Invalidation::HitTest,
                 UiDebugInvalidationSource::Other,
             );
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn debug_sever_child_edge_without_invalidation(
-        &mut self,
-        parent: NodeId,
-        child: NodeId,
-    ) {
-        let Some(parent_node) = self.nodes.get_mut(parent) else {
-            return;
-        };
-        parent_node.children.retain(|&c| c != child);
-        if let Some(child_node) = self.nodes.get_mut(child) {
-            if child_node.parent == Some(parent) {
-                child_node.parent = None;
-            }
         }
     }
 
