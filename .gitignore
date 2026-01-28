@@ -19,6 +19,7 @@ crates/fret-fonts/assets/_sources/
 .idea/
 tools/_clippy*.txt
 /apps/fret-demo-web/dist/
+/apps/fret-ui-gallery-web/dist/
 tmp*
 *.rej
 /.bench/
