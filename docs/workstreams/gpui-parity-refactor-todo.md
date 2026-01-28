@@ -646,7 +646,9 @@ topics (if/when we implement them):
       - Evidence: `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape`), `crates/fret-ui/src/declarative/frame.rs` (`with_element_record_for_node`), `crates/fret-ui/src/tree/layout.rs` (borrowed vlist fast path).
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
-    - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that still force a cache-root rerender in cache+shell mode.
+    - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
+      - `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json --warmup-frames 5 --check-vlist-scroll-window-dirty-max 4 ...`
+      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to `--warmup-frames 5`, `--check-view-cache-reuse-min 1`, and `--check-vlist-scroll-window-dirty-max 4`.
 
 - [~] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
