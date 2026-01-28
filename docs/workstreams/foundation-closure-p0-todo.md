@@ -50,12 +50,10 @@ Tracking format:
 
 ## M4 — Multi-window tear-off (capability-driven)
 
-- [ ] FC-P0-mw-050 Decide where the “hovered window / set_outer_position / z-level reliability” capability quality signals live.
-  - Recommendation: amend an existing accepted contract instead of creating a new ADR:
-    - `docs/adr/0054-platform-capabilities-and-portability-matrix.md` (preferred), or
-    - `docs/adr/0084-multi-window-degradation-policy.md`
+- [x] FC-P0-mw-050 Decide where the “hovered window / set_outer_position / z-level reliability” capability quality signals live.
+  - Decision: define them as capability keys in `docs/adr/0054-platform-capabilities-and-portability-matrix.md`.
   - Workstream context: `docs/workstreams/docking-multiwindow-imgui-parity.md`
-  - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
+  - Follow-up: implement and populate them (tracked by `docs/workstreams/docking-multiwindow-imgui-parity-todo.md` `DW-P1-caps-001`).
 
 - [ ] FC-P0-mw-060 Add a minimal scripted regression plan for tear-off parity (even if it is “manual-run only” at first).
   - Target scenarios:
