@@ -146,7 +146,7 @@ Evidence anchors:
 
 - [~] Choose v1 buffer structure (rope / piece table / hybrid) (seed `TextBuffer` exists; internal structure decision pending).
 - [x] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
-- [~] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
+- [x] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
 - [ ] Lock document identity (URI-like) for multi-document workflows.
 
 Evidence anchors:

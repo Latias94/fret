@@ -333,7 +333,7 @@ Evidence anchors:
 - [~] Select v1 text buffer structure:
   - rope, piece table, or hybrid (document decision).
 - [x] Define edit operation vocabulary (insert/delete/replace) in UTF-8 byte indices.
-- [~] Define transaction boundaries (begin/update/commit/cancel) compatible with `fret-undo`.
+- [x] Define transaction boundaries (begin/update/commit/cancel) compatible with `fret-undo`.
 - [ ] Define document identity (URI-like) and multi-document story for workspace shells.
 
 Evidence anchors:
