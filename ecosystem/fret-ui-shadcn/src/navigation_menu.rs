@@ -122,7 +122,7 @@ fn nav_menu_viewport_border(theme: &Theme) -> Color {
 fn nav_menu_viewport_side_offset(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.viewport.side_offset")
-        .unwrap_or_else(|| MetricRef::space(Space::N1p5).resolve(theme))
+        .unwrap_or(Px(6.0))
 }
 
 fn nav_menu_viewport_window_margin(theme: &Theme) -> Px {
@@ -1098,7 +1098,7 @@ impl NavigationMenu {
             if overlay_presence.present {
                 let side_offset = nav_menu_viewport_side_offset(&theme);
                 let window_margin = nav_menu_viewport_window_margin(&theme);
-                let indicator_thickness = if indicator_enabled { side_offset } else { Px(0.0) };
+                let indicator_size = if indicator_enabled { side_offset } else { Px(0.0) };
                 let indicator_diamond_size = nav_menu_indicator_diamond_size(&theme);
                 let indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(2.0));
                 let indicator_diamond_corners = {
@@ -1151,7 +1151,7 @@ impl NavigationMenu {
                 let mut panel_props = if viewport_enabled {
                     ContainerProps {
                         layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Clip,
+                            overflow: fret_ui::element::Overflow::Visible,
                             ..Default::default()
                         },
                         padding: Edges::all(Px(0.0)),
@@ -1165,7 +1165,7 @@ impl NavigationMenu {
                 } else {
                     ContainerProps {
                         layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Clip,
+                            overflow: fret_ui::element::Overflow::Visible,
                             ..Default::default()
                         },
                         padding: Edges::all(Px(0.0)),
@@ -1177,10 +1177,13 @@ impl NavigationMenu {
                         ..Default::default()
                     }
                 };
-                if viewport_enabled && measured.is_some() {
+                if viewport_enabled {
                     // Match shadcn/ui + Radix: the viewport panel is sized by the measured content
                     // dimensions (CSS vars). Tailwind preflight uses `box-sizing: border-box`, so
                     // the viewport border is included in those dimensions.
+                    //
+                    // We apply this even when the first measurement hasn't been observed yet so
+                    // popper placement and panel layout remain consistent across frames.
                     panel_props.layout.size.width = Length::Px(content_size.width);
                     panel_props.layout.size.height = Length::Px(content_size.height);
                 }
@@ -1197,7 +1200,7 @@ impl NavigationMenu {
                     placement,
                     placement_anchor_override: viewport_enabled.then_some(root_id),
                     content_size,
-                    indicator_thickness,
+                    indicator_size,
                 };
 
                 let opacity = opacity;
@@ -1268,13 +1271,24 @@ impl NavigationMenu {
                                 let content_id_for_registry = content_id;
                                 let viewport_enabled_for_registry = viewport_enabled;
                                 let children = vec![cx.container(panel_props, move |cx| {
+                                    let mut clip_layout = LayoutStyle::default();
+                                    clip_layout.overflow = fret_ui::element::Overflow::Clip;
+
+                                    let clip_props = ContainerProps {
+                                        layout: clip_layout,
+                                        corner_radii: Corners::all(viewport_radius),
+                                        ..Default::default()
+                                    };
+
+                                    vec![cx.container(clip_props, move |cx| {
                                     let Some((t, forward, from_children)) = content_switch.clone()
                                     else {
                                         let children = viewport_children.clone();
                                         let body = cx.keyed("viewport-body", |cx| {
+                                            let layout = LayoutStyle::default();
                                             cx.container(
                                                 ContainerProps {
-                                                    layout: LayoutStyle::default(),
+                                                    layout,
                                                     padding: content_padding,
                                                     ..Default::default()
                                                 },
@@ -1412,6 +1426,7 @@ impl NavigationMenu {
                                         );
                                     }
                                     vec![stack]
+                                })]
                                 })];
 
                                 (
@@ -1453,7 +1468,7 @@ impl NavigationMenu {
                         }
 
                         let mut children = Vec::new();
-                        if indicator_enabled && indicator_thickness.0 > 0.0 {
+                        if indicator_enabled && indicator_size.0 > 0.0 {
                             let indicator = popper_content::popper_wrapper_panel_at(
                                 cx,
                                 layout.indicator_rect,

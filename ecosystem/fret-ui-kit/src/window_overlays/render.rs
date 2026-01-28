@@ -750,11 +750,12 @@ pub fn render<H: UiHost>(
             let focus_cleared_by_modal_scope = modal_barrier_active && focus_now.is_none();
             let focus_on_trigger = fret_ui::elements::node_for_element(app, window, trigger)
                 .is_some_and(|node| focus_now == Some(node));
-            let should_run_close_auto_focus =
-                focus_in_layer || focus_on_trigger || (!focus_cleared_by_modal_scope && focus_now.is_none());
+            let should_run_close_auto_focus = focus_in_layer
+                || focus_on_trigger
+                || (!focus_cleared_by_modal_scope && focus_now.is_none());
 
             let mut close_auto_focus_prevented = false;
-            if should_run_close_auto_focus {
+            if should_run_close_auto_focus && !focus_cleared_by_modal_scope {
                 if let Some(on_close_auto_focus) = on_close_auto_focus.as_ref() {
                     let mut host = OverlayFocusActionHostAdapter { app, ui, window };
                     let mut req_cx = AutoFocusRequestCx::new();
