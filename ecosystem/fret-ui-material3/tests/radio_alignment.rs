@@ -4002,6 +4002,237 @@ fn select_dismisses_and_restores_focus_across_schemes() {
     }
 }
 
+#[test]
+fn select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+    let keyboard_open_keys = [
+        (KeyCode::ArrowDown, "arrow_down"),
+        (KeyCode::ArrowUp, "arrow_up"),
+    ];
+
+    for (mode, variant, label) in cases {
+        for (open_key, key_label) in keyboard_open_keys {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(560.0), Px(420.0)),
+            );
+
+            let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+            let underlay_toggled = app.models_mut().insert(false);
+
+            let items: Arc<[SelectItem]> = vec![
+                SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
+                SelectItem::new("beta", "Beta").test_id("select-item-beta"),
+                SelectItem::new("charlie", "Charlie (disabled)")
+                    .disabled(true)
+                    .test_id("select-item-charlie-disabled"),
+            ]
+            .into();
+
+            let selected_model = selected.clone();
+            let underlay_model = underlay_toggled.clone();
+            let render = move |ui: &mut UiTree<TestHost>,
+                               app: &mut TestHost,
+                               services: &mut dyn UiServices| {
+                let selected_model = selected_model.clone();
+                let items = items.clone();
+                let underlay_model = underlay_model.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let select = Select::new(selected_model)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx);
+
+                    let underlay = cx.pressable(
+                        fret_ui::element::PressableProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = fret_ui::element::Length::Px(Px(160.0));
+                                l.size.height = fret_ui::element::Length::Px(Px(40.0));
+                                l
+                            },
+                            a11y: fret_ui::element::PressableA11y {
+                                test_id: Some(Arc::<str>::from("select-underlay-toggle")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_toggle_bool(&underlay_model);
+                            Vec::new()
+                        },
+                    );
+
+                    let mut props = fret_ui::element::FlexProps::default();
+                    props.direction = fret_core::Axis::Vertical;
+                    props.gap = Px(24.0);
+                    vec![cx.flex(props, move |_cx| vec![select, underlay])]
+                })
+            };
+
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+
+            let trigger_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected select-trigger in semantics snapshot ({label}, {key_label})")
+                });
+            let underlay_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-underlay-toggle"))
+                            .then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "expected select-underlay-toggle in semantics snapshot ({label}, {key_label})"
+                    )
+                });
+
+            ui.set_focus(Some(trigger_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(open_key));
+            ui.dispatch_event(&mut app, &mut services, &key_up(open_key));
+
+            let mut opened = false;
+            for _ in 0..24 {
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                if stack
+                    .stack
+                    .iter()
+                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+                {
+                    opened = true;
+                    break;
+                }
+            }
+            assert!(
+                opened,
+                "expected select overlay to open on {key_label} ({label})"
+            );
+
+            let selected_option_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected select-item-beta in semantics snapshot ({label}, {key_label})")
+                });
+            assert_eq!(
+                ui.focus(),
+                Some(selected_option_node),
+                "expected Select to move focus to the selected option when opening via keyboard ({label}, {key_label})"
+            );
+
+            let underlay_bounds = ui
+                .debug_node_visual_bounds(underlay_node)
+                .expect("expected underlay bounds");
+            let click_at = Point::new(
+                Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5),
+                Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.5),
+            );
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_down(PointerId(1), click_at),
+            );
+            ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+            let mut closed = false;
+            for _ in 0..24 {
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    false,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                if !stack
+                    .stack
+                    .iter()
+                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.visible)
+                {
+                    closed = true;
+                    break;
+                }
+            }
+
+            assert!(
+                closed,
+                "expected select overlay to close on outside press after opening via {key_label} ({label})"
+            );
+            assert_eq!(
+                app.models().get_copied(&underlay_toggled),
+                Some(false),
+                "expected select to prevent underlay activation on outside press ({label}, {key_label})"
+            );
+            assert_eq!(
+                ui.focus(),
+                Some(trigger_node),
+                "expected select to restore focus to trigger on outside press ({label}, {key_label})"
+            );
+        }
+    }
+}
+
 fn scale_segment(scale_factor: f32) -> &'static str {
     if (scale_factor - 1.0).abs() < 1e-6 {
         "scale1_0"
