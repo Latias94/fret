@@ -316,6 +316,7 @@ Evidence anchors:
 - [~] Define row cache keys and budgets (text blobs + shaping caches + token spans).
 - [~] Define selection/caret painting layers (paint-only where possible).
 - [~] Define IME preedit rendering strategy (inline underline + caret anchoring).
+- [~] Ensure `ImeSetCursorArea` caret rect accounts for preedit cursor (best-effort).
 - [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
 - [x] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
 
@@ -330,6 +331,7 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
+- `ecosystem/fret-code-editor/src/lib.rs` (`caret_rect_for_selection` preedit cursor offset)
 
 ### 4) Document model (buffer) and undo hooks (ADR 0193 / ADR 0136)
 
