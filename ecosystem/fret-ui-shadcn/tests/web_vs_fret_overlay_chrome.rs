@@ -6922,6 +6922,313 @@ fn build_shadcn_menubar_demo(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
 }
 
+fn web_find_highlighted_menu_item_chrome(theme: &WebGoldenTheme) -> WebHighlightedNodeChrome {
+    fn node_area(node: &WebNode) -> f32 {
+        node.rect.w * node.rect.h
+    }
+
+    fn collect<'a>(node: &'a WebNode, out: &mut Vec<&'a WebNode>) {
+        let is_menuitem = node
+            .attrs
+            .get("role")
+            .is_some_and(|v| v.as_str() == "menuitem");
+        let is_item_slot = node
+            .attrs
+            .get("data-slot")
+            .is_some_and(|v| v.as_str().ends_with("-item"));
+        if is_menuitem && is_item_slot {
+            if let Some(bg) = node
+                .computed_style
+                .get("backgroundColor")
+                .map(String::as_str)
+                .and_then(parse_css_color)
+                && bg.a > 0.01
+            {
+                out.push(node);
+            }
+        }
+        for child in &node.children {
+            collect(child, out);
+        }
+    }
+
+    let mut candidates: Vec<&WebNode> = Vec::new();
+    for portal in &theme.portals {
+        collect(portal, &mut candidates);
+    }
+
+    let highlighted = candidates
+        .into_iter()
+        .max_by(|a, b| node_area(a).total_cmp(&node_area(b)))
+        .expect("web highlighted menuitem (data-slot ends_with '-item')");
+
+    let bg = highlighted
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web highlighted menuitem backgroundColor");
+    let fg = highlighted
+        .computed_style
+        .get("color")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web highlighted menuitem color");
+
+    WebHighlightedNodeChrome { bg, fg }
+}
+
+fn fret_find_active_menu_item<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+) -> Option<&'a fret_core::SemanticsNode> {
+    if let Some(focused) = snap
+        .nodes
+        .iter()
+        .find(|n| n.flags.focused && n.role == SemanticsRole::MenuItem)
+    {
+        return Some(focused);
+    }
+
+    for owner in snap.nodes.iter().filter(|n| n.active_descendant.is_some()) {
+        let active_id = owner.active_descendant?;
+        let target = snap.nodes.iter().find(|n| n.id == active_id)?;
+        if target.role == SemanticsRole::MenuItem {
+            return Some(target);
+        }
+    }
+
+    None
+}
+
+fn render_shadcn_menubar_demo_settled(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    frame_id_base: u64,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            FrameId(frame_id_base + tick),
+            tick + 1 == settle_frames,
+            |cx| vec![build_shadcn_menubar_demo(cx)],
+        );
+    }
+    paint_frame(ui, app, services, bounds)
+}
+
+fn assert_menubar_focused_item_chrome_matches_web(
+    web_name: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_shadcn_menubar_demo(cx)],
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let file_trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("menubar File trigger semantics node");
+
+    ui.set_focus(Some(file_trigger.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(200),
+        true,
+        |cx| vec![build_shadcn_menubar_demo(cx)],
+    );
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+
+    let (snap, scene) =
+        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 201);
+
+    let new_tab = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Tab"))
+        .unwrap_or_else(|| {
+            let focused_labels: Vec<&str> = snap
+                .nodes
+                .iter()
+                .filter(|n| n.flags.focused)
+                .filter_map(|n| n.label.as_deref())
+                .collect();
+            let menu_item_labels: Vec<&str> = snap
+                .nodes
+                .iter()
+                .filter(|n| n.role == SemanticsRole::MenuItem)
+                .filter_map(|n| n.label.as_deref())
+                .collect();
+            panic!(
+                "{web_name} {web_theme_name}: expected menubar menu item 'New Tab'\n  focused_labels={focused_labels:?}\n  menu_item_labels={menu_item_labels:?}",
+            )
+        });
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, new_tab.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("{web_name} {web_theme_name}: focused menu item background quad")
+        });
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} focused menu item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        new_tab.bounds,
+        leftish_text_probe_point(new_tab.bounds),
+    )
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused menu item text color"));
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} focused menu item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+fn assert_menubar_highlighted_item_chrome_matches_web(
+    web_name: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_highlighted_menu_item_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_shadcn_menubar_demo(cx)],
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let file_trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("menubar File trigger semantics node");
+
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(file_trigger.bounds),
+    );
+
+    let (snap, _) =
+        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 2);
+
+    let new_tab = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Tab"))
+        .expect("menubar New Tab item semantics node");
+
+    hover_open_at(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(new_tab.bounds),
+    );
+
+    let (snap, scene) =
+        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 200);
+
+    let new_tab = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Tab"))
+        .expect("menubar New Tab item semantics node after hover");
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, new_tab.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("{web_name} {web_theme_name}: highlighted menu item background quad")
+        });
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted menu item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        new_tab.bounds,
+        leftish_text_probe_point(new_tab.bounds),
+    )
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: highlighted menu item text color"));
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted menu item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
 #[test]
 fn web_vs_fret_menubar_demo_view_shadow_matches_web() {
     assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
@@ -7491,6 +7798,42 @@ fn web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_surface_colors_match_web_d
             ])])
             .into_element(cx)
         },
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_focused_item_chrome_matches_web() {
+    assert_menubar_focused_item_chrome_matches_web(
+        "menubar-demo.focus-first",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_focused_item_chrome_matches_web_dark() {
+    assert_menubar_focused_item_chrome_matches_web(
+        "menubar-demo.focus-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web() {
+    assert_menubar_highlighted_item_chrome_matches_web(
+        "menubar-demo.highlight-first",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark() {
+    assert_menubar_highlighted_item_chrome_matches_web(
+        "menubar-demo.highlight-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
 }
 

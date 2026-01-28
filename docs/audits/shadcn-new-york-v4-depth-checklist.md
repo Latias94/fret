@@ -24,8 +24,8 @@ scroll buttons + max-height clamping), not as incidental layout.
 - Menu content insets + overall menu height: **Gated**
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
-- Hovered/highlighted item chrome: **Gated** (`menubar-demo.highlight-first.open.json`)
-- Focus ring + roving focus visuals: **Partially gated** (focused item bg/fg via `menubar-demo.focus-first.open.json`)
+- Hovered/highlighted item chrome (bg/fg): **Gated** (`menubar-demo.highlight-first.open.json`)
+- Keyboard roving focus visuals (focused item bg/fg): **Gated** (`menubar-demo.focus-first.open.json`)
 
 Evidence anchors:
 
@@ -37,7 +37,7 @@ Evidence anchors:
   `assert_menubar_demo_constrained_scroll_state_matches`,
   `assert_menubar_demo_submenu_*`)
   and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-  (`web_vs_fret_menubar_demo_highlighted_item_background_matches_web`,
+  (`web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_menubar_demo_focused_item_chrome_matches_web`)
 
 ### DropdownMenu (`dropdown-menu-demo*`, `context-menu-demo*`)
@@ -48,25 +48,23 @@ Evidence anchors:
 - Menu content insets + overall menu height: **Gated**
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
-- Hovered/highlighted item chrome: **Gated** (`*.highlight-first.open.json`)
-- Focus ring + roving focus visuals: **Partially gated** (focused item bg/fg via `*.focus-first.open.json`)
+- Hovered/highlighted item chrome: **Not gated** (missing shadcn-web state goldens)
+- Keyboard roving focus visuals: **Not gated** (missing shadcn-web state goldens)
 
 Evidence anchors:
 
 - Goldens:
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo*.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo*.open.json`
-- Goldens (state):
+- Goldens (state): **missing** (recommended next additions)
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.focus-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.focus-first.open.json`
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
   (`assert_dropdown_menu_demo_constrained_scroll_state_matches`,
   `assert_context_menu_demo_constrained_scroll_state_matches`)
-  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-  (`web_vs_fret_dropdown_menu_demo_highlighted_item_background_matches_web`,
-  `web_vs_fret_context_menu_demo_highlighted_item_background_matches_web`,
-  `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`)
+  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (panel chrome + shadows + surface colors only; no state-item chrome yet)
 
 ### Select / Combobox listboxes
 
