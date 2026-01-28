@@ -69,6 +69,14 @@ pub struct TextBufferTransaction {
 }
 
 impl TextBufferTransaction {
+    /// Convert a live transaction snapshot into a committed, invertible transaction.
+    ///
+    /// This is equivalent to `snapshot()`, but uses the "commit" vocabulary used by
+    /// undo/history layers.
+    pub fn snapshot_tx(&self) -> TextBufferTx {
+        self.snapshot()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.edits.is_empty()
     }
@@ -83,6 +91,14 @@ impl TextBufferTransaction {
             edits: self.edits.clone(),
             inverse_edits: self.inverse_edits.clone(),
         }
+    }
+
+    /// Commit the transaction, consuming the builder and producing an invertible transaction.
+    ///
+    /// This is equivalent to `into_tx()`, but uses the "commit" vocabulary used by
+    /// undo/history layers.
+    pub fn commit(self) -> TextBufferTx {
+        self.into_tx()
     }
 
     pub fn into_tx(self) -> TextBufferTx {
@@ -263,6 +279,30 @@ impl TextBuffer {
             self.apply(edit.clone())?;
         }
         Ok(())
+    }
+
+    /// Begin a new text transaction (buffer-level begin/update/commit/cancel vocabulary).
+    pub fn transaction_begin(&self) -> TextBufferTransaction {
+        TextBufferTransaction::default()
+    }
+
+    /// Update an in-flight transaction by applying an edit and recording its inverse.
+    pub fn transaction_update(
+        &mut self,
+        tx: &mut TextBufferTransaction,
+        edit: Edit,
+    ) -> Result<BufferDelta, EditError> {
+        self.apply_in_transaction(tx, edit)
+    }
+
+    /// Commit a transaction builder into an invertible transaction object.
+    pub fn transaction_commit(&self, tx: TextBufferTransaction) -> TextBufferTx {
+        tx.into_tx()
+    }
+
+    /// Cancel an in-flight transaction by rolling back the recorded inverse edits.
+    pub fn transaction_cancel(&mut self, tx: &TextBufferTransaction) -> Result<(), EditError> {
+        self.rollback_transaction(tx)
     }
 
     pub fn apply_with_inverse(&mut self, edit: Edit) -> Result<AppliedEdit, EditError> {
@@ -505,5 +545,40 @@ mod tests {
 
         buf.rollback_transaction(&txn).unwrap();
         assert_eq!(buf.text(), "hello");
+    }
+
+    #[test]
+    fn transaction_hooks_vocabulary_roundtrip() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "hello".to_string()).unwrap();
+
+        let mut txn = buf.transaction_begin();
+        let _ = buf
+            .transaction_update(
+                &mut txn,
+                Edit::Insert {
+                    at: 5,
+                    text: " world".to_string(),
+                },
+            )
+            .unwrap();
+        let _ = buf
+            .transaction_update(
+                &mut txn,
+                Edit::Replace {
+                    range: 0..5,
+                    text: "hi".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(buf.text(), "hi world");
+        let committed = buf.transaction_commit(txn.clone());
+
+        buf.transaction_cancel(&txn).unwrap();
+        assert_eq!(buf.text(), "hello");
+
+        buf.apply_tx(&committed).unwrap();
+        assert_eq!(buf.text(), "hi world");
     }
 }
