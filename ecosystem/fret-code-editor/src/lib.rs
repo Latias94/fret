@@ -156,6 +156,30 @@ impl CodeEditorHandle {
         }
     }
 
+    pub fn replace_buffer(&self, buffer: TextBuffer) {
+        let mut st = self.state.borrow_mut();
+        st.buffer = buffer;
+        st.selection = Selection::default();
+        st.preedit = None;
+        st.undo = UndoHistory::with_limit(512);
+        st.undo_group = None;
+        st.dragging = false;
+        st.drag_pointer = None;
+        st.last_bounds = None;
+        st.row_text_cache_rev = st.buffer.revision();
+        st.row_text_cache_tick = 0;
+        st.row_text_cache.clear();
+        st.row_text_cache_queue.clear();
+    }
+
+    pub fn set_text(&self, text: impl Into<String>) {
+        let doc = DocId::new();
+        let buffer = TextBuffer::new(doc, text.into()).unwrap_or_else(|_| {
+            TextBuffer::new(doc, String::new()).expect("empty buffer must be valid")
+        });
+        self.replace_buffer(buffer);
+    }
+
     pub fn with_buffer<R>(&self, f: impl FnOnce(&TextBuffer) -> R) -> R {
         let st = self.state.borrow();
         f(&st.buffer)
@@ -1353,4 +1377,40 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
     }
 
     text
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn replace_buffer_resets_state() {
+        let handle = CodeEditorHandle::new("hello");
+
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 1,
+                focus: 3,
+            };
+            st.dragging = true;
+            st.drag_pointer = Some(fret_core::PointerId(1));
+            st.row_text_cache.insert(0, ("hello".into(), 1));
+            st.row_text_cache_queue.push_back((0, 1));
+        }
+
+        let doc = DocId::new();
+        let buffer = TextBuffer::new(doc, "world".to_string()).unwrap();
+        handle.replace_buffer(buffer);
+
+        let st = handle.state.borrow();
+        assert_eq!(st.buffer.text(), "world");
+        assert_eq!(st.selection, Selection::default());
+        assert_eq!(st.preedit, None);
+        assert!(st.undo_group.is_none());
+        assert!(!st.dragging);
+        assert_eq!(st.drag_pointer, None);
+        assert_eq!(st.row_text_cache.len(), 0);
+        assert_eq!(st.row_text_cache_queue.len(), 0);
+    }
 }
