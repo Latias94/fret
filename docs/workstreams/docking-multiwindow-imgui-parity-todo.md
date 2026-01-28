@@ -93,7 +93,7 @@ Each TODO is labeled:
 
 ## P1 — Cross-platform robustness and capability modeling
 
-- [~] DW-P1-caps-001 Add capability quality signals for window hover + positioning.
+- [x] DW-P1-caps-001 Add capability quality signals for window hover + positioning.
   - Goal: avoid implicit assumptions that all native backends have reliable:
     - window-under-cursor selection,
     - `set_outer_position`,
@@ -108,9 +108,7 @@ Each TODO is labeled:
     - Re-exports: `crates/fret-runtime/src/lib.rs`
     - Backend values + clamp: `crates/fret-launch/src/runner/desktop/mod.rs`, `crates/fret-launch/src/runner/web.rs`
     - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/mod.rs`
-  - Remaining work:
-    - Thread the signals into docking/UI policy gating (e.g. `allow_tear_off` and “follow-mode” UX promises),
-      so behavior degrades by capability instead of by platform forks inside widgets.
+    - Docking UI gating (tear-off affordance): `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
 
 - [ ] DW-P1-win-002 Windows placement correctness under DPI and decorations.
   - Goal: initial window placement for tear-off aligns with cursor grab and respects non-client offsets.
