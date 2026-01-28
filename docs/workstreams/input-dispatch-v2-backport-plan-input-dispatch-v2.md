@@ -1,6 +1,6 @@
-# Input Dispatch v2 — Backport Plan (input-dispatch-v2 worktree)
+# Input Dispatch v2 — Backport Plan (archived worktree snapshot)
 
-Status: Draft (worktree-local; intended to reduce churn when backporting to `main`)
+Status: Archived (the workstream has landed on `main`; keep as reference for future backports)
 
 This document tracks how to backport the Input Dispatch v2 and overlay arbitration work from
 `input-dispatch-v2` worktrees into `main` without losing bisectability or creating large conflict

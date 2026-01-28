@@ -1,11 +1,10 @@
-# Overlay & Input Arbitration v2 (Pointer Occlusion) — TODO Tracker (input-dispatch-v2 worktree)
+# Overlay & Input Arbitration v2 (Pointer Occlusion) — TODO Tracker (archived worktree snapshot)
 
-Status: Complete (branch/worktree-local tracker; reconcile into `docs/workstreams/overlay-input-arbitration-v2-todo.md` when backporting)
+Status: Archived (historical record; canonical tracker: `docs/workstreams/overlay-input-arbitration-v2-todo.md`)
 
-This tracker exists because `docs/workstreams/overlay-input-arbitration-v2-todo.md` is maintained on
-`main` by another parallel workstream. Keep this file as the single source of truth for work done
-in the `input-dispatch-v2` worktrees/branches; when backporting to `main`, reconcile into the main
-tracker.
+This file originated as a worktree-local tracker to avoid doc ownership conflicts while
+developing Input Dispatch v2 in parallel. It is kept on `main` as a historical record of the
+workstream breakdown and evidence anchors.
 
 - Narrative progress: `docs/workstreams/overlay-input-arbitration-v2.md`
 - Cross-cutting contracts (phases / prevent_default / availability): `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`

@@ -1,11 +1,10 @@
-# Command Gating Surface Alignment v2 — TODO Tracker (input-dispatch-v2 worktree)
+# Command Gating Surface Alignment v2 — TODO Tracker (archived worktree snapshot)
 
-Status: Complete (branch/worktree-local tracker; reconcile into main workstream docs when backporting)
+Status: Archived (historical record; canonical tracker: `docs/workstreams/input-dispatch-v2-todo.md`)
 
-This tracker exists because menu/command gating docs on `main` may be updated in parallel by other
-workstreams. Keep this file as the single source of truth for work done in the
-`input-dispatch-v2` worktrees/branches; when backporting to `main`, reconcile into the main
-workstream docs.
+This file originated as a worktree-local tracker to avoid doc ownership conflicts while
+developing Input Dispatch v2 in parallel. It is kept on `main` as a historical record of the
+workstream breakdown and evidence anchors.
 
 - Related: `docs/workstreams/os-menubar.md`
 - Cross-cutting contracts: `docs/adr/1157-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
