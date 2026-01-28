@@ -263,31 +263,7 @@ mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
     use fret_ui::UiTree;
     use fret_ui_kit::OverlayController;
-    use time::{Date, Month};
-
-    fn ordinal_suffix(day: u8) -> &'static str {
-        let mod_100 = day % 100;
-        if mod_100 >= 11 && mod_100 <= 13 {
-            return "th";
-        }
-        match day % 10 {
-            1 => "st",
-            2 => "nd",
-            3 => "rd",
-            _ => "th",
-        }
-    }
-
-    fn shadcn_calendar_day_aria_label(date: Date) -> String {
-        let day = date.day();
-        format!(
-            "{:?}, {:?} {day}{}, {}",
-            date.weekday(),
-            date.month(),
-            ordinal_suffix(day),
-            date.year()
-        )
-    }
+    use time::Month;
 
     use fret_core::{
         PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, SvgId,
@@ -406,16 +382,12 @@ mod tests {
             1,
         );
 
+        let trigger_label: Arc<str> = Arc::from("2026-01-15");
         let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
-        let trigger_label = selected_date.to_string();
-        let selected_label = format!(
-            "{}, selected",
-            shadcn_calendar_day_aria_label(selected_date)
-        );
         let trigger_node = snap1
             .nodes
             .iter()
-            .find(|n| n.label.as_deref() == Some(trigger_label.as_str()))
+            .find(|n| n.label.as_deref() == Some(trigger_label.as_ref()))
             .map(|n| n.id)
             .expect("trigger semantics node");
         ui.set_focus(Some(trigger_node));
@@ -440,7 +412,7 @@ mod tests {
             .iter()
             .find(|n| n.id == focused)
             .expect("focused semantics node");
-        assert_eq!(focused_sem.test_id.as_deref(), Some(trigger_label.as_str()));
+        assert_eq!(focused_sem.test_id.as_deref(), Some(trigger_label.as_ref()));
         assert!(
             focused_sem.flags.selected,
             "expected focused day to be selected"

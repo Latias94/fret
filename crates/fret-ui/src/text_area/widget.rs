@@ -91,7 +91,11 @@ impl<H: UiHost> Widget<H> for TextArea {
                 cx.stop_propagation();
             }
             Event::Pointer(fret_core::PointerEvent::Down {
-                button, position, ..
+                button,
+                position,
+                click_count,
+                modifiers,
+                ..
             }) => {
                 if *button != MouseButton::Left {
                     return;
@@ -128,7 +132,30 @@ impl<H: UiHost> Widget<H> for TextArea {
                     fret_core::Point::new(position.x - inner.origin.x, position.y - inner.origin.y);
                 let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
                 self.set_caret_from_point(cx, local);
-                self.selection_anchor = self.caret;
+                match *click_count {
+                    2 => {
+                        let (anchor, caret) = crate::text_edit::utf8::select_word_range(
+                            self.text.as_str(),
+                            self.caret,
+                            cx.input_ctx.text_boundary_mode,
+                        );
+                        self.selection_anchor = anchor;
+                        self.caret = caret;
+                    }
+                    3 => {
+                        let (anchor, caret) = crate::text_edit::utf8::select_line_range(
+                            self.text.as_str(),
+                            self.caret,
+                        );
+                        self.selection_anchor = anchor;
+                        self.caret = caret;
+                    }
+                    _ => {
+                        if !modifiers.shift {
+                            self.selection_anchor = self.caret;
+                        }
+                    }
+                }
                 self.ensure_caret_visible = true;
 
                 if had_preedit {
@@ -498,6 +525,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     &mut self.edit_state(),
                     cmd,
                     is_ime_composing,
+                    cx.input_ctx.text_boundary_mode,
                 );
                 let delta = crate::text_edit::commands::multiline_ui_delta(cmd, outcome);
                 if !delta.handled {

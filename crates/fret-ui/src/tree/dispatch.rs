@@ -73,6 +73,10 @@ impl<H: UiHost> UiTree<H> {
             fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                 self.app.next_timer_token()
             }
+
+            fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+                self.app.next_clipboard_token()
+            }
         }
 
         let mut host = PressableHoverHookHost {
@@ -226,15 +230,16 @@ impl<H: UiHost> UiTree<H> {
                 }
                 continue;
             }
-            self.dispatch_event_to_node_chain_observer(
+            if self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
                 input_ctx,
                 layer_root,
                 event,
                 invalidation_visited,
-            );
-            *needs_redraw = true;
+            ) {
+                *needs_redraw = true;
+            }
             if barrier_root == Some(layer_root) {
                 hit_barrier = true;
             }
@@ -327,6 +332,10 @@ impl<H: UiHost> UiTree<H> {
 
             fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                 self.app.next_timer_token()
+            }
+
+            fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+                self.app.next_clipboard_token()
             }
         }
 
@@ -803,11 +812,21 @@ impl<H: UiHost> UiTree<H> {
             ui_has_modal: barrier_root.is_some(),
             window_arbitration: None,
             focus_is_text_input,
+            text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
             dispatch_phase: InputDispatchPhase::Bubble,
         };
         if let Some(window) = self.window {
+            if let Some(mode) = app
+                .global::<fret_runtime::WindowTextBoundaryModeService>()
+                .and_then(|svc| svc.mode(window))
+            {
+                input_ctx.text_boundary_mode = mode;
+            }
+            if let Some(mode) = self.focus_text_boundary_mode_override() {
+                input_ctx.text_boundary_mode = mode;
+            }
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()
                 .and_then(|svc| svc.snapshot(window))
@@ -998,6 +1017,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut cursor_choice_from_query = false;
+        let mut cursor_query_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
         let mut suppress_touch_up_outside_dispatch = false;
@@ -1221,6 +1241,27 @@ impl<H: UiHost> UiTree<H> {
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
                     }
+                }
+            }
+
+            if input_ctx.caps.ui.cursor_icons
+                && cursor_query_choice.is_none()
+                && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
+            {
+                let mut node = captured.or(hit_for_hover);
+                while let Some(id) = node {
+                    let (bounds, parent) = self
+                        .nodes
+                        .get(id)
+                        .map(|n| (n.bounds, n.parent))
+                        .unwrap_or_default();
+                    if let Some(icon) = self.with_widget_mut(id, |widget, _tree| {
+                        widget.cursor_icon_at(bounds, pos, &input_ctx)
+                    }) {
+                        cursor_query_choice = Some(icon);
+                        break;
+                    }
+                    node = parent;
                 }
             }
 
@@ -1721,6 +1762,14 @@ impl<H: UiHost> UiTree<H> {
                             stop_propagation: false,
                         };
                         widget.event(&mut cx, &event_for_node);
+                        if cx.requested_cursor.is_none()
+                            && matches!(event_for_node, Event::Pointer(_))
+                            && cx.input_ctx.caps.ui.cursor_icons
+                            && let Some(position) = event_position(&event_for_node)
+                        {
+                            cx.requested_cursor =
+                                widget.cursor_icon_at(bounds, position, &cx.input_ctx);
+                        }
                         (
                             cx.invalidations,
                             cx.requested_focus,
@@ -2254,6 +2303,10 @@ impl<H: UiHost> UiTree<H> {
                     fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
                         self.app.next_timer_token()
                     }
+
+                    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+                        self.app.next_clipboard_token()
+                    }
                 }
 
                 let mut dismissed_any = false;
@@ -2432,7 +2485,9 @@ impl<H: UiHost> UiTree<H> {
             && let Some(window) = self.window
             && matches!(event, Event::Pointer(_))
         {
-            let icon = cursor_choice.unwrap_or(fret_core::CursorIcon::Default);
+            let icon = cursor_choice
+                .or(cursor_query_choice)
+                .unwrap_or(fret_core::CursorIcon::Default);
             app.push_effect(Effect::CursorSetIcon { window, icon });
         }
 
@@ -2470,10 +2525,20 @@ impl<H: UiHost> UiTree<H> {
                 ui_has_modal: barrier_root.is_some(),
                 window_arbitration: None,
                 focus_is_text_input,
+                text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
                 edit_can_undo: true,
                 edit_can_redo: true,
                 dispatch_phase: InputDispatchPhase::Bubble,
             };
+            if let Some(mode) = app
+                .global::<fret_runtime::WindowTextBoundaryModeService>()
+                .and_then(|svc| svc.mode(window))
+            {
+                input_ctx.text_boundary_mode = mode;
+            }
+            if let Some(mode) = self.focus_text_boundary_mode_override() {
+                input_ctx.text_boundary_mode = mode;
+            }
             if let Some(availability) = app
                 .global::<fret_runtime::WindowCommandAvailabilityService>()
                 .and_then(|svc| svc.snapshot(window))
@@ -2492,6 +2557,7 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }
@@ -2504,7 +2570,7 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         event: &Event,
         invalidation_visited: &mut HashMap<NodeId, u8>,
-    ) {
+    ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
             | Event::Pointer(PointerEvent::Down { pointer_id, .. })
@@ -2516,6 +2582,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let mut pending_invalidations = HashMap::<NodeId, PendingInvalidation>::new();
+        let mut did_work = false;
 
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
@@ -2550,6 +2617,9 @@ impl<H: UiHost> UiTree<H> {
                         (cx.invalidations, cx.notify_requested, parent)
                     });
 
+                if !invalidations.is_empty() || notify_requested {
+                    did_work = true;
+                }
                 for (id, inv) in invalidations {
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
@@ -2574,7 +2644,7 @@ impl<H: UiHost> UiTree<H> {
                 std::mem::take(&mut pending_invalidations),
                 invalidation_visited,
             );
-            return;
+            return did_work;
         }
 
         let mut node_id = start;
@@ -2609,6 +2679,9 @@ impl<H: UiHost> UiTree<H> {
                     (cx.invalidations, cx.notify_requested, parent)
                 });
 
+            if !invalidations.is_empty() || notify_requested {
+                did_work = true;
+            }
             for (id, inv) in invalidations {
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
@@ -2639,6 +2712,7 @@ impl<H: UiHost> UiTree<H> {
             std::mem::take(&mut pending_invalidations),
             invalidation_visited,
         );
+        did_work
     }
 
     fn apply_vector(t: Transform2D, v: Point) -> Point {

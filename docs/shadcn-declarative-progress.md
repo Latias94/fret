@@ -237,9 +237,8 @@ Legend:
 | `combobox` | `Combobox` | Chrome+Layout |  |
 | `checkbox` | `Checkbox` | Chrome+Layout |  |
 | `radio_group` | `RadioGroup` | Chrome+Layout |  |
-| `calendar` | `Calendar` | Chrome+Layout | Single-date variants are gated, including multi-month + locale + bounded month windows (`calendar-02/05/09/11/12`). |
-| `calendar_range` | `CalendarRange` | Chrome+Layout | Range selection variants are gated, including multi-month (`calendar-07`). |
-| `calendar_multiple` | `CalendarMultiple` | Chrome+Layout | Multiple selection variants are gated, including multi-month `required` + `max` policy (`calendar-03`). |
+| `calendar` | `Calendar` | Chrome+Layout |  |
+| `calendar_range` | `CalendarRange` | Chrome+Layout |  |
 | `date_picker` | `DatePicker` | Chrome+Layout |  |
 | `date_range_picker` | `DateRangePicker` | Chrome+Layout |  |
 | `input` | `Input` | Chrome+Layout |  |
@@ -337,8 +336,8 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | button-group | `button_group` | Present | Unreviewed | Thin wrapper over `toggle_group` styling |
 | calendar | `calendar` | Present | Unreviewed | Headless month grid lives in `fret-ui-kit` (`headless::calendar`); UI surface lives in `fret-ui-shadcn` |
 | card | `card` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`card-with-form`) |
-| carousel | `carousel` | Present | Unreviewed | Layout-only; shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`carousel-*`) |
-| chart | `chart` | Planned | In review | Audit: `docs/audits/shadcn-chart.md`; shadcn-web gap: `chart-*` (76 keys) |
+| carousel | `carousel` | Defer | Unreviewed | Not editor-critical |
+| chart | `chart` | Defer | Unreviewed | Not editor-critical |
 | checkbox | `checkbox` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`checkbox-demo`) |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
 | command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut; audit: `docs/audits/shadcn-command.md`; shadcn-web gates: `web_vs_fret_command_dialog_*` + `web_vs_fret_combobox_demo_*` |
@@ -356,9 +355,9 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | item | `item` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`item-avatar`) |
 | kbd | `kbd` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`kbd-demo`) |
 | label | `label` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`label-demo`) |
-| menubar | `menubar` | Present | In review | Click-to-open; hover switching; focus close outcomes (Escape vs outside press) are gated against radix timelines; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/{radix_web_primitives_state,web_vs_fret_overlay_placement}.rs` |
+| menubar | `menubar` | Present | In review | Click-to-open; hover switching; Escape close focus is gated against radix timelines; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/{radix_web_primitives_state,web_vs_fret_overlay_placement}.rs` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
-| navigation-menu | `navigation_menu` | Present | In review | `viewport=true` mobile geometry (root-anchored viewport) + `viewport=false` popover placement; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (navigation-menu-demo.* open variants, incl. `components-mobile`) |
+| navigation-menu | `navigation_menu` | Present | In review | Mobile `viewport` mode + anchored placement; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (navigation-menu-demo.* open variants) |
 | pagination | `pagination` | Present | Unreviewed |  |
 | popover | `popover` | Present | Pass | Anchored placement + click-through outside press dismissal (ADR 0069); non-modal (no focus trap); audit: `docs/audits/shadcn-popover.md` |
 | progress | `progress` | Present | In review | shadcn-web gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` + `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`progress-demo`) |

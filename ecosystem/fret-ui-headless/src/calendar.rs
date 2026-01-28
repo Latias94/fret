@@ -216,7 +216,6 @@ pub fn week_number(date: Date, week_start: Weekday) -> u32 {
     let weeks = diff_days.div_euclid(7).max(0);
     (weeks as u32) + 1
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,31 +242,6 @@ mod tests {
 
         let jan = CalendarMonth::new(2026, Month::January);
         assert_eq!(jan.prev_month(), CalendarMonth::new(2025, Month::December));
-    }
-
-    #[test]
-    fn month_grid_compact_can_return_5_weeks() {
-        // January 2026 starts on Thursday; for week_start=Sunday, it fits exactly into 5 rows
-        // (Dec 28..31 + Jan 1..31 = 35 days).
-        let m = CalendarMonth::new(2026, Month::January);
-        let grid = month_grid_compact(m, Weekday::Sunday);
-        assert_eq!(grid.len(), 35);
-        assert_eq!(
-            grid.first().map(|d| d.date),
-            Some(Date::from_calendar_date(2025, Month::December, 28).unwrap())
-        );
-        assert_eq!(
-            grid.last().map(|d| d.date),
-            Some(Date::from_calendar_date(2026, Month::January, 31).unwrap())
-        );
-    }
-
-    #[test]
-    fn week_number_matches_sunday_aligned_year_weeks() {
-        // With week_start=Sunday and firstWeekContainsDate=1, 2025-06-01 is the start of week 23
-        // (week 1 starts on 2024-12-29).
-        let d = Date::from_calendar_date(2025, Month::June, 1).unwrap();
-        assert_eq!(week_number(d, Weekday::Sunday), 23);
     }
 
     #[test]

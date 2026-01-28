@@ -115,6 +115,8 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_radio_button_scalars(cfg);
     inject_comp_outlined_text_field_scalars(cfg);
     inject_comp_filled_text_field_scalars(cfg);
+    inject_comp_outlined_select_scalars(cfg);
+    inject_comp_filled_select_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
     inject_comp_navigation_bar_scalars(cfg);
     inject_comp_navigation_drawer_scalars(cfg);
@@ -374,6 +376,8 @@ pub fn theme_config_with_colors(
     inject_comp_radio_button_colors_from_sys(&mut cfg);
     inject_comp_outlined_text_field_colors_from_sys(&mut cfg);
     inject_comp_filled_text_field_colors_from_sys(&mut cfg);
+    inject_comp_outlined_select_colors_from_sys(&mut cfg);
+    inject_comp_filled_select_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
     inject_comp_navigation_bar_colors_from_sys(&mut cfg);
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
@@ -1383,6 +1387,14 @@ fn inject_comp_filled_text_field_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_text_field_scalars(cfg);
 }
 
+fn inject_comp_outlined_select_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_select_scalars(cfg);
+}
+
+fn inject_comp_filled_select_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_select_scalars(cfg);
+}
+
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
 }
@@ -1858,6 +1870,14 @@ fn inject_comp_filled_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.color.error",
     );
     material_web_v30::inject_comp_filled_text_field_colors_from_sys(cfg);
+}
+
+fn inject_comp_outlined_select_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_select_colors_from_sys(cfg);
+}
+
+fn inject_comp_filled_select_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_select_colors_from_sys(cfg);
 }
 
 fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {

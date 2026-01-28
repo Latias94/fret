@@ -1244,6 +1244,7 @@ impl DropdownMenu {
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id_for_request = first_item_focus_id.clone();
                 let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let first_item_focus_id_for_initial_focus = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -2536,11 +2537,6 @@ impl DropdownMenu {
                                                             cx.window,
                                                         );
 
-                                                        let gating = crate::command_gating::snapshot_for_window(
-                                                            &*cx.app,
-                                                            cx.window,
-                                                        );
-
                                                         let mut rows: Vec<AnyElement> =
                                                             Vec::with_capacity(entries.len());
 
@@ -2877,12 +2873,15 @@ impl DropdownMenu {
                                                         let test_id = item.test_id.clone();
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
-                                                         let disabled = item.disabled
-                                                             || crate::command_gating::command_is_disabled_by_gating(
-                                                                 &*cx.app,
-                                                                 &gating,
-                                                                 command.as_ref(),
-                                                             );
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &crate::command_gating::snapshot_for_window(
+                                                                    &*cx.app,
+                                                                    cx.window,
+                                                                ),
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
@@ -3162,8 +3161,8 @@ impl DropdownMenu {
                     overlay_children,
                     overlay_root_name,
                     menu::root::MenuInitialFocusTargets::new()
-                        .keyboard_entry_focus(first_item_focus_id_for_initial_focus.get())
-                        .pointer_content_focus(Some(content_id_for_trigger)),
+                        .pointer_content_focus(content_focus_id.get())
+                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                     None,
                     None,
                     on_dismiss_request.clone(),

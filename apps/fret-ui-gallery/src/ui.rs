@@ -1,4 +1,5 @@
 use fret_app::{App, CommandId, Model};
+use fret_code_editor as code_editor;
 use fret_code_view as code_view;
 use fret_core::{
     Color as CoreColor, Corners, DrawOrder, Edges, ImageId, Point, Px, Rect, SceneOp, Size,
@@ -541,6 +542,9 @@ fn page_preview(
             virtual_list_torture_scroll,
         ),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
+        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(cx, theme),
+        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(cx, theme),
+        PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
         PAGE_CHROME_TORTURE => preview_chrome_torture(
@@ -667,6 +671,9 @@ fn page_preview(
         PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_radio(cx, material3_radio_value)
         }),
+        PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_select(cx)
+        }),
         PAGE_MATERIAL3_TEXT_FIELD => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_text_field(
@@ -735,11 +742,15 @@ fn page_preview(
     .into_element(cx)
 }
 
-fn material3_scoped_page(
+fn material3_scoped_page<I, F>(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
-    content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) -> Vec<AnyElement> {
+    content: F,
+) -> Vec<AnyElement>
+where
+    F: FnOnce(&mut ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     let enabled = cx
         .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);
@@ -1155,8 +1166,26 @@ fn preview_virtual_list_torture(
 ) -> Vec<AnyElement> {
     let len: usize = 10_000;
 
+    let minimal_harness =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_MINIMAL").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let known_heights =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
+    let retained_host =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_RETAINED").filter(|v| !v.is_empty()) {
             Some(v) => {
                 let v = v.to_string_lossy().trim().to_ascii_lowercase();
                 !(v == "0" || v == "false" || v == "no" || v == "off")
@@ -1173,81 +1202,89 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
-    let header_editing_row = cx
-        .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+    let header_editing_row = (!minimal_harness)
+        .then(|| {
+            cx.get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                .flatten()
+        })
         .flatten();
 
-    let jump_input = {
-        let mut props = fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
-        props.a11y_label = Some(Arc::<str>::from("Jump to row"));
-        props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
-        props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
-        props.layout.size.width = fret_ui::element::Length::Fill;
-        cx.text_input(props)
-    };
+    let controls = (!minimal_harness).then(|| {
+        let jump_input = {
+            let mut props =
+                fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
+            props.a11y_label = Some(Arc::<str>::from("Jump to row"));
+            props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
+            props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
+            props.layout.size.width = fret_ui::element::Length::Fill;
+            cx.text_input(props)
+        };
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
-            .items_center(),
-        |cx| {
-            let jump_model = virtual_list_torture_jump.clone();
-            let scroll_for_jump = virtual_list_torture_scroll.clone();
-            let on_jump: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                let raw = host
-                    .models_mut()
-                    .get_cloned(&jump_model)
-                    .unwrap_or_default();
-                let index = raw.trim().parse::<usize>().unwrap_or(0);
-                scroll_for_jump.scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
-                host.request_redraw(action_cx.window);
-            });
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N2)
+                .items_center(),
+            |cx| {
+                let jump_model = virtual_list_torture_jump.clone();
+                let scroll_for_jump = virtual_list_torture_scroll.clone();
+                let on_jump: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let raw = host
+                            .models_mut()
+                            .get_cloned(&jump_model)
+                            .unwrap_or_default();
+                        let index = raw.trim().parse::<usize>().unwrap_or(0);
+                        scroll_for_jump
+                            .scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
+                        host.request_redraw(action_cx.window);
+                    });
 
-            let scroll_for_bottom = virtual_list_torture_scroll.clone();
-            let on_bottom: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    scroll_for_bottom.scroll_to_bottom();
-                    host.request_redraw(action_cx.window);
-                });
+                let scroll_for_bottom = virtual_list_torture_scroll.clone();
+                let on_bottom: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        scroll_for_bottom.scroll_to_bottom();
+                        host.request_redraw(action_cx.window);
+                    });
 
-            let edit_row_for_clear = virtual_list_torture_edit_row.clone();
-            let edit_text_for_clear = virtual_list_torture_edit_text.clone();
-            let on_clear_edit: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
-                    let _ = host
-                        .models_mut()
-                        .update(&edit_text_for_clear, |v| v.clear());
-                    host.request_redraw(action_cx.window);
-                });
+                let edit_row_for_clear = virtual_list_torture_edit_row.clone();
+                let edit_text_for_clear = virtual_list_torture_edit_text.clone();
+                let on_clear_edit: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
+                        let _ = host
+                            .models_mut()
+                            .update(&edit_text_for_clear, |v| v.clear());
+                        host.request_redraw(action_cx.window);
+                    });
 
-            vec![
-                jump_input,
-                shadcn::Button::new("Jump")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-jump-button")
-                    .on_activate(on_jump)
-                    .into_element(cx),
-                shadcn::Button::new("Bottom")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-bottom-button")
-                    .on_activate(on_bottom)
-                    .into_element(cx),
-                shadcn::Button::new("Clear edit")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-clear-edit-button")
-                    .on_activate(on_clear_edit)
-                    .into_element(cx),
-            ]
-        },
-    );
+                vec![
+                    jump_input,
+                    shadcn::Button::new("Jump")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-jump-button")
+                        .on_activate(on_jump)
+                        .into_element(cx),
+                    shadcn::Button::new("Bottom")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-bottom-button")
+                        .on_activate(on_bottom)
+                        .into_element(cx),
+                    shadcn::Button::new("Clear edit")
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-clear-edit-button")
+                        .on_activate(on_clear_edit)
+                        .into_element(cx),
+                ]
+            },
+        )
+    });
 
-    let editing_indicator = {
+    let editing_indicator = (!minimal_harness).then(|| {
         let label = if let Some(row) = header_editing_row {
             Arc::<str>::from(format!("editing_row={row}"))
         } else {
@@ -1269,7 +1306,7 @@ fn preview_virtual_list_torture(
                 }
             },
         )
-    };
+    });
 
     let header = stack::vstack(
         cx,
@@ -1277,16 +1314,32 @@ fn preview_virtual_list_torture(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
         |cx| {
-            vec![
+            let mut out = vec![
                 cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
+                cx.text(if retained_host {
+                    "Mode: retained host (virt-003 prototype; item subtrees can reattach without rerendering the parent cache root)."
+                } else {
+                    "Mode: render-driven (baseline; visible items update requires rerender when the window changes)."
+                }),
                 cx.text(if known_heights {
                     "Mode: known row heights (no measure pass; better for perf baselines)."
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
-                controls,
-                editing_indicator,
-            ]
+            ];
+
+            if minimal_harness {
+                out.push(cx.text("Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
+            } else {
+                if let Some(controls) = controls {
+                    out.push(controls);
+                }
+                if let Some(editing_indicator) = editing_indicator {
+                    out.push(editing_indicator);
+                }
+            }
+
+            out
         },
     );
 
@@ -1309,17 +1362,102 @@ fn preview_virtual_list_torture(
     };
 
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-        let list = cx.virtual_list_keyed_with_layout(
-            list_layout,
-            len,
-            options,
-            &virtual_list_torture_scroll,
-            |i| i as fret_ui::ItemKey,
-            |cx, index| {
+        let list = if minimal_harness {
+            if retained_host {
+                let theme = theme.clone();
+                let key_at = Arc::new(|i| i as fret_ui::ItemKey);
+                let row = Arc::new(move |cx: &mut ElementContext<'_, App>, index: usize| {
+                    let zebra = (index % 2) == 0;
+                    let background = if zebra {
+                        theme.color_required("muted")
+                    } else {
+                        theme.color_required("background")
+                    };
+
+                    let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                    let row_label = cx.text(format!("Row {index}"));
+
+                    let mut container_props = decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(background))
+                            .p(Space::N2),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(height_hint)),
+                    );
+                    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                    let row_layout = container_props.layout;
+                    let container = cx.container(container_props, |_cx| vec![row_label]);
+                    let mut semantics = fret_ui::element::SemanticsProps::default();
+                    semantics.layout = row_layout;
+                    semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
+                        "ui-gallery-virtual-list-row-{index}-label"
+                    )));
+                    cx.semantics(semantics, |_cx| vec![container])
+                });
+
+                cx.virtual_list_keyed_retained_with_layout(
+                    list_layout,
+                    len,
+                    options,
+                    &virtual_list_torture_scroll,
+                    key_at,
+                    row,
+                )
+            } else {
+                cx.virtual_list_keyed_with_layout(
+                    list_layout,
+                    len,
+                    options,
+                    &virtual_list_torture_scroll,
+                    |i| i as fret_ui::ItemKey,
+                    |cx, index| {
+                        let zebra = (index % 2) == 0;
+                        let background = if zebra {
+                            theme.color_required("muted")
+                        } else {
+                            theme.color_required("background")
+                        };
+
+                        let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                        let row_label = cx.text(format!("Row {index}"));
+
+                        let mut container_props = decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(background))
+                                .p(Space::N2),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(height_hint)),
+                        );
+                        container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                        let row_layout = container_props.layout;
+                        let container = cx.container(container_props, |_cx| vec![row_label]);
+                        let mut semantics = fret_ui::element::SemanticsProps::default();
+                        semantics.layout = row_layout;
+                        semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
+                            "ui-gallery-virtual-list-row-{index}-label"
+                        )));
+                        cx.semantics(semantics, |_cx| vec![container])
+                    },
+                )
+            }
+        } else if retained_host {
+            let theme = theme.clone();
+            let edit_row = virtual_list_torture_edit_row.clone();
+            let edit_text = virtual_list_torture_edit_text.clone();
+            let row_cache = row_cache;
+
+            let key_at = Arc::new(|i| i as fret_ui::ItemKey);
+            let row = Arc::new(move |cx: &mut ElementContext<'_, App>, index: usize| {
                 let index_u64 = index as u64;
                 let row = |cx: &mut ElementContext<'_, App>| {
                     let editing_row = cx
-                        .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                        .get_model_copied(&edit_row, Invalidation::Layout)
                         .flatten();
                     let is_editing = editing_row == Some(index_u64);
 
@@ -1334,8 +1472,8 @@ fn preview_virtual_list_torture(
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
 
-                    let edit_row_for_activate = virtual_list_torture_edit_row.clone();
-                    let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+                    let edit_row_for_activate = edit_row.clone();
+                    let edit_text_for_activate = edit_text.clone();
                     let on_select_row: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
                             let _ = host
@@ -1356,9 +1494,7 @@ fn preview_virtual_list_torture(
                         .into_element(cx);
 
                     let right = if is_editing {
-                        let mut props = fret_ui::element::TextInputProps::new(
-                            virtual_list_torture_edit_text.clone(),
-                        );
+                        let mut props = fret_ui::element::TextInputProps::new(edit_text.clone());
                         props.a11y_label = Some(Arc::<str>::from("Inline edit"));
                         props.test_id =
                             Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
@@ -1389,7 +1525,7 @@ fn preview_virtual_list_torture(
                     };
 
                     let mut container_props = decl_style::container_props(
-                        theme,
+                        &theme,
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
@@ -1419,8 +1555,131 @@ fn preview_virtual_list_torture(
                 } else {
                     row(cx)
                 }
-            },
-        );
+            });
+
+            cx.virtual_list_keyed_retained_with_layout(
+                list_layout,
+                len,
+                options,
+                &virtual_list_torture_scroll,
+                key_at,
+                row,
+            )
+        } else {
+            cx.virtual_list_keyed_with_layout(
+                list_layout,
+                len,
+                options,
+                &virtual_list_torture_scroll,
+                |i| i as fret_ui::ItemKey,
+                |cx, index| {
+                    let index_u64 = index as u64;
+                    let row = |cx: &mut ElementContext<'_, App>| {
+                        let editing_row = cx
+                            .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                            .flatten();
+                        let is_editing = editing_row == Some(index_u64);
+
+                        let zebra = (index % 2) == 0;
+                        let background = if is_editing {
+                            theme.color_required("accent")
+                        } else if zebra {
+                            theme.color_required("muted")
+                        } else {
+                            theme.color_required("background")
+                        };
+
+                        let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+
+                        let edit_row_for_activate = virtual_list_torture_edit_row.clone();
+                        let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+                        let on_select_row: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&edit_row_for_activate, |v| *v = Some(index_u64));
+                                let _ = host.models_mut().update(&edit_text_for_activate, |v| {
+                                    *v = format!("Row {index_u64}");
+                                });
+                                host.request_redraw(action_cx.window);
+                            });
+                        let row_label = shadcn::Button::new(format!("Row {index}"))
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Sm)
+                            .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
+                            .on_activate(on_select_row.clone())
+                            .refine_layout(LayoutRefinement::default().flex_1())
+                            .into_element(cx);
+
+                        let right = if is_editing {
+                            let mut props = fret_ui::element::TextInputProps::new(
+                                virtual_list_torture_edit_text.clone(),
+                            );
+                            props.a11y_label = Some(Arc::<str>::from("Inline edit"));
+                            props.test_id =
+                                Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
+                            props.placeholder = Some(Arc::<str>::from("Type to edit…"));
+                            props.layout.size.width = fret_ui::element::Length::Fill;
+
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N2)
+                                    .items_center(),
+                                |cx| vec![cx.text_input(props)],
+                            )
+                        } else {
+                            let edit_button = shadcn::Button::new("Edit")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
+                                .on_activate(on_select_row)
+                                .into_element(cx);
+
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_center(),
+                                |_cx| vec![edit_button],
+                            )
+                        };
+
+                        let mut container_props = decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(background))
+                                .p(Space::N2),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(height_hint)),
+                        );
+                        container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                        cx.container(container_props, |cx| {
+                            vec![stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full().h_full())
+                                    .gap(Space::N2)
+                                    .items_center(),
+                                |_cx| vec![row_label, right],
+                            )]
+                        })
+                    };
+
+                    if row_cache {
+                        cx.cached_subtree_with(
+                            CachedSubtreeProps::default()
+                                .contained_layout(false)
+                                .cache_key(index_u64),
+                            |cx| vec![row(cx)],
+                        )
+                    } else {
+                        row(cx)
+                    }
+                },
+            )
+        };
 
         let list = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1499,6 +1758,347 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
     );
 
     vec![header, block]
+}
+
+fn code_editor_mvp_source() -> String {
+    [
+        "// Code Editor MVP\n",
+        "// Goals:\n",
+        "// - Validate TextInputRegion focus + TextInput/Ime events\n",
+        "// - Validate nested scrolling (editor owns its own scroll)\n",
+        "// - Provide a base surface for code-editor-ecosystem-v1 workstream\n",
+        "\n",
+        "fn main() {\n",
+        "    let mut sum = 0u64;\n",
+        "    for i in 0..10_000 {\n",
+        "        sum = sum.wrapping_add(i);\n",
+        "    }\n",
+        "    println!(\"sum={}\", sum);\n",
+        "}\n",
+        "\n",
+        "struct Point { x: f32, y: f32 }\n",
+        "\n",
+        "impl Point {\n",
+        "    fn len(&self) -> f32 {\n",
+        "        (self.x * self.x + self.y * self.y).sqrt()\n",
+        "    }\n",
+        "}\n",
+        "\n",
+        "// Try: mouse drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, IME.\n",
+    ]
+    .concat()
+}
+
+fn code_editor_torture_source() -> String {
+    static SOURCE: OnceLock<String> = OnceLock::new();
+    SOURCE
+        .get_or_init(|| {
+            let mut out = String::new();
+            out.push_str("// Code Editor Torture Harness\n");
+            out.push_str("// Generated content: many lines + deterministic prefixes\n\n");
+            for i in 0..20_000usize {
+                let _ = std::fmt::Write::write_fmt(
+                    &mut out,
+                    format_args!(
+                        "{i:05}: let value_{i} = {i}; // scrolling should never show stale lines\n"
+                    ),
+                );
+            }
+            out
+        })
+        .clone()
+}
+
+fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME)."),
+                cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
+            ]
+        },
+    );
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+        |h| h.clone(),
+    );
+
+    let editor = code_editor::CodeEditor::new(handle)
+        .overscan(32)
+        .into_element(cx);
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![editor],
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
+}
+
+fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
+                cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+            ]
+        },
+    );
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
+        |h| h.clone(),
+    );
+
+    let editor = code_editor::CodeEditor::new(handle)
+        .overscan(128)
+        .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+        .into_element(cx);
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(520.0))),
+        ),
+        |_cx| vec![editor],
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-torture-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
+}
+
+fn preview_web_ime_harness(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    text_input: Model<String>,
+    text_area: Model<String>,
+) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct ImeHarnessState {
+        committed: String,
+        preedit: Option<String>,
+        ime_enabled: bool,
+        text_input_count: u64,
+        ime_commit_count: u64,
+        ime_preedit_count: u64,
+        ime_enabled_count: u64,
+        ime_disabled_count: u64,
+        last: String,
+    }
+
+    let state = cx.with_state(
+        || std::rc::Rc::new(std::cell::RefCell::new(ImeHarnessState::default())),
+        |st| st.clone(),
+    );
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: validate the wasm textarea IME bridge (ADR 0195)."),
+                cx.text("Try: CJK IME preedit → commit; ensure no double insert on compositionend + input."),
+                cx.text("Click inside the region to focus it (IME should enable)."),
+            ]
+        },
+    );
+
+    let inputs = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default().w_full(),
+        ),
+        |cx| {
+            let body = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N2),
+                |cx| {
+                    vec![
+                        cx.text("Editable widgets (sanity check):"),
+                        shadcn::Input::new(text_input)
+                            .a11y_label("Web IME input")
+                            .placeholder("Type here (IME should work on web)")
+                            .into_element(cx),
+                        shadcn::Textarea::new(text_area)
+                            .a11y_label("Web IME textarea")
+                            .into_element(cx),
+                    ]
+                },
+            );
+            vec![body]
+        },
+    );
+
+    let mut region_props = fret_ui::element::TextInputRegionProps::default();
+    region_props.layout.size.width = fret_ui::element::Length::Fill;
+    region_props.layout.size.height = fret_ui::element::Length::Fill;
+
+    let region = cx.text_input_region(region_props, |cx| {
+        let state_for_text_input = state.clone();
+        cx.text_input_region_on_text_input(std::sync::Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  text: &str| {
+                let mut st = state_for_text_input.borrow_mut();
+                st.text_input_count = st.text_input_count.saturating_add(1);
+                st.last = format!("TextInput({:?})", text);
+                st.committed.push_str(text);
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            },
+        ));
+
+        let state_for_ime = state.clone();
+        cx.text_input_region_on_ime(std::sync::Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  ime: &fret_core::ImeEvent| {
+                let mut st = state_for_ime.borrow_mut();
+                match ime {
+                    fret_core::ImeEvent::Enabled => {
+                        st.ime_enabled = true;
+                        st.ime_enabled_count = st.ime_enabled_count.saturating_add(1);
+                        st.last = "Ime(Enabled)".to_string();
+                    }
+                    fret_core::ImeEvent::Disabled => {
+                        st.ime_enabled = false;
+                        st.preedit = None;
+                        st.ime_disabled_count = st.ime_disabled_count.saturating_add(1);
+                        st.last = "Ime(Disabled)".to_string();
+                    }
+                    fret_core::ImeEvent::Commit(text) => {
+                        st.ime_commit_count = st.ime_commit_count.saturating_add(1);
+                        st.last = format!("Ime(Commit({:?}))", text);
+                        st.committed.push_str(text);
+                        st.preedit = None;
+                    }
+                    fret_core::ImeEvent::Preedit { text, .. } => {
+                        st.ime_preedit_count = st.ime_preedit_count.saturating_add(1);
+                        st.last = format!("Ime(Preedit({:?}))", text);
+                        st.preedit = (!text.is_empty()).then(|| text.clone());
+                    }
+                }
+
+                host.notify(action_cx);
+                host.request_redraw(action_cx.window);
+                true
+            },
+        ));
+
+        let st = state.borrow();
+        let committed_tail = {
+            const MAX_CHARS: usize = 120;
+            let total = st.committed.chars().count();
+            if total <= MAX_CHARS {
+                st.committed.clone()
+            } else {
+                let tail: String = st
+                    .committed
+                    .chars()
+                    .skip(total.saturating_sub(MAX_CHARS))
+                    .collect();
+                format!("…{tail}")
+            }
+        };
+
+        let preedit = st
+            .preedit
+            .as_deref()
+            .unwrap_or("<none>");
+        let ime_enabled = st.ime_enabled as u8;
+
+        let panel = cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .border_1()
+                    .rounded(Radius::Md)
+                    .bg(ColorRef::Color(theme.color_required("background"))),
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_px(MetricRef::Px(Px(240.0))),
+            ),
+            |cx| {
+                let body = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N2),
+                    |cx| {
+                        vec![
+                            cx.text(format!("ime_enabled={ime_enabled}")),
+                            cx.text(format!("preedit={preedit:?}")),
+                            cx.text(format!("committed_tail={committed_tail:?}")),
+                            cx.text(format!("last_event={:?}", st.last)),
+                            cx.text(format!(
+                                "counts: text_input={} ime_commit={} ime_preedit={} enabled={} disabled={}",
+                                st.text_input_count,
+                                st.ime_commit_count,
+                                st.ime_preedit_count,
+                                st.ime_enabled_count,
+                                st.ime_disabled_count
+                            )),
+                        ]
+                    },
+                );
+                vec![body]
+            },
+        );
+
+        vec![panel]
+    });
+
+    vec![header, inputs, region]
 }
 
 fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
@@ -2218,6 +2818,7 @@ fn preview_windowed_rows_surface_interactive_torture(
                     let handlers = WindowedRowsSurfacePointerHandlers {
                         on_pointer_down: Some(on_pointer_down),
                         on_pointer_move: Some(on_pointer_move),
+                        ..Default::default()
                     };
 
                     let mut props = WindowedRowsSurfaceProps::default();
@@ -3403,6 +4004,84 @@ fn preview_material3_radio(
         group_overridden,
         cx.text("Override preview: standalone Radio::style(...) using RadioStyle."),
         standalone,
+    ]
+}
+
+fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct SelectPageModels {
+        selected: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let selected = cx.with_state(SelectPageModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha").test_id("ui-gallery-material3-select-a"),
+        material3::SelectItem::new("beta", "Beta").test_id("ui-gallery-material3-select-b"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("ui-gallery-material3-select-c-disabled"),
+    ]
+    .into();
+
+    let default = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select")
+        .placeholder("Pick one")
+        .items(items.clone())
+        .test_id("ui-gallery-material3-select")
+        .into_element(cx);
+
+    let primary = theme.color_required("md.sys.color.primary");
+    let primary_container = theme.color_required("md.sys.color.primary-container");
+    let secondary_container = theme.color_required("md.sys.color.secondary-container");
+
+    let override_style = material3::SelectStyle::default()
+        .container_background(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::OPEN, Some(ColorRef::Color(primary_container))),
+        )
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::FOCUS_VISIBLE, Some(ColorRef::Color(primary))),
+        )
+        .trailing_icon_color(
+            WidgetStateProperty::new(None).when(WidgetStates::OPEN, Some(ColorRef::Color(primary))),
+        )
+        .menu_selected_container_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            secondary_container,
+        ))));
+
+    let overridden = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select (override)")
+        .placeholder("Pick one")
+        .items(items)
+        .style(override_style)
+        .test_id("ui-gallery-material3-select-overridden")
+        .into_element(cx);
+
+    vec![
+        cx.text(
+            "Material 3 Select: token-driven trigger + listbox overlay + ADR 1159 style overrides.",
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |_cx| vec![default, overridden],
+        ),
     ]
 }
 
@@ -5232,11 +5911,7 @@ fn preview_data_table_torture(
                         shadcn::DataTable::new()
                             .overscan(10)
                             .row_height(Px(28.0))
-                            .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .h_px(MetricRef::Px(Px(420.0))),
-                            )
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
                                 data.clone(),
@@ -5374,9 +6049,7 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     let mut container_props = decl_style::container_props(
         theme,
         ChromeRefinement::default(),
-        LayoutRefinement::default()
-            .w_full()
-            .h_px(MetricRef::Px(Px(460.0))),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -6126,8 +6799,8 @@ fn preview_overlay(
                                         ])
                                         .refine_layout(
                                             LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(360.0)))
-                                                .h_px(MetricRef::Px(Px(220.0))),
+                                                .w_px(Px(360.0))
+                                                .h_px(Px(220.0)),
                                         )
                                         .into_element(cx),
                                     ]
@@ -6148,11 +6821,7 @@ fn preview_overlay(
                 });
 
                 let scroll = shadcn::ScrollArea::new(vec![body])
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_px(MetricRef::Px(Px(240.0)))
-                            .h_px(MetricRef::Px(Px(160.0))),
-                    )
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))
                     .into_element(cx);
 
                 let scroll = cx.semantics(

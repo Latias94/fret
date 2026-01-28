@@ -79,7 +79,6 @@ impl EmbeddedViewportService {
     ) -> Option<&mut dyn EmbeddedViewportForeignUi> {
         self.foreign_ui_by_window.get_mut(&window).map(|v| &mut **v)
     }
-
     fn set_target(&mut self, app: &mut App, window: AppWindowId, id: RenderTargetId) {
         let models = self.ensure_window(app, window);
         let _ = app.models_mut().update(&models.target, |v| *v = id);

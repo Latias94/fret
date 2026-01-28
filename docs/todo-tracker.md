@@ -267,6 +267,19 @@ It complements (but does not replace) ADRs:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`
       - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-keyboard-open-close.light.json`
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-keyboard-open-close.light.json`
+
+## P0 - Docking / Multi-Window Tear-off
+
+- **ImGui-style multi-window tear-off parity (macOS-first, but cross-platform)**
+  - Goal: editor-grade “tear off → hover another window → re-dock → close empty window” experience.
+  - Workstream:
+    - Narrative: `docs/workstreams/docking-multiwindow-imgui-parity.md`
+    - TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
+    - macOS detail: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
+  - Contract gates:
+    - `docs/adr/0013-docking-ops-and-persistence.md`
+    - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+    - `docs/adr/0072-docking-interaction-arbitration-matrix.md`
     - Added Fret gates covering submenu ArrowRight open + ArrowLeft close + focus restore:
       `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added Fret gates covering layered submenu close (ArrowLeft closes submenu; Escape closes root):

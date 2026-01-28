@@ -733,9 +733,7 @@ impl HoverCardContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let base_layout = LayoutRefinement::default()
-            .w_px(MetricRef::Px(Px(256.0)))
-            .flex_shrink_0();
+        let base_layout = LayoutRefinement::default().w_px(Px(256.0)).flex_shrink_0();
 
         let chrome = hover_card_content_chrome(&theme).merge(self.chrome);
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
@@ -1400,9 +1398,7 @@ mod tests {
                             .open_delay_frames(0)
                             .close_delay_frames(0)
                             .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(120.0)))
-                                    .h_px(MetricRef::Px(Px(40.0))),
+                                LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
                             )
                             .window_margin(Px(0.0))
                             .into_element(cx),
@@ -1660,9 +1656,7 @@ mod tests {
                             .open_delay_frames(0)
                             .close_delay_frames(0)
                             .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(120.0)))
-                                    .h_px(MetricRef::Px(Px(40.0))),
+                                LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
                             )
                             .window_margin(Px(0.0))
                             .into_element(cx),

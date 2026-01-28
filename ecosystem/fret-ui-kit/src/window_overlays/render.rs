@@ -54,6 +54,10 @@ impl<'a, H: UiHost> UiActionHost for OverlayFocusActionHostAdapter<'a, H> {
     fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
         self.app.next_timer_token()
     }
+
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+        self.app.next_clipboard_token()
+    }
 }
 
 impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusActionHostAdapter<'a, H> {
@@ -99,7 +103,43 @@ fn should_suspend_pointer_gating_for_capture(
         && (disable_outside_pointer_events || consume_outside_pointer_events)
 }
 
-pub fn render<H: UiHost>(
+struct OverlayFocusHost<'a, H: UiHost> {
+    ui: &'a mut UiTree<H>,
+    app: &'a mut H,
+    window: AppWindowId,
+}
+
+impl<'a, H: UiHost> UiActionHost for OverlayFocusHost<'a, H> {
+    fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+        self.app.models_mut()
+    }
+
+    fn push_effect(&mut self, effect: fret_runtime::Effect) {
+        self.app.push_effect(effect);
+    }
+
+    fn request_redraw(&mut self, window: AppWindowId) {
+        self.app.request_redraw(window);
+    }
+
+    fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+        self.app.next_timer_token()
+    }
+
+    fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+        self.app.next_clipboard_token()
+    }
+}
+
+impl<'a, H: UiHost> UiFocusActionHost for OverlayFocusHost<'a, H> {
+    fn request_focus(&mut self, target: fret_ui::elements::GlobalElementId) {
+        if let Some(node) = fret_ui::elements::node_for_element(self.app, self.window, target) {
+            self.ui.set_focus(Some(node));
+        }
+    }
+}
+
+pub fn render<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -560,10 +600,10 @@ pub fn render<H: UiHost>(
         let consume_outside_pointer_events = req.consume_outside_pointer_events;
         let wants_pointer_move_events = req.on_pointer_move.is_some();
         let open = req.open;
+        let on_open_auto_focus = req.on_open_auto_focus.clone();
         let open_for_dismiss = open.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let on_dismiss_request = req.on_dismiss_request.clone();
-        let on_open_auto_focus = req.on_open_auto_focus.clone();
         let on_close_auto_focus = req.on_close_auto_focus.clone();
         let on_dismiss_request_for_root = on_dismiss_request.clone();
         let children = req.children;
@@ -772,7 +812,7 @@ pub fn render<H: UiHost>(
             }
             app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
                 if let Some(entry) = overlays.popovers.get_mut(&key) {
-                    entry.close_auto_focus_handled = true;
+                    entry.close_auto_focus_handled = should_run_close_auto_focus;
                     entry.close_auto_focus_prevented = close_auto_focus_prevented;
                 }
             });
@@ -810,6 +850,30 @@ pub fn render<H: UiHost>(
         let should_focus_initial = opening && !open_auto_focus_prevented;
 
         if should_focus_initial || pending_initial_focus {
+            let mut focus_req = AutoFocusRequestCx::new();
+            if open_now && (should_focus_initial || pending_initial_focus) {
+                if let Some(on_open_auto_focus) = &on_open_auto_focus {
+                    let mut host = OverlayFocusHost { ui, app, window };
+                    on_open_auto_focus(
+                        &mut host,
+                        ActionCx {
+                            window,
+                            target: popover_id,
+                        },
+                        &mut focus_req,
+                    );
+                }
+            }
+
+            if focus_req.default_prevented() {
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    if let Some(entry) = overlays.popovers.get_mut(&key) {
+                        entry.pending_initial_focus = false;
+                    }
+                });
+                continue;
+            }
+
             if should_focus_initial && open_now && consume_outside_pointer_events {
                 ui.set_focus(Some(root));
             }
@@ -1112,7 +1176,6 @@ pub fn render<H: UiHost>(
         if dock_drag_affects_window {
             continue;
         }
-
         if !req.present {
             continue;
         }

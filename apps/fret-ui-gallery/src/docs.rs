@@ -125,6 +125,75 @@ let block = CodeBlock::new(code).language("rust").show_line_numbers(true);
 ```
 "#;
 
+pub(crate) const DOC_CODE_EDITOR_MVP: &str = r#"
+## Code Editor (MVP)
+
+This page hosts a v1 MVP for a **paint-driven, windowed code editor surface**:
+
+- Owns its buffer + selection state (ecosystem crate, not `fret-ui`).
+- Uses a `TextInputRegion` seam to receive `TextInput` / `Ime` events while it draws its own text.
+- Focuses on validating the input/IME contract and scroll stability before performance work.
+"#;
+
+pub(crate) const USAGE_CODE_EDITOR_MVP: &str = r#"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle};
+
+let handle = CodeEditorHandle::new("fn main() {}\n");
+let editor = CodeEditor::new(handle).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_CODE_EDITOR_TORTURE: &str = r#"
+## Code Editor (torture harness)
+
+This page is a stress surface for the **windowed, paint-driven code editor**.
+
+Goals:
+
+- validate scroll stability (no “stale paint” / “looks not refreshed” regressions),
+- validate text blob caching stays bounded to the visible window,
+- provide a deterministic target for perf investigations.
+"#;
+
+pub(crate) const USAGE_CODE_EDITOR_TORTURE: &str = r#"
+```rust
+use fret_code_editor::{CodeEditor, CodeEditorHandle, CodeEditorTorture};
+use fret_core::Px;
+
+let handle = CodeEditorHandle::new("...\n");
+let editor = CodeEditor::new(handle)
+    .overscan(128)
+    .torture(CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
+## Web IME (harness)
+
+This page exists to validate the wasm IME bridge contract (ADR 0195):
+
+- a hidden textarea is used as the browser-owned IME target,
+- `composition*` drives `Event::Ime::{Preedit,Commit}`,
+- committed insertions arrive as `Event::TextInput` (no control characters),
+- and we avoid **double-insert** on `compositionend` + `input`.
+
+Try:
+
+- CJK IME composition (preedit updates, commit),
+- emoji input,
+- backspace/arrows while composing,
+- and verify the committed buffer does not duplicate inserts.
+"#;
+
+pub(crate) const USAGE_WEB_IME_HARNESS: &str = r#"
+```rust
+// Click the region to focus it. On wasm, it should focus a hidden textarea via `Effect::ImeAllow`.
+// Use an IME to ensure `Event::Ime` and `Event::TextInput` are routed correctly.
+```
+"#;
+
 pub(crate) const DOC_CHART_TORTURE: &str = r#"
 ## Chart (torture harness)
 
@@ -480,6 +549,34 @@ use std::sync::Arc;
 
 let value = app.models_mut().insert(None::<Arc<str>>);
 let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_SELECT: &str = r#"
+## Material 3 Select (MVP)
+
+This page validates a Material 3 select surface:
+
+- token-driven trigger outcomes via `md.comp.{outlined,filled}-select.*`
+- listbox overlay anchored to the trigger (Escape / outside press dismissal)
+- ADR 1159 style overrides via `SelectStyle` (partial per-state overrides)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SELECT: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let model = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::SelectItem::new("a", "Option A"),
+    m3::SelectItem::new("b", "Option B"),
+];
+
+let select = m3::Select::new(model)
+    .placeholder("Pick one")
+    .items(items)
+    .into_element(cx);
 ```
 "#;
 

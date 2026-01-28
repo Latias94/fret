@@ -27,6 +27,17 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::virtual_list::VirtualListMetrics;
 use fret_ui::{ElementContext, UiHost};
 
+#[derive(Debug, Clone, Copy)]
+pub struct WindowedRowsPaintFrame {
+    pub viewport_height: Px,
+    pub offset_y: Px,
+    pub visible_start: usize,
+    pub visible_end: usize,
+}
+
+pub type OnWindowedRowsPaintFrame =
+    std::sync::Arc<dyn for<'p> Fn(&mut CanvasPainter<'p>, WindowedRowsPaintFrame) + 'static>;
+
 /// Props for [`windowed_rows_surface`].
 ///
 /// Note: this helper is intentionally fixed-row-height for v1. Variable-height virtualization
@@ -41,6 +52,7 @@ pub struct WindowedRowsSurfaceProps {
     pub gap: Px,
     pub scroll_margin: Px,
     pub scroll_handle: ScrollHandle,
+    pub on_paint_frame: Option<OnWindowedRowsPaintFrame>,
 }
 
 impl Default for WindowedRowsSurfaceProps {
@@ -62,6 +74,7 @@ impl Default for WindowedRowsSurfaceProps {
             gap: Px(0.0),
             scroll_margin: Px(0.0),
             scroll_handle: ScrollHandle::default(),
+            on_paint_frame: None,
         }
     }
 }
@@ -86,6 +99,7 @@ pub fn windowed_rows_surface<H: UiHost>(
         gap,
         scroll_margin,
         scroll_handle,
+        on_paint_frame,
     } = props;
 
     let mut metrics = VirtualListMetrics::default();
@@ -108,6 +122,7 @@ pub fn windowed_rows_surface<H: UiHost>(
         let scroll_handle = scroll_handle.clone();
         let metrics = metrics.clone();
         let paint_row = std::sync::Arc::new(paint_row);
+        let on_paint_frame = on_paint_frame.clone();
 
         vec![cx.canvas(canvas, move |painter| {
             let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
@@ -125,6 +140,18 @@ pub fn windowed_rows_surface<H: UiHost>(
 
             let start = visible.start_index.saturating_sub(visible.overscan);
             let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
+
+            if let Some(on_paint_frame) = &on_paint_frame {
+                on_paint_frame(
+                    painter,
+                    WindowedRowsPaintFrame {
+                        viewport_height: viewport_h,
+                        offset_y,
+                        visible_start: start,
+                        visible_end: end,
+                    },
+                );
+            }
 
             for index in start..=end {
                 let y = metrics.offset_for_index(index);
@@ -144,10 +171,27 @@ pub type OnWindowedRowsPointerMove = std::sync::Arc<
     dyn Fn(&mut dyn UiPointerActionHost, ActionCx, Option<usize>, PointerMoveCx) -> bool + 'static,
 >;
 
+pub type OnWindowedRowsPointerUp = std::sync::Arc<
+    dyn Fn(
+            &mut dyn UiPointerActionHost,
+            ActionCx,
+            Option<usize>,
+            fret_ui::action::PointerUpCx,
+        ) -> bool
+        + 'static,
+>;
+
+pub type OnWindowedRowsPointerCancel = std::sync::Arc<
+    dyn Fn(&mut dyn UiPointerActionHost, ActionCx, fret_ui::action::PointerCancelCx) -> bool
+        + 'static,
+>;
+
 #[derive(Default, Clone)]
 pub struct WindowedRowsSurfacePointerHandlers {
     pub on_pointer_down: Option<OnWindowedRowsPointerDown>,
     pub on_pointer_move: Option<OnWindowedRowsPointerMove>,
+    pub on_pointer_up: Option<OnWindowedRowsPointerUp>,
+    pub on_pointer_cancel: Option<OnWindowedRowsPointerCancel>,
 }
 
 fn row_index_for_pointer(
@@ -193,6 +237,8 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
     let WindowedRowsSurfacePointerHandlers {
         on_pointer_down,
         on_pointer_move,
+        on_pointer_up,
+        on_pointer_cancel,
     } = handlers;
 
     let WindowedRowsSurfaceProps {
@@ -204,6 +250,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         gap,
         scroll_margin,
         scroll_handle,
+        on_paint_frame,
     } = props;
 
     let mut metrics = VirtualListMetrics::default();
@@ -228,7 +275,10 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         let paint_row = std::sync::Arc::new(paint_row);
         let on_pointer_down = on_pointer_down.clone();
         let on_pointer_move = on_pointer_move.clone();
+        let on_pointer_up = on_pointer_up.clone();
+        let on_pointer_cancel = on_pointer_cancel.clone();
         let content_semantics = content_semantics.clone();
+        let on_paint_frame = on_paint_frame.clone();
 
         vec![cx.pointer_region(pointer, move |cx| {
             if let Some(on_pointer_down) = on_pointer_down.clone() {
@@ -270,6 +320,21 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                 ));
             }
 
+            if let Some(on_pointer_up) = on_pointer_up.clone() {
+                let scroll_handle = scroll_handle.clone();
+                let metrics = metrics.clone();
+                cx.pointer_region_on_pointer_up(std::sync::Arc::new(move |host, action_cx, up| {
+                    let bounds = host.bounds();
+                    let idx =
+                        row_index_for_pointer(&metrics, &scroll_handle, bounds, up.position, len);
+                    on_pointer_up(host, action_cx, idx, up)
+                }));
+            }
+
+            if let Some(on_pointer_cancel) = on_pointer_cancel.clone() {
+                cx.pointer_region_on_pointer_cancel(on_pointer_cancel);
+            }
+
             let canvas_children = vec![cx.canvas(canvas, move |painter| {
                 let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
                 let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
@@ -286,6 +351,18 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
 
                 let start = visible.start_index.saturating_sub(visible.overscan);
                 let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
+
+                if let Some(on_paint_frame) = &on_paint_frame {
+                    on_paint_frame(
+                        painter,
+                        WindowedRowsPaintFrame {
+                            viewport_height: viewport_h,
+                            offset_y,
+                            visible_start: start,
+                            visible_end: end,
+                        },
+                    );
+                }
 
                 for index in start..=end {
                     let y = metrics.offset_for_index(index);

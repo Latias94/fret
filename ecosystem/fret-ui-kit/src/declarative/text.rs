@@ -18,6 +18,22 @@ fn font_line_height(theme: &Theme) -> Px {
         .unwrap_or_else(|| theme.metric_required("font.line_height"))
 }
 
+pub(crate) fn text_xs_style(theme: &Theme) -> TextStyle {
+    let size = theme
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_PX)
+        .unwrap_or(Px(12.0));
+    let line_height = theme
+        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
+        .unwrap_or(Px(16.0));
+
+    TextStyle {
+        font: FontId::default(),
+        size,
+        line_height: Some(line_height),
+        ..Default::default()
+    }
+}
+
 pub(crate) fn text_sm_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)

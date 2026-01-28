@@ -97,6 +97,9 @@ pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
+pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
+pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
+pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
 pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
@@ -136,6 +139,7 @@ pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
 pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
 pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
+pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
 pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
 pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
 pub(crate) const PAGE_MATERIAL3_NAVIGATION_BAR: &str = "material3_navigation_bar";
@@ -155,6 +159,9 @@ pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
+pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
+pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
+pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
 pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
@@ -196,6 +203,7 @@ pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
 pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
 pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
+pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
 pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
 pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
 pub(crate) const CMD_NAV_MATERIAL3_NAVIGATION_BAR: &str =
@@ -356,6 +364,43 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CODE_VIEW_TORTURE,
                 docs::USAGE_CODE_VIEW_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_CODE_EDITOR_MVP,
+                "Code Editor (MVP)",
+                "Code Editor / TextInputRegion MVP",
+                "fret-code-editor (ecosystem surface)",
+                CMD_NAV_CODE_EDITOR_MVP,
+                &["code", "editor", "ime", "text-input", "windowed-rows"],
+                docs::DOC_CODE_EDITOR_MVP,
+                docs::USAGE_CODE_EDITOR_MVP,
+            ),
+            PageSpec::new(
+                PAGE_CODE_EDITOR_TORTURE,
+                "Code Editor (Torture)",
+                "Code Editor / Scroll Stability Harness",
+                "fret-code-editor (windowed surface + caching)",
+                CMD_NAV_CODE_EDITOR_TORTURE,
+                &[
+                    "code",
+                    "editor",
+                    "scroll",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_CODE_EDITOR_TORTURE,
+                docs::USAGE_CODE_EDITOR_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_WEB_IME_HARNESS,
+                "Web IME (Harness)",
+                "Web / IME + TextInput Bridge Harness",
+                "fret-platform-web (textarea bridge, v1)",
+                CMD_NAV_WEB_IME_HARNESS,
+                &["web", "ime", "text-input", "wasm", "harness"],
+                docs::DOC_WEB_IME_HARNESS,
+                docs::USAGE_WEB_IME_HARNESS,
             ),
             PageSpec::new(
                 PAGE_CHART_TORTURE,
@@ -819,6 +864,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["material3", "radio", "state-layer", "ripple", "forms"],
                 docs::DOC_MATERIAL3_RADIO,
                 docs::USAGE_MATERIAL3_RADIO,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SELECT,
+                "Select",
+                "Material 3 Select (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SELECT,
+                &["material3", "select", "listbox", "forms", "overlay"],
+                docs::DOC_MATERIAL3_SELECT,
+                docs::USAGE_MATERIAL3_SELECT,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_TEXT_FIELD,

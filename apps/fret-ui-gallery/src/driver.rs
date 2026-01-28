@@ -2131,11 +2131,14 @@ impl WinitAppDriver for UiGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.record_model_changes(context.window, changed);
-            });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            context
+                .app
+                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                    svc.record_model_changes(context.window, changed);
+                });
+        }
         context
             .state
             .ui
@@ -2147,11 +2150,14 @@ impl WinitAppDriver for UiGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.record_global_changes(app, context.window, changed);
-            });
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            context
+                .app
+                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                    svc.record_global_changes(app, context.window, changed);
+                });
+        }
         context
             .state
             .ui

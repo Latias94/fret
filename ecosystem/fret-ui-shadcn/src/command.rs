@@ -61,6 +61,7 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         window_arbitration: None,
         // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,
@@ -505,11 +506,11 @@ impl std::fmt::Debug for Command {
 }
 
 impl Command {
-    pub fn new(children: Vec<AnyElement>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            children,
+            children: children.into_iter().collect(),
         }
     }
 
@@ -828,8 +829,8 @@ impl CommandItem {
         self
     }
 
-    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
-        self.children = children;
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
         self
     }
 }
@@ -1014,7 +1015,7 @@ impl CommandList {
             empty_text: Arc::from("No results."),
             highlight_query: None,
             scroll: LayoutRefinement::default()
-                .max_h(MetricRef::Px(Px(300.0)))
+                .max_h(Px(300.0))
                 .w_full()
                 .min_w_0(),
         }
@@ -1472,7 +1473,7 @@ impl CommandPalette {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default().w_full().min_w_0(),
             scroll: LayoutRefinement::default()
-                .max_h(MetricRef::Px(Px(300.0)))
+                .max_h(Px(300.0))
                 .w_full()
                 .min_w_0(),
         }
@@ -2543,10 +2544,11 @@ struct CommandPaletteState {
     items_fingerprint: u64,
 }
 
-pub fn command<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
+pub fn command<H: UiHost, I, F>(cx: &mut ElementContext<'_, H>, f: F) -> AnyElement
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     Command::new(f(cx)).into_element(cx)
 }
 
@@ -3283,9 +3285,7 @@ mod tests {
                     vec![
                         CommandPalette::new(model, items)
                             .refine_scroll_layout(
-                                LayoutRefinement::default()
-                                    .h_px(MetricRef::Px(Px(40.0)))
-                                    .max_h(MetricRef::Px(Px(40.0))),
+                                LayoutRefinement::default().h_px(Px(40.0)).max_h(Px(40.0)),
                             )
                             .into_element(cx),
                     ]

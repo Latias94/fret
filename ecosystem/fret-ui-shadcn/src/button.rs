@@ -158,7 +158,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                         "destructive.active.background",
                         ColorFallback::ThemeTokenAlphaMul {
                             key: "destructive",
-                            mul: 0.8,
+                            mul: 0.9,
                         },
                     ),
                 ),
@@ -191,7 +191,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                     "secondary.active.background",
                     ColorFallback::ThemeTokenAlphaMul {
                         key: "secondary",
-                        mul: 0.7,
+                        mul: 0.8,
                     },
                 ),
             ),
@@ -212,13 +212,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
             )
             .when(
                 WidgetStates::ACTIVE,
-                token(
-                    "accent.active.background",
-                    ColorFallback::ThemeTokenAlphaMul {
-                        key: "accent",
-                        mul: 0.8,
-                    },
-                ),
+                token("accent", ColorFallback::ThemeHoverBackground),
             ),
             border_color: WidgetStateProperty::new(token(
                 "border",
@@ -241,13 +235,7 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
                 )
                 .when(
                     WidgetStates::ACTIVE,
-                    token(
-                        "accent.active.background",
-                        ColorFallback::ThemeTokenAlphaMul {
-                            key: "accent",
-                            mul: 0.8,
-                        },
-                    ),
+                    token("accent", ColorFallback::ThemeHoverBackground),
                 ),
             border_color: WidgetStateProperty::new(transparent.clone()),
             foreground: WidgetStateProperty::new(token(

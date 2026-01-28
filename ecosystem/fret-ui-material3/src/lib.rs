@@ -20,6 +20,7 @@ pub mod navigation_bar;
 pub mod navigation_drawer;
 pub mod navigation_rail;
 pub mod radio;
+pub mod select;
 pub mod snackbar;
 pub mod switch;
 pub mod tabs;
@@ -41,6 +42,7 @@ pub use navigation_bar::{NavigationBar, NavigationBarItem};
 pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant};
 pub use navigation_rail::{NavigationRail, NavigationRailItem};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation, RadioStyle};
+pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
 pub use snackbar::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};
 pub use switch::{Switch, SwitchStyle};
 pub use tabs::{TabItem, Tabs, TabsStyle};
@@ -121,6 +123,7 @@ mod tests {
             include_str!("navigation_drawer.rs"),
             include_str!("navigation_rail.rs"),
             include_str!("radio.rs"),
+            include_str!("select.rs"),
             include_str!("snackbar.rs"),
             include_str!("switch.rs"),
             include_str!("tabs.rs"),

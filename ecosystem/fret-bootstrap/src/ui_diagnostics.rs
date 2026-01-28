@@ -2433,6 +2433,23 @@ pub enum UiPredicateV1 {
     FocusIs {
         target: UiSelectorV1,
     },
+    /// Matches the current modal/pointer barrier root and focus barrier root (if any).
+    ///
+    /// This is intentionally coarse-grained: scripts should be able to assert that close
+    /// transitions keep the pointer barrier active while releasing focus containment (or vice
+    /// versa) without needing stable node ids.
+    BarrierRoots {
+        #[serde(default)]
+        barrier_root: UiOptionalRootStateV1,
+        #[serde(default)]
+        focus_barrier_root: UiOptionalRootStateV1,
+        /// When set, additionally enforces whether the two roots are equal.
+        ///
+        /// - `true`: requires `barrier_root == focus_barrier_root` (both `None`, or the same id).
+        /// - `false`: requires `barrier_root != focus_barrier_root`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        require_equal: Option<bool>,
+    },
     /// True when the target exists and its semantics bounds intersect the active window bounds.
     ///
     /// This is useful for scroll-driven scenarios: it prevents scripts from “finding” an element
@@ -2448,6 +2465,16 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         padding_px: f32,
     },
+}
+
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiOptionalRootStateV1 {
+    /// Do not assert anything about the root (accept both `Some` and `None`).
+    #[default]
+    Any,
+    None,
+    Some,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2590,6 +2617,8 @@ pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
     #[serde(default)]
+    pub focus_barrier_root: Option<u64>,
+    #[serde(default)]
     pub pointer_occlusion: String,
     #[serde(default)]
     pub pointer_occlusion_layer_id: Option<u64>,
@@ -2605,6 +2634,7 @@ impl Default for UiInputArbitrationSnapshotV1 {
     fn default() -> Self {
         Self {
             modal_barrier_root: None,
+            focus_barrier_root: None,
             pointer_occlusion: "none".to_string(),
             pointer_occlusion_layer_id: None,
             pointer_capture_active: false,
@@ -2618,6 +2648,7 @@ impl UiInputArbitrationSnapshotV1 {
     fn from_snapshot(snapshot: fret_ui::tree::UiInputArbitrationSnapshot) -> Self {
         Self {
             modal_barrier_root: snapshot.modal_barrier_root.map(key_to_u64),
+            focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
             pointer_occlusion: pointer_occlusion_label(snapshot.pointer_occlusion),
             pointer_occlusion_layer_id: snapshot
                 .pointer_occlusion_layer
@@ -2641,7 +2672,11 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
     #[serde(default)]
+    pub retained_virtual_list_reconciles: Vec<UiRetainedVirtualListReconcileV1>,
+    #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
+    #[serde(default)]
+    pub prepaint_actions: Vec<UiPrepaintActionV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
     #[serde(default)]
@@ -2728,10 +2763,20 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiVirtualListWindowV1::from_window)
                 .collect(),
+            retained_virtual_list_reconciles: ui
+                .debug_retained_virtual_list_reconciles()
+                .iter()
+                .map(UiRetainedVirtualListReconcileV1::from_record)
+                .collect(),
             scroll_handle_changes: ui
                 .debug_scroll_handle_changes()
                 .iter()
                 .map(UiScrollHandleChangeV1::from_change)
+                .collect(),
+            prepaint_actions: ui
+                .debug_prepaint_actions()
+                .iter()
+                .map(UiPrepaintActionV1::from_action)
                 .collect(),
             model_change_hotspots: ui
                 .debug_model_change_hotspots()
@@ -3069,6 +3114,8 @@ impl UiVirtualRangeV1 {
 pub struct UiVirtualListWindowV1 {
     pub node: u64,
     pub element: u64,
+    #[serde(default)]
+    pub source: UiVirtualListWindowSourceV1,
     pub axis: UiAxisV1,
     #[serde(default)]
     pub is_probe_layout: bool,
@@ -3100,6 +3147,7 @@ impl UiVirtualListWindowV1 {
         Self {
             node: key_to_u64(window.node),
             element: window.element.0,
+            source: UiVirtualListWindowSourceV1::from_source(window.source),
             axis: UiAxisV1::from_axis(window.axis),
             is_probe_layout: window.is_probe_layout,
             items_len: window.items_len as u64,
@@ -3117,6 +3165,54 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiRetainedVirtualListReconcileV1 {
+    pub node: u64,
+    pub element: u64,
+    pub prev_items: u64,
+    pub next_items: u64,
+    pub preserved_items: u64,
+    pub attached_items: u64,
+    pub detached_items: u64,
+}
+
+impl UiRetainedVirtualListReconcileV1 {
+    fn from_record(record: &fret_ui::tree::UiDebugRetainedVirtualListReconcile) -> Self {
+        Self {
+            node: key_to_u64(record.node),
+            element: record.element.0,
+            prev_items: record.prev_items as u64,
+            next_items: record.next_items as u64,
+            preserved_items: record.preserved_items as u64,
+            attached_items: record.attached_items as u64,
+            detached_items: record.detached_items as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowSourceV1 {
+    Prepaint,
+    #[serde(other)]
+    Layout,
+}
+
+impl Default for UiVirtualListWindowSourceV1 {
+    fn default() -> Self {
+        Self::Layout
+    }
+}
+
+impl UiVirtualListWindowSourceV1 {
+    fn from_source(source: fret_ui::tree::UiDebugVirtualListWindowSource) -> Self {
+        match source {
+            fret_ui::tree::UiDebugVirtualListWindowSource::Layout => Self::Layout,
+            fret_ui::tree::UiDebugVirtualListWindowSource::Prepaint => Self::Prepaint,
         }
     }
 }
@@ -3212,6 +3308,57 @@ impl UiScrollHandleChangeV1 {
                 .map(key_to_u64)
                 .collect(),
             upgraded_to_layout_bindings: change.upgraded_to_layout_bindings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiPrepaintActionKindV1 {
+    Invalidate,
+    RequestRedraw,
+    RequestAnimationFrame,
+}
+
+impl UiPrepaintActionKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugPrepaintActionKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugPrepaintActionKind::Invalidate => Self::Invalidate,
+            fret_ui::tree::UiDebugPrepaintActionKind::RequestRedraw => Self::RequestRedraw,
+            fret_ui::tree::UiDebugPrepaintActionKind::RequestAnimationFrame => {
+                Self::RequestAnimationFrame
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPrepaintActionV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_node: Option<u64>,
+    pub kind: UiPrepaintActionKindV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub invalidation: Option<String>,
+    #[serde(default)]
+    pub frame_id: u64,
+}
+
+impl UiPrepaintActionV1 {
+    fn from_action(action: &fret_ui::tree::UiDebugPrepaintAction) -> Self {
+        let invalidation = action.invalidation.map(|inv| match inv {
+            fret_ui::Invalidation::Layout => "layout",
+            fret_ui::Invalidation::Paint => "paint",
+            fret_ui::Invalidation::HitTest => "hit_test",
+            fret_ui::Invalidation::HitTestOnly => "hit_test_only",
+        });
+
+        Self {
+            node: key_to_u64(action.node),
+            target_node: action.target.map(key_to_u64),
+            kind: UiPrepaintActionKindV1::from_kind(action.kind),
+            invalidation: invalidation.map(|s| s.to_string()),
+            frame_id: action.frame_id.0,
         }
     }
 }
@@ -4343,6 +4490,8 @@ pub struct UiSemanticsSnapshotV1 {
     pub window: u64,
     pub roots: Vec<UiSemanticsRootV1>,
     pub barrier_root: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus_barrier_root: Option<u64>,
     pub focus: Option<u64>,
     pub captured: Option<u64>,
     pub nodes: Vec<UiSemanticsNodeV1>,
@@ -4416,6 +4565,7 @@ impl UiSemanticsSnapshotV1 {
                 })
                 .collect(),
             barrier_root: snapshot.barrier_root.map(key_to_u64),
+            focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
             focus: snapshot.focus.map(key_to_u64),
             captured: snapshot.captured.map(key_to_u64),
             nodes: snapshot
@@ -4581,6 +4731,12 @@ pub struct UiFrameStatsV1 {
     pub virtual_list_visible_range_checks: u32,
     #[serde(default)]
     pub virtual_list_visible_range_refreshes: u32,
+    #[serde(default)]
+    pub retained_virtual_list_reconciles: u32,
+    #[serde(default)]
+    pub retained_virtual_list_attached_items: u32,
+    #[serde(default)]
+    pub retained_virtual_list_detached_items: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
 }
@@ -4641,6 +4797,9 @@ impl UiFrameStatsV1 {
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
             virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
             virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
+            retained_virtual_list_reconciles: stats.retained_virtual_list_reconciles,
+            retained_virtual_list_attached_items: stats.retained_virtual_list_attached_items,
+            retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
         }
@@ -4754,6 +4913,8 @@ pub struct UiHitTestSnapshotV1 {
     pub hit: Option<u64>,
     pub active_layer_roots: Vec<u64>,
     pub barrier_root: Option<u64>,
+    #[serde(default)]
+    pub focus_barrier_root: Option<u64>,
     /// Stable, script-friendly labels for each scope root.
     ///
     /// Prefer this over `active_layer_roots` when validating behavior across refactors, since node
@@ -4765,13 +4926,15 @@ pub struct UiHitTestSnapshotV1 {
 impl UiHitTestSnapshotV1 {
     fn from_tree(position: Point, ui: &UiTree<App>) -> Self {
         let hit_test = ui.debug_hit_test(position);
+        let arbitration = ui.input_arbitration_snapshot();
         let layers = ui.debug_layers_in_paint_order();
-        Self::from_hit_test_with_layers(position, hit_test, &layers)
+        Self::from_hit_test_with_layers(position, hit_test, arbitration.focus_barrier_root, &layers)
     }
 
     fn from_hit_test_with_layers(
         position: Point,
         hit_test: UiDebugHitTest,
+        focus_barrier_root: Option<NodeId>,
         layers: &[UiDebugLayerInfo],
     ) -> Self {
         let mut scope_roots = Vec::new();
@@ -4786,9 +4949,21 @@ impl UiHitTestSnapshotV1 {
             });
         }
 
-        let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
+        let mut by_root: HashMap<NodeId, &UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
-            by_root.insert(layer.root, layer.clone());
+            by_root.insert(layer.root, layer);
+        }
+
+        if let Some(root) = focus_barrier_root {
+            let info = by_root.get(&root);
+            scope_roots.push(UiHitTestScopeRootV1 {
+                kind: "focus_barrier_root".to_string(),
+                root: key_to_u64(root),
+                layer_id: info.map(|l| l.id.data().as_ffi()),
+                pointer_occlusion: info.map(|l| pointer_occlusion_label(l.pointer_occlusion)),
+                blocks_underlay_input: info.map(|l| l.blocks_underlay_input),
+                hit_testable: info.map(|l| l.hit_testable),
+            });
         }
 
         for root in &hit_test.active_layer_roots {
@@ -4812,6 +4987,7 @@ impl UiHitTestSnapshotV1 {
                 .map(key_to_u64)
                 .collect(),
             barrier_root: hit_test.barrier_root.map(key_to_u64),
+            focus_barrier_root: focus_barrier_root.map(key_to_u64),
             scope_roots,
         }
     }
@@ -5526,6 +5702,34 @@ fn eval_predicate(
             };
             node.id == focus
         }
+        UiPredicateV1::BarrierRoots {
+            barrier_root,
+            focus_barrier_root,
+            require_equal,
+        } => {
+            let barrier = snapshot.barrier_root.map(|n| n.data().as_ffi());
+            let focus_barrier = snapshot.focus_barrier_root.map(|n| n.data().as_ffi());
+
+            let matches_root_state = |state: UiOptionalRootStateV1, value: Option<u64>| match state
+            {
+                UiOptionalRootStateV1::Any => true,
+                UiOptionalRootStateV1::None => value.is_none(),
+                UiOptionalRootStateV1::Some => value.is_some(),
+            };
+
+            if !matches_root_state(*barrier_root, barrier) {
+                return false;
+            }
+            if !matches_root_state(*focus_barrier_root, focus_barrier) {
+                return false;
+            }
+
+            match require_equal {
+                None => true,
+                Some(true) => barrier == focus_barrier,
+                Some(false) => barrier != focus_barrier,
+            }
+        }
         UiPredicateV1::VisibleInWindow { target } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
@@ -6235,6 +6439,7 @@ mod tests {
                 },
             ],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6295,6 +6500,7 @@ mod tests {
                 },
             ],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6360,6 +6566,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: None,
             captured: None,
             nodes: vec![
@@ -6419,6 +6626,7 @@ mod tests {
                 z_index: 0,
             }],
             barrier_root: None,
+            focus_barrier_root: None,
             focus: Some(node_id(2)),
             captured: None,
             nodes: vec![
@@ -6479,6 +6687,7 @@ mod tests {
                 },
             ],
             barrier_root: Some(node_id(3)),
+            focus_barrier_root: Some(node_id(3)),
             focus: None,
             captured: None,
             nodes: vec![
@@ -6516,6 +6725,161 @@ mod tests {
         let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
+    }
+
+    #[test]
+    fn scripts_can_assert_barrier_root_and_focus_barrier_root_independently() {
+        let window = window_id(1);
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: Some(node_id(1)),
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node(
+                1,
+                None,
+                SemanticsRole::Window,
+                rect(0.0, 0.0, 100.0, 100.0),
+                "root",
+            )],
+        };
+
+        let pred = UiPredicateV1::BarrierRoots {
+            barrier_root: UiOptionalRootStateV1::Some,
+            focus_barrier_root: UiOptionalRootStateV1::None,
+            require_equal: Some(false),
+        };
+
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            "expected scripts to assert that the pointer barrier can remain active while focus containment is released"
+        );
+
+        let pred = UiPredicateV1::BarrierRoots {
+            barrier_root: UiOptionalRootStateV1::Some,
+            focus_barrier_root: UiOptionalRootStateV1::None,
+            require_equal: Some(true),
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window, None, &pred),
+            "expected require_equal=true to fail when the roots differ"
+        );
+    }
+
+    #[test]
+    fn scripts_can_assert_barrier_roots_via_drive_script() {
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.cfg.script_auto_dump = false;
+
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be >= UNIX_EPOCH")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("fret-diag-test-script-{}", unique));
+        std::fs::create_dir_all(&dir).expect("create temp test dir");
+        svc.cfg.out_dir = dir.clone();
+        svc.cfg.ready_path = dir.join("ready.touch");
+        svc.cfg.script_path = dir.join("script.json");
+        svc.cfg.script_trigger_path = dir.join("script.touch");
+        svc.cfg.script_result_path = dir.join("script.result.json");
+        svc.cfg.script_result_trigger_path = dir.join("script.result.touch");
+
+        let window = AppWindowId::default();
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: true,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: Some(node_id(1)),
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node(
+                1,
+                None,
+                SemanticsRole::Window,
+                rect(0.0, 0.0, 100.0, 100.0),
+                "root",
+            )],
+        };
+
+        let script: UiActionScriptV1 = serde_json::from_str(
+            r#"{
+                "schema_version": 1,
+                "steps": [
+                    {
+                        "type": "assert",
+                        "predicate": {
+                            "kind": "barrier_roots",
+                            "barrier_root": "some",
+                            "focus_barrier_root": "none",
+                            "require_equal": false
+                        }
+                    }
+                ]
+            }"#,
+        )
+        .expect("parse barrier_roots predicate");
+        svc.pending_script = Some(script);
+        svc.pending_script_run_id = Some(1);
+
+        let app = App::new();
+        let _ = svc.drive_script_for_window(&app, window, window_bounds, Some(&snapshot), None);
+
+        let bytes =
+            std::fs::read(&svc.cfg.script_result_path).expect("read script result json file");
+        let result: UiScriptResultV1 =
+            serde_json::from_slice(&bytes).expect("parse UiScriptResultV1");
+        assert!(
+            matches!(result.stage, UiScriptStageV1::Passed),
+            "expected drive_script to persist the passed result"
+        );
+    }
+
+    #[test]
+    fn hit_test_snapshot_exposes_focus_barrier_root() {
+        let position = Point::new(Px(1.0), Px(2.0));
+        let hit_test = UiDebugHitTest {
+            hit: None,
+            active_layer_roots: vec![node_id(10)],
+            barrier_root: Some(node_id(10)),
+        };
+
+        let snap = UiHitTestSnapshotV1::from_hit_test_with_layers(
+            position,
+            hit_test,
+            Some(node_id(11)),
+            &[],
+        );
+
+        assert_eq!(snap.barrier_root, Some(key_to_u64(node_id(10))));
+        assert_eq!(snap.focus_barrier_root, Some(key_to_u64(node_id(11))));
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| r.kind == "modal_barrier_root" && r.root == key_to_u64(node_id(10)))
+        );
+        assert!(
+            snap.scope_roots
+                .iter()
+                .any(|r| { r.kind == "focus_barrier_root" && r.root == key_to_u64(node_id(11)) })
+        );
     }
 }
 

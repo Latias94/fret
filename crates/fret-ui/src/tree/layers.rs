@@ -9,6 +9,7 @@ pub(super) struct UiLayer {
     pub(super) root: NodeId,
     pub(super) visible: bool,
     pub(super) blocks_underlay_input: bool,
+    pub(super) blocks_underlay_focus: bool,
     pub(super) hit_testable: bool,
     pub(super) pointer_occlusion: PointerOcclusion,
     pub(super) wants_pointer_down_outside_events: bool,
@@ -37,6 +38,7 @@ impl<H: UiHost> UiTree<H> {
             root,
             visible: true,
             blocks_underlay_input: false,
+            blocks_underlay_focus: false,
             hit_testable: true,
             pointer_occlusion: PointerOcclusion::None,
             wants_pointer_down_outside_events: false,
@@ -66,6 +68,7 @@ impl<H: UiHost> UiTree<H> {
             root,
             visible: true,
             blocks_underlay_input,
+            blocks_underlay_focus: blocks_underlay_input,
             hit_testable,
             pointer_occlusion: PointerOcclusion::None,
             wants_pointer_down_outside_events: false,
@@ -216,6 +219,21 @@ impl<H: UiHost> UiTree<H> {
         l.pointer_occlusion = occlusion;
     }
 
+    pub fn set_layer_blocks_underlay_focus(&mut self, layer: UiLayerId, blocks: bool) {
+        let prev = self.layers.get(layer).map(|l| l.blocks_underlay_focus);
+        let Some(l) = self.layers.get_mut(layer) else {
+            return;
+        };
+        l.blocks_underlay_focus = blocks;
+
+        if prev != Some(blocks) {
+            let (active_roots, barrier_root) = self.active_focus_layers();
+            if barrier_root.is_some() {
+                self.enforce_focus_barrier_scope(&active_roots);
+            }
+        }
+    }
+
     pub fn is_layer_visible(&self, layer: UiLayerId) -> bool {
         self.layers.get(layer).is_some_and(|l| l.visible)
     }
@@ -343,6 +361,33 @@ impl<H: UiHost> UiTree<H> {
             // Modal/pointer barriers can be hit-test-inert (e.g. close transitions, pointer-only
             // underlay blocking). A barrier must still gate input even when it isn't hit-testable.
             if l.blocks_underlay_input {
+                barrier_index = Some(idx);
+            }
+        }
+
+        let range_start = barrier_index.unwrap_or(0);
+        let mut roots: Vec<NodeId> = Vec::new();
+        for layer in visible[range_start..].iter().rev() {
+            let l = &self.layers[*layer];
+            if l.hit_testable {
+                roots.push(l.root);
+            }
+        }
+
+        let barrier_root = barrier_index.map(|idx| self.layers[visible[idx]].root);
+        (roots, barrier_root)
+    }
+
+    pub(super) fn active_focus_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
+        let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        if visible.is_empty() {
+            return (Vec::new(), None);
+        }
+
+        let mut barrier_index: Option<usize> = None;
+        for (idx, layer) in visible.iter().enumerate() {
+            let l = &self.layers[*layer];
+            if l.blocks_underlay_focus {
                 barrier_index = Some(idx);
             }
         }

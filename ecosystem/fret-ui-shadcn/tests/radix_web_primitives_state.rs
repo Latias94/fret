@@ -262,7 +262,7 @@ impl fret_core::SvgService for FakeServices {
     }
 }
 
-fn render_frame(
+fn render_frame<I, F>(
     ui: &mut UiTree<App>,
     app: &mut App,
     services: &mut dyn UiServices,
@@ -270,8 +270,11 @@ fn render_frame(
     bounds: Rect,
     frame_id: FrameId,
     request_semantics: bool,
-    render: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) {
+    render: F,
+) where
+    F: FnOnce(&mut ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     app.set_frame_id(frame_id);
     OverlayController::begin_frame(app, window);
     let root =
@@ -980,6 +983,12 @@ fn radix_web_context_menu_open_close_matches_fret() {
     );
 
     assert!(!app.models().get_copied(&open).unwrap_or(false));
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert_focus_cleared(&ui, &snap, "context menu escape close");
 }
 
 #[test]
@@ -1098,6 +1107,17 @@ fn radix_web_menubar_open_navigate_close_matches_fret() {
     assert!(
         !file.flags.expanded,
         "expected menubar menu to be closed after Escape"
+    );
+
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("File"),
+        "expected Escape close to restore focus to the menubar trigger"
+    );
+    assert!(
+        ui.focus().is_some(),
+        "expected UiTree focus to be set after menubar Escape close"
     );
 }
 

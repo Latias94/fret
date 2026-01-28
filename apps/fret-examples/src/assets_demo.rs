@@ -6,7 +6,7 @@ use fret_kit::prelude::*;
 use fret_ui_assets::{UiAssets, image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::GlobalWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ColorRef, LayoutRefinement, Radius, Space};
 
 static DEMO_SVG: &[u8] = br##"
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
@@ -228,7 +228,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret_kit::ViewElement
     let card = shadcn::Card::new([header, content])
         .ui()
         .w_full()
-        .max_w(MetricRef::Px(fret_core::Px(560.0)))
+        .max_w(fret_core::Px(560.0))
         .into_element(cx);
 
     let page = ui::container(cx, |cx| {
@@ -276,8 +276,8 @@ fn render_image_panel(
     .border_1()
     .border_color(ColorRef::Color(theme.color_required("border")))
     .rounded(Radius::Lg)
-    .w_px(MetricRef::Px(fret_core::Px(160.0)))
-    .h_px(MetricRef::Px(fret_core::Px(160.0)))
+    .w_px(fret_core::Px(160.0))
+    .h_px(fret_core::Px(160.0))
     .overflow_hidden()
     .into_element(cx);
 
@@ -327,8 +327,8 @@ fn render_svg_panel(
         props.layout = decl_style::layout_style(
             theme,
             LayoutRefinement::default()
-                .w_px(MetricRef::Px(fret_core::Px(160.0)))
-                .h_px(MetricRef::Px(fret_core::Px(160.0))),
+                .w_px(fret_core::Px(160.0))
+                .h_px(fret_core::Px(160.0)),
         );
         props.fit = fret_core::SvgFit::Contain;
         props.color = theme.color_required("foreground");

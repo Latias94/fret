@@ -304,6 +304,38 @@ fn shadow_layer_style(
     }
 }
 
+pub fn shadow(theme: &Theme, radius: Px) -> ShadowStyle {
+    // Tailwind default (`shadow`):
+    // `0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)`
+    let primary_color = shadow_color(theme, 0.10);
+    let primary = shadow_layer_style(
+        theme,
+        "component.shadow.default.offset_x",
+        "component.shadow.default.offset_y",
+        "component.shadow.default.spread",
+        "component.shadow.default.softness",
+        (Px(0.0), Px(1.0), Px(0.0), Px(3.0)),
+        primary_color,
+    );
+
+    let secondary_color = shadow_color(theme, 0.06);
+    let secondary = shadow_layer_style(
+        theme,
+        "component.shadow.default2.offset_x",
+        "component.shadow.default2.offset_y",
+        "component.shadow.default2.spread",
+        "component.shadow.default2.softness",
+        (Px(0.0), Px(1.0), Px(0.0), Px(2.0)),
+        secondary_color,
+    );
+
+    ShadowStyle {
+        primary,
+        secondary: Some(secondary),
+        corner_radii: Corners::all(radius),
+    }
+}
+
 pub fn shadow_xs(theme: &Theme, radius: Px) -> ShadowStyle {
     // Tailwind default (`shadow-xs`): `0 1px 2px 0 rgba(0,0,0,0.05)`.
     let color = shadow_color(theme, 0.05);
