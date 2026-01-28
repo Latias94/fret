@@ -409,6 +409,7 @@ pub fn render<H: UiHost + 'static>(
             layer = Some(entry.layer);
 
             apply_modal_layer(ui, entry.layer, true);
+            ui.set_layer_blocks_underlay_focus(entry.layer, open_now);
             entry.open = open_now;
             if open_now {
                 entry.close_auto_focus_handled = false;
@@ -494,8 +495,7 @@ pub fn render<H: UiHost + 'static>(
             ui.focus()
                 .is_some_and(|n| ui.node_layer(n).is_some_and(|lid| lid == layer))
         });
-        let enforce_focus_containment =
-            open_now && !focus_in_layer && !(opening && open_auto_focus_prevented);
+        let enforce_focus_containment = open_now && !focus_in_layer;
 
         let pending_initial_focus =
             app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
@@ -505,15 +505,16 @@ pub fn render<H: UiHost + 'static>(
                     .is_some_and(|entry| entry.pending_initial_focus)
             });
 
-        if (opening && !open_auto_focus_prevented)
-            || pending_initial_focus
-            || enforce_focus_containment
-        {
+        let apply_initial_focus = (opening && !open_auto_focus_prevented) || pending_initial_focus;
+        if apply_initial_focus || enforce_focus_containment {
             let focus = app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
                 overlays.modals.get(&key).and_then(|p| p.initial_focus)
             });
-            let applied =
-                focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus);
+            let applied = if apply_initial_focus {
+                focus_scope_prim::apply_initial_focus_for_overlay(ui, app, window, root, focus)
+            } else {
+                false
+            };
             if !applied && enforce_focus_containment {
                 ui.set_focus(Some(root));
             }
@@ -1113,7 +1114,7 @@ pub fn render<H: UiHost + 'static>(
 
         let open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let interactive = req.interactive && open_now;
-        let root = fret_ui::declarative::render_root(
+        let root = fret_ui::declarative::render_dismissible_root_with_hooks(
             ui,
             app,
             services,
