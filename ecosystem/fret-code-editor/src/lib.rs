@@ -14,6 +14,8 @@ use fret_code_editor_view::{
     DisplayPoint, byte_to_display_point, display_point_to_byte, move_word_left, move_word_right,
     select_word_range,
 };
+#[cfg(feature = "syntax")]
+use fret_core::{AttributedText, TextPaintStyle, TextSpan};
 use fret_core::{
     Color, Corners, DrawOrder, Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
     Size, TextOverflow, TextStyle, TextWrap,
@@ -111,6 +113,14 @@ struct UndoGroup {
     coalesce_key: CoalesceKey,
 }
 
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SyntaxSpan {
+    /// Range within the row text (UTF-8 byte indices).
+    range: Range<usize>,
+    highlight: &'static str,
+}
+
 #[derive(Debug, Clone)]
 struct CodeEditorState {
     buffer: TextBuffer,
@@ -125,6 +135,14 @@ struct CodeEditorState {
     row_text_cache_tick: u64,
     row_text_cache: HashMap<usize, (Arc<str>, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
+    #[cfg(feature = "syntax")]
+    language: Option<Arc<str>>,
+    #[cfg(feature = "syntax")]
+    syntax_rev: fret_code_editor_buffer::Revision,
+    #[cfg(feature = "syntax")]
+    syntax_language: Option<Arc<str>>,
+    #[cfg(feature = "syntax")]
+    syntax_row_spans: Vec<Vec<SyntaxSpan>>,
 }
 
 #[derive(Clone)]
@@ -152,7 +170,29 @@ impl CodeEditorHandle {
                 row_text_cache_tick: 0,
                 row_text_cache: HashMap::new(),
                 row_text_cache_queue: VecDeque::new(),
+                #[cfg(feature = "syntax")]
+                language: None,
+                #[cfg(feature = "syntax")]
+                syntax_rev: fret_code_editor_buffer::Revision(0),
+                #[cfg(feature = "syntax")]
+                syntax_language: None,
+                #[cfg(feature = "syntax")]
+                syntax_row_spans: Vec::new(),
             })),
+        }
+    }
+
+    pub fn set_language(&self, language: Option<impl Into<Arc<str>>>) {
+        #[cfg(feature = "syntax")]
+        {
+            let mut st = self.state.borrow_mut();
+            st.language = language.map(Into::into);
+            st.syntax_language = None;
+            st.syntax_row_spans.clear();
+        }
+        #[cfg(not(feature = "syntax"))]
+        {
+            let _ = language;
         }
     }
 
@@ -170,6 +210,11 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        #[cfg(feature = "syntax")]
+        {
+            st.syntax_language = None;
+            st.syntax_row_spans.clear();
+        }
     }
 
     pub fn set_text(&self, text: impl Into<String>) {
@@ -1290,16 +1335,43 @@ fn paint_row(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     };
-    let _ = painter.text(
-        key,
-        DrawOrder(2),
-        origin,
-        Arc::clone(&line),
-        text_style.clone(),
-        fg,
-        constraints,
-        painter.scale_factor(),
-    );
+    #[cfg(feature = "syntax")]
+    let mut drew_rich = false;
+    #[cfg(not(feature = "syntax"))]
+    let drew_rich = false;
+    #[cfg(feature = "syntax")]
+    {
+        ensure_syntax_cache(st);
+        if row < st.syntax_row_spans.len() && !st.syntax_row_spans[row].is_empty() {
+            let theme = painter.theme().clone();
+            let rich =
+                materialize_row_rich_text(&theme, Arc::clone(&line), &st.syntax_row_spans[row]);
+            let _ = painter.rich_text(
+                key,
+                DrawOrder(2),
+                origin,
+                rich,
+                text_style.clone(),
+                fg,
+                constraints,
+                painter.scale_factor(),
+            );
+            drew_rich = true;
+        }
+    }
+
+    if !drew_rich {
+        let _ = painter.text(
+            key,
+            DrawOrder(2),
+            origin,
+            Arc::clone(&line),
+            text_style.clone(),
+            fg,
+            constraints,
+            painter.scale_factor(),
+        );
+    }
 
     if st.selection.is_caret() {
         let caret_pt = byte_to_display_point(&st.buffer, st.selection.caret());
@@ -1379,6 +1451,160 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
     text
 }
 
+#[cfg(feature = "syntax")]
+fn ensure_syntax_cache(st: &mut CodeEditorState) {
+    let rev = st.buffer.revision();
+    if st.syntax_rev == rev && st.syntax_language == st.language {
+        return;
+    }
+
+    st.syntax_rev = rev;
+    st.syntax_language = st.language.clone();
+    st.syntax_row_spans.clear();
+    st.syntax_row_spans
+        .resize(st.buffer.line_count(), Vec::new());
+
+    let Some(lang) = st.language.as_deref() else {
+        return;
+    };
+
+    let Ok(spans) = fret_syntax::highlight(st.buffer.text(), lang) else {
+        return;
+    };
+
+    let line_count = st.buffer.line_count();
+    let mut line_ranges = Vec::with_capacity(line_count);
+    for row in 0..line_count {
+        line_ranges.push(st.buffer.line_byte_range(row).unwrap_or(0..0));
+    }
+
+    for span in spans {
+        let Some(highlight) = span.highlight else {
+            continue;
+        };
+        let start = span.range.start;
+        let end = span.range.end;
+        if start >= end {
+            continue;
+        }
+
+        let end_for_row = end.saturating_sub(1);
+        let start_row = st.buffer.line_index_at_byte(start);
+        let end_row = st.buffer.line_index_at_byte(end_for_row);
+        for row in start_row..=end_row {
+            if row >= line_ranges.len() {
+                break;
+            }
+            let row_range = &line_ranges[row];
+            let inter_start = start.max(row_range.start);
+            let inter_end = end.min(row_range.end);
+            if inter_start >= inter_end {
+                continue;
+            }
+            st.syntax_row_spans[row].push(SyntaxSpan {
+                range: (inter_start - row_range.start)..(inter_end - row_range.start),
+                highlight,
+            });
+        }
+    }
+
+    for spans in &mut st.syntax_row_spans {
+        spans.sort_by_key(|s| s.range.start);
+        spans.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
+
+        let mut merged: Vec<SyntaxSpan> = Vec::new();
+        for span in spans.drain(..) {
+            if let Some(last) = merged.last_mut()
+                && last.highlight == span.highlight
+                && last.range.end == span.range.start
+            {
+                last.range.end = span.range.end;
+                continue;
+            }
+            merged.push(span);
+        }
+        *spans = merged;
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn syntax_color(theme: &fret_ui::Theme, highlight: &str) -> Option<Color> {
+    let mut key = String::with_capacity("color.syntax.".len() + highlight.len());
+    key.push_str("color.syntax.");
+    key.push_str(highlight);
+    if let Some(c) = theme.color_by_key(key.as_str()) {
+        return Some(c);
+    }
+
+    let fallback = highlight.split('.').next().unwrap_or(highlight);
+    if fallback != highlight {
+        let mut key = String::with_capacity("color.syntax.".len() + fallback.len());
+        key.push_str("color.syntax.");
+        key.push_str(fallback);
+        if let Some(c) = theme.color_by_key(key.as_str()) {
+            return Some(c);
+        }
+    }
+
+    match fallback {
+        "comment" => Some(theme.color_required("muted-foreground")),
+        "keyword" | "operator" => Some(theme.color_required("primary")),
+        "property" | "variable" => Some(theme.color_required("foreground")),
+        "punctuation" => Some(theme.color_required("muted-foreground")),
+
+        "string" => Some(theme.color_required("foreground")),
+        "number" | "boolean" | "constant" => Some(theme.color_required("primary")),
+        "type" | "constructor" | "function" => Some(theme.color_required("foreground")),
+        _ => None,
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn materialize_row_rich_text(
+    theme: &fret_ui::Theme,
+    line: Arc<str>,
+    spans: &[SyntaxSpan],
+) -> AttributedText {
+    let mut out: Vec<TextSpan> = Vec::new();
+    let mut cursor = 0usize;
+    let max = line.len();
+
+    for span in spans {
+        let start = span.range.start.min(max);
+        let end = span.range.end.min(max);
+        if start >= end || start < cursor {
+            continue;
+        }
+
+        if start > cursor {
+            out.push(TextSpan {
+                len: start - cursor,
+                ..Default::default()
+            });
+        }
+
+        let fg = syntax_color(theme, span.highlight);
+        out.push(TextSpan {
+            len: end - start,
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                fg,
+                ..Default::default()
+            },
+        });
+        cursor = end;
+    }
+
+    if cursor < max {
+        out.push(TextSpan {
+            len: max - cursor,
+            ..Default::default()
+        });
+    }
+
+    AttributedText::new(line, out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1412,5 +1638,21 @@ mod tests {
         assert_eq!(st.drag_pointer, None);
         assert_eq!(st.row_text_cache.len(), 0);
         assert_eq!(st.row_text_cache_queue.len(), 0);
+    }
+
+    #[cfg(feature = "syntax-rust")]
+    #[test]
+    fn rust_syntax_spans_are_materialized_for_rows() {
+        let handle = CodeEditorHandle::new("fn main() {\n    let x = 1;\n}\n");
+        handle.set_language(Some(Arc::<str>::from("rust")));
+
+        let mut st = handle.state.borrow_mut();
+        ensure_syntax_cache(&mut st);
+
+        assert_eq!(st.syntax_row_spans.len(), st.buffer.line_count());
+        assert!(
+            st.syntax_row_spans.iter().any(|row| !row.is_empty()),
+            "expected at least one highlighted span for rust"
+        );
     }
 }
