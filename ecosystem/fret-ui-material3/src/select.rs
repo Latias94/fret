@@ -864,6 +864,18 @@ fn select_listbox_panel<H: UiHost>(
                                 RovingNavigateResult::Handled { target }
                             }));
 
+                            // Prefix typeahead (best-effort): matches `Menu` / `RadioGroup` behavior.
+                            fret_ui_kit::primitives::roving_focus_group::typeahead_prefix_arc_str_always_wrap(
+                                cx,
+                                Arc::from(
+                                    items
+                                        .iter()
+                                        .map(|it| it.label.clone())
+                                        .collect::<Vec<_>>(),
+                                ),
+                                30,
+                            );
+
                             let mut out: Vec<AnyElement> = Vec::with_capacity(count);
                             for (idx, item) in items.iter().cloned().enumerate() {
                                 let tab_stop = idx == tab_stop_idx;

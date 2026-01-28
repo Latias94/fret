@@ -571,7 +571,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Verify Select dismissal and focus restore across light/dark + TonalSpot/Expressive schemes.
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`select_dismisses_and_restores_focus_across_schemes`,
     `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes`,
-    `select_roving_scrolls_focused_option_into_view`, `select_open_scrolls_selected_option_into_view`).
+    `select_roving_scrolls_focused_option_into_view`, `select_open_scrolls_selected_option_into_view`,
+    `select_listbox_typeahead_moves_focus_skipping_disabled_options`).
 - [x] Add golden-style visual snapshots per component state (light/dark, density variants).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_controls_suite_goldens_v1`, `material3_headless_overlays_suite_goldens_v1`, `material3_headless_text_field_suite_goldens_v1`),
     `goldens/material3-headless/v1/material3-*.json` (controls suite, overlay suite, text-field suite; includes `scale1_0`/`scale1_25`/`scale2_0` variants and overlay cases such as `both_open` + `select_open`).

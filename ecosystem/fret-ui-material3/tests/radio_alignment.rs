@@ -4700,6 +4700,180 @@ fn select_open_scrolls_selected_option_into_view() {
     );
 }
 
+#[test]
+fn select_listbox_typeahead_moves_focus_skipping_disabled_options() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+    let items: Arc<[SelectItem]> = vec![
+        SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
+        SelectItem::new("beta", "Beta").test_id("select-item-beta"),
+        SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("select-item-charlie-disabled"),
+        SelectItem::new("delta", "Delta").test_id("select-item-delta"),
+    ]
+    .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![
+                    Select::new(selected_model)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx),
+                ]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    let beta_option_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+            })
+        })
+        .expect("expected select-item-beta in semantics snapshot");
+    assert_eq!(
+        ui.focus(),
+        Some(beta_option_node),
+        "expected select to focus the selected option when opening via keyboard"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyC));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyC));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.as_deref())
+        })
+    });
+    assert_eq!(
+        focused_test_id,
+        Some("select-item-beta"),
+        "expected typeahead to ignore disabled matches (KeyC)"
+    );
+
+    // Wait for the typeahead buffer to expire (select installs a prefix-buffer typeahead policy).
+    for _ in 0..40 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyD));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyD));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.as_deref())
+        })
+    });
+    assert_eq!(
+        focused_test_id,
+        Some("select-item-delta"),
+        "expected typeahead to rove focus to the matching option (KeyD)"
+    );
+}
+
 fn scale_segment(scale_factor: f32) -> &'static str {
     if (scale_factor - 1.0).abs() < 1e-6 {
         "scale1_0"
