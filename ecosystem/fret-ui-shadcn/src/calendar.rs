@@ -605,7 +605,7 @@ impl Calendar {
                             .collect::<Vec<_>>()
                             .into()
                     } else {
-                        Arc::from([])
+                        Vec::<u32>::new().into()
                     };
 
                     let days_grid = cx.roving_flex(roving_props, move |cx| {
@@ -707,7 +707,7 @@ impl Calendar {
                     });
 
                     let days = if show_week_number {
-                        let week_numbers = Arc::clone(&week_numbers);
+                        let week_numbers: Arc<[u32]> = Arc::clone(&week_numbers);
                         let week_number_column = cx.flex(
                             FlexProps {
                                 layout: LayoutStyle {
@@ -727,7 +727,7 @@ impl Calendar {
                             move |cx| {
                                 week_numbers
                                     .iter()
-                                    .map(|n| {
+                                    .map(|n: &u32| {
                                         let mut props = TextProps::new(Arc::from(n.to_string()));
                                         props.style = Some(grid_text_style_week_numbers.clone());
                                         props.color = theme_days_for_week_numbers
@@ -1171,7 +1171,7 @@ fn calendar_month_view<H: UiHost>(
             .collect::<Vec<_>>()
             .into()
     } else {
-        Arc::from([])
+        Vec::<u32>::new().into()
     };
 
     let days_grid = cx.roving_flex(roving_props, move |cx| {
@@ -1271,7 +1271,7 @@ fn calendar_month_view<H: UiHost>(
     });
 
     let days = if show_week_number {
-        let week_numbers = Arc::clone(&week_numbers);
+        let week_numbers: Arc<[u32]> = Arc::clone(&week_numbers);
         let week_number_column = cx.flex(
             FlexProps {
                 layout: LayoutStyle {
@@ -1291,7 +1291,7 @@ fn calendar_month_view<H: UiHost>(
             move |cx| {
                 week_numbers
                     .iter()
-                    .map(|n| {
+                    .map(|n: &u32| {
                         let mut props = TextProps::new(Arc::from(n.to_string()));
                         props.style = Some(grid_text_style_week_numbers.clone());
                         props.color = theme_days_for_week_numbers.color_by_key("muted-foreground");
@@ -1681,6 +1681,7 @@ fn calendar_day_cell<H: UiHost>(
             )),
             a11y: PressableA11y {
                 label: Some(date_label.clone()),
+                test_id: Some(Arc::from(date.to_string())),
                 selected,
                 ..Default::default()
             },

@@ -195,19 +195,22 @@ pub fn month_grid_compact(month: CalendarMonth, week_start: Weekday) -> Vec<Cale
         .collect()
 }
 
-/// Returns a week number aligned to `week_start`, matching `date-fns`'s `getWeek` defaults
+fn start_of_week(date: Date, week_start: Weekday) -> Date {
+    let offset = offset_to_week_start(date.weekday(), week_start) as i64;
+    date - Duration::days(offset)
+}
+
+/// Returns a week number aligned to `week_start`, matching `date-fns` `getWeek` defaults
 /// (`firstWeekContainsDate = 1`).
 ///
 /// This is the numbering used by `react-day-picker` when `showWeekNumber` is enabled.
 pub fn week_number(date: Date, week_start: Weekday) -> u32 {
-    let week_start_offset = offset_to_week_start(date.weekday(), week_start) as i64;
-    let week_start_date = date - Duration::days(week_start_offset);
+    let week_start_date = start_of_week(date, week_start);
     let week_end_date = week_start_date + Duration::days(6);
     let week_year = week_end_date.year();
 
     let jan1 = Date::from_calendar_date(week_year, Month::January, 1).expect("valid year");
-    let week1_start_offset = offset_to_week_start(jan1.weekday(), week_start) as i64;
-    let week1_start = jan1 - Duration::days(week1_start_offset);
+    let week1_start = start_of_week(jan1, week_start);
 
     let diff_days = (week_start_date - week1_start).whole_days();
     let weeks = diff_days.div_euclid(7).max(0);
