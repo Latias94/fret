@@ -156,7 +156,11 @@ Suggested initial slot sets:
 - TextField: container/outline/focus-ring + text/placeholder/supporting.
 - Menu / MenuItem: container + item background/foreground + selection state.
 
-- [ ] For each component, document which slots are public and which remain policy-only.
+- [~] For each component, document which slots are public and which remain policy-only.
+  - [x] Select (slot boundary documented below).
+  - [ ] Button / IconButton
+  - [ ] Checkbox / Switch / Radio / Tabs / TextField
+  - [ ] Menu / Dialog / Tooltip (if exposed in v1)
 - [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
 
 Widget state conventions (v1):
@@ -167,6 +171,28 @@ Widget state conventions (v1):
   Tabs active tab) and for boolean "checked/on" controls (Checkbox/Switch/Radio/IconButton toggles).
 - Overlays (Menu/Select listbox) should usually treat `SELECTED` as belonging to the *option row*,
   not to the overlay container.
+
+#### Select slot boundary (v1)
+
+Select exposes a small set of public `SelectStyle` slots intended for app-level customization, while
+keeping the rest of the interaction/layout/overlay behavior as policy.
+
+Public override surface (`SelectStyle` in `ecosystem/fret-ui-material3/src/select.rs`):
+
+- `container_background` — Select trigger background (stateful).
+- `outline_color` — Select trigger outline color (stateful).
+- `active_indicator_color` — Select trigger active-indicator color (stateful).
+- `text_color` — Select trigger text/placeholder color (stateful).
+- `trailing_icon_color` — Select trigger trailing icon color (stateful).
+- `menu_selected_container_color` — Selected option row container color for the listbox (applies with `WidgetStates::SELECTED` on the option row).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing: container height, menu row height, minimum touch target enforcement.
+- Layout: padding/insets, listbox spacing, max visible rows and scroll behavior.
+- Shape/elevation: container shape radius, listbox container shape, elevation + shadow.
+- Overlay mechanics: placement, collision padding, motion timings/easing, dismissal policy.
+- Interaction: roving focus behavior, focus restore, ripple/state-layer policy.
 
 ### M3SA-200 — Implement `*Style` surfaces per component (incremental)
 
