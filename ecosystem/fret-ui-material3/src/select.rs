@@ -216,6 +216,7 @@ impl Select {
 #[derive(Clone)]
 struct SelectRuntimeModels {
     open: Model<bool>,
+    scroll_handle: fret_ui::scroll::ScrollHandle,
 }
 
 fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRuntimeModels {
@@ -231,6 +232,7 @@ fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRun
 
     let models = SelectRuntimeModels {
         open: cx.app.models_mut().insert(false),
+        scroll_handle: fret_ui::scroll::ScrollHandle::default(),
     };
 
     cx.with_state(State::default, |st| st.models = Some(models.clone()));
@@ -245,6 +247,16 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         let is_open = cx
             .get_model_copied(&runtime.open, Invalidation::Layout)
             .unwrap_or(false);
+
+        #[derive(Default)]
+        struct OpenState {
+            last_open: bool,
+        }
+        let opening = cx.with_state(OpenState::default, |st| {
+            let opening = is_open && !st.last_open;
+            st.last_open = is_open;
+            opening
+        });
 
         let open_ticks = ms_to_frames(dropdown_menu_tokens::open_duration_ms(&theme));
         let close_ticks = ms_to_frames(dropdown_menu_tokens::close_duration_ms(&theme));
@@ -264,6 +276,23 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         let selected = cx
             .get_model_cloned(&select.model, Invalidation::Layout)
             .unwrap_or(None);
+
+        if opening {
+            let selected_idx = selected.as_ref().and_then(|value| {
+                select
+                    .items
+                    .iter()
+                    .position(|it| it.value.as_ref() == value.as_ref() && !it.disabled)
+            });
+            let first_enabled_idx = select.items.iter().position(|it| !it.disabled);
+            let tab_stop_idx = selected_idx.or(first_enabled_idx).unwrap_or(0);
+
+            let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
+            let target_y = Px(item_height.0 * (tab_stop_idx as f32));
+            runtime
+                .scroll_handle
+                .scroll_to_offset(Point::new(Px(0.0), target_y));
+        }
         let display_label = selected
             .as_ref()
             .and_then(|value| {
@@ -335,6 +364,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                         select.a11y_label.clone(),
                         select.test_id.clone(),
                         initial_focus_id_for_list,
+                        runtime.scroll_handle.clone(),
                         select.style.clone(),
                     )]
                 },
@@ -690,6 +720,7 @@ fn select_listbox_panel<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
+    scroll_handle: fret_ui::scroll::ScrollHandle,
     style: SelectStyle,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
@@ -772,6 +803,7 @@ fn select_listbox_panel<H: UiHost>(
                             l.overflow = Overflow::Clip;
                             l
                         },
+                        scroll_handle: Some(scroll_handle.clone()),
                         ..Default::default()
                     },
                     move |cx| {
