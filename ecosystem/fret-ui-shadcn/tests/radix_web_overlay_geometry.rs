@@ -2363,16 +2363,79 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
             panic!("fret navigation-menu trigger semantics");
         });
 
+    let overlay_stack =
+        fret_ui_kit::OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    let nav_root = overlay_stack
+        .topmost_popover
+        .expect("expected navigation-menu overlay root id");
+    let anchor_element = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "radix-web-overlay-geometry",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx,
+                nav_root,
+                "getting_started",
+            )
+        },
+    )
+    .expect("expected navigation-menu trigger element id");
+    let anchor_rect = fret_rect_to_dom(
+        fret_ui::elements::bounds_for_element(&mut app, window, anchor_element)
+            .expect("expected trigger element bounds"),
+    );
+
+    let viewport_panel_element = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "radix-web-overlay-geometry",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(
+                cx, nav_root,
+            )
+        },
+    )
+    .expect("expected navigation-menu viewport panel element id");
+
     let fret_trigger_rect = fret_rect_to_dom(
         ui.debug_node_visual_bounds(fret_trigger.id)
             .expect("fret trigger visual bounds"),
     );
-    let fret_viewport_rect = fret_rect_to_dom(find_overlay_panel_rect(&ui, bounds));
+    let fret_viewport_rect = fret_rect_to_dom(
+        fret_ui::elements::bounds_for_element(&mut app, window, viewport_panel_element)
+            .or_else(|| {
+                fret_ui::elements::visual_bounds_for_element(
+                    &mut app,
+                    window,
+                    viewport_panel_element,
+                )
+            })
+            .expect("expected viewport panel bounds"),
+    );
 
     let fret_gap = rect_main_gap(side, fret_trigger_rect, fret_viewport_rect);
     let fret_cross = rect_cross_delta(side, align, fret_trigger_rect, fret_viewport_rect);
 
-    assert_close("navigation-menu main gap", fret_gap, web_gap, 2.0);
+    let theme = fret_ui::Theme::global(&app);
+    let side_offset = theme
+        .metric_by_key("component.navigation_menu.viewport.side_offset")
+        .map(|v| v.0)
+        .unwrap_or(-1.0);
+    assert_close(
+        &format!(
+            "navigation-menu main gap (side_offset={side_offset}, trigger_h={}, trigger_bottom={}, viewport_y={}, anchor_bottom={})",
+            fret_trigger_rect.h,
+            fret_trigger_rect.y + fret_trigger_rect.h,
+            fret_viewport_rect.y,
+            anchor_rect.y + anchor_rect.h
+        ),
+        fret_gap,
+        web_gap,
+        2.0,
+    );
     assert_close("navigation-menu cross delta", fret_cross, web_cross, 2.0);
 }
 

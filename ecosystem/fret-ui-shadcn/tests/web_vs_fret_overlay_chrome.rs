@@ -12,6 +12,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use serde::Deserialize;
 use std::cell::Cell;
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -271,6 +272,23 @@ fn shadow_insets_score(a: ShadowInsets, b: ShadowInsets) -> f32 {
         + (a.top - b.top).abs()
         + (a.right - b.right).abs()
         + (a.bottom - b.bottom).abs()
+}
+
+fn maybe_dump_shadow_candidates(
+    label: &str,
+    expected: &[ShadowInsets],
+    candidates: &[ShadowInsets],
+) {
+    if std::env::var("FRET_DEBUG_SHADOW_INSETS").is_err() {
+        return;
+    }
+    eprintln!("-- shadow insets debug: {label}");
+    eprintln!("expected: {expected:?}");
+    let mut sorted = candidates.to_vec();
+    sorted.sort_by(|a, b| a.top.partial_cmp(&b.top).unwrap_or(Ordering::Equal));
+    for (idx, cand) in sorted.iter().take(16).enumerate() {
+        eprintln!("cand[{idx}] {cand:?}");
+    }
 }
 
 fn rect_intersection_area(a: Rect, b: Rect) -> f32 {
@@ -1660,6 +1678,11 @@ fn assert_navigation_menu_content_shadow_insets_match(
         find_best_chrome_quad(&scene, target).expect("painted quad for navigation-menu content");
 
     let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+    maybe_dump_shadow_candidates(
+        &format!("{web_name} {web_theme_name} navigation-menu-content"),
+        &expected,
+        &candidates,
+    );
     assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
 }
 
@@ -1765,6 +1788,11 @@ fn assert_navigation_menu_viewport_shadow_insets_match(
         .expect("painted quad for navigation-menu viewport panel");
 
     let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+    maybe_dump_shadow_candidates(
+        &format!("{web_name} {web_theme_name} navigation-menu-viewport"),
+        &expected,
+        &candidates,
+    );
     assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
 }
 
@@ -3026,10 +3054,10 @@ fn fret_drop_shadow_insets_candidates(scene: &Scene, panel_rect: Rect) -> Vec<Sh
         }
         // `shadow-lg` can push the outermost layer alpha below 0.01 (e.g. 0.1 / 16 = 0.00625),
         // but we still need to capture the full footprint for 1:1 `box-shadow` geometry gates.
-        if background.a <= 0.001 || background.a >= 0.95 {
+        if background.a <= 0.0001 || background.a >= 0.95 {
             continue;
         }
-        if rect_intersection_area(rect, panel_rect) / panel_area <= 0.10 {
+        if rect_intersection_area(rect, panel_rect) / panel_area <= 0.01 {
             continue;
         }
 

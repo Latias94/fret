@@ -144,6 +144,14 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("metric.padding.md".to_string())
         .or_insert(10.0);
 
+    // NavigationMenu:
+    // Upstream `NavigationMenuViewport` uses a 0.375rem gap (`mt-1.5`) between the trigger row and
+    // the viewport panel.
+    metrics.insert(
+        "component.navigation_menu.viewport.side_offset".to_string(),
+        6.0,
+    );
+
     // Component-specific overrides in the upstream registry.
     // - Checkbox uses `rounded-[4px]` (not `rounded-sm`, which would be `radius - 4px`).
     metrics
@@ -571,6 +579,25 @@ mod tests {
         assert_eq!(
             theme.metric_by_key("component.size.sm.button.h"),
             Some(fret_core::Px(32.0))
+        );
+    }
+
+    #[test]
+    fn new_york_v4_seeds_navigation_menu_viewport_gap_metric() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        assert_eq!(
+            cfg.metrics
+                .get("component.navigation_menu.viewport.side_offset")
+                .copied(),
+            Some(6.0)
+        );
+
+        let mut app = fret_app::App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let theme = Theme::global(&app);
+        assert_eq!(
+            theme.metric_by_key("component.navigation_menu.viewport.side_offset"),
+            Some(fret_core::Px(6.0))
         );
     }
 }
