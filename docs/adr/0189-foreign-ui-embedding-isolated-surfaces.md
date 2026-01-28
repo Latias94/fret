@@ -98,7 +98,6 @@ It provides two integration styles (both keep semantics/focus/IME isolated):
 
 This design keeps the “interop contract” explicit (render target + input forwarding) and allows adapters for
 other ecosystems (Iced/egui/custom wgpu passes) without pulling their semantics or layout models into the kernel.
-
 ## Alternatives Considered
 
 ### A1) Full widget tree integration
