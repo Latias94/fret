@@ -230,7 +230,6 @@ pub(super) struct NonModalDismissibleLayerPolicy {
     pub dismissable_branches: Vec<NodeId>,
     pub consume_outside_pointer_events: bool,
     pub disable_outside_pointer_events: bool,
-    pub wants_pointer_move_events: bool,
 }
 
 pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(

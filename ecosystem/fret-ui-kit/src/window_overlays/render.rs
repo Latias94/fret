@@ -599,7 +599,6 @@ pub fn render<H: UiHost + 'static>(
         let trigger = req.trigger;
         let initial_focus = req.initial_focus;
         let consume_outside_pointer_events = req.consume_outside_pointer_events;
-        let wants_pointer_move_events = req.on_pointer_move.is_some();
         let open = req.open;
         let on_open_auto_focus = req.on_open_auto_focus.clone();
         let open_for_dismiss = open.clone();
@@ -738,7 +737,6 @@ pub fn render<H: UiHost + 'static>(
                     dismissable_branches,
                     consume_outside_pointer_events,
                     disable_outside_pointer_events,
-                    wants_pointer_move_events,
                 },
             );
 
@@ -1028,7 +1026,6 @@ pub fn render<H: UiHost + 'static>(
                     dismissable_branches: Vec::new(),
                     consume_outside_pointer_events: false,
                     disable_outside_pointer_events: false,
-                    wants_pointer_move_events: false,
                 },
             );
             if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
@@ -1050,7 +1047,6 @@ pub fn render<H: UiHost + 'static>(
                     dismissable_branches: Vec::new(),
                     consume_outside_pointer_events: false,
                     disable_outside_pointer_events: false,
-                    wants_pointer_move_events: false,
                 },
             );
         }
