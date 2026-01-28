@@ -158,10 +158,10 @@ Suggested initial slot sets:
 
 - [~] For each component, document which slots are public and which remain policy-only.
   - [x] Select (slot boundary documented below).
-  - [ ] Button / IconButton
-  - [ ] Checkbox / Switch / Radio / Tabs / TextField
-  - [ ] Menu / Dialog / Tooltip (if exposed in v1)
-- [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
+  - [x] Button / IconButton
+  - [x] Checkbox / Switch / Radio / Tabs / TextField
+  - [x] Menu / Dialog / Tooltip (policy-only in v1)
+  - [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
 
 Widget state conventions (v1):
 
@@ -193,6 +193,121 @@ Policy-only in v1 (not exposed as slots):
 - Shape/elevation: container shape radius, listbox container shape, elevation + shadow.
 - Overlay mechanics: placement, collision padding, motion timings/easing, dismissal policy.
 - Interaction: roving focus behavior, focus restore, ripple/state-layer policy.
+
+#### Button slot boundary (v1)
+
+Public override surface (`ButtonStyle` in `ecosystem/fret-ui-material3/src/button.rs`):
+
+- `container_background` — Button container background (stateful).
+- `label_color` — Label text color (stateful).
+- `outline_color` — Outline stroke color (stateful; affects outlined variants).
+- `state_layer_color` — Press/hover/focus state layer color (stateful).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing and density: padding, minimum touch target enforcement.
+- Shape/elevation: container shape, shadow/elevation logic.
+- Interaction: ripple/state-layer behavior and motion timings.
+
+#### IconButton slot boundary (v1)
+
+Public override surface (`IconButtonStyle` in `ecosystem/fret-ui-material3/src/icon_button.rs`):
+
+- `container_background` — IconButton container background (stateful).
+- `icon_color` — Icon foreground color (stateful).
+- `outline_color` — Outline stroke color (stateful; affects outlined variants).
+- `state_layer_color` — Press/hover/focus state layer color (stateful).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing and density: padding, minimum touch target enforcement.
+- Shape/elevation: container shape, shadow/elevation logic.
+- Interaction: toggle semantics, ripple/state-layer behavior and motion timings.
+
+#### Checkbox slot boundary (v1)
+
+Public override surface (`CheckboxStyle` in `ecosystem/fret-ui-material3/src/checkbox.rs`):
+
+- `container_background` — Checkbox container background (stateful).
+- `outline_color` — Outline stroke color (stateful).
+- `icon_color` — Check icon color (stateful).
+- `state_layer_color` — Press/hover/focus state layer color (stateful).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing and density: padding, minimum touch target enforcement.
+- Shape/elevation: container shape and focus-ring policy.
+- Interaction: ripple/state-layer behavior and motion timings.
+
+#### Switch slot boundary (v1)
+
+Public override surface (`SwitchStyle` in `ecosystem/fret-ui-material3/src/switch.rs`):
+
+- `track_color` — Switch track color (stateful).
+- `handle_color` — Switch handle/thumb color (stateful).
+- `outline_color` — Outline stroke color (stateful).
+- `state_layer_color` — Press/hover/focus state layer color (stateful).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing and density: padding, minimum touch target enforcement.
+- Shape/elevation: track/handle shape and focus-ring policy.
+- Interaction: ripple/state-layer behavior and motion timings.
+
+#### Radio slot boundary (v1)
+
+Public override surface (`RadioStyle` in `ecosystem/fret-ui-material3/src/radio.rs`):
+
+- `icon_color` — Radio icon color (stateful).
+- `state_layer_color` — Press/hover/focus state layer color (stateful).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing and density: padding, minimum touch target enforcement.
+- Shape/elevation: focus-ring policy.
+- Interaction: group roving focus mechanics, ripple/state-layer behavior and motion timings.
+
+#### Tabs slot boundary (v1)
+
+Public override surface (`TabsStyle` in `ecosystem/fret-ui-material3/src/tabs.rs`):
+
+- `container_background` — Tabs container background (stateful).
+- `label_color` — Tab label color (stateful).
+- `state_layer_color` — Press/hover/focus state layer color (stateful).
+- `active_indicator_color` — Active indicator color (stateful).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing and density: padding, minimum touch target enforcement.
+- Layout: scrollable behavior, spacing/insets, indicator geometry.
+- Interaction: roving focus mechanics, ripple/state-layer behavior and motion timings.
+
+#### TextField slot boundary (v1)
+
+Public override surface (`TextFieldStyle` in `ecosystem/fret-ui-material3/src/text_field.rs`):
+
+- `container_background` — TextField container background (stateful).
+- `outline_color` — Outline stroke color (stateful).
+- `text_color` — Input text color (stateful).
+- `placeholder_color` — Placeholder text color (stateful).
+- `caret_color` — Caret color (stateful).
+- `label_color` — Floating label color (stateful).
+- `supporting_text_color` — Supporting text color (stateful).
+
+Policy-only in v1 (not exposed as slots):
+
+- Sizing and density: padding, minimum touch target enforcement.
+- Layout: label/supporting layout rules and motion.
+- Shape/elevation: focus-ring thickness policy.
+- Interaction: hover/focus/press state-layer behavior and motion timings.
+- Error styling: kept as component-level boolean (see M3SA-400).
+
+#### Menu / Dialog / Tooltip slot boundary (v1)
+
+In v1, these overlays are intentionally policy-owned and do not expose a public `*Style` override
+surface. Customization is expected to happen via theme token overrides and/or higher-level
+ecosystem components, until we have strong downstream evidence that a small, stable override surface
+is required.
 
 ### M3SA-200 — Implement `*Style` surfaces per component (incremental)
 
