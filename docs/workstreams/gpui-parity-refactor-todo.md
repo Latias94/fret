@@ -650,7 +650,7 @@ topics (if/when we implement them):
       - `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json --warmup-frames 5 --check-vlist-scroll-window-dirty-max 4 ...`
       - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to `--warmup-frames 5`, `--check-view-cache-reuse-min 1`, and `--check-vlist-scroll-window-dirty-max 4`.
 
-- [~] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
+- [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
   - Goal: allow scroll/window membership updates to attach/detach item subtrees without rerendering the parent cache root.
   - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Proposed).
@@ -693,6 +693,9 @@ topics (if/when we implement them):
   - Done when:
     - A prototype host can drive a fixed-height “composable rows” list without forcing a parent cache-root rerender when crossing a window boundary (attach/detach delta only).
     - A scripted harness bundle can prove: no stale paint, stable hit-testing, and bounded attach/detach work.
+  - Next:
+    - Expand retained-table coverage from v0 to more of the existing UI Kit table surface (grouping/pinning/resizing), tracked in `GPUI-MVP5-eco-002`.
+    - Investigate measured/variable-height support (deferred until the prepaint-derived window contract is stabilized; ADR 0190/0193).
 
 - [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
   - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
