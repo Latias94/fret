@@ -651,7 +651,7 @@ fn calendar_month_view<H: UiHost>(
             .collect::<Vec<_>>()
             .into()
     } else {
-        Arc::from([])
+        Vec::<u32>::new().into()
     };
 
     let roving_props = RovingFlexProps {
@@ -722,7 +722,7 @@ fn calendar_month_view<H: UiHost>(
     });
 
     let days = if show_week_number {
-        let week_numbers = Arc::clone(&week_numbers);
+        let week_numbers: Arc<[u32]> = Arc::clone(&week_numbers);
         let week_number_column = cx.flex(
             FlexProps {
                 layout: LayoutStyle {
@@ -742,7 +742,7 @@ fn calendar_month_view<H: UiHost>(
             move |cx| {
                 week_numbers
                     .iter()
-                    .map(|week| {
+                    .map(|week: &u32| {
                         let mut props = TextProps::new(Arc::from(week.to_string()));
                         props.style = Some(grid_text_style_week_numbers.clone());
                         props.color = theme_days_for_week_numbers.color_by_key("muted-foreground");

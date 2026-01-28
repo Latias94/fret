@@ -411,7 +411,7 @@ mod tests {
             .iter()
             .find(|n| n.id == focused)
             .expect("focused semantics node");
-        assert_eq!(focused_sem.label.as_deref(), Some("2026-01-15"));
+        assert_eq!(focused_sem.test_id.as_deref(), Some(trigger_label.as_str()));
         assert!(
             focused_sem.flags.selected,
             "expected focused day to be selected"
