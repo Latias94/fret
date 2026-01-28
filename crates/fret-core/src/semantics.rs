@@ -125,6 +125,11 @@ pub struct SemanticsSnapshot {
     pub roots: Vec<SemanticsRoot>,
     /// The root of the topmost modal layer (if any), matching ADR 0011/0033 semantics gating.
     pub barrier_root: Option<NodeId>,
+    /// The root of the topmost focus-blocking layer (if any).
+    ///
+    /// This is intentionally decoupled from `barrier_root`: some overlay close transitions keep a
+    /// pointer barrier active while releasing focus containment.
+    pub focus_barrier_root: Option<NodeId>,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
     pub nodes: Vec<SemanticsNode>,

@@ -61,6 +61,7 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         window_arbitration: None,
         // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,
@@ -1735,7 +1736,7 @@ impl CommandPalette {
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
 
             let bg_hover = item_bg_hover(&theme);
-            let bg_selected = alpha_mul(bg_hover, 0.85);
+            let bg_selected = bg_hover;
             let fg = theme.color_required("foreground");
             let fg_disabled = alpha_mul(fg, 0.5);
             let text_style = item_text_style(&theme);

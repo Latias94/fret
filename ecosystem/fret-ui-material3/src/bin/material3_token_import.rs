@@ -58,6 +58,8 @@ impl Args {
             "md.comp.snackbar.".to_string(),
             "md.comp.outlined-text-field.".to_string(),
             "md.comp.filled-text-field.".to_string(),
+            "md.comp.outlined-select.".to_string(),
+            "md.comp.filled-select.".to_string(),
             "md.comp.dialog.".to_string(),
             "md.comp.full-screen-dialog.".to_string(),
         ];
@@ -614,6 +616,22 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
             .filter(|d| d.token_key.starts_with("md.comp.filled-text-field."))
             .collect::<Vec<_>>(),
     );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_outlined_select_scalars",
+        "md.comp.outlined-select.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-select."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_filled_select_scalars",
+        "md.comp.filled-select.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-select."))
+            .collect::<Vec<_>>(),
+    );
 
     emit_copy_color_helper(&mut out);
     emit_inject_comp_color_aliases(
@@ -742,6 +760,22 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.filled-text-field.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.filled-text-field."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_outlined_select_colors_from_sys",
+        "md.comp.outlined-select.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-select."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_filled_select_colors_from_sys",
+        "md.comp.filled-select.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-select."))
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_color_aliases(

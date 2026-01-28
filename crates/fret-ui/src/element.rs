@@ -59,6 +59,13 @@ pub enum ElementKind {
     Anchored(AnchoredProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
+    /// A focusable, text-input-capable event region primitive.
+    ///
+    /// Unlike `TextInput` / `TextArea`, this does not own an internal text model. It exists as a
+    /// mechanism-only building block for ecosystem text surfaces (e.g. code editors) that need
+    /// to receive `Event::TextInput` / `Event::Ime` / clipboard events while owning their own
+    /// buffer and rendering pipeline.
+    TextInputRegion(TextInputRegionProps),
     /// An internal drag event listener region primitive.
     ///
     /// This is a mechanism-only building block: it does not own policy for any particular drag
@@ -116,6 +123,14 @@ pub struct PointerRegionProps {
     pub enabled: bool,
 }
 
+/// A focusable event region that participates in text input / IME routing.
+#[derive(Debug, Clone, Copy)]
+pub struct TextInputRegionProps {
+    pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
+}
+
 /// An internal drag event listener region primitive.
 ///
 /// This is a mechanism-only building block for cross-window and internal drag flows.
@@ -139,6 +154,16 @@ impl Default for PointerRegionProps {
         Self {
             layout: LayoutStyle::default(),
             enabled: true,
+        }
+    }
+}
+
+impl Default for TextInputRegionProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            enabled: true,
+            text_boundary_mode_override: None,
         }
     }
 }
@@ -1107,6 +1132,7 @@ impl CanvasCacheTuning {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CanvasCachePolicy {
     pub text: CanvasCacheTuning,
+    pub shared_text: CanvasCacheTuning,
     pub path: CanvasCacheTuning,
     pub svg: CanvasCacheTuning,
 }
@@ -1117,6 +1143,14 @@ impl CanvasCachePolicy {
             // ~1s at 60fps; reduces prepare/release thrash during scroll/pan.
             text: CanvasCacheTuning {
                 keep_frames: 60,
+                max_entries: 4096,
+            },
+            // Shared cache (keyed by content/style/constraints) is useful for repeated labels,
+            // but should remain bounded and configurable for large, scroll-driven surfaces.
+            //
+            // Default preserves the previous hard-coded behavior in `CanvasCache`.
+            shared_text: CanvasCacheTuning {
+                keep_frames: 120,
                 max_entries: 4096,
             },
             path: CanvasCacheTuning {

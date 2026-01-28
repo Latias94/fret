@@ -5,6 +5,7 @@ use super::frame::{
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
@@ -16,7 +17,7 @@ pub struct RenderRootContext<'a, H: UiHost> {
     pub bounds: Rect,
 }
 
-impl<'a, H: UiHost> RenderRootContext<'a, H> {
+impl<'a, H: UiHost + 'static> RenderRootContext<'a, H> {
     pub fn new(
         ui: &'a mut UiTree<H>,
         app: &'a mut H,
@@ -136,6 +137,7 @@ pub fn render_root<H: UiHost, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NodeId
 where
+    H: 'static,
     I: IntoIterator<Item = AnyElement>,
 {
     let frame_id = app.frame_id();
@@ -249,6 +251,23 @@ where
             }
             ui.set_children(root_node, mounted_children.clone());
             window_frame.children.insert(root_node, mounted_children);
+
+            let retained_virtual_lists = window_state.take_retained_virtual_list_reconciles();
+            if !retained_virtual_lists.is_empty() {
+                reconcile_retained_virtual_list_hosts(
+                    ui,
+                    _app,
+                    window,
+                    bounds,
+                    root_id,
+                    frame_id,
+                    window_state,
+                    window_frame,
+                    &mut scroll_bindings,
+                    &mut pending_invalidations,
+                    retained_virtual_lists,
+                );
+            }
         });
 
         // View-cache experiments rely on explicit liveness bookkeeping (layer roots + view-cache
@@ -547,6 +566,7 @@ pub fn render_dismissible_root_with_hooks<H: UiHost, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NodeId
 where
+    H: 'static,
     I: IntoIterator<Item = AnyElement>,
 {
     render_dismissible_root_impl(ui, app, services, window, bounds, root_name, render)
@@ -1026,6 +1046,15 @@ fn mount_element<H: UiHost>(
         }
     }
 
+    match &element.kind {
+        ElementKind::TextInputRegion(props) => {
+            ui.set_node_text_boundary_mode_override(node, props.text_boundary_mode_override);
+        }
+        _ => {
+            ui.set_node_text_boundary_mode_override(node, None);
+        }
+    }
+
     let instance = match element.kind {
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
@@ -1041,6 +1070,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Anchored(p) => ElementInstance::Anchored(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),
         ElementKind::PointerRegion(p) => ElementInstance::PointerRegion(p),
+        ElementKind::TextInputRegion(p) => ElementInstance::TextInputRegion(p),
         ElementKind::InternalDragRegion(p) => ElementInstance::InternalDragRegion(p),
         ElementKind::RovingFlex(p) => ElementInstance::RovingFlex(p),
         ElementKind::Stack(p) => ElementInstance::Stack(p),
@@ -1263,6 +1293,184 @@ fn mount_element<H: UiHost>(
     }
 
     node
+}
+
+#[allow(clippy::too_many_arguments)]
+fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
+    ui: &mut UiTree<H>,
+    app: &mut H,
+    window: AppWindowId,
+    bounds: Rect,
+    root_id: GlobalElementId,
+    frame_id: FrameId,
+    window_state: &mut crate::elements::WindowElementState,
+    window_frame: &mut WindowFrame,
+    scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
+    pending_invalidations: &mut HashMap<NodeId, u8>,
+    elements: Vec<GlobalElementId>,
+) {
+    if elements.is_empty() {
+        return;
+    }
+
+    for element in elements {
+        let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+            continue;
+        };
+
+        let Some(record) = window_frame.instances.get(&node) else {
+            continue;
+        };
+        let ElementInstance::VirtualList(props) = &record.instance else {
+            continue;
+        };
+        if !virtual_list_can_be_layout_barrier(props) {
+            continue;
+        }
+        let props = props.clone();
+
+        let Some((key_at, row, range_extractor)) = window_state
+            .try_with_state_mut::<crate::windowed_surface_host::RetainedVirtualListHostCallbacks<H>, _>(
+                element,
+                |st| (Arc::clone(&st.key_at), Arc::clone(&st.row), st.range_extractor),
+            )
+        else {
+            continue;
+        };
+
+        let desired_items: Option<Vec<crate::virtual_list::VirtualItem>> = window_state
+            .with_state_mut(
+                element,
+                crate::element::VirtualListState::default,
+                |state| {
+                    state.metrics.ensure_with_mode(
+                        props.measure_mode,
+                        props.len,
+                        props.estimate_row_height,
+                        props.gap,
+                        props.scroll_margin,
+                    );
+
+                    let viewport = match props.axis {
+                        fret_core::Axis::Vertical => Px(state.viewport_h.0.max(0.0)),
+                        fret_core::Axis::Horizontal => Px(state.viewport_w.0.max(0.0)),
+                    };
+                    if viewport.0 <= 0.0 || props.len == 0 {
+                        return None;
+                    }
+
+                    let offset_point = props.scroll_handle.offset();
+                    let offset_axis = match props.axis {
+                        fret_core::Axis::Vertical => offset_point.y,
+                        fret_core::Axis::Horizontal => offset_point.x,
+                    };
+                    let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+
+                    let range = state.window_range.or_else(|| {
+                        state
+                            .metrics
+                            .visible_range(offset_axis, viewport, props.overscan)
+                    });
+                    state.window_range = range;
+                    state.render_window_range = range;
+                    let range = range?;
+
+                    let mut indices = (range_extractor)(range)
+                        .into_iter()
+                        .filter(|&idx| idx < props.len)
+                        .collect::<Vec<_>>();
+                    indices.sort_unstable();
+                    indices.dedup();
+
+                    let items = indices
+                        .iter()
+                        .copied()
+                        .map(|idx| {
+                            let key = (key_at)(idx);
+                            state.metrics.virtual_item(idx, key)
+                        })
+                        .collect::<Vec<_>>();
+                    Some(items)
+                },
+            );
+
+        let Some(desired_items) = desired_items else {
+            continue;
+        };
+
+        let prev_items_len = props.visible_items.len();
+
+        let mut existing_by_key: HashMap<crate::ItemKey, NodeId> = HashMap::new();
+        {
+            let current_children = ui.children(node);
+            for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
+                existing_by_key.insert(item.key, child);
+            }
+        }
+
+        let mut preserved: u32 = 0;
+        let mut attached: u32 = 0;
+        let mut next_children: Vec<NodeId> = Vec::with_capacity(desired_items.len());
+        for item in &desired_items {
+            if let Some(existing) = existing_by_key.get(&item.key).copied() {
+                next_children.push(existing);
+                preserved = preserved.saturating_add(1);
+                continue;
+            }
+
+            attached = attached.saturating_add(1);
+            let child_element = {
+                let mut cx = crate::elements::ElementContext::new_for_existing_window_state(
+                    app,
+                    window,
+                    bounds,
+                    element,
+                    window_state,
+                );
+                let ui_ref: &UiTree<H> = &*ui;
+                let mut should_reuse_view_cache =
+                    |node: NodeId| ui_ref.should_reuse_view_cache_node(node);
+                cx.set_view_cache_should_reuse(&mut should_reuse_view_cache);
+                cx.retained_virtual_list_row_any_element(item.key, item.index, &row)
+            };
+
+            let child_node = mount_element(
+                ui,
+                window,
+                root_id,
+                frame_id,
+                window_state,
+                window_frame,
+                child_element,
+                scroll_bindings,
+                pending_invalidations,
+            );
+            next_children.push(child_node);
+        }
+
+        let detached =
+            (prev_items_len.saturating_sub(preserved as usize)).min(u32::MAX as usize) as u32;
+        ui.debug_record_retained_virtual_list_reconcile(
+            crate::tree::UiDebugRetainedVirtualListReconcile {
+                node,
+                element,
+                prev_items: prev_items_len.min(u32::MAX as usize) as u32,
+                next_items: desired_items.len().min(u32::MAX as usize) as u32,
+                preserved_items: preserved,
+                attached_items: attached,
+                detached_items: detached,
+            },
+        );
+
+        ui.set_children_barrier(node, next_children.clone());
+        window_frame.children.insert(node, next_children);
+
+        if let Some(record) = window_frame.instances.get_mut(&node) {
+            if let ElementInstance::VirtualList(props) = &mut record.instance {
+                props.visible_items = desired_items;
+            }
+        }
+    }
 }
 
 const INVALIDATION_HIT_TEST: u8 = 1 << 0;

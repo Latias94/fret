@@ -355,7 +355,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | item | `item` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`item-avatar`) |
 | kbd | `kbd` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`kbd-demo`) |
 | label | `label` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`label-demo`) |
-| menubar | `menubar` | Present | In review | Click-to-open; hover switching; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` |
+| menubar | `menubar` | Present | In review | Click-to-open; hover switching; Escape close focus is gated against radix timelines; audit: `docs/audits/shadcn-menubar.md`; gates: `ecosystem/fret-ui-shadcn/tests/{radix_web_primitives_state,web_vs_fret_overlay_placement}.rs` |
 | native-select | `native_select` | Defer | Unreviewed | Can map to `select` + platform-native later |
 | navigation-menu | `navigation_menu` | Present | In review | Mobile `viewport` mode + anchored placement; gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (navigation-menu-demo.* open variants) |
 | pagination | `pagination` | Present | Unreviewed |  |

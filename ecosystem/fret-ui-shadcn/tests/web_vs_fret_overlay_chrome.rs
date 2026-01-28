@@ -1,7 +1,8 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
+    AppWindowId, Color, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
     PointerEvent, PointerType, Px, Rect, Scene, SceneOp, SemanticsRole, Size as CoreSize,
+    Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::ElementContext;
@@ -11,6 +12,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use serde::Deserialize;
 use std::cell::Cell;
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -30,6 +32,8 @@ struct WebGoldenTheme {
     root: WebNode,
     #[serde(default)]
     portals: Vec<WebNode>,
+    #[serde(rename = "portalWrappers", default)]
+    portal_wrappers: Vec<WebNode>,
     #[serde(default)]
     viewport: Option<WebViewport>,
 }
@@ -268,6 +272,23 @@ fn shadow_insets_score(a: ShadowInsets, b: ShadowInsets) -> f32 {
         + (a.bottom - b.bottom).abs()
 }
 
+fn maybe_dump_shadow_candidates(
+    label: &str,
+    expected: &[ShadowInsets],
+    candidates: &[ShadowInsets],
+) {
+    if std::env::var("FRET_DEBUG_SHADOW_INSETS").is_err() {
+        return;
+    }
+    eprintln!("-- shadow insets debug: {label}");
+    eprintln!("expected: {expected:?}");
+    let mut sorted = candidates.to_vec();
+    sorted.sort_by(|a, b| a.top.partial_cmp(&b.top).unwrap_or(Ordering::Equal));
+    for (idx, cand) in sorted.iter().take(16).enumerate() {
+        eprintln!("cand[{idx}] {cand:?}");
+    }
+}
+
 fn rect_intersection_area(a: Rect, b: Rect) -> f32 {
     let ax0 = a.origin.x.0;
     let ay0 = a.origin.y.0;
@@ -473,19 +494,171 @@ fn find_best_chrome_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
     best_border.or(best_background)
 }
 
+fn find_best_solid_quad_within_matching_bg(
+    scene: &Scene,
+    target: Rect,
+    expected_bg: css_color::Rgba,
+) -> Option<PaintedQuad> {
+    let target_area = rect_area(target).max(1.0);
+    let mut best: Option<PaintedQuad> = None;
+    let mut best_score = f32::INFINITY;
+    let mut best_area = f32::INFINITY;
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Quad {
+            rect,
+            border,
+            corner_radii,
+            background,
+            border_color,
+            ..
+        } = *op
+        else {
+            return;
+        };
+
+        let rect = transform_rect_bounds(st.transform, rect);
+        let background = color_with_opacity(background, st.opacity);
+
+        if rect_intersection_area(rect, target) <= 0.01 {
+            return;
+        }
+        if background.a <= 0.01 {
+            return;
+        }
+        // Ignore drop-shadow layers: highlighted option backgrounds are opaque in shadcn.
+        if background.a < 0.5 {
+            return;
+        }
+        // Avoid capturing the overlay panel surface (too large) when the intent is to find the
+        // option-level highlight quad. Use a generous ratio because some semantics bounds are
+        // tighter than the painted row background.
+        let area = rect_area(rect);
+        if area > target_area * 40.0 {
+            return;
+        }
+
+        let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+        let quad = PaintedQuad {
+            rect,
+            background,
+            border,
+            border_color,
+            corners: [
+                corner_radii.top_left.0,
+                corner_radii.top_right.0,
+                corner_radii.bottom_right.0,
+                corner_radii.bottom_left.0,
+            ],
+        };
+
+        let bg = color_to_rgba(background);
+        let score = (bg.r - expected_bg.r).abs()
+            + (bg.g - expected_bg.g).abs()
+            + (bg.b - expected_bg.b).abs()
+            + (bg.a - expected_bg.a).abs();
+        if score < best_score || (score <= best_score + 0.0001 && area < best_area) {
+            best_score = score;
+            best_area = area;
+            best = Some(quad);
+        }
+    });
+
+    best
+}
+
+fn find_best_solid_quad_near_point(scene: &Scene, point: Point) -> Option<Rect> {
+    let mut best_rect: Option<Rect> = None;
+    let mut best_area = f32::INFINITY;
+    let mut best_center_dist = f32::INFINITY;
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Quad {
+            rect, background, ..
+        } = *op
+        else {
+            return;
+        };
+
+        let rect = transform_rect_bounds(st.transform, rect);
+        let background = color_with_opacity(background, st.opacity);
+
+        if background.a < 0.5 {
+            return;
+        }
+        if !rect_contains_point_with_margin(rect, point, 6.0) {
+            return;
+        }
+
+        let area = rect_area(rect);
+        let center = bounds_center(rect);
+        let center_dist = (center.x.0 - point.x.0).abs() + (center.y.0 - point.y.0).abs();
+
+        if area < best_area || (area == best_area && center_dist < best_center_dist) {
+            best_area = area;
+            best_center_dist = center_dist;
+            best_rect = Some(rect);
+        }
+    });
+
+    best_rect
+}
+
+#[derive(Default)]
 struct FakeServices;
+
+type StyleAwareServices = FakeServices;
 
 impl fret_core::TextService for FakeServices {
     fn prepare(
         &mut self,
-        _input: &fret_core::TextInput,
-        _constraints: fret_core::TextConstraints,
+        input: &fret_core::TextInput,
+        constraints: fret_core::TextConstraints,
     ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+        let (text, style) = match input {
+            fret_core::TextInput::Plain { text, style } => (text.as_ref(), style.clone()),
+            fret_core::TextInput::Attributed { text, base, .. } => (text.as_ref(), base.clone()),
+            _ => (input.text(), fret_core::TextStyle::default()),
+        };
+        let line_height = style
+            .line_height
+            .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
+
+        fn estimate_width_px(text: &str, font_size: f32) -> Px {
+            let mut units = 0.0f32;
+            for ch in text.chars() {
+                units += match ch {
+                    ' ' => 0.28,
+                    '(' | ')' => 0.28,
+                    'i' | 'l' | 'I' | 't' | 'f' | 'j' | 'r' => 0.32,
+                    'm' | 'w' | 'M' | 'W' => 0.75,
+                    'o' | 'O' | 'p' | 'P' => 0.62,
+                    'A'..='Z' => 0.62,
+                    'a'..='z' => 0.56,
+                    _ => 0.56,
+                };
+            }
+            Px((units * font_size).max(1.0))
+        }
+
+        let est_w = estimate_width_px(text, style.size.0);
+
+        let max_w = constraints.max_width.unwrap_or(est_w);
+        let (lines, w) = match constraints.wrap {
+            fret_core::TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
+                let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
+                (lines, Px(est_w.0.min(max_w.0)))
+            }
+            _ => (1, est_w),
+        };
+
+        let h = Px(line_height.0 * lines as f32);
+
         (
             fret_core::TextBlobId::default(),
             fret_core::TextMetrics {
-                size: CoreSize::new(Px(10.0), Px(10.0)),
-                baseline: Px(8.0),
+                size: CoreSize::new(w, h),
+                baseline: Px(h.0 * 0.8),
             },
         )
     }
@@ -595,6 +768,13 @@ fn assert_close(label: &str, actual: f32, expected: f32, tol: f32) {
         delta <= tol,
         "{label}: expected＞{expected} (㊣{tol}) got={actual} (忖={delta})"
     );
+}
+
+fn assert_rgba_close(label: &str, actual: css_color::Rgba, expected: css_color::Rgba, tol: f32) {
+    assert_close(&format!("{label}.r"), actual.r, expected.r, tol);
+    assert_close(&format!("{label}.g"), actual.g, expected.g, tol);
+    assert_close(&format!("{label}.b"), actual.b, expected.b, tol);
+    assert_close(&format!("{label}.a"), actual.a, expected.a, tol);
 }
 
 fn bounds_center(r: Rect) -> Point {
@@ -1458,6 +1638,514 @@ fn assert_navigation_menu_content_surface_colors_match(
     }
 }
 
+fn assert_navigation_menu_content_shadow_insets_match(
+    web_name: &str,
+    web_slot: &str,
+    web_state: &str,
+    open_value: &str,
+    trigger_label: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &Model<Option<Arc<str>>>,
+        &Rc<Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_content = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
+        .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
+    let expected = web_drop_shadow_insets(web_content);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &model, &root_id_out)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    let _trigger_bounds = trigger.bounds;
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &model, &root_id_out)],
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let content_id = with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-shadow-insets",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_content_id(
+                cx, root_id, open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("missing fret navigation-menu content id for {open_value}"));
+
+    let target = bounds_for_element(&mut app, window, content_id).unwrap_or_else(|| {
+        panic!("missing fret bounds for navigation-menu content id {content_id:?}")
+    });
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let quad =
+        find_best_chrome_quad(&scene, target).expect("painted quad for navigation-menu content");
+
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+    maybe_dump_shadow_candidates(
+        &format!("{web_name} {web_theme_name} navigation-menu-content"),
+        &expected,
+        &candidates,
+    );
+    assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
+}
+
+fn assert_navigation_menu_viewport_shadow_insets_match(
+    web_name: &str,
+    web_slot: &str,
+    web_state: &str,
+    trigger_label: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &Model<Option<Arc<str>>>,
+        &Rc<Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_viewport = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
+        .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
+    let expected = web_drop_shadow_insets(web_viewport);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &model, &root_id_out)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    let _trigger_bounds = trigger.bounds;
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &model, &root_id_out)],
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let panel_id = with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-viewport-panel-id",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(cx, root_id)
+        },
+    )
+    .expect("missing fret navigation-menu viewport panel id");
+
+    let target = bounds_for_element(&mut app, window, panel_id).unwrap_or_else(|| {
+        panic!("missing fret bounds for navigation-menu viewport panel id {panel_id:?}")
+    });
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let quad = find_best_chrome_quad(&scene, target)
+        .expect("painted quad for navigation-menu viewport panel");
+
+    let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
+    maybe_dump_shadow_candidates(
+        &format!("{web_name} {web_theme_name} navigation-menu-viewport"),
+        &expected,
+        &candidates,
+    );
+    assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
+}
+
+fn assert_navigation_menu_viewport_surface_colors_match(
+    web_name: &str,
+    web_slot: &str,
+    web_state: &str,
+    trigger_label: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &Model<Option<Arc<str>>>,
+        &Rc<Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_viewport = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
+        .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
+    let web_background = web_viewport
+        .computed_style
+        .get("backgroundColor")
+        .and_then(|v| parse_css_color(v));
+    let web_border = web_border_widths_px(web_viewport).expect("web border widths px");
+    let web_border_color = web_viewport
+        .computed_style
+        .get("borderTopColor")
+        .and_then(|v| parse_css_color(v));
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &model, &root_id_out)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &model, &root_id_out)],
+        );
+    }
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let panel_id = with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-viewport-surface-colors",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_panel_id(cx, root_id)
+        },
+    )
+    .expect("missing fret navigation-menu viewport panel id");
+
+    let target = bounds_for_element(&mut app, window, panel_id).unwrap_or_else(|| {
+        panic!("missing fret bounds for navigation-menu viewport panel id {panel_id:?}")
+    });
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let quad = find_best_chrome_quad(&scene, target)
+        .expect("painted quad for navigation-menu viewport panel");
+
+    if let Some(web_background) = web_background
+        && web_background.a > 0.01
+    {
+        let fret_bg = color_to_rgba(quad.background);
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.r"),
+            fret_bg.r,
+            web_background.r,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.g"),
+            fret_bg.g,
+            web_background.g,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.b"),
+            fret_bg.b,
+            web_background.b,
+            0.02,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_background.a"),
+            fret_bg.a,
+            web_background.a,
+            0.02,
+        );
+    }
+
+    if has_border(&web_border)
+        && let Some(web_border_color) = web_border_color
+        && web_border_color.a > 0.01
+    {
+        let fret_border = color_to_rgba(quad.border_color);
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.r"),
+            fret_border.r,
+            web_border_color.r,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.g"),
+            fret_border.g,
+            web_border_color.g,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.b"),
+            fret_border.b,
+            web_border_color.b,
+            0.03,
+        );
+        assert_close(
+            &format!("{web_name} {web_theme_name} viewport_border_color.a"),
+            fret_border.a,
+            web_border_color.a,
+            0.03,
+        );
+    }
+}
+
+fn assert_navigation_menu_indicator_shadow_insets_match(
+    web_name: &str,
+    web_slot: &str,
+    web_state: &str,
+    trigger_label: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &Model<Option<Arc<str>>>,
+        &Rc<Cell<Option<GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_indicator = find_by_data_slot_and_state(&theme.root, web_slot, web_state)
+        .unwrap_or_else(|| panic!("missing web node data-slot={web_slot} data-state={web_state}"));
+    let web_diamond = find_first(web_indicator, &|n| {
+        let box_shadow = n
+            .computed_style
+            .get("boxShadow")
+            .map(String::as_str)
+            .unwrap_or("");
+        !box_shadow.is_empty() && box_shadow != "none"
+    })
+    .expect("missing web indicator diamond node (expected non-empty boxShadow)");
+
+    let expected = web_drop_shadow_insets(web_diamond);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &model, &root_id_out)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &model, &root_id_out)],
+        );
+    }
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let diamond_id = with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "web-vs-fret-nav-menu-indicator-diamond-id",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_indicator_diamond_id(
+                cx, root_id,
+            )
+        },
+    )
+    .expect("missing fret navigation-menu indicator diamond id");
+    let diamond_bounds = bounds_for_element(&mut app, window, diamond_id).unwrap_or_else(|| {
+        panic!("missing fret bounds for navigation-menu indicator diamond id {diamond_id:?}")
+    });
+    let near = bounds_center(diamond_bounds);
+    let panel_rect = find_best_solid_quad_near_point(&scene, near)
+        .expect("painted quad for navigation-menu indicator diamond");
+
+    let candidates = fret_drop_shadow_insets_candidates(&scene, panel_rect);
+    assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
+}
+
 fn find_best_chrome_quad_by_size(
     scene: &Scene,
     expected_w: f32,
@@ -2080,9 +2768,6 @@ fn web_find_active_element<'a>(theme: &'a WebGoldenTheme) -> &'a WebNode {
     for portal in &theme.portals {
         collect(portal, &mut active_descendants, &mut actives);
     }
-    for wrapper in &theme.portal_wrappers {
-        collect(wrapper, &mut active_descendants, &mut actives);
-    }
 
     if let Some(best) = active_descendants
         .into_iter()
@@ -2258,6 +2943,8 @@ fn find_best_text_color_near(
     let mut best_raw_score = f32::INFINITY;
     let mut best_tx: Option<css_color::Rgba> = None;
     let mut best_tx_score = f32::INFINITY;
+    let mut best_any: Option<css_color::Rgba> = None;
+    let mut best_any_score = f32::INFINITY;
 
     scene_walk(scene, |st, op| {
         let SceneOp::Text { origin, color, .. } = *op else {
@@ -2284,9 +2971,15 @@ fn find_best_text_color_near(
                 best_raw = Some(rgba);
             }
         }
+
+        let dist_score = (tx_origin.x.0 - near.x.0).abs() + (tx_origin.y.0 - near.y.0).abs();
+        if dist_score < best_any_score {
+            best_any_score = dist_score;
+            best_any = Some(rgba);
+        }
     });
 
-    best_tx.or(best_raw)
+    best_tx.or(best_raw).or(best_any)
 }
 
 fn fret_drop_shadow_insets_candidates(scene: &Scene, panel_rect: Rect) -> Vec<ShadowInsets> {
@@ -2310,10 +3003,10 @@ fn fret_drop_shadow_insets_candidates(scene: &Scene, panel_rect: Rect) -> Vec<Sh
         }
         // `shadow-lg` can push the outermost layer alpha below 0.01 (e.g. 0.1 / 16 = 0.00625),
         // but we still need to capture the full footprint for 1:1 `box-shadow` geometry gates.
-        if background.a <= 0.001 || background.a >= 0.95 {
+        if background.a <= 0.0001 || background.a >= 0.95 {
             continue;
         }
-        if rect_intersection_area(rect, panel_rect) / panel_area <= 0.10 {
+        if rect_intersection_area(rect, panel_rect) / panel_area <= 0.01 {
             continue;
         }
 
@@ -5338,6 +6031,13 @@ fn build_shadcn_select_scrollable_page(
         )
         .entries(entries)
         .into_element(cx)
+}
+
+fn build_shadcn_select_scrollable_demo(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    build_shadcn_select_scrollable_page(cx, open)
 }
 
 fn build_shadcn_combobox_demo_page(

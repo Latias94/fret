@@ -808,6 +808,7 @@ where
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextPreset {
+    Xs,
     Sm,
     Base,
     Prose,
@@ -836,7 +837,9 @@ impl TextBox {
     pub fn new(text: impl Into<Arc<str>>, preset: TextPreset) -> Self {
         let wrap = match preset {
             TextPreset::Label => TextWrap::None,
-            TextPreset::Sm | TextPreset::Base | TextPreset::Prose => TextWrap::Word,
+            TextPreset::Xs | TextPreset::Sm | TextPreset::Base | TextPreset::Prose => {
+                TextWrap::Word
+            }
         };
 
         Self {
@@ -868,6 +871,7 @@ impl UiIntoElement for TextBox {
         let theme = Theme::global(&*cx.app).clone();
 
         let mut style = match self.preset {
+            TextPreset::Xs => decl_text::text_xs_style(&theme),
             TextPreset::Sm => decl_text::text_sm_style(&theme),
             TextPreset::Base => decl_text::text_base_style(&theme),
             TextPreset::Prose => decl_text::text_prose_style(&theme),

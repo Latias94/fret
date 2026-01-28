@@ -448,6 +448,7 @@ impl ViewportInputEvent {
         (x.clamp(0.0, tw), y.clamp(0.0, th))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn from_mapping_window_point(
         window: AppWindowId,
         target: RenderTargetId,
@@ -480,6 +481,7 @@ impl ViewportInputEvent {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn from_mapping_window_point_clamped(
         window: AppWindowId,
         target: RenderTargetId,
@@ -512,6 +514,7 @@ impl ViewportInputEvent {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn from_mapping_window_point_maybe_clamped(
         window: AppWindowId,
         target: RenderTargetId,

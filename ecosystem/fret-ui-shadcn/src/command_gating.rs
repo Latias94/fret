@@ -16,6 +16,7 @@ pub(crate) fn default_input_context<H: UiHost>(app: &H) -> InputContext {
         ui_has_modal: false,
         window_arbitration: None,
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,

@@ -69,6 +69,10 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             self.app.next_timer_token()
         }
 
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.app.next_clipboard_token()
+        }
+
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
         }

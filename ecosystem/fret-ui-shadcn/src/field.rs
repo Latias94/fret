@@ -93,6 +93,7 @@ fn kind_flex_grow(kind: &ElementKind) -> Option<f32> {
         ElementKind::SemanticFlex(props) => Some(props.flex.layout.flex.grow),
         ElementKind::Pressable(props) => Some(props.layout.flex.grow),
         ElementKind::PointerRegion(props) => Some(props.layout.flex.grow),
+        ElementKind::TextInputRegion(props) => Some(props.layout.flex.grow),
         ElementKind::InternalDragRegion(props) => Some(props.layout.flex.grow),
         ElementKind::Opacity(props) => Some(props.layout.flex.grow),
         ElementKind::InteractivityGate(props) => Some(props.layout.flex.grow),

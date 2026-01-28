@@ -188,6 +188,13 @@ impl LayoutRefinement {
         self
     }
 
+    pub fn top_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.top = Some(SignedMetricRef::neg(px.into()));
+        self.inset = Some(inset);
+        self
+    }
+
     pub fn right(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.right = Some(SignedMetricRef::pos(MetricRef::space(space)));
@@ -205,6 +212,13 @@ impl LayoutRefinement {
     pub fn right_neg(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.right = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn right_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.right = Some(SignedMetricRef::neg(px.into()));
         self.inset = Some(inset);
         self
     }
@@ -230,6 +244,13 @@ impl LayoutRefinement {
         self
     }
 
+    pub fn bottom_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.bottom = Some(SignedMetricRef::neg(px.into()));
+        self.inset = Some(inset);
+        self
+    }
+
     pub fn left(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.left = Some(SignedMetricRef::pos(MetricRef::space(space)));
@@ -247,6 +268,13 @@ impl LayoutRefinement {
     pub fn left_neg(mut self, space: Space) -> Self {
         let mut inset = self.inset.unwrap_or_default();
         inset.left = Some(SignedMetricRef::neg(MetricRef::space(space)));
+        self.inset = Some(inset);
+        self
+    }
+
+    pub fn left_neg_px(mut self, px: impl Into<MetricRef>) -> Self {
+        let mut inset = self.inset.unwrap_or_default();
+        inset.left = Some(SignedMetricRef::neg(px.into()));
         self.inset = Some(inset);
         self
     }

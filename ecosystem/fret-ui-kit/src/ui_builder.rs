@@ -115,6 +115,12 @@ macro_rules! forward_layout_noargs {
 }
 
 impl UiBuilder<crate::ui::TextBox> {
+    pub fn text_xs(mut self) -> Self {
+        self.inner.preset = crate::ui::TextPreset::Xs;
+        self.inner.wrap = TextWrap::Word;
+        self
+    }
+
     pub fn text_sm(mut self) -> Self {
         self.inner.preset = crate::ui::TextPreset::Sm;
         self.inner.wrap = TextWrap::Word;
@@ -291,6 +297,10 @@ impl<T: UiSupportsChrome> UiBuilder<T> {
 
     pub fn shadow_lg(self) -> Self {
         self.style_with(ChromeRefinement::shadow_lg)
+    }
+
+    pub fn shadow_xl(self) -> Self {
+        self.style_with(ChromeRefinement::shadow_xl)
     }
 
     pub fn debug_border(self, color: ColorRef) -> Self {

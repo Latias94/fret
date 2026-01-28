@@ -40,6 +40,13 @@ impl Default for Platform {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum TextBoundaryMode {
+    #[default]
+    UnicodeWord,
+    Identifier,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InputContext {
     pub platform: Platform,
@@ -52,6 +59,7 @@ pub struct InputContext {
     /// single dispatch).
     pub window_arbitration: Option<WindowInputArbitrationSnapshot>,
     pub focus_is_text_input: bool,
+    pub text_boundary_mode: TextBoundaryMode,
     pub edit_can_undo: bool,
     pub edit_can_redo: bool,
     pub dispatch_phase: InputDispatchPhase,
@@ -75,6 +83,7 @@ impl Default for InputContext {
             ui_has_modal: false,
             window_arbitration: None,
             focus_is_text_input: false,
+            text_boundary_mode: TextBoundaryMode::UnicodeWord,
             edit_can_undo: true,
             edit_can_redo: true,
             dispatch_phase: InputDispatchPhase::Bubble,

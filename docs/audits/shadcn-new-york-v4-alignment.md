@@ -265,8 +265,10 @@ are caught as layout/style outcomes, not just placement drift).
   - `viewport=true` viewport panel: `rounded-md border shadow` with zoom motion `zoom-in-90` / `zoom-out-95`.
 
 Recent fixes:
-
-- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshot.
+- `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshots, including hover-switch (`home-then-hover-components`).
+- `viewport=true` viewport geometry now matches shadcn-web mobile snapshots, including “click then hover” switching (`home-mobile-then-hover-components`) and the viewport/indicator chrome gates.
+- Geometry gates now measure the registered viewport panel element (via `navigation_menu_viewport_panel_id`) instead of relying on “largest overlay rect” heuristics. This avoids accidentally measuring motion wrappers / indicator siblings when overlays animate or when multiple popover layers exist.
+- The viewport panel keeps `overflow: visible` so drop shadows match CSS `box-shadow` footprint; radius clipping is applied by an inner `overflow: clip` container with the same corner radii so content still clips correctly.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`).

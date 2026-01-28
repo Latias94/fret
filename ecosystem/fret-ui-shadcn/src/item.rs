@@ -3,15 +3,14 @@ use std::sync::Arc;
 use fret_core::{Color, Edges, Px, TextOverflow, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, GridProps, MainAlign,
+    PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
-    WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt, ui,
+    ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space, ui,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -82,37 +81,79 @@ fn base_item_border_color(theme: &Theme, variant: ItemVariant) -> Option<Color> 
 
 #[derive(Debug, Clone)]
 pub struct ItemGroup {
+    kind: ItemGroupKind,
+    layout: LayoutRefinement,
+    gap: Option<Px>,
     children: Vec<AnyElement>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ItemGroupKind {
+    #[default]
+    Column,
+    Grid {
+        cols: u16,
+    },
 }
 
 impl ItemGroup {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            kind: ItemGroupKind::Column,
+            layout: LayoutRefinement::default().w_full(),
+            gap: None,
+            children,
+        }
+    }
+
+    pub fn grid(mut self, cols: u16) -> Self {
+        self.kind = ItemGroupKind::Grid { cols: cols.max(1) };
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn gap(mut self, gap: Px) -> Self {
+        self.gap = Some(gap);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let layout = decl_style::layout_style(&theme, self.layout);
+        let gap = self.gap.unwrap_or(Px(0.0));
         let children = self.children;
-        cx.column(
-            ColumnProps {
-                layout,
-                gap: Px(0.0),
-                ..Default::default()
-            },
-            move |_cx| children,
-        )
+
+        match self.kind {
+            ItemGroupKind::Column => cx.column(
+                ColumnProps {
+                    layout,
+                    gap,
+                    ..Default::default()
+                },
+                move |_cx| children,
+            ),
+            ItemGroupKind::Grid { cols } => cx.grid(
+                GridProps {
+                    layout,
+                    cols,
+                    gap,
+                    ..Default::default()
+                },
+                move |_cx| children,
+            ),
+        }
     }
 }
 
-pub fn item_group<H: UiHost, I>(
+pub fn item_group<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = AnyElement>,
-{
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
     ItemGroup::new(f(cx)).into_element(cx)
 }
 
@@ -129,8 +170,12 @@ impl ItemSeparator {
         let border = theme
             .color_by_key("border")
             .unwrap_or_else(|| theme.color_required("border"));
-        let layout =
-            decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_px(Px(1.0)));
+        let layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(1.0))),
+        );
         cx.container(
             ContainerProps {
                 layout,
@@ -151,6 +196,7 @@ impl Default for ItemSeparator {
 #[derive(Debug, Clone)]
 pub struct ItemMedia {
     variant: ItemMediaVariant,
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
@@ -159,12 +205,18 @@ impl ItemMedia {
         let children = children.into_iter().collect();
         Self {
             variant: ItemMediaVariant::default(),
+            layout: LayoutRefinement::default(),
             children,
         }
     }
 
     pub fn variant(mut self, variant: ItemMediaVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -193,9 +245,12 @@ impl ItemMedia {
             }
         };
 
-        let mut layout = LayoutRefinement::default().flex_none().flex_shrink_0();
+        let mut layout = LayoutRefinement::default()
+            .merge(self.layout)
+            .flex_none()
+            .flex_shrink_0();
         if let Some(s) = size {
-            layout = layout.w_px(s).h_px(s);
+            layout = layout.w_px(MetricRef::Px(s)).h_px(MetricRef::Px(s));
         }
 
         let mut props = decl_style::container_props(&theme, chrome, layout);
@@ -205,13 +260,17 @@ impl ItemMedia {
 
         let children = self.children;
         cx.container(props, move |cx| {
-            let inner_layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+            let inner_layout = if size.is_some() {
+                decl_style::layout_style(&theme, LayoutRefinement::default().size_full())
+            } else {
+                decl_style::layout_style(&theme, LayoutRefinement::default())
+            };
+            let gap = MetricRef::space(Space::N2).resolve(&theme);
             vec![cx.flex(
                 FlexProps {
                     layout: inner_layout,
                     direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
+                    gap,
                     padding: Edges::all(Px(0.0)),
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
@@ -225,26 +284,64 @@ impl ItemMedia {
 
 #[derive(Debug, Clone)]
 pub struct ItemContent {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
+    gap: Option<Px>,
+    justify: MainAlign,
+    align: CrossAlign,
 }
 
 impl ItemContent {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            layout: LayoutRefinement::default()
+                .flex_1()
+                .min_w_0()
+                .overflow_hidden(),
+            children,
+            gap: None,
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+        }
+    }
+
+    pub fn gap(mut self, gap: Px) -> Self {
+        self.gap = Some(gap);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn justify(mut self, justify: MainAlign) -> Self {
+        self.justify = justify;
+        self
+    }
+
+    pub fn align(mut self, align: CrossAlign) -> Self {
+        self.align = align;
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let gap = MetricRef::space(Space::N1).resolve(&theme);
-        let layout =
-            decl_style::layout_style(&theme, LayoutRefinement::default().flex_1().min_w_0());
+        let gap = self
+            .gap
+            .unwrap_or_else(|| MetricRef::space(Space::N1).resolve(&theme));
+        let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
-        cx.column(
-            ColumnProps {
+        cx.flex(
+            FlexProps {
                 layout,
+                direction: fret_core::Axis::Vertical,
                 gap,
-                ..Default::default()
+                padding: Edges::all(Px(0.0)),
+                justify: self.justify,
+                align: self.align,
+                wrap: false,
             },
             move |_cx| children,
         )
@@ -253,22 +350,28 @@ impl ItemContent {
 
 #[derive(Debug, Clone)]
 pub struct ItemActions {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
 impl ItemActions {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            layout: LayoutRefinement::default(),
+            children,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default().flex_none().flex_shrink_0(),
-        );
+        let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -287,19 +390,30 @@ impl ItemActions {
 
 #[derive(Debug, Clone)]
 pub struct ItemHeader {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
 impl ItemHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            layout: LayoutRefinement::default()
+                .w_full()
+                .basis(LengthRefinement::Fill),
+            children,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let gap = MetricRef::space(Space::N2).resolve(&theme);
-        let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+        let layout = decl_style::layout_style(&theme, self.layout);
         let children = self.children;
         cx.flex(
             FlexProps {
@@ -318,17 +432,43 @@ impl ItemHeader {
 
 #[derive(Debug, Clone)]
 pub struct ItemFooter {
+    layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
 
 impl ItemFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
-        Self { children }
+        Self {
+            layout: LayoutRefinement::default()
+                .w_full()
+                .basis(LengthRefinement::Fill),
+            children,
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        ItemHeader::new(self.children).into_element(cx)
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N2).resolve(&theme);
+        let layout = decl_style::layout_style(&theme, self.layout);
+        let children = self.children;
+        cx.flex(
+            FlexProps {
+                layout,
+                direction: fret_core::Axis::Horizontal,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::SpaceBetween,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| children,
+        )
     }
 }
 
@@ -402,31 +542,19 @@ impl ItemDescription {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Item {
-    variant: ItemVariant,
-    size: ItemSize,
-    on_click: Option<CommandId>,
-    enabled: bool,
-    children: Vec<AnyElement>,
-    chrome: ChromeRefinement,
-    layout: LayoutRefinement,
-    style: ItemStyle,
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct ItemStyle {
-    pub background: OverrideSlot<ColorRef>,
-    pub border_color: OverrideSlot<ColorRef>,
+    pub background: Option<ColorRef>,
+    pub border_color: Option<ColorRef>,
 }
 
 impl ItemStyle {
-    pub fn background(mut self, background: WidgetStateProperty<Option<ColorRef>>) -> Self {
+    pub fn background(mut self, background: ColorRef) -> Self {
         self.background = Some(background);
         self
     }
 
-    pub fn border_color(mut self, border_color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+    pub fn border_color(mut self, border_color: ColorRef) -> Self {
         self.border_color = Some(border_color);
         self
     }
@@ -442,6 +570,17 @@ impl ItemStyle {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Item {
+    variant: ItemVariant,
+    size: ItemSize,
+    on_click: Option<CommandId>,
+    enabled: bool,
+    children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+}
+
 impl Item {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
@@ -452,8 +591,7 @@ impl Item {
             enabled: true,
             children,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default().w_full(),
-            style: ItemStyle::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -488,7 +626,12 @@ impl Item {
     }
 
     pub fn style(mut self, style: ItemStyle) -> Self {
-        self.style = self.style.merged(style);
+        if let Some(background) = style.background {
+            self.chrome.background = Some(background);
+        }
+        if let Some(border_color) = style.border_color {
+            self.chrome.border_color = Some(border_color);
+        }
         self
     }
 
@@ -515,15 +658,11 @@ impl Item {
         let focus_ring = decl_style::focus_ring(&theme, radius);
 
         let children = std::rc::Rc::new(self.children);
-        let mut enabled = self.enabled;
+        let enabled = self.enabled;
         let on_click = self.on_click;
-        if let Some(cmd) = on_click.as_ref() {
-            enabled = enabled && cx.command_is_enabled(cmd);
-        }
         let user_chrome = self.chrome;
         let user_bg_override = user_chrome.background.is_some();
         let user_border_override = user_chrome.border_color.is_some();
-        let style = self.style;
         let padding = match size {
             ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N4),
             ItemSize::Sm => ChromeRefinement::default().px(Space::N4).py(Space::N3),
@@ -540,32 +679,30 @@ impl Item {
                 move |cx, st| {
                     cx.pressable_dispatch_command_if_enabled_opt(on_click);
 
-                    let states = WidgetStates::from_pressable(cx, st, enabled);
+                    let hovered = st.hovered && enabled;
+                    let pressed = st.pressed && enabled;
 
-                    let bg_defaults = WidgetStateProperty::new(base_bg.map(ColorRef::Color))
-                        .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_bg)))
-                        .when(WidgetStates::ACTIVE, Some(ColorRef::Color(pressed_bg)));
-                    let border_defaults = WidgetStateProperty::new(ColorRef::Color(border_color));
+                    let bg = if !enabled {
+                        base_bg
+                    } else if pressed {
+                        Some(pressed_bg)
+                    } else if hovered {
+                        Some(hover_bg)
+                    } else {
+                        base_bg
+                    };
 
-                    let bg =
-                        resolve_override_slot_opt(style.background.as_ref(), &bg_defaults, states);
-                    let border_ref = resolve_override_slot(
-                        style.border_color.as_ref(),
-                        &border_defaults,
-                        states,
-                    );
-
-                    let mut chrome = padding.clone().merge(
-                        ChromeRefinement::default()
-                            .radius(radius)
-                            .border_width(Px(1.0)),
-                    );
+                    let mut chrome = padding.clone().merge(ChromeRefinement {
+                        radius: Some(MetricRef::Px(radius)),
+                        border_width: Some(MetricRef::Px(Px(1.0))),
+                        ..Default::default()
+                    });
 
                     if !user_bg_override {
-                        chrome.background = bg;
+                        chrome.background = bg.map(ColorRef::Color);
                     }
                     if !user_border_override {
-                        chrome.border_color = Some(border_ref);
+                        chrome.border_color = Some(ColorRef::Color(border_color));
                     }
                     chrome = chrome.merge(user_chrome.clone());
 
@@ -574,7 +711,7 @@ impl Item {
                     props.layout.size = pressable_layout.size;
 
                     let inner_layout =
-                        decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+                        decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
 
                     let children = children.clone();
                     vec![cx.container(props, move |cx| {
@@ -587,7 +724,7 @@ impl Item {
                                 padding: Edges::all(Px(0.0)),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
-                                wrap: false,
+                                wrap: true,
                             },
                             move |_cx| (*children).clone(),
                         )]
@@ -595,30 +732,17 @@ impl Item {
                 },
             )
         } else {
-            let mut chrome = padding.merge(
-                ChromeRefinement::default()
-                    .radius(radius)
-                    .border_width(Px(1.0)),
-            );
-
-            let bg_defaults = WidgetStateProperty::new(base_bg.map(ColorRef::Color));
-            let border_defaults = WidgetStateProperty::new(ColorRef::Color(border_color));
-            let bg = resolve_override_slot_opt(
-                style.background.as_ref(),
-                &bg_defaults,
-                WidgetStates::empty(),
-            );
-            let border_ref = resolve_override_slot(
-                style.border_color.as_ref(),
-                &border_defaults,
-                WidgetStates::empty(),
-            );
+            let mut chrome = padding.merge(ChromeRefinement {
+                radius: Some(MetricRef::Px(radius)),
+                border_width: Some(MetricRef::Px(Px(1.0))),
+                ..Default::default()
+            });
 
             if !user_bg_override {
-                chrome.background = bg;
+                chrome.background = base_bg.map(ColorRef::Color);
             }
             if !user_border_override {
-                chrome.border_color = Some(border_ref);
+                chrome.border_color = Some(ColorRef::Color(border_color));
             }
             chrome = chrome.merge(user_chrome);
 
@@ -626,7 +750,7 @@ impl Item {
 
             cx.container(props, move |cx| {
                 let inner_layout =
-                    decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+                    decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
                 vec![cx.flex(
                     FlexProps {
                         layout: inner_layout,
@@ -635,41 +759,11 @@ impl Item {
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
-                        wrap: false,
+                        wrap: true,
                     },
                     move |_cx| (*children).clone(),
                 )]
             })
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn item_style_merge_is_right_biased() {
-        let red = Color {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-            a: 1.0,
-        };
-        let green = Color {
-            r: 0.0,
-            g: 1.0,
-            b: 0.0,
-            a: 1.0,
-        };
-
-        let base =
-            ItemStyle::default().background(WidgetStateProperty::new(Some(ColorRef::Color(red))));
-        let other = ItemStyle::default()
-            .border_color(WidgetStateProperty::new(Some(ColorRef::Color(green))));
-
-        let merged = base.merged(other);
-        assert!(merged.background.is_some());
-        assert!(merged.border_color.is_some());
     }
 }

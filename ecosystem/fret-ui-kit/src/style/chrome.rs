@@ -147,6 +147,7 @@ pub enum ShadowPreset {
     Sm,
     Md,
     Lg,
+    Xl,
 }
 
 impl ChromeRefinement {
@@ -314,6 +315,10 @@ impl ChromeRefinement {
 
     pub fn shadow_lg(self) -> Self {
         self.shadow(ShadowPreset::Lg)
+    }
+
+    pub fn shadow_xl(self) -> Self {
+        self.shadow(ShadowPreset::Xl)
     }
 
     // Tailwind-like spacing scale, backed by namespaced tokens.

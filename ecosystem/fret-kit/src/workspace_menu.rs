@@ -877,8 +877,9 @@ fn request_menu_overlay<H: UiHost>(
         host.request_redraw(acx.window);
     }));
 
-    let initial_focus =
-        menu::root::MenuInitialFocusTargets::new().pointer_content_focus(content_focus_id.get());
+    let initial_focus = menu::root::MenuInitialFocusTargets::new()
+        .pointer_content_focus(content_focus_id.get())
+        .keyboard_entry_focus(content_focus_id.get());
     let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
         cx,
         trigger_id,
@@ -1185,6 +1186,7 @@ fn menu_shortcut_input_context<H: UiHost>(
         ui_has_modal: false,
         window_arbitration: None,
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,

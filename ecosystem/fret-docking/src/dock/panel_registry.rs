@@ -16,7 +16,7 @@ fn fill_layout() -> fret_ui::element::LayoutStyle {
 /// Render a dock panel root wrapped in a view-cache boundary.
 ///
 /// This is a mechanism-level helper intended for GPUI-style view caching experiments.
-pub fn render_cached_panel_root<H: UiHost>(
+pub fn render_cached_panel_root<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,
@@ -90,7 +90,7 @@ fn missing_panel_root_name(panel: &PanelKey) -> String {
     }
 }
 
-fn render_missing_panel<H: UiHost>(
+fn render_missing_panel<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,

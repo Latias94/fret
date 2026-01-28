@@ -1,5 +1,6 @@
 use crate::element::SelectableTextState;
 use crate::text_edit::{buffer, utf8};
+use fret_runtime::TextBoundaryMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SelectableTextCommandOutcome {
@@ -30,6 +31,7 @@ pub(crate) fn apply_selectable_text_command(
     text: &str,
     state: &mut SelectableTextState,
     command: &str,
+    boundary_mode: TextBoundaryMode,
 ) -> SelectableTextCommandOutcome {
     let command = match command {
         "edit.copy" => "text.copy",
@@ -82,26 +84,26 @@ pub(crate) fn apply_selectable_text_command(
             needs_repaint = true;
         }
         "text.move_word_left" => {
-            let next = utf8::move_word_left(text, state.caret);
+            let next = utf8::move_word_left(text, state.caret, boundary_mode);
             state.selection_anchor = next;
             state.caret = next;
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }
         "text.move_word_right" => {
-            let next = utf8::move_word_right(text, state.caret);
+            let next = utf8::move_word_right(text, state.caret, boundary_mode);
             state.selection_anchor = next;
             state.caret = next;
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }
         "text.select_word_left" => {
-            state.caret = utf8::move_word_left(text, state.caret);
+            state.caret = utf8::move_word_left(text, state.caret, boundary_mode);
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }
         "text.select_word_right" => {
-            state.caret = utf8::move_word_right(text, state.caret);
+            state.caret = utf8::move_word_right(text, state.caret, boundary_mode);
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }

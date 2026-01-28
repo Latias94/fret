@@ -29,6 +29,7 @@ pub(crate) fn command_shortcut_label<H: UiHost>(
         ui_has_modal: false,
         window_arbitration: None,
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,

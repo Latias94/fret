@@ -141,6 +141,7 @@ pub struct WindowElementState {
     view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
+    pub(super) pending_retained_virtual_list_reconciles: HashSet<GlobalElementId>,
     prepared_frame: FrameId,
     #[cfg(any(test, feature = "diagnostics"))]
     strict_ownership: bool,
@@ -307,6 +308,11 @@ impl WindowElementState {
         None
     }
 
+    pub(crate) fn has_state<S: Any>(&self, element: GlobalElementId) -> bool {
+        let key = (element, TypeId::of::<S>());
+        self.state_any_ref(&key).is_some()
+    }
+
     pub(super) fn take_state_box(
         &mut self,
         key: &(GlobalElementId, TypeId),
@@ -327,6 +333,56 @@ impl WindowElementState {
 
     pub(super) fn insert_state_box(&mut self, key: (GlobalElementId, TypeId), value: Box<dyn Any>) {
         self.next_state.insert(key, value);
+    }
+
+    pub(crate) fn with_state_mut<S: Any, R>(
+        &mut self,
+        element: GlobalElementId,
+        init: impl FnOnce() -> S,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> R {
+        let key = (element, TypeId::of::<S>());
+        self.record_state_key_access(key);
+        let mut value = self
+            .take_state_box(&key)
+            .unwrap_or_else(|| Box::new(init()));
+        let out = {
+            let state = value
+                .downcast_mut::<S>()
+                .expect("element state type mismatch");
+            f(state)
+        };
+        self.insert_state_box(key, value);
+        out
+    }
+
+    pub(crate) fn try_with_state_mut<S: Any, R>(
+        &mut self,
+        element: GlobalElementId,
+        f: impl FnOnce(&mut S) -> R,
+    ) -> Option<R> {
+        let key = (element, TypeId::of::<S>());
+        self.record_state_key_access(key);
+        let mut value = self.take_state_box(&key)?;
+        let out = {
+            let state = value
+                .downcast_mut::<S>()
+                .expect("element state type mismatch");
+            f(state)
+        };
+        self.insert_state_box(key, value);
+        Some(out)
+    }
+
+    pub(crate) fn mark_retained_virtual_list_needs_reconcile(&mut self, element: GlobalElementId) {
+        self.pending_retained_virtual_list_reconciles
+            .insert(element);
+    }
+
+    pub(crate) fn take_retained_virtual_list_reconciles(&mut self) -> Vec<GlobalElementId> {
+        self.pending_retained_virtual_list_reconciles
+            .drain()
+            .collect()
     }
 
     pub(super) fn record_state_key_access(&mut self, key: (GlobalElementId, TypeId)) {

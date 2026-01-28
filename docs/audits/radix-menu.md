@@ -54,6 +54,12 @@ composing:
   `dismissible_menu_request_with_dismiss_handler(...)` (or
   `dismissible_menu_request_with_modal_and_dismiss_handler(...)`).
   - Focus-outside dismissal routes through the same handler with `DismissReason::FocusOutside`.
+- Pass: Focus restoration on close honors Radix `onCloseAutoFocus` outcomes even when the overlay
+  unmounts after motion:
+  - `WindowOverlays` records whether `onCloseAutoFocus` ran and whether it prevented default while
+    the overlay is closing.
+  - The unmount/teardown path consults this recorded outcome (and runs the hook when needed) before
+    applying the default “restore focus to trigger” policy.
 - Pass: Trigger `expanded`/`controls` relationships can be stamped via
   `menu::trigger::apply_menu_trigger_a11y(...)` (used by shadcn menu recipes).
 

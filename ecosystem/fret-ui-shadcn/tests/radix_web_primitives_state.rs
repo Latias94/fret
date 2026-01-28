@@ -376,6 +376,31 @@ fn find_semantics_by_role<'a>(
         .unwrap_or_else(|| panic!("missing semantics node role={role:?}"))
 }
 
+fn assert_focus_cleared(ui: &UiTree<App>, snap: &fret_core::SemanticsSnapshot, context: &str) {
+    let focused: Vec<String> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.flags.focused)
+        .map(|n| {
+            format!(
+                "{:?}:{:?}",
+                n.role,
+                n.label.as_deref().unwrap_or("<unlabeled>")
+            )
+        })
+        .collect();
+    assert!(
+        focused.is_empty(),
+        "{context}: expected semantics focus to be cleared, got focused={focused:?} ui_focus={:?}",
+        ui.focus()
+    );
+    assert_eq!(
+        ui.focus(),
+        None,
+        "{context}: expected UiTree focus to be cleared"
+    );
+}
+
 fn has_semantics_role(snap: &fret_core::SemanticsSnapshot, role: SemanticsRole) -> bool {
     snap.nodes.iter().any(|n| n.role == role)
 }
@@ -950,6 +975,12 @@ fn radix_web_context_menu_open_close_matches_fret() {
     );
 
     assert!(!app.models().get_copied(&open).unwrap_or(false));
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot");
+    assert_focus_cleared(&ui, &snap, "context menu escape close");
 }
 
 #[test]
@@ -1067,6 +1098,17 @@ fn radix_web_menubar_open_navigate_close_matches_fret() {
     assert!(
         !file.flags.expanded,
         "expected menubar menu to be closed after Escape"
+    );
+
+    let focused = snap.nodes.iter().find(|n| n.flags.focused).expect("focus");
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("File"),
+        "expected Escape close to restore focus to the menubar trigger"
+    );
+    assert!(
+        ui.focus().is_some(),
+        "expected UiTree focus to be set after menubar Escape close"
     );
 }
 
