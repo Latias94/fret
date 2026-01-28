@@ -1,6 +1,6 @@
 # Overlay & Input Arbitration v2 (Pointer Occlusion) — TODO Tracker (input-dispatch-v2 worktree)
 
-Status: Active (branch/worktree-local tracker to avoid doc ownership conflicts)
+Status: Complete (branch/worktree-local tracker; reconcile into `docs/workstreams/overlay-input-arbitration-v2-todo.md` when backporting)
 
 This tracker exists because `docs/workstreams/overlay-input-arbitration-v2-todo.md` is maintained on
 `main` by another parallel workstream. Keep this file as the single source of truth for work done

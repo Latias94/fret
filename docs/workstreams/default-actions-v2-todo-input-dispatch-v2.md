@@ -1,6 +1,6 @@
 # Default Actions v2 — Mechanism vs Policy Boundary (worktree-local)
 
-Status: Active (input-dispatch-v2 worktree-local tracker to avoid doc ownership conflicts)
+Status: Complete (input-dispatch-v2 worktree-local tracker; reconcile into main docs if needed)
 
 This document exists to resolve `IDV2-def-006/007` without repeatedly reshaping core contracts.
 

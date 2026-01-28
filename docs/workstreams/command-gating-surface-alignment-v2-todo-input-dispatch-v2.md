@@ -1,6 +1,6 @@
 # Command Gating Surface Alignment v2 — TODO Tracker (input-dispatch-v2 worktree)
 
-Status: Active (branch/worktree-local tracker to avoid doc ownership conflicts)
+Status: Complete (branch/worktree-local tracker; reconcile into main workstream docs when backporting)
 
 This tracker exists because menu/command gating docs on `main` may be updated in parallel by other
 workstreams. Keep this file as the single source of truth for work done in the
