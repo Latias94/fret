@@ -2032,6 +2032,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_tear_off = true;
             caps.ui.cursor_icons = true;
 
+            #[cfg(any(target_os = "windows", target_os = "macos"))]
+            {
+                caps.ui.window_hover_detection =
+                    fret_runtime::WindowHoverDetectionQuality::Reliable;
+                caps.ui.window_set_outer_position =
+                    fret_runtime::WindowSetOuterPositionQuality::Reliable;
+                caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::Reliable;
+            }
+
+            #[cfg(target_os = "linux")]
+            {
+                // Linux windowing behavior varies significantly across X11/Wayland and
+                // compositors. Default to best-effort until we add backend-specific detection.
+                caps.ui.window_hover_detection =
+                    fret_runtime::WindowHoverDetectionQuality::BestEffort;
+                caps.ui.window_set_outer_position =
+                    fret_runtime::WindowSetOuterPositionQuality::BestEffort;
+                caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::BestEffort;
+            }
+
             caps.clipboard.text = true;
             caps.clipboard.files = false;
 
@@ -2068,6 +2088,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.multi_window = false;
             caps.ui.window_tear_off = false;
             caps.ui.cursor_icons = false;
+            caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+            caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
+            caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
 
             caps.clipboard.text = false;
             caps.clipboard.files = false;
@@ -2097,6 +2120,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.multi_window = false;
             caps.ui.window_tear_off = false;
             caps.ui.cursor_icons = false;
+            caps.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+            caps.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
+            caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
 
             caps.clipboard.text = true;
             caps.clipboard.files = false;
@@ -2137,6 +2163,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.ui.multi_window &= available.ui.multi_window;
         caps.ui.window_tear_off &= available.ui.window_tear_off;
         caps.ui.cursor_icons &= available.ui.cursor_icons;
+        caps.ui.window_hover_detection = caps
+            .ui
+            .window_hover_detection
+            .clamp_to_available(available.ui.window_hover_detection);
+        caps.ui.window_set_outer_position = caps
+            .ui
+            .window_set_outer_position
+            .clamp_to_available(available.ui.window_set_outer_position);
+        caps.ui.window_z_level = caps
+            .ui
+            .window_z_level
+            .clamp_to_available(available.ui.window_z_level);
 
         caps.clipboard.text &= available.clipboard.text;
         caps.clipboard.files &= available.clipboard.files;
@@ -3779,21 +3817,34 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                         .anchor
                                         .map(|a| a.position)
                                         .unwrap_or(Point::new(Px(40.0), Px(20.0)));
-                                    if let Some(state) = self.windows.get(new_window) {
-                                        state.window.set_window_level(WindowLevel::AlwaysOnTop);
+                                    let caps = self
+                                        .app
+                                        .global::<PlatformCapabilities>()
+                                        .cloned()
+                                        .unwrap_or_default();
+                                    let allow_follow = caps.ui.window_set_outer_position
+                                        == fret_runtime::WindowSetOuterPositionQuality::Reliable;
+                                    if allow_follow {
+                                        if caps.ui.window_z_level
+                                            != fret_runtime::WindowZLevelQuality::None
+                                            && let Some(state) = self.windows.get(new_window)
+                                        {
+                                            state.window.set_window_level(WindowLevel::AlwaysOnTop);
+                                        }
+
+                                        self.dock_tearoff_follow = Some(DockTearoffFollow {
+                                            window: new_window,
+                                            source_window: *source_window,
+                                            grab_offset,
+                                            manual_follow: true,
+                                            last_outer_pos: None,
+                                        });
+                                        // Do not call `drag_window()` here. ImGui drives multi-viewport
+                                        // window movement by updating the platform window position in
+                                        // response to mouse motion; native OS dragging tends to
+                                        // introduce a fixed cursor offset and prevents reliable
+                                        // hit-testing of other windows under the moving viewport.
                                     }
-                                    self.dock_tearoff_follow = Some(DockTearoffFollow {
-                                        window: new_window,
-                                        source_window: *source_window,
-                                        grab_offset,
-                                        manual_follow: true,
-                                        last_outer_pos: None,
-                                    });
-                                    // Do not call `drag_window()` here. ImGui drives multi-viewport
-                                    // window movement by updating the platform window position in
-                                    // response to mouse motion; native OS dragging tends to
-                                    // introduce a fixed cursor offset and prevents reliable
-                                    // hit-testing of other windows under the moving viewport.
                                 }
                                 let panel = match &create.kind {
                                     CreateWindowKind::DockFloating { panel, .. } => Some(panel),
@@ -4256,6 +4307,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        let allow_window_under_cursor =
+            caps.ui.window_hover_detection != fret_runtime::WindowHoverDetectionQuality::None;
+
         // When a dock tear-off window is following the cursor, the cursor is always "inside" that
         // moving window. Prefer other windows under the cursor so we can dock back into the main
         // window (ImGui-style).
@@ -4270,7 +4329,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .internal_drag_hover_window
             .filter(|w| self.screen_pos_in_window(*w, screen_pos))
             .filter(|w| Some(*w) != prefer_not)
-            .or_else(|| self.window_under_cursor(screen_pos, prefer_not));
+            .or_else(|| {
+                allow_window_under_cursor
+                    .then(|| self.window_under_cursor(screen_pos, prefer_not))
+                    .flatten()
+            });
         let hovered = hovered.or_else(|| {
             // For dock tear-off, keep delivering `InternalDrag::Over` to the source window even
             // when the cursor is outside all windows so the UI can react before mouse-up.
@@ -4333,6 +4396,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        let allow_window_under_cursor =
+            caps.ui.window_hover_detection != fret_runtime::WindowHoverDetectionQuality::None;
+
         let prefer_not = self
             .dock_tearoff_follow
             .filter(|_| drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
@@ -4343,7 +4414,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .internal_drag_hover_window
             .filter(|w| self.screen_pos_in_window(*w, screen_pos))
             .filter(|w| Some(*w) != prefer_not)
-            .or_else(|| self.window_under_cursor(screen_pos, prefer_not))
+            .or_else(|| {
+                allow_window_under_cursor
+                    .then(|| self.window_under_cursor(screen_pos, prefer_not))
+                    .flatten()
+            })
             .or(self.internal_drag_hover_window);
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
@@ -4493,6 +4568,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         }
 
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        if caps.ui.window_set_outer_position
+            != fret_runtime::WindowSetOuterPositionQuality::Reliable
+        {
+            return false;
+        }
+
         if self.windows.get(window).is_none() {
             self.dock_tearoff_follow = None;
             return false;
@@ -4523,7 +4609,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         if let Some(state) = self.windows.get(window) {
             // Keep the moving window visible while docking back into another window (ImGui-style).
-            state.window.set_window_level(WindowLevel::AlwaysOnTop);
+            if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None {
+                state.window.set_window_level(WindowLevel::AlwaysOnTop);
+            }
             state.window.set_outer_position(pos);
         }
 
@@ -4544,10 +4632,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return;
         };
 
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+
         if let Some(state) = self.windows.get(follow.window) {
-            state.window.set_window_level(WindowLevel::Normal);
-            if let Some(pos) =
-                self.settle_window_outer_position(state.window.as_ref(), self.cursor_screen_pos)
+            if caps.ui.window_z_level != fret_runtime::WindowZLevelQuality::None {
+                state.window.set_window_level(WindowLevel::Normal);
+            }
+            if caps.ui.window_set_outer_position
+                == fret_runtime::WindowSetOuterPositionQuality::Reliable
+                && let Some(pos) =
+                    self.settle_window_outer_position(state.window.as_ref(), self.cursor_screen_pos)
             {
                 state.window.set_outer_position(Position::Physical(pos));
             }
