@@ -78,6 +78,7 @@ Legend:
 - [x] Implement override stack service (push/pop token) for focused surfaces/overlays.
 - [x] Default mode is `UnicodeWord` unless overridden.
 - [x] Allow focused text input regions to override the mode (mechanism-only).
+- [x] Allow code-editor-grade surfaces to select the mode explicitly (policy input), and expose a UI Gallery toggle.
 
 ### Command semantics
 
@@ -100,6 +101,8 @@ Evidence anchors:
 - `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
 ---
 
@@ -165,6 +168,7 @@ Evidence anchors:
 - [x] Define semantic token schema (highlight ids independent of theme colors).
 - [~] Incremental update strategy (best-effort; visible window prioritized).
 - [x] Materialize spans only for visible rows.
+- [x] Expose a UI Gallery toggle for manual validation.
 - [ ] Theme changes update paint-only styles without reshaping.
 
 ---

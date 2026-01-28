@@ -284,6 +284,7 @@ Legend:
 - [x] Add window-scoped snapshot for the mode (`InputContext`).
 - [x] Provide an override stack service (push/pop token) for overlays and focused surfaces.
 - [x] Allow focused text input regions to override `TextBoundaryMode` (mechanism-only).
+- [x] Allow code-editor-grade surfaces to select the mode explicitly (policy input), and expose a UI Gallery toggle.
 - [x] Ensure `TextInput`, `TextArea`, `SelectableText` consult the mode for:
   - word move/select commands,
   - double-click selection,
@@ -299,6 +300,8 @@ Evidence anchors:
 - `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
 ### 3) Windowed editor surface (ADR 0190/0193)
 
@@ -344,12 +347,16 @@ Evidence anchors:
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::replace_buffer`, `CodeEditorHandle::set_text`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_language`, `cached_row_syntax_spans`, `materialize_row_rich_text`)
 - `ecosystem/fret-code-editor/Cargo.toml` (`syntax` / `syntax-rust` / `syntax-all`)
+- `apps/fret-ui-gallery/Cargo.toml` (native enables `fret-code-editor` `syntax-rust`)
+- `apps/fret-ui-gallery/src/driver.rs` (`code_editor_syntax_rust` model)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` syntax toggle)
 
 ### 5) Syntax and highlighting (ADR 0193)
 
 - [x] Define semantic token schema (independent of theme colors).
 - [~] Define incremental update strategy (best-effort; visible-window prioritized).
 - [x] Materialize spans only for visible rows; keep theme mapping paint-only.
+- [x] Expose a UI Gallery toggle for manual validation.
 
 ### 6) Semantics (a11y) and selection state
 
