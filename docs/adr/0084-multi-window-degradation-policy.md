@@ -134,6 +134,8 @@ Cons:
 
 - Capability gate: use `PlatformCapabilities.ui.multi_window` (ADR 0054) plus user settings (e.g.
   “tear-off enabled”) to control whether tear-off is available.
+- Windowing quality signals (ADR 0054) may still require policy-level degradation on multi-window
+  platforms (e.g. disable follow-mode or avoid z-level nudges when reliability is `best_effort`).
 - Rendering model: treat each additional `DockLayoutWindow` root as an in-window “floating dock host”
   whose chrome and interaction policy live in `fret-docking`.
 - Testing strategy:

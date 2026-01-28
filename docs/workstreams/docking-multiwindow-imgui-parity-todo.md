@@ -75,12 +75,16 @@ Each TODO is labeled:
     - window-under-cursor selection,
     - `set_outer_position`,
     - window z-level changes (AlwaysOnTop).
-  - Proposed (non-normative) keys:
-    - `ui.window_hover_detection: None|BestEffort|Reliable`
-    - `ui.window_set_outer_position: None|BestEffort|Reliable`
-    - `ui.window_z_level: None|BestEffort|Reliable`
+  - Contract: keys are defined in ADR 0054 (stable capability signals):
+    - `ui.window_hover_detection: none|best_effort|reliable`
+    - `ui.window_set_outer_position: none|best_effort|reliable`
+    - `ui.window_z_level: none|best_effort|reliable`
   - Rationale: Wayland and sandboxed contexts require graceful degradation.
-  - Contract gate: must land as an ADR update if this expands public runtime surface.
+  - Remaining work (implementation):
+    - Add fields to `PlatformCapabilities` and thread them into `InputContext`/`when`.
+    - Populate per-backend values (desktop: Windows/macOS/Linux; web: `none`).
+    - Gate docking tear-off follow-mode + hovered-window selection strategy using these signals
+      (avoid platform branches inside widgets/policies).
 
 - [ ] DW-P1-win-002 Windows placement correctness under DPI and decorations.
   - Goal: initial window placement for tear-off aligns with cursor grab and respects non-client offsets.
@@ -113,4 +117,3 @@ Keep this list short and use it to prevent drift:
 - macOS-specific logging:
   - `FRET_DOCK_TEAROFF_LOG=1` (`target/fret-dock-tearoff.log`)
   - `FRET_MACOS_WINDOW_LOG=1` (`target/fret-macos-window.log`)
-

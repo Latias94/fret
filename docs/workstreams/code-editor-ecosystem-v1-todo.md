@@ -145,13 +145,15 @@ Evidence anchors:
 ## M4 — Buffer Model + Undo Hooks
 
 - [~] Choose v1 buffer structure (rope / piece table / hybrid) (seed `TextBuffer` exists; internal structure decision pending).
-- [ ] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
-- [ ] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
-- [ ] Lock document identity (URI-like) for multi-document workflows.
+- [x] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
+- [x] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
+- [~] Lock document identity (URI-like) for multi-document workflows.
 
 Evidence anchors:
 
-- `ecosystem/fret-code-editor-buffer/src/lib.rs` (`TextBuffer`, `Edit`, UTF-8 byte-index validation)
+- `ecosystem/fret-code-editor-buffer/src/lib.rs` (`TextBuffer`, `Edit`, `TextBufferTransaction`, `TextBufferTx`, `apply_in_transaction`, `rollback_transaction`)
+- `ecosystem/fret-code-editor-buffer/src/lib.rs` (`DocId`, `DocUri`, `TextBuffer::uri`, `TextBuffer::set_uri`)
+- `ecosystem/fret-code-editor/src/lib.rs` (`UndoGroupKind`, `UndoGroup`, `apply_and_record_edit`, `UndoHistory::record_or_coalesce`)
 
 ---
 
