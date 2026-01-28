@@ -18,6 +18,23 @@ impl Default for DocId {
     }
 }
 
+/// A URI-like document identity for workspace shells.
+///
+/// This is intentionally a thin wrapper; normalization and scheme decisions are left to the
+/// workspace layer.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DocUri(String);
+
+impl DocUri {
+    pub fn new(uri: impl Into<String>) -> Self {
+        Self(uri.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Revision(pub u64);
 
@@ -138,6 +155,7 @@ pub enum EditError {
 #[derive(Debug, Clone)]
 pub struct TextBuffer {
     doc: DocId,
+    uri: Option<DocUri>,
     revision: Revision,
     text: String,
     line_starts: Vec<usize>,
@@ -145,12 +163,17 @@ pub struct TextBuffer {
 
 impl TextBuffer {
     pub fn new(doc: DocId, text: String) -> Result<Self, EditError> {
+        Self::new_with_uri(doc, None, text)
+    }
+
+    pub fn new_with_uri(doc: DocId, uri: Option<DocUri>, text: String) -> Result<Self, EditError> {
         if !text.is_char_boundary(text.len()) {
             return Err(EditError::NotCharBoundary);
         }
 
         let mut buf = Self {
             doc,
+            uri,
             revision: Revision(0),
             text,
             line_starts: Vec::new(),
@@ -161,6 +184,14 @@ impl TextBuffer {
 
     pub fn doc(&self) -> DocId {
         self.doc
+    }
+
+    pub fn uri(&self) -> Option<&DocUri> {
+        self.uri.as_ref()
+    }
+
+    pub fn set_uri(&mut self, uri: Option<DocUri>) {
+        self.uri = uri;
     }
 
     pub fn revision(&self) -> Revision {
@@ -580,5 +611,20 @@ mod tests {
 
         buf.apply_tx(&committed).unwrap();
         assert_eq!(buf.text(), "hi world");
+    }
+
+    #[test]
+    fn buffer_stores_optional_uri() {
+        let doc = DocId::new();
+        let uri = DocUri::new("file:///tmp/hello.txt");
+        let mut buf =
+            TextBuffer::new_with_uri(doc, Some(uri.clone()), "hello".to_string()).unwrap();
+        assert_eq!(buf.uri().map(DocUri::as_str), Some("file:///tmp/hello.txt"));
+
+        buf.set_uri(None);
+        assert_eq!(buf.uri(), None);
+
+        buf.set_uri(Some(uri));
+        assert_eq!(buf.uri().map(DocUri::as_str), Some("file:///tmp/hello.txt"));
     }
 }

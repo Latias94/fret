@@ -334,11 +334,12 @@ Evidence anchors:
   - rope, piece table, or hybrid (document decision).
 - [x] Define edit operation vocabulary (insert/delete/replace) in UTF-8 byte indices.
 - [x] Define transaction boundaries (begin/update/commit/cancel) compatible with `fret-undo`.
-- [ ] Define document identity (URI-like) and multi-document story for workspace shells.
+- [~] Define document identity (URI-like) and multi-document story for workspace shells.
 
 Evidence anchors:
 
 - `ecosystem/fret-code-editor-buffer/src/lib.rs` (`TextBuffer`, `Edit`, `TextBufferTransaction`, `TextBufferTx`, `apply_in_transaction`, `rollback_transaction`)
+- `ecosystem/fret-code-editor-buffer/src/lib.rs` (`DocId`, `DocUri`, `TextBuffer::uri`, `TextBuffer::set_uri`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`UndoGroupKind`, `UndoGroup`, `apply_and_record_edit`, `UndoHistory::record_or_coalesce`)
 
 ### 5) Syntax and highlighting (ADR 0193)
