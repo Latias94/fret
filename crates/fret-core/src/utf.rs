@@ -54,14 +54,12 @@ pub fn utf16_offset_to_utf8_byte_offset(
     }
 
     // Target is at/after end.
-    if utf16_units == target {
-        text.len()
-    } else if utf16_units < target {
+    if utf16_units <= target {
         text.len()
     } else {
         // Should not happen, but keep deterministic.
         match clamp {
-            UtfIndexClamp::Down => text.len().saturating_sub(0),
+            UtfIndexClamp::Down => text.len(),
             UtfIndexClamp::Up => text.len(),
         }
     }
