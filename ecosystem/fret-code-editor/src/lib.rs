@@ -12,7 +12,7 @@ use std::sync::Arc;
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
     DisplayPoint, byte_to_display_point, display_point_to_byte, move_word_left, move_word_right,
-    select_word_range,
+    next_char_boundary, prev_char_boundary, select_word_range,
 };
 #[cfg(feature = "syntax")]
 use fret_core::{AttributedText, TextPaintStyle, TextSpan};
@@ -126,6 +126,7 @@ struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    text_boundary_mode: TextBoundaryMode,
     undo: UndoHistory<CodeEditorTx>,
     undo_group: Option<UndoGroup>,
     dragging: bool,
@@ -165,6 +166,7 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                text_boundary_mode: TextBoundaryMode::Identifier,
                 undo: UndoHistory::with_limit(512),
                 undo_group: None,
                 dragging: false,
@@ -204,6 +206,19 @@ impl CodeEditorHandle {
         {
             let _ = language;
         }
+    }
+
+    pub fn text_boundary_mode(&self) -> TextBoundaryMode {
+        self.state.borrow().text_boundary_mode
+    }
+
+    pub fn set_text_boundary_mode(&self, mode: TextBoundaryMode) {
+        let mut st = self.state.borrow_mut();
+        if st.text_boundary_mode == mode {
+            return;
+        }
+        st.text_boundary_mode = mode;
+        st.undo_group = None;
     }
 
     pub fn replace_buffer(&self, buffer: TextBuffer) {
@@ -314,6 +329,7 @@ impl CodeEditor {
             };
 
             let content_len = editor_state.borrow().buffer.line_count();
+            let boundary_mode = editor_state.borrow().text_boundary_mode;
 
             let mut region_layout = fret_ui::element::LayoutStyle::default();
             region_layout.size.width = Length::Fill;
@@ -323,7 +339,7 @@ impl CodeEditor {
             let region_props = TextInputRegionProps {
                 layout: region_layout,
                 enabled: true,
-                text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
+                text_boundary_mode_override: Some(boundary_mode),
             };
 
             let mut pointer_props = PointerRegionProps::default();
@@ -355,11 +371,8 @@ impl CodeEditor {
                     let caret = caret_for_pointer(&st.buffer, row, bounds, down.position, cell_w);
                     match down.click_count {
                         2 => {
-                            let (start, end) = select_word_range(
-                                st.buffer.text(),
-                                caret,
-                                TextBoundaryMode::Identifier,
-                            );
+                            let (start, end) =
+                                select_word_range(st.buffer.text(), caret, st.text_boundary_mode);
                             st.selection = Selection {
                                 anchor: start,
                                 focus: end,
@@ -936,30 +949,6 @@ fn insert_text_with_kind(st: &mut CodeEditorState, text: &str, kind: UndoGroupKi
     Some(())
 }
 
-fn prev_char_boundary(text: &str, mut idx: usize) -> usize {
-    idx = idx.min(text.len());
-    if idx == 0 {
-        return 0;
-    }
-    idx = idx.saturating_sub(1);
-    while idx > 0 && !text.is_char_boundary(idx) {
-        idx = idx.saturating_sub(1);
-    }
-    idx
-}
-
-fn next_char_boundary(text: &str, mut idx: usize) -> usize {
-    idx = idx.min(text.len());
-    if idx >= text.len() {
-        return text.len();
-    }
-    idx = idx.saturating_add(1).min(text.len());
-    while idx < text.len() && !text.is_char_boundary(idx) {
-        idx = idx.saturating_add(1).min(text.len());
-    }
-    idx
-}
-
 #[allow(clippy::too_many_arguments)]
 fn handle_key_down(
     host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -1231,7 +1220,7 @@ fn redo(st: &mut CodeEditorState) -> bool {
 
 fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
     let text = st.buffer.text();
-    let mode = TextBoundaryMode::Identifier;
+    let mode = st.text_boundary_mode;
     st.undo_group = None;
 
     let (sel_start, sel_end) = {
@@ -1739,6 +1728,18 @@ mod tests {
         assert_eq!(st.drag_pointer, None);
         assert_eq!(st.row_text_cache.len(), 0);
         assert_eq!(st.row_text_cache_queue.len(), 0);
+    }
+
+    #[test]
+    fn replace_buffer_preserves_text_boundary_mode() {
+        let handle = CodeEditorHandle::new("hello");
+        handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+
+        let doc = DocId::new();
+        let buffer = TextBuffer::new(doc, "world".to_string()).unwrap();
+        handle.replace_buffer(buffer);
+
+        assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
     }
 
     #[cfg(feature = "syntax-rust")]
