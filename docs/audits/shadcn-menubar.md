@@ -33,6 +33,11 @@ Key upstream behaviors/surfaces:
   underlay pointer interaction remains enabled (Radix Menubar uses `Menu.modal=false`).
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
+- Pass: Close auto-focus outcomes match Radix Menubar’s `onCloseAutoFocus` policy:
+  - Escape close restores focus to the menubar trigger (keeps keyboard roving continuity).
+  - Outside-press close leaves focus to the user agent (`<body/>`); in Fret this is modeled as
+    `UiTree` focus `None`.
+  - Upstream anchor: `repo-ref/primitives/packages/react/menubar/src/menubar.tsx` (`MenubarContent`).
 
 ### Placement & sizing
 

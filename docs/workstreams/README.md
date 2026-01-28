@@ -20,6 +20,9 @@ Active workstreams:
 - `docs/workstreams/overlay-lifecycle-phases.md`
 - `docs/workstreams/docking-multiviewport-arbitration-v1.md`
 - `docs/workstreams/docking-multiviewport-arbitration-v1-todo.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity.md`
+- `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
+- `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
 - `docs/workstreams/execution-concurrency-surface-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1.md`
 - `docs/workstreams/unified-authoring-builder-v1-todo.md`

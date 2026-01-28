@@ -154,7 +154,7 @@ pub(crate) fn sidebar_view(
         let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
             nav_body
         } else {
-            shadcn::ScrollArea::new(vec![nav_body])
+            shadcn::ScrollArea::new([nav_body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         };
@@ -163,7 +163,7 @@ pub(crate) fn sidebar_view(
                 test_id: Some(Arc::<str>::from("ui-gallery-nav-scroll")),
                 ..Default::default()
             },
-            move |_cx| vec![nav_scroll],
+            move |_cx| [nav_scroll],
         )
     };
 
@@ -173,17 +173,15 @@ pub(crate) fn sidebar_view(
             ChromeRefinement::default()
                 .bg(ColorRef::Color(theme.color_required("muted")))
                 .p(Space::N4),
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(280.0)))
-                .h_full(),
+            LayoutRefinement::default().w_px(Px(280.0)).h_full(),
         ),
         |cx| {
-            vec![stack::vstack(
+            [stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full().h_full())
                     .gap(Space::N4),
-                |_cx| vec![title_row, query_input, nav_scroll],
+                |_cx| [title_row, query_input, nav_scroll],
             )]
         },
     );
@@ -300,7 +298,7 @@ pub(crate) fn content_view(
                     shadcn::SelectItem::new("neutral/light", "Neutral (light)"),
                     shadcn::SelectItem::new("neutral/dark", "Neutral (dark)"),
                 ])
-                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(220.0))))
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
                 .into_element(cx);
 
             let copy_actions = stack::hstack(
@@ -330,10 +328,10 @@ pub(crate) fn content_view(
             let right = stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N3).items_center(),
-                |_cx| vec![theme_select, copy_actions],
+                |_cx| [theme_select, copy_actions],
             );
 
-            vec![left, right]
+            [left, right]
         },
     );
 
@@ -414,16 +412,16 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| vec![preview_panel, usage_panel, docs_panel],
+            |_cx| [preview_panel, usage_panel, docs_panel],
         )
     } else {
         shadcn::Tabs::new(content_tab)
             .refine_layout(LayoutRefinement::default().w_full())
             .list_full_width(true)
             .items([
-                shadcn::TabsItem::new("preview", "Preview", vec![preview_panel]),
-                shadcn::TabsItem::new("usage", "Usage", vec![usage_panel]),
-                shadcn::TabsItem::new("docs", "Notes", vec![docs_panel]),
+                shadcn::TabsItem::new("preview", "Preview", [preview_panel]),
+                shadcn::TabsItem::new("usage", "Usage", [usage_panel]),
+                shadcn::TabsItem::new("docs", "Notes", [docs_panel]),
             ])
             .into_element(cx)
     };
@@ -434,14 +432,14 @@ pub(crate) fn content_view(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N6),
-            |_cx| vec![header, tabs],
+            |_cx| [header, tabs],
         )
     });
     let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            shadcn::ScrollArea::new(vec![body])
+            shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         })
@@ -456,7 +454,7 @@ pub(crate) fn content_view(
                     .p(Space::N6),
                 LayoutRefinement::default().w_full().h_full(),
             ),
-            |_cx| vec![content],
+            |_cx| [content],
         )
     })
 }
@@ -673,6 +671,9 @@ fn page_preview(
         PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_radio(cx, material3_radio_value)
         }),
+        PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+            preview_material3_select(cx)
+        }),
         PAGE_MATERIAL3_TEXT_FIELD => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_text_field(
@@ -741,11 +742,15 @@ fn page_preview(
     .into_element(cx)
 }
 
-fn material3_scoped_page(
+fn material3_scoped_page<I, F>(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
-    content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
-) -> Vec<AnyElement> {
+    content: F,
+) -> Vec<AnyElement>
+where
+    F: FnOnce(&mut ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     let enabled = cx
         .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);
@@ -1022,7 +1027,7 @@ fn preview_view_cache(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::PopoverContent::new(vec![
+                    shadcn::PopoverContent::new([
                         cx.text("Popover content"),
                         shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
@@ -1045,18 +1050,14 @@ fn preview_view_cache(
             }));
         }
 
-        let list = shadcn::ScrollArea::new(vec![stack::vstack(
+        let list = shadcn::ScrollArea::new([stack::vstack(
             cx,
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N1),
             |_cx| rows,
         )])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(cx);
 
         vec![
@@ -1130,7 +1131,7 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
                     .p(Space::N3),
                 LayoutRefinement::default().w_full(),
             ),
-            |cx| vec![cx.text(label)],
+            |cx| [cx.text(label)],
         )
     };
 
@@ -1165,8 +1166,26 @@ fn preview_virtual_list_torture(
 ) -> Vec<AnyElement> {
     let len: usize = 10_000;
 
+    let minimal_harness =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_MINIMAL").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let known_heights =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
+    let retained_host =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_RETAINED").filter(|v| !v.is_empty()) {
             Some(v) => {
                 let v = v.to_string_lossy().trim().to_ascii_lowercase();
                 !(v == "0" || v == "false" || v == "no" || v == "off")
@@ -1183,81 +1202,89 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
-    let header_editing_row = cx
-        .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+    let header_editing_row = (!minimal_harness)
+        .then(|| {
+            cx.get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                .flatten()
+        })
         .flatten();
 
-    let jump_input = {
-        let mut props = fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
-        props.a11y_label = Some(Arc::<str>::from("Jump to row"));
-        props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
-        props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
-        props.layout.size.width = fret_ui::element::Length::Fill;
-        cx.text_input(props)
-    };
+    let controls = (!minimal_harness).then(|| {
+        let jump_input = {
+            let mut props =
+                fret_ui::element::TextInputProps::new(virtual_list_torture_jump.clone());
+            props.a11y_label = Some(Arc::<str>::from("Jump to row"));
+            props.test_id = Some(Arc::<str>::from("ui-gallery-virtual-list-jump-input"));
+            props.placeholder = Some(Arc::<str>::from("Row index (e.g. 9000)"));
+            props.layout.size.width = fret_ui::element::Length::Fill;
+            cx.text_input(props)
+        };
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
-            .items_center(),
-        |cx| {
-            let jump_model = virtual_list_torture_jump.clone();
-            let scroll_for_jump = virtual_list_torture_scroll.clone();
-            let on_jump: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                let raw = host
-                    .models_mut()
-                    .get_cloned(&jump_model)
-                    .unwrap_or_default();
-                let index = raw.trim().parse::<usize>().unwrap_or(0);
-                scroll_for_jump.scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
-                host.request_redraw(action_cx.window);
-            });
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N2)
+                .items_center(),
+            |cx| {
+                let jump_model = virtual_list_torture_jump.clone();
+                let scroll_for_jump = virtual_list_torture_scroll.clone();
+                let on_jump: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let raw = host
+                            .models_mut()
+                            .get_cloned(&jump_model)
+                            .unwrap_or_default();
+                        let index = raw.trim().parse::<usize>().unwrap_or(0);
+                        scroll_for_jump
+                            .scroll_to_item(index, fret_ui::scroll::ScrollStrategy::Start);
+                        host.request_redraw(action_cx.window);
+                    });
 
-            let scroll_for_bottom = virtual_list_torture_scroll.clone();
-            let on_bottom: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    scroll_for_bottom.scroll_to_bottom();
-                    host.request_redraw(action_cx.window);
-                });
+                let scroll_for_bottom = virtual_list_torture_scroll.clone();
+                let on_bottom: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        scroll_for_bottom.scroll_to_bottom();
+                        host.request_redraw(action_cx.window);
+                    });
 
-            let edit_row_for_clear = virtual_list_torture_edit_row.clone();
-            let edit_text_for_clear = virtual_list_torture_edit_text.clone();
-            let on_clear_edit: fret_ui::action::OnActivate =
-                Arc::new(move |host, action_cx, _reason| {
-                    let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
-                    let _ = host
-                        .models_mut()
-                        .update(&edit_text_for_clear, |v| v.clear());
-                    host.request_redraw(action_cx.window);
-                });
+                let edit_row_for_clear = virtual_list_torture_edit_row.clone();
+                let edit_text_for_clear = virtual_list_torture_edit_text.clone();
+                let on_clear_edit: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host.models_mut().update(&edit_row_for_clear, |v| *v = None);
+                        let _ = host
+                            .models_mut()
+                            .update(&edit_text_for_clear, |v| v.clear());
+                        host.request_redraw(action_cx.window);
+                    });
 
-            vec![
-                jump_input,
-                shadcn::Button::new("Jump")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-jump-button")
-                    .on_activate(on_jump)
-                    .into_element(cx),
-                shadcn::Button::new("Bottom")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-bottom-button")
-                    .on_activate(on_bottom)
-                    .into_element(cx),
-                shadcn::Button::new("Clear edit")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-virtual-list-clear-edit-button")
-                    .on_activate(on_clear_edit)
-                    .into_element(cx),
-            ]
-        },
-    );
+                vec![
+                    jump_input,
+                    shadcn::Button::new("Jump")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-jump-button")
+                        .on_activate(on_jump)
+                        .into_element(cx),
+                    shadcn::Button::new("Bottom")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-bottom-button")
+                        .on_activate(on_bottom)
+                        .into_element(cx),
+                    shadcn::Button::new("Clear edit")
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::Sm)
+                        .test_id("ui-gallery-virtual-list-clear-edit-button")
+                        .on_activate(on_clear_edit)
+                        .into_element(cx),
+                ]
+            },
+        )
+    });
 
-    let editing_indicator = {
+    let editing_indicator = (!minimal_harness).then(|| {
         let label = if let Some(row) = header_editing_row {
             Arc::<str>::from(format!("editing_row={row}"))
         } else {
@@ -1279,7 +1306,7 @@ fn preview_virtual_list_torture(
                 }
             },
         )
-    };
+    });
 
     let header = stack::vstack(
         cx,
@@ -1287,16 +1314,32 @@ fn preview_virtual_list_torture(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
         |cx| {
-            vec![
+            let mut out = vec![
                 cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
+                cx.text(if retained_host {
+                    "Mode: retained host (virt-003 prototype; item subtrees can reattach without rerendering the parent cache root)."
+                } else {
+                    "Mode: render-driven (baseline; visible items update requires rerender when the window changes)."
+                }),
                 cx.text(if known_heights {
                     "Mode: known row heights (no measure pass; better for perf baselines)."
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
-                controls,
-                editing_indicator,
-            ]
+            ];
+
+            if minimal_harness {
+                out.push(cx.text("Harness: minimal (no focusable controls; reduces RAF/notify noise in perf bundles)."));
+            } else {
+                if let Some(controls) = controls {
+                    out.push(controls);
+                }
+                if let Some(editing_indicator) = editing_indicator {
+                    out.push(editing_indicator);
+                }
+            }
+
+            out
         },
     );
 
@@ -1319,17 +1362,102 @@ fn preview_virtual_list_torture(
     };
 
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-        let list = cx.virtual_list_keyed_with_layout(
-            list_layout,
-            len,
-            options,
-            &virtual_list_torture_scroll,
-            |i| i as fret_ui::ItemKey,
-            |cx, index| {
+        let list = if minimal_harness {
+            if retained_host {
+                let theme = theme.clone();
+                let key_at = Arc::new(|i| i as fret_ui::ItemKey);
+                let row = Arc::new(move |cx: &mut ElementContext<'_, App>, index: usize| {
+                    let zebra = (index % 2) == 0;
+                    let background = if zebra {
+                        theme.color_required("muted")
+                    } else {
+                        theme.color_required("background")
+                    };
+
+                    let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                    let row_label = cx.text(format!("Row {index}"));
+
+                    let mut container_props = decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(background))
+                            .p(Space::N2),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(height_hint)),
+                    );
+                    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                    let row_layout = container_props.layout;
+                    let container = cx.container(container_props, |_cx| vec![row_label]);
+                    let mut semantics = fret_ui::element::SemanticsProps::default();
+                    semantics.layout = row_layout;
+                    semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
+                        "ui-gallery-virtual-list-row-{index}-label"
+                    )));
+                    cx.semantics(semantics, |_cx| vec![container])
+                });
+
+                cx.virtual_list_keyed_retained_with_layout(
+                    list_layout,
+                    len,
+                    options,
+                    &virtual_list_torture_scroll,
+                    key_at,
+                    row,
+                )
+            } else {
+                cx.virtual_list_keyed_with_layout(
+                    list_layout,
+                    len,
+                    options,
+                    &virtual_list_torture_scroll,
+                    |i| i as fret_ui::ItemKey,
+                    |cx, index| {
+                        let zebra = (index % 2) == 0;
+                        let background = if zebra {
+                            theme.color_required("muted")
+                        } else {
+                            theme.color_required("background")
+                        };
+
+                        let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+                        let row_label = cx.text(format!("Row {index}"));
+
+                        let mut container_props = decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(background))
+                                .p(Space::N2),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(height_hint)),
+                        );
+                        container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                        let row_layout = container_props.layout;
+                        let container = cx.container(container_props, |_cx| vec![row_label]);
+                        let mut semantics = fret_ui::element::SemanticsProps::default();
+                        semantics.layout = row_layout;
+                        semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
+                            "ui-gallery-virtual-list-row-{index}-label"
+                        )));
+                        cx.semantics(semantics, |_cx| vec![container])
+                    },
+                )
+            }
+        } else if retained_host {
+            let theme = theme.clone();
+            let edit_row = virtual_list_torture_edit_row.clone();
+            let edit_text = virtual_list_torture_edit_text.clone();
+            let row_cache = row_cache;
+
+            let key_at = Arc::new(|i| i as fret_ui::ItemKey);
+            let row = Arc::new(move |cx: &mut ElementContext<'_, App>, index: usize| {
                 let index_u64 = index as u64;
                 let row = |cx: &mut ElementContext<'_, App>| {
                     let editing_row = cx
-                        .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                        .get_model_copied(&edit_row, Invalidation::Layout)
                         .flatten();
                     let is_editing = editing_row == Some(index_u64);
 
@@ -1344,8 +1472,8 @@ fn preview_virtual_list_torture(
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
 
-                    let edit_row_for_activate = virtual_list_torture_edit_row.clone();
-                    let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+                    let edit_row_for_activate = edit_row.clone();
+                    let edit_text_for_activate = edit_text.clone();
                     let on_select_row: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
                             let _ = host
@@ -1356,6 +1484,7 @@ fn preview_virtual_list_torture(
                             });
                             host.request_redraw(action_cx.window);
                         });
+
                     let row_label = shadcn::Button::new(format!("Row {index}"))
                         .variant(shadcn::ButtonVariant::Ghost)
                         .size(shadcn::ButtonSize::Sm)
@@ -1365,9 +1494,7 @@ fn preview_virtual_list_torture(
                         .into_element(cx);
 
                     let right = if is_editing {
-                        let mut props = fret_ui::element::TextInputProps::new(
-                            virtual_list_torture_edit_text.clone(),
-                        );
+                        let mut props = fret_ui::element::TextInputProps::new(edit_text.clone());
                         props.a11y_label = Some(Arc::<str>::from("Inline edit"));
                         props.test_id =
                             Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
@@ -1380,7 +1507,7 @@ fn preview_virtual_list_torture(
                                 .layout(LayoutRefinement::default().w_full())
                                 .gap(Space::N2)
                                 .items_center(),
-                            |cx| vec![cx.text_input(props)],
+                            |cx| [cx.text_input(props)],
                         )
                     } else {
                         let edit_button = shadcn::Button::new("Edit")
@@ -1393,29 +1520,27 @@ fn preview_virtual_list_torture(
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![edit_button],
+                            |_cx| [edit_button],
                         )
                     };
 
                     let mut container_props = decl_style::container_props(
-                        theme,
+                        &theme,
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
+                        LayoutRefinement::default().w_full().h_px(height_hint),
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                     cx.container(container_props, |cx| {
-                        vec![stack::hstack(
+                        [stack::hstack(
                             cx,
                             stack::HStackProps::default()
                                 .layout(LayoutRefinement::default().w_full().h_full())
                                 .gap(Space::N2)
                                 .items_center(),
-                            |_cx| vec![row_label, right],
+                            |_cx| [row_label, right],
                         )]
                     })
                 };
@@ -1425,13 +1550,136 @@ fn preview_virtual_list_torture(
                         CachedSubtreeProps::default()
                             .contained_layout(false)
                             .cache_key(index_u64),
-                        |cx| vec![row(cx)],
+                        |cx| [row(cx)],
                     )
                 } else {
                     row(cx)
                 }
-            },
-        );
+            });
+
+            cx.virtual_list_keyed_retained_with_layout(
+                list_layout,
+                len,
+                options,
+                &virtual_list_torture_scroll,
+                key_at,
+                row,
+            )
+        } else {
+            cx.virtual_list_keyed_with_layout(
+                list_layout,
+                len,
+                options,
+                &virtual_list_torture_scroll,
+                |i| i as fret_ui::ItemKey,
+                |cx, index| {
+                    let index_u64 = index as u64;
+                    let row = |cx: &mut ElementContext<'_, App>| {
+                        let editing_row = cx
+                            .get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
+                            .flatten();
+                        let is_editing = editing_row == Some(index_u64);
+
+                        let zebra = (index % 2) == 0;
+                        let background = if is_editing {
+                            theme.color_required("accent")
+                        } else if zebra {
+                            theme.color_required("muted")
+                        } else {
+                            theme.color_required("background")
+                        };
+
+                        let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
+
+                        let edit_row_for_activate = virtual_list_torture_edit_row.clone();
+                        let edit_text_for_activate = virtual_list_torture_edit_text.clone();
+                        let on_select_row: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&edit_row_for_activate, |v| *v = Some(index_u64));
+                                let _ = host.models_mut().update(&edit_text_for_activate, |v| {
+                                    *v = format!("Row {index_u64}");
+                                });
+                                host.request_redraw(action_cx.window);
+                            });
+                        let row_label = shadcn::Button::new(format!("Row {index}"))
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::Sm)
+                            .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
+                            .on_activate(on_select_row.clone())
+                            .refine_layout(LayoutRefinement::default().flex_1())
+                            .into_element(cx);
+
+                        let right = if is_editing {
+                            let mut props = fret_ui::element::TextInputProps::new(
+                                virtual_list_torture_edit_text.clone(),
+                            );
+                            props.a11y_label = Some(Arc::<str>::from("Inline edit"));
+                            props.test_id =
+                                Some(Arc::<str>::from("ui-gallery-virtual-list-edit-input"));
+                            props.placeholder = Some(Arc::<str>::from("Type to edit…"));
+                            props.layout.size.width = fret_ui::element::Length::Fill;
+
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N2)
+                                    .items_center(),
+                                |cx| vec![cx.text_input(props)],
+                            )
+                        } else {
+                            let edit_button = shadcn::Button::new("Edit")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(format!("ui-gallery-virtual-list-row-{index}-edit"))
+                                .on_activate(on_select_row)
+                                .into_element(cx);
+
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_center(),
+                                |_cx| vec![edit_button],
+                            )
+                        };
+
+                        let mut container_props = decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .bg(ColorRef::Color(background))
+                                .p(Space::N2),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(height_hint)),
+                        );
+                        container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                        cx.container(container_props, |cx| {
+                            vec![stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full().h_full())
+                                    .gap(Space::N2)
+                                    .items_center(),
+                                |_cx| vec![row_label, right],
+                            )]
+                        })
+                    };
+
+                    if row_cache {
+                        cx.cached_subtree_with(
+                            CachedSubtreeProps::default()
+                                .contained_layout(false)
+                                .cache_key(index_u64),
+                            |cx| vec![row(cx)],
+                        )
+                    } else {
+                        row(cx)
+                    }
+                },
+            )
+        };
 
         let list = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -1439,7 +1687,7 @@ fn preview_virtual_list_torture(
                 test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
                 ..Default::default()
             },
-            |_cx| vec![list],
+            |_cx| [list],
         );
 
         vec![list]
@@ -3325,11 +3573,7 @@ fn preview_material3_touch_targets(
             .into_element(cx),
             shadcn::CardContent::new(vec![stack]).into_element(cx),
         ])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(280.0)))
-                .min_w_0(),
-        )
+        .refine_layout(LayoutRefinement::default().w_px(Px(280.0)).min_w_0())
         .into_element(cx)
     };
 
@@ -3763,6 +4007,84 @@ fn preview_material3_radio(
     ]
 }
 
+fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct SelectPageModels {
+        selected: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let selected = cx.with_state(SelectPageModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha").test_id("ui-gallery-material3-select-a"),
+        material3::SelectItem::new("beta", "Beta").test_id("ui-gallery-material3-select-b"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("ui-gallery-material3-select-c-disabled"),
+    ]
+    .into();
+
+    let default = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select")
+        .placeholder("Pick one")
+        .items(items.clone())
+        .test_id("ui-gallery-material3-select")
+        .into_element(cx);
+
+    let primary = theme.color_required("md.sys.color.primary");
+    let primary_container = theme.color_required("md.sys.color.primary-container");
+    let secondary_container = theme.color_required("md.sys.color.secondary-container");
+
+    let override_style = material3::SelectStyle::default()
+        .container_background(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::OPEN, Some(ColorRef::Color(primary_container))),
+        )
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::FOCUS_VISIBLE, Some(ColorRef::Color(primary))),
+        )
+        .trailing_icon_color(
+            WidgetStateProperty::new(None).when(WidgetStates::OPEN, Some(ColorRef::Color(primary))),
+        )
+        .menu_selected_container_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            secondary_container,
+        ))));
+
+    let overridden = material3::Select::new(selected.clone())
+        .a11y_label("Material 3 Select (override)")
+        .placeholder("Pick one")
+        .items(items)
+        .style(override_style)
+        .test_id("ui-gallery-material3-select-overridden")
+        .into_element(cx);
+
+    vec![
+        cx.text(
+            "Material 3 Select: token-driven trigger + listbox overlay + ADR 1159 style overrides.",
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |_cx| vec![default, overridden],
+        ),
+    ]
+}
+
 fn preview_material3_text_field(
     cx: &mut ElementContext<'_, App>,
     value: Model<String>,
@@ -4084,7 +4406,7 @@ fn preview_material3_navigation_rail(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![rail],
+        move |_cx| [rail],
     );
 
     vec![
@@ -4133,7 +4455,7 @@ fn preview_material3_navigation_drawer(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![drawer],
+        move |_cx| [drawer],
     );
 
     vec![
@@ -4231,7 +4553,7 @@ fn preview_material3_modal_navigation_drawer(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![modal],
+        move |_cx| [modal],
     );
 
     vec![
@@ -4318,7 +4640,7 @@ fn preview_material3_dialog(
                     },
                 )
             },
-            |_cx| vec![],
+            |_cx| std::iter::empty::<AnyElement>(),
         );
 
     let last = cx
@@ -4336,7 +4658,7 @@ fn preview_material3_dialog(
             layout,
             ..Default::default()
         },
-        move |_cx| vec![dialog],
+        move |_cx| [dialog],
     );
 
     vec![
@@ -4512,7 +4834,7 @@ fn preview_material3_list(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4)
             .items_stretch(),
-        move |_cx| vec![standard, expressive],
+        move |_cx| [standard, expressive],
     );
 
     vec![
@@ -4646,7 +4968,7 @@ fn preview_material3_snackbar(
 }
 
 fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let content = material3::TooltipProvider::new().with(cx, |cx| {
+    let content = material3::TooltipProvider::new().with_elements(cx, |cx| {
         let outlined = material3::ButtonVariant::Outlined;
 
         let top = material3::PlainTooltip::new(
@@ -4690,15 +5012,15 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .into_element(cx);
 
         vec![
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N4)
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| vec![top, right, bottom, left],
-            ),
-            cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
-        ]
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N4)
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| [top, right, bottom, left],
+                ),
+                cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
+            ]
     });
 
     let card = shadcn::Card::new(vec![
@@ -4779,7 +5101,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N4)
             .items_stretch(),
-        |_cx| vec![left, right],
+        |_cx| [left, right],
     )]
 }
 
@@ -4788,7 +5110,7 @@ fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         |cx| {
-            vec![
+            [
                 shadcn::Badge::new("Default").into_element(cx),
                 shadcn::Badge::new("Secondary")
                     .variant(shadcn::BadgeVariant::Secondary)
@@ -4833,25 +5155,21 @@ fn preview_avatar(
             .when_image_missing_model(avatar_image.clone())
             .delay_ms(120)
             .into_element(cx);
-        shadcn::Avatar::new(vec![image, fallback]).into_element(cx)
+        shadcn::Avatar::new([image, fallback]).into_element(cx)
     };
 
-    let b = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("WK").into_element(cx)])
-        .into_element(cx);
+    let b =
+        shadcn::Avatar::new([shadcn::AvatarFallback::new("WK").into_element(cx)]).into_element(cx);
 
-    let c = shadcn::Avatar::new(vec![shadcn::AvatarFallback::new("?").into_element(cx)])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(48.0)))
-                .h_px(MetricRef::Px(Px(48.0))),
-        )
+    let c = shadcn::Avatar::new([shadcn::AvatarFallback::new("?").into_element(cx)])
+        .refine_layout(LayoutRefinement::default().w_px(Px(48.0)).h_px(Px(48.0)))
         .into_element(cx);
 
     vec![
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N3).items_center(),
-            |_cx| vec![a, b, c],
+            |_cx| [a, b, c],
         ),
         cx.text("Tip: use AvatarImage when you have an ImageId; AvatarFallback covers missing/slow loads."),
     ]
@@ -4866,16 +5184,16 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |cx| {
             vec![
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(180.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new().into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(320.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new()
                     .secondary()
-                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
                     .into_element(cx),
             ]
         },
@@ -4909,12 +5227,8 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         |_cx| items,
     );
 
-    let scroll = shadcn::ScrollArea::new(vec![body])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(240.0))),
-        )
+    let scroll = shadcn::ScrollArea::new([body])
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
         .into_element(cx);
 
     vec![
@@ -4933,26 +5247,27 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    shadcn::TooltipProvider::new().with(cx, |cx| {
-        let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
-            shadcn::Tooltip::new(
-                shadcn::Button::new(label)
-                    .variant(shadcn::ButtonVariant::Outline)
+    shadcn::TooltipProvider::new()
+        .with_elements(cx, |cx| {
+            let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
+                shadcn::Tooltip::new(
+                    shadcn::Button::new(label)
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into_element(cx),
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        format!("Tooltip on {label}"),
+                    )])
                     .into_element(cx),
-                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                    cx,
-                    format!("Tooltip on {label}"),
-                )])
-                .into_element(cx),
-            )
-            .arrow(true)
-            .side(side)
-            .open_delay_frames(10)
-            .close_delay_frames(10)
-            .into_element(cx)
-        };
+                )
+                .arrow(true)
+                .side(side)
+                .open_delay_frames(10)
+                .close_delay_frames(10)
+                .into_element(cx)
+            };
 
-        vec![
+            vec![
             stack::hstack(
                 cx,
                 stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -4969,7 +5284,8 @@ fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 "Hover the buttons to validate hover intent, delay group, and overlay placement.",
             ),
         ]
-    })
+        })
+        .into_vec()
 }
 
 fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -5038,7 +5354,7 @@ fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         .p(Space::N3),
                     LayoutRefinement::default().w_full(),
                 ),
-                |_cx| vec![row],
+                |_cx| [row],
             )
         };
 
@@ -5185,7 +5501,7 @@ fn preview_forms(
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N3),
-            |_cx| vec![input, textarea, toggles],
+            |_cx| [input, textarea, toggles],
         ),
         cx.text(
             "Tip: these are model-bound controls; values persist while you stay in the window.",
@@ -5216,7 +5532,7 @@ fn preview_select(
                 shadcn::SelectItem::new(value, label).test_id(test_id)
             })),
         )
-        .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
         .into_element(cx);
 
     let selected = cx
@@ -5303,17 +5619,17 @@ fn preview_resizable(
                 .p(Space::N3),
             LayoutRefinement::default().w_full().h_full(),
         );
-        cx.container(props, move |cx| vec![cx.text(title)])
+        cx.container(props, move |cx| [cx.text(title)])
     };
 
     let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
         .axis(fret_core::Axis::Vertical)
-        .entries(vec![
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Viewport", "muted")])
+        .entries([
+            shadcn::ResizablePanel::new([boxy(cx, "Viewport", "muted")])
                 .min_px(Px(120.0))
                 .into(),
             shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Console", "card")])
+            shadcn::ResizablePanel::new([boxy(cx, "Console", "card")])
                 .min_px(Px(80.0))
                 .into(),
         ])
@@ -5321,11 +5637,7 @@ fn preview_resizable(
 
     let root = shadcn::ResizablePanelGroup::new(h_fractions)
         .axis(fret_core::Axis::Horizontal)
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(320.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
         .entries(vec![
             shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
                 .min_px(Px(140.0))
@@ -5450,11 +5762,7 @@ fn preview_data_table(
 
     let table = shadcn::DataTable::new()
         .row_height(Px(36.0))
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(Px(280.0))),
-        )
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(
             cx,
             assets.data.clone(),
@@ -5603,11 +5911,7 @@ fn preview_data_table_torture(
                         shadcn::DataTable::new()
                             .overscan(10)
                             .row_height(Px(28.0))
-                            .refine_layout(
-                                LayoutRefinement::default()
-                                    .w_full()
-                                    .h_px(MetricRef::Px(Px(420.0))),
-                            )
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
                                 data.clone(),
@@ -5745,9 +6049,7 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     let mut container_props = decl_style::container_props(
         theme,
         ChromeRefinement::default(),
-        LayoutRefinement::default()
-            .w_full()
-            .h_px(MetricRef::Px(Px(460.0))),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -5773,11 +6075,7 @@ fn preview_data_grid(
 
         let grid =
             shadcn::experimental::DataGridElement::new(["PID", "Name", "State", "CPU%"], 200)
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_px(MetricRef::Px(Px(320.0))),
-                )
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
                 .into_element(
                     cx,
                     1,
@@ -6055,7 +6353,7 @@ fn preview_menus(
         stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| vec![dropdown, context_menu],
+            |_cx| [dropdown, context_menu],
         ),
         cx.text(format!("last action: {last}")),
     ]
@@ -6151,7 +6449,7 @@ fn preview_overlay(
                 test_id: Some(Arc::from("ui-gallery-overlay-last-action")),
                 ..Default::default()
             },
-            |cx| vec![cx.text(text)],
+            |cx| [cx.text(text)],
         )
     };
 
@@ -6501,8 +6799,8 @@ fn preview_overlay(
                                         ])
                                         .refine_layout(
                                             LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(Px(360.0)))
-                                                .h_px(MetricRef::Px(Px(220.0))),
+                                                .w_px(Px(360.0))
+                                                .h_px(Px(220.0)),
                                         )
                                         .into_element(cx),
                                     ]
@@ -6523,11 +6821,7 @@ fn preview_overlay(
                 });
 
                 let scroll = shadcn::ScrollArea::new(vec![body])
-                    .refine_layout(
-                        LayoutRefinement::default()
-                            .w_px(MetricRef::Px(Px(240.0)))
-                            .h_px(MetricRef::Px(Px(160.0))),
-                    )
+                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))
                     .into_element(cx);
 
                 let scroll = cx.semantics(
@@ -6561,17 +6855,17 @@ fn preview_overlay(
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![dropdown, context_menu, overlay_reset],
+                            |_cx| [dropdown, context_menu, overlay_reset],
                         ),
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![tooltip, hover_card, popover, underlay, dialog],
+                            |_cx| [tooltip, hover_card, popover, underlay, dialog],
                         ),
                         stack::hstack(
                             cx,
                             stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| vec![alert_dialog, sheet],
+                            |_cx| [alert_dialog, sheet],
                         ),
                         portal_geometry,
                     ]
@@ -6591,7 +6885,7 @@ fn preview_overlay(
                     test_id: Some(Arc::from("ui-gallery-dialog-open")),
                     ..Default::default()
                 },
-                |cx| vec![cx.text("Dialog open")],
+                |cx| [cx.text("Dialog open")],
             ))
         } else {
             None
@@ -6625,7 +6919,7 @@ fn preview_overlay(
                     test_id: Some(Arc::from("ui-gallery-popover-dismissed")),
                     ..Default::default()
                 },
-                |cx| vec![cx.text("Popover dismissed")],
+                |cx| [cx.text("Popover dismissed")],
             ))
         } else {
             None

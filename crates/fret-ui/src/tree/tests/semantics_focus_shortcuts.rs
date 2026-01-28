@@ -26,6 +26,7 @@ fn semantics_snapshot_includes_visible_roots_and_barrier() {
     let snap = ui.semantics_snapshot().expect("semantics snapshot");
     assert_eq!(snap.roots.len(), 2);
     assert_eq!(snap.barrier_root, Some(overlay_root));
+    assert_eq!(snap.focus_barrier_root, Some(overlay_root));
     assert_eq!(
         snap.nodes.iter().find(|n| n.id == base).unwrap().role,
         SemanticsRole::Window
@@ -41,6 +42,42 @@ fn semantics_snapshot_includes_visible_roots_and_barrier() {
     assert!(snap.nodes.iter().any(|n| n.id == base));
     assert!(snap.nodes.iter().any(|n| n.id == base_child));
     assert!(snap.nodes.iter().any(|n| n.id == overlay_root));
+}
+
+#[test]
+fn semantics_snapshot_exposes_focus_barrier_root_independently_of_pointer_barrier() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+
+    let base = ui.create_node(TestStack);
+    ui.set_root(base);
+
+    let overlay_root = ui.create_node(TestStack);
+    let layer = ui.push_overlay_root(overlay_root, true);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert_eq!(snap.barrier_root, Some(overlay_root));
+    assert_eq!(snap.focus_barrier_root, Some(overlay_root));
+
+    ui.set_layer_blocks_underlay_focus(layer, false);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert_eq!(snap.barrier_root, Some(overlay_root));
+    assert_eq!(snap.focus_barrier_root, None);
 }
 
 #[test]

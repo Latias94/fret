@@ -1864,14 +1864,10 @@ impl UiGalleryDriver {
                                     },
                                 );
 
-                                vec![cx.container(container_props, |cx| {
-                                    vec![
-                                        shadcn::ScrollArea::new(vec![body])
-                                            .refine_layout(
-                                                LayoutRefinement::default().w_full().h_full(),
-                                            )
-                                            .into_element(cx),
-                                    ]
+                                [cx.container(container_props, |cx| {
+                                    [shadcn::ScrollArea::new([body])
+                                        .refine_layout(LayoutRefinement::default().w_full().h_full())
+                                        .into_element(cx)]
                                 })]
                             })
                         }));

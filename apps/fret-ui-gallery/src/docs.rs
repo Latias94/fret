@@ -552,6 +552,34 @@ let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_SELECT: &str = r#"
+## Material 3 Select (MVP)
+
+This page validates a Material 3 select surface:
+
+- token-driven trigger outcomes via `md.comp.{outlined,filled}-select.*`
+- listbox overlay anchored to the trigger (Escape / outside press dismissal)
+- ADR 1159 style overrides via `SelectStyle` (partial per-state overrides)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SELECT: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let model = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::SelectItem::new("a", "Option A"),
+    m3::SelectItem::new("b", "Option B"),
+];
+
+let select = m3::Select::new(model)
+    .placeholder("Pick one")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 ## Material 3 Text Field (MVP)
 
@@ -830,10 +858,10 @@ pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
 ```rust
 use fret_ui_material3 as m3;
 
-m3::TooltipProvider::new().with(cx, |cx| {
+m3::TooltipProvider::new().with_elements(cx, |cx| {
     let trigger = m3::Button::new("Hover me").into_element(cx);
-    vec![m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
-});
+    [m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+})
 ```
 "#;
 
@@ -1259,7 +1287,7 @@ Scrollable region with custom scrollbars and nested content.
 pub(crate) const USAGE_SCROLL_AREA: &str = r#"
 ```rust
 let body = stack::vstack(cx, stack::VStackProps::default(), |_cx| items);
-let scroll = shadcn::ScrollArea::new(vec![body]).into_element(cx);
+let scroll = shadcn::ScrollArea::new([body]).into_element(cx);
 ```
 "#;
 

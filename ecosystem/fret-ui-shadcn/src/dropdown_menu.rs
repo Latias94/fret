@@ -142,8 +142,8 @@ impl DropdownMenuItem {
         self
     }
 
-    pub fn submenu(mut self, entries: Vec<DropdownMenuEntry>) -> Self {
-        self.submenu = Some(entries);
+    pub fn submenu(mut self, entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        self.submenu = Some(entries.into_iter().collect());
         self
     }
 
@@ -428,8 +428,10 @@ pub struct DropdownMenuGroup {
 }
 
 impl DropdownMenuGroup {
-    pub fn new(entries: Vec<DropdownMenuEntry>) -> Self {
-        Self { entries }
+    pub fn new(entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
     }
 }
 
@@ -1129,12 +1131,15 @@ impl DropdownMenu {
         self
     }
 
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<DropdownMenuEntry>,
-    ) -> AnyElement {
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+    {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx
@@ -1204,6 +1209,7 @@ impl DropdownMenu {
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
                 let first_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let first_item_focus_id_for_request = first_item_focus_id.clone();
                 let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let first_item_focus_id_for_initial_focus = first_item_focus_id.clone();
                 let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -1216,7 +1222,8 @@ impl DropdownMenu {
                         return (Vec::new(), None);
                     };
 
-                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries(cx).into_boxed_slice());
+                    let entries: Vec<DropdownMenuEntry> = entries(cx).into_iter().collect();
+                    let entries: Arc<[DropdownMenuEntry]> = Arc::from(entries.into_boxed_slice());
                     let reserve_leading_slot_enabled =
                         align_leading_icons && reserve_leading_slot(&entries);
 
@@ -2804,12 +2811,15 @@ impl DropdownMenu {
                                                         let test_id = item.test_id.clone();
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
-                                                         let disabled = item.disabled
-                                                             || crate::command_gating::command_is_disabled_by_gating(
-                                                                 &*cx.app,
-                                                                 &gating,
-                                                                 command.as_ref(),
-                                                             );
+                                                        let disabled = item.disabled
+                                                            || crate::command_gating::command_is_disabled_by_gating(
+                                                                &*cx.app,
+                                                                &crate::command_gating::snapshot_for_window(
+                                                                    &*cx.app,
+                                                                    cx.window,
+                                                                ),
+                                                                command.as_ref(),
+                                                            );
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
@@ -3070,8 +3080,8 @@ impl DropdownMenu {
                     overlay_children,
                     overlay_root_name,
                     menu::root::MenuInitialFocusTargets::new()
-                        .keyboard_entry_focus(first_item_focus_id_for_initial_focus.get())
-                        .pointer_content_focus(Some(content_id_for_trigger)),
+                        .pointer_content_focus(content_focus_id.get())
+                        .keyboard_entry_focus(first_item_focus_id_for_request.get()),
                     None,
                     None,
                     on_dismiss_request.clone(),

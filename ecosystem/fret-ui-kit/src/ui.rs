@@ -34,6 +34,20 @@ pub struct FlexBox<H, F> {
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
 
+/// Variant of [`FlexBox`] that collects children into a sink to avoid iterator borrow pitfalls.
+#[derive(Debug)]
+pub struct FlexBoxBuild<H, B> {
+    pub(crate) chrome: ChromeRefinement,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) direction: Axis,
+    pub(crate) gap: MetricRef,
+    pub(crate) justify: Justify,
+    pub(crate) items: Items,
+    pub(crate) wrap: bool,
+    pub(crate) build: Option<B>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
 impl<H, F> FlexBox<H, F> {
     pub fn new(direction: Axis, children: F) -> Self {
         let items = match direction {
@@ -54,6 +68,26 @@ impl<H, F> FlexBox<H, F> {
     }
 }
 
+impl<H, B> FlexBoxBuild<H, B> {
+    pub fn new(direction: Axis, build: B) -> Self {
+        let items = match direction {
+            Axis::Horizontal => Items::Center,
+            Axis::Vertical => Items::Stretch,
+        };
+        Self {
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            direction,
+            gap: MetricRef::space(Space::N0),
+            justify: Justify::Start,
+            items,
+            wrap: false,
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+}
+
 impl<H, F> UiPatchTarget for FlexBox<H, F> {
     fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
         self.chrome = self.chrome.merge(patch.chrome);
@@ -64,6 +98,17 @@ impl<H, F> UiPatchTarget for FlexBox<H, F> {
 
 impl<H, F> UiSupportsChrome for FlexBox<H, F> {}
 impl<H, F> UiSupportsLayout for FlexBox<H, F> {}
+
+impl<H, B> UiPatchTarget for FlexBoxBuild<H, B> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.chrome = self.chrome.merge(patch.chrome);
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, B> UiSupportsChrome for FlexBoxBuild<H, B> {}
+impl<H, B> UiSupportsLayout for FlexBoxBuild<H, B> {}
 
 impl<H: UiHost, F, I> FlexBox<H, F>
 where
@@ -93,6 +138,37 @@ where
     }
 }
 
+impl<H: UiHost, B> FlexBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+
+        let container = decl_style::container_props(theme, self.chrome, self.layout);
+
+        let gap = self.gap.resolve(theme);
+        let flex_props = FlexProps {
+            direction: self.direction,
+            gap,
+            padding: Edges::all(Px(0.0)),
+            justify: self.justify.to_main_align(),
+            align: self.items.to_cross_align(),
+            wrap: self.wrap,
+            ..Default::default()
+        };
+
+        let build = self.build.expect("expected flex build closure");
+        cx.container(container, move |cx| {
+            vec![cx.flex(flex_props, move |cx| {
+                let mut out = Vec::new();
+                build(cx, &mut out);
+                out
+            })]
+        })
+    }
+}
+
 /// Returns a patchable horizontal flex layout builder.
 ///
 /// Usage:
@@ -108,6 +184,20 @@ where
     UiBuilder::new(FlexBox::new(Axis::Horizontal, children))
 }
 
+/// Variant of [`h_flex`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn h_flex_build<H: UiHost, B>(
+    _cx: &mut ElementContext<'_, H>,
+    build: B,
+) -> UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(FlexBoxBuild::new(Axis::Horizontal, build))
+}
+
 /// Returns a patchable vertical flex layout builder.
 pub fn v_flex<H: UiHost, F, I>(
     _cx: &mut ElementContext<'_, H>,
@@ -118,6 +208,20 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(FlexBox::new(Axis::Vertical, children))
+}
+
+/// Variant of [`v_flex`] that avoids iterator borrow pitfalls by collecting into a sink.
+///
+/// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
+/// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
+pub fn v_flex_build<H: UiHost, B>(
+    _cx: &mut ElementContext<'_, H>,
+    build: B,
+) -> UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(FlexBoxBuild::new(Axis::Vertical, build))
 }
 
 /// A patchable container constructor for authoring ergonomics.
@@ -131,12 +235,32 @@ pub struct ContainerBox<H, F> {
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
 
+/// Variant of [`ContainerBox`] that collects children into a sink to avoid iterator borrow pitfalls.
+#[derive(Debug)]
+pub struct ContainerBoxBuild<H, B> {
+    pub(crate) chrome: ChromeRefinement,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) build: Option<B>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
 impl<H, F> ContainerBox<H, F> {
     pub fn new(children: F) -> Self {
         Self {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             children: Some(children),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<H, B> ContainerBoxBuild<H, B> {
+    pub fn new(build: B) -> Self {
+        Self {
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            build: Some(build),
             _phantom: PhantomData,
         }
     }
@@ -153,6 +277,17 @@ impl<H, F> UiPatchTarget for ContainerBox<H, F> {
 impl<H, F> UiSupportsChrome for ContainerBox<H, F> {}
 impl<H, F> UiSupportsLayout for ContainerBox<H, F> {}
 
+impl<H, B> UiPatchTarget for ContainerBoxBuild<H, B> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.chrome = self.chrome.merge(patch.chrome);
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, B> UiSupportsChrome for ContainerBoxBuild<H, B> {}
+impl<H, B> UiSupportsLayout for ContainerBoxBuild<H, B> {}
+
 impl<H: UiHost, F, I> ContainerBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -163,6 +298,22 @@ where
         let container = decl_style::container_props(theme, self.chrome, self.layout);
         let children = self.children.expect("expected container children closure");
         cx.container(container, move |cx| children(cx))
+    }
+}
+
+impl<H: UiHost, B> ContainerBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app);
+        let container = decl_style::container_props(theme, self.chrome, self.layout);
+        let build = self.build.expect("expected container build closure");
+        cx.container(container, move |cx| {
+            let mut out = Vec::new();
+            build(cx, &mut out);
+            out
+        })
     }
 }
 
@@ -181,6 +332,17 @@ where
     UiBuilder::new(ContainerBox::new(children))
 }
 
+/// Variant of [`container`] that avoids iterator borrow pitfalls by collecting into a sink.
+pub fn container_build<H: UiHost, B>(
+    _cx: &mut ElementContext<'_, H>,
+    build: B,
+) -> UiBuilder<ContainerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(ContainerBoxBuild::new(build))
+}
+
 /// A patchable scroll area constructor for authoring ergonomics.
 ///
 /// This is a thin wrapper over the runtime `Scroll` + `Scrollbar` elements with sensible defaults.
@@ -193,6 +355,19 @@ pub struct ScrollAreaBox<H, F> {
     pub(crate) show_scrollbar_y: bool,
     pub(crate) handle: Option<ScrollHandle>,
     pub(crate) children: Option<F>,
+    pub(crate) _phantom: PhantomData<fn() -> H>,
+}
+
+/// Variant of [`ScrollAreaBox`] that collects children into a sink to avoid iterator borrow pitfalls.
+#[derive(Debug)]
+pub struct ScrollAreaBoxBuild<H, B> {
+    pub(crate) chrome: ChromeRefinement,
+    pub(crate) layout: LayoutRefinement,
+    pub(crate) axis: ScrollAxis,
+    pub(crate) show_scrollbar_x: bool,
+    pub(crate) show_scrollbar_y: bool,
+    pub(crate) handle: Option<ScrollHandle>,
+    pub(crate) build: Option<B>,
     pub(crate) _phantom: PhantomData<fn() -> H>,
 }
 
@@ -211,6 +386,21 @@ impl<H, F> ScrollAreaBox<H, F> {
     }
 }
 
+impl<H, B> ScrollAreaBoxBuild<H, B> {
+    pub fn new(build: B) -> Self {
+        Self {
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            axis: ScrollAxis::Y,
+            show_scrollbar_x: false,
+            show_scrollbar_y: true,
+            handle: None,
+            build: Some(build),
+            _phantom: PhantomData,
+        }
+    }
+}
+
 impl<H, F> UiPatchTarget for ScrollAreaBox<H, F> {
     fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
         self.chrome = self.chrome.merge(patch.chrome);
@@ -221,6 +411,17 @@ impl<H, F> UiPatchTarget for ScrollAreaBox<H, F> {
 
 impl<H, F> UiSupportsChrome for ScrollAreaBox<H, F> {}
 impl<H, F> UiSupportsLayout for ScrollAreaBox<H, F> {}
+
+impl<H, B> UiPatchTarget for ScrollAreaBoxBuild<H, B> {
+    fn apply_ui_patch(mut self, patch: UiPatch) -> Self {
+        self.chrome = self.chrome.merge(patch.chrome);
+        self.layout = self.layout.merge(patch.layout);
+        self
+    }
+}
+
+impl<H, B> UiSupportsChrome for ScrollAreaBoxBuild<H, B> {}
+impl<H, B> UiSupportsLayout for ScrollAreaBoxBuild<H, B> {}
 
 impl<H: UiHost, F, I> ScrollAreaBox<H, F>
 where
@@ -368,6 +569,151 @@ where
     }
 }
 
+impl<H: UiHost, B> ScrollAreaBoxBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let container = decl_style::container_props(&theme, self.chrome, self.layout);
+        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let thumb = theme.color_required("scrollbar.thumb.background");
+        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+        let corner_bg = theme.color_required("scrollbar.track.background");
+
+        let axis = self.axis;
+        let show_scrollbar_x = self.show_scrollbar_x;
+        let show_scrollbar_y = self.show_scrollbar_y;
+        let provided_handle = self.handle;
+        let build = self.build.expect("expected scroll area build closure");
+
+        cx.container(container, move |cx| {
+            let handle = cx.with_state(ScrollHandle::default, |h| {
+                if let Some(handle) = provided_handle.clone() {
+                    *h = handle;
+                }
+                h.clone()
+            });
+
+            let mut scroll_layout = LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = Overflow::Clip;
+
+            let scroll = cx.scroll(
+                ScrollProps {
+                    layout: scroll_layout,
+                    axis,
+                    scroll_handle: Some(handle.clone()),
+                    ..Default::default()
+                },
+                move |cx| {
+                    let mut out = Vec::new();
+                    build(cx, &mut out);
+                    out
+                },
+            );
+
+            let scroll_id = scroll.id;
+            let mut out = vec![scroll];
+
+            if show_scrollbar_y {
+                let scrollbar_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        bottom: Some(if show_scrollbar_x {
+                            scrollbar_w
+                        } else {
+                            Px(0.0)
+                        }),
+                        left: None,
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                out.push(cx.scrollbar(ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: ScrollbarAxis::Vertical,
+                    scroll_target: Some(scroll_id),
+                    scroll_handle: handle.clone(),
+                    style: ScrollbarStyle {
+                        thumb,
+                        thumb_hover,
+                        ..Default::default()
+                    },
+                }));
+            }
+
+            if show_scrollbar_x {
+                let scrollbar_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: None,
+                        right: Some(if show_scrollbar_y {
+                            scrollbar_w
+                        } else {
+                            Px(0.0)
+                        }),
+                        bottom: Some(Px(0.0)),
+                        left: Some(Px(0.0)),
+                    },
+                    size: SizeStyle {
+                        height: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                out.push(cx.scrollbar(ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: ScrollbarAxis::Horizontal,
+                    scroll_target: Some(scroll_id),
+                    scroll_handle: handle.clone(),
+                    style: ScrollbarStyle {
+                        thumb,
+                        thumb_hover,
+                        ..Default::default()
+                    },
+                }));
+            }
+
+            if show_scrollbar_x && show_scrollbar_y {
+                let corner_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: None,
+                        right: Some(Px(0.0)),
+                        bottom: Some(Px(0.0)),
+                        left: None,
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(scrollbar_w),
+                        height: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                out.push(cx.container(
+                    ContainerProps {
+                        layout: corner_layout,
+                        background: Some(corner_bg),
+                        ..Default::default()
+                    },
+                    |_cx| [],
+                ));
+            }
+
+            out
+        })
+    }
+}
+
 /// Returns a patchable scroll area builder.
 ///
 /// Defaults:
@@ -382,6 +728,17 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     UiBuilder::new(ScrollAreaBox::new(children))
+}
+
+/// Variant of [`scroll_area`] that avoids iterator borrow pitfalls by collecting into a sink.
+pub fn scroll_area_build<H: UiHost, B>(
+    _cx: &mut ElementContext<'_, H>,
+    build: B,
+) -> UiBuilder<ScrollAreaBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    UiBuilder::new(ScrollAreaBoxBuild::new(build))
 }
 
 /// A patchable stack layout constructor for authoring ergonomics.
@@ -451,6 +808,7 @@ where
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextPreset {
+    Xs,
     Sm,
     Base,
     Prose,
@@ -479,7 +837,9 @@ impl TextBox {
     pub fn new(text: impl Into<Arc<str>>, preset: TextPreset) -> Self {
         let wrap = match preset {
             TextPreset::Label => TextWrap::None,
-            TextPreset::Sm | TextPreset::Base | TextPreset::Prose => TextWrap::Word,
+            TextPreset::Xs | TextPreset::Sm | TextPreset::Base | TextPreset::Prose => {
+                TextWrap::Word
+            }
         };
 
         Self {
@@ -511,6 +871,7 @@ impl UiIntoElement for TextBox {
         let theme = Theme::global(&*cx.app).clone();
 
         let mut style = match self.preset {
+            TextPreset::Xs => decl_text::text_xs_style(&theme),
             TextPreset::Sm => decl_text::text_sm_style(&theme),
             TextPreset::Base => decl_text::text_base_style(&theme),
             TextPreset::Prose => decl_text::text_prose_style(&theme),

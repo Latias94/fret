@@ -75,22 +75,31 @@ Legend:
 ### Mode seam
 
 - [x] Define `TextBoundaryMode` and wire it into window-scoped `InputContext`.
-- [x] Provide a focused-surface override via `TextInputRegion` (code editor defaults to `Identifier`).
-- [ ] Implement override stack service (push/pop token) if needed for non-focus-based policies.
+- [x] Implement override stack service (push/pop token) for focused surfaces/overlays.
 - [x] Default mode is `UnicodeWord` unless overridden.
+- [x] Allow focused text input regions to override the mode (mechanism-only).
 
 ### Command semantics
 
 - [x] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
-- [ ] Ensure double-click selects word and triple-click selects logical line (ADR 0151 + ADR 0194).
+- [x] Ensure double-click selects word and triple-click selects logical line (ADR 0151 + ADR 0194).
 - [ ] Ensure composing selection operates on display text (ADR 0071).
 
 ### Tests
 
-- [x] Unicode word boundaries: Latin/CJK/emoji.
-- [x] Identifier boundaries: underscores, digits, mixed scripts, punctuation.
-- [x] Window input context snapshots include `text_boundary_mode` and arbitration.
-- [ ] Double/triple click selection under scroll offsets and transforms.
+- [~] Unicode word boundaries: Latin/CJK/emoji (seed tests added; expand coverage).
+- [~] Identifier boundaries: underscores, digits, mixed scripts, punctuation (seed tests added; expand coverage).
+- [~] Double/triple click selection under scroll offsets and transforms (existing SelectableText tests; add mode coverage and TextInput/TextArea click selection).
+
+Evidence anchors:
+
+- `crates/fret-runtime/src/input.rs` (`InputContext.text_boundary_mode`, `TextBoundaryMode`)
+- `crates/fret-runtime/src/window_text_boundary_mode.rs` (`WindowTextBoundaryModeService`)
+- `crates/fret-ui/src/element.rs` (`TextInputRegionProps.text_boundary_mode_override`)
+- `crates/fret-ui/src/declarative/mount.rs` (mounts focused override into the runtime tree)
+- `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
+- `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
+- `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
 
 ---
 
@@ -111,21 +120,38 @@ Legend:
 
 ### Input/IME integration
 
-- [x] Inline preedit rendering.
-- [x] Caret rect reporting for `ImeSetCursorArea` (native).
+- [x] Inline preedit rendering (best-effort overlay for v1).
+- [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
+- [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
 
 ### Harness
 
+- [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
 - [x] Add a “scroll stability / no stale paint” torture harness entry (ui-gallery style).
+
+Evidence anchors:
+
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor`, row painting + selection/caret + IME)
+- `crates/fret-ui/src/element.rs` (`TextInputRegionProps`, `ElementKind::TextInputRegion`)
+- `crates/fret-ui/src/declarative/host_widget/event/text_input_region.rs` (IME/TextInput forwarding)
+- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`on_pointer_up`/`on_pointer_cancel`)
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_MVP`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`)
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
 
 ---
 
 ## M4 — Buffer Model + Undo Hooks
 
-- [ ] Choose v1 buffer structure (rope / piece table / hybrid).
+- [~] Choose v1 buffer structure (rope / piece table / hybrid) (seed `TextBuffer` exists; internal structure decision pending).
 - [ ] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
 - [ ] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
 - [ ] Lock document identity (URI-like) for multi-document workflows.
+
+Evidence anchors:
+
+- `ecosystem/fret-code-editor-buffer/src/lib.rs` (`TextBuffer`, `Edit`, UTF-8 byte-index validation)
 
 ---
 

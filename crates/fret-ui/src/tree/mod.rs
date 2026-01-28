@@ -259,6 +259,13 @@ pub struct UiDebugFrameStats {
     /// How many VirtualList visible-range checks requested a refresh (range delta outside the
     /// currently mounted span).
     pub virtual_list_visible_range_refreshes: u32,
+    /// How many retained VirtualList hosts were reconciled (attach/detach without rerendering the
+    /// parent view-cache root).
+    pub retained_virtual_list_reconciles: u32,
+    /// Total items attached across retained VirtualList reconciles (new keys mounted).
+    pub retained_virtual_list_attached_items: u32,
+    /// Total items detached across retained VirtualList reconciles (keys removed from children).
+    pub retained_virtual_list_detached_items: u32,
     pub focus: Option<NodeId>,
     pub captured: Option<NodeId>,
 }
@@ -398,6 +405,7 @@ pub enum PointerOcclusion {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct UiInputArbitrationSnapshot {
     pub modal_barrier_root: Option<NodeId>,
+    pub focus_barrier_root: Option<NodeId>,
     pub pointer_occlusion: PointerOcclusion,
     pub pointer_occlusion_layer: Option<UiLayerId>,
     pub pointer_capture_active: bool,
@@ -442,7 +450,14 @@ pub struct UiDebugCacheRootStats {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum UiDebugVirtualListWindowSource {
+    Layout,
+    Prepaint,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct UiDebugVirtualListWindow {
+    pub source: UiDebugVirtualListWindowSource,
     pub node: NodeId,
     pub element: GlobalElementId,
     pub axis: fret_core::Axis,
@@ -462,6 +477,33 @@ pub struct UiDebugVirtualListWindow {
     pub deferred_scroll_to_item: bool,
     pub deferred_scroll_consumed: bool,
     pub window_mismatch: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugRetainedVirtualListReconcile {
+    pub node: NodeId,
+    pub element: GlobalElementId,
+    pub prev_items: u32,
+    pub next_items: u32,
+    pub preserved_items: u32,
+    pub attached_items: u32,
+    pub detached_items: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugPrepaintActionKind {
+    Invalidate,
+    RequestRedraw,
+    RequestAnimationFrame,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugPrepaintAction {
+    pub node: NodeId,
+    pub target: Option<NodeId>,
+    pub kind: UiDebugPrepaintActionKind,
+    pub invalidation: Option<Invalidation>,
+    pub frame_id: FrameId,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -979,7 +1021,9 @@ pub struct UiTree<H: UiHost> {
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
     debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
+    debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
+    debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
     #[cfg(feature = "diagnostics")]
@@ -1071,7 +1115,9 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
             debug_virtual_list_windows: Vec::new(),
+            debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
+            debug_prepaint_actions: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
             #[cfg(feature = "diagnostics")]
@@ -1244,6 +1290,9 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.barrier_relayouts_performed = 0;
         self.debug_stats.virtual_list_visible_range_checks = 0;
         self.debug_stats.virtual_list_visible_range_refreshes = 0;
+        self.debug_stats.retained_virtual_list_reconciles = 0;
+        self.debug_stats.retained_virtual_list_attached_items = 0;
+        self.debug_stats.retained_virtual_list_detached_items = 0;
 
         self.debug_view_cache_roots.clear();
         self.debug_view_cache_contained_relayout_roots.clear();
@@ -1259,7 +1308,9 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
         self.debug_virtual_list_windows.clear();
+        self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
+        self.debug_prepaint_actions.clear();
         #[cfg(feature = "diagnostics")]
         {
             // Keep `debug_set_children_writes` and `debug_parent_sever_writes` across frames so
@@ -1419,6 +1470,44 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.debug_virtual_list_windows.push(record);
+    }
+
+    pub(crate) fn debug_record_retained_virtual_list_reconcile(
+        &mut self,
+        record: UiDebugRetainedVirtualListReconcile,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        const MAX_RECORDS: usize = 128;
+        if self.debug_retained_virtual_list_reconciles.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_stats.retained_virtual_list_reconciles = self
+            .debug_stats
+            .retained_virtual_list_reconciles
+            .saturating_add(1);
+        self.debug_stats.retained_virtual_list_attached_items = self
+            .debug_stats
+            .retained_virtual_list_attached_items
+            .saturating_add(record.attached_items);
+        self.debug_stats.retained_virtual_list_detached_items = self
+            .debug_stats
+            .retained_virtual_list_detached_items
+            .saturating_add(record.detached_items);
+        self.debug_retained_virtual_list_reconciles.push(record);
+    }
+
+    pub(crate) fn debug_record_prepaint_action(&mut self, action: UiDebugPrepaintAction) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many prepaint actions.
+        const MAX_RECORDS: usize = 512;
+        if self.debug_prepaint_actions.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_prepaint_actions.push(action);
     }
 
     pub(crate) fn debug_record_paint_cache_replay(&mut self, node: NodeId, replayed_ops: u32) {
@@ -1776,6 +1865,15 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn enforce_focus_barrier_scope(&mut self, active_roots: &[NodeId]) {
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+        {
+            self.focus = None;
+        }
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -1856,11 +1954,25 @@ impl<H: UiHost> UiTree<H> {
         self.debug_virtual_list_windows.as_slice()
     }
 
+    pub fn debug_retained_virtual_list_reconciles(&self) -> &[UiDebugRetainedVirtualListReconcile] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_retained_virtual_list_reconciles.as_slice()
+    }
+
     pub fn debug_scroll_handle_changes(&self) -> &[UiDebugScrollHandleChange] {
         if !self.debug_enabled {
             return &[];
         }
         self.debug_scroll_handle_changes.as_slice()
+    }
+
+    pub fn debug_prepaint_actions(&self) -> &[UiDebugPrepaintAction] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_prepaint_actions.as_slice()
     }
 
     pub fn debug_model_change_hotspots(&self) -> &[UiDebugModelChangeHotspot] {
@@ -1947,11 +2059,6 @@ impl<H: UiHost> UiTree<H> {
             current = n.parent;
         }
         None
-    }
-
-    fn notify_target_for_node(&self, node: NodeId) -> NodeId {
-        self.nearest_view_cache_root(node)
-            .unwrap_or_else(|| self.node_root(node).unwrap_or(node))
     }
 
     fn collapse_observation_index_to_view_cache_roots(
@@ -2110,6 +2217,7 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn input_arbitration_snapshot(&self) -> UiInputArbitrationSnapshot {
         let (_active, barrier_root) = self.active_input_layers();
+        let (_focus_active, focus_barrier_root) = self.active_focus_layers();
 
         let (pointer_occlusion_layer, pointer_occlusion) = self
             .topmost_pointer_occlusion_layer(barrier_root)
@@ -2141,6 +2249,7 @@ impl<H: UiHost> UiTree<H> {
 
         UiInputArbitrationSnapshot {
             modal_barrier_root: barrier_root,
+            focus_barrier_root,
             pointer_occlusion,
             pointer_occlusion_layer,
             pointer_capture_active,
@@ -2155,6 +2264,7 @@ impl<H: UiHost> UiTree<H> {
         let snapshot = self.input_arbitration_snapshot();
         fret_runtime::WindowInputArbitrationSnapshot {
             modal_barrier_root: snapshot.modal_barrier_root,
+            focus_barrier_root: snapshot.focus_barrier_root,
             pointer_occlusion: match snapshot.pointer_occlusion {
                 PointerOcclusion::None => fret_runtime::WindowPointerOcclusion::None,
                 PointerOcclusion::BlockMouse => fret_runtime::WindowPointerOcclusion::BlockMouse,
@@ -2448,23 +2558,6 @@ impl<H: UiHost> UiTree<H> {
                 Invalidation::HitTest,
                 UiDebugInvalidationSource::Other,
             );
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn debug_sever_child_edge_without_invalidation(
-        &mut self,
-        parent: NodeId,
-        child: NodeId,
-    ) {
-        let Some(parent_node) = self.nodes.get_mut(parent) else {
-            return;
-        };
-        parent_node.children.retain(|&c| c != child);
-        if let Some(child_node) = self.nodes.get_mut(child) {
-            if child_node.parent == Some(parent) {
-                child_node.parent = None;
-            }
         }
     }
 
@@ -4585,6 +4678,18 @@ impl<H: UiHost> UiTree<H> {
         let element_id_map: HashMap<u64, NodeId> =
             crate::declarative::frame::element_id_map_for_window(app, window);
 
+        // View-cache reuse can legitimately skip re-setting `UiTree` child edges for cached
+        // subtrees. `WindowFrame` retains the authoritative element-tree edges, so semantics
+        // traversal should treat the union as the effective child list (mirrors GC reachability
+        // bookkeeping). Only pay the cost when view-cache reuse can occur.
+        let window_frame_children: HashMap<NodeId, Vec<NodeId>> = if self.view_cache_active() {
+            crate::declarative::with_window_frame(app, window, |window_frame| {
+                window_frame.map(|w| w.children.clone()).unwrap_or_default()
+            })
+        } else {
+            HashMap::new()
+        };
+
         let mut barrier_index: Option<usize> = None;
         for (idx, layer) in visible_layers.iter().enumerate() {
             if self.layers[*layer].blocks_underlay_input {
@@ -4592,6 +4697,15 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         let barrier_root = barrier_index.map(|idx| self.layers[visible_layers[idx]].root);
+
+        let mut focus_barrier_index: Option<usize> = None;
+        for (idx, layer) in visible_layers.iter().enumerate() {
+            if self.layers[*layer].blocks_underlay_focus {
+                focus_barrier_index = Some(idx);
+            }
+        }
+        let focus_barrier_root =
+            focus_barrier_index.map(|idx| self.layers[visible_layers[idx]].root);
 
         let mut roots: Vec<SemanticsRoot> = Vec::with_capacity(visible_layers.len());
         for (z, layer_id) in visible_layers.iter().enumerate() {
@@ -4647,7 +4761,20 @@ impl<H: UiHost> UiTree<H> {
                         .unwrap_or(Transform2D::IDENTITY);
                     let at_node = before.compose(node_transform);
                     let bounds = rect_aabb_transformed(node.bounds, at_node);
-                    let children = node.children.clone();
+                    let ui_children = node.children.clone();
+                    let children = match window_frame_children.get(&id) {
+                        None => ui_children,
+                        Some(frame_children) if ui_children.is_empty() => frame_children.clone(),
+                        Some(frame_children) => {
+                            let mut out = ui_children;
+                            for &child in frame_children {
+                                if !out.contains(&child) {
+                                    out.push(child);
+                                }
+                            }
+                            out
+                        }
+                    };
                     let is_text_input = widget.is_some_and(|w| w.is_text_input());
                     let is_focusable = widget.is_some_and(|w| w.is_focusable());
                     let traverse_children = widget.map(|w| w.semantics_children()).unwrap_or(true);
@@ -4813,6 +4940,7 @@ impl<H: UiHost> UiTree<H> {
             window,
             roots,
             barrier_root,
+            focus_barrier_root,
             focus,
             captured,
             nodes,

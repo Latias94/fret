@@ -260,8 +260,8 @@ impl Checkbox {
                 .when(WidgetStates::SELECTED, ColorRef::Color(fg_on));
 
             let layout = LayoutRefinement::default()
-                .w_px(MetricRef::Px(size))
-                .h_px(MetricRef::Px(size))
+                .w_px(size)
+                .h_px(size)
                 .merge(self.layout);
             let pressable_layout = decl_style::layout_style(&theme, layout);
 

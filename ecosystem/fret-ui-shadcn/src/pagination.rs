@@ -228,8 +228,8 @@ impl PaginationLink {
                     decl_style::layout_style(
                         &theme,
                         LayoutRefinement::default()
-                            .w_px(MetricRef::Px(s))
-                            .h_px(MetricRef::Px(s))
+                            .w_px(s)
+                            .h_px(s)
                             .flex_none()
                             .flex_shrink_0(),
                     ),
@@ -242,7 +242,7 @@ impl PaginationLink {
                 decl_style::layout_style(
                     &theme,
                     LayoutRefinement::default()
-                        .min_h(MetricRef::Px(button_h(&theme)))
+                        .min_h(button_h(&theme))
                         .flex_none()
                         .flex_shrink_0(),
                 ),
@@ -423,8 +423,8 @@ impl PaginationEllipsis {
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .w_px(MetricRef::Px(s))
-                .h_px(MetricRef::Px(s))
+                .w_px(s)
+                .h_px(s)
                 .flex_none()
                 .flex_shrink_0(),
         );

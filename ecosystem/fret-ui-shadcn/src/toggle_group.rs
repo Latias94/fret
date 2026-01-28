@@ -254,7 +254,12 @@ impl ToggleGroup {
 
     /// Creates an uncontrolled multi-select toggle group with an initial set of values (Radix
     /// `defaultValue`).
-    pub fn multiple_uncontrolled(default_value: Vec<Arc<str>>) -> Self {
+    pub fn multiple_uncontrolled<I, T>(default_value: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<Arc<str>>,
+    {
+        let default_value = default_value.into_iter().map(Into::into).collect();
         Self {
             model: ToggleGroupModel::Multiple {
                 model: None,
@@ -454,18 +459,14 @@ impl ToggleGroup {
         }
 
         let base_chrome = match variant {
-            ToggleVariant::Default => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(Color::TRANSPARENT)),
-                ..Default::default()
-            },
-            ToggleVariant::Outline => ChromeRefinement {
-                radius: Some(MetricRef::Px(radius)),
-                border_width: Some(MetricRef::Px(Px(1.0))),
-                border_color: Some(ColorRef::Color(border)),
-                ..Default::default()
-            },
+            ToggleVariant::Default => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(Color::TRANSPARENT)),
+            ToggleVariant::Outline => ChromeRefinement::default()
+                .radius(radius)
+                .border_width(Px(1.0))
+                .border_color(ColorRef::Color(border)),
         };
 
         let roving = RovingFocusProps {
@@ -584,7 +585,7 @@ impl ToggleGroup {
                     let pressable_layout = decl_style::layout_style(
                         &theme,
                         LayoutRefinement::default()
-                            .min_h(MetricRef::Px(item_h))
+                            .min_h(item_h)
                             .min_w_0()
                             .flex_none(),
                     );
@@ -673,37 +674,51 @@ impl ToggleGroup {
     }
 }
 
-pub fn toggle_group_single<H: UiHost>(
+pub fn toggle_group_single<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::single(model).items(f(cx)).into_element(cx)
 }
 
-pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::single_uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)
 }
 
-pub fn toggle_group_multiple<H: UiHost>(
+pub fn toggle_group_multiple<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::multiple(model).items(f(cx)).into_element(cx)
 }
 
-pub fn toggle_group_multiple_uncontrolled<H: UiHost>(
+pub fn toggle_group_multiple_uncontrolled<H: UiHost, V, I>(
     cx: &mut ElementContext<'_, H>,
-    default_value: Vec<Arc<str>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
-) -> AnyElement {
+    default_value: V,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    V: IntoIterator,
+    V::Item: Into<Arc<str>>,
+    I: IntoIterator<Item = ToggleGroupItem>,
+{
     ToggleGroup::multiple_uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)

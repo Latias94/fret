@@ -726,7 +726,7 @@ impl Tabs {
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
                 .bg(ColorRef::Color(tabs_list_bg(&theme))),
-            LayoutRefinement::default().h_px(MetricRef::Px(list_height)),
+            LayoutRefinement::default().h_px(list_height),
         );
         list_props.padding = Edges::all(list_padding);
         if list_full_width {
@@ -824,7 +824,7 @@ impl Tabs {
                                     &theme,
                                     LayoutRefinement::default()
                                         .flex_1()
-                                        .h_px(MetricRef::Px(trigger_h)),
+                                        .h_px(trigger_h),
                                 );
 
                                 let mut out: Vec<AnyElement> =
@@ -1067,19 +1067,25 @@ impl Tabs {
     }
 }
 
-pub fn tabs<H: UiHost>(
+pub fn tabs<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = TabsItem>,
+{
     Tabs::new(model).items(f(cx)).into_element(cx)
 }
 
-pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>, I>(
     cx: &mut ElementContext<'_, H>,
     default_value: Option<T>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
-) -> AnyElement {
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = TabsItem>,
+{
     Tabs::uncontrolled(default_value)
         .items(f(cx))
         .into_element(cx)

@@ -390,8 +390,8 @@ mod tests {
                     TableViewProps::default(),
                     Arc::new(|_models, i| Some(format!("Row {i}"))),
                     |_row| None,
-                    |cx, _col, _sort| vec![cx.text("Header")],
-                    |cx, row, _col| vec![cx.text(format!("Cell {}", row.index))],
+                    |cx, _col, _sort| [cx.text("Header")],
+                    |cx, row, _col| [cx.text(format!("Cell {}", row.index))],
                     None,
                 )]
             })
@@ -613,7 +613,7 @@ impl Default for TableKeyboardNavState {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn table_virtualized<H: UiHost, TData>(
+pub fn table_virtualized<H: UiHost, TData, IHeader, ICell>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -628,14 +628,14 @@ pub fn table_virtualized<H: UiHost, TData>(
         &mut ElementContext<'_, H>,
         &ColumnDef<TData>,
         Option<bool>,
-    ) -> Vec<AnyElement>,
-    render_cell: impl FnMut(
-        &mut ElementContext<'_, H>,
-        &Row<'_, TData>,
-        &ColumnDef<TData>,
-    ) -> Vec<AnyElement>,
+    ) -> IHeader,
+    render_cell: impl FnMut(&mut ElementContext<'_, H>, &Row<'_, TData>, &ColumnDef<TData>) -> ICell,
     output: Option<Model<TableViewOutput>>,
-) -> AnyElement {
+) -> AnyElement
+where
+    IHeader: IntoIterator<Item = AnyElement>,
+    ICell: IntoIterator<Item = AnyElement>,
+{
     table_virtualized_impl(
         cx,
         data,
@@ -658,7 +658,7 @@ pub fn table_virtualized<H: UiHost, TData>(
 ///
 /// `copy_text_at` receives the data index for the selected/active leaf row.
 #[allow(clippy::too_many_arguments)]
-pub fn table_virtualized_copyable<H: UiHost, TData>(
+pub fn table_virtualized_copyable<H: UiHost, TData, IHeader, ICell>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -674,14 +674,14 @@ pub fn table_virtualized_copyable<H: UiHost, TData>(
         &mut ElementContext<'_, H>,
         &ColumnDef<TData>,
         Option<bool>,
-    ) -> Vec<AnyElement>,
-    render_cell: impl FnMut(
-        &mut ElementContext<'_, H>,
-        &Row<'_, TData>,
-        &ColumnDef<TData>,
-    ) -> Vec<AnyElement>,
+    ) -> IHeader,
+    render_cell: impl FnMut(&mut ElementContext<'_, H>, &Row<'_, TData>, &ColumnDef<TData>) -> ICell,
     output: Option<Model<TableViewOutput>>,
-) -> AnyElement {
+) -> AnyElement
+where
+    IHeader: IntoIterator<Item = AnyElement>,
+    ICell: IntoIterator<Item = AnyElement>,
+{
     table_virtualized_impl(
         cx,
         data,
@@ -701,7 +701,7 @@ pub fn table_virtualized_copyable<H: UiHost, TData>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn table_virtualized_impl<H: UiHost, TData>(
+fn table_virtualized_impl<H: UiHost, TData, IHeader, ICell>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
     columns: &[ColumnDef<TData>],
@@ -717,14 +717,14 @@ fn table_virtualized_impl<H: UiHost, TData>(
         &mut ElementContext<'_, H>,
         &ColumnDef<TData>,
         Option<bool>,
-    ) -> Vec<AnyElement>,
-    mut render_cell: impl FnMut(
-        &mut ElementContext<'_, H>,
-        &Row<'_, TData>,
-        &ColumnDef<TData>,
-    ) -> Vec<AnyElement>,
+    ) -> IHeader,
+    mut render_cell: impl FnMut(&mut ElementContext<'_, H>, &Row<'_, TData>, &ColumnDef<TData>) -> ICell,
     output: Option<Model<TableViewOutput>>,
-) -> AnyElement {
+) -> AnyElement
+where
+    IHeader: IntoIterator<Item = AnyElement>,
+    ICell: IntoIterator<Item = AnyElement>,
+{
     let profile = std::env::var_os("FRET_TABLE_PROFILE").is_some();
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 

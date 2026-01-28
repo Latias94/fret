@@ -312,12 +312,15 @@ impl Dialog {
         self
     }
 
-    pub fn into_element<H: UiHost>(
+    pub fn into_element<H: UiHost, I>(
         self,
         cx: &mut ElementContext<'_, H>,
         underlay: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
-        content: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-    ) -> AnyElement {
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 

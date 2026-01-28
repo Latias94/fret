@@ -58,7 +58,7 @@ pub enum OverlayKind {
 pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
-    pub style: Option<window_overlays::ToastLayerStyle>,
+    pub style: window_overlays::ToastLayerStyle,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -286,7 +286,7 @@ impl OverlayRequest {
             toast_layer: Some(ToastLayerSpec {
                 store,
                 position: window_overlays::ToastPosition::default(),
-                style: None,
+                style: window_overlays::ToastLayerStyle::default(),
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -319,7 +319,7 @@ impl OverlayRequest {
             .toast_layer
             .as_mut()
             .expect("toast_style requires a ToastLayer request");
-        spec.style = Some(style);
+        spec.style = style;
         self
     }
 
@@ -359,8 +359,11 @@ impl OverlayRequest {
         self
     }
 
-    pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
-        self.dismissable_branches = branches;
+    pub fn dismissable_branches(
+        mut self,
+        branches: impl IntoIterator<Item = GlobalElementId>,
+    ) -> Self {
+        self.dismissable_branches = branches.into_iter().collect();
         self
     }
 
@@ -579,15 +582,13 @@ impl OverlayController {
 
                 let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
                     .position(spec.position)
+                    .style(spec.style)
                     .root_name(root_name);
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
                 }
                 if let Some(gap) = spec.gap {
                     toast_req = toast_req.gap(gap);
-                }
-                if let Some(style) = spec.style {
-                    toast_req = toast_req.style(style);
                 }
                 if let Some(width) = spec.toast_min_width {
                     toast_req = toast_req.toast_min_width(width);
@@ -600,7 +601,7 @@ impl OverlayController {
         }
     }
 
-    pub fn render<H: UiHost>(
+    pub fn render<H: UiHost + 'static>(
         ui: &mut UiTree<H>,
         app: &mut H,
         services: &mut dyn fret_core::UiServices,

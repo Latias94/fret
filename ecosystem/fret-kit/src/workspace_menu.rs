@@ -877,8 +877,9 @@ fn request_menu_overlay<H: UiHost>(
         host.request_redraw(acx.window);
     }));
 
-    let initial_focus =
-        menu::root::MenuInitialFocusTargets::new().pointer_content_focus(content_focus_id.get());
+    let initial_focus = menu::root::MenuInitialFocusTargets::new()
+        .pointer_content_focus(content_focus_id.get())
+        .keyboard_entry_focus(content_focus_id.get());
     let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
         cx,
         trigger_id,

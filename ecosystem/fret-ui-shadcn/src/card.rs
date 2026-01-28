@@ -5,7 +5,7 @@ use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 
@@ -26,10 +26,7 @@ fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let rounded_xl = Px(base_radius.0 + 4.0);
 
     ChromeRefinement::default()
-        .merge(ChromeRefinement {
-            radius: Some(MetricRef::Px(rounded_xl)),
-            ..Default::default()
-        })
+        .radius(rounded_xl)
         .border_1()
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))

@@ -372,9 +372,9 @@ fn combobox_with_patch<H: UiHost>(
         let mut trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .min_h(MetricRef::Px(min_h))
+                .min_h(min_h)
                 .merge(if let Some(w) = width {
-                    LayoutRefinement::default().w_px(MetricRef::Px(w))
+                    LayoutRefinement::default().w_px(w)
                 } else {
                     LayoutRefinement::default().w_full()
                 })
@@ -612,16 +612,14 @@ fn combobox_with_patch<H: UiHost>(
                             .placeholder(search_placeholder.clone())
                             .disabled(disabled)
                             .empty_text(empty_text)
-                            .refine_style(ChromeRefinement {
-                                radius: Some(MetricRef::Px(Px(0.0))),
-                                border_width: Some(MetricRef::Px(Px(0.0))),
-                                background: Some(ColorRef::Color(transparent)),
-                                border_color: Some(ColorRef::Color(transparent)),
-                                ..Default::default()
-                            })
-                            .refine_scroll_layout(
-                                LayoutRefinement::default().max_h(MetricRef::Px(max_list_h)),
+                            .refine_style(
+                                ChromeRefinement::default()
+                                    .radius(Px(0.0))
+                                    .border_width(Px(0.0))
+                                    .bg(ColorRef::Color(transparent))
+                                    .border_color(ColorRef::Color(transparent)),
                             )
+                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
                             .into_element(cx)
                     } else {
                         let max_list_h = Px(theme_max_list_h.0.max(0.0));
@@ -709,19 +707,13 @@ fn combobox_with_patch<H: UiHost>(
                         CommandList::new(command_items)
                             .disabled(disabled)
                             .empty_text(empty_text)
-                            .refine_scroll_layout(
-                                LayoutRefinement::default().max_h(MetricRef::Px(max_list_h)),
-                            )
+                            .refine_scroll_layout(LayoutRefinement::default().max_h(max_list_h))
                             .into_element(cx)
                     };
 
                     PopoverContent::new(vec![list])
                         .refine_style(ChromeRefinement::default().p(Space::N0))
-                        .refine_layout(
-                            LayoutRefinement::default()
-                                .w_px(MetricRef::Px(desired_w))
-                                .min_w_0(),
-                        )
+                        .refine_layout(LayoutRefinement::default().w_px(desired_w).min_w_0())
                         .into_element(cx)
                 },
             )

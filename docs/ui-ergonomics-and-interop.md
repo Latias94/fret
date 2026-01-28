@@ -116,7 +116,7 @@ The remaining high-impact ergonomics improvements tend to be:
 
 1. **Reduce “children container” boilerplate**
    - Prefer accepting `IntoIterator<Item = AnyElement>` in high-frequency APIs.
-   - Provide a tiny authoring helper for iterator-heavy lists (example: `.elements()`).
+   - Provide a tiny authoring helper for iterator-heavy lists (examples: `.elements()` for `Vec`, `.elements_owned()` for `Elements`).
 2. **Make root rendering accept iterables**
    - Root render fns should accept iterable children, not force `Vec`.
 3. **Bias toward key-based identity**

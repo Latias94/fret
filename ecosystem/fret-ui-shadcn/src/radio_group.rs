@@ -432,8 +432,8 @@ impl RadioGroup {
                                         let icon_layout = decl_style::layout_style(
                                             &theme,
                                             fret_ui_kit::LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(icon))
-                                                .h_px(MetricRef::Px(icon)),
+                                                .w_px(icon)
+                                                .h_px(icon),
                                         );
                                         let icon_props = ContainerProps {
                                             layout: icon_layout,
@@ -458,8 +458,8 @@ impl RadioGroup {
                                         let indicator_layout = decl_style::layout_style(
                                             &theme,
                                             fret_ui_kit::LayoutRefinement::default()
-                                                .w_px(MetricRef::Px(indicator))
-                                                .h_px(MetricRef::Px(indicator)),
+                                                .w_px(indicator)
+                                                .h_px(indicator),
                                         );
                                         let indicator_props = ContainerProps {
                                             layout: indicator_layout,

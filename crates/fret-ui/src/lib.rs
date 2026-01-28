@@ -48,6 +48,7 @@ pub mod tree;
 pub mod virtual_list;
 #[allow(dead_code)]
 pub(crate) mod widget;
+pub(crate) mod windowed_surface_host;
 
 #[cfg(feature = "compat-policy-shortcuts")]
 compile_error!(

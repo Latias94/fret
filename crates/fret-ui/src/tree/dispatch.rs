@@ -230,15 +230,16 @@ impl<H: UiHost> UiTree<H> {
                 }
                 continue;
             }
-            self.dispatch_event_to_node_chain_observer(
+            if self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
                 input_ctx,
                 layer_root,
                 event,
                 invalidation_visited,
-            );
-            *needs_redraw = true;
+            ) {
+                *needs_redraw = true;
+            }
             if barrier_root == Some(layer_root) {
                 hit_barrier = true;
             }
@@ -1016,6 +1017,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut cursor_choice_from_query = false;
+        let mut cursor_query_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
         let mut suppress_touch_up_outside_dispatch = false;
@@ -1239,6 +1241,27 @@ impl<H: UiHost> UiTree<H> {
                     if blocks_pointer_dispatch {
                         suppress_pointer_dispatch = true;
                     }
+                }
+            }
+
+            if input_ctx.caps.ui.cursor_icons
+                && cursor_query_choice.is_none()
+                && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
+            {
+                let mut node = captured.or(hit_for_hover);
+                while let Some(id) = node {
+                    let (bounds, parent) = self
+                        .nodes
+                        .get(id)
+                        .map(|n| (n.bounds, n.parent))
+                        .unwrap_or_default();
+                    if let Some(icon) = self.with_widget_mut(id, |widget, _tree| {
+                        widget.cursor_icon_at(bounds, pos, &input_ctx)
+                    }) {
+                        cursor_query_choice = Some(icon);
+                        break;
+                    }
+                    node = parent;
                 }
             }
 
@@ -1739,6 +1762,14 @@ impl<H: UiHost> UiTree<H> {
                             stop_propagation: false,
                         };
                         widget.event(&mut cx, &event_for_node);
+                        if cx.requested_cursor.is_none()
+                            && matches!(event_for_node, Event::Pointer(_))
+                            && cx.input_ctx.caps.ui.cursor_icons
+                            && let Some(position) = event_position(&event_for_node)
+                        {
+                            cx.requested_cursor =
+                                widget.cursor_icon_at(bounds, position, &cx.input_ctx);
+                        }
                         (
                             cx.invalidations,
                             cx.requested_focus,
@@ -2454,7 +2485,9 @@ impl<H: UiHost> UiTree<H> {
             && let Some(window) = self.window
             && matches!(event, Event::Pointer(_))
         {
-            let icon = cursor_choice.unwrap_or(fret_core::CursorIcon::Default);
+            let icon = cursor_choice
+                .or(cursor_query_choice)
+                .unwrap_or(fret_core::CursorIcon::Default);
             app.push_effect(Effect::CursorSetIcon { window, icon });
         }
 
@@ -2524,6 +2557,7 @@ impl<H: UiHost> UiTree<H> {
                     svc.set_snapshot(window, input_ctx.clone());
                 },
             );
+
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }
     }

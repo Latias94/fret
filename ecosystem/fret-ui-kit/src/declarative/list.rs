@@ -55,7 +55,7 @@ fn resolve_row_padding_y(theme: &Theme) -> Px {
 /// This intentionally avoids a fixed row schema (`VirtualListRow { text/secondary/trailing... }`)
 /// so higher-level shadcn-like components can be built in the component layer via composition.
 #[allow(clippy::too_many_arguments)]
-pub fn list_virtualized<H: UiHost>(
+pub fn list_virtualized<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
@@ -66,8 +66,11 @@ pub fn list_virtualized<H: UiHost>(
     items_revision: u64,
     key_at: impl FnMut(usize) -> u64,
     on_select: impl Fn(usize) -> Option<CommandId>,
-    row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
-) -> AnyElement {
+    row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     list_virtualized_impl(
         cx,
         selection,
@@ -89,7 +92,7 @@ pub fn list_virtualized<H: UiHost>(
 /// This is intended for non-text selection surfaces (lists, tables, node graphs) that want to share
 /// command IDs and OS/menu gating with text inputs.
 #[allow(clippy::too_many_arguments)]
-pub fn list_virtualized_copyable<H: UiHost>(
+pub fn list_virtualized_copyable<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     selection: Model<Option<usize>>,
     size: Size,
@@ -101,8 +104,11 @@ pub fn list_virtualized_copyable<H: UiHost>(
     key_at: impl FnMut(usize) -> u64,
     copy_text_at: Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>,
     on_select: impl Fn(usize) -> Option<CommandId>,
-    row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
-) -> AnyElement {
+    row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     list_virtualized_impl(
         cx,
         Some(selection),
@@ -120,7 +126,7 @@ pub fn list_virtualized_copyable<H: UiHost>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn list_virtualized_impl<H: UiHost>(
+fn list_virtualized_impl<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     selection: Option<Model<Option<usize>>>,
     size: Size,
@@ -132,8 +138,11 @@ fn list_virtualized_impl<H: UiHost>(
     key_at: impl FnMut(usize) -> u64,
     copy_text_at: Option<Arc<dyn Fn(&ModelStore, usize) -> Option<String> + Send + Sync>>,
     on_select: impl Fn(usize) -> Option<CommandId>,
-    mut row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> Vec<AnyElement>,
-) -> AnyElement {
+    mut row_contents: impl FnMut(&mut ElementContext<'_, H>, usize) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
     let selected = match &selection {
         Some(m) => cx.watch_model(m).copied().unwrap_or(None),
         None => None,
@@ -442,7 +451,7 @@ mod tests {
                     0,
                     |i| i as u64,
                     |_i| Some(CommandId::new("noop")),
-                    |cx, i| vec![cx.text(format!("Item {i}"))],
+                    |cx, i| [cx.text(format!("Item {i}"))],
                 )]
             })
         };

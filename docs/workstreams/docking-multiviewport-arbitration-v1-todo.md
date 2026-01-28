@@ -88,10 +88,20 @@ Each TODO is labeled:
     - script: `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
     - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-tab-drag-anchor-left`, `dock-arb-dialog-*`, `dock-arb-popover-*`)
 
+- [x] DMV1-reg-032 Add a built-in diag suite for docking arbitration scripts.
+  - Target: a single `fretboard diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
+  - Evidence:
+    - scripts: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`, `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
+    - runner: `apps/fretboard/src/diag.rs` (`diag suite docking-arbitration`)
+
 ## P2 — Unification Opportunities (Optional)
 
-- [ ] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.
+- [x] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.
   - Candidates:
     - `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`
     - `ecosystem/fret-docking/src/dock/viewport.rs`
+  - Evidence:
+    - `crates/fret-core/src/input.rs` (`ViewportInputEvent::from_mapping_window_point_maybe_clamped`)
+    - `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs` (uses `from_mapping_window_point_maybe_clamped`)
+    - `ecosystem/fret-docking/src/dock/viewport.rs` (uses `from_mapping_window_point_maybe_clamped`)
   - Guardrail: do not move policy into `crates/*`; keep helper in ecosystem unless it becomes a true contract.

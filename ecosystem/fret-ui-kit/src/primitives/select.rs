@@ -24,7 +24,8 @@ use fret_ui::action::{
     UiActionHost, UiPointerActionHost,
 };
 use fret_ui::element::{
-    AnyElement, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps, PressableState,
+    AnyElement, Elements, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps,
+    PressableState,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::Side;
@@ -1111,7 +1112,7 @@ pub fn select_modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     select_modal_barrier_with_dismiss_handler(cx, open, dismiss_on_press, None, children)
 }
@@ -1126,7 +1127,7 @@ pub fn select_modal_barrier_with_dismiss_handler<H: UiHost>(
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> AnyElement {
     dialog::modal_barrier_with_dismiss_handler(
         cx,
@@ -1139,30 +1140,30 @@ pub fn select_modal_barrier_with_dismiss_handler<H: UiHost>(
 
 /// Convenience helper to assemble select modal overlay children in a Radix-like order: barrier then
 /// content.
-pub fn select_modal_layer_children<H: UiHost>(
+pub fn select_modal_layer_elements<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         select_modal_barrier(cx, open, dismiss_on_press, barrier_children),
         content,
-    ]
+    ])
 }
 
 /// Convenience helper to assemble select modal overlay children in a Radix-like order (barrier then
 /// content), while routing barrier presses through an optional dismiss handler.
-pub fn select_modal_layer_children_with_dismiss_handler<H: UiHost>(
+pub fn select_modal_layer_elements_with_dismiss_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
-    barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    vec![
+) -> Elements {
+    Elements::from([
         select_modal_barrier_with_dismiss_handler(
             cx,
             open,
@@ -1171,7 +1172,7 @@ pub fn select_modal_layer_children_with_dismiss_handler<H: UiHost>(
             barrier_children,
         ),
         content,
-    ]
+    ])
 }
 
 /// Builds a pointer region that guards the next mouse `pointerup` after opening on `pointerdown`.
@@ -1210,43 +1211,43 @@ pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
 
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
 /// inside the barrier (Radix-like behavior when opening on mouse `pointerdown`).
-pub fn select_modal_layer_children_with_pointer_up_guard<H: UiHost>(
+pub fn select_modal_layer_elements_with_pointer_up_guard<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     guard: SelectMouseOpenGuard,
-    mut barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    barrier_children.insert(
-        0,
-        select_modal_barrier_pointer_up_guard(cx, open.clone(), guard),
-    );
-    select_modal_layer_children(cx, open, dismiss_on_press, barrier_children, content)
+) -> Elements {
+    let guard_el = select_modal_barrier_pointer_up_guard(cx, open.clone(), guard);
+    select_modal_layer_elements(
+        cx,
+        open,
+        dismiss_on_press,
+        std::iter::once(guard_el).chain(barrier_children),
+        content,
+    )
 }
 
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
 /// inside the barrier (Radix behavior when opening on mouse `pointerdown`), while routing barrier
 /// presses through an optional dismiss handler.
-pub fn select_modal_layer_children_with_pointer_up_guard_and_dismiss_handler<H: UiHost>(
+pub fn select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: Model<bool>,
     dismiss_on_press: bool,
     on_dismiss_request: Option<OnDismissRequest>,
     guard: SelectMouseOpenGuard,
-    mut barrier_children: Vec<AnyElement>,
+    barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
-) -> Vec<AnyElement> {
-    barrier_children.insert(
-        0,
-        select_modal_barrier_pointer_up_guard(cx, open.clone(), guard),
-    );
-    select_modal_layer_children_with_dismiss_handler(
+) -> Elements {
+    let guard_el = select_modal_barrier_pointer_up_guard(cx, open.clone(), guard);
+    select_modal_layer_elements_with_dismiss_handler(
         cx,
         open,
         dismiss_on_press,
         on_dismiss_request,
-        barrier_children,
+        std::iter::once(guard_el).chain(barrier_children),
         content,
     )
 }
@@ -1294,8 +1295,9 @@ pub fn modal_select_request(
     trigger: GlobalElementId,
     open: Model<bool>,
     presence: OverlayPresence,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
+    let children: Vec<AnyElement> = children.into_iter().collect();
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.close_on_window_focus_lost = true;
     request.close_on_window_resize = true;
@@ -1311,7 +1313,7 @@ pub fn modal_select_request_with_dismiss_handler(
     open: Model<bool>,
     presence: OverlayPresence,
     on_dismiss_request: Option<OnDismissRequest>,
-    children: Vec<AnyElement>,
+    children: impl IntoIterator<Item = AnyElement>,
 ) -> OverlayRequest {
     let mut request = modal_select_request(id, trigger, open, presence, children);
     request.dismissible_on_dismiss_request = on_dismiss_request;

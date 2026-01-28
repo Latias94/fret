@@ -2538,7 +2538,7 @@ fn web_vs_fret_layout_breadcrumb_responsive_mobile_truncation_geometry() {
         run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
             use fret_ui_shadcn::breadcrumb::primitives as bc;
 
-            let trunc_layout = LayoutRefinement::default().max_w(MetricRef::Px(Px(80.0)));
+            let trunc_layout = LayoutRefinement::default().max_w(Px(80.0));
 
             vec![bc::Breadcrumb::new().into_element(cx, |cx| {
                 vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -3064,8 +3064,8 @@ fn web_vs_fret_layout_empty_avatar_geometry() {
         ])
         .refine_layout(
             LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(web_avatar.rect.w)))
-                .h_px(MetricRef::Px(Px(web_avatar.rect.h))),
+                .w_px(Px(web_avatar.rect.w))
+                .h_px(Px(web_avatar.rect.h)),
         )
         .into_element(cx);
 
@@ -3163,11 +3163,7 @@ fn web_vs_fret_layout_empty_avatar_group_geometry() {
                         .when_image_missing(Some(image))
                         .into_element(cx),
                 ])
-                .refine_layout(
-                    LayoutRefinement::default()
-                        .w_px(MetricRef::Px(size))
-                        .h_px(MetricRef::Px(size)),
-                );
+                .refine_layout(LayoutRefinement::default().w_px(size).h_px(size));
                 if idx > 0 {
                     avatar = avatar.refine_layout(LayoutRefinement::default().ml_neg(Space::N2));
                 }
@@ -3309,8 +3305,8 @@ fn web_vs_fret_layout_item_avatar_geometry() {
         ])
         .refine_layout(
             LayoutRefinement::default()
-                .w_px(MetricRef::Px(Px(web_item_avatar.rect.w)))
-                .h_px(MetricRef::Px(Px(web_item_avatar.rect.h))),
+                .w_px(Px(web_item_avatar.rect.w))
+                .h_px(Px(web_item_avatar.rect.h)),
         )
         .into_element(cx);
 
@@ -3324,8 +3320,8 @@ fn web_vs_fret_layout_item_avatar_geometry() {
                 ])
                 .refine_layout(
                     LayoutRefinement::default()
-                        .w_px(MetricRef::Px(Px(web_group_item.rect.w)))
-                        .h_px(MetricRef::Px(Px(web_group_item.rect.h))),
+                        .w_px(Px(web_group_item.rect.w))
+                        .h_px(Px(web_group_item.rect.h)),
                 );
                 if idx > 0 {
                     avatar = avatar.refine_layout(LayoutRefinement::default().ml_neg(Space::N2));
@@ -3607,8 +3603,8 @@ fn web_vs_fret_layout_scroll_area_demo_root_size() {
         let scroll_area = fret_ui_shadcn::ScrollArea::new(items)
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w)))
-                    .h_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.h))),
+                    .w_px(Px(web_root.rect.w))
+                    .h_px(Px(web_root.rect.h)),
             )
             .into_element(cx);
 
@@ -6128,8 +6124,7 @@ fn web_vs_fret_layout_select_scrollable_trigger_size() {
                         fret_ui_shadcn::SelectItem::new("gamma", "Gamma"),
                     ])
                     .refine_layout(
-                        fret_ui_kit::LayoutRefinement::default()
-                            .w_px(fret_ui_kit::MetricRef::Px(Px(web_trigger.rect.w))),
+                        fret_ui_kit::LayoutRefinement::default().w_px(Px(web_trigger.rect.w)),
                     )
                     .into_element(cx),
             ]
@@ -6487,8 +6482,7 @@ fn web_vs_fret_layout_input_group_dropdown_height() {
         bounds,
         "web-vs-fret-layout-input-group",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(384.0)));
+            let container_layout = fret_ui_kit::LayoutRefinement::default().w_px(Px(384.0));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -6577,8 +6571,7 @@ fn web_vs_fret_layout_input_group_icon_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-icon",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(384.0)));
+            let container_layout = fret_ui_kit::LayoutRefinement::default().w_px(Px(384.0));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -6731,8 +6724,7 @@ fn web_vs_fret_layout_input_group_spinner_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-spinner",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(384.0)));
+            let container_layout = fret_ui_kit::LayoutRefinement::default().w_px(Px(384.0));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -6900,8 +6892,7 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-button",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(384.0)));
+            let container_layout = fret_ui_kit::LayoutRefinement::default().w_px(Px(384.0));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -6926,8 +6917,8 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                                .w_px(Px(24.0))
+                                .h_px(Px(24.0)),
                         )
                         .into_element(cx);
 
@@ -7109,8 +7100,7 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-tooltip",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(384.0)));
+            let container_layout = fret_ui_kit::LayoutRefinement::default().w_px(Px(384.0));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -7134,8 +7124,8 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                                .w_px(Px(24.0))
+                                .h_px(Px(24.0)),
                         )
                         .into_element(cx);
 
@@ -7159,8 +7149,8 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                                .w_px(Px(24.0))
+                                .h_px(Px(24.0)),
                         )
                         .into_element(cx);
                     let group1 = fret_ui_shadcn::InputGroup::new(model1.clone())
@@ -7191,8 +7181,8 @@ fn web_vs_fret_layout_input_group_tooltip_geometry_matches() {
                         .refine_style(ChromeRefinement::default().p(Space::N0))
                         .refine_layout(
                             fret_ui_kit::LayoutRefinement::default()
-                                .w_px(fret_ui_kit::MetricRef::Px(Px(24.0)))
-                                .h_px(fret_ui_kit::MetricRef::Px(Px(24.0))),
+                                .w_px(Px(24.0))
+                                .h_px(Px(24.0)),
                         )
                         .into_element(cx);
 
@@ -7419,8 +7409,8 @@ fn web_vs_fret_layout_empty_input_group_geometry_matches() {
         bounds,
         "web-vs-fret-layout-empty-input-group",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)));
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -7634,8 +7624,8 @@ fn web_vs_fret_layout_kbd_input_group_geometry_matches() {
         bounds,
         "web-vs-fret-layout-kbd-input-group",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)));
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -7890,8 +7880,8 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-textarea",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group.rect.w)));
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -7984,8 +7974,8 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
                                 &Theme::global(&*cx.app),
                                 fret_ui_kit::LayoutRefinement::default()
                                     .ml_auto()
-                                    .w_px(MetricRef::Px(Px(24.0)))
-                                    .h_px(MetricRef::Px(Px(24.0))),
+                                    .w_px(Px(24.0))
+                                    .h_px(Px(24.0)),
                             ),
                             ..Default::default()
                         },
@@ -8009,8 +7999,8 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
                             layout: fret_ui_kit::declarative::style::layout_style(
                                 &Theme::global(&*cx.app),
                                 fret_ui_kit::LayoutRefinement::default()
-                                    .w_px(MetricRef::Px(Px(24.0)))
-                                    .h_px(MetricRef::Px(Px(24.0))),
+                                    .w_px(Px(24.0))
+                                    .h_px(Px(24.0)),
                             ),
                             ..Default::default()
                         },
@@ -8037,8 +8027,8 @@ fn web_vs_fret_layout_input_group_textarea_geometry_matches() {
                                 &Theme::global(&*cx.app),
                                 fret_ui_kit::LayoutRefinement::default()
                                     .ml_auto()
-                                    .w_px(MetricRef::Px(Px(32.0)))
-                                    .h_px(MetricRef::Px(Px(32.0))),
+                                    .w_px(Px(32.0))
+                                    .h_px(Px(32.0)),
                             ),
                             ..Default::default()
                         },
@@ -8330,8 +8320,8 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-text-currency",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group0.rect.w)));
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group0.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -8342,14 +8332,10 @@ fn web_vs_fret_layout_input_group_text_currency_geometry_matches() {
                 },
                 move |cx| {
                     let leading = fret_ui_shadcn::InputGroupText::new("$")
-                        .refine_layout(
-                            LayoutRefinement::default().w_px(MetricRef::Px(Px(web_dollar.rect.w))),
-                        )
+                        .refine_layout(LayoutRefinement::default().w_px(Px(web_dollar.rect.w)))
                         .into_element(cx);
                     let trailing = fret_ui_shadcn::InputGroupText::new("USD")
-                        .refine_layout(
-                            LayoutRefinement::default().w_px(MetricRef::Px(Px(web_usd.rect.w))),
-                        )
+                        .refine_layout(LayoutRefinement::default().w_px(Px(web_usd.rect.w)))
                         .into_element(cx);
 
                     let group = fret_ui_shadcn::InputGroup::new(model.clone())
@@ -8495,8 +8481,8 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-text-url",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group1.rect.w)));
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group1.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -8516,8 +8502,7 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
                             vec![
                                 fret_ui_shadcn::InputGroupText::new("https://")
                                     .refine_layout(
-                                        LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(web_prefix.rect.w))),
+                                        LayoutRefinement::default().w_px(Px(web_prefix.rect.w)),
                                     )
                                     .into_element(cx),
                             ]
@@ -8534,8 +8519,7 @@ fn web_vs_fret_layout_input_group_text_url_geometry_matches() {
                             vec![
                                 fret_ui_shadcn::InputGroupText::new(".com")
                                     .refine_layout(
-                                        LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(web_suffix.rect.w))),
+                                        LayoutRefinement::default().w_px(Px(web_suffix.rect.w)),
                                     )
                                     .into_element(cx),
                             ]
@@ -8714,8 +8698,8 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-text-email",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group2.rect.w)));
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group2.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -8735,8 +8719,7 @@ fn web_vs_fret_layout_input_group_text_email_geometry_matches() {
                             vec![
                                 fret_ui_shadcn::InputGroupText::new("@company.com")
                                     .refine_layout(
-                                        LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(web_suffix.rect.w))),
+                                        LayoutRefinement::default().w_px(Px(web_suffix.rect.w)),
                                     )
                                     .into_element(cx),
                             ]
@@ -8896,8 +8879,8 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
         bounds,
         "web-vs-fret-layout-input-group-text-textarea-count",
         |cx| {
-            let container_layout = fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_group3.rect.w)));
+            let container_layout =
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group3.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -8918,8 +8901,7 @@ fn web_vs_fret_layout_input_group_text_textarea_count_geometry_matches() {
                                 fret_ui_shadcn::InputGroupText::new("120 characters left")
                                     .size(fret_ui_shadcn::InputGroupTextSize::Xs)
                                     .refine_layout(
-                                        LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(Px(web_count.rect.w))),
+                                        LayoutRefinement::default().w_px(Px(web_count.rect.w)),
                                     )
                                     .into_element(cx),
                             ]
@@ -9076,7 +9058,7 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
         "web-vs-fret-layout-input-group-custom",
         |cx| {
             let container_layout =
-                fret_ui_kit::LayoutRefinement::default().w_px(MetricRef::Px(Px(web_group.rect.w)));
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -9093,7 +9075,7 @@ fn web_vs_fret_layout_input_group_custom_geometry_matches() {
                         .refine_layout(
                             LayoutRefinement::default()
                                 .ml_auto()
-                                .w_px(MetricRef::Px(expected_submit_w)),
+                                .w_px(expected_submit_w),
                         )
                         .into_element(cx);
 
@@ -9299,7 +9281,7 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
         "web-vs-fret-layout-input-group-demo-block-end",
         |cx| {
             let container_layout =
-                fret_ui_kit::LayoutRefinement::default().w_px(MetricRef::Px(Px(web_group.rect.w)));
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -9327,9 +9309,7 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
                     let auto = fret_ui_shadcn::InputGroupButton::new("Auto")
                         .variant(fret_ui_shadcn::ButtonVariant::Ghost)
                         .a11y_label("Golden:input-group-demo:block:auto")
-                        .refine_layout(
-                            LayoutRefinement::default().w_px(MetricRef::Px(expected_auto_w)),
-                        )
+                        .refine_layout(LayoutRefinement::default().w_px(expected_auto_w))
                         .into_element(cx);
 
                     let used = cx.semantics(
@@ -9346,8 +9326,7 @@ fn web_vs_fret_layout_input_group_demo_block_end_geometry_matches() {
                             vec![
                                 fret_ui_shadcn::InputGroupText::new("52% used")
                                     .refine_layout(
-                                        LayoutRefinement::default()
-                                            .w_px(MetricRef::Px(expected_used_w)),
+                                        LayoutRefinement::default().w_px(expected_used_w),
                                     )
                                     .into_element(cx),
                             ]
@@ -9634,7 +9613,7 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
         "web-vs-fret-layout-spinner-input-group",
         |cx| {
             let container_layout =
-                fret_ui_kit::LayoutRefinement::default().w_px(MetricRef::Px(Px(web_group0.rect.w)));
+                fret_ui_kit::LayoutRefinement::default().w_px(Px(web_group0.rect.w));
             let container = cx.container(
                 fret_ui::element::ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
@@ -9695,8 +9674,8 @@ fn web_vs_fret_layout_spinner_input_group_geometry_matches() {
                                 &fret_ui::Theme::global(&*cx.app),
                                 fret_ui_kit::LayoutRefinement::default()
                                     .ml_auto()
-                                    .w_px(MetricRef::Px(Px(30.0)))
-                                    .h_px(MetricRef::Px(Px(24.0))),
+                                    .w_px(Px(30.0))
+                                    .h_px(Px(24.0)),
                             ),
                             ..Default::default()
                         },
@@ -9962,10 +9941,7 @@ fn web_vs_fret_layout_card_with_form_width() {
             .into_element(cx),
             fret_ui_shadcn::CardContent::new(vec![cx.text("Content")]).into_element(cx),
         ])
-        .refine_layout(
-            fret_ui_kit::LayoutRefinement::default()
-                .w_px(fret_ui_kit::MetricRef::Px(Px(web_card.rect.w))),
-        )
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(web_card.rect.w)))
         .into_element(cx);
 
         vec![cx.semantics(
@@ -10135,8 +10111,7 @@ fn web_vs_fret_layout_field_input_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -10453,8 +10428,7 @@ fn web_vs_fret_layout_field_checkbox_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -10592,8 +10566,7 @@ fn web_vs_fret_layout_field_switch_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -10739,8 +10712,7 @@ fn web_vs_fret_layout_field_select_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -10886,8 +10858,7 @@ fn web_vs_fret_layout_field_radio_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -11018,8 +10989,7 @@ fn web_vs_fret_layout_field_textarea_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -11275,8 +11245,7 @@ fn web_vs_fret_layout_field_group_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -11571,8 +11540,7 @@ fn web_vs_fret_layout_field_fieldset_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -11791,8 +11759,8 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
             let radio_stub_layout = fret_ui_kit::declarative::style::layout_style(
                 &Theme::global(&*cx.app),
                 fret_ui_kit::LayoutRefinement::default()
-                    .w_px(fret_ui_kit::MetricRef::Px(Px(16.0)))
-                    .h_px(fret_ui_kit::MetricRef::Px(Px(16.0)))
+                    .w_px(Px(16.0))
+                    .h_px(Px(16.0))
                     .flex_shrink_0(),
             );
             let radio_stub = cx.container(
@@ -11888,8 +11856,7 @@ fn web_vs_fret_layout_field_choice_card_geometry() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &Theme::global(&*cx.app),
-                    fret_ui_kit::LayoutRefinement::default()
-                        .w_px(fret_ui_kit::MetricRef::Px(Px(web_root.rect.w))),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(web_root.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -12385,7 +12352,7 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
 
         let empty_td = fret_ui_shadcn::TableCell::new(decl_text::text_sm(cx, "No results."))
             .col_span(5)
-            .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(web_empty_td.rect.h))))
+            .refine_layout(LayoutRefinement::default().h_px(Px(web_empty_td.rect.h)))
             .into_element(cx);
 
         let table = cx.semantics(
@@ -12436,7 +12403,7 @@ fn web_vs_fret_layout_data_table_demo_empty_state_cell_spans_table_width() {
             ContainerProps {
                 layout: fret_ui_kit::declarative::style::layout_style(
                     &theme,
-                    LayoutRefinement::default().w_px(MetricRef::Px(Px(web_table.rect.w))),
+                    LayoutRefinement::default().w_px(Px(web_table.rect.w)),
                 ),
                 ..Default::default()
             },
@@ -13678,7 +13645,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_light() {
                 ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
                         &Theme::global(&*cx.app),
-                        LayoutRefinement::default().w_px(MetricRef::Px(width)),
+                        LayoutRefinement::default().w_px(width),
                     ),
                     ..Default::default()
                 },
@@ -13802,7 +13769,7 @@ fn web_vs_fret_layout_progress_demo_track_and_indicator_geometry_dark() {
                 ContainerProps {
                     layout: fret_ui_kit::declarative::style::layout_style(
                         &Theme::global(&*cx.app),
-                        LayoutRefinement::default().w_px(MetricRef::Px(width)),
+                        LayoutRefinement::default().w_px(width),
                     ),
                     ..Default::default()
                 },

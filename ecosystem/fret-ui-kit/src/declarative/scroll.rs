@@ -337,7 +337,7 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     overflow_scroll_content(cx, layout, show_scrollbar, |cx| {
-        stack::vstack_iter(cx, vstack, f)
+        stack::vstack(cx, vstack, f)
     })
 }
 
@@ -427,7 +427,7 @@ where
     I: IntoIterator<Item = AnyElement>,
 {
     overflow_scroll_x_content(cx, layout, show_scrollbar_x, |cx| {
-        stack::vstack_iter(cx, vstack, f)
+        stack::vstack(cx, vstack, f)
     })
 }
 

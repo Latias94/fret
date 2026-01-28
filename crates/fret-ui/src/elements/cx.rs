@@ -45,6 +45,15 @@ pub struct ElementContext<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> ElementContext<'a, H> {
+    pub(crate) fn retained_virtual_list_row_any_element(
+        &mut self,
+        key: crate::ItemKey,
+        index: usize,
+        row: &crate::windowed_surface_host::RetainedVirtualListRowFn<H>,
+    ) -> AnyElement {
+        self.keyed(key, |cx| (row)(cx, index))
+    }
+
     pub fn new(
         app: &'a mut H,
         runtime: &'a mut ElementRuntime,
@@ -91,6 +100,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         #[cfg(not(feature = "diagnostics"))]
         {
             Self::new(app, runtime, window, bounds, root)
+        }
+    }
+
+    pub(crate) fn new_for_existing_window_state(
+        app: &'a mut H,
+        window: AppWindowId,
+        bounds: Rect,
+        root: GlobalElementId,
+        window_state: &'a mut WindowElementState,
+    ) -> Self {
+        let frame_id = app.frame_id();
+        Self {
+            app,
+            window,
+            frame_id,
+            bounds,
+            window_state,
+            stack: vec![root],
+            callsite_counters: vec![HashMap::new()],
+            view_cache_should_reuse: None,
         }
     }
 
@@ -2701,6 +2730,108 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             scroll_handle,
             key_at,
             row,
+        )
+    }
+
+    /// Retained-host VirtualList helper (ADR 0192).
+    ///
+    /// This is an opt-in surface that stores `'static` row callbacks in element-local state so
+    /// the runtime can attach/detach row subtrees when a cache root reuses without rerendering.
+    #[track_caller]
+    pub fn virtual_list_keyed_retained(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn,
+        row: crate::windowed_surface_host::RetainedVirtualListRowFn<H>,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        self.virtual_list_keyed_retained_with_layout(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_retained_with_layout(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn,
+        row: crate::windowed_surface_host::RetainedVirtualListRowFn<H>,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        self.virtual_list_keyed_retained_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            crate::virtual_list::default_range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub fn virtual_list_keyed_retained_with_layout_ex(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn,
+        range_extractor: crate::windowed_surface_host::RetainedVirtualListRangeExtractor,
+        row: crate::windowed_surface_host::RetainedVirtualListRowFn<H>,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        let key_at_for_keys = Arc::clone(&key_at);
+        self.virtual_list_with_layout_and_keys(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            move |i| (key_at_for_keys)(i),
+            range_extractor,
+            move |cx, items| {
+                cx.with_state(
+                    crate::windowed_surface_host::RetainedVirtualListHostMarker::default,
+                    |_| {},
+                );
+                cx.with_state(
+                    || crate::windowed_surface_host::RetainedVirtualListHostCallbacks::<H> {
+                        key_at: Arc::clone(&key_at),
+                        row: Arc::clone(&row),
+                        range_extractor,
+                    },
+                    |st| {
+                        st.key_at = Arc::clone(&key_at);
+                        st.row = Arc::clone(&row);
+                        st.range_extractor = range_extractor;
+                    },
+                );
+
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| {
+                        cx.retained_virtual_list_row_any_element(item.key, item.index, &row)
+                    })
+                    .collect::<Vec<_>>()
+            },
         )
     }
 

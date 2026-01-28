@@ -396,11 +396,11 @@ impl SvgService for FakeServices {
     }
 }
 
-fn snapshot_for_root(
-    name: &str,
-    bounds: Rect,
-    build: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<AnyElement>,
-) {
+fn snapshot_for_root<I, F>(name: &str, bounds: Rect, build: F)
+where
+    F: FnOnce(&mut fret_ui::ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
     let window = AppWindowId::default();
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();

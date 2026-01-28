@@ -76,8 +76,14 @@ pub struct DataTableViewOptions {
 }
 
 impl DataTableViewOptions {
-    pub fn new(open: Model<bool>, items: Vec<DataTableViewOptionItem>) -> Self {
-        Self { open, items }
+    pub fn new(
+        open: Model<bool>,
+        items: impl IntoIterator<Item = DataTableViewOptionItem>,
+    ) -> Self {
+        Self {
+            open,
+            items: items.into_iter().collect(),
+        }
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -101,7 +107,7 @@ impl DataTableViewOptions {
                                 .disabled(it.disabled),
                         )
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         )
     }

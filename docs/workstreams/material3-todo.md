@@ -312,6 +312,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - [x] Radio token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/radio.rs`,
       `ecosystem/fret-ui-material3/src/radio.rs`.
+  - [x] Select token keys + fallbacks centralized.
+    - Evidence: `ecosystem/fret-ui-material3/src/tokens/select.rs`,
+      `ecosystem/fret-ui-material3/src/select.rs`.
   - [x] Tabs token keys + fallbacks centralized.
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/tabs.rs`,
       `ecosystem/fret-ui-material3/src/tabs.rs`.
@@ -536,6 +539,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Add a Material 3 Text field gallery page for manual interaction verification.
   - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_TEXT_FIELD`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_text_field`).
+- [x] Add a Material 3 Select gallery page for manual interaction verification.
+  - Evidence: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_SELECT`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_select`).
 - [x] Add a small, scripted interaction test harness for Material states (hover/press/ripple).
   - Evidence: `ecosystem/fret-ui-material3/tests/interaction_harness.rs` (`scene_signature`),
     tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tabs_pressed_scene_structure_is_stable`, `icon_button_pressed_scene_structure_is_stable`, `switch_pressed_scene_structure_is_stable`, `radio_pressed_scene_structure_is_stable`).
@@ -562,9 +568,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Verify tooltip hover open/close and dropdown menu dismissal across light/dark + TonalSpot/Expressive schemes.
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tooltip_opens_and_closes_on_hover_across_schemes`,
     `dropdown_menu_dismisses_and_restores_focus_across_schemes`).
+- [x] Verify Select dismissal and focus restore across light/dark + TonalSpot/Expressive schemes.
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`select_dismisses_and_restores_focus_across_schemes`).
 - [x] Add golden-style visual snapshots per component state (light/dark, density variants).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_controls_suite_goldens_v1`, `material3_headless_overlays_suite_goldens_v1`, `material3_headless_text_field_suite_goldens_v1`),
-    `goldens/material3-headless/v1/material3-*.json` (controls suite, overlay suite, text-field suite; includes `scale1_0`/`scale1_25`/`scale2_0` variants).
+    `goldens/material3-headless/v1/material3-*.json` (controls suite, overlay suite, text-field suite; includes `scale1_0`/`scale1_25`/`scale2_0` variants and overlay cases such as `both_open` + `select_open`).
 
 ## Proposed ADRs (drafts)
 
