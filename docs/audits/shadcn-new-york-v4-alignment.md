@@ -270,6 +270,8 @@ Recent fixes:
 - Geometry gates now measure the registered viewport panel element (via `navigation_menu_viewport_panel_id`) instead of relying on “largest overlay rect” heuristics. This avoids accidentally measuring motion wrappers / indicator siblings when overlays animate or when multiple popover layers exist.
 - The viewport panel keeps `overflow: visible` so drop shadows match CSS `box-shadow` footprint; radius clipping is applied by an inner `overflow: clip` container with the same corner radii so content still clips correctly.
 - Conformance gates:
+  - Trigger (open vs closed surface colors): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_navigation_menu_demo_trigger_open_and_closed_surface_colors_match_web`, `web_vs_fret_navigation_menu_demo_components_trigger_open_and_closed_surface_colors_match_web`, plus dark variants).
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
   - Chrome (viewport surface colors): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web`, `web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web_dark`).
