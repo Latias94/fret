@@ -2,7 +2,7 @@ use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, ScrollAxis, ScrollProps, SemanticsProps,
+    PressableProps, ScrollAxis, ScrollProps, SemanticsProps, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{
@@ -698,6 +698,316 @@ where
         render_cell,
         output,
     )
+}
+
+/// Retained-host virtualized table helper (virt-003 / ADR 0192).
+///
+/// This is an opt-in surface intended for perf/correctness harnesses. v0 is intentionally minimal:
+/// - fixed-height body rows only (no measured mode)
+/// - flat (non-grouped) tables only
+/// - single-column sorting only
+///
+/// The key benefit is that overscan window boundary updates can attach/detach body row subtrees
+/// without forcing a parent cache-root rerender under view-cache reuse.
+#[allow(clippy::too_many_arguments)]
+pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
+    cx: &mut ElementContext<'_, H>,
+    data: Arc<[TData]>,
+    columns: Arc<[ColumnDef<TData>]>,
+    state: Model<TableState>,
+    vertical_scroll: &VirtualListScrollHandle,
+    items_revision: u64,
+    row_key_at: Arc<dyn Fn(&TData, usize) -> RowKey>,
+    props: TableViewProps,
+    header_label: Arc<dyn Fn(&ColumnDef<TData>) -> Arc<str>>,
+    cell_at: Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement>,
+    debug_row_test_id_prefix: Option<Arc<str>>,
+) -> AnyElement
+where
+    TData: 'static,
+{
+    #[derive(Debug, Clone, Copy)]
+    struct RowEntry {
+        key: RowKey,
+        data_index: usize,
+    }
+
+    #[derive(Default)]
+    struct RetainedTableRowsState {
+        last_items_revision: Option<u64>,
+        entries: Arc<[RowEntry]>,
+    }
+
+    let theme = Theme::global(&*cx.app);
+    let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
+    let row_hover_bg = Color {
+        a: row_hover.a.min(0.12),
+        ..row_hover
+    };
+    let row_active_bg = Color {
+        a: row_active.a.min(0.18),
+        ..row_active
+    };
+    let radius = theme.metric_required("metric.radius.md");
+
+    let row_h = props
+        .row_height
+        .unwrap_or_else(|| resolve_row_height(theme, props.size));
+
+    let cell_px = resolve_cell_padding_x(theme);
+    let cell_py = resolve_cell_padding_y(theme);
+
+    let sorting = cx
+        .watch_model(&state)
+        .layout()
+        .read_ref(|s| s.sorting.clone())
+        .ok()
+        .unwrap_or_default();
+
+    let entries = cx.with_state(RetainedTableRowsState::default, |st| {
+        if st.last_items_revision != Some(items_revision) {
+            st.last_items_revision = Some(items_revision);
+
+            let mut entries: Vec<RowEntry> = (0..data.len())
+                .map(|i| RowEntry {
+                    key: (row_key_at)(&data[i], i),
+                    data_index: i,
+                })
+                .collect();
+
+            if let Some(spec) = sorting.first() {
+                if let Some(col) = columns
+                    .iter()
+                    .find(|c| c.id.as_ref() == spec.column.as_ref())
+                    && let Some(cmp) = col.sort_cmp.as_ref()
+                {
+                    entries.sort_by(|a, b| {
+                        let a_row = &data[a.data_index];
+                        let b_row = &data[b.data_index];
+                        let ord = (cmp)(a_row, b_row);
+                        let ord = if spec.desc { ord.reverse() } else { ord };
+                        if ord == std::cmp::Ordering::Equal {
+                            a.key.cmp(&b.key)
+                        } else {
+                            ord
+                        }
+                    });
+                }
+            }
+
+            st.entries = Arc::from(entries);
+        }
+
+        st.entries.clone()
+    });
+
+    let mut fill_layout = LayoutStyle::default();
+    fill_layout.size.width = Length::Fill;
+    fill_layout.size.height = Length::Fill;
+    fill_layout.flex.grow = 1.0;
+    fill_layout.flex.basis = Length::Px(Px(0.0));
+
+    let mut options = VirtualListOptions::new(row_h, props.overscan);
+    options.items_revision = items_revision;
+
+    let header = {
+        let state = state.clone();
+        let columns = columns.clone();
+        let header_label = Arc::clone(&header_label);
+
+        cx.container(
+            ContainerProps {
+                background: Some(header_bg),
+                border: Edges {
+                    bottom: Px(1.0),
+                    ..Default::default()
+                },
+                border_color: Some(border),
+                corner_radii: Corners {
+                    top_left: radius,
+                    top_right: radius,
+                    ..Default::default()
+                },
+                padding: Edges::symmetric(cell_px, cell_py),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap_x(Space::N2)
+                        .justify(Justify::Start)
+                        .items(Items::Center),
+                    move |cx| {
+                        columns
+                            .iter()
+                            .map(|col| {
+                                let label = (header_label)(col);
+                                let sort_state = sort_for_column(&sorting, &col.id);
+                                let col_id = col.id.clone();
+                                let state = state.clone();
+
+                                cx.pressable(
+                                    PressableProps {
+                                        enabled: true,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(label.clone()),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |cx, _st| {
+                                        cx.pressable_update_model(&state, move |st| {
+                                            apply_single_sort_toggle(st, &col_id);
+                                            st.pagination.page_index = 0;
+                                        });
+
+                                        let indicator: Arc<str> = match sort_state {
+                                            None => Arc::from(""),
+                                            Some(false) => Arc::from(" ▲"),
+                                            Some(true) => Arc::from(" ▼"),
+                                        };
+                                        vec![cx.text(format!("{}{}", label, indicator))]
+                                    },
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        )
+    };
+
+    let key_at: Arc<dyn Fn(usize) -> fret_ui::ItemKey> = {
+        let entries = entries.clone();
+        Arc::new(move |i| entries[i].key.0)
+    };
+
+    let row = {
+        let state = state.clone();
+        let entries = entries.clone();
+        let data = data.clone();
+        let columns = columns.clone();
+        let cell_at = Arc::clone(&cell_at);
+        let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
+
+        Arc::new(move |cx: &mut ElementContext<'_, H>, i: usize| {
+            let entry = entries[i];
+            let row_key = entry.key;
+            let data_index = entry.data_index;
+
+            let selected = cx
+                .watch_model(&state)
+                .paint()
+                .read_ref(|s| s.row_selection.contains(&row_key))
+                .ok()
+                .unwrap_or(false);
+
+            let test_id = debug_row_test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{}{id}", prefix, id = row_key.0)));
+
+            let state_model = state.clone();
+            let data_for_row = Arc::clone(&data);
+            let columns_for_row = Arc::clone(&columns);
+            let cell_at_for_row = Arc::clone(&cell_at);
+
+            cx.pressable(
+                PressableProps {
+                    enabled: true,
+                    focusable: false,
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::ListItem),
+                        test_id,
+                        selected,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                move |cx, st| {
+                    let state = state_model.clone();
+                    cx.pressable_update_model(&state, move |st| {
+                        if st.row_selection.contains(&row_key) {
+                            st.row_selection.remove(&row_key);
+                        } else {
+                            st.row_selection.insert(row_key);
+                        }
+                    });
+
+                    let bg = if selected || st.pressed {
+                        Some(row_active_bg)
+                    } else if st.hovered {
+                        Some(row_hover_bg)
+                    } else {
+                        None
+                    };
+
+                    let original = &data_for_row[data_index];
+                    let cells = columns_for_row
+                        .iter()
+                        .map(|col| (cell_at_for_row)(cx, col, original))
+                        .collect::<Vec<_>>();
+
+                    vec![cx.container(
+                        ContainerProps {
+                            background: bg,
+                            padding: Edges::symmetric(cell_px, cell_py),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .gap_x(Space::N2)
+                                    .justify(Justify::Start)
+                                    .items(Items::Center),
+                                move |_cx| cells,
+                            )]
+                        },
+                    )]
+                },
+            )
+        })
+    };
+
+    let content = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().h_full())
+            .gap(Space::N0)
+            .justify(Justify::Start)
+            .items(Items::Stretch),
+        move |cx| {
+            vec![
+                header,
+                cx.virtual_list_keyed_retained_with_layout(
+                    fill_layout,
+                    entries.len(),
+                    options,
+                    vertical_scroll,
+                    key_at,
+                    row,
+                ),
+            ]
+        },
+    );
+
+    if props.draw_frame {
+        cx.container(
+            ContainerProps {
+                layout: fill_layout,
+                background: Some(table_bg),
+                border: Edges::all(Px(1.0)),
+                border_color: Some(border),
+                corner_radii: Corners::all(radius),
+                ..Default::default()
+            },
+            move |_cx| vec![content],
+        )
+    } else {
+        content
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
