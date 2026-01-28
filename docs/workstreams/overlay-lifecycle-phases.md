@@ -19,7 +19,9 @@ before deeper refactors.
 - **`present`**: whether the overlay is currently mounted/painted (often `true` while closing for
   exit transitions).
 - **`interactive`**: whether the overlay participates in hit-testing and dismissal observation.
-- **Barrier**: modal underlay gating (background input/semantics suppression).
+- **Barrier**: modal underlay gating (background pointer/input suppression).
+- **Focus containment**: whether focus/capture is clamped to the modal layer roots (may be stricter
+  than pointer gating).
 
 Ownership:
 
@@ -47,8 +49,10 @@ Overlays conceptually move through a small state machine:
    - The overlay remains mounted/painted for an exit transition, but interactivity is reduced to
      avoid click-through or double-dispatch.
    - The key contract difference by overlay kind:
-     - **Modal**: the barrier remains active while `present=true` (prevents underlay click-through
-       during close animations).
+     - **Modal**: the pointer barrier remains active while `present=true` (prevents underlay
+       click-through during close animations), but focus containment is driven by `open` so
+       `on_close_auto_focus` can restore/redirect focus while the barrier still blocks pointer
+       input.
      - **Non-modal dismissible**: the overlay becomes click-through during close transitions
        (`present=true` but `open=false`) so it does not steal input or observe outside presses.
 5. **Unmounted**
@@ -68,6 +72,8 @@ Implementation anchors:
 - Request types: `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`
 - Policy/render orchestration: `ecosystem/fret-ui-kit/src/window_overlays/render.rs`
 - Layer knobs (present vs interactive semantics): `ecosystem/fret-ui-kit/src/window_overlays/state.rs`
+- Focus barrier split (modal close transitions): `crates/fret-ui/src/tree/layers.rs` (`blocks_underlay_focus`,
+  `active_focus_layers`) + `ecosystem/fret-ui-kit/src/window_overlays/state.rs` (`apply_modal_layer`)
 
 View-cache seam:
 

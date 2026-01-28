@@ -3540,7 +3540,7 @@ fn tooltip_does_not_request_observers_by_default() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(true);
+    let _open = app.models_mut().insert(true);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -3611,7 +3611,7 @@ fn tooltip_does_not_request_observers_while_closing() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(false);
+    let _open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(
@@ -3684,7 +3684,7 @@ fn hover_overlay_is_click_through_while_closing() {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
-    let open = app.models_mut().insert(false);
+    let _open = app.models_mut().insert(false);
 
     let mut services = FakeServices;
     let bounds = Rect::new(

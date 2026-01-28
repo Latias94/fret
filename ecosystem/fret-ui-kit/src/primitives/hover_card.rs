@@ -14,6 +14,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
+use crate::headless::hover_intent::{HoverIntentConfig, HoverIntentState, HoverIntentUpdate};
 use crate::primitives::popper;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -90,6 +91,17 @@ pub fn hover_card_request(
     id: GlobalElementId,
     trigger: GlobalElementId,
     open: Model<bool>,
+    presence: crate::OverlayPresence,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    hover_card_request_with_presence(id, trigger, open, presence, children)
+}
+
+/// Builds an overlay request for a Radix-style hover card with explicit presence semantics.
+pub fn hover_card_request_with_presence(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
     presence: OverlayPresence,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
@@ -116,6 +128,105 @@ pub fn hover_card_hovered(
     keyboard_focused: bool,
 ) -> bool {
     trigger_hovered || overlay_hovered || keyboard_focused
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct HoverCardIntentDriverState {
+    last_frame_tick: Option<u64>,
+    tick: u64,
+    intent: HoverIntentState,
+    saw_active_since_open: bool,
+    last_pointer_down: bool,
+    close_suppressed_after_pointer_down: bool,
+}
+
+/// Updates hover-card open state using Radix-aligned hover intent policy.
+///
+/// This helper centralizes the "hover-card intent driver" logic so recipes can share it without
+/// copying per-frame state machines:
+///
+/// - open/close are driven by hover intent delays (via `HoverIntentState`),
+/// - close is suppressed if the pointer leaves while holding the mouse button down,
+/// - `defaultOpen=true` behaves like Radix: the card stays open until an "active" period is
+///   observed and then a leave edge occurs,
+/// - active text selection keeps the hover card open while selecting.
+pub fn hover_card_update_interaction<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open_now: bool,
+    signal_active: bool,
+    pointer_down_on_content: bool,
+    has_text_selection: bool,
+    cfg: HoverIntentConfig,
+) -> HoverIntentUpdate {
+    let frame_tick = cx.app.frame_id().0;
+    cx.with_state(HoverCardIntentDriverState::default, |st| {
+        match st.last_frame_tick {
+            None => {
+                st.last_frame_tick = Some(frame_tick);
+                st.tick = frame_tick;
+            }
+            Some(prev) if prev != frame_tick => {
+                st.last_frame_tick = Some(frame_tick);
+                st.tick = frame_tick;
+            }
+            Some(_) => {
+                // Some unit tests may not advance the runner-owned frame clock; fall back to a
+                // per-call monotonic tick so delays can still elapse deterministically.
+                st.tick = st.tick.saturating_add(1);
+            }
+        }
+
+        if st.intent.is_open() != open_now {
+            st.intent.set_open(open_now);
+            st.saw_active_since_open = false;
+            st.close_suppressed_after_pointer_down = false;
+        }
+
+        let was_open = st.intent.is_open();
+
+        if pointer_down_on_content != st.last_pointer_down {
+            if pointer_down_on_content {
+                st.close_suppressed_after_pointer_down = false;
+            } else if was_open && !signal_active {
+                // Mirror Radix HoverCard: if the pointer left while the button is held, `onClose`
+                // does not schedule a close timer. We model that by suppressing close until the
+                // next "active -> inactive" edge.
+                st.close_suppressed_after_pointer_down = true;
+            }
+            st.last_pointer_down = pointer_down_on_content;
+        }
+        if st.close_suppressed_after_pointer_down && signal_active {
+            st.close_suppressed_after_pointer_down = false;
+        }
+
+        if was_open && (signal_active || pointer_down_on_content) {
+            st.saw_active_since_open = true;
+        }
+
+        // Radix HoverCard opens/closes based on enter/leave edges, not a pure level signal.
+        // If the root is open but we've never observed an "active" signal since it opened (e.g.
+        // `defaultOpen=true` on first mount), keep it open until we see at least one active
+        // period and then a leave edge.
+        let effective_hovered = if was_open {
+            signal_active
+                || pointer_down_on_content
+                || st.close_suppressed_after_pointer_down
+                || has_text_selection
+                || !st.saw_active_since_open
+        } else {
+            signal_active || pointer_down_on_content
+        };
+
+        let out = st.intent.update(effective_hovered, st.tick, cfg);
+        if !was_open && out.open {
+            st.saw_active_since_open = signal_active || pointer_down_on_content;
+        } else if was_open && !out.open {
+            st.saw_active_since_open = false;
+            st.close_suppressed_after_pointer_down = false;
+        }
+
+        out
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -186,14 +297,14 @@ mod tests {
             Default::default(),
             Default::default(),
             "test",
-            |_cx| {
+            move |_cx| {
                 let id = GlobalElementId(0x123);
                 let trigger = GlobalElementId(0x456);
                 let req = hover_card_request(
                     id,
                     trigger,
                     open.clone(),
-                    OverlayPresence::instant(true),
+                    crate::OverlayPresence::instant(true),
                     Vec::new(),
                 );
                 let expected = hover_card_root_name(id);
@@ -229,5 +340,56 @@ mod tests {
         );
         let vars = hover_card_popper_vars(outer, anchor, Px(0.0), placement);
         assert!(vars.available_height.0 > 60.0 && vars.available_height.0 < 80.0);
+    }
+
+    #[test]
+    fn hover_card_close_is_suppressed_after_pointer_down_leave_until_reenter() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let cfg = HoverIntentConfig::new(0, 0);
+            let mut open_now = true;
+
+            open_now = hover_card_update_interaction(cx, open_now, true, true, false, cfg).open;
+            assert!(open_now);
+
+            // Pointer leaves while holding the button down.
+            open_now = hover_card_update_interaction(cx, open_now, false, true, false, cfg).open;
+            assert!(open_now);
+
+            // Release outside: close is suppressed until the next active -> inactive edge.
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(open_now);
+
+            // Re-enter clears suppression.
+            open_now = hover_card_update_interaction(cx, open_now, true, false, false, cfg).open;
+            assert!(open_now);
+
+            // Leave closes immediately (close_delay=0).
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(!open_now);
+        });
+    }
+
+    #[test]
+    fn hover_card_default_open_does_not_close_until_active_then_leave() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let cfg = HoverIntentConfig::new(0, 0);
+            let mut open_now = true;
+
+            // `defaultOpen=true` should remain open until at least one active period is observed.
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(open_now);
+
+            open_now = hover_card_update_interaction(cx, open_now, true, false, false, cfg).open;
+            assert!(open_now);
+
+            open_now = hover_card_update_interaction(cx, open_now, false, false, false, cfg).open;
+            assert!(!open_now);
+        });
     }
 }
