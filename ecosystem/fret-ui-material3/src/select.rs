@@ -11,8 +11,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, Point, Px, Rect, SemanticsRole, Size, SvgFit, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit,
+    TextOverflow, TextWrap,
 };
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned, ids};
 use fret_runtime::Model;
@@ -400,6 +400,40 @@ fn select_trigger_element<H: UiHost>(
             let _ = host.models_mut().update(&toggle_open, |v| *v = !*v);
             host.request_redraw(action_cx.window);
         }));
+
+        let enabled_for_key = enabled;
+        let open_for_key = open;
+        let toggle_open_on_key = open_model.clone();
+        cx.key_add_on_key_down_for(
+            pressable_id,
+            Arc::new(move |host, action_cx, down| {
+                if !enabled_for_key {
+                    return false;
+                }
+
+                match down.key {
+                    KeyCode::ArrowDown | KeyCode::ArrowUp => {
+                        if !open_for_key {
+                            let _ = host.models_mut().update(&toggle_open_on_key, |v| *v = true);
+                            host.request_redraw(action_cx.window);
+                        }
+                        true
+                    }
+                    KeyCode::Escape => {
+                        if open_for_key {
+                            let _ = host
+                                .models_mut()
+                                .update(&toggle_open_on_key, |v| *v = false);
+                            host.request_redraw(action_cx.window);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                }
+            }),
+        );
 
         let corner = select_tokens::container_corner(theme, variant);
         let token_container_bg = Some(select_tokens::container_background(
