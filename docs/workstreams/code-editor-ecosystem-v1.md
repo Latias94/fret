@@ -342,13 +342,13 @@ Evidence anchors:
 - `ecosystem/fret-code-editor-buffer/src/lib.rs` (`DocId`, `DocUri`, `TextBuffer::uri`, `TextBuffer::set_uri`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`UndoGroupKind`, `UndoGroup`, `apply_and_record_edit`, `UndoHistory::record_or_coalesce`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::replace_buffer`, `CodeEditorHandle::set_text`)
-- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_language`, `ensure_syntax_cache`, `materialize_row_rich_text`)
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_language`, `cached_row_syntax_spans`, `materialize_row_rich_text`)
 - `ecosystem/fret-code-editor/Cargo.toml` (`syntax` / `syntax-rust` / `syntax-all`)
 
 ### 5) Syntax and highlighting (ADR 0193)
 
 - [x] Define semantic token schema (independent of theme colors).
-- [ ] Define incremental update strategy (best-effort; visible-window prioritized).
+- [~] Define incremental update strategy (best-effort; visible-window prioritized).
 - [x] Materialize spans only for visible rows; keep theme mapping paint-only.
 
 ### 6) Semantics (a11y) and selection state
