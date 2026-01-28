@@ -799,7 +799,7 @@ impl MacCursorTransform {
 
 #[cfg(target_os = "macos")]
 #[allow(deprecated)]
-fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
+fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Window>) -> bool {
     use cocoa::{
         appkit::{NSApp, NSApplication, NSWindow},
         base::{id, nil},
@@ -808,7 +808,7 @@ fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
-    unsafe fn ns_window_id(window: &Window) -> Option<id> {
+    unsafe fn ns_window_id(window: &dyn Window) -> Option<id> {
         let handle = window.window_handle().ok()?;
         let RawWindowHandle::AppKit(h) = handle.as_raw() else {
             return None;
