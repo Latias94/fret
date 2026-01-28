@@ -5918,7 +5918,31 @@ fn preview_data_table_torture(
                     ..Default::default()
                 },
                 |cx| {
-                    vec![
+                    let retained =
+                        std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
+                    vec![if retained {
+                        shadcn::DataTable::new()
+                            .overscan(10)
+                            .row_height(Px(28.0))
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                            .into_element_retained(
+                                cx,
+                                data.clone(),
+                                1,
+                                state,
+                                columns.clone(),
+                                |row, _index, _parent| RowKey(row.id),
+                                |col| Arc::<str>::from(col.id.as_ref()),
+                                |cx, col, row| match col.id.as_ref() {
+                                    "name" => cx.text(row.name.as_ref()),
+                                    "status" => cx.text(row.status.as_ref()),
+                                    "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                    _ => cx.text("?"),
+                                },
+                                Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                            )
+                    } else {
                         shadcn::DataTable::new()
                             .overscan(10)
                             .row_height(Px(28.0))
@@ -5938,8 +5962,8 @@ fn preview_data_table_torture(
                                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                                     _ => cx.text("?"),
                                 },
-                            ),
-                    ]
+                            )
+                    }]
                 },
             )]
         });
