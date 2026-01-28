@@ -121,7 +121,7 @@ pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
 ) -> Vec<WindowOverlayLayerEntry> {
-    app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, app| {
+    app.with_global_mut_untracked(state::WindowOverlays::default, |overlays, _app| {
         let mut out: Vec<WindowOverlayLayerEntry> = Vec::new();
 
         for ((w, id), active) in overlays.popovers.iter() {
@@ -152,12 +152,11 @@ pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
             if *w != window {
                 continue;
             }
-            let open = app.models().get_copied(&active.open).unwrap_or(false);
             out.push(WindowOverlayLayerEntry {
                 kind: WindowOverlayLayerKind::Hover,
                 id: *id,
                 layer: active.layer,
-                open,
+                open: true,
             });
         }
 
@@ -165,12 +164,11 @@ pub(crate) fn overlay_layer_entries_for_window<H: UiHost>(
             if *w != window {
                 continue;
             }
-            let open = app.models().get_copied(&active.open).unwrap_or(false);
             out.push(WindowOverlayLayerEntry {
                 kind: WindowOverlayLayerKind::Tooltip,
                 id: *id,
                 layer: active.layer,
-                open,
+                open: true,
             });
         }
 

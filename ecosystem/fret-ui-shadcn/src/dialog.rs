@@ -692,7 +692,11 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::sync::Arc;
+    use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
+    use crate::test_support::render_overlay_frame;
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{
@@ -700,6 +704,7 @@ mod tests {
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::Effect;
+    use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
@@ -861,6 +866,271 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    fn render_dialog_frame_with_auto_focus_hooks(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        overlay_closable: bool,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        initial_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        close_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+        on_close_auto_focus: Option<OnCloseAutoFocus>,
+    ) -> fret_ui::elements::GlobalElementId {
+        OverlayController::begin_frame(app, window);
+
+        let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let dialog = Dialog::new(open.clone())
+                    .overlay_closable(overlay_closable)
+                    .on_open_auto_focus(on_open_auto_focus.clone())
+                    .on_close_auto_focus(on_close_auto_focus.clone())
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let focusable = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(200.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    initial_focus_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let close = DialogClose::new(open.clone()).into_element(cx);
+                            close_id_out.set(Some(close.id));
+
+                            let content =
+                                DialogContent::new(vec![focusable, close]).into_element(cx);
+                            content_id_out.set(Some(content.id));
+                            content
+                        },
+                    );
+
+                vec![dialog]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        trigger_id.expect("trigger id")
+    }
+
+    fn render_dialog_frame_with_open_auto_focus_redirect_target(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        overlay_closable: bool,
+        initial_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        redirect_focus_id_cell: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>>,
+        redirect_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+    ) -> fret_ui::elements::GlobalElementId {
+        OverlayController::begin_frame(app, window);
+
+        let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let redirect_focus_id_cell = redirect_focus_id_cell.clone();
+                let dialog = Dialog::new(open.clone())
+                    .overlay_closable(overlay_closable)
+                    .on_open_auto_focus(on_open_auto_focus.clone())
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let initial = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(200.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    initial_focus_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let redirect = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(200.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    redirect_focus_id_out.set(Some(id));
+                                    *redirect_focus_id_cell
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner()) = Some(id);
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            DialogContent::new(vec![initial, redirect]).into_element(cx)
+                        },
+                    );
+
+                vec![dialog]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        trigger_id.expect("trigger id")
+    }
+
+    fn render_dialog_frame_with_underlay(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        overlay_closable: bool,
+        underlay_activated: Model<bool>,
+    ) {
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dialog-underlay",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        Vec::new()
+                    },
+                );
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.left = Some(Px(20.0));
+                            layout.inset.top = Some(Px(20.0));
+                            layout.position = PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(&open);
+                        Vec::new()
+                    },
+                );
+
+                let dialog = Dialog::new(open.clone())
+                    .overlay_closable(overlay_closable)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let content = DialogContent::new(vec![
+                                ui::raw_text(cx, "dialog").into_element(cx),
+                            ])
+                            .into_element(cx);
+                            content
+                        },
+                    );
+
+                vec![underlay, dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
     }
 
     fn apply_command_effects(ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices) {
@@ -1087,6 +1357,650 @@ mod tests {
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn dialog_close_transition_keeps_modal_barrier_blocking_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices;
+
+        // Frame 1: closed.
+        render_dialog_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_activated.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open -> barrier root should exist.
+        render_dialog_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_activated.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected dialog to install a modal barrier root"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false) -> barrier must remain active.
+        render_dialog_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_activated.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let barrier_root = snap
+            .barrier_root
+            .expect("expected barrier root to remain while the dialog is closing");
+        let barrier_layer = ui.node_layer(barrier_root).expect("barrier layer");
+        let barrier = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == barrier_layer)
+            .expect("barrier debug layer info");
+        assert!(barrier.visible);
+        assert!(barrier.hit_testable);
+        assert!(
+            barrier.blocks_underlay_input,
+            "expected modal barrier layer to block underlay input"
+        );
+
+        // Click the underlay. The modal barrier should block the click-through while closing.
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while the dialog is closing"
+        );
+
+        // After the exit transition settles, the barrier must drop and the underlay becomes
+        // interactive again.
+        let settle_frames = overlay_motion::SHADCN_MOTION_TICKS_200 + 2;
+        for _ in 0..settle_frames {
+            render_dialog_frame_with_underlay(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+                underlay_activated.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_none(),
+            "expected barrier root to clear once the exit transition completes"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(true),
+            "underlay should activate once the barrier is removed"
+        );
+    }
+
+    #[test]
+    fn dialog_close_transition_restores_trigger_focus_while_barrier_blocks_underlay_pointer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices;
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            open: Model<bool>,
+            underlay_activated: Model<bool>,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            let _ = render_overlay_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "dialog-close-transition-focus-restore",
+                |cx| {
+                    let underlay_activated = underlay_activated.clone();
+                    let underlay = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_set_bool(&underlay_activated, true);
+                            Vec::new()
+                        },
+                    );
+
+                    let trigger_id_out = trigger_id_out.clone();
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout.inset.left = Some(Px(20.0));
+                                layout.inset.top = Some(Px(20.0));
+                                layout.position = PositionStyle::Absolute;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: PressableA11y {
+                                test_id: Some(Arc::from("trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            trigger_id_out.set(Some(id));
+                            cx.pressable_toggle_bool(&open);
+                            Vec::new()
+                        },
+                    );
+
+                    let focusable_id_out = focusable_id_out.clone();
+                    let dialog = Dialog::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let focusable = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(200.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        test_id: Some(Arc::from("dialog-focusable")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                move |_cx, _st, id| {
+                                    focusable_id_out.set(Some(id));
+                                    Vec::new()
+                                },
+                            );
+                            DialogContent::new(vec![focusable]).into_element(cx)
+                        },
+                    );
+
+                    vec![underlay, dialog]
+                },
+            );
+        }
+
+        // Frame 1: closed.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            focusable_id_out.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            focusable_id_out.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected dialog to install a modal barrier root"
+        );
+
+        let focusable_id = focusable_id_out.get().expect("dialog focusable id");
+        let focusable_node = fret_ui::elements::node_for_element(&mut app, window, focusable_id)
+            .expect("dialog focusable");
+        ui.set_focus(Some(focusable_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false) -> focus should be restored even
+        // though pointer interactions remain blocked by the barrier.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            focusable_id_out.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected close transition to restore focus to the trigger"
+        );
+
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "expected the modal barrier to keep the underlay inert while closing"
+        );
+    }
+
+    #[test]
+    fn dialog_close_transition_on_close_auto_focus_can_prevent_default_and_restore_focus() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let trigger_id_cell: Arc<std::sync::Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let trigger_id_for_handler = trigger_id_cell.clone();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let trigger = trigger_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(trigger) = trigger {
+                host.request_focus(trigger);
+            }
+            req.prevent_default();
+        });
+
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            open: Model<bool>,
+            underlay_activated: Model<bool>,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            trigger_id_cell: Arc<std::sync::Mutex<Option<fret_ui::elements::GlobalElementId>>>,
+            focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            handler: OnCloseAutoFocus,
+        ) {
+            let _ = render_overlay_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "dialog-close-transition-on-close-auto-focus",
+                |cx| {
+                    let underlay_activated = underlay_activated.clone();
+                    let underlay = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_set_bool(&underlay_activated, true);
+                            Vec::new()
+                        },
+                    );
+
+                    let trigger_id_out = trigger_id_out.clone();
+                    let trigger_id_cell = trigger_id_cell.clone();
+                    let open_for_trigger = open.clone();
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout.inset.left = Some(Px(20.0));
+                                layout.inset.top = Some(Px(20.0));
+                                layout.position = PositionStyle::Absolute;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: PressableA11y {
+                                test_id: Some(Arc::from("trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _st, id| {
+                            trigger_id_out.set(Some(id));
+                            *trigger_id_cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
+                            cx.pressable_toggle_bool(&open_for_trigger);
+                            Vec::new()
+                        },
+                    );
+
+                    let focusable_id_out = focusable_id_out.clone();
+                    let handler = handler.clone();
+                    let dialog = Dialog::new(open.clone())
+                        .on_close_auto_focus(Some(handler))
+                        .into_element(
+                            cx,
+                            |_cx| trigger,
+                            move |cx| {
+                                let focusable = cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(200.0));
+                                            layout.size.height = Length::Px(Px(44.0));
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        a11y: PressableA11y {
+                                            test_id: Some(Arc::from("dialog-focusable")),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |_cx, _st, id| {
+                                        focusable_id_out.set(Some(id));
+                                        Vec::new()
+                                    },
+                                );
+                                DialogContent::new(vec![focusable]).into_element(cx)
+                            },
+                        );
+
+                    vec![underlay, dialog]
+                },
+            );
+        }
+
+        // Frame 1: closed.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            trigger_id_cell.clone(),
+            focusable_id_out.clone(),
+            handler.clone(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open -> barrier root should exist.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            trigger_id_cell.clone(),
+            focusable_id_out.clone(),
+            handler.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected dialog to install a modal barrier root"
+        );
+
+        let focusable_id = focusable_id_out.get().expect("focusable id");
+        let focusable_node = fret_ui::elements::node_for_element(&mut app, window, focusable_id)
+            .expect("focusable node");
+        ui.set_focus(Some(focusable_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing -> handler should be able to restore focus while barrier blocks pointer.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_activated.clone(),
+            trigger_id_out.clone(),
+            trigger_id_cell.clone(),
+            focusable_id_out.clone(),
+            handler.clone(),
+        );
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_close_auto_focus to run"
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected on_close_auto_focus to restore focus to the trigger"
+        );
+
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "expected the modal barrier to keep the underlay inert while closing"
+        );
     }
 
     #[test]
@@ -1480,6 +2394,528 @@ mod tests {
         let trigger_node =
             fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
         assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dialog_open_auto_focus_can_be_prevented() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let close_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |_host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        let trigger = render_dialog_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            content_id.clone(),
+            initial_focus_id.clone(),
+            close_id.clone(),
+            None,
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(FrameId(2));
+        let _ = render_dialog_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            content_id,
+            initial_focus_id.clone(),
+            close_id,
+            Some(handler),
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("focusable");
+        assert_ne!(
+            ui.focus(),
+            Some(initial_focus_node),
+            "expected preventDefault to suppress focusing the first focusable"
+        );
+        let focused = ui.focus().expect("expected focus to be set");
+        assert_eq!(
+            ui.node_layer(focused),
+            ui.node_layer(initial_focus_node),
+            "expected focus containment to keep focus within the dialog layer"
+        );
+    }
+
+    #[test]
+    fn dialog_open_auto_focus_can_be_redirected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let initial_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let redirect_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let redirect_focus_id_cell: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
+        let redirect_focus_id_for_handler = redirect_focus_id_cell.clone();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let id = redirect_focus_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(id) = id {
+                host.request_focus(id);
+            }
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        let trigger = render_dialog_frame_with_open_auto_focus_redirect_target(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            initial_focus_id.clone(),
+            redirect_focus_id_cell.clone(),
+            redirect_focus_id_out.clone(),
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(FrameId(2));
+        let _ = render_dialog_frame_with_open_auto_focus_redirect_target(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            initial_focus_id.clone(),
+            redirect_focus_id_cell,
+            redirect_focus_id_out.clone(),
+            Some(handler),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("initial focus");
+        let redirect_focus = redirect_focus_id_out.get().expect("redirect focus element");
+        let redirect_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, redirect_focus)
+                .expect("redirect focus");
+        assert_ne!(
+            ui.focus(),
+            Some(initial_focus_node),
+            "expected redirect to override the default initial focus"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(redirect_focus_node),
+            "expected open autofocus redirect to win when preventDefault is set"
+        );
+    }
+
+    #[test]
+    fn dialog_open_auto_focus_redirect_to_trigger_is_clamped_to_modal_layer() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let close_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+
+        let target_id_cell: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
+        let target_id_for_handler = target_id_cell.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let id = target_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(id) = id {
+                host.request_focus(id);
+            }
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        let trigger = render_dialog_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            content_id,
+            initial_focus_id.clone(),
+            close_id,
+            None,
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        ui.set_focus(Some(trigger_node));
+        *target_id_cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(trigger);
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(FrameId(2));
+        let _ = render_dialog_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            Rc::new(Cell::new(None)),
+            initial_focus_id.clone(),
+            Rc::new(Cell::new(None)),
+            Some(handler),
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("initial focus node");
+
+        let focused = ui.focus().expect("expected focus after open");
+        assert_ne!(
+            focused, trigger_node,
+            "expected modal focus containment to prevent focusing the trigger while opening"
+        );
+        assert_eq!(
+            ui.node_layer(focused),
+            ui.node_layer(initial_focus_node),
+            "expected focus containment to clamp focus within the dialog layer"
+        );
+    }
+
+    #[test]
+    fn dialog_close_auto_focus_can_be_prevented_and_redirected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let close_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_cell: Arc<std::sync::Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let underlay_id_for_handler = underlay_id_cell.clone();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let id = underlay_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(id) = id {
+                host.request_focus(id);
+            }
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dialog-underlay-autofocus",
+            |cx| {
+                let content_id = content_id.clone();
+                let initial_focus_id = initial_focus_id.clone();
+                let close_id = close_id.clone();
+                let underlay_id_out = underlay_id_out.clone();
+                let underlay_id_cell = underlay_id_cell.clone();
+
+                let underlay = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        a11y: PressableA11y {
+                            test_id: Some(Arc::from("underlay")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |_cx, _st, id| {
+                        underlay_id_out.set(Some(id));
+                        *underlay_id_cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
+                        Vec::new()
+                    },
+                );
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st| Vec::new(),
+                );
+
+                let open_for_dialog = open.clone();
+                let open_for_close = open.clone();
+                let dialog = Dialog::new(open_for_dialog)
+                    .on_close_auto_focus(Some(handler.clone()))
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let focusable = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(200.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    initial_focus_id.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let close = DialogClose::new(open_for_close.clone()).into_element(cx);
+                            close_id.set(Some(close.id));
+
+                            let content =
+                                DialogContent::new(vec![focusable, close]).into_element(cx);
+                            content_id.set(Some(content.id));
+                            content
+                        },
+                    );
+
+                vec![underlay, dialog]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("focusable");
+        ui.set_focus(Some(initial_focus_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 2;
+        for i in 0..settle_frames {
+            app.set_frame_id(FrameId(2 + i as u64));
+            OverlayController::begin_frame(&mut app, window);
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "dialog-underlay-autofocus-close",
+                |cx| {
+                    let underlay_id_out = underlay_id_out.clone();
+                    let underlay_id_cell = underlay_id_cell.clone();
+
+                    let underlay = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: PressableA11y {
+                                test_id: Some(Arc::from("underlay")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |_cx, _st, id| {
+                            underlay_id_out.set(Some(id));
+                            *underlay_id_cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
+                            Vec::new()
+                        },
+                    );
+
+                    let trigger = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st| Vec::new(),
+                    );
+
+                    let dialog = Dialog::new(open.clone())
+                        .on_close_auto_focus(Some(handler.clone()))
+                        .into_element(
+                            cx,
+                            |_cx| trigger,
+                            |cx| cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                        );
+
+                    vec![underlay, dialog]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let underlay_id = underlay_id_out.get().expect("underlay element id");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_close_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected preventDefault close autofocus to allow redirecting focus"
+        );
     }
 
     #[test]

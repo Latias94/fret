@@ -152,9 +152,10 @@ impl OverlayLayerState {
             present,
             interactive,
             // Non-modal overlays may rely on timers for small interaction policies (e.g. submenu
-            // safe-hover close delays). Keeping this enabled avoids requiring per-overlay opt-in
-            // plumbing while the overlay policy surface is still evolving.
-            wants_timer_events: present,
+            // safe-hover close delays). Close transitions are intentionally non-interactive, so
+            // timer processing must stop while closing to avoid driving new behavior behind a
+            // pointer-transparent overlay.
+            wants_timer_events: present && interactive,
         }
     }
 
@@ -236,7 +237,6 @@ pub(super) struct NonModalDismissibleLayerPolicy {
     pub dismissable_branches: Vec<NodeId>,
     pub consume_outside_pointer_events: bool,
     pub disable_outside_pointer_events: bool,
-    pub wants_pointer_move_events: bool,
 }
 
 pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(
@@ -269,7 +269,7 @@ pub(super) fn apply_non_modal_dismissible_layer<H: UiHost>(
             PointerOcclusion::None
         },
     );
-    ui.set_layer_wants_pointer_move_events(layer, interactive && policy.wants_pointer_move_events);
+    ui.set_layer_wants_pointer_move_events(layer, interactive);
 }
 
 pub(super) fn apply_modal_layer<H: UiHost>(ui: &mut UiTree<H>, layer: UiLayerId, present: bool) {

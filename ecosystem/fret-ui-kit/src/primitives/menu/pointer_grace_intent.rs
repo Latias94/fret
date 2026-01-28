@@ -57,6 +57,7 @@ pub struct GraceIntent {
 pub fn grace_side(geometry: PointerGraceIntentGeometry) -> Option<GraceSide> {
     let reference_left = geometry.reference.origin.x.0;
     let reference_right = reference_left + geometry.reference.size.width.0;
+    let reference_center = (reference_left + reference_right) / 2.0;
 
     let floating_left = geometry.floating.origin.x.0;
     let floating_right = floating_left + geometry.floating.size.width.0;
@@ -65,6 +66,16 @@ pub fn grace_side(geometry: PointerGraceIntentGeometry) -> Option<GraceSide> {
         return Some(GraceSide::Right);
     }
     if floating_right <= reference_left {
+        return Some(GraceSide::Left);
+    }
+
+    // Allow a small horizontal overlap as long as the floating panel is predominantly on one side
+    // of the reference. This matches typical menu submenu layouts that slightly overlap to avoid
+    // visible seams between panels.
+    if floating_left >= reference_center {
+        return Some(GraceSide::Right);
+    }
+    if floating_right <= reference_center {
         return Some(GraceSide::Left);
     }
     None
@@ -219,6 +230,18 @@ mod tests {
     use super::*;
 
     use fret_core::Size;
+
+    #[test]
+    fn grace_side_classifies_overlapping_submenu_as_right() {
+        let reference = Rect::new(Point::new(Px(10.0), Px(0.0)), Size::new(Px(20.0), Px(10.0)));
+        // Overlaps by 2px but is mostly to the right.
+        let floating = Rect::new(Point::new(Px(28.0), Px(0.0)), Size::new(Px(20.0), Px(10.0)));
+        let geometry = PointerGraceIntentGeometry {
+            reference,
+            floating,
+        };
+        assert_eq!(grace_side(geometry), Some(GraceSide::Right));
+    }
 
     #[test]
     fn last_pointer_is_safe_matches_geometry_corridor() {
