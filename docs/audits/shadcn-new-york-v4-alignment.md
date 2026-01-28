@@ -460,6 +460,10 @@ Conformance gates:
 - Gaps to check:
   - Content chrome: `bg-foreground text-background`, `rounded-md`, `px-3 py-1.5`, `text-xs`.
   - Arrow: diamond rotated 45deg, size `2.5`, minor translate.
+- Policy notes:
+  - The deterministic "reopen suppression" gates (pointermove-open requirement + suppress hover/focus reopen after dismissal)
+    are implemented in headless as `ecosystem/fret-ui-headless/src/tooltip_intent.rs` and consumed by the shadcn recipe.
+    This keeps overlay recipes wiring-only while still matching Radix-like intent edge cases (and is unit-tested at the headless layer).
 
 ### `Dialog`
 
