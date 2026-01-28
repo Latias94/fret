@@ -28,6 +28,71 @@ pub enum Edit {
     Replace { range: Range<usize>, text: String },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppliedEdit {
+    pub edit: Edit,
+    pub inverse: Edit,
+    pub delta: BufferDelta,
+}
+
+/// A committed, invertible text transaction expressed as UTF-8 byte-index edits.
+///
+/// The transaction is self-contained: it includes the inverse edits computed from the buffer
+/// state at apply time.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TextBufferTx {
+    pub edits: Vec<Edit>,
+    pub inverse_edits: Vec<Edit>,
+}
+
+impl TextBufferTx {
+    pub fn is_empty(&self) -> bool {
+        self.edits.is_empty()
+    }
+
+    pub fn invert(&self) -> Self {
+        Self {
+            edits: self.inverse_edits.iter().rev().cloned().collect(),
+            inverse_edits: self.edits.iter().rev().cloned().collect(),
+        }
+    }
+}
+
+/// Builder for a multi-edit transaction.
+///
+/// This type does not hold references into the buffer; callers apply edits via
+/// `TextBuffer::apply_in_transaction`.
+#[derive(Debug, Clone, Default)]
+pub struct TextBufferTransaction {
+    edits: Vec<Edit>,
+    inverse_edits: Vec<Edit>,
+}
+
+impl TextBufferTransaction {
+    pub fn is_empty(&self) -> bool {
+        self.edits.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.edits.clear();
+        self.inverse_edits.clear();
+    }
+
+    pub fn snapshot(&self) -> TextBufferTx {
+        TextBufferTx {
+            edits: self.edits.clone(),
+            inverse_edits: self.inverse_edits.clone(),
+        }
+    }
+
+    pub fn into_tx(self) -> TextBufferTx {
+        TextBufferTx {
+            edits: self.edits,
+            inverse_edits: self.inverse_edits,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LineDelta {
     pub start: usize,
@@ -110,7 +175,7 @@ impl TextBuffer {
         let start = self.line_start(line)?;
         let end = self
             .line_start(line.saturating_add(1))
-            .unwrap_or_else(|| self.text.len());
+            .unwrap_or(self.text.len());
         Some(start..end.min(self.text.len()))
     }
 
@@ -193,6 +258,76 @@ impl TextBuffer {
         })
     }
 
+    pub fn apply_tx(&mut self, tx: &TextBufferTx) -> Result<(), EditError> {
+        for edit in &tx.edits {
+            self.apply(edit.clone())?;
+        }
+        Ok(())
+    }
+
+    pub fn apply_with_inverse(&mut self, edit: Edit) -> Result<AppliedEdit, EditError> {
+        let inverse = match &edit {
+            Edit::Insert { at, text } => {
+                self.validate_index(*at)?;
+                if !text.is_char_boundary(text.len()) {
+                    return Err(EditError::NotCharBoundary);
+                }
+                Edit::Delete {
+                    range: (*at)..at.saturating_add(text.len()),
+                }
+            }
+            Edit::Delete { range } => {
+                self.validate_range(range)?;
+                let Some(removed) = self.text.get(range.clone()) else {
+                    return Err(EditError::RangeEndOutOfBounds);
+                };
+                Edit::Insert {
+                    at: range.start,
+                    text: removed.to_string(),
+                }
+            }
+            Edit::Replace { range, text } => {
+                self.validate_range(range)?;
+                if !text.is_char_boundary(text.len()) {
+                    return Err(EditError::NotCharBoundary);
+                }
+                let Some(removed) = self.text.get(range.clone()) else {
+                    return Err(EditError::RangeEndOutOfBounds);
+                };
+                Edit::Replace {
+                    range: range.start..range.start.saturating_add(text.len()),
+                    text: removed.to_string(),
+                }
+            }
+        };
+
+        let delta = self.apply(edit.clone())?;
+        Ok(AppliedEdit {
+            edit,
+            inverse,
+            delta,
+        })
+    }
+
+    pub fn apply_in_transaction(
+        &mut self,
+        tx: &mut TextBufferTransaction,
+        edit: Edit,
+    ) -> Result<BufferDelta, EditError> {
+        let applied = self.apply_with_inverse(edit)?;
+        let delta = applied.delta;
+        tx.edits.push(applied.edit);
+        tx.inverse_edits.push(applied.inverse);
+        Ok(delta)
+    }
+
+    pub fn rollback_transaction(&mut self, tx: &TextBufferTransaction) -> Result<(), EditError> {
+        for edit in tx.inverse_edits.iter().rev() {
+            self.apply(edit.clone())?;
+        }
+        Ok(())
+    }
+
     fn validate_index(&self, idx: usize) -> Result<(), EditError> {
         if idx > self.text.len() {
             return Err(EditError::IndexOutOfBounds);
@@ -220,7 +355,7 @@ impl TextBuffer {
         self.line_starts.clear();
         self.line_starts.push(0);
         for (idx, ch) in self.text.char_indices() {
-            if ch == '\n' && idx + 1 <= self.text.len() {
+            if ch == '\n' {
                 self.line_starts.push(idx + 1);
             }
         }
@@ -300,5 +435,75 @@ mod tests {
         assert_eq!(buf.line_text(2), Some(""));
         assert_eq!(buf.line_byte_range_including_newline(1), Some(2..4));
         assert_eq!(buf.line_byte_range(1), Some(2..3));
+    }
+
+    #[test]
+    fn transaction_invert_roundtrip() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "abc".to_string()).unwrap();
+        let mut txn = TextBufferTransaction::default();
+
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Insert {
+                    at: 3,
+                    text: "d".to_string(),
+                },
+            )
+            .unwrap();
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Insert {
+                    at: 4,
+                    text: "e".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(buf.text(), "abcde");
+
+        let tx = txn.snapshot();
+        assert_eq!(tx.edits.len(), 2);
+        assert_eq!(tx.inverse_edits.len(), 2);
+
+        let undo_tx = tx.invert();
+        buf.apply_tx(&undo_tx).unwrap();
+        assert_eq!(buf.text(), "abc");
+
+        let redo_tx = undo_tx.invert();
+        buf.apply_tx(&redo_tx).unwrap();
+        assert_eq!(buf.text(), "abcde");
+    }
+
+    #[test]
+    fn rollback_transaction_restores_text() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "hello".to_string()).unwrap();
+        let mut txn = TextBufferTransaction::default();
+
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Insert {
+                    at: 5,
+                    text: " world".to_string(),
+                },
+            )
+            .unwrap();
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Replace {
+                    range: 0..5,
+                    text: "hi".to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(buf.text(), "hi world");
+
+        buf.rollback_transaction(&txn).unwrap();
+        assert_eq!(buf.text(), "hello");
     }
 }
