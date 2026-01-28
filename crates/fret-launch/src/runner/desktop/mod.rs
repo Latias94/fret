@@ -695,6 +695,80 @@ fn macos_is_left_mouse_down() -> bool {
 
 #[cfg(target_os = "macos")]
 #[allow(deprecated)]
+fn macos_mouse_location() -> Option<cocoa::foundation::NSPoint> {
+    use cocoa::foundation::NSPoint;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+    unsafe {
+        let Some(class) = Class::get("NSEvent") else {
+            return None;
+        };
+        let point: NSPoint = msg_send![class, mouseLocation];
+        Some(point)
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Clone, Copy, Debug, Default)]
+struct MacCursorTransform {
+    scale_factor: f64,
+    x_offset: f64,
+    y_offset: f64,
+    y_flipped: Option<bool>,
+    last_winit_y: Option<f64>,
+    last_cocoa_y: Option<f64>,
+}
+
+#[cfg(target_os = "macos")]
+impl MacCursorTransform {
+    fn update_from_sample(
+        &mut self,
+        winit_screen_pos: PhysicalPosition<f64>,
+        cocoa_mouse_location: cocoa::foundation::NSPoint,
+        scale_factor: f64,
+    ) {
+        let cocoa_x = cocoa_mouse_location.x * scale_factor;
+        let cocoa_y = cocoa_mouse_location.y * scale_factor;
+
+        if self.y_flipped.is_none()
+            && let (Some(prev_winit_y), Some(prev_cocoa_y)) = (self.last_winit_y, self.last_cocoa_y)
+        {
+            let dy_winit = winit_screen_pos.y - prev_winit_y;
+            let dy_cocoa = cocoa_y - prev_cocoa_y;
+            if dy_winit.abs() > 0.5 && dy_cocoa.abs() > 0.5 {
+                self.y_flipped = Some(dy_winit * dy_cocoa < 0.0);
+            }
+        }
+
+        self.last_winit_y = Some(winit_screen_pos.y);
+        self.last_cocoa_y = Some(cocoa_y);
+
+        self.scale_factor = scale_factor;
+        self.x_offset = winit_screen_pos.x - cocoa_x;
+
+        let y_flipped = self.y_flipped.unwrap_or(true);
+        self.y_offset = if y_flipped {
+            winit_screen_pos.y + cocoa_y
+        } else {
+            winit_screen_pos.y - cocoa_y
+        };
+    }
+
+    fn map(&self, cocoa_mouse_location: cocoa::foundation::NSPoint) -> PhysicalPosition<f64> {
+        let cocoa_x = cocoa_mouse_location.x * self.scale_factor;
+        let cocoa_y = cocoa_mouse_location.y * self.scale_factor;
+        let x = cocoa_x + self.x_offset;
+        let y = if self.y_flipped.unwrap_or(true) {
+            self.y_offset - cocoa_y
+        } else {
+            cocoa_y + self.y_offset
+        };
+        PhysicalPosition::new(x, y)
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
 fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
     use cocoa::{
         appkit::{NSApp, NSApplication, NSWindow},
@@ -902,6 +976,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
     open_url: NativeOpenUrl,
     file_dialog: NativeFileDialog,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
+    #[cfg(target_os = "macos")]
+    macos_cursor_transform: Option<MacCursorTransform>,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
     internal_drag_pointer_id: Option<fret_core::PointerId>,
@@ -991,6 +1067,33 @@ struct StreamingImageUpdateNv12<'a> {
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
+
+    #[cfg(target_os = "macos")]
+    fn macos_calibrate_cursor_transform_from_window_sample(
+        &mut self,
+        winit_screen_pos: PhysicalPosition<f64>,
+        scale_factor: f64,
+    ) {
+        let Some(cocoa_pos) = macos_mouse_location() else {
+            return;
+        };
+        let transform = self
+            .macos_cursor_transform
+            .get_or_insert_with(Default::default);
+        transform.update_from_sample(winit_screen_pos, cocoa_pos, scale_factor);
+    }
+
+    #[cfg(target_os = "macos")]
+    fn macos_refresh_cursor_screen_pos_from_nsevent(&mut self) -> bool {
+        let Some(transform) = self.macos_cursor_transform else {
+            return false;
+        };
+        let Some(cocoa_pos) = macos_mouse_location() else {
+            return false;
+        };
+        self.cursor_screen_pos = Some(transform.map(cocoa_pos));
+        true
+    }
 
     fn init_renderdoc_if_needed(&mut self) {
         if self.renderdoc.is_some() {
@@ -2002,6 +2105,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             open_url: NativeOpenUrl,
             file_dialog: NativeFileDialog::default(),
             cursor_screen_pos: None,
+            #[cfg(target_os = "macos")]
+            macos_cursor_transform: None,
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
             internal_drag_pointer_id: None,
