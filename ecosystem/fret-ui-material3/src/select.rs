@@ -18,8 +18,8 @@ use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned, ids};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps,
-    SvgIconProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollProps,
+    SemanticsProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
@@ -301,7 +301,11 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
             let min_width = Px(anchor.size.width.0.max(128.0));
             let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
-            let estimated = Size::new(min_width, Px(item_height.0 * select.items.len() as f32));
+            let max_visible = 7.0;
+            let max_height = Px(item_height.0 * max_visible);
+            let estimated_height =
+                Px((item_height.0 * (select.items.len().max(1) as f32)).min(max_height.0));
+            let estimated = Size::new(min_width, estimated_height);
 
             let direction = direction_prim::use_direction_in_scope(cx, None);
             let placement =
@@ -752,33 +756,104 @@ fn select_listbox_panel<H: UiHost>(
                 layout: {
                     let mut l = fret_ui::element::LayoutStyle::default();
                     l.size.width = Length::Fill;
+                    l.size.height = Length::Fill;
                     l.overflow = Overflow::Clip;
                     l
                 },
                 ..Default::default()
             },
             move |cx| {
-                vec![cx.roving_flex(roving, move |cx| {
-                    let mut out: Vec<AnyElement> = Vec::with_capacity(count);
-                    for (idx, item) in items.iter().cloned().enumerate() {
-                        let tab_stop = idx == tab_stop_idx;
-                        out.push(select_list_item(
-                            cx,
-                            &theme,
-                            variant,
-                            item,
-                            model.clone(),
-                            open.clone(),
-                            selected.clone(),
-                            selected_bg,
-                            tab_stop,
-                            idx,
-                            count,
-                            initial_focus_id_out.clone(),
-                        ));
-                    }
-                    out
-                })]
+                vec![cx.scroll(
+                    ScrollProps {
+                        layout: {
+                            let mut l = fret_ui::element::LayoutStyle::default();
+                            l.size.width = Length::Fill;
+                            l.size.height = Length::Fill;
+                            l.overflow = Overflow::Clip;
+                            l
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.roving_flex(roving, move |cx| {
+                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                use fret_ui::action::RovingNavigateResult;
+
+                                let is_disabled = |idx: usize| -> bool {
+                                    it.disabled.get(idx).copied().unwrap_or(false)
+                                };
+
+                                let forward = match it.key {
+                                    KeyCode::ArrowDown => Some(true),
+                                    KeyCode::ArrowUp => Some(false),
+                                    _ => None,
+                                };
+
+                                if it.key == KeyCode::Home {
+                                    let target = (0..it.len).find(|&i| !is_disabled(i));
+                                    return RovingNavigateResult::Handled { target };
+                                }
+                                if it.key == KeyCode::End {
+                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                    return RovingNavigateResult::Handled { target };
+                                }
+
+                                let Some(forward) = forward else {
+                                    return RovingNavigateResult::NotHandled;
+                                };
+
+                                let current = it
+                                    .current
+                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                let Some(current) = current else {
+                                    return RovingNavigateResult::Handled { target: None };
+                                };
+
+                                let len = it.len;
+                                let mut target: Option<usize> = None;
+                                if it.wrap {
+                                    for step in 1..=len {
+                                        let idx = if forward {
+                                            (current + step) % len
+                                        } else {
+                                            (current + len - (step % len)) % len
+                                        };
+                                        if !is_disabled(idx) {
+                                            target = Some(idx);
+                                            break;
+                                        }
+                                    }
+                                } else if forward {
+                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                } else if current > 0 {
+                                    target = (0..current).rev().find(|&i| !is_disabled(i));
+                                }
+
+                                RovingNavigateResult::Handled { target }
+                            }));
+
+                            let mut out: Vec<AnyElement> = Vec::with_capacity(count);
+                            for (idx, item) in items.iter().cloned().enumerate() {
+                                let tab_stop = idx == tab_stop_idx;
+                                out.push(select_list_item(
+                                    cx,
+                                    &theme,
+                                    variant,
+                                    item,
+                                    model.clone(),
+                                    open.clone(),
+                                    selected.clone(),
+                                    selected_bg,
+                                    tab_stop,
+                                    idx,
+                                    count,
+                                    initial_focus_id_out.clone(),
+                                ));
+                            }
+                            out
+                        })]
+                    },
+                )]
             },
         )]
     })

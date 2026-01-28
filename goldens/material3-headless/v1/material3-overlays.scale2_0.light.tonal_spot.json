@@ -723,6 +723,9 @@
           "kind": "push_clip_rect"
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
           "kind": "text",
           "order": 0
         },
@@ -761,6 +764,9 @@
         {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "pop_clip"
