@@ -52,6 +52,7 @@ Each TODO is labeled:
     - Cursor screen position updates: `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - Cross-window routing uses `cursor_screen_pos`: `crates/fret-launch/src/runner/desktop/mod.rs`
     - Online calibration + sampling: `crates/fret-launch/src/runner/desktop/mod.rs` (`MacCursorTransform`, `macos_mouse_location`, `macos_refresh_cursor_screen_pos_from_nsevent`)
+    - Diagnostics: `FRET_MACOS_CURSOR_TRACE=1` (emits cursor calibration + mapping lines into `target/fret-dock-tearoff.log` when `FRET_DOCK_TEAROFF_LOG=1` is also set)
   - Acceptance:
     - During a dock drag, move outside all windows and back: hover/drop target selection remains correct.
 
@@ -69,6 +70,7 @@ Each TODO is labeled:
   - Evidence anchors:
     - Follow state machine: `crates/fret-launch/src/runner/desktop/mod.rs` (`dock_tearoff_follow`, `stop_dock_tearoff_follow`)
     - Cancel/drag end guard: `crates/fret-launch/src/runner/desktop/mod.rs` (`update_dock_tearoff_follow`)
+    - about_to_wait guard: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`about_to_wait`)
     - Escape cancel: `crates/fret-ui/src/tree/dispatch.rs` and runner cancel path `crates/fret-launch/src/runner/desktop/app_handler.rs`
   - Acceptance:
     - Escape during dock drag cancels and stops follow.

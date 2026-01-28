@@ -680,6 +680,15 @@ fn dock_tearoff_log(_args: fmt::Arguments<'_>) {
 }
 
 #[cfg(target_os = "macos")]
+fn macos_cursor_trace_enabled() -> bool {
+    use std::sync::OnceLock;
+
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED
+        .get_or_init(|| std::env::var_os("FRET_MACOS_CURSOR_TRACE").is_some_and(|v| !v.is_empty()))
+}
+
+#[cfg(target_os = "macos")]
 #[allow(deprecated)]
 fn macos_is_left_mouse_down() -> bool {
     use objc::runtime::Class;
@@ -752,6 +761,20 @@ impl MacCursorTransform {
         } else {
             winit_screen_pos.y - cocoa_y
         };
+
+        if macos_cursor_trace_enabled() {
+            dock_tearoff_log(format_args!(
+                "[cursor-calibrate] winit=({:.1},{:.1}) cocoa=({:.1},{:.1}) scale={:.3} flipped={:?} x_off={:.1} y_off={:.1}",
+                winit_screen_pos.x,
+                winit_screen_pos.y,
+                cocoa_x,
+                cocoa_y,
+                self.scale_factor,
+                self.y_flipped,
+                self.x_offset,
+                self.y_offset,
+            ));
+        }
     }
 
     fn map(&self, cocoa_mouse_location: cocoa::foundation::NSPoint) -> PhysicalPosition<f64> {
@@ -763,7 +786,14 @@ impl MacCursorTransform {
         } else {
             cocoa_y + self.y_offset
         };
-        PhysicalPosition::new(x, y)
+        let out = PhysicalPosition::new(x, y);
+        if macos_cursor_trace_enabled() {
+            dock_tearoff_log(format_args!(
+                "[cursor-map] cocoa=({:.1},{:.1}) scale={:.3} flipped={:?} out=({:.1},{:.1})",
+                cocoa_x, cocoa_y, self.scale_factor, self.y_flipped, out.x, out.y
+            ));
+        }
+        out
     }
 }
 
