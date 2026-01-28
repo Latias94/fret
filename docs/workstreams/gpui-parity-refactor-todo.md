@@ -675,6 +675,8 @@ topics (if/when we implement them):
     - Run with: `FRET_UI_GALLERY_TREE_RETAINED=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
     - Expectation: crossing the overscan boundary reconciles attach/detach deltas (no parent cache-root rerender), and remains stale-paint safe.
     - Gate (suite): `fretboard diag suite ui-gallery-tree-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-tree-row-0 --check-stale-paint ui-gallery-tree-row-0 ...`
+    - Note: the script uses the sidebar search input (`ui-gallery-nav-search`) to keep navigation stable as the page list grows.
+    - Evidence bundle (cache+shell, release; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-tree-retained-suite-shell/1769612148231-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
   - Plan (v1; fixed/known height only):
     - Add a runtime-owned `WindowedSurfaceHost` boundary that can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
     - Define an opt-in authoring API that stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
