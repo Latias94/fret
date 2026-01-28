@@ -12,6 +12,8 @@ use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 use time::Date;
 
@@ -251,6 +253,8 @@ pub(crate) fn content_view(
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -394,6 +398,8 @@ pub(crate) fn content_view(
         virtual_list_torture_edit_row,
         virtual_list_torture_edit_text,
         virtual_list_torture_scroll,
+        code_editor_syntax_rust,
+        code_editor_boundary_identifier,
     );
     let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
         cx.text(docs_md)
@@ -518,6 +524,8 @@ fn page_preview(
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -542,8 +550,18 @@ fn page_preview(
             virtual_list_torture_scroll,
         ),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
-        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(cx, theme),
-        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(cx, theme),
+        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(
+            cx,
+            theme,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+        ),
+        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(
+            cx,
+            theme,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+        ),
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
@@ -1809,16 +1827,59 @@ fn code_editor_torture_source() -> String {
         .clone()
 }
 
-fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+fn preview_code_editor_mvp(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    syntax_rust: Model<bool>,
+    boundary_identifier: Model<bool>,
+) -> Vec<AnyElement> {
+    let syntax_enabled = cx
+        .get_model_copied(&syntax_rust, Invalidation::Layout)
+        .unwrap_or(false);
+    let boundary_identifier_enabled = cx
+        .get_model_copied(&boundary_identifier, Invalidation::Layout)
+        .unwrap_or(true);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
-        |cx| {
+        move |cx| {
             vec![
                 cx.text("Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME)."),
                 cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(syntax_rust.clone())
+                                .a11y_label("Toggle Rust syntax highlighting")
+                                .into_element(cx),
+                            cx.text(if syntax_enabled {
+                                "Syntax: Rust (tree-sitter)"
+                            } else {
+                                "Syntax: disabled"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(boundary_identifier.clone())
+                                .a11y_label("Toggle identifier word boundaries")
+                                .into_element(cx),
+                            cx.text(if boundary_identifier_enabled {
+                                "Word boundaries: Identifier"
+                            } else {
+                                "Word boundaries: UnicodeWord"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -1827,6 +1888,20 @@ fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> V
         || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
         |h| h.clone(),
     );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(32)
@@ -1858,16 +1933,59 @@ fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> V
     vec![header, panel]
 }
 
-fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+fn preview_code_editor_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    syntax_rust: Model<bool>,
+    boundary_identifier: Model<bool>,
+) -> Vec<AnyElement> {
+    let syntax_enabled = cx
+        .get_model_copied(&syntax_rust, Invalidation::Layout)
+        .unwrap_or(false);
+    let boundary_identifier_enabled = cx
+        .get_model_copied(&boundary_identifier, Invalidation::Layout)
+        .unwrap_or(true);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
-        |cx| {
+        move |cx| {
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(syntax_rust.clone())
+                                .a11y_label("Toggle Rust syntax highlighting")
+                                .into_element(cx),
+                            cx.text(if syntax_enabled {
+                                "Syntax: Rust (tree-sitter)"
+                            } else {
+                                "Syntax: disabled"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(boundary_identifier.clone())
+                                .a11y_label("Toggle identifier word boundaries")
+                                .into_element(cx),
+                            cx.text(if boundary_identifier_enabled {
+                                "Word boundaries: Identifier"
+                            } else {
+                                "Word boundaries: UnicodeWord"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -1876,6 +1994,20 @@ fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
         || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
         |h| h.clone(),
     );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)

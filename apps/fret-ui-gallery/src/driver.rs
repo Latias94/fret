@@ -128,6 +128,8 @@ struct UiGalleryWindowState {
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -411,6 +413,8 @@ impl UiGalleryDriver {
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
         let switch = app.models_mut().insert(true);
+        let code_editor_syntax_rust = app.models_mut().insert(true);
+        let code_editor_boundary_identifier = app.models_mut().insert(true);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
@@ -530,6 +534,8 @@ impl UiGalleryDriver {
             progress,
             checkbox,
             switch,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -984,6 +990,8 @@ impl UiGalleryDriver {
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
+        let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
+        let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
@@ -1388,6 +1396,8 @@ impl UiGalleryDriver {
                                             virtual_list_torture_edit_row.clone(),
                                             virtual_list_torture_edit_text.clone(),
                                             virtual_list_torture_scroll.clone(),
+                                            code_editor_syntax_rust.clone(),
+                                            code_editor_boundary_identifier.clone(),
                                         )
                                     }
                                 })]
@@ -1476,6 +1486,8 @@ impl UiGalleryDriver {
                                         virtual_list_torture_edit_row.clone(),
                                         virtual_list_torture_edit_text.clone(),
                                         virtual_list_torture_scroll.clone(),
+                                        code_editor_syntax_rust.clone(),
+                                        code_editor_boundary_identifier.clone(),
                                     )
                                 }
                             })
