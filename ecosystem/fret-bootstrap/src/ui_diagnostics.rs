@@ -2612,7 +2612,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -2634,6 +2634,7 @@ impl Default for UiInputArbitrationSnapshotV1 {
     fn default() -> Self {
         Self {
             modal_barrier_root: None,
+            focus_barrier_root: None,
             pointer_occlusion: "none".to_string(),
             pointer_occlusion_layer_id: None,
             pointer_capture_active: false,
