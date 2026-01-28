@@ -1863,6 +1863,15 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn enforce_focus_barrier_scope(&mut self, active_roots: &[NodeId]) {
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+        {
+            self.focus = None;
+        }
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
