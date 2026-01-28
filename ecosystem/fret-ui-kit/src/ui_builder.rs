@@ -127,12 +127,6 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
-    pub fn text_xs(mut self) -> Self {
-        self.inner.preset = crate::ui::TextPreset::Xs;
-        self.inner.wrap = TextWrap::Word;
-        self
-    }
-
     pub fn text_base(mut self) -> Self {
         self.inner.preset = crate::ui::TextPreset::Base;
         self.inner.wrap = TextWrap::Word;

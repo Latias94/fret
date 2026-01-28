@@ -50,22 +50,6 @@ pub(crate) fn text_sm_style(theme: &Theme) -> TextStyle {
     }
 }
 
-pub(crate) fn text_xs_style(theme: &Theme) -> TextStyle {
-    let size = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_PX)
-        .unwrap_or_else(|| Px(font_size(theme).0 - 2.0));
-    let line_height = theme
-        .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
-        .unwrap_or_else(|| Px(font_line_height(theme).0 - 4.0));
-
-    TextStyle {
-        font: FontId::default(),
-        size,
-        line_height: Some(line_height),
-        ..Default::default()
-    }
-}
-
 pub(crate) fn text_base_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_BASE_PX)

@@ -18,6 +18,11 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_shadcn::button_group::ButtonGroupText;
+use fret_ui_shadcn::empty::{
+    EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
+};
+use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -1986,7 +1991,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
     let snap_default = run_fret_root(bounds, |cx| {
         vec![
             fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
-                .size(fret_ui_shadcn::SidebarMenuButtonSize::Default)
+                .size(SidebarMenuButtonSize::Default)
                 .into_element(cx),
         ]
     });
@@ -2011,7 +2016,7 @@ fn assert_sidebar_menu_button_heights_match_web(web_name: &str) {
         let snap_lg = run_fret_root(bounds, |cx| {
             vec![
                 fret_ui_shadcn::SidebarMenuButton::new("Sidebar Menu Button")
-                    .size(fret_ui_shadcn::SidebarMenuButtonSize::Lg)
+                    .size(SidebarMenuButtonSize::Lg)
                     .collapsed(collapsed)
                     .into_element(cx),
             ]
@@ -3342,16 +3347,16 @@ fn web_vs_fret_layout_empty_demo_geometry_matches_web() {
 
         let icon =
             decl_icon::icon_with(cx, fret_icons::ids::ui::CHEVRON_DOWN, Some(Px(24.0)), None);
-        let media = fret_ui_shadcn::EmptyMedia::new(vec![icon])
-            .variant(fret_ui_shadcn::EmptyMediaVariant::Icon)
+        let media = EmptyMedia::new(vec![icon])
+            .variant(EmptyMediaVariant::Icon)
             .into_element(cx);
 
-        let title = fret_ui_shadcn::EmptyTitle::new("No Projects Yet").into_element(cx);
-        let desc = fret_ui_shadcn::EmptyDescription::new(
+        let title = EmptyTitle::new("No Projects Yet").into_element(cx);
+        let desc = EmptyDescription::new(
             "You haven't created any projects yet. Get started by creating your first project.",
         )
         .into_element(cx);
-        let header = fret_ui_shadcn::EmptyHeader::new(vec![media, title, desc]).into_element(cx);
+        let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
         let header = cx.semantics(
             fret_ui::element::SemanticsProps {
                 role: SemanticsRole::Panel,
@@ -3380,7 +3385,7 @@ fn web_vs_fret_layout_empty_demo_geometry_matches_web() {
                 ]
             },
         );
-        let content = fret_ui_shadcn::EmptyContent::new(vec![actions]).into_element(cx);
+        let content = EmptyContent::new(vec![actions]).into_element(cx);
 
         let learn_more = Button::new("Learn More")
             .variant(ButtonVariant::Link)
@@ -3454,22 +3459,21 @@ fn web_vs_fret_layout_empty_background_geometry_matches_web() {
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let icon =
             decl_icon::icon_with(cx, fret_icons::ids::ui::CHEVRON_DOWN, Some(Px(24.0)), None);
-        let media = fret_ui_shadcn::EmptyMedia::new(vec![icon])
-            .variant(fret_ui_shadcn::EmptyMediaVariant::Icon)
+        let media = EmptyMedia::new(vec![icon])
+            .variant(EmptyMediaVariant::Icon)
             .into_element(cx);
 
-        let title = fret_ui_shadcn::EmptyTitle::new("No Notifications").into_element(cx);
-        let desc = fret_ui_shadcn::EmptyDescription::new(
-            "You're all caught up. New notifications will appear here.",
-        )
-        .into_element(cx);
-        let header = fret_ui_shadcn::EmptyHeader::new(vec![media, title, desc]).into_element(cx);
+        let title = EmptyTitle::new("No Notifications").into_element(cx);
+        let desc =
+            EmptyDescription::new("You're all caught up. New notifications will appear here.")
+                .into_element(cx);
+        let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
 
         let button = fret_ui_shadcn::Button::new("Refresh")
             .variant(fret_ui_shadcn::ButtonVariant::Outline)
             .size(fret_ui_shadcn::ButtonSize::Sm)
             .into_element(cx);
-        let content = fret_ui_shadcn::EmptyContent::new(vec![button]).into_element(cx);
+        let content = EmptyContent::new(vec![button]).into_element(cx);
 
         let root = fret_ui_shadcn::Empty::new(vec![header, content]).into_element(cx);
         vec![cx.semantics(
@@ -3529,22 +3533,21 @@ fn web_vs_fret_layout_empty_outline_geometry_matches_web() {
     let snap = run_fret_root_with_services(bounds, &mut services, |cx| {
         let icon =
             decl_icon::icon_with(cx, fret_icons::ids::ui::CHEVRON_DOWN, Some(Px(24.0)), None);
-        let media = fret_ui_shadcn::EmptyMedia::new(vec![icon])
-            .variant(fret_ui_shadcn::EmptyMediaVariant::Icon)
+        let media = EmptyMedia::new(vec![icon])
+            .variant(EmptyMediaVariant::Icon)
             .into_element(cx);
 
-        let title = fret_ui_shadcn::EmptyTitle::new("Cloud Storage Empty").into_element(cx);
-        let desc = fret_ui_shadcn::EmptyDescription::new(
-            "Upload files to your cloud storage to access them anywhere.",
-        )
-        .into_element(cx);
-        let header = fret_ui_shadcn::EmptyHeader::new(vec![media, title, desc]).into_element(cx);
+        let title = EmptyTitle::new("Cloud Storage Empty").into_element(cx);
+        let desc =
+            EmptyDescription::new("Upload files to your cloud storage to access them anywhere.")
+                .into_element(cx);
+        let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
 
         let button = fret_ui_shadcn::Button::new("Upload Files")
             .variant(fret_ui_shadcn::ButtonVariant::Outline)
             .size(fret_ui_shadcn::ButtonSize::Sm)
             .into_element(cx);
-        let content = fret_ui_shadcn::EmptyContent::new(vec![button]).into_element(cx);
+        let content = EmptyContent::new(vec![button]).into_element(cx);
 
         let root = fret_ui_shadcn::Empty::new(vec![header, content]).into_element(cx);
         vec![cx.semantics(
@@ -3607,13 +3610,12 @@ fn web_vs_fret_layout_empty_icon_geometry_matches_web() {
         ) -> AnyElement {
             let icon =
                 decl_icon::icon_with(cx, fret_icons::ids::ui::CHEVRON_DOWN, Some(Px(24.0)), None);
-            let media = fret_ui_shadcn::EmptyMedia::new(vec![icon])
-                .variant(fret_ui_shadcn::EmptyMediaVariant::Icon)
+            let media = EmptyMedia::new(vec![icon])
+                .variant(EmptyMediaVariant::Icon)
                 .into_element(cx);
-            let title = fret_ui_shadcn::EmptyTitle::new(title).into_element(cx);
-            let desc = fret_ui_shadcn::EmptyDescription::new(desc).into_element(cx);
-            let header =
-                fret_ui_shadcn::EmptyHeader::new(vec![media, title, desc]).into_element(cx);
+            let title = EmptyTitle::new(title).into_element(cx);
+            let desc = EmptyDescription::new(desc).into_element(cx);
+            let header = EmptyHeader::new(vec![media, title, desc]).into_element(cx);
             let card = fret_ui_shadcn::Empty::new(vec![header]).into_element(cx);
             cx.semantics(
                 fret_ui::element::SemanticsProps {
@@ -10526,13 +10528,13 @@ fn web_vs_fret_layout_input_group_button_group_geometry_matches() {
             .trailing(vec![icon]);
 
         let group = fret_ui_shadcn::ButtonGroup::new(vec![
-            fret_ui_shadcn::ButtonGroupText::new("https://")
+            ButtonGroupText::new("https://")
                 .refine_layout(
                     LayoutRefinement::default().w_px(MetricRef::Px(Px(web_prefix.rect.w))),
                 )
                 .into(),
             input_group.into(),
-            fret_ui_shadcn::ButtonGroupText::new(".com")
+            ButtonGroupText::new(".com")
                 .refine_layout(
                     LayoutRefinement::default().w_px(MetricRef::Px(Px(web_suffix.rect.w))),
                 )
@@ -22820,20 +22822,18 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
         "web-vs-fret-layout",
         |cx| {
             let empty = fret_ui_shadcn::Empty::new([
-                fret_ui_shadcn::EmptyHeader::new([
-                    fret_ui_shadcn::EmptyMedia::new([fret_ui_shadcn::Spinner::new()
-                        .speed(0.0)
-                        .into_element(cx)])
-                    .variant(fret_ui_shadcn::EmptyMediaVariant::Icon)
-                    .into_element(cx),
-                    fret_ui_shadcn::EmptyTitle::new("Processing your request").into_element(cx),
-                    fret_ui_shadcn::EmptyDescription::new(
+                EmptyHeader::new([
+                    EmptyMedia::new([fret_ui_shadcn::Spinner::new().speed(0.0).into_element(cx)])
+                        .variant(EmptyMediaVariant::Icon)
+                        .into_element(cx),
+                    EmptyTitle::new("Processing your request").into_element(cx),
+                    EmptyDescription::new(
                         "Please wait while we process your request. Do not refresh the page.",
                     )
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                fret_ui_shadcn::EmptyContent::new([fret_ui_shadcn::Button::new("Cancel")
+                EmptyContent::new([fret_ui_shadcn::Button::new("Cancel")
                     .variant(fret_ui_shadcn::ButtonVariant::Outline)
                     .size(fret_ui_shadcn::ButtonSize::Sm)
                     .into_element(cx)])
