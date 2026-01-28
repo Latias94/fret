@@ -4659,6 +4659,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn update_dock_tearoff_follow(&mut self) -> bool {
+        if self.dock_tearoff_follow.is_some() && self.dock_drag_pointer_id().is_none() {
+            // If the dock drag session was canceled (e.g. Escape), ensure we do not keep moving a
+            // dock tear-off window indefinitely.
+            self.stop_dock_tearoff_follow(Instant::now(), false);
+            return true;
+        }
+
         let (window, grab_offset, manual_follow, last_outer_pos) = match self.dock_tearoff_follow {
             Some(follow) => (
                 follow.window,
