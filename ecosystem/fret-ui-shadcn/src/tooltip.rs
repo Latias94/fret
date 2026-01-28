@@ -3,6 +3,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::tooltip_intent::TooltipTriggerIntentGates;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dismissable_layer as radix_dismissable_layer;
@@ -438,37 +439,43 @@ impl Tooltip {
                 left
             });
 
-            if left_hover && (has_pointer_move_opened || suppress_hover_open) {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.has_pointer_move_opened, |v| *v = false);
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.suppress_hover_open, |v| *v = false);
-            }
+            let mut gates = TooltipTriggerIntentGates {
+                has_pointer_move_opened,
+                suppress_hover_open,
+                suppress_focus_open,
+            };
+            let prev = gates;
+            gates = gates.on_left_hover(left_hover);
+            gates = gates.on_focus_changed(focused);
+            let (gates_after_close, clear_close_requested) =
+                gates.on_close_requested(close_requested, focused);
+            gates = gates_after_close;
 
-            if !focused && suppress_focus_open {
+            if gates.has_pointer_move_opened != prev.has_pointer_move_opened {
                 let _ = cx
                     .app
                     .models_mut()
-                    .update(&event_models.suppress_focus_open, |v| *v = false);
+                    .update(&event_models.has_pointer_move_opened, |v| {
+                        *v = gates.has_pointer_move_opened
+                    });
             }
-
-            if close_requested {
-                if has_pointer_move_opened && !suppress_hover_open {
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&event_models.suppress_hover_open, |v| *v = true);
-                }
-                if focused && !suppress_focus_open {
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&event_models.suppress_focus_open, |v| *v = true);
-                }
+            if gates.suppress_hover_open != prev.suppress_hover_open {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_hover_open, |v| {
+                        *v = gates.suppress_hover_open
+                    });
+            }
+            if gates.suppress_focus_open != prev.suppress_focus_open {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&event_models.suppress_focus_open, |v| {
+                        *v = gates.suppress_focus_open
+                    });
+            }
+            if clear_close_requested {
                 let _ = cx
                     .app
                     .models_mut()
@@ -480,8 +487,8 @@ impl Tooltip {
                 .unwrap_or(provider_cfg.disable_hoverable_content);
             let last_pointer = radix_tooltip::tooltip_last_pointer_model(cx);
 
-            let trigger_hovered = hovered && has_pointer_move_opened && !suppress_hover_open;
-            let trigger_focused = focused && !suppress_focus_open;
+            let trigger_hovered = gates.trigger_hovered(hovered);
+            let trigger_focused = gates.trigger_focused(focused);
 
             let anchor_bounds = overlay::anchor_bounds_for_element(cx, anchor_id);
             let floating_bounds = anchor_bounds.and_then(|anchor| {

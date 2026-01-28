@@ -221,6 +221,8 @@ It complements (but does not replace) ADRs:
   - Targets (examples to audit/move):
     - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`HoverCardIntentDriverState`, frame-tick fallback, close suppression heuristics).
     - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (pointermove gating + suppress-after-pointerdown/focus heuristics).
+  - Progress:
+    - Extracted tooltip reopen suppression gates into `ecosystem/fret-ui-headless/src/tooltip_intent.rs` and wired `ecosystem/fret-ui-shadcn/src/tooltip.rs` to consume it (with unit tests in the headless module).
   - Approach:
     - keep wiring in shadcn recipes, but move the deterministic state machine and timers into `ecosystem/fret-ui-kit/src/headless/*` (or extend existing headless primitives like `hover_intent`).
     - add unit tests at the headless layer for the intent driver (open/close timing, suppression edges), then keep only "wiring smoke" in shadcn.
