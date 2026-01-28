@@ -423,7 +423,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
                     return Err(
-                        "missing value for --check-retained-vlist-attach-detach-max".to_string(),
+                        "missing value for --check-retained-vlist-attach-detach-max".to_string()
                     );
                 };
                 check_retained_vlist_attach_detach_max = Some(v.parse::<u64>().map_err(|_| {
@@ -973,42 +973,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 DockingArbitration,
             }
 
-            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
-                if rest.len() == 1 && rest[0] == "ui-gallery" {
-                    (
-                        ui_gallery_suite_scripts()
-                            .into_iter()
-                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                            .collect(),
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
-                    (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-                            ),
-                        )],
-                        Some(BuiltinSuite::UiGallery),
-                    )
-                } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
-                    (
-                        docking_arbitration_suite_scripts()
-                            .into_iter()
-                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                            .collect(),
-                        Some(BuiltinSuite::DockingArbitration),
-                    )
-                } else {
-                    (
-                        rest.into_iter()
-                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                            .collect(),
-                        None,
-                    )
-                };
- 
+            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if rest.len() == 1
+                && rest[0] == "ui-gallery"
+            {
+                (
+                    ui_gallery_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    Some(BuiltinSuite::UiGallery),
+                )
+            } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
+                (
+                    vec![resolve_path(
+                        &workspace_root,
+                        PathBuf::from(
+                            "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                        ),
+                    )],
+                    Some(BuiltinSuite::UiGallery),
+                )
+            } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
+                (
+                    docking_arbitration_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    Some(BuiltinSuite::DockingArbitration),
+                )
+            } else {
+                (
+                    rest.into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    None,
+                )
+            };
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -1102,8 +1102,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                 let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min
                     .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
-                let retained_vlist_attach_detach_max_for_script = check_retained_vlist_attach_detach_max
-                    .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                let retained_vlist_attach_detach_max_for_script =
+                    check_retained_vlist_attach_detach_max
+                        .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
@@ -2703,6 +2704,8 @@ fn docking_arbitration_script_default_gates(
         }
         _ => (None, None, None),
     }
+}
+
 fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -5983,7 +5986,9 @@ fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
 
     if !notify_offenders.is_empty() {
         let mut msg = String::new();
-        msg.push_str("retained virtual-list reconcile should not require notify-based dirty views\n");
+        msg.push_str(
+            "retained virtual-list reconcile should not require notify-based dirty views\n",
+        );
         msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
         msg.push_str(&format!(
             "min_reconcile_events={min_reconcile_events} reconcile_events={reconcile_events} reconcile_frames={reconcile_frames} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
@@ -6015,7 +6020,12 @@ fn check_bundle_for_retained_vlist_attach_detach_max(
 ) -> Result<(), String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
-    check_bundle_for_retained_vlist_attach_detach_max_json(&bundle, bundle_path, max_delta, warmup_frames)
+    check_bundle_for_retained_vlist_attach_detach_max_json(
+        &bundle,
+        bundle_path,
+        max_delta,
+        warmup_frames,
+    )
 }
 
 fn check_bundle_for_retained_vlist_attach_detach_max_json(
@@ -6092,11 +6102,19 @@ fn check_bundle_for_retained_vlist_attach_detach_max_json(
             } else {
                 let attached = records
                     .iter()
-                    .map(|r| r.get("attached_items").and_then(|v| v.as_u64()).unwrap_or(0))
+                    .map(|r| {
+                        r.get("attached_items")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                    })
                     .sum::<u64>();
                 let detached = records
                     .iter()
-                    .map(|r| r.get("detached_items").and_then(|v| v.as_u64()).unwrap_or(0))
+                    .map(|r| {
+                        r.get("detached_items")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                    })
                     .sum::<u64>();
                 (attached, detached)
             };

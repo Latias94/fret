@@ -2585,7 +2585,7 @@ struct WaitUntilState {
     remaining_frames: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiInputArbitrationSnapshotV1 {
     #[serde(default)]
     pub modal_barrier_root: Option<u64>,
@@ -3177,12 +3177,6 @@ impl Default for UiVirtualListWindowSourceV1 {
     }
 }
 
-impl Default for UiVirtualListWindowSourceV1 {
-    fn default() -> Self {
-        Self::Layout
-    }
-}
-
 impl UiVirtualListWindowSourceV1 {
     fn from_source(source: fret_ui::tree::UiDebugVirtualListWindowSource) -> Self {
         match source {
@@ -3322,10 +3316,10 @@ pub struct UiPrepaintActionV1 {
 impl UiPrepaintActionV1 {
     fn from_action(action: &fret_ui::tree::UiDebugPrepaintAction) -> Self {
         let invalidation = action.invalidation.map(|inv| match inv {
-            fret_ui::widget::Invalidation::Layout => "layout",
-            fret_ui::widget::Invalidation::Paint => "paint",
-            fret_ui::widget::Invalidation::HitTest => "hit_test",
-            fret_ui::widget::Invalidation::HitTestOnly => "hit_test_only",
+            fret_ui::Invalidation::Layout => "layout",
+            fret_ui::Invalidation::Paint => "paint",
+            fret_ui::Invalidation::HitTest => "hit_test",
+            fret_ui::Invalidation::HitTestOnly => "hit_test_only",
         });
 
         Self {

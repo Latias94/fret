@@ -99,7 +99,7 @@ fn should_suspend_pointer_gating_for_capture(
         && (disable_outside_pointer_events || consume_outside_pointer_events)
 }
 
-pub fn render<H: UiHost>(
+pub fn render<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,

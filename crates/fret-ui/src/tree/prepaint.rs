@@ -99,29 +99,26 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let Some(inputs) = crate::declarative::frame::with_element_record_for_node(
-            app,
-            window,
-            record.node,
-            |element_record| match &element_record.instance {
-                crate::declarative::frame::ElementInstance::VirtualList(props) => {
-                    Some(VirtualListPrepaintInputs {
-                        element: element_record.element,
-                        axis: props.axis,
-                        len: props.len,
-                        items_revision: props.items_revision,
-                        measure_mode: props.measure_mode,
-                        overscan: props.overscan,
-                        estimate_row_height: props.estimate_row_height,
-                        gap: props.gap,
-                        scroll_margin: props.scroll_margin,
-                        scroll_handle: props.scroll_handle.clone(),
-                    })
-                }
-                _ => None,
-            },
-        )
-        .flatten() else {
+        let Some(inputs) =
+            crate::declarative::frame::element_record_for_node(&mut *app, window, record.node)
+                .and_then(|element_record| match &element_record.instance {
+                    crate::declarative::frame::ElementInstance::VirtualList(props) => {
+                        Some(VirtualListPrepaintInputs {
+                            element: element_record.element,
+                            axis: props.axis,
+                            len: props.len,
+                            items_revision: props.items_revision,
+                            measure_mode: props.measure_mode,
+                            overscan: props.overscan,
+                            estimate_row_height: props.estimate_row_height,
+                            gap: props.gap,
+                            scroll_margin: props.scroll_margin,
+                            scroll_handle: props.scroll_handle.clone(),
+                        })
+                    }
+                    _ => None,
+                })
+        else {
             return;
         };
 

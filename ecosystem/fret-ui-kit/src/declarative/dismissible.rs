@@ -8,7 +8,7 @@ pub use fret_ui::action::DismissReason;
 ///
 /// This is a small wrapper over `fret-ui`'s `render_dismissible_root_with_hooks(...)` so component
 /// crates can depend on `fret-ui-kit` as the stable policy surface (ADR 0067).
-pub fn render_dismissible_root_with_hooks<H: UiHost, I>(
+pub fn render_dismissible_root_with_hooks<H: UiHost + 'static, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn UiServices,
