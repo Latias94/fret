@@ -14,11 +14,10 @@ use fret_code_editor_view::{
     DisplayPoint, byte_to_display_point, display_point_to_byte, move_word_left, move_word_right,
     next_char_boundary, prev_char_boundary, select_word_range,
 };
-#[cfg(feature = "syntax")]
-use fret_core::{AttributedText, TextPaintStyle, TextSpan};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
-    Size, TextOverflow, TextStyle, TextWrap,
+    AttributedText, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId, KeyCode,
+    Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow, TextPaintStyle, TextSpan,
+    TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
@@ -1373,16 +1372,25 @@ fn paint_row(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     };
-    #[cfg(feature = "syntax")]
     let mut drew_rich = false;
-    #[cfg(not(feature = "syntax"))]
-    let drew_rich = false;
-    #[cfg(feature = "syntax")]
-    {
-        let spans = cached_row_syntax_spans(st, row, text_cache_max_entries);
-        if !spans.is_empty() {
-            let theme = painter.theme().clone();
-            let rich = materialize_row_rich_text(&theme, Arc::clone(&line), spans.as_ref());
+
+    if let Some(preedit) = &st.preedit {
+        let caret = st.selection.caret().min(st.buffer.len_bytes());
+        let caret_pt = byte_to_display_point(&st.buffer, caret);
+        if caret_pt.row == row {
+            let line_start = st.buffer.line_start(row).unwrap_or(0);
+            let mut caret_in_line = caret.saturating_sub(line_start).min(line.len());
+            caret_in_line =
+                fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
+
+            let rich = materialize_preedit_rich_text(
+                Arc::clone(&line),
+                caret_in_line,
+                preedit,
+                fg,
+                selection_bg,
+            );
+            let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
             let _ = painter.rich_text(
                 key,
                 DrawOrder(2),
@@ -1394,6 +1402,27 @@ fn paint_row(
                 painter.scale_factor(),
             );
             drew_rich = true;
+        }
+    }
+    #[cfg(feature = "syntax")]
+    {
+        if !drew_rich {
+            let spans = cached_row_syntax_spans(st, row, text_cache_max_entries);
+            if !spans.is_empty() {
+                let theme = painter.theme().clone();
+                let rich = materialize_row_rich_text(&theme, Arc::clone(&line), spans.as_ref());
+                let _ = painter.rich_text(
+                    key,
+                    DrawOrder(2),
+                    origin,
+                    rich,
+                    text_style.clone(),
+                    fg,
+                    constraints,
+                    painter.scale_factor(),
+                );
+                drew_rich = true;
+            }
         }
     }
 
@@ -1430,26 +1459,6 @@ fn paint_row(
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(Px(0.0)),
             });
-        }
-    }
-
-    if let Some(preedit) = &st.preedit {
-        let caret_pt = byte_to_display_point(&st.buffer, st.selection.caret());
-        if caret_pt.row == row {
-            let x = Px(rect.origin.x.0 + caret_pt.col as f32 * cell_w.0);
-            let origin = fret_core::Point::new(x, rect.origin.y);
-            let scope = painter.key_scope(&"fret-code-editor-row-text");
-            let key: u64 = painter.child_key(scope, &(row, 1u8)).into();
-            let _ = painter.text(
-                key,
-                DrawOrder(4),
-                origin,
-                preedit.text.as_str(),
-                text_style.clone(),
-                fg,
-                constraints,
-                painter.scale_factor(),
-            );
         }
     }
 }
@@ -1490,6 +1499,97 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
     }
 
     text
+}
+
+fn materialize_preedit_rich_text(
+    line: Arc<str>,
+    caret_in_line: usize,
+    preedit: &PreeditState,
+    fg: Color,
+    selection_bg: Color,
+) -> AttributedText {
+    let caret_in_line = caret_in_line.min(line.len());
+    let before = line.get(..caret_in_line).unwrap_or("");
+    let after = line.get(caret_in_line..).unwrap_or("");
+
+    let mut display = String::with_capacity(before.len() + preedit.text.len() + after.len());
+    display.push_str(before);
+    display.push_str(preedit.text.as_str());
+    display.push_str(after);
+
+    let before_len = before.len();
+    let preedit_len = preedit.text.len();
+    let after_len = after.len();
+
+    let underline = UnderlineStyle {
+        color: Some(fg),
+        style: DecorationLineStyle::Solid,
+    };
+
+    let cursor_range = preedit.cursor.and_then(|(a, b)| {
+        let a = fret_code_editor_view::clamp_to_char_boundary(preedit.text.as_str(), a)
+            .min(preedit.text.len());
+        let b = fret_code_editor_view::clamp_to_char_boundary(preedit.text.as_str(), b)
+            .min(preedit.text.len());
+        if a == b {
+            return None;
+        }
+        Some(if a <= b { a..b } else { b..a })
+    });
+
+    let mut spans: Vec<TextSpan> = Vec::new();
+    if before_len > 0 {
+        spans.push(TextSpan::new(before_len));
+    }
+
+    if let Some(cursor) = cursor_range {
+        let pre_a = cursor.start.min(preedit_len);
+        let pre_b = cursor.end.min(preedit_len);
+        if pre_a > 0 {
+            spans.push(TextSpan {
+                len: pre_a,
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    underline: Some(underline.clone()),
+                    ..Default::default()
+                },
+            });
+        }
+        spans.push(TextSpan {
+            len: pre_b.saturating_sub(pre_a),
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                bg: Some(selection_bg),
+                underline: Some(underline.clone()),
+                ..Default::default()
+            },
+        });
+        if pre_b < preedit_len {
+            spans.push(TextSpan {
+                len: preedit_len - pre_b,
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    underline: Some(underline),
+                    ..Default::default()
+                },
+            });
+        }
+    } else {
+        spans.push(TextSpan {
+            len: preedit_len,
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                underline: Some(underline),
+                ..Default::default()
+            },
+        });
+    }
+
+    if after_len > 0 {
+        spans.push(TextSpan::new(after_len));
+    }
+
+    AttributedText::new(display, spans)
 }
 
 #[cfg(feature = "syntax")]
@@ -1815,6 +1915,38 @@ mod tests {
 
         assert_eq!(rect.origin.x, Px(20.0), "2 cols * 10px");
         assert_eq!(rect.origin.y, Px(0.0));
+    }
+
+    #[test]
+    fn preedit_rich_text_inserts_and_underlines() {
+        let preedit = PreeditState {
+            text: "世界".to_string(),
+            cursor: Some((0, "世".len())),
+        };
+        let fg = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        };
+        let selection_bg = Color {
+            r: 0.2,
+            g: 0.2,
+            b: 0.2,
+            a: 1.0,
+        };
+
+        let rich = materialize_preedit_rich_text("hello".into(), 2, &preedit, fg, selection_bg);
+        assert_eq!(rich.text.as_ref(), "he世界llo");
+        assert!(rich.is_valid());
+        assert!(
+            rich.spans.iter().any(|s| s.paint.underline.is_some()),
+            "expected preedit spans to be underlined"
+        );
+        assert!(
+            rich.spans.iter().any(|s| s.paint.bg.is_some()),
+            "expected cursor range to be highlighted"
+        );
     }
 
     #[cfg(feature = "syntax-rust")]
