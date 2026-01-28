@@ -400,6 +400,7 @@ impl<H: UiHost> UiTree<H> {
         if is_view_cache_root {
             let window = self.window;
             let sf = scale_factor;
+            self.begin_prepaint_outputs_for_node(node, key);
             self.with_widget_mut(node, |widget, tree| {
                 let mut cx = crate::widget::PrepaintCx {
                     app,

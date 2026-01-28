@@ -524,6 +524,18 @@ pub struct PrepaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    pub fn set_output<T: std::any::Any>(&mut self, value: T) {
+        self.tree.set_prepaint_output(self.node, value);
+    }
+
+    pub fn output<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.prepaint_output(self.node)
+    }
+
+    pub fn output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.prepaint_output_mut(self.node)
+    }
+
     /// Mark an invalidation on `node` for the next frame.
     ///
     /// Prefer `Invalidation::Paint` / `Invalidation::HitTest` here. Invalidating `Layout` from
@@ -613,6 +625,14 @@ pub struct PaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
+    pub fn prepaint_output<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.prepaint_output(self.node)
+    }
+
+    pub fn prepaint_output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.prepaint_output_mut(self.node)
+    }
+
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)

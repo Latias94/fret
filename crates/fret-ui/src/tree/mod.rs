@@ -14,7 +14,7 @@ use fret_runtime::{
     ModelCreatedDebugInfo, ModelId, Platform, PlatformCapabilities, TickId,
 };
 use slotmap::{Key, SlotMap};
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
 use std::slice;
@@ -103,6 +103,7 @@ struct Node<H: UiHost> {
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
     interaction_cache: Option<prepaint::InteractionCacheEntry>,
+    prepaint_outputs: PrepaintOutputs,
     prepaint_hit_test: Option<PrepaintHitTestCache>,
     view_cache: ViewCacheFlags,
     view_cache_needs_rerender: bool,
@@ -126,6 +127,46 @@ struct PrepaintHitTestCache {
     can_scroll_descendant_into_view: bool,
 }
 
+#[derive(Default)]
+struct PrepaintOutputs {
+    key: Option<PaintCacheKey>,
+    values: Vec<(TypeId, Box<dyn Any>)>,
+}
+
+impl PrepaintOutputs {
+    fn begin_frame(&mut self, key: PaintCacheKey) {
+        if self.key != Some(key) {
+            self.key = Some(key);
+            self.values.clear();
+        }
+    }
+
+    fn set<T: Any>(&mut self, value: T) {
+        let ty = TypeId::of::<T>();
+        if let Some((_, existing)) = self.values.iter_mut().find(|(id, _)| *id == ty) {
+            *existing = Box::new(value);
+            return;
+        }
+        self.values.push((ty, Box::new(value)));
+    }
+
+    fn get<T: Any>(&self) -> Option<&T> {
+        let ty = TypeId::of::<T>();
+        self.values
+            .iter()
+            .find(|(id, _)| *id == ty)
+            .and_then(|(_, value)| value.downcast_ref::<T>())
+    }
+
+    fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
+        let ty = TypeId::of::<T>();
+        self.values
+            .iter_mut()
+            .find(|(id, _)| *id == ty)
+            .and_then(|(_, value)| value.downcast_mut::<T>())
+    }
+}
+
 impl<H: UiHost> Node<H> {
     fn new(widget: impl Widget<H> + 'static) -> Self {
         Self {
@@ -142,6 +183,7 @@ impl<H: UiHost> Node<H> {
             },
             paint_cache: None,
             interaction_cache: None,
+            prepaint_outputs: PrepaintOutputs::default(),
             prepaint_hit_test: None,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
@@ -1195,6 +1237,28 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn begin_prepaint_outputs_for_node(&mut self, node: NodeId, key: PaintCacheKey) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.prepaint_outputs.begin_frame(key);
+    }
+
+    pub(crate) fn set_prepaint_output<T: Any>(&mut self, node: NodeId, value: T) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.prepaint_outputs.set(value);
+    }
+
+    pub(crate) fn prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
+        self.nodes.get(node)?.prepaint_outputs.get::<T>()
+    }
+
+    pub(crate) fn prepaint_output_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
+        self.nodes.get_mut(node)?.prepaint_outputs.get_mut::<T>()
+    }
+
     #[cfg(feature = "diagnostics")]
     fn debug_sample_child_elements_head(
         &self,
