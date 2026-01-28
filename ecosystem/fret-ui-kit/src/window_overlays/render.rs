@@ -560,10 +560,10 @@ pub fn render<H: UiHost + 'static>(
         let consume_outside_pointer_events = req.consume_outside_pointer_events;
         let wants_pointer_move_events = req.on_pointer_move.is_some();
         let open = req.open;
+        let on_open_auto_focus = req.on_open_auto_focus.clone();
         let open_for_dismiss = open.clone();
         let on_pointer_move = req.on_pointer_move.clone();
         let on_dismiss_request = req.on_dismiss_request.clone();
-        let on_open_auto_focus = req.on_open_auto_focus.clone();
         let on_close_auto_focus = req.on_close_auto_focus.clone();
         let on_dismiss_request_for_root = on_dismiss_request.clone();
         let children = req.children;
@@ -810,6 +810,30 @@ pub fn render<H: UiHost + 'static>(
         let should_focus_initial = opening && !open_auto_focus_prevented;
 
         if should_focus_initial || pending_initial_focus {
+            let mut focus_req = AutoFocusRequestCx::new();
+            if open_now && (should_focus_initial || pending_initial_focus) {
+                if let Some(on_open_auto_focus) = &on_open_auto_focus {
+                    let mut host = OverlayFocusHost { ui, app, window };
+                    on_open_auto_focus(
+                        &mut host,
+                        ActionCx {
+                            window,
+                            target: popover_id,
+                        },
+                        &mut focus_req,
+                    );
+                }
+            }
+
+            if focus_req.default_prevented() {
+                app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                    if let Some(entry) = overlays.popovers.get_mut(&key) {
+                        entry.pending_initial_focus = false;
+                    }
+                });
+                continue;
+            }
+
             if should_focus_initial && open_now && consume_outside_pointer_events {
                 ui.set_focus(Some(root));
             }
@@ -1112,7 +1136,6 @@ pub fn render<H: UiHost + 'static>(
         if dock_drag_affects_window {
             continue;
         }
-
         if !req.present {
             continue;
         }

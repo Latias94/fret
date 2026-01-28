@@ -4949,9 +4949,9 @@ impl UiHitTestSnapshotV1 {
             });
         }
 
-        let mut by_root: HashMap<NodeId, UiDebugLayerInfo> = HashMap::new();
+        let mut by_root: HashMap<NodeId, &UiDebugLayerInfo> = HashMap::new();
         for layer in layers {
-            by_root.insert(layer.root, layer.clone());
+            by_root.insert(layer.root, layer);
         }
 
         if let Some(root) = focus_barrier_root {

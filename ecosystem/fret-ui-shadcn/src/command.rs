@@ -61,6 +61,7 @@ pub fn command_palette_input_context<H: UiHost>(app: &H) -> InputContext {
         window_arbitration: None,
         // Best-effort: treat the palette as a global discovery surface, not a text-editing scope.
         focus_is_text_input: false,
+        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,

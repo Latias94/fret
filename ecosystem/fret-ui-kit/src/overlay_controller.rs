@@ -58,7 +58,7 @@ pub enum OverlayKind {
 pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
-    pub style: Option<window_overlays::ToastLayerStyle>,
+    pub style: window_overlays::ToastLayerStyle,
     pub margin: Option<fret_core::Px>,
     pub gap: Option<fret_core::Px>,
     pub toast_min_width: Option<fret_core::Px>,
@@ -137,7 +137,7 @@ impl OverlayRequest {
         trigger: GlobalElementId,
         open: Model<bool>,
         presence: OverlayPresence,
-        children: impl IntoIterator<Item = AnyElement>,
+        children: Vec<AnyElement>,
     ) -> Self {
         Self {
             kind: OverlayKind::NonModalDismissible,
@@ -156,7 +156,7 @@ impl OverlayRequest {
             initial_focus: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
-            children: children.into_iter().collect(),
+            children,
             toast_layer: None,
         }
     }
@@ -170,7 +170,7 @@ impl OverlayRequest {
         trigger: GlobalElementId,
         open: Model<bool>,
         presence: OverlayPresence,
-        children: impl IntoIterator<Item = AnyElement>,
+        children: Vec<AnyElement>,
     ) -> Self {
         let mut req = Self::dismissible_popover(id, trigger, open, presence, children);
         req.consume_outside_pointer_events = true;
@@ -183,7 +183,7 @@ impl OverlayRequest {
         trigger: Option<GlobalElementId>,
         open: Model<bool>,
         presence: OverlayPresence,
-        children: impl IntoIterator<Item = AnyElement>,
+        children: Vec<AnyElement>,
     ) -> Self {
         Self {
             kind: OverlayKind::Modal,
@@ -202,7 +202,7 @@ impl OverlayRequest {
             initial_focus: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
-            children: children.into_iter().collect(),
+            children,
             toast_layer: None,
         }
     }
@@ -211,7 +211,7 @@ impl OverlayRequest {
         id: GlobalElementId,
         open: Model<bool>,
         presence: OverlayPresence,
-        children: impl IntoIterator<Item = AnyElement>,
+        children: Vec<AnyElement>,
     ) -> Self {
         Self {
             kind: OverlayKind::Tooltip,
@@ -230,7 +230,7 @@ impl OverlayRequest {
             initial_focus: None,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
-            children: children.into_iter().collect(),
+            children,
             toast_layer: None,
         }
     }
@@ -286,7 +286,7 @@ impl OverlayRequest {
             toast_layer: Some(ToastLayerSpec {
                 store,
                 position: window_overlays::ToastPosition::default(),
-                style: None,
+                style: window_overlays::ToastLayerStyle::default(),
                 margin: None,
                 gap: None,
                 toast_min_width: None,
@@ -319,7 +319,7 @@ impl OverlayRequest {
             .toast_layer
             .as_mut()
             .expect("toast_style requires a ToastLayer request");
-        spec.style = Some(style);
+        spec.style = style;
         self
     }
 
@@ -582,15 +582,13 @@ impl OverlayController {
 
                 let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
                     .position(spec.position)
+                    .style(spec.style)
                     .root_name(root_name);
                 if let Some(margin) = spec.margin {
                     toast_req = toast_req.margin(margin);
                 }
                 if let Some(gap) = spec.gap {
                     toast_req = toast_req.gap(gap);
-                }
-                if let Some(style) = spec.style {
-                    toast_req = toast_req.style(style);
                 }
                 if let Some(width) = spec.toast_min_width {
                     toast_req = toast_req.toast_min_width(width);
