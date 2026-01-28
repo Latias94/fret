@@ -46,11 +46,12 @@ Each TODO is labeled:
     - Tear off a tab into a new OS window, then re-dock it into main → the floating OS window closes.
     - Drag the last remaining tab out of a floating window → source window closes without leaving a blank shell.
 
-- [ ] DW-P0-macos-002 Make global cursor tracking robust outside windows on macOS.
+- [~] DW-P0-macos-002 Make global cursor tracking robust outside windows on macOS.
   - Goal: reduce `cursor_screen_pos` drift when the cursor is outside any window during dock drag.
   - Evidence anchors:
     - Cursor screen position updates: `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - Cross-window routing uses `cursor_screen_pos`: `crates/fret-launch/src/runner/desktop/mod.rs`
+    - Online calibration + sampling: `crates/fret-launch/src/runner/desktop/mod.rs` (`MacCursorTransform`, `macos_mouse_location`, `macos_refresh_cursor_screen_pos_from_nsevent`)
   - Acceptance:
     - During a dock drag, move outside all windows and back: hover/drop target selection remains correct.
 
