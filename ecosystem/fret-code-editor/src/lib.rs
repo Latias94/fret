@@ -367,6 +367,7 @@ impl CodeEditor {
                     st.dragging = true;
                     st.drag_pointer = Some(down.pointer_id);
                     st.undo_group = None;
+                    st.preedit = None;
 
                     let caret = caret_for_pointer(&st.buffer, row, bounds, down.position, cell_w);
                     match down.click_count {
@@ -397,7 +398,6 @@ impl CodeEditor {
                             }
                         }
                     }
-                    st.preedit = None;
 
                     let caret_rect = caret_rect_for_selection(
                         &st.buffer,
@@ -569,15 +569,19 @@ impl CodeEditor {
                                 did = true;
                             }
                             "text.move_word_left" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, -1, false);
                             }
                             "text.move_word_right" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, 1, false);
                             }
                             "text.select_word_left" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, -1, true);
                             }
                             "text.select_word_right" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, 1, true);
                             }
                             _ => return false,
@@ -714,6 +718,7 @@ impl CodeEditor {
                 cx.text_input_region_on_text_input(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, text: &str| {
                         let mut st = text_state.borrow_mut();
+                        st.preedit = None;
                         if insert_text(&mut st, text).is_some() {
                             push_caret_rect_effect(
                                 host,
@@ -978,6 +983,21 @@ fn handle_key_down(
     modifiers: Modifiers,
 ) -> bool {
     let mut st = state.borrow_mut();
+    if st.preedit.is_some() {
+        match key {
+            KeyCode::ArrowLeft
+            | KeyCode::ArrowRight
+            | KeyCode::ArrowUp
+            | KeyCode::ArrowDown
+            | KeyCode::Backspace
+            | KeyCode::Delete
+            | KeyCode::Enter
+            | KeyCode::Tab => {
+                st.preedit = None;
+            }
+            _ => {}
+        }
+    }
     let cell_w_px = cell_w.get();
 
     let shift = modifiers.shift;
