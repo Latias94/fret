@@ -212,25 +212,6 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub fn set_layer_blocks_underlay_focus(&mut self, layer: UiLayerId, blocks: bool) {
-        let prev = self.layers.get(layer).map(|l| l.blocks_underlay_focus);
-        let Some(l) = self.layers.get_mut(layer) else {
-            return;
-        };
-        l.blocks_underlay_focus = blocks;
-
-        if prev != Some(blocks) {
-            let (active_roots, barrier_root) = self.active_focus_layers();
-            if barrier_root.is_some()
-                && self
-                    .focus
-                    .is_some_and(|n| !self.node_in_any_layer(n, active_roots.as_slice()))
-            {
-                self.focus = None;
-            }
-        }
-    }
-
     pub fn set_layer_pointer_occlusion(&mut self, layer: UiLayerId, occlusion: PointerOcclusion) {
         let Some(l) = self.layers.get_mut(layer) else {
             return;

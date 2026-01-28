@@ -92,8 +92,6 @@ pub struct OverlayRequest {
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
     pub initial_focus: Option<GlobalElementId>,
-    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
-    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub children: Vec<AnyElement>,
     pub toast_layer: Option<ToastLayerSpec>,
 }
@@ -127,8 +125,6 @@ impl std::fmt::Debug for OverlayRequest {
             )
             .field("presence", &self.presence)
             .field("initial_focus", &self.initial_focus)
-            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
-            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("children_len", &self.children.len())
             .field("toast_layer", &self.toast_layer)
             .finish()
@@ -160,8 +156,6 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -208,8 +202,6 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -238,8 +230,6 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -269,8 +259,6 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children: children.into_iter().collect(),
             toast_layer: None,
         }
@@ -294,8 +282,6 @@ impl OverlayRequest {
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children: Vec::new(),
             toast_layer: Some(ToastLayerSpec {
                 store,
