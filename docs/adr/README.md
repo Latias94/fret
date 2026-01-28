@@ -8,6 +8,22 @@ Notes:
 - Cross-references in `docs/architecture.md` should remain valid even as the code evolves.
 - Implementation audit tracking: `docs/adr/IMPLEMENTATION_ALIGNMENT.md`.
 
+### ADR Number Collisions (Legacy)
+
+Some historical ADR IDs have collisions (multiple files sharing the same numeric prefix). When
+referencing ADRs, treat the **full filename** as the canonical identifier, not just the number.
+
+Known collisions (as of 2026-01-28):
+
+- `0190-execution-and-concurrency-surface-v1.md` vs `0190-prepaint-windowed-virtual-surfaces.md`
+- `0193-code-editor-ecosystem-v1.md` vs `0193-ephemeral-prepaint-items-v1.md`
+
+Policy going forward:
+
+- Prefer allocating a new, unused numeric ID for new ADRs.
+- If we need to “supersede” an existing ADR, add a new ADR that references the old filename(s)
+  rather than renaming historical files.
+
 See `docs/adr/0027-framework-scope-and-responsibilities.md` for the framework vs editor-app scope boundary.
 
 Non-normative code references:

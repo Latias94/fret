@@ -148,13 +148,14 @@ Typical hotspots:
 - lack of a reliable global cursor position under some compositors,
 - decoration offsets differ across WMs; initial placement may drift without a stable “outer rect” contract.
 
-## Capabilities: recommended expansions (v1)
+## Capabilities (contract) — windowing quality signals (v1)
 
-To avoid platform forks inside widgets, extend `PlatformCapabilities` with a small set of quality signals:
+To avoid platform forks inside widgets, use the windowing quality signals in ADR 0054:
 
 - `ui.window_hover_detection`: `None | BestEffort | Reliable`
 - `ui.window_set_outer_position`: `None | BestEffort | Reliable`
 - `ui.window_z_level`: `None | BestEffort | Reliable`
+  - Note: capability enum values are spelled `none|best_effort|reliable` in the contract; this workstream uses TitleCase for readability.
 
 These should gate policies such as:
 
@@ -163,7 +164,9 @@ These should gate policies such as:
 - applying AlwaysOnTop during drags,
 - auto-raising target windows on drop.
 
-Normative contract changes should be captured in ADRs; this section is intentionally non-normative.
+Contract source of truth:
+
+- `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
 
 ## Diagnostics and regressions
 

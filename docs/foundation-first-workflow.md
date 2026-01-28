@@ -82,3 +82,10 @@ Each validation surface should have:
 - `active_descendant` is implemented at the semantics schema + platform bridge level (ADR 0073,
   Phase A). The remaining work is component-layer cmdk policy wiring.
 
+## Tracking (P0 closure)
+
+For a cross-workstream “done enough to scale” checklist (milestones + exit criteria), see:
+
+- `docs/workstreams/foundation-closure-p0.md`
+- `docs/workstreams/foundation-closure-p0-todo.md`
+

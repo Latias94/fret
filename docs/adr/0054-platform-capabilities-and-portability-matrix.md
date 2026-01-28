@@ -66,6 +66,7 @@ Instead:
 We define a minimal set of booleans/enums that cover the “hard portability” boundaries:
 
 - **Execution / scheduling** (see ADR 0190; primarily diagnostics and portability guardrails)
+  - Note: this reference is `docs/adr/0190-execution-and-concurrency-surface-v1.md` (ADR number collisions exist; prefer full filenames).
   - `exec.background_work`: enum:
     - `none` (no background execution; UI thread only)
     - `cooperative` (best-effort background work; no threads, time-sliced/cooperative)
@@ -82,6 +83,19 @@ We define a minimal set of booleans/enums that cover the “hard portability” 
   - `ui.multi_window`: `bool` (wasm/mobile: false; desktop: true)
   - `ui.window_tear_off`: `bool` (may equal `multi_window`)
   - `ui.cursor_icons`: `bool` (desktop: true; wasm/mobile: false or limited)
+  - Windowing quality signals (stable keys; recommended for editor-grade multi-window UX):
+    - `ui.window_hover_detection`: enum:
+      - `none` (cannot reliably determine window-under-cursor)
+      - `best_effort` (may be stale/missing; avoid “hover another window while dragging” UX promises)
+      - `reliable` (window-under-cursor selection is accurate enough for tear-off + cross-window docking)
+    - `ui.window_set_outer_position`: enum:
+      - `none` (cannot programmatically move windows)
+      - `best_effort` (movement is possible but may be clamped/denied or visibly delayed; avoid follow-mode)
+      - `reliable` (movement works predictably; follow-mode is viable)
+    - `ui.window_z_level`: enum:
+      - `none` (cannot request OS z-level changes)
+      - `best_effort` (may work inconsistently; avoid relying on AlwaysOnTop during drags)
+      - `reliable` (z-level requests behave predictably)
 - **Clipboard**
   - `clipboard.text`: `bool`
   - `clipboard.files`: `bool` (future; often false on web)
@@ -132,6 +146,11 @@ When `ui.multi_window == false`:
 
 - tear-off commands should be disabled,
 - docking remains single-window, but logical layouts can still exist (persistence remains useful).
+
+When `ui.multi_window == true` but windowing quality signals are not `reliable`:
+
+- policy layers (docking tear-off follow, cross-window hover selection, z-order nudges) must degrade gracefully
+  using the capability quality signals above, instead of introducing platform branches inside widgets.
 
 ### 5) Observability
 
@@ -185,7 +204,7 @@ Remaining:
 - ADR 0013: `docs/adr/0013-docking-ops-and-persistence.md`
 - ADR 0017: `docs/adr/0017-multi-window-display-and-dpi.md`
 - ADR 0022: `docs/adr/0022-when-expressions.md`
-- ADR 0190: `docs/adr/0190-execution-and-concurrency-surface-v1.md`
+- ADR 0190 (execution): `docs/adr/0190-execution-and-concurrency-surface-v1.md`
 - ADR 0034: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - ADR 0036: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 - ADR 0041: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
