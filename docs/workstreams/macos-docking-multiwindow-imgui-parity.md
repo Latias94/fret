@@ -112,8 +112,11 @@ These are the user-visible outcomes we want to guarantee on macOS:
 - Cursor screen position for cross-window routing:
   - `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - `WindowEvent::PointerMoved` computes `cursor_screen_pos` from outer + surface + local position
+    - `WindowEvent::PointerButton` also bootstraps `cursor_screen_pos` + cursor calibration (avoids requiring a move)
   - `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - `DeviceEvent::PointerMotion` updates `cursor_screen_pos` and drives hover/drop routing for dock drags
+  - `crates/fret-launch/src/runner/desktop/mod.rs`
+    - `MacCursorTransformTable` maps `mouseLocation` per screen; `route_internal_drag_*` refreshes before routing
 
 ### Cross-window internal-drag routing mechanics
 
@@ -125,26 +128,15 @@ These are the user-visible outcomes we want to guarantee on macOS:
 
 ## Known gaps (macOS parity)
 
-### Gap 1: Empty DockFloating OS windows may remain visible after re-dock
+### Gap 1: Empty DockFloating OS windows may remain visible after re-dock (resolved)
 
-The dock graph correctly moves panels between windows, but there is no explicit policy that closes a
-dock-floating OS window when it becomes empty.
+Status: addressed by docking runtime policy (see `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
 
-Symptoms:
+### Gap 2: macOS global cursor tracking can drift outside windows (resolved)
 
-- After re-docking the last tab/panel back into another window, the source OS window can remain open as an
-  empty shell.
-
-Why this is a parity issue:
-
-- Dear ImGui docking + multi-viewports typically auto-destroys secondary platform windows when they no longer
-  host content.
-
-### Gap 2: macOS global cursor tracking can drift outside windows
-
-When the cursor leaves all windows, the runner may rely on relative motion deltas (device events) to update
-`cursor_screen_pos`. Under certain configurations, this can drift and select the wrong window-under-cursor
-for hover/drop.
+Status: addressed by using `NSEvent::mouseLocation` mapped through a screen-keyed calibration table during
+dock drags, with delta integration only as a last-resort fallback (see
+`docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
 
 Why this matters:
 
