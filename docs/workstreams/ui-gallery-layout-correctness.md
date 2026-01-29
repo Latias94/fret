@@ -29,6 +29,8 @@ Reference workflow: `docs/debugging-playbook.md`.
 - Use `fretboard diag run` with an existing script, or add a new `tools/diag-scripts/ui-gallery-*.json`.
 - If the bug is visual, capture pixels too:
   - `FRET_DIAG_SCREENSHOT=1`: enable screenshot readback and write `frame.bmp` into the most recent bundle dir when a script requests it (via `capture_screenshot`) or when dumping bundles (writes `screenshot.request`).
+- If you need to inspect `SemanticsProps.test_id` / `label` in exported `bundle.json`, disable text redaction:
+  - `FRET_DIAG_REDACT_TEXT=0` (default is redaction enabled).
 
 ### 2.2 Dump the solved layout tree (when bounds are wrong)
 
@@ -144,17 +146,18 @@ Implementation note:
 
 ### 5.3 TODO (Near-term)
 
-- [ ] Add/maintain a “P0-first” issue queue in this doc (table in section 3 stays authoritative).
-- [ ] Audit shadcn containers for Invariants A–D:
-  - Tabs content / panels
-  - Scroll areas used inside flex stacks
-  - Cards/dialogs/sheets/popovers content wrappers
-  - Resizable/split panel wrappers and handle rows
-- [ ] Add a lightweight “page-sweep” script that visits a few core pages and asserts `bounds_within_window` for `ui-gallery-page-*` roots.
+- [x] Add/maintain a “P0-first” issue queue in this doc (table in section 3 stays authoritative).
+- [ ] Audit shadcn containers for Invariants A–D (keep the checklist explicit):
+  - [x] Tabs content / panels (L2)
+  - [x] Scroll areas used inside flex stacks (`ScrollArea` defaults to `min_w_0().min_h_0()`)
+  - [x] Resizable/split panel wrappers and handle rows (L1)
+  - [ ] Cards/dialogs/sheets/popovers content wrappers
+- [x] Add a lightweight “page-sweep” script that visits a few core pages and asserts `bounds_within_window` for `ui-gallery-page-*` roots:
+  - `tools/diag-scripts/ui-gallery-layout-sweep-core.json`
   - Current coverage (kept intentionally small): `intro`, `layout`, `scroll_area`, `tabs`, `accordion`, `overlay`, `resizable`.
-- [ ] Add an overlay regression script that opens key modals/popovers and asserts bounds:
+- [x] Add an overlay regression script that opens key modals/popovers and asserts bounds:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
-- [ ] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
+- [x] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
   - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - [ ] For each new P0 issue:
   - [ ] Add a `tools/diag-scripts/ui-gallery-...json` repro (navigate + wait_until + bounds assertions + `capture_bundle` + `capture_screenshot`).
