@@ -1013,6 +1013,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-tree-retained";
             let is_ui_gallery_data_table_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained";
+            let is_ui_gallery_table_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-table-retained";
             let is_ui_gallery_vlist_window_boundary_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
@@ -1067,6 +1069,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 &workspace_root,
                                 PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_table_retained_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json",
                                 ),
                             ),
                         ],
@@ -1165,6 +1185,22 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_wheel_scroll_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
                 check_stale_paint_test_id =
                     check_stale_paint_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
+            }
+
+            if is_ui_gallery_table_retained_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id
+                    .or(Some("ui-gallery-table-retained-row-0".to_string()));
+                check_stale_paint_test_id = check_stale_paint_test_id
+                    .or(Some("ui-gallery-table-retained-row-0".to_string()));
             }
 
             if is_ui_gallery_vlist_window_boundary_suite {
