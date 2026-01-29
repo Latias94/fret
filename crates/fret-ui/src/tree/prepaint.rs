@@ -136,6 +136,11 @@ impl<H: UiHost> UiTree<H> {
             fret_core::Axis::Horizontal => offset_point.x,
         };
         let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some();
+        let retained_host = crate::elements::with_window_state(&mut *app, window, |window_state| {
+            window_state.has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
+                inputs.element,
+            )
+        });
 
         let update = crate::elements::with_element_state(
             &mut *app,
@@ -180,16 +185,14 @@ impl<H: UiHost> UiTree<H> {
                     state.has_final_viewport = true;
                 }
 
-                let window_range =
+                let visible_range = state.metrics.visible_range(offset_axis, viewport, 0);
+                let ideal_window_range =
                     state
                         .metrics
                         .visible_range(offset_axis, viewport, inputs.overscan);
-                state.window_range = window_range;
 
-                let window_mismatch = if let Some(visible) =
-                    state.metrics.visible_range(offset_axis, viewport, 0)
-                {
-                    match render_window_range.or(window_range).filter(|r| {
+                let window_mismatch = if let Some(visible) = visible_range {
+                    match render_window_range.or(ideal_window_range).filter(|r| {
                         r.count == inputs.len
                             && r.overscan == inputs.overscan
                             && r.start_index <= r.end_index
@@ -207,6 +210,23 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     false
                 };
+
+                let window_range = if window_mismatch && retained_host {
+                    match (render_window_range, visible_range) {
+                        (Some(rendered), Some(visible))
+                            if rendered.count == inputs.len
+                                && rendered.overscan == inputs.overscan
+                                && rendered.start_index <= rendered.end_index
+                                && rendered.end_index < rendered.count =>
+                        {
+                            Some(Self::shift_virtual_list_window_minimally(rendered, visible))
+                        }
+                        _ => ideal_window_range,
+                    }
+                } else {
+                    ideal_window_range
+                };
+                state.window_range = window_range;
 
                 VirtualListPrepaintWindowUpdate {
                     prev_items_revision,
@@ -274,19 +294,11 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if self.view_cache_active() && update.window_mismatch {
-            let retained_host =
+            if retained_host {
                 crate::elements::with_window_state(&mut *app, window, |window_state| {
-                    let retained = window_state
-                        .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
-                        inputs.element,
-                    );
-                    if retained {
-                        window_state.mark_retained_virtual_list_needs_reconcile(inputs.element);
-                    }
-                    retained
+                    window_state.mark_retained_virtual_list_needs_reconcile(inputs.element);
                 });
-
-            if !retained_host {
+            } else {
                 self.mark_nearest_view_cache_root_needs_rerender(
                     record.node,
                     UiDebugInvalidationSource::Other,
@@ -294,6 +306,50 @@ impl<H: UiHost> UiTree<H> {
                 );
             }
             self.request_redraw_coalesced(app);
+        }
+    }
+
+    fn shift_virtual_list_window_minimally(
+        rendered: crate::virtual_list::VirtualRange,
+        visible: crate::virtual_list::VirtualRange,
+    ) -> crate::virtual_list::VirtualRange {
+        let overscan = rendered.overscan;
+        let count = rendered.count;
+        if count == 0 {
+            return rendered;
+        }
+
+        let inner_len = rendered.end_index.saturating_sub(rendered.start_index);
+        let rendered_outer_start = rendered.start_index.saturating_sub(overscan);
+        let rendered_outer_end = (rendered.end_index + overscan).min(count.saturating_sub(1));
+
+        let mut start = rendered.start_index;
+        let mut end = rendered.end_index;
+
+        if visible.start_index < rendered_outer_start {
+            start = visible.start_index.saturating_add(overscan);
+            end = start.saturating_add(inner_len);
+        } else if visible.end_index > rendered_outer_end {
+            end = visible.end_index.saturating_sub(overscan);
+            start = end.saturating_sub(inner_len);
+        }
+
+        if end >= count {
+            end = count.saturating_sub(1);
+            start = end.saturating_sub(inner_len);
+        }
+        if start >= count {
+            start = count.saturating_sub(1);
+        }
+        if start > end {
+            end = start;
+        }
+
+        crate::virtual_list::VirtualRange {
+            start_index: start,
+            end_index: end,
+            overscan,
+            count,
         }
     }
 
