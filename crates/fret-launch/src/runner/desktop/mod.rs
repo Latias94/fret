@@ -2371,6 +2371,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 caps.ui.window_set_outer_position =
                     fret_runtime::WindowSetOuterPositionQuality::BestEffort;
                 caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::BestEffort;
+
+                // Wayland compositors do not provide a reliable "window under cursor" contract and
+                // may ignore programmatic window positioning/z-level hints. Prefer a predictable
+                // in-window floating fallback over OS tear-off UX (ADR 0054 / ADR 0084).
+                if linux_is_wayland_session() {
+                    caps.ui.window_tear_off = false;
+                    caps.ui.window_hover_detection =
+                        fret_runtime::WindowHoverDetectionQuality::None;
+                    caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
+                }
             }
 
             caps.clipboard.text = true;
@@ -5119,6 +5129,20 @@ fn screen_pos_in_client(
     screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
 }
 
+fn is_wayland_session(xdg_session_type: Option<&str>, wayland_display: Option<&str>) -> bool {
+    if xdg_session_type.is_some_and(|v| v.eq_ignore_ascii_case("wayland")) {
+        return true;
+    }
+    wayland_display.is_some_and(|v| !v.is_empty())
+}
+
+#[cfg(target_os = "linux")]
+fn linux_is_wayland_session() -> bool {
+    let xdg_session_type = std::env::var("XDG_SESSION_TYPE").ok();
+    let wayland_display = std::env::var("WAYLAND_DISPLAY").ok();
+    is_wayland_session(xdg_session_type.as_deref(), wayland_display.as_deref())
+}
+
 fn local_pos_for_screen_pos(
     client_origin: winit::dpi::PhysicalPosition<f64>,
     scale_factor: f64,
@@ -5181,6 +5205,23 @@ fn outer_pos_for_cursor_grab(
 mod tests {
     use super::*;
     use winit::dpi::{PhysicalPosition, PhysicalSize};
+
+    #[test]
+    fn is_wayland_session_true_for_xdg_session_type_wayland() {
+        assert!(is_wayland_session(Some("wayland"), None));
+        assert!(is_wayland_session(Some("Wayland"), None));
+    }
+
+    #[test]
+    fn is_wayland_session_true_for_wayland_display() {
+        assert!(is_wayland_session(None, Some("wayland-0")));
+    }
+
+    #[test]
+    fn is_wayland_session_false_for_x11_and_no_wayland_display() {
+        assert!(!is_wayland_session(Some("x11"), None));
+        assert!(!is_wayland_session(None, Some("")));
+    }
 
     #[test]
     fn outer_pos_for_cursor_grab_accounts_for_decorations_and_scale() {
