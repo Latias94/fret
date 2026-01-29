@@ -617,14 +617,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 }
             }
 
+            // Match Dear ImGui's "explicit target gating" (reduces visual noise):
+            // - We only show/allow docking when hovering over:
+            //   - the explicit target (tab bar), or
+            //   - an explicit drop rect (inner/outer direction pads).
+            //
+            // Reference:
+            // - `repo-ref/imgui/imgui.cpp`: `DockNodePreviewDockSetup(...)` (is_explicit_target + IsSplitDirExplicit)
             if let Some(&root_rect) = layout.get(&root)
+                && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
+                && root != leaf_tabs
                 && let Some(zone) =
                     super::layout::dock_hint_pick_zone(root_rect, font_size, true, position)
                 && zone != DropZone::Center
             {
-                let leaf_tabs = leaf
-                    .map(|(tabs_node, _rect, _len)| tabs_node)
-                    .unwrap_or(root);
                 return Some(HoverTarget {
                     tabs: root,
                     root,
@@ -635,9 +641,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 });
             }
 
-            if let Some((tabs_node, rect, _tab_count)) = leaf {
-                let zone = super::layout::dock_hint_pick_zone(rect, font_size, false, position)
-                    .unwrap_or(DropZone::Center);
+            if let Some((tabs_node, rect, _tab_count)) = leaf
+                && let Some(zone) =
+                    super::layout::dock_hint_pick_zone(rect, font_size, false, position)
+            {
                 return Some(HoverTarget {
                     tabs: tabs_node,
                     root,

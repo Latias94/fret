@@ -4191,6 +4191,109 @@ fn dock_center_drop_overlay_draws_tab_preview_for_drag_payload() {
 }
 
 #[test]
+fn dock_drag_requires_explicit_target_or_hint_rects() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("target.panel")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("target.panel"),
+            DockPanel {
+                title: "Target".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            PanelKey::new("drag.panel"),
+            DockPanel {
+                title: "Dragged".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.hover = None;
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("drag.panel"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.current_window = window;
+    }
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let (_tab_bar, content) = split_tab_bar(dock_bounds);
+
+    // 1) Cursor in content but far from center pads: no hover (explicit gating).
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: Point::new(Px(content.origin.x.0 + 6.0), Px(content.origin.y.0 + 6.0)),
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
+    assert!(
+        hover.is_none(),
+        "expected no hover when not over tab bar or explicit drop rects, got: {hover:?}",
+    );
+
+    // 2) Cursor over center pad: hover becomes Dock(Center).
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: Point::new(
+                Px(dock_bounds.origin.x.0 + dock_bounds.size.width.0 * 0.5),
+                Px(dock_bounds.origin.y.0 + dock_bounds.size.height.0 * 0.5),
+            ),
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
+    assert!(
+        matches!(hover, Some(DockDropTarget::Dock(t)) if t.zone == DropZone::Center),
+        "expected center pad to produce a dock hover target, got: {hover:?}",
+    );
+}
+
+#[test]
 fn dock_tab_bar_insert_index_respects_before_after_halves() {
     let window = AppWindowId::default();
 
