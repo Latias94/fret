@@ -188,6 +188,12 @@ feature toggles:
 | vlist_retained | `FRET_UI_GALLERY_VLIST_RETAINED=1` | 6736 / 6790 | 6195 / 6205 | 6790 |
 | vlist_row_cache | `FRET_UI_GALLERY_VLIST_ROW_CACHE=1` | 7962 / 8556 | 7299 / 7945 | 8556 |
 
+Follow-up: `vlist_row_cache` with `contained_layout=true` (change in `apps/fret-ui-gallery/src/ui.rs`):
+
+- Output dir: `target/perf-matrix-vlist-smooth-contained/`
+- baseline: `total p50/p95 = 6736/7237`, `layout p50/p95 = 6222/6633`
+- row_cache: `total p50/p95 = 7199/7542`, `layout p50/p95 = 6692/6994`
+
 ## 4) Hypotheses (what we think is actually happening)
 
 H1) The `Scroll` probe’s `AvailableSpace::MaxContent` contract is correct for “true unbounded content extent”, but it is

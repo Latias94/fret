@@ -1555,7 +1555,7 @@ fn preview_virtual_list_torture(
                 if row_cache {
                     cx.cached_subtree_with(
                         CachedSubtreeProps::default()
-                            .contained_layout(false)
+                            .contained_layout(true)
                             .cache_key(index_u64),
                         |cx| [row(cx)],
                     )
@@ -1677,7 +1677,7 @@ fn preview_virtual_list_torture(
                     if row_cache {
                         cx.cached_subtree_with(
                             CachedSubtreeProps::default()
-                                .contained_layout(false)
+                                .contained_layout(true)
                                 .cache_key(index_u64),
                             |cx| vec![row(cx)],
                         )
