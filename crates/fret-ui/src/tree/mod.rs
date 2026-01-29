@@ -633,6 +633,10 @@ pub struct UiDebugRemoveSubtreeFrameContext {
     pub parent_frame_children_contains_root: Option<bool>,
     pub root_frame_instance_present: bool,
     pub root_frame_children_len: Option<u32>,
+    /// Whether this subtree root is reachable from the window's liveness roots when considering
+    /// the authoritative retained edges used for GC (ie. the union of `UiTree` and `WindowFrame`
+    /// child edges when available).
+    pub root_reachable_from_layer_roots: bool,
     pub root_reachable_from_view_cache_roots: Option<bool>,
     pub liveness_layer_roots_len: u32,
     pub view_cache_reuse_roots_len: u32,
@@ -2941,8 +2945,6 @@ impl<H: UiHost> UiTree<H> {
             let root_layer = self.node_layer(root);
             let root_layer_visible =
                 root_layer.and_then(|layer| self.layers.get(layer).map(|l| l.visible));
-            let reachable_from_layer_roots =
-                pre_exists && self.debug_is_reachable_from_layer_roots(root);
             let root_children_len = self
                 .nodes
                 .get(root)
@@ -2956,6 +2958,11 @@ impl<H: UiHost> UiTree<H> {
             let root_parent_children_contains_root =
                 root_parent.and_then(|p| self.nodes.get(p).map(|n| n.children.contains(&root)));
             let frame_context = self.debug_remove_subtree_frame_context.remove(&root);
+            let reachable_from_layer_roots = pre_exists
+                && frame_context
+                    .as_ref()
+                    .map(|ctx| ctx.root_reachable_from_layer_roots)
+                    .unwrap_or_else(|| self.debug_is_reachable_from_layer_roots(root));
             let mut root_path: [u64; 16] = [0u64; 16];
             let mut root_path_nodes: [Option<NodeId>; 16] = [None; 16];
             let mut root_path_len: u8 = 0;

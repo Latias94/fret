@@ -463,6 +463,9 @@ where
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let root_reachable_from_layer_roots = reachable_from_layers
+                    .as_ref()
+                    .is_some_and(|reachable| reachable.contains(&node));
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
                     .as_ref()
                     .map(|reachable| reachable.contains(&node));
@@ -509,6 +512,7 @@ where
                         .children
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    root_reachable_from_layer_roots,
                     root_reachable_from_view_cache_roots,
                     liveness_layer_roots_len,
                     view_cache_reuse_roots_len,
@@ -843,6 +847,9 @@ where
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let root_reachable_from_layer_roots = reachable_from_layers
+                    .as_ref()
+                    .is_some_and(|reachable| reachable.contains(&node));
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
                     .as_ref()
                     .map(|reachable| reachable.contains(&node));
@@ -889,6 +896,7 @@ where
                         .children
                         .get(&node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    root_reachable_from_layer_roots,
                     root_reachable_from_view_cache_roots,
                     liveness_layer_roots_len,
                     view_cache_reuse_roots_len,
