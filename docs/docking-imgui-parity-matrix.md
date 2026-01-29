@@ -388,13 +388,16 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
 
 - [~] **Tab strip scrolling behavior**
   - ImGui: TabBar supports scrolling, tab list popup, and per-tab sizing.
-  - Fret: has `tab_scroll` state and wheel-based scroll, but parity on:
-    - “auto scroll the active tab into view”
-    - scroll easing vs step
-    - edge cases under drag
-    is still evolving.
+  - Fret:
+    - has `tab_scroll` state
+    - supports wheel-based scrolling
+    - supports drag-time edge auto-scroll when hovering near the tab bar left/right edges (keeps insert position reachable under overflow)
+  - Still evolving:
+    - “tab list” popup (overflow menu)
+    - scroll feel knobs (speed/easing)
   - Evidence:
-    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (wheel path + `tab_scroll`)
+    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (`tab_scroll`, `apply_tab_bar_drag_auto_scroll(...)`)
+    - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_auto_scrolls_tab_bar_near_edges`)
 
 - [~] **Close button semantics**
   - ImGui: per-tab close buttons, plus node “close all” and host close button interactions.

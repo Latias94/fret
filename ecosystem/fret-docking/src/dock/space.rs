@@ -52,6 +52,7 @@ pub struct DockSpace {
     hovered_tab_close: bool,
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
     tab_scroll: HashMap<DockNodeId, Px>,
+    tab_drag_auto_scroll_last_frame: HashMap<DockNodeId, fret_runtime::FrameId>,
     tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
@@ -115,6 +116,7 @@ impl DockSpace {
             hovered_tab_close: false,
             pressed_tab_close: None,
             tab_scroll: HashMap::new(),
+            tab_drag_auto_scroll_last_frame: HashMap::new(),
             tab_widths: HashMap::new(),
             tab_close_glyph: None,
             tab_text_style: TextStyle {
@@ -410,6 +412,75 @@ impl DockSpace {
 
         scroll = geom.ensure_tab_visible(scroll, active.min(tab_count.saturating_sub(1)));
         self.set_tab_scroll_for(tabs, scroll);
+    }
+
+    fn apply_tab_bar_drag_auto_scroll(
+        &mut self,
+        graph: &DockGraph,
+        hover: &mut HoverTarget,
+        tab_bar: Rect,
+        tab_count: usize,
+        font_size: Px,
+        position: Point,
+        frame_id: fret_runtime::FrameId,
+    ) -> bool {
+        if tab_count == 0
+            || hover.zone != DropZone::Center
+            || hover.insert_index.is_none()
+            || hover.outer
+        {
+            return false;
+        }
+        if !tab_bar.contains(position) {
+            return false;
+        }
+
+        let tabs = hover.tabs;
+        let Some(DockNode::Tabs { .. }) = graph.node(tabs) else {
+            return false;
+        };
+
+        let max_scroll = self.max_tab_scroll(tabs, tab_bar, tab_count);
+        if max_scroll.0 <= 0.0 {
+            return false;
+        }
+
+        if self
+            .tab_drag_auto_scroll_last_frame
+            .get(&tabs)
+            .is_some_and(|f| *f == frame_id)
+        {
+            return false;
+        }
+        self.tab_drag_auto_scroll_last_frame.insert(tabs, frame_id);
+
+        let left_dist = position.x.0 - tab_bar.origin.x.0;
+        let right_dist = tab_bar.origin.x.0 + tab_bar.size.width.0 - position.x.0;
+        let edge = Px(((tab_bar.size.height.0 * 0.6).max(font_size.0 * 1.25)).clamp(12.0, 28.0));
+
+        let (dir, t) = if left_dist >= 0.0 && left_dist < edge.0 {
+            (-1.0, 1.0 - left_dist / edge.0)
+        } else if right_dist >= 0.0 && right_dist < edge.0 {
+            (1.0, 1.0 - right_dist / edge.0)
+        } else {
+            return false;
+        };
+        let t = t.clamp(0.0, 1.0);
+
+        let base = (font_size.0 * 0.9).clamp(8.0, 22.0);
+        let step = base * (0.20 + 0.80 * t);
+
+        let prev_scroll = self.tab_scroll_for(tabs);
+        let next_scroll = Px((prev_scroll.0 + dir * step).clamp(0.0, max_scroll.0));
+        if (next_scroll.0 - prev_scroll.0).abs() < 0.01 {
+            return false;
+        }
+
+        self.set_tab_scroll_for(tabs, next_scroll);
+
+        let geom = self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count);
+        hover.insert_index = Some(geom.compute_insert_index(position, next_scroll));
+        true
     }
 
     fn rebuild_empty_state(
@@ -952,6 +1023,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .unwrap_or(1.0);
         let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
         let now_tick = cx.app.tick_id();
+        let now_frame = cx.app.frame_id();
 
         let mut start_dock_drag: Option<(Point, DockPanelDragPayload, Point)> = None;
         let mut update_drag: Option<(Point, bool)> = None;
@@ -2081,6 +2153,48 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 split_handle_hit_thickness,
                                                 position,
                                             );
+
+                                            if let Some(DockDropTarget::Dock(target)) =
+                                                dock.hover.as_mut()
+                                                && matches!(target.zone, DropZone::Center)
+                                                && target.insert_index.is_some()
+                                                && !target.outer
+                                                && let Some(DockNode::Tabs { tabs, .. }) =
+                                                    dock.graph.node(target.tabs)
+                                            {
+                                                let (layout_root, layout_bounds) =
+                                                    layout_context_for_position(
+                                                        &dock.graph,
+                                                        self.window,
+                                                        root,
+                                                        dock_bounds,
+                                                        position,
+                                                    );
+                                                let layout = compute_layout_map(
+                                                    &dock.graph,
+                                                    layout_root,
+                                                    layout_bounds,
+                                                    split_handle_gap,
+                                                    split_handle_hit_thickness,
+                                                );
+                                                if let Some(&tabs_rect) = layout.get(&target.tabs)
+                                                {
+                                                    let (tab_bar, _content) =
+                                                        split_tab_bar(tabs_rect);
+                                                    if self.apply_tab_bar_drag_auto_scroll(
+                                                        &dock.graph,
+                                                        target,
+                                                        tab_bar,
+                                                        tabs.len(),
+                                                        font_size,
+                                                        position,
+                                                        now_frame,
+                                                    ) {
+                                                        pending_redraws.push(self.window);
+                                                        invalidate_paint = true;
+                                                    }
+                                                }
+                                            }
                                         }
                                     } else {
                                         dock.hover = None;
@@ -2428,6 +2542,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         self.last_bounds = cx.bounds;
         let theme = cx.theme().snapshot();
         let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
+        let font_size = theme.metric_required("font.size");
         // Keep the dock host "alive" as a stable internal drag route target.
         //
         // This must be refreshed during paint/layout, not only during event handling, because
@@ -2519,6 +2634,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .unwrap_or_default();
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
+        let frame_id = app.frame_id();
         let dock_drag_panel = app
             .find_drag_pointer_id(|d| {
                 d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
@@ -2528,6 +2644,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .and_then(|pointer_id| app.drag(pointer_id))
             .and_then(|drag| drag.payload::<DockPanelDragPayload>())
             .map(|payload| payload.panel.clone());
+        let dock_drag_pos = app
+            .find_drag_pointer_id(|d| {
+                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    && (d.source_window == self.window || d.current_window == self.window)
+                    && d.dragging
+            })
+            .and_then(|pointer_id| app.drag(pointer_id).map(|d| d.position));
 
         let paint_panels = app.with_global_mut_untracked(DockManager::default, |dock, _app| {
             dock.register_dock_space_node(self.window, dock_space_node);
@@ -2562,6 +2685,26 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     layout_all.insert(*k, *v);
                 }
                 floating_layouts.push((*floating, chrome, layout));
+            }
+
+            if let (Some(pos), Some(DockDropTarget::Dock(target))) =
+                (dock_drag_pos, dock.hover.as_mut())
+                && matches!(target.zone, DropZone::Center)
+                && target.insert_index.is_some()
+                && !target.outer
+                && let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(target.tabs)
+                && let Some(&tabs_rect) = layout_all.get(&target.tabs)
+            {
+                let (tab_bar, _content) = split_tab_bar(tabs_rect);
+                let _ = self.apply_tab_bar_drag_auto_scroll(
+                    &dock.graph,
+                    target,
+                    tab_bar,
+                    tabs.len(),
+                    font_size,
+                    pos,
+                    frame_id,
+                );
             }
 
             let hover = dock.hover.clone();

@@ -4387,6 +4387,141 @@ fn dock_tab_bar_insert_index_respects_before_after_halves() {
 }
 
 #[test]
+fn dock_drag_auto_scrolls_tab_bar_near_edges() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let tabs_node = app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs: Vec<PanelKey> = (0..30)
+            .map(|i| PanelKey::new(format!("core.tab_{i}")))
+            .collect();
+        let tabs_node = dock.graph.insert_node(DockNode::Tabs { tabs, active: 0 });
+        dock.graph.set_window_root(window, tabs_node);
+
+        dock.panels.insert(
+            PanelKey::new("drag.panel"),
+            DockPanel {
+                title: "Dragged".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+
+        dock.hover = None;
+        tabs_node
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("drag.panel"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+        drag.current_window = window;
+    }
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let (tab_bar, _content) = split_tab_bar(dock_bounds);
+    let pos_right = Point::new(
+        Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - 2.0),
+        Px(tab_bar.origin.y.0 + 6.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: pos_right,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
+    let first_ix = match hover {
+        Some(DockDropTarget::Dock(t)) => {
+            assert_eq!(t.tabs, tabs_node);
+            t.insert_index.expect("expected a tab insert index")
+        }
+        other => panic!("expected a tab-bar dock hover target, got: {other:?}"),
+    };
+
+    let mut ix_after_scroll = first_ix;
+    for _ in 0..6 {
+        app.advance_frame();
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position: pos_right,
+                kind: InternalDragKind::Over,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+        let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
+        if let Some(DockDropTarget::Dock(t)) = hover {
+            ix_after_scroll = t.insert_index.expect("expected insert index");
+        }
+    }
+
+    assert!(
+        ix_after_scroll > first_ix,
+        "expected auto-scroll at the right edge to increase the insert index, before={first_ix}, after={ix_after_scroll}",
+    );
+
+    let pos_left = Point::new(Px(tab_bar.origin.x.0 + 2.0), Px(tab_bar.origin.y.0 + 6.0));
+    let mut ix_after_scroll_back = ix_after_scroll;
+    for _ in 0..6 {
+        app.advance_frame();
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position: pos_left,
+                kind: InternalDragKind::Over,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+        let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
+        if let Some(DockDropTarget::Dock(t)) = hover {
+            ix_after_scroll_back = t.insert_index.expect("expected insert index");
+        }
+    }
+
+    assert!(
+        ix_after_scroll_back < ix_after_scroll,
+        "expected auto-scroll at the left edge to decrease the insert index, before={ix_after_scroll}, after={ix_after_scroll_back}",
+    );
+}
+
+#[test]
 fn dock_tab_drop_emits_insert_index_based_on_over_tab_halves() {
     let window = AppWindowId::default();
 
