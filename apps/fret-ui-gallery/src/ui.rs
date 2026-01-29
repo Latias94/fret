@@ -1216,6 +1216,15 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
+    let variable_height =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let retained_host =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_RETAINED").filter(|v| !v.is_empty()) {
             Some(v) => {
@@ -1408,20 +1417,35 @@ fn preview_virtual_list_torture(
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                     let row_label = cx.text(format!("Row {index}"));
+                    let extra_line = cx.text(format!(
+                        "Details: index={index} seed={} repeat={}",
+                        index.wrapping_mul(2654435761),
+                        (index % 7) + 1
+                    ));
 
                     let mut container_props = decl_style::container_props(
                         &theme,
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
+                        {
+                            let mut layout = LayoutRefinement::default().w_full();
+                            if !variable_height {
+                                layout = layout.h_px(MetricRef::Px(height_hint));
+                            }
+                            layout
+                        },
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                     let row_layout = container_props.layout;
-                    let container = cx.container(container_props, |_cx| vec![row_label]);
+                    let container = cx.container(container_props, |_cx| {
+                        if variable_height && index % 15 == 0 {
+                            vec![row_label, extra_line]
+                        } else {
+                            vec![row_label]
+                        }
+                    });
                     let mut semantics = fret_ui::element::SemanticsProps::default();
                     semantics.layout = row_layout;
                     semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
@@ -1455,20 +1479,35 @@ fn preview_virtual_list_torture(
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                         let row_label = cx.text(format!("Row {index}"));
+                        let extra_line = cx.text(format!(
+                            "Details: index={index} seed={} repeat={}",
+                            index.wrapping_mul(2654435761),
+                            (index % 7) + 1
+                        ));
 
                         let mut container_props = decl_style::container_props(
                             theme,
                             ChromeRefinement::default()
                                 .bg(ColorRef::Color(background))
                                 .p(Space::N2),
-                            LayoutRefinement::default()
-                                .w_full()
-                                .h_px(MetricRef::Px(height_hint)),
+                            {
+                                let mut layout = LayoutRefinement::default().w_full();
+                                if !variable_height {
+                                    layout = layout.h_px(MetricRef::Px(height_hint));
+                                }
+                                layout
+                            },
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                         let row_layout = container_props.layout;
-                        let container = cx.container(container_props, |_cx| vec![row_label]);
+                        let container = cx.container(container_props, |_cx| {
+                            if variable_height && index % 15 == 0 {
+                                vec![row_label, extra_line]
+                            } else {
+                                vec![row_label]
+                            }
+                        });
                         let mut semantics = fret_ui::element::SemanticsProps::default();
                         semantics.layout = row_layout;
                         semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
