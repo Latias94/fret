@@ -719,17 +719,13 @@ topics (if/when we implement them):
       - `target/fret-diag-data-table-retained-suite-shell6/1769651504240-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
       - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679828598-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
       - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679856618-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
-  - Plan (v1; fixed/known height only):
-    - Add a runtime-owned `WindowedSurfaceHost` boundary that can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
-    - Define an opt-in authoring API that stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
-    - Wire the host to `VirtualListMetrics` (Fixed/Known) for window math and item placement, and defer Measured mode.
-    - Add diagnostics export for attach/detach counts + reuse hits, and gate with a scripted UI Gallery harness (no stale paint + bounded work).
-  - Done when:
-    - A prototype host can drive a fixed-height “composable rows” list without forcing a parent cache-root rerender when crossing a window boundary (attach/detach delta only).
-    - A scripted harness bundle can prove: no stale paint, stable hit-testing, and bounded attach/detach work.
+  - Implementation summary (v1):
+    - A runtime-owned `WindowedSurfaceHost` boundary can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
+    - The opt-in authoring API stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
+    - The retained host supports fixed/known heights and measured rows (via `VirtualListOptions.measure_mode` + `VirtualListKeyCache`), and is regression-gated with scripted UI Gallery suites (including measured variants).
   - Next:
     - Expand retained-table coverage from v0 to more of the existing UI Kit table surface (grouping/pinning/resizing), tracked in `GPUI-MVP5-eco-002`.
-    - Investigate measured/variable-height support (deferred until the prepaint-derived window contract is stabilized; ADR 0190/0193).
+    - Keep tuning measured-mode churn (attach/detach deltas) under overscan-boundary scroll, while `GPUI-MVP5-virt-001` continues to target the default (non-retained) VirtualList path.
 
 - [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
   - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
