@@ -56,6 +56,7 @@ Evidence anchors:
 - SubTrigger open-state chrome (`data-state=open` bg/fg): **Gated** (`*.submenu-kbd.open.json`)
 - Hovered/highlighted item chrome (bg/fg): **Gated** (`*.highlight-first.open.json`)
 - Keyboard roving focus visuals (focused item bg/fg): **Gated** (`*.focus-first.open.json`)
+- Destructive variant focus tint (bg/fg): **Gated** (`context-menu-demo.submenu-kbd-delete-focus.open.json`)
 
 Evidence anchors:
 
@@ -67,6 +68,7 @@ Evidence anchors:
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.focus-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.focus-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd-delete-focus.open.json`
   - Note: `context-menu-demo.focus-first` is captured by opening via pointer context menu and then
     forcing focus onto the first `[role='menuitem']` (scripted `steps=keys=[role='menuitem']@Home`),
     because the upstream `context-menu-demo` does not reliably open from the keyboard in our
@@ -82,7 +84,8 @@ Evidence anchors:
   `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`,
   `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`,
-  `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`, plus `*_dark` variants).
+  `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`,
+  `web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web`, plus `*_dark` variants).
 
 ### Select / Combobox listboxes
 

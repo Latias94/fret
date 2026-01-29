@@ -224,6 +224,8 @@ Recent fixes:
     (`web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark`).
   - Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark`).
+  - Submenu destructive item focus tint (bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web_dark`).
   - SubTrigger open-state chrome (`data-state=open` bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_subtrigger_open_chrome_matches_web`, `web_vs_fret_context_menu_demo_subtrigger_open_chrome_matches_web_dark`).
   - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`

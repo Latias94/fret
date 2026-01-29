@@ -51,6 +51,20 @@ fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c
 }
 
+fn menu_destructive_focus_bg(theme: &Theme, destructive_fg: fret_core::Color) -> fret_core::Color {
+    if let Some(c) = theme.color_by_key("component.menu.destructive_focus_bg") {
+        return c;
+    }
+
+    // Fallback for non-shadcn themes: approximate the upstream `/10` and `dark:/20` alphas.
+    let alpha = if theme.name.ends_with("/dark") {
+        0.2
+    } else {
+        0.1
+    };
+    alpha_mul(destructive_fg, alpha)
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ContextMenuItemVariant {
     #[default]
@@ -1888,7 +1902,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     let accent_fg = theme.color_required("accent-foreground");
     let fg = theme.color_required("foreground");
     let destructive_fg = theme.color_required("destructive");
-    let destructive_bg = alpha_mul(destructive_fg, 0.12);
+    let destructive_bg = menu_destructive_focus_bg(&theme, destructive_fg);
 
     let labelled_by_element = cx
         .app
@@ -2419,7 +2433,7 @@ impl ContextMenu {
                     let accent_fg = theme.color_required("accent-foreground");
                     let fg = theme.color_required("foreground");
                     let destructive_fg = theme.color_required("destructive");
-                    let destructive_bg = alpha_mul(destructive_fg, 0.12);
+                    let destructive_bg = menu_destructive_focus_bg(&theme, destructive_fg);
                     let panel_bg = theme.color_required("popover.background");
                     let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
 

@@ -110,6 +110,21 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
             ShadcnColorScheme::Dark => "oklch(0.58 0.22 27)".to_string(),
         });
 
+    // Menu rows use `data-[variant=destructive]:focus:bg-destructive/10` (and `/20` on dark) in the
+    // upstream shadcn v4 recipes.
+    if let Some(destructive) = colors.get("destructive").cloned() {
+        let alpha = match scheme {
+            ShadcnColorScheme::Light => 0.1,
+            ShadcnColorScheme::Dark => 0.2,
+        };
+        let destructive_focus_bg = with_oklch_alpha(&destructive, alpha)
+            .expect("shadcn new-york-v4 destructive token is oklch");
+        colors.insert(
+            "component.menu.destructive_focus_bg".to_string(),
+            destructive_focus_bg,
+        );
+    }
+
     // The upstream v4 registry theme JSONs do not fully match the values used by the upstream
     // web app's `styles/globals.css`. Our web-vs-fret goldens are generated from that app, so we
     // patch the delta here to keep the Rust runtime aligned.

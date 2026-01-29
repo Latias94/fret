@@ -584,6 +584,78 @@ fn find_best_solid_quad_within_matching_bg(
     best
 }
 
+fn find_best_quad_within_matching_bg(
+    scene: &Scene,
+    target: Rect,
+    expected_bg: css_color::Rgba,
+) -> Option<PaintedQuad> {
+    let target_area = rect_area(target).max(1.0);
+    let mut best: Option<PaintedQuad> = None;
+    let mut best_score = f32::INFINITY;
+    let mut best_area = f32::INFINITY;
+
+    // Some shadcn menu states use translucent tints (e.g. `bg-destructive/10`).
+    // Keep this tighter than `find_best_solid_quad_within_matching_bg` to avoid accidentally
+    // selecting the (opaque) overlay panel surface instead of the per-row tint.
+    let max_area_ratio = 8.0;
+    let min_alpha = (expected_bg.a * 0.25).max(0.01);
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Quad {
+            rect,
+            border,
+            corner_radii,
+            background,
+            border_color,
+            ..
+        } = *op
+        else {
+            return;
+        };
+
+        let rect = transform_rect_bounds(st.transform, rect);
+        let background = color_with_opacity(background, st.opacity);
+
+        if rect_intersection_area(rect, target) <= 0.01 {
+            return;
+        }
+        if background.a < min_alpha {
+            return;
+        }
+        let area = rect_area(rect);
+        if area > target_area * max_area_ratio {
+            return;
+        }
+
+        let border = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+        let quad = PaintedQuad {
+            rect,
+            background,
+            border,
+            border_color,
+            corners: [
+                corner_radii.top_left.0,
+                corner_radii.top_right.0,
+                corner_radii.bottom_right.0,
+                corner_radii.bottom_left.0,
+            ],
+        };
+
+        let bg = color_to_rgba(background);
+        let score = (bg.r - expected_bg.r).abs()
+            + (bg.g - expected_bg.g).abs()
+            + (bg.b - expected_bg.b).abs()
+            + (bg.a - expected_bg.a).abs();
+        if score < best_score || (score <= best_score + 0.0001 && area < best_area) {
+            best_score = score;
+            best_area = area;
+            best = Some(quad);
+        }
+    });
+
+    best
+}
+
 fn find_best_solid_quad_near_point(scene: &Scene, point: Point) -> Option<Rect> {
     let mut best_rect: Option<Rect> = None;
     let mut best_area = f32::INFINITY;
@@ -6807,6 +6879,204 @@ fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web() {
 #[test]
 fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark() {
     assert_context_menu_focused_item_chrome_matches_web(
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+fn assert_context_menu_submenu_destructive_focused_item_chrome_matches_web(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open("context-menu-demo.submenu-kbd-delete-focus");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_active_element_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(false);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(true);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
+        .expect("context-menu trigger semantics node");
+
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let (snap2, _) = render_context_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        &open,
+        checked_bookmarks.clone(),
+        checked_full_urls.clone(),
+        radio_person.clone(),
+    );
+
+    let more_tools = snap2
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"))
+        .expect("context-menu More Tools item semantics node");
+    ui.set_focus(Some(more_tools.id));
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+
+    // Settle the submenu open motion.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(500 + tick),
+            tick + 1 == settle_frames,
+            |cx| {
+                vec![build_shadcn_context_menu_demo(
+                    cx,
+                    &open,
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                )]
+            },
+        );
+    }
+
+    let snap3 = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot after submenu open")
+        .clone();
+    let delete = snap3
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Delete"))
+        .expect("context-menu submenu destructive Delete item semantics node");
+
+    ui.set_focus(Some(delete.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(600),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let focused = fret_find_active_menu_item(&snap).unwrap_or_else(|| {
+        panic!(
+            "context-menu-demo.submenu-kbd-delete-focus {web_theme_name}: expected focused menu item semantics node"
+        )
+    });
+    assert_eq!(
+        focused.label.as_deref(),
+        Some("Delete"),
+        "context-menu-demo.submenu-kbd-delete-focus {web_theme_name}: focused menu item label"
+    );
+
+    let quad = find_best_quad_within_matching_bg(&scene, focused.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!(
+                "context-menu-demo.submenu-kbd-delete-focus {web_theme_name}: destructive focused menu item background quad"
+            )
+        });
+    assert_rgba_close(
+        &format!(
+            "context-menu-demo.submenu-kbd-delete-focus {web_theme_name} destructive focused menu item background"
+        ),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        focused.bounds,
+        leftish_text_probe_point(focused.bounds),
+    )
+    .unwrap_or_else(|| {
+        panic!(
+            "context-menu-demo.submenu-kbd-delete-focus {web_theme_name}: destructive focused menu item text color"
+        )
+    });
+    assert_rgba_close(
+        &format!(
+            "context-menu-demo.submenu-kbd-delete-focus {web_theme_name} destructive focused menu item text color"
+        ),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web() {
+    assert_context_menu_submenu_destructive_focused_item_chrome_matches_web(
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web_dark() {
+    assert_context_menu_submenu_destructive_focused_item_chrome_matches_web(
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
