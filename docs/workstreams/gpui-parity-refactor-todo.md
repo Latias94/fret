@@ -566,7 +566,7 @@ topics (if/when we implement them):
 - [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
-  - Contract: `docs/adr/0193-ephemeral-prepaint-items-v1.md` (Proposed).
+  - Contract: `docs/adr/0193-ephemeral-prepaint-items-v1.md` (Accepted).
   - Notes: ADR 0190 is now Accepted as the guiding contract; capture any new “hard-to-change” commitments as follow-up ADRs if needed.
   - Progress (v1):
     - Bundles can export VirtualList window telemetry via `UiTreeDebugSnapshotV1.virtual_list_windows` (debug-only, bounded) for postmortem analysis.
