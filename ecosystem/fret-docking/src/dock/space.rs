@@ -650,11 +650,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
             fret_runtime::DRAG_KIND_DOCK_TABS,
             cx.node,
         );
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_TABS,
+            cx.node,
+        );
 
-        let is_dock_dragging = cx
-            .app
-            .drag(fret_core::PointerId(0))
-            .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
+        let is_dock_dragging = cx.app.any_drag_session(|d| {
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && (d.source_window == self.window || d.current_window == self.window)
+                && d.dragging
+        });
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()
             || self.floating_drag.is_some()
@@ -731,7 +739,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             layout: &HashMap<DockNodeId, Rect>,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
-            font_size: Px,
+            hint_font_size_inner: Px,
+            hint_font_size_outer: Px,
             position: Point,
             mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> Option<(HoverTarget, fret_runtime::DockDropResolveSource)> {
@@ -795,6 +804,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 geom.compute_insert_index(position, scroll)
                             }),
                             outer: false,
+                            explicit: false,
                         },
                         fret_runtime::DockDropResolveSource::TabBar,
                     ));
@@ -806,8 +816,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if let Some(&root_rect) = layout.get(&root)
                 && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
                 && root != leaf_tabs
-                && let Some(zone) =
-                    super::layout::dock_hint_pick_zone(root_rect, font_size, true, position)
+                && let Some(zone) = super::layout::dock_hint_pick_zone(
+                    root_rect,
+                    hint_font_size_outer,
+                    true,
+                    position,
+                )
                 && zone != DropZone::Center
             {
                 if let Some(candidates) = candidates.as_deref_mut() {
@@ -816,9 +830,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         zone: None,
                         rect: root_rect,
                     });
-                    for (z, r) in
-                        super::layout::dock_hint_rects_with_font(root_rect, font_size, true)
-                    {
+                    for (z, r) in super::layout::dock_hint_rects_with_font(
+                        root_rect,
+                        hint_font_size_outer,
+                        true,
+                    ) {
                         candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                             kind: fret_runtime::DockDropCandidateRectKind::OuterHintRect,
                             zone: Some(z),
@@ -834,6 +850,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         zone,
                         insert_index: None,
                         outer: true,
+                        explicit: true,
                     },
                     fret_runtime::DockDropResolveSource::OuterHintRect,
                 ));
@@ -841,10 +858,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             if let Some((tabs_node, rect, _tab_count)) = leaf
                 && let Some(zone) =
-                    super::layout::dock_hint_pick_zone(rect, font_size, false, position)
+                    super::layout::dock_hint_pick_zone(rect, hint_font_size_inner, false, position)
             {
                 if let Some(candidates) = candidates.as_deref_mut() {
-                    for (z, r) in super::layout::dock_hint_rects_with_font(rect, font_size, false) {
+                    for (z, r) in
+                        super::layout::dock_hint_rects_with_font(rect, hint_font_size_inner, false)
+                    {
                         candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                             kind: fret_runtime::DockDropCandidateRectKind::InnerHintRect,
                             zone: Some(z),
@@ -860,6 +879,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         zone,
                         insert_index: None,
                         outer: false,
+                        explicit: true,
                     },
                     fret_runtime::DockDropResolveSource::InnerHintRect,
                 ));
@@ -926,12 +946,29 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
-            font_size: Px,
+            hint_font_size_inner: Px,
+            hint_font_size_outer: Px,
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
             mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> (Option<DockDropTarget>, fret_runtime::DockDropResolveSource) {
+            fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
+                const EPS: f32 = 0.001;
+                let x0 = rect.origin.x.0;
+                let y0 = rect.origin.y.0;
+                let x1 = x0 + rect.size.width.0;
+                let y1 = y0 + rect.size.height.0;
+
+                let max_x = if x1 > x0 { (x1 - EPS).max(x0) } else { x0 };
+                let max_y = if y1 > y0 { (y1 - EPS).max(y0) } else { y0 };
+
+                Point::new(
+                    Px(point.x.0.clamp(x0, max_x)),
+                    Px(point.y.0.clamp(y0, max_y)),
+                )
+            }
+
             if let Some(candidates) = candidates.as_deref_mut() {
                 candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                     kind: fret_runtime::DockDropCandidateRectKind::WindowBounds,
@@ -962,9 +999,86 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 );
             }
 
-            let (layout_root, layout_bounds) =
-                layout_context_for_position(graph, window, root, dock_bounds, position);
-            if !layout_bounds.contains(position) {
+            if let Some((floating, chrome, FloatingHitKind::TitleBar)) =
+                hit_test_floating(graph, window, position)
+            {
+                let layout_bounds = chrome.inner;
+                let layout = compute_layout_map(
+                    graph,
+                    floating,
+                    layout_bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                );
+                let center = Point::new(
+                    Px(layout_bounds.origin.x.0 + layout_bounds.size.width.0 * 0.5),
+                    Px(layout_bounds.origin.y.0 + layout_bounds.size.height.0 * 0.5),
+                );
+                let mut best: Option<(DockNodeId, f32)> = None;
+                for (&node_id, &rect) in layout.iter() {
+                    if !rect.contains(center) {
+                        continue;
+                    }
+                    let Some(DockNode::Tabs { tabs, .. }) = graph.node(node_id) else {
+                        continue;
+                    };
+                    if tabs.is_empty() {
+                        continue;
+                    }
+                    let area = rect.size.width.0 * rect.size.height.0;
+                    match best {
+                        None => best = Some((node_id, area)),
+                        Some((_best_node, best_area)) => {
+                            if area < best_area {
+                                best = Some((node_id, area));
+                            }
+                        }
+                    }
+                }
+
+                if let Some((leaf_tabs, _area)) = best {
+                    return (
+                        Some(DockDropTarget::Dock(HoverTarget {
+                            tabs: leaf_tabs,
+                            root: floating,
+                            leaf_tabs,
+                            zone: DropZone::Center,
+                            insert_index: None,
+                            outer: false,
+                            explicit: false,
+                        })),
+                        fret_runtime::DockDropResolveSource::FloatingTitleBar,
+                    );
+                }
+                return (None, fret_runtime::DockDropResolveSource::None);
+            }
+
+            let (layout_root, layout_bounds, effective_position) =
+                match hit_test_floating(graph, window, position) {
+                    None | Some((_, _, FloatingHitKind::Close)) => {
+                        let (layout_root, layout_bounds) =
+                            layout_context_for_position(graph, window, root, dock_bounds, position);
+                        (layout_root, layout_bounds, position)
+                    }
+                    Some((floating, chrome, FloatingHitKind::TitleBar)) => {
+                        let projected = Point::new(
+                            Px(chrome.inner.origin.x.0 + chrome.inner.size.width.0 * 0.5),
+                            Px(chrome.inner.origin.y.0 + chrome.inner.size.height.0 * 0.5),
+                        );
+                        (
+                            floating,
+                            chrome.inner,
+                            clamp_point_inside_rect(chrome.inner, projected),
+                        )
+                    }
+                    Some((floating, chrome, FloatingHitKind::Body)) => (
+                        floating,
+                        chrome.inner,
+                        clamp_point_inside_rect(chrome.inner, position),
+                    ),
+                };
+
+            if !layout_bounds.contains(effective_position) {
                 if let Some(candidates) = candidates.as_deref_mut() {
                     candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                         kind: fret_runtime::DockDropCandidateRectKind::LayoutBounds,
@@ -988,8 +1102,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &layout,
                 tab_scroll,
                 tab_widths,
-                font_size,
-                position,
+                hint_font_size_inner,
+                hint_font_size_outer,
+                effective_position,
                 candidates,
             )
             .map(|(target, source)| (Some(DockDropTarget::Dock(target)), source))
@@ -1006,7 +1121,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
-            font_size: Px,
+            hint_font_size_inner: Px,
+            hint_font_size_outer: Px,
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
@@ -1033,7 +1149,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 window_bounds,
                 tab_scroll,
                 tab_widths,
-                font_size,
+                hint_font_size_inner,
+                hint_font_size_outer,
                 split_handle_gap,
                 split_handle_hit_thickness,
                 position,
@@ -1328,6 +1445,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::DockingInteractionSettings>()
             .copied()
             .unwrap_or_default();
+        let hint_font_size_inner = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_inner.max(0.0))
+        .max(0.0));
+        let hint_font_size_outer = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_outer.max(0.0))
+        .max(0.0));
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let window_bounds = cx
@@ -2914,22 +3037,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         if !requested_tear_off {
                                             let mut candidates =
                                                 Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
-                                            let (hover, source) = resolve_dock_drop_target(
-                                                None,
-                                                invert_docking,
-                                                self.window,
-                                                &dock.graph,
-                                                root,
-                                                dock_bounds,
-                                                window_bounds,
-                                                &self.tab_scroll,
-                                                &self.tab_widths,
-                                                font_size,
-                                                split_handle_gap,
-                                                split_handle_hit_thickness,
-                                                position,
-                                                diagnostics_enabled.then_some(&mut candidates),
-                                            );
+	                                            let (hover, source) = resolve_dock_drop_target(
+	                                                None,
+	                                                invert_docking,
+	                                                self.window,
+	                                                &dock.graph,
+	                                                root,
+	                                                dock_bounds,
+	                                                window_bounds,
+	                                                &self.tab_scroll,
+	                                                &self.tab_widths,
+	                                                hint_font_size_inner,
+	                                                hint_font_size_outer,
+	                                                split_handle_gap,
+	                                                split_handle_hit_thickness,
+	                                                position,
+	                                                diagnostics_enabled.then_some(&mut candidates),
+	                                            );
                                             dock.hover = hover;
                                             if diagnostics_enabled {
                                                 self.dock_drop_resolve_diagnostics = Some((
@@ -3032,22 +3156,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     if dragging {
                                         let mut candidates =
                                             Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
-                                        let (target, source) = resolve_dock_drop_target(
-                                            prev_hover.clone(),
-                                            invert_docking,
-                                            self.window,
-                                            &dock.graph,
-                                            root,
-                                            dock_bounds,
-                                            window_bounds,
-                                            &self.tab_scroll,
-                                            &self.tab_widths,
-                                            font_size,
-                                            split_handle_gap,
-                                            split_handle_hit_thickness,
-                                            position,
-                                            diagnostics_enabled.then_some(&mut candidates),
-                                        );
+	                                        let (target, source) = resolve_dock_drop_target(
+	                                            prev_hover.clone(),
+	                                            invert_docking,
+	                                            self.window,
+	                                            &dock.graph,
+	                                            root,
+	                                            dock_bounds,
+	                                            window_bounds,
+	                                            &self.tab_scroll,
+	                                            &self.tab_widths,
+	                                            hint_font_size_inner,
+	                                            hint_font_size_outer,
+	                                            split_handle_gap,
+	                                            split_handle_hit_thickness,
+	                                            position,
+	                                            diagnostics_enabled.then_some(&mut candidates),
+	                                        );
                                         if diagnostics_enabled {
                                             self.dock_drop_resolve_diagnostics = Some((
                                                 now_frame,
@@ -3496,25 +3621,33 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::DockingInteractionSettings>()
             .copied()
             .unwrap_or_default();
+        let hint_font_size_inner = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_inner.max(0.0))
+        .max(0.0));
+        let hint_font_size_outer = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_outer.max(0.0))
+        .max(0.0));
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let frame_id = app.frame_id();
-        let dock_drag_panel = app
-            .find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                    && (d.source_window == self.window || d.current_window == self.window)
-                    && d.dragging
-            })
+        let dock_drag_pointer_id = app.find_drag_pointer_id(|d| {
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && (d.source_window == self.window || d.current_window == self.window)
+                && d.dragging
+        });
+        let dock_drag_panel = dock_drag_pointer_id
             .and_then(|pointer_id| app.drag(pointer_id))
             .and_then(|drag| drag.payload::<DockPanelDragPayload>())
             .map(|payload| payload.panel.clone());
-        let dock_drag_pos = app
-            .find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                    && (d.source_window == self.window || d.current_window == self.window)
-                    && d.dragging
-            })
-            .and_then(|pointer_id| app.drag(pointer_id).map(|d| d.position));
+        let dock_drag_pos =
+            dock_drag_pointer_id.and_then(|pointer_id| app.drag(pointer_id).map(|d| d.position));
+        let dock_drag_source_window = dock_drag_pointer_id
+            .and_then(|pointer_id| app.drag(pointer_id).map(|d| d.source_window));
+        let dock_drag_source_tabs = dock_drag_pointer_id
+            .and_then(|pointer_id| app.drag(pointer_id))
+            .and_then(|drag| drag.payload::<DockTabsDragPayload>())
+            .map(|payload| payload.source_tabs);
 
         let paint_panels = app.with_global_mut_untracked(DockManager::default, |dock, _app| {
             dock.register_dock_space_node(self.window, dock_space_node);
@@ -3761,15 +3894,145 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 scene,
             );
 
+            let drag_source_tabs_for_preview = dock_drag_source_tabs.or_else(|| {
+                dock_drag_panel
+                    .as_ref()
+                    .zip(dock_drag_source_window)
+                    .and_then(|(panel, source_window)| {
+                        dock.graph
+                            .find_panel_in_window(source_window, panel)
+                            .map(|(tabs, _active)| tabs)
+                    })
+            });
+
             if is_dock_dragging {
-                paint_drop_hints(
-                    theme,
-                    hover.clone(),
-                    self.window,
-                    bounds,
-                    &layout_all,
-                    scene,
-                );
+                let suppress_hints_for_tab_reorder = hover.as_ref().is_some_and(|hover| {
+                    let DockDropTarget::Dock(target) = hover else {
+                        return false;
+                    };
+                    let is_tab_bar_reorder =
+                        target.zone == DropZone::Center && target.insert_index.is_some();
+                    let is_same_tabs = drag_source_tabs_for_preview
+                        .is_some_and(|source_tabs| source_tabs == target.tabs);
+                    is_tab_bar_reorder && is_same_tabs && !target.outer
+                });
+
+                if !suppress_hints_for_tab_reorder {
+                    paint_drop_hints(
+                        theme,
+                        dock_drag_pos.and_then(|position| {
+                            fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
+                                const EPS: f32 = 0.001;
+                                let x0 = rect.origin.x.0;
+                                let y0 = rect.origin.y.0;
+                                let x1 = x0 + rect.size.width.0;
+                                let y1 = y0 + rect.size.height.0;
+
+                                let max_x = if x1 > x0 { (x1 - EPS).max(x0) } else { x0 };
+                                let max_y = if y1 > y0 { (y1 - EPS).max(y0) } else { y0 };
+
+                                Point::new(
+                                    Px(point.x.0.clamp(x0, max_x)),
+                                    Px(point.y.0.clamp(y0, max_y)),
+                                )
+                            }
+
+                            fn distance2_point_to_rect(point: Point, rect: Rect) -> f32 {
+                                let x0 = rect.origin.x.0;
+                                let y0 = rect.origin.y.0;
+                                let x1 = x0 + rect.size.width.0;
+                                let y1 = y0 + rect.size.height.0;
+
+                                let dx = if point.x.0 < x0 {
+                                    x0 - point.x.0
+                                } else if point.x.0 > x1 {
+                                    point.x.0 - x1
+                                } else {
+                                    0.0
+                                };
+                                let dy = if point.y.0 < y0 {
+                                    y0 - point.y.0
+                                } else if point.y.0 > y1 {
+                                    point.y.0 - y1
+                                } else {
+                                    0.0
+                                };
+                                dx * dx + dy * dy
+                            }
+
+                            if float_zone(dock_bounds).contains(position)
+                                || !bounds.contains(position)
+                            {
+                                return None;
+                            }
+
+                            let mut layout_root = root;
+                            let mut layout_bounds = dock_bounds;
+                            let mut layout_ctx = &root_layout;
+                            let mut effective_position = position;
+                            for (floating, chrome, layout) in floating_layouts.iter().rev() {
+                                if chrome.close_button.contains(position) {
+                                    continue;
+                                }
+                                if chrome.outer.contains(position) {
+                                    layout_root = floating.floating;
+                                    layout_bounds = chrome.inner;
+                                    layout_ctx = layout;
+                                    effective_position = if chrome.title_bar.contains(position) {
+                                        let projected = Point::new(
+                                            Px(chrome.inner.origin.x.0
+                                                + chrome.inner.size.width.0 * 0.5),
+                                            Px(chrome.inner.origin.y.0
+                                                + chrome.inner.size.height.0 * 0.5),
+                                        );
+                                        clamp_point_inside_rect(chrome.inner, projected)
+                                    } else {
+                                        clamp_point_inside_rect(chrome.inner, position)
+                                    };
+                                    break;
+                                }
+                            }
+                            if !layout_bounds.contains(effective_position) {
+                                return None;
+                            }
+
+                            let mut best: Option<(DockNodeId, f32, f32)> = None;
+                            for (&node_id, &rect) in layout_ctx.iter() {
+                                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id)
+                                else {
+                                    continue;
+                                };
+                                if tabs.is_empty() {
+                                    continue;
+                                }
+                                let dist2 = distance2_point_to_rect(effective_position, rect);
+                                let area = rect.size.width.0 * rect.size.height.0;
+                                match best {
+                                    None => best = Some((node_id, dist2, area)),
+                                    Some((_best_node, best_dist2, best_area)) => {
+                                        let better = dist2 < best_dist2
+                                            || (dist2 == best_dist2 && area < best_area);
+                                        if better {
+                                            best = Some((node_id, dist2, area));
+                                        }
+                                    }
+                                }
+                            }
+
+                            best.map(|(leaf_tabs, _dist2, _area)| DockDropHints {
+                                root: layout_root,
+                                leaf_tabs,
+                            })
+                        }),
+                        hover.clone(),
+                        hint_font_size_inner,
+                        hint_font_size_outer,
+                        self.window,
+                        bounds,
+                        &layout_all,
+                        scene,
+                    );
+                }
             }
             paint_drop_overlay(
                 theme,
@@ -3780,6 +4043,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &layout_all,
                 &self.tab_scroll,
                 &self.tab_widths,
+                drag_source_tabs_for_preview,
                 drag_tab_title,
                 close_glyph_present,
                 scene,

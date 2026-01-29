@@ -41,6 +41,8 @@ pub enum DockDropResolveSource {
     LatchedPreviousHover,
     /// The cursor hit the explicit tab-bar target (center docking + insert index).
     TabBar,
+    /// The cursor is hovering an in-window floating container title bar (explicit target band).
+    FloatingTitleBar,
     /// The cursor hit the outer direction-pad (window-root edge docking).
     OuterHintRect,
     /// The cursor hit the inner direction-pad (leaf docking).

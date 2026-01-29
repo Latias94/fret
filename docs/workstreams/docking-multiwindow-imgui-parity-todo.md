@@ -161,9 +161,20 @@ Each TODO is labeled:
     - No portable capabilities for style facets yet (only best-effort application).
     - Tool-window parenting/alt-tab semantics beyond skip-taskbar are backend-specific.
 
-- [ ] DW-P2-macos-002 Parent/child window relationship for DockFloating (macOS).
+- [x] DW-P2-macos-002 Parent/child window relationship for DockFloating (macOS).
+  - Goal: attach DockFloating OS windows as child/tool windows of their source window so ordering and
+    Space/fullscreen behavior is closer to ImGui/Editor expectations.
+  - Evidence anchors:
+    - Parent window handle wiring (DockFloating only): `crates/fret-launch/src/runner/desktop/mod.rs` (`create_window_from_request`)
+    - Window creation applies parent relationship via winit: `crates/fret-launch/src/runner/desktop/mod.rs` (`create_os_window`, `with_parent_window`)
   - Non-normative reference: winit parent_window support calls `NSWindow.addChildWindow_ordered(...)`
     (`repo-ref/winit/winit-appkit/src/window_delegate.rs`).
+  - Acceptance (manual; macOS):
+    - Run: `cargo run -p fret-demo --bin docking_arbitration_demo`
+    - Tear off a tab to create a DockFloating OS window.
+    - Move the source window around: the DockFloating window should behave like a child/tool window (stay associated rather than behaving like an unrelated app window).
+    - Switch Spaces (or enter fullscreen on the source window): the DockFloating window should follow the expected Space/fullscreen conventions (no “lost on another Space” surprises).
+    - Close the source window: DockFloating windows should not become “stuck” in a bad z-order state; closing behavior should remain consistent with `DW-P0-ux-003` merge semantics.
 
 ## Regression harness
 

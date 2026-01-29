@@ -122,46 +122,81 @@ pub(super) fn split_tab_bar(rect: Rect) -> (Rect, Rect) {
     (tab_bar, content)
 }
 
-pub(super) fn dock_drop_edge_thickness(rect: Rect) -> Px {
-    let min_dim = rect.size.width.0.min(rect.size.height.0);
-    // Keep split zones usable on large panels, but avoid making "center tab" drops difficult.
-    // Also keep the thickness sane on small panels.
-    // Edge splits should be easy to hit even on big panels; we still cap it so the center/tab
-    // drop remains a first-class target.
-    let base = (min_dim * 0.30).clamp(20.0, 120.0);
-    let cap = (min_dim * 0.44).clamp(20.0, 120.0);
-    Px(base.min(cap))
-}
-
 pub(super) fn drop_zone_rect(rect: Rect, zone: DropZone) -> Rect {
     if zone == DropZone::Center {
         return rect;
     }
-    let thickness = dock_drop_edge_thickness(rect).0;
+    // Keep preview geometry aligned with the committed split behavior.
+    // `fret-core` currently splits 50/50 for edge drops.
+    let half_w = Px((rect.size.width.0 * 0.5).max(0.0));
+    let half_h = Px((rect.size.height.0 * 0.5).max(0.0));
     match zone {
         DropZone::Left => Rect {
             origin: rect.origin,
-            size: Size::new(Px(thickness), rect.size.height),
+            size: Size::new(half_w, rect.size.height),
         },
         DropZone::Right => Rect {
             origin: Point::new(
-                Px(rect.origin.x.0 + rect.size.width.0 - thickness),
+                Px(rect.origin.x.0 + rect.size.width.0 - half_w.0),
                 rect.origin.y,
             ),
-            size: Size::new(Px(thickness), rect.size.height),
+            size: Size::new(half_w, rect.size.height),
         },
         DropZone::Top => Rect {
             origin: rect.origin,
-            size: Size::new(rect.size.width, Px(thickness)),
+            size: Size::new(rect.size.width, half_h),
         },
         DropZone::Bottom => Rect {
             origin: Point::new(
                 rect.origin.x,
-                Px(rect.origin.y.0 + rect.size.height.0 - thickness),
+                Px(rect.origin.y.0 + rect.size.height.0 - half_h.0),
             ),
-            size: Size::new(rect.size.width, Px(thickness)),
+            size: Size::new(rect.size.width, half_h),
         },
         DropZone::Center => rect,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drop_zone_rect_matches_half_split_geometry() {
+        let rect = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Left),
+            Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(100.0), Px(100.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Right),
+            Rect::new(
+                Point::new(Px(110.0), Px(20.0)),
+                Size::new(Px(100.0), Px(100.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Top),
+            Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(200.0), Px(50.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Bottom),
+            Rect::new(
+                Point::new(Px(10.0), Px(70.0)),
+                Size::new(Px(200.0), Px(50.0))
+            )
+        );
+        assert_eq!(drop_zone_rect(rect, DropZone::Center), rect);
     }
 }
 
