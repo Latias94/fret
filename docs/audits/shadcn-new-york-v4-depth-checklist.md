@@ -224,7 +224,7 @@ Evidence anchors:
 - Tooltip panel geometry (wrapper): **Gated**
 - Tooltip internal row layout (advanced): **Gated** (`chart-tooltip-advanced` item rows + “Total” row bounds)
 - Legend panel geometry (wrapper): **Gated**
-- Interactive hover tooltip + cursor rect (scripted): **Gated** (`*.hover-mid`)
+- Interactive hover tooltip + cursor rect + active marker rect (scripted): **Gated** (`*.hover-mid`)
 - Full chart engine rendering parity (axes/ticks/marks/hit-test): **Not gated** (not implemented as a shadcn chart engine yet)
 
 Evidence anchors:

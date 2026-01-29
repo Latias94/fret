@@ -25426,6 +25426,39 @@ fn web_find_chart_tooltip_cursor<'a>(root: &'a WebNode) -> &'a WebNode {
     .expect("web chart tooltip cursor")
 }
 
+fn web_find_chart_active_dot_circle<'a>(root: &'a WebNode) -> &'a WebNode {
+    fn walk<'a>(node: &'a WebNode, active_dot_layer: bool, out: &mut Option<&'a WebNode>) {
+        if out.is_some() {
+            return;
+        }
+
+        let active_dot_layer = active_dot_layer
+            || node
+                .class_name
+                .as_deref()
+                .is_some_and(|c| c.contains("recharts-active-dot"));
+
+        if active_dot_layer
+            && node.tag == "circle"
+            && node.class_name.as_deref() == Some("recharts-dot")
+        {
+            *out = Some(node);
+            return;
+        }
+
+        for child in &node.children {
+            walk(child, active_dot_layer, out);
+            if out.is_some() {
+                return;
+            }
+        }
+    }
+
+    let mut out = None;
+    walk(root, false, &mut out);
+    out.expect("web chart active dot circle")
+}
+
 fn web_find_pie_svg<'a>(root: &'a WebNode) -> &'a WebNode {
     find_first(root, &|n| {
         n.tag == "svg" && n.class_name.as_deref() == Some("recharts-surface")
@@ -26162,6 +26195,57 @@ fn web_vs_fret_layout_chart_bar_interactive_hover_mid_cursor_rect_matches_web() 
     );
 
     assert_rect_close_px(&format!("{web_name} cursor"), expected, cursor, 1.0);
+}
+
+#[test]
+fn web_vs_fret_layout_chart_line_interactive_hover_mid_active_dot_rect_matches_web() {
+    let web_name = "chart-line-interactive.hover-mid";
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let chart = web_find_chart_container(&theme.root);
+    let plot = web_find_chart_grid(chart).rect;
+    let svg = web_find_chart_svg(&theme.root).rect;
+    let dot = web_find_chart_active_dot_circle(chart);
+
+    let plot = Rect::new(
+        Point::new(Px(plot.x), Px(plot.y)),
+        CoreSize::new(Px(plot.w), Px(plot.h)),
+    );
+
+    let hover_x = svg.x + svg.w * 0.5;
+    let n = CHART_INTERACTIVE_DESKTOP.len();
+    let step_x = if n > 1 {
+        plot.size.width.0 / (n as f32 - 1.0)
+    } else {
+        0.0
+    };
+    let idx = if step_x > 0.0 {
+        ((hover_x - plot.origin.x.0) / step_x).round()
+    } else {
+        0.0
+    };
+    let idx = idx.clamp(0.0, (n.saturating_sub(1)) as f32).round() as usize;
+
+    assert_eq!(
+        CHART_INTERACTIVE_DESKTOP[idx], 338.0,
+        "{web_name}: expected the hover-mid point to match the tooltip value"
+    );
+
+    let domain_max = fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(
+        &CHART_INTERACTIVE_DESKTOP,
+        5,
+    );
+    let expected = fret_ui_shadcn::recharts_geometry::line_dot_rect(
+        plot,
+        &CHART_INTERACTIVE_DESKTOP,
+        domain_max,
+        idx,
+        4.0,
+    )
+    .expect("expected dot rect");
+
+    assert_rect_close_px(&format!("{web_name} active-dot"), expected, dot.rect, 1.0);
 }
 
 fn assert_chart_bar_rects_match_web(

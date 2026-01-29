@@ -23,7 +23,7 @@ What is currently gated (high level):
 
 - Chart scaffold geometry (container + plot area bounds) for representative families.
 - Tooltip panel chrome + internal row layout for tooltip variants.
-- Scripted “hover-mid” snapshots that gate tooltip panel size and cursor-related geometry for interactive pages.
+- Scripted “hover-mid” snapshots that gate tooltip panel size, cursor geometry, and active marker (dot) geometry for interactive pages.
 
 This is sufficient to catch many regressions in:
 
@@ -52,4 +52,3 @@ P1 (broader confidence, still controlled):
 
 1. Introduce a limited DPI/font-metrics sweep (1–2 DPIs, 1 “weird metrics” font) for tooltip/legend/axis-heavy pages.
 2. Expand stacking/math gates once the baseline implementation stops churn (avoid fragile tests while refactoring).
-
