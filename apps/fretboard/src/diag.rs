@@ -1632,10 +1632,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
-                check_wheel_scroll_test_id = check_wheel_scroll_test_id
-                    .or(Some("ui-gallery-table-retained-row-0".to_string()));
-                check_stale_paint_test_id = check_stale_paint_test_id
-                    .or(Some("ui-gallery-table-retained-row-0".to_string()));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id.or(Some(
+                    "ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999"
+                        .to_string(),
+                ));
+                check_stale_paint_test_id = check_stale_paint_test_id.or(Some(
+                    "ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999"
+                        .to_string(),
+                ));
             }
 
             if is_ui_gallery_table_retained_measured_suite {
@@ -1673,10 +1677,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
-                check_wheel_scroll_test_id = check_wheel_scroll_test_id
-                    .or(Some("ui-gallery-table-retained-row-0".to_string()));
-                check_stale_paint_test_id = check_stale_paint_test_id
-                    .or(Some("ui-gallery-table-retained-row-0".to_string()));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id.or(Some(
+                    "ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999"
+                        .to_string(),
+                ));
+                check_stale_paint_test_id = check_stale_paint_test_id.or(Some(
+                    "ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999"
+                        .to_string(),
+                ));
             }
 
             if is_ui_gallery_ai_transcript_retained_suite {
