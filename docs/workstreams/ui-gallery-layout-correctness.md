@@ -28,8 +28,7 @@ Reference workflow: `docs/debugging-playbook.md`.
 
 - Use `fretboard diag run` with an existing script, or add a new `tools/diag-scripts/ui-gallery-*.json`.
 - If the bug is visual, capture pixels too:
-  - `FRET_DIAG_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when `capture_bundle` runs.
-  - `FRET_DIAG_SCREENSHOTS=1`: enable request/response screenshots (required for `capture_screenshot` steps).
+  - `FRET_DIAG_SCREENSHOT=1`: enable screenshot readback and write `frame.bmp` into the most recent bundle dir when a script requests it (via `capture_screenshot`) or when dumping bundles (writes `screenshot.request`).
 
 ### 2.2 Dump the solved layout tree (when bounds are wrong)
 
@@ -83,3 +82,4 @@ Use `fretboard diag compare`:
 - Pick the top P0 issue and add a dedicated `tools/diag-scripts/ui-gallery-...json` repro.
 - Add `SemanticsProps.test_id` / labels to make the hot region and broken bounds discoverable in bundles and dumps.
 - Convert the repro into a `crates/fret-ui/src/declarative/tests/*` test when possible.
+- Keep a small layout-only suite runnable via `fretboard diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`.

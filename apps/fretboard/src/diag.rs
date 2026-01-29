@@ -970,6 +970,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             enum BuiltinSuite {
                 UiGallery,
+                UiGalleryLayout,
                 DockingArbitration,
             }
 
@@ -982,6 +983,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                         .collect(),
                     Some(BuiltinSuite::UiGallery),
+                )
+            } else if rest.len() == 1 && rest[0] == "ui-gallery-layout" {
+                (
+                    ui_gallery_layout_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    Some(BuiltinSuite::UiGalleryLayout),
                 )
             } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
                 (
@@ -2680,6 +2689,13 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
         "tools/diag-scripts/ui-gallery-table-smoke.json",
         "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+    ]
+}
+
+fn ui_gallery_layout_suite_scripts() -> [&'static str; 2] {
+    [
+        "tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json",
+        "tools/diag-scripts/ui-gallery-resizable-initial-bundle.json",
     ]
 }
 
