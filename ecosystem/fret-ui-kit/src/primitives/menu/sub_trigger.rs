@@ -86,6 +86,7 @@ pub fn wire<H: UiHost>(
     let models_for_key = models.clone();
     let value_for_key = value.clone();
     let cfg_for_key = cfg;
+    let trigger_id_for_key = item_id;
     let dir = direction_prim::use_direction_in_scope(cx, None);
     cx.key_on_key_down_for(
         item_id,
@@ -106,6 +107,7 @@ pub fn wire<H: UiHost>(
                     host,
                     acx,
                     &models_for_key,
+                    trigger_id_for_key,
                     value_for_key.clone(),
                     cfg_for_key.focus_delay,
                 );
