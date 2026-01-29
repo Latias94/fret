@@ -3,7 +3,7 @@
 This document tracks **coverage**, not deep conformance details:
 
 - Which shadcn-web goldens exist for `new-york-v4`
-- Which golden keys are referenced by `ecosystem/fret-ui-shadcn/tests`
+- Which golden keys are **gated** by `ecosystem/fret-ui-shadcn/tests`
 - Where to focus next to increase “1:1” confidence efficiently
 
 For deep, high-impact alignment notes and “gaps to check” per component, see:
@@ -31,15 +31,17 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
 Notes:
 
-- `tools/golden_coverage.ps1` currently counts a key as “referenced” if the key appears as a
+- `tools/golden_coverage.ps1` currently counts a key as “gated” if the key appears as a
   **string literal** somewhere under `ecosystem/fret-ui-shadcn/tests`.
-- This is a good proxy for “this golden is exercised by some test”, but it is not a perfect proxy
-  for “high-signal behavior is gated”.
+- This is a reasonable proxy for “this golden is exercised by some dedicated test”, but it is not
+  a perfect proxy for “high-signal behavior is gated”.
+- `shadcn_web_goldens_smoke.rs` provides a separate, *dynamic* “smoke-parse” pass that ensures we
+  can parse the JSON and that the exported rectangles are finite.
 - To avoid local, uncommitted goldens skewing the counts, prefer `-TrackedOnly`.
 
 - Golden files (tracked): `512`
 - Golden keys (tracked, normalized `.open` suffix): `473`
-- Keys referenced by tests (string-literal heuristic): `473` (`100%`)
+- Gated keys (string-literal heuristic): `473` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
@@ -48,9 +50,9 @@ Top missing prefixes (heuristic grouping by the substring before the first `.` o
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -AsMarkdown -GroupMissingByPrefix -TopGroups 20
 ```
 
-At the time of writing, there are no missing groups (all keys are referenced by tests).
+At the time of writing, there are no missing groups (all keys are gated by tests).
 
-The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
+The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
 
 - `chart` (84)
@@ -103,7 +105,7 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## Common “coverage smells”
 
-- Many goldens exist, but none are referenced by tests (coverage drift).
+- Many goldens exist, but none are gated by tests (coverage drift).
 - A component is gated only at one viewport size, but it changes behavior at others (false confidence).
 - A gate checks only placement while ignoring geometry (panel width/height), allowing “menu height”
   regressions to slip through.

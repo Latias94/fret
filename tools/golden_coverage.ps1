@@ -106,14 +106,14 @@ if ($total -gt 0) {
 
 $smokeTest = $null
 $smokeCoverage = $null
-if ($Kind -eq "shadcn-web" -and $Style -eq "v4/new-york-v4") {
+if ($Kind -eq "shadcn-web") {
   $candidate = Join-Path $testDir "shadcn_web_goldens_smoke.rs"
   if (Test-Path $candidate) {
     $smokeTest = $candidate
     $smokeCoverage = 100.0
   }
 }
-if ($Kind -eq "radix-web" -and $Style -eq "primitives") {
+if ($Kind -eq "radix-web") {
   $candidate = Join-Path $testDir "radix_web_goldens_smoke.rs"
   if (Test-Path $candidate) {
     $smokeTest = $candidate
@@ -123,7 +123,7 @@ if ($Kind -eq "radix-web" -and $Style -eq "primitives") {
 
 if ($AsMarkdown) {
   $trackedNote = if ($TrackedOnly) { " (tracked-only)" } else { "" }
-  Write-Output ('- `{0}` goldens{1}: {2} files, {3} keys; {4} keys referenced ({5}%), {6} keys not referenced' -f $Kind, $trackedNote, $totalFiles, $total, $usedCount, $coverage, $missingCount)
+  Write-Output ('- `{0}` goldens{1}: {2} files, {3} keys; {4} gated keys ({5}%) [string-literal heuristic], {6} ungated keys' -f $Kind, $trackedNote, $totalFiles, $total, $usedCount, $coverage, $missingCount)
   if ($smokeTest) {
     Write-Output ('  - smoke-parse coverage: {0}% (via `{1}`)' -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
   }
@@ -135,8 +135,8 @@ if ($AsMarkdown) {
   Write-Host ("  Tracked:   {0}" -f $(if ($TrackedOnly) { "yes" } else { "no" }))
   Write-Host ("  Files:     {0}" -f $totalFiles)
   Write-Host ("  Keys:      {0} (NormalizeOpenSuffix={1})" -f $total, $NormalizeOpenSuffix)
-  Write-Host ("  Used keys: {0} ({1}%)" -f $usedCount, $coverage)
-  Write-Host ("  Missing:   {0} keys" -f $missingCount)
+  Write-Host ("  Gated:     {0} keys ({1}%) [string-literal heuristic]" -f $usedCount, $coverage)
+  Write-Host ("  Ungated:   {0} keys [not referenced by tests]" -f $missingCount)
   if ($smokeTest) {
     Write-Host ("  Smoke:     yes ({0}%, {1})" -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
   } else {
@@ -146,13 +146,13 @@ if ($AsMarkdown) {
 
 if ($ShowUsed) {
   Write-Host ""
-  Write-Host "Referenced (unique):"
+  Write-Host "Gated keys (unique):"
   $usedNames | ForEach-Object { Write-Host ("  {0}" -f $_) }
 }
 
 if ($ShowMissing) {
   Write-Host ""
-  Write-Host ("Not referenced (first {0}):" -f $TopMissing)
+  Write-Host ("Ungated keys (first {0}):" -f $TopMissing)
   $missingNames | Select-Object -First $TopMissing | ForEach-Object { Write-Host ("  {0}" -f $_) }
 }
 
