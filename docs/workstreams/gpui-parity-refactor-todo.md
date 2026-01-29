@@ -674,16 +674,22 @@ topics (if/when we implement them):
       - Defaults: `ui-gallery-virt-retained-measured` sets `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, and `FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT=1`.
     - Note: `fretboard diag suite ui-gallery-virt-retained` now defaults to `--warmup-frames 5` plus the retained VirtualList gates above when not explicitly provided.
     - Evidence bundle (cache+shell, release, minimal harness; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-suite2/1769511343500-script-step-0048-wheel/bundle.json`
+    - Evidence bundle (measured rows; cache+shell, release; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-measured-local1/1769676590792-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
   - Tree harness (retained host consumer):
     - Script: `tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json`
     - Script (toggle + scroll): `tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json`
     - Run with: `FRET_UI_GALLERY_TREE_RETAINED=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+    - Variant (measured rows): set `FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT=1` to introduce multi-line labels and run the retained host with `VirtualListMeasureMode::Measured`.
     - Expectation: crossing the overscan boundary reconciles attach/detach deltas (no parent cache-root rerender), and remains stale-paint safe.
     - Gate (suite): `fretboard diag suite ui-gallery-tree-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-tree-row-0 --check-stale-paint ui-gallery-tree-row-0 ...`
+    - Gate (suite, measured rows): `fretboard diag suite ui-gallery-tree-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-tree-row-0 --check-stale-paint ui-gallery-tree-row-0 ...`
+      - Defaults: `ui-gallery-tree-retained-measured` sets `FRET_UI_GALLERY_TREE_RETAINED=1` and `FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT=1`.
     - Note: the script uses the sidebar search input (`ui-gallery-nav-search`) to keep navigation stable as the page list grows.
     - Evidence bundles (cache+shell, release; pass no-notify + bounded-delta + wheel-scroll + stale-paint gates):
       - `target/fret-diag-tree-retained-suite-shell3/1769649443728-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
       - `target/fret-diag-tree-retained-suite-shell3/1769649473084-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+      - (Measured rows) `target/fret-diag-tree-retained-measured-local1/1769678735646-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+      - (Measured rows) `target/fret-diag-tree-retained-measured-local1/1769678769241-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
   - DataTable harness (retained host consumer):
     - Script: `tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json`
     - Script (sort + select + scroll): `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
@@ -761,10 +767,15 @@ topics (if/when we implement them):
         - `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`, `RetainedTableKeyboardNavState`)
       - Gate (suite): `fretboard diag suite ui-gallery-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0 --check-stale-paint ui-gallery-table-retained-row-0 ...`
         - Note: `--check-wheel-scroll <test_id>` asserts that the target's semantics bounds move after the first wheel event (it does not require the debug hit-test node id to change).
+      - Gate (suite, measured rows): `fretboard diag suite ui-gallery-table-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0 --check-stale-paint ui-gallery-table-retained-row-0 ...`
+        - Defaults: `ui-gallery-table-retained-measured` sets `FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT=1`.
       - Evidence bundles (cache+shell, release):
         - `target/fret-diag-table-retained-suite-shell1/1769653530154-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
         - `target/fret-diag-table-retained-suite-shell1/1769653557131-ui-gallery-table-retained-sort-select-scroll/bundle.json`
         - `target/fret-diag-table-retained-keyboard-local12/1769667088191-ui-gallery-table-retained-keyboard-typeahead/bundle.json`
+        - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678819672-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
+        - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678848174-ui-gallery-table-retained-sort-select-scroll/bundle.json`
+        - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678876972-ui-gallery-table-retained-keyboard-typeahead/bundle.json`
     - Bundle-based stale-paint check:
       - Generate (example): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --dir target/fret-diag-perf-data-table-torture --launch -- cargo run -p fret-ui-gallery --release`
       - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-data-table-torture-root`
