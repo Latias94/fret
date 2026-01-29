@@ -1549,6 +1549,7 @@ impl UiGalleryDriver {
                         .center(vec![tab_strip])
                         .right(vec![
                             shadcn::Button::new("Command palette")
+                                .test_id("ui-gallery-command-palette")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
                                 .on_click(fret_app::core_commands::COMMAND_PALETTE)

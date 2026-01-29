@@ -2692,8 +2692,9 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
     ]
 }
 
-fn ui_gallery_layout_suite_scripts() -> [&'static str; 3] {
+fn ui_gallery_layout_suite_scripts() -> [&'static str; 4] {
     [
+        "tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json",
         "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
         "tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json",
         "tools/diag-scripts/ui-gallery-resizable-initial-bundle.json",
