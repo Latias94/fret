@@ -650,7 +650,14 @@ topics (if/when we implement them):
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
       - `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json --warmup-frames 5 --check-vlist-scroll-window-dirty-max 4 ...`
-      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to `--warmup-frames 5`, `--check-view-cache-reuse-min 1`, and `--check-vlist-scroll-window-dirty-max 4`.
+      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to:
+        - `--warmup-frames 5`
+        - `--check-view-cache-reuse-min 1`
+        - `--check-vlist-scroll-window-dirty-max 4`
+        - `--check-wheel-scroll ui-gallery-virtual-list-root`
+        - `--check-stale-paint ui-gallery-virtual-list-root`
+        - plus launch env: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
+          `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`.
 
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
