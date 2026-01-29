@@ -222,6 +222,8 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - `removed_subtrees` include `root_parent_children_last_set_location` (when the parent has a recorded `set_children(..)` write in this run).
     - `removed_subtrees` include `root_path_edge_ui_contains_child` / `root_path_edge_frame_contains_child` to pinpoint whether the parent chain is internally consistent
       (and whether the authoritative `WindowFrame.children` agrees with `UiTree` edges).
+    - `removed_subtrees.reachable_from_layer_roots` is computed using the same conservative reachability used by GC (liveness roots + union of `UiTree` and `WindowFrame` edges),
+      so cache-hit frames with temporarily-incomplete `UiTree.children` do not misreport “islands”.
     - `removed_subtrees` include `reachable_from_view_cache_roots` to classify whether a swept subtree was still reachable from any view-cache reuse root node (child-edge reachability),
       vs. becoming a fully-detached island.
     - `removed_subtrees` include `trigger_element` / `trigger_element_root` and `trigger_element_root_path` to identify which element-runtime root produced the sweep.

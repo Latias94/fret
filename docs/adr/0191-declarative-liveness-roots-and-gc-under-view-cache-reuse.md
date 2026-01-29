@@ -53,6 +53,9 @@ The contract is the source of truth; the mapping may evolve.
 - **Subtree membership list**: `WindowElementState::view_cache_elements_for_root` (`crates/fret-ui/src/elements/runtime.rs`).
 - **GC reachability under reuse**: `crates/fret-ui/src/declarative/mount.rs` (see the `reachable_from_view_cache_roots` set and the sweep predicate).
 - **Removed-subtree attribution** (diagnostics): `UiDebugRemoveSubtreeRecord` exported from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+  - Note: `removed_subtrees.reachable_from_layer_roots` MUST reflect the same conservative reachability used by GC, not just `UiTree.children`.
+    Cache-hit frames can temporarily have incomplete `UiTree` child edges, while the last mounted `WindowFrame.children` still retains authoritative
+    element-tree edges. For GC and diagnostics, reachability should be computed from the liveness roots using the union of both sources.
 - **Ownership root**: `NodeEntry.root` (`crates/fret-ui/src/elements/runtime.rs`); cross-root overwrites must not be “repaired” implicitly (ADR 0191).
 
 ## Non-normative reference patterns (best practice survey)
