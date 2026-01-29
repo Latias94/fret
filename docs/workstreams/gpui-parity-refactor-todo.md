@@ -790,6 +790,7 @@ topics (if/when we implement them):
       - Evidence bundles (cache+shell, release):
         - `target/fret-diag-table-retained-suite-shell1/1769653530154-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
         - `target/fret-diag-table-retained-suite-shell1/1769653557131-ui-gallery-table-retained-sort-select-scroll/bundle.json`
+        - (Desc sort) `target/fret-diag-table-retained-suite-smoke3/1769698245411-ui-gallery-table-retained-sort-desc/bundle.json`
         - `target/fret-diag-table-retained-keyboard-local12/1769667088191-ui-gallery-table-retained-keyboard-typeahead/bundle.json`
         - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678819672-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
         - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678848174-ui-gallery-table-retained-sort-select-scroll/bundle.json`
