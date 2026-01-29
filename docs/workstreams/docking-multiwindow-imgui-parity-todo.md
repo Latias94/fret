@@ -127,12 +127,22 @@ Each TODO is labeled:
     - Mixed-DPI (100% + 150%): tear off a tab near the cursor; the new window should appear with the cursor over the grabbed tab (no large “jump”).
     - With window decorations enabled: initial placement should not be offset by titlebar height.
 
-- [ ] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
+- [~] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
   - Goal: on platforms where programmatic window movement is best-effort, disable follow-mode and keep
     cross-window docking predictable (in-window floating fallback if needed).
+  - Degradation policy (Wayland):
+    - Disable OS tear-off (`ui.window_tear_off=false`) and window-under-cursor routing (`ui.window_hover_detection=none`).
+    - Preserve `ui.multi_window=true` (apps may still open multiple OS windows), but docking tear-off uses
+      in-window floating fallback instead of creating DockFloating OS windows.
   - Evidence anchors:
-    - Capability gating: `crates/fret-launch/src/runner/desktop/mod.rs` (backend capabilities)
+    - Wayland session detection + capability downgrade: `crates/fret-launch/src/runner/desktop/mod.rs` (`linux_is_wayland_session`, `backend_platform_capabilities`)
+    - Tear-off request degradation (no `CreateWindowKind::DockFloating` when tear-off is disabled): `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`)
     - Docking UI gating: `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
+    - Unit tests: `crates/fret-launch/src/runner/desktop/mod.rs` (`is_wayland_session_*`)
+  - Acceptance (manual; Linux Wayland compositor):
+    - Run `cargo run -p fret-demo --bin docking_arbitration_demo`.
+    - Attempt to tear off a tab: no new OS window should be created; the panel should float inside the same OS window.
+    - Optional: with `FRET_DOCK_TEAROFF_LOG=1`, the log should not contain `[effect-window-create]` lines for DockFloating.
 
 ## P2 — Style/parenting and future-proofing (ADR 0154 dependent)
 
