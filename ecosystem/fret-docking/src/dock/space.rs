@@ -940,6 +940,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
             position: Point,
             mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> (Option<DockDropTarget>, fret_runtime::DockDropResolveSource) {
+            fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
+                const EPS: f32 = 0.001;
+                let x0 = rect.origin.x.0;
+                let y0 = rect.origin.y.0;
+                let x1 = x0 + rect.size.width.0;
+                let y1 = y0 + rect.size.height.0;
+
+                let max_x = if x1 > x0 { (x1 - EPS).max(x0) } else { x0 };
+                let max_y = if y1 > y0 { (y1 - EPS).max(y0) } else { y0 };
+
+                Point::new(
+                    Px(point.x.0.clamp(x0, max_x)),
+                    Px(point.y.0.clamp(y0, max_y)),
+                )
+            }
+
             if let Some(candidates) = candidates.as_deref_mut() {
                 candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                     kind: fret_runtime::DockDropCandidateRectKind::WindowBounds,
@@ -970,9 +986,32 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 );
             }
 
-            let (layout_root, layout_bounds) =
-                layout_context_for_position(graph, window, root, dock_bounds, position);
-            if !layout_bounds.contains(position) {
+            let (layout_root, layout_bounds, effective_position) =
+                match hit_test_floating(graph, window, position) {
+                    None | Some((_, _, FloatingHitKind::Close)) => {
+                        let (layout_root, layout_bounds) =
+                            layout_context_for_position(graph, window, root, dock_bounds, position);
+                        (layout_root, layout_bounds, position)
+                    }
+                    Some((floating, chrome, FloatingHitKind::TitleBar)) => {
+                        let projected = Point::new(
+                            Px(chrome.inner.origin.x.0 + chrome.inner.size.width.0 * 0.5),
+                            Px(chrome.inner.origin.y.0 + chrome.inner.size.height.0 * 0.5),
+                        );
+                        (
+                            floating,
+                            chrome.inner,
+                            clamp_point_inside_rect(chrome.inner, projected),
+                        )
+                    }
+                    Some((floating, chrome, FloatingHitKind::Body)) => (
+                        floating,
+                        chrome.inner,
+                        clamp_point_inside_rect(chrome.inner, position),
+                    ),
+                };
+
+            if !layout_bounds.contains(effective_position) {
                 if let Some(candidates) = candidates.as_deref_mut() {
                     candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                         kind: fret_runtime::DockDropCandidateRectKind::LayoutBounds,
@@ -997,7 +1036,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 tab_scroll,
                 tab_widths,
                 font_size,
-                position,
+                effective_position,
                 candidates,
             )
             .map(|(target, source)| (Some(DockDropTarget::Dock(target)), source))
@@ -3775,6 +3814,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 paint_drop_hints(
                     theme,
                     dock_drag_pos.and_then(|position| {
+                        fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
+                            const EPS: f32 = 0.001;
+                            let x0 = rect.origin.x.0;
+                            let y0 = rect.origin.y.0;
+                            let x1 = x0 + rect.size.width.0;
+                            let y1 = y0 + rect.size.height.0;
+
+                            let max_x = if x1 > x0 { (x1 - EPS).max(x0) } else { x0 };
+                            let max_y = if y1 > y0 { (y1 - EPS).max(y0) } else { y0 };
+
+                            Point::new(
+                                Px(point.x.0.clamp(x0, max_x)),
+                                Px(point.y.0.clamp(y0, max_y)),
+                            )
+                        }
+
                         if float_zone(dock_bounds).contains(position) || !bounds.contains(position)
                         {
                             return None;
@@ -3782,20 +3837,35 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                         let mut layout_root = root;
                         let mut layout_bounds = dock_bounds;
+                        let mut effective_position = position;
                         for (floating, chrome, _layout) in floating_layouts.iter().rev() {
-                            if chrome.inner.contains(position) {
+                            if chrome.close_button.contains(position) {
+                                continue;
+                            }
+                            if chrome.outer.contains(position) {
                                 layout_root = floating.floating;
                                 layout_bounds = chrome.inner;
+                                effective_position = if chrome.title_bar.contains(position) {
+                                    let projected = Point::new(
+                                        Px(chrome.inner.origin.x.0
+                                            + chrome.inner.size.width.0 * 0.5),
+                                        Px(chrome.inner.origin.y.0
+                                            + chrome.inner.size.height.0 * 0.5),
+                                    );
+                                    clamp_point_inside_rect(chrome.inner, projected)
+                                } else {
+                                    clamp_point_inside_rect(chrome.inner, position)
+                                };
                                 break;
                             }
                         }
-                        if !layout_bounds.contains(position) {
+                        if !layout_bounds.contains(effective_position) {
                             return None;
                         }
 
                         let mut best: Option<(DockNodeId, f32)> = None;
                         for (&node_id, &rect) in layout_all.iter() {
-                            if !rect.contains(position) {
+                            if !rect.contains(effective_position) {
                                 continue;
                             }
                             let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {

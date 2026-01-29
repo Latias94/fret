@@ -3997,6 +3997,109 @@ fn dock_tab_drop_on_float_zone_floats_in_window_even_when_tear_off_enabled() {
 }
 
 #[test]
+fn dock_drag_over_floating_title_bar_resolves_center_dock_target() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let main_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, main_tabs);
+
+        let floating_tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.inspector")],
+            active: 0,
+        });
+        let floating = dock.graph.insert_node(DockNode::Floating {
+            child: floating_tabs,
+        });
+        dock.graph
+            .floating_windows_mut(window)
+            .push(fret_core::DockFloatingWindow {
+                floating,
+                rect: Rect::new(
+                    Point::new(Px(180.0), Px(140.0)),
+                    Size::new(Px(320.0), Px(240.0)),
+                ),
+            });
+
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.panels.insert(
+            PanelKey::new("core.inspector"),
+            DockPanel {
+                title: "Inspector".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    // DockSpace's floating chrome constants (space.rs):
+    // border=1, title_h=22 -> title bar is at y in [outer.y + 1, outer.y + 23).
+    let title_bar_pos = Point::new(Px(200.0), Px(152.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: title_bar_pos,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let hover = app
+        .global::<DockManager>()
+        .and_then(|dock| dock.hover.clone());
+    assert!(
+        matches!(
+            hover,
+            Some(DockDropTarget::Dock(t))
+                if t.zone == DropZone::Center && t.insert_index.is_none() && !t.outer
+        ),
+        "expected center dock target when hovering floating title bar, got: {hover:?}"
+    );
+}
+
+#[test]
 fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
     let window = AppWindowId::default();
 
