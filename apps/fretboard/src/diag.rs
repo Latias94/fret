@@ -1023,6 +1023,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-table-retained";
             let is_ui_gallery_table_retained_measured_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-table-retained-measured";
+            let is_ui_gallery_retained_measured_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-retained-measured";
             let is_ui_gallery_vlist_window_boundary_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
@@ -1155,6 +1157,60 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 } else if is_ui_gallery_table_retained_measured_suite {
                     (
                         vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_retained_measured_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
@@ -1309,6 +1365,45 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .or(Some("ui-gallery-virtual-list-row-0-label".to_string()));
                 check_stale_paint_test_id = check_stale_paint_test_id
                     .or(Some("ui-gallery-virtual-list-row-0-label".to_string()));
+            }
+
+            if is_ui_gallery_retained_measured_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+
+                for (key, value) in [
+                    ("FRET_UI_GALLERY_VIEW_CACHE", "1"),
+                    ("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1"),
+                    ("FRET_UI_GALLERY_VLIST_RETAINED", "1"),
+                    ("FRET_UI_GALLERY_VLIST_MINIMAL", "1"),
+                    ("FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT", "1"),
+                    ("FRET_UI_GALLERY_TREE_RETAINED", "1"),
+                    ("FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT", "1"),
+                    ("FRET_UI_GALLERY_DATA_TABLE_RETAINED", "1"),
+                    ("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT", "1"),
+                    ("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT", "1"),
+                ] {
+                    if !launch_env.iter().any(|(k, _)| k == key) {
+                        launch_env.push((key.to_string(), value.to_string()));
+                    }
+                }
+
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+
+                // Use a candidate list so each script can select the relevant target test id.
+                // This requires the wheel-scroll and stale-paint gates to support `a|b|c` syntax.
+                let any_target = "ui-gallery-virtual-list-row-0-label|ui-gallery-tree-row-0|ui-gallery-data-table-row-0|ui-gallery-table-retained-row-0";
+                check_wheel_scroll_test_id =
+                    check_wheel_scroll_test_id.or(Some(any_target.to_string()));
+                check_stale_paint_test_id =
+                    check_stale_paint_test_id.or(Some(any_target.to_string()));
             }
 
             if is_ui_gallery_tree_retained_suite {
@@ -5736,6 +5831,18 @@ fn check_bundle_for_stale_paint_json(
     test_id: &str,
     eps: f32,
 ) -> Result<(), String> {
+    let candidates: Vec<&str> = test_id
+        .split('|')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let candidates: &[&str] = if candidates.is_empty() {
+        &[test_id]
+    } else {
+        &candidates
+    };
+    let require_match = candidates.len() > 1;
+
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -5746,6 +5853,7 @@ fn check_bundle_for_stale_paint_json(
 
     let mut suspicious: Vec<String> = Vec::new();
     let mut missing_scene_fingerprint = false;
+    let mut any_test_id_match = false;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -5753,6 +5861,16 @@ fn check_bundle_for_stale_paint_json(
             .get("snapshots")
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
+
+        let chosen_test_id = candidates.iter().copied().find(|candidate| {
+            snaps
+                .iter()
+                .any(|s| semantics_node_y_for_test_id(s, candidate).is_some())
+        });
+        let Some(test_id) = chosen_test_id else {
+            continue;
+        };
+        any_test_id_match = true;
 
         let mut prev_y: Option<f64> = None;
         let mut prev_fp: Option<u64> = None;
@@ -5803,6 +5921,14 @@ fn check_bundle_for_stale_paint_json(
     if missing_scene_fingerprint {
         return Err(format!(
             "stale paint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if require_match && !any_test_id_match {
+        return Err(format!(
+            "stale paint check: none of the provided test ids were found in any snapshot (test_ids={:?})\nbundle: {}",
+            candidates,
             bundle_path.display()
         ));
     }
@@ -5891,6 +6017,18 @@ fn check_bundle_for_wheel_scroll_json(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
+    let candidates: Vec<&str> = test_id
+        .split('|')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let candidates: &[&str] = if candidates.is_empty() {
+        &[test_id]
+    } else {
+        &candidates
+    };
+    let require_match = candidates.len() > 1;
+
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -5902,6 +6040,7 @@ fn check_bundle_for_wheel_scroll_json(
     let mut any_wheel = false;
     let mut failures: Vec<String> = Vec::new();
     let eps_px: f64 = 0.25;
+    let mut any_test_id_match = false;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -5941,25 +6080,35 @@ fn check_bundle_for_wheel_scroll_json(
             continue;
         };
 
-        let Some(target_before) = semantics_node_id_for_test_id(before, test_id) else {
+        let mut chosen_test_id: Option<&str> = None;
+        let mut target_before: u64 = 0;
+        let mut target_after: u64 = 0;
+        let mut y_before: f64 = 0.0;
+        for candidate in candidates {
+            let Some(tb) = semantics_node_id_for_test_id(before, candidate) else {
+                continue;
+            };
+            let Some(ta) = semantics_node_id_for_test_id(after, candidate) else {
+                continue;
+            };
+            let Some(yb) = semantics_node_y_for_test_id(before, candidate) else {
+                continue;
+            };
+            chosen_test_id = Some(*candidate);
+            target_before = tb;
+            target_after = ta;
+            y_before = yb;
+            break;
+        }
+        let Some(test_id) = chosen_test_id else {
             failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
+                "window={window_id} wheel_frame={wheel_frame} error=missing_test_id_before_or_after test_ids={:?}",
+                candidates
             ));
             continue;
         };
-        let Some(target_after) = semantics_node_id_for_test_id(after, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
-            ));
-            continue;
-        };
+        any_test_id_match = true;
 
-        let Some(y_before) = semantics_node_y_for_test_id(before, test_id) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_target_y_before"
-            ));
-            continue;
-        };
         let mut moved = false;
         let mut best_after_frame: u64 = after_frame_id;
         let mut best_y_after: Option<f64> = None;
@@ -5998,6 +6147,14 @@ fn check_bundle_for_wheel_scroll_json(
     if !any_wheel {
         return Err(format!(
             "wheel scroll check requires at least one pointer.wheel event in the bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if require_match && !any_test_id_match {
+        return Err(format!(
+            "wheel scroll check: none of the provided test ids were found in any snapshot (test_ids={:?})\nbundle: {}",
+            candidates,
             bundle_path.display()
         ));
     }
@@ -8966,6 +9123,101 @@ mod tests {
                 .as_deref(),
             Some("hover-offender")
         );
+    }
+
+    #[test]
+    fn wheel_scroll_gate_accepts_any_of_multiple_test_ids() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "events": [
+                        { "kind": "pointer.wheel", "frame_id": 2 }
+                    ],
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        { "id": 10, "role": "text", "test_id": "b", "bounds": { "y": 0.0 } }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        { "id": 10, "role": "text", "test_id": "b", "bounds": { "y": 10.0 } }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_wheel_scroll_json(&bundle, Path::new("bundle.json"), "a|b", 0).unwrap();
+    }
+
+    #[test]
+    fn stale_paint_gate_requires_a_match_when_multiple_test_ids_provided() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "tick_id": 1, "frame_id": 1, "scene_fingerprint": 1, "debug": { "semantics": { "nodes": [] } } },
+                        { "tick_id": 2, "frame_id": 2, "scene_fingerprint": 2, "debug": { "semantics": { "nodes": [] } } }
+                    ]
+                }
+            ]
+        });
+
+        let err = check_bundle_for_stale_paint_json(&bundle, Path::new("bundle.json"), "a|b", 0.5)
+            .unwrap_err();
+        assert!(err.contains("none of the provided test ids were found"));
+    }
+
+    #[test]
+    fn stale_paint_gate_accepts_any_of_multiple_test_ids() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "scene_fingerprint": 1,
+                            "debug": {
+                                "stats": { "paint_nodes_performed": 1, "paint_cache_replayed_ops": 0 },
+                                "semantics": { "nodes": [ { "id": 10, "role": "text", "test_id": "b", "bounds": { "y": 0.0 } } ] }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "scene_fingerprint": 2,
+                            "debug": {
+                                "stats": { "paint_nodes_performed": 1, "paint_cache_replayed_ops": 0 },
+                                "semantics": { "nodes": [ { "id": 10, "role": "text", "test_id": "b", "bounds": { "y": 10.0 } } ] }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_stale_paint_json(&bundle, Path::new("bundle.json"), "a|b", 0.5).unwrap();
     }
 
     #[test]
