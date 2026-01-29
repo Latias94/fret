@@ -14,6 +14,7 @@ Active workstreams:
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
 - `docs/workstreams/state-driven-style-resolution-v1.md`
+- `docs/workstreams/ui-gallery-layout-correctness.md`
 - `docs/workstreams/ui-gallery-perf-scroll-measure.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
