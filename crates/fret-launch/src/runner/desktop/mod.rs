@@ -3074,6 +3074,69 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
     }
 
+    fn compute_window_position_from_cursor_grab_estimate(
+        &self,
+        reference_window: fret_core::AppWindowId,
+        new_window_inner_size: winit::dpi::LogicalSize<f64>,
+        grab_offset_logical: Point,
+    ) -> Option<Position> {
+        let screen_pos = self.cursor_screen_pos?;
+        let state = self.windows.get(reference_window)?;
+        let scale = state.window.scale_factor();
+
+        let max_client = winit::dpi::LogicalSize::new(
+            new_window_inner_size.width as f32,
+            new_window_inner_size.height as f32,
+        );
+
+        let mut x = screen_pos.x;
+        let mut y = screen_pos.y;
+
+        if let Some((ox, oy)) = outer_pos_for_cursor_grab(
+            screen_pos,
+            grab_offset_logical,
+            scale,
+            state.window.surface_position(),
+            Some(max_client),
+        ) {
+            x = ox;
+            y = oy;
+        }
+
+        // Best-effort clamping: avoid creating "off-screen" floating windows due to
+        // platform-specific coordinate spaces and DPI conversions.
+        let outer_size = new_window_inner_size.to_physical::<u32>(scale);
+
+        #[cfg(target_os = "windows")]
+        if let Some(work) = win32::monitor_work_area_for_point(screen_pos) {
+            (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                x,
+                y,
+                outer_size,
+                work,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let monitors = Self::monitor_rects_physical(state.window.as_ref());
+            if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+                && let Some(monitor) = monitors.get(idx).copied()
+            {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            }
+        }
+
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+    }
+
     fn compute_window_outer_position_from_cursor_grab(
         &self,
         target_window: fret_core::AppWindowId,
@@ -3083,49 +3146,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let state = self.windows.get(target_window)?;
         let scale = state.window.scale_factor();
 
-        if !grab_offset_logical.x.0.is_finite()
-            || !grab_offset_logical.y.0.is_finite()
-            || grab_offset_logical.x.0 < 0.0
-            || grab_offset_logical.y.0 < 0.0
-        {
-            return None;
-        }
-
         // Clamp the grab point to the target window's current client size. During tear-off, the
         // grab offset comes from the source window's client coordinates; if the new floating
         // window is smaller, keeping the original offset would place the cursor outside the new
         // window (visible as a fixed offset between cursor and window).
         let target_inner = state.window.surface_size();
         let target_inner_logical: winit::dpi::LogicalSize<f32> = target_inner.to_logical(scale);
-        let max_x = target_inner_logical.width;
-        let max_y = target_inner_logical.height;
-        let mut grab_x = grab_offset_logical.x.0;
-        let mut grab_y = grab_offset_logical.y.0;
-        if max_x.is_finite() && max_x > 0.0 {
-            grab_x = grab_x.min(max_x).max(0.0);
-        } else {
-            grab_x = 0.0;
-        }
-        if max_y.is_finite() && max_y > 0.0 {
-            grab_y = grab_y.min(max_y).max(0.0);
-        } else {
-            grab_y = 0.0;
-        }
-
-        // Match ImGui's platform contract:
-        // - viewport pos is client/inner screen position (logical)
-        // - winit expects outer position
-        // - therefore: outer = desired_client - decoration_offset(window)
-        // See `repo-ref/dear-imgui-rs/backends/dear-imgui-winit/src/multi_viewport.rs:winit_set_window_pos`.
-        let deco_offset = state.window.surface_position();
-
-        let grab_client_x = grab_x as f64 * scale;
-        let grab_client_y = grab_y as f64 * scale;
-        let grab_outer_x = deco_offset.x as f64 + grab_client_x;
-        let grab_outer_y = deco_offset.y as f64 + grab_client_y;
-
-        let mut x = screen_pos.x - grab_outer_x;
-        let mut y = screen_pos.y - grab_outer_y;
+        let (mut x, mut y) = outer_pos_for_cursor_grab(
+            screen_pos,
+            grab_offset_logical,
+            scale,
+            state.window.surface_position(),
+            Some(target_inner_logical),
+        )?;
 
         // Align with ImGui docking/multi-viewport behavior:
         // - platform backend sets the window pos as requested
@@ -3206,7 +3239,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // For dock tear-off, initially place near the cursor; we will refine the position
             // after the OS window exists using its own decoration offset (ImGui-style).
             if let CreateWindowKind::DockFloating { source_window, .. } = request.kind {
-                spec.position = self.compute_window_position_from_cursor(source_window);
+                if let Some(anchor) = request.anchor {
+                    // Initial positioning is best-effort until the OS window exists, but it's
+                    // worth approximating with the source window's decoration offset so Windows
+                    // doesn't "jump" after creation under mixed DPI / non-client offsets.
+                    spec.position = self.compute_window_position_from_cursor_grab_estimate(
+                        anchor.window,
+                        spec.size,
+                        anchor.position,
+                    );
+                }
+                if spec.position.is_none() {
+                    spec.position = self.compute_window_position_from_cursor(source_window);
+                }
             }
 
             if spec.position.is_none()
@@ -5087,10 +5132,83 @@ fn local_pos_for_screen_pos(
     Point::new(Px(local_logical.x), Px(local_logical.y))
 }
 
+fn outer_pos_for_cursor_grab(
+    screen_pos: PhysicalPosition<f64>,
+    grab_offset_logical: Point,
+    scale_factor: f64,
+    decoration_offset: winit::dpi::PhysicalPosition<i32>,
+    max_client_logical: Option<winit::dpi::LogicalSize<f32>>,
+) -> Option<(f64, f64)> {
+    if !grab_offset_logical.x.0.is_finite()
+        || !grab_offset_logical.y.0.is_finite()
+        || grab_offset_logical.x.0 < 0.0
+        || grab_offset_logical.y.0 < 0.0
+    {
+        return None;
+    }
+
+    let mut grab_x = grab_offset_logical.x.0;
+    let mut grab_y = grab_offset_logical.y.0;
+    if let Some(max) = max_client_logical {
+        if max.width.is_finite() && max.width > 0.0 {
+            grab_x = grab_x.min(max.width).max(0.0);
+        } else {
+            grab_x = 0.0;
+        }
+        if max.height.is_finite() && max.height > 0.0 {
+            grab_y = grab_y.min(max.height).max(0.0);
+        } else {
+            grab_y = 0.0;
+        }
+    }
+
+    // Match ImGui's platform contract:
+    // - viewport pos is client/inner screen position (logical)
+    // - winit expects outer position
+    // - therefore: outer = desired_client - decoration_offset(window)
+    // See `repo-ref/dear-imgui-rs/backends/dear-imgui-winit/src/multi_viewport.rs:winit_set_window_pos`.
+    let grab_client_x = grab_x as f64 * scale_factor;
+    let grab_client_y = grab_y as f64 * scale_factor;
+    let grab_outer_x = decoration_offset.x as f64 + grab_client_x;
+    let grab_outer_y = decoration_offset.y as f64 + grab_client_y;
+
+    let x = screen_pos.x - grab_outer_x;
+    let y = screen_pos.y - grab_outer_y;
+    Some((x, y))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use winit::dpi::{PhysicalPosition, PhysicalSize};
+
+    #[test]
+    fn outer_pos_for_cursor_grab_accounts_for_decorations_and_scale() {
+        let cursor = PhysicalPosition::new(1000.0, 500.0);
+        let grab = Point::new(Px(20.0), Px(40.0));
+        let scale = 1.5;
+        let deco = winit::dpi::PhysicalPosition::new(10, 30);
+        let max_client = winit::dpi::LogicalSize::new(200.0f32, 200.0f32);
+
+        let (x, y) = outer_pos_for_cursor_grab(cursor, grab, scale, deco, Some(max_client))
+            .expect("expected outer pos");
+        assert_eq!(x, 960.0);
+        assert_eq!(y, 410.0);
+    }
+
+    #[test]
+    fn outer_pos_for_cursor_grab_clamps_to_client_size() {
+        let cursor = PhysicalPosition::new(1000.0, 500.0);
+        let grab = Point::new(Px(9999.0), Px(9999.0));
+        let scale = 2.0;
+        let deco = winit::dpi::PhysicalPosition::new(0, 0);
+        let max_client = winit::dpi::LogicalSize::new(100.0f32, 100.0f32);
+
+        let (x, y) = outer_pos_for_cursor_grab(cursor, grab, scale, deco, Some(max_client))
+            .expect("expected outer pos");
+        assert_eq!(x, 800.0);
+        assert_eq!(y, 300.0);
+    }
 
     #[cfg(target_os = "macos")]
     #[test]
