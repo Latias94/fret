@@ -747,6 +747,15 @@ topics (if/when we implement them):
       - Evidence bundles (cache+shell, release):
         - `target/fret-diag-tree-retained-suite-shell3/1769649443728-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
         - `target/fret-diag-tree-retained-suite-shell3/1769649473084-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+    - UI Kit table retained harness (virt-003 consumer):
+      - UI Gallery page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_TABLE_RETAINED_TORTURE`)
+      - Scripts:
+        - `tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json`
+        - `tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json`
+      - Gate (suite): `fretboard diag suite ui-gallery-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0 --check-stale-paint ui-gallery-table-retained-row-0 ...`
+      - Evidence bundles (cache+shell, release):
+        - `target/fret-diag-table-retained-suite-shell1/1769653530154-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-table-retained-suite-shell1/1769653557131-ui-gallery-table-retained-sort-select-scroll/bundle.json`
     - Bundle-based stale-paint check:
       - Generate (example): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --dir target/fret-diag-perf-data-table-torture --launch -- cargo run -p fret-ui-gallery --release`
       - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-data-table-torture-root`
