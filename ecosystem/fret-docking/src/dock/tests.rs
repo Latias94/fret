@@ -4040,6 +4040,72 @@ fn dock_outer_drop_rects_target_window_root_even_when_root_is_split() {
 }
 
 #[test]
+fn dock_center_drop_overlay_excludes_tab_bar() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+        dock.hover = Some(DockDropTarget::Dock(HoverTarget {
+            tabs,
+            root: tabs,
+            leaf_tabs: tabs,
+            zone: DropZone::Center,
+            insert_index: None,
+            outer: false,
+        }));
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let (tab_bar, content) = split_tab_bar(dock_bounds);
+
+    let has_tab_quad = scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Quad { rect, .. } if *rect == tab_bar
+        )
+    });
+    assert!(has_tab_quad, "expected a tab-bar overlay quad");
+
+    let has_content_quad = scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Quad { rect, .. } if *rect == content
+        )
+    });
+    assert!(
+        has_content_quad,
+        "expected center drop overlay quad to cover content rect (excluding tab bar)"
+    );
+}
+
+#[test]
 fn dock_tab_bar_insert_index_respects_before_after_halves() {
     let window = AppWindowId::default();
 

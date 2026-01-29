@@ -341,7 +341,15 @@ pub(super) fn paint_drop_overlay(
             };
 
             if target.zone == DropZone::Center {
-                let (tab_bar, _content) = split_tab_bar(rect);
+                let (tab_bar, content) = split_tab_bar(rect);
+                scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(9_985),
+                    rect: content,
+                    background: Color { a: 0.12, ..primary },
+                    border: Edges::all(Px(2.0)),
+                    border_color: Color { a: 0.65, ..primary },
+                    corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+                });
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(9_990),
                     rect: tab_bar,
