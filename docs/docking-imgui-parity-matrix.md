@@ -278,8 +278,11 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - `DockDragInversionSettings` supports:
       - `DockByDefault` + modifier to invert, or
       - `DockOnlyWhenModifier`.
-    - Fret applies an ImGui-style **explicit target gating** rule:
-      - no docking preview unless hovering the explicit target (tab bar) or one of the direction-pad hint rects.
+    - Fret applies an ImGui-style **explicit target gating** rule for *drop allow/commit*:
+      - docking is only committed when hovering the explicit target (tab bar) or one of the direction-pad hint rects.
+    - Fret now renders the direction-pad hint UI even when no drop target is currently selected
+      (mirrors ImGui's always-visible drop boxes while dragging over a valid host), but keeps the
+      "drop allowed" gating aligned with ImGui's explicit-target semantics.
     - However, Fret still does not have a direct equivalent of ImGui’s “explicit target rect = title bar band”
       for non-tab-window chrome.
   - Evidence anchors:
@@ -325,9 +328,9 @@ Known semantic deltas to track:
 - Fret currently uses a small amount of custom hit logic (center radius + quadrant selection) to reduce flicker when moving
   diagonally between pads.
 
-## 4.2 Edge split zones (left/right/top/bottom strips)
+## 4.2 Edge split zones (left/right/top/bottom preview areas)
 
-- [~] **Split preview overlays match the committed split zone**
+- [x] **Split preview overlays match the committed split zone**
   - ImGui:
     - Preview uses the chosen `dir` to compute the final split rectangles.
   - Fret:
@@ -647,7 +650,8 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
      - Edge-strip candidates are no longer used for selecting a drop zone.
      - Outer docking (window-root edge targets) is supported by targeting `layout_root` directly.
    - Notes:
-     - `drop_zone_rect(...)` still uses edge thickness for the *preview overlay* when a zone is selected.
+     - `drop_zone_rect(...)` renders a 50/50 split preview, aligned with the currently-committed
+       split behavior in `fret-core`.
 
 3) **Add conformance tests that pin the chosen target**
    - Add tests for:
@@ -667,7 +671,7 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
      - Inner hit testing (anti-flicker quadrant logic): `dock_hint_pick_zone(...)`
      - Outer docking selection: `HoverTarget.outer` + `DockSpace` targets `layout_root` for edge docking
    - Remaining polish:
-     - render both inner + outer hint sets simultaneously (ImGui renders inner then outer)
+     - verify hint render ordering and overlap parity (ImGui renders inner then outer)
      - align overlay visuals (alpha/rounding/placement) with ImGui’s `DockNodePreviewDockRender`
 
 5) **Align splitter feel**

@@ -30,6 +30,12 @@ pub(super) enum DockDropTarget {
     Float { window: AppWindowId },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct DockDropHints {
+    pub(super) root: DockNodeId,
+    pub(super) leaf_tabs: DockNodeId,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(super) enum DockDropIntent {
     None,

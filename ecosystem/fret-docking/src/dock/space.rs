@@ -650,11 +650,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
             fret_runtime::DRAG_KIND_DOCK_TABS,
             cx.node,
         );
+        fret_ui::internal_drag::set_route(
+            cx.app,
+            self.window,
+            fret_runtime::DRAG_KIND_DOCK_TABS,
+            cx.node,
+        );
 
-        let is_dock_dragging = cx
-            .app
-            .drag(fret_core::PointerId(0))
-            .is_some_and(|d| d.dragging && d.payload::<DockPanelDragPayload>().is_some());
+        let is_dock_dragging = cx.app.any_drag_session(|d| {
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && (d.source_window == self.window || d.current_window == self.window)
+                && d.dragging
+        });
         let wants_animation_frames = is_dock_dragging
             || self.divider_drag.is_some()
             || self.floating_drag.is_some()
@@ -3499,22 +3507,24 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let frame_id = app.frame_id();
-        let dock_drag_panel = app
-            .find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                    && (d.source_window == self.window || d.current_window == self.window)
-                    && d.dragging
-            })
+        let dock_drag_pointer_id = app.find_drag_pointer_id(|d| {
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && (d.source_window == self.window || d.current_window == self.window)
+                && d.dragging
+        });
+        let dock_drag_panel = dock_drag_pointer_id
             .and_then(|pointer_id| app.drag(pointer_id))
             .and_then(|drag| drag.payload::<DockPanelDragPayload>())
             .map(|payload| payload.panel.clone());
-        let dock_drag_pos = app
-            .find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                    && (d.source_window == self.window || d.current_window == self.window)
-                    && d.dragging
-            })
-            .and_then(|pointer_id| app.drag(pointer_id).map(|d| d.position));
+        let dock_drag_pos =
+            dock_drag_pointer_id.and_then(|pointer_id| app.drag(pointer_id).map(|d| d.position));
+        let dock_drag_source_window = dock_drag_pointer_id
+            .and_then(|pointer_id| app.drag(pointer_id).map(|d| d.source_window));
+        let dock_drag_source_tabs = dock_drag_pointer_id
+            .and_then(|pointer_id| app.drag(pointer_id))
+            .and_then(|drag| drag.payload::<DockTabsDragPayload>())
+            .map(|payload| payload.source_tabs);
 
         let paint_panels = app.with_global_mut_untracked(DockManager::default, |dock, _app| {
             dock.register_dock_space_node(self.window, dock_space_node);
@@ -3764,6 +3774,52 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if is_dock_dragging {
                 paint_drop_hints(
                     theme,
+                    dock_drag_pos.and_then(|position| {
+                        if float_zone(dock_bounds).contains(position) || !bounds.contains(position)
+                        {
+                            return None;
+                        }
+
+                        let mut layout_root = root;
+                        let mut layout_bounds = dock_bounds;
+                        for (floating, chrome, _layout) in floating_layouts.iter().rev() {
+                            if chrome.inner.contains(position) {
+                                layout_root = floating.floating;
+                                layout_bounds = chrome.inner;
+                                break;
+                            }
+                        }
+                        if !layout_bounds.contains(position) {
+                            return None;
+                        }
+
+                        let mut best: Option<(DockNodeId, f32)> = None;
+                        for (&node_id, &rect) in layout_all.iter() {
+                            if !rect.contains(position) {
+                                continue;
+                            }
+                            let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
+                                continue;
+                            };
+                            if tabs.is_empty() {
+                                continue;
+                            }
+                            let area = rect.size.width.0 * rect.size.height.0;
+                            match best {
+                                None => best = Some((node_id, area)),
+                                Some((_best_node, best_area)) => {
+                                    if area < best_area {
+                                        best = Some((node_id, area));
+                                    }
+                                }
+                            }
+                        }
+
+                        best.map(|(leaf_tabs, _area)| DockDropHints {
+                            root: layout_root,
+                            leaf_tabs,
+                        })
+                    }),
                     hover.clone(),
                     self.window,
                     bounds,
@@ -3780,6 +3836,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &layout_all,
                 &self.tab_scroll,
                 &self.tab_widths,
+                dock_drag_source_tabs.or_else(|| {
+                    dock_drag_panel
+                        .as_ref()
+                        .zip(dock_drag_source_window)
+                        .and_then(|(panel, source_window)| {
+                            dock.graph
+                                .find_panel_in_window(source_window, panel)
+                                .map(|(tabs, _active)| tabs)
+                        })
+                }),
                 drag_tab_title,
                 close_glyph_present,
                 scene,

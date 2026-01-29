@@ -432,6 +432,7 @@ pub(super) fn paint_drop_overlay(
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
     tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+    drag_source_tabs: Option<DockNodeId>,
     drag_tab_title: Option<PreparedTabTitle>,
     close_glyph_present: bool,
     scene: &mut Scene,
@@ -466,23 +467,26 @@ pub(super) fn paint_drop_overlay(
 
             if target.zone == DropZone::Center {
                 let (tab_bar, content) = split_tab_bar(rect);
-                scene.push(SceneOp::Quad {
-                    order: fret_core::DrawOrder(9_985),
-                    rect: content,
-                    background: Color { a: 0.12, ..primary },
-                    border: Edges::all(Px(2.0)),
-                    border_color: Color { a: 0.65, ..primary },
-                    corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
-                });
-                scene.push(SceneOp::Quad {
-                    order: fret_core::DrawOrder(9_990),
-                    rect: tab_bar,
-                    background: Color { a: 0.14, ..primary },
-                    border: Edges::all(Px(1.0)),
-                    border_color: Color { a: 0.45, ..primary },
-                    corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
-                });
-                if let Some(title) = drag_tab_title {
+                let same_tabs_reorder = drag_source_tabs.is_some_and(|src| src == target.tabs);
+                if !same_tabs_reorder {
+                    scene.push(SceneOp::Quad {
+                        order: fret_core::DrawOrder(9_985),
+                        rect: content,
+                        background: Color { a: 0.12, ..primary },
+                        border: Edges::all(Px(2.0)),
+                        border_color: Color { a: 0.65, ..primary },
+                        corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+                    });
+                    scene.push(SceneOp::Quad {
+                        order: fret_core::DrawOrder(9_990),
+                        rect: tab_bar,
+                        background: Color { a: 0.14, ..primary },
+                        border: Edges::all(Px(1.0)),
+                        border_color: Color { a: 0.45, ..primary },
+                        corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+                    });
+                }
+                if !same_tabs_reorder && let Some(title) = drag_tab_title {
                     let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
                     let tab_count = match graph.node(target.tabs) {
                         Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
@@ -632,32 +636,35 @@ pub(super) fn paint_drop_overlay(
 
 pub(super) fn paint_drop_hints(
     theme: fret_ui::ThemeSnapshot,
+    hints: Option<DockDropHints>,
     target: Option<DockDropTarget>,
     _window: fret_core::AppWindowId,
     _bounds: Rect,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     scene: &mut Scene,
 ) {
-    let Some(target) = target else {
+    let Some(hints) = hints else {
         return;
     };
 
-    let DockDropTarget::Dock(target) = target else {
-        return;
+    let active = match target {
+        Some(DockDropTarget::Dock(t)) => Some(t),
+        _ => None,
     };
+    let active_matches_hints =
+        active.is_some_and(|t| t.root == hints.root && t.leaf_tabs == hints.leaf_tabs);
+    let active_zone = active_matches_hints.then(|| active.unwrap().zone);
+    let active_outer = active_matches_hints && active.unwrap().outer;
+    let inner_active_set = active_zone.is_some() && !active_outer;
+    let outer_active_set = active_zone.is_some() && active_outer;
 
-    let Some(active_rect) = layout.get(&target.tabs).copied() else {
+    let Some(inner_rect) = layout.get(&hints.leaf_tabs).copied() else {
         return;
     };
+    let root_rect = layout.get(&hints.root).copied().unwrap_or(inner_rect);
 
     let font_size = theme.metric_required("font.size");
-    let inner_rect = layout
-        .get(&target.leaf_tabs)
-        .copied()
-        .unwrap_or(active_rect);
-    let root_rect = layout.get(&target.root).copied().unwrap_or(active_rect);
-
-    let show_outer = target.root != target.leaf_tabs;
+    let show_outer = hints.root != hints.leaf_tabs;
     let inner_rects = dock_hint_rects_with_font(inner_rect, font_size, false);
     let outer_rects = show_outer.then(|| dock_hint_rects_with_font(root_rect, font_size, true));
 
@@ -734,7 +741,7 @@ pub(super) fn paint_drop_hints(
             if skip_center && zone == DropZone::Center {
                 continue;
             }
-            let is_active = active_set && zone == target.zone;
+            let is_active = active_set && active_zone.is_some_and(|z| z == zone);
             let bg = if is_active {
                 active_bg
             } else {
@@ -766,9 +773,9 @@ pub(super) fn paint_drop_hints(
 
     // Inner and outer hint sets can coexist; the active set is determined by which family of
     // drop rects was hit-tested.
-    paint_set(&inner_rects, !target.outer, false, 1.0);
+    paint_set(&inner_rects, inner_active_set, false, 1.0);
     if let Some(outer_rects) = outer_rects.as_ref() {
-        paint_set(outer_rects, target.outer, true, 0.80);
+        paint_set(outer_rects, outer_active_set, true, 0.80);
     }
 }
 
