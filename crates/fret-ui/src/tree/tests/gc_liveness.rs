@@ -1,5 +1,3 @@
-use super::*;
-
 #[cfg(feature = "diagnostics")]
 #[test]
 fn removed_subtree_reachability_prefers_frame_context() {
