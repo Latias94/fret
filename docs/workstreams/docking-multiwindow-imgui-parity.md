@@ -9,6 +9,7 @@ Platform note:
 
 - macOS-specific plan: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
+- Detailed parity matrix (mechanics + hand feel): `docs/docking-imgui-parity-matrix.md`
 
 ## Upstream reference anchors (Dear ImGui)
 
