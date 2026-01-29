@@ -672,19 +672,25 @@ topics (if/when we implement them):
     - Evidence bundle (cache+shell, release, minimal harness; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-suite2/1769511343500-script-step-0048-wheel/bundle.json`
   - Tree harness (retained host consumer):
     - Script: `tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json`
+    - Script (toggle + scroll): `tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json`
     - Run with: `FRET_UI_GALLERY_TREE_RETAINED=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
     - Expectation: crossing the overscan boundary reconciles attach/detach deltas (no parent cache-root rerender), and remains stale-paint safe.
     - Gate (suite): `fretboard diag suite ui-gallery-tree-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-tree-row-0 --check-stale-paint ui-gallery-tree-row-0 ...`
     - Note: the script uses the sidebar search input (`ui-gallery-nav-search`) to keep navigation stable as the page list grows.
-    - Evidence bundle (cache+shell, release; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-tree-retained-suite-shell/1769612148231-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+    - Evidence bundles (cache+shell, release; pass no-notify + bounded-delta + wheel-scroll + stale-paint gates):
+      - `target/fret-diag-tree-retained-suite-shell3/1769649443728-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+      - `target/fret-diag-tree-retained-suite-shell3/1769649473084-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
   - DataTable harness (retained host consumer):
     - Script: `tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json`
+    - Script (sort + select + scroll): `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
     - Run with: `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
     - Expectation: crossing the overscan boundary reconciles attach/detach deltas (no parent cache-root rerender), and remains stale-paint safe.
     - Gate (suite): `fretboard diag suite ui-gallery-data-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-data-table-row-0 --check-stale-paint ui-gallery-data-table-row-0 ...`
     - Note: the script uses the sidebar search input (`ui-gallery-nav-search`) to keep navigation stable as the page list grows.
     - Implementation: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`), via `ecosystem/fret-ui-shadcn/src/data_table.rs` (`DataTable::into_element_retained`).
-    - Evidence bundle (cache+shell, release; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-data-table-retained-suite-shell2/1769619719317-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+    - Evidence bundles (cache+shell, release; pass no-notify + bounded-delta + wheel-scroll + stale-paint gates):
+      - `target/fret-diag-data-table-retained-suite-shell6/1769651477808-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+      - `target/fret-diag-data-table-retained-suite-shell6/1769651504240-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
   - Plan (v1; fixed/known height only):
     - Add a runtime-owned `WindowedSurfaceHost` boundary that can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
     - Define an opt-in authoring API that stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
