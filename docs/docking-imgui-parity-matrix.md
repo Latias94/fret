@@ -82,6 +82,8 @@ Docking UI + hit testing + previews:
   - `ecosystem/fret-docking/src/dock/paint.rs`
 - Tab geometry:
   - `ecosystem/fret-docking/src/dock/tab_bar_geometry.rs`
+- Tab overflow affordances:
+  - `ecosystem/fret-docking/src/dock/tab_overflow.rs`
 - Split stabilization:
   - `ecosystem/fret-docking/src/dock/split_stabilize.rs`
 - Interaction settings:
@@ -392,11 +394,12 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
     - has `tab_scroll` state
     - supports wheel-based scrolling
     - supports drag-time edge auto-scroll when hovering near the tab bar left/right edges (keeps insert position reachable under overflow)
+    - supports “tab list” popup (overflow menu) for overflowed tab bars
   - Still evolving:
-    - “tab list” popup (overflow menu)
-    - scroll feel knobs (speed/easing)
+    - scroll feel knobs (speed/easing), scroll buttons
   - Evidence:
     - Fret: `ecosystem/fret-docking/src/dock/space.rs` (`tab_scroll`, `apply_tab_bar_drag_auto_scroll(...)`)
+    - Fret: `ecosystem/fret-docking/src/dock/tab_overflow.rs` (overflow button/menu geometry + row math)
     - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_auto_scrolls_tab_bar_near_edges`)
 
 - [~] **Close button semantics**

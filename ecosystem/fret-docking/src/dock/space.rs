@@ -22,6 +22,11 @@ use super::split_stabilize::{
 };
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
+use super::tab_overflow::{
+    TabOverflowMenuState, overflow_menu_max_scroll, overflow_menu_row_at_pos,
+    overflow_menu_row_count, overflow_menu_row_height, tab_overflow_button_rect,
+    tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
+};
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
     viewport_input_from_hit_clamped,
@@ -50,11 +55,14 @@ pub struct DockSpace {
     empty_state: Option<PreparedTabTitle>,
     hovered_tab: Option<(DockNodeId, usize)>,
     hovered_tab_close: bool,
+    hovered_tab_overflow_button: Option<DockNodeId>,
     pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
     tab_scroll: HashMap<DockNodeId, Px>,
     tab_drag_auto_scroll_last_frame: HashMap<DockNodeId, fret_runtime::FrameId>,
+    tab_overflow_menu: Option<TabOverflowMenuState>,
     tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
+    tab_overflow_glyph: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
     empty_state_style: TextStyle,
@@ -114,11 +122,14 @@ impl DockSpace {
             empty_state: None,
             hovered_tab: None,
             hovered_tab_close: false,
+            hovered_tab_overflow_button: None,
             pressed_tab_close: None,
             tab_scroll: HashMap::new(),
             tab_drag_auto_scroll_last_frame: HashMap::new(),
+            tab_overflow_menu: None,
             tab_widths: HashMap::new(),
             tab_close_glyph: None,
+            tab_overflow_glyph: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
@@ -311,6 +322,9 @@ impl DockSpace {
         if let Some(glyph) = self.tab_close_glyph.take() {
             services.text().release(glyph.blob);
         }
+        if let Some(glyph) = self.tab_overflow_glyph.take() {
+            services.text().release(glyph.blob);
+        }
 
         let pad_x = theme.metric_required("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
@@ -335,6 +349,22 @@ impl DockSpace {
         self.tab_close_glyph = Some(PreparedTabTitle {
             blob: close_blob,
             metrics: close_metrics,
+            title_hash: 0,
+        });
+
+        let (more_blob, more_metrics) = services.text().prepare_str(
+            "⋯",
+            &self.tab_close_style,
+            TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor,
+            },
+        );
+        self.tab_overflow_glyph = Some(PreparedTabTitle {
+            blob: more_blob,
+            metrics: more_metrics,
             title_hash: 0,
         });
 
@@ -373,24 +403,47 @@ impl DockSpace {
 
     fn tab_bar_geometry_for_node(
         &self,
+        theme: fret_ui::ThemeSnapshot,
         tabs: DockNodeId,
         tab_bar: Rect,
         tab_count: usize,
-    ) -> TabBarGeometry {
-        self.tab_widths
+    ) -> (TabBarGeometry, bool) {
+        let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+        let geom_candidate = self
+            .tab_widths
             .get(&tabs)
             .filter(|w| w.len() == tab_count)
-            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
-            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count))
+            .map(|w| TabBarGeometry::variable(strip_candidate, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tab_count));
+        let overflow = geom_candidate.max_scroll().0 > 0.0;
+        if overflow {
+            (geom_candidate, true)
+        } else {
+            let geom = self
+                .tab_widths
+                .get(&tabs)
+                .filter(|w| w.len() == tab_count)
+                .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+            (geom, false)
+        }
     }
 
-    fn max_tab_scroll(&self, tabs: DockNodeId, tab_bar: Rect, tab_count: usize) -> Px {
-        self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count)
+    fn max_tab_scroll(
+        &self,
+        theme: fret_ui::ThemeSnapshot,
+        tabs: DockNodeId,
+        tab_bar: Rect,
+        tab_count: usize,
+    ) -> Px {
+        self.tab_bar_geometry_for_node(theme, tabs, tab_bar, tab_count)
+            .0
             .max_scroll()
     }
 
     fn clamp_and_ensure_active_visible(
         &mut self,
+        theme: fret_ui::ThemeSnapshot,
         tabs: DockNodeId,
         tab_bar: Rect,
         tab_count: usize,
@@ -401,7 +454,7 @@ impl DockSpace {
             return;
         }
 
-        let geom = self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count);
+        let (geom, _overflow) = self.tab_bar_geometry_for_node(theme, tabs, tab_bar, tab_count);
         let max_scroll = geom.max_scroll();
         let mut scroll = self.tab_scroll_for(tabs);
 
@@ -416,6 +469,7 @@ impl DockSpace {
 
     fn apply_tab_bar_drag_auto_scroll(
         &mut self,
+        theme: fret_ui::ThemeSnapshot,
         graph: &DockGraph,
         hover: &mut HoverTarget,
         tab_bar: Rect,
@@ -431,16 +485,17 @@ impl DockSpace {
         {
             return false;
         }
+        let tabs = hover.tabs;
+        let (geom, _overflow) = self.tab_bar_geometry_for_node(theme, tabs, tab_bar, tab_count);
         if !tab_bar.contains(position) {
             return false;
         }
 
-        let tabs = hover.tabs;
         let Some(DockNode::Tabs { .. }) = graph.node(tabs) else {
             return false;
         };
 
-        let max_scroll = self.max_tab_scroll(tabs, tab_bar, tab_count);
+        let max_scroll = geom.max_scroll();
         if max_scroll.0 <= 0.0 {
             return false;
         }
@@ -478,7 +533,6 @@ impl DockSpace {
 
         self.set_tab_scroll_for(tabs, next_scroll);
 
-        let geom = self.tab_bar_geometry_for_node(tabs, tab_bar, tab_count);
         hover.insert_index = Some(geom.compute_insert_index(position, next_scroll));
         true
     }
@@ -1127,6 +1181,139 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                             let mut handled = false;
 
+                            if *button == fret_core::MouseButton::Left && dock_bounds.contains(*position)
+                            {
+                                let mut layout_all = compute_layout_map(
+                                    &dock.graph,
+                                    root,
+                                    dock_bounds,
+                                    split_handle_gap,
+                                    split_handle_hit_thickness,
+                                );
+                                for floating in dock.graph.floating_windows(self.window) {
+                                    let chrome = Self::floating_chrome(floating.rect);
+                                    let floating_layout = compute_layout_map(
+                                        &dock.graph,
+                                        floating.floating,
+                                        chrome.inner,
+                                        split_handle_gap,
+                                        split_handle_hit_thickness,
+                                    );
+                                    for (k, v) in floating_layout {
+                                        layout_all.insert(k, v);
+                                    }
+                                }
+
+                                if let Some(menu) = self.tab_overflow_menu {
+                                    let mut keep_open = true;
+
+                                    let tabs_rect = layout_all.get(&menu.tabs).copied();
+                                    let node = dock.graph.node(menu.tabs);
+                                    if let (Some(tabs_rect), Some(DockNode::Tabs { tabs, .. })) =
+                                        (tabs_rect, node)
+                                    {
+                                        let (tab_bar, _content) = split_tab_bar(tabs_rect);
+                                        let button_rect = tab_overflow_button_rect(theme, tab_bar);
+                                        let menu_rect =
+                                            tab_overflow_menu_rect(theme, tab_bar, tabs.len());
+
+                                        if menu_rect.contains(*position) {
+                                            let row = overflow_menu_row_at_pos(
+                                                menu_rect,
+                                                tab_bar,
+                                                tabs.len(),
+                                                menu.scroll,
+                                                *position,
+                                            );
+                                            if let Some(ix) = row {
+                                                pending_effects.push(Effect::Dock(
+                                                    DockOp::SetActiveTab {
+                                                        tabs: menu.tabs,
+                                                        active: ix,
+                                                    },
+                                                ));
+                                                if let Some(panel) = tabs.get(ix) {
+                                                    request_focus_panel = Some(panel.clone());
+                                                }
+                                                invalidate_layout = true;
+                                                invalidate_paint = true;
+                                                pending_redraws.push(self.window);
+                                                keep_open = false;
+                                            }
+                                            handled = true;
+                                        } else if button_rect.contains(*position) {
+                                            // Toggle: clicking the overflow button closes the menu.
+                                            keep_open = false;
+                                            invalidate_paint = true;
+                                            pending_redraws.push(self.window);
+                                            handled = true;
+                                        } else {
+                                            // Click outside closes the menu, but does not swallow the click.
+                                            if keep_open {
+                                                keep_open = false;
+                                                invalidate_paint = true;
+                                                pending_redraws.push(self.window);
+                                            }
+                                        }
+                                    } else {
+                                        keep_open = false;
+                                    }
+
+                                    if keep_open {
+                                        // Keep the menu state stable on unrelated clicks.
+                                        self.tab_overflow_menu = Some(menu);
+                                    } else {
+                                        self.tab_overflow_menu = None;
+                                    }
+                                }
+
+                                if !handled {
+                                    // Open the overflow menu by clicking the overflow button on any overflowing tab bar.
+                                    for (&node_id, &rect) in layout_all.iter() {
+                                        let Some(DockNode::Tabs { tabs, active }) =
+                                            dock.graph.node(node_id)
+                                        else {
+                                            continue;
+                                        };
+                                        if tabs.is_empty() {
+                                            continue;
+                                        }
+                                        let (tab_bar, _content) = split_tab_bar(rect);
+                                        if !tab_bar.contains(*position) {
+                                            continue;
+                                        }
+                                        let max_scroll =
+                                            self.max_tab_scroll(theme, node_id, tab_bar, tabs.len());
+                                        if max_scroll.0 <= 0.0 {
+                                            continue;
+                                        }
+                                        let button_rect = tab_overflow_button_rect(theme, tab_bar);
+                                        if !button_rect.contains(*position) {
+                                            continue;
+                                        }
+
+                                        let row_h = overflow_menu_row_height(tab_bar).0;
+                                        let visible = overflow_menu_row_count(tabs.len()) as f32;
+                                        let active_y = *active as f32 * row_h;
+                                        let min_scroll = active_y - (visible - 1.0) * row_h;
+                                        let max_scroll_menu =
+                                            overflow_menu_max_scroll(tab_bar, tabs.len());
+                                        let scroll =
+                                            Px(min_scroll.clamp(0.0, max_scroll_menu.0.max(0.0)));
+
+                                        self.tab_overflow_menu = Some(TabOverflowMenuState {
+                                            tabs: node_id,
+                                            scroll,
+                                            hovered: None,
+                                        });
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                        handled = true;
+                                        break;
+                                    }
+                                }
+                            }
+
                             if *button == fret_core::MouseButton::Left
                                 && let Some((floating, _chrome, kind)) =
                                     hit_test_floating(&dock.graph, self.window, *position)
@@ -1262,10 +1449,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 };
                                                 (tab_index < tab_count).then(|| {
                                                     let scroll = self.tab_scroll_for(tabs_node);
-                                                    self.tab_bar_geometry_for_node(
-                                                        tabs_node, bar, tab_count,
-                                                    )
-                                                    .tab_rect(tab_index, scroll)
+                                                    let (geom, _overflow) = self
+                                                        .tab_bar_geometry_for_node(
+                                                            theme,
+                                                            tabs_node,
+                                                            bar,
+                                                            tab_count,
+                                                        );
+                                                    geom.tab_rect(tab_index, scroll)
                                                 })
                                             })
                                             .unwrap_or_else(|| {
@@ -1502,7 +1693,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
                                 }
 
-                                let hovered = if self.viewport_capture.is_empty()
+                                if self.viewport_capture.is_empty()
                                     && self.divider_drag.is_none()
                                     && dock_drag.is_none()
                                 {
@@ -1522,7 +1713,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         split_handle_gap,
                                         split_handle_hit_thickness,
                                     );
-                                    hit_test_tab(
+
+                                    let hovered = hit_test_tab(
                                         &dock.graph,
                                         &layout,
                                         &self.tab_scroll,
@@ -1530,20 +1722,119 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         theme,
                                         *position,
                                     )
-                                    .map(|(node, idx, _panel, close)| (node, idx, close))
+                                    .map(|(node, idx, _panel, close)| (node, idx, close));
+
+                                    let next_tab = hovered.map(|(node, idx, _close)| (node, idx));
+                                    let next_close = hovered
+                                        .map(|(_node, _idx, close)| close)
+                                        .unwrap_or(false);
+                                    if next_tab != self.hovered_tab
+                                        || next_close != self.hovered_tab_close
+                                    {
+                                        self.hovered_tab = next_tab;
+                                        self.hovered_tab_close = next_close;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                    }
+
+                                    let mut next_overflow_button: Option<DockNodeId> = None;
+                                    for (&node_id, &rect) in layout.iter() {
+                                        let Some(DockNode::Tabs { tabs, .. }) =
+                                            dock.graph.node(node_id)
+                                        else {
+                                            continue;
+                                        };
+                                        if tabs.is_empty() {
+                                            continue;
+                                        }
+                                        let (tab_bar, _content) = split_tab_bar(rect);
+                                        if !tab_bar.contains(*position) {
+                                            continue;
+                                        }
+                                        let (_geom, overflow) = self.tab_bar_geometry_for_node(
+                                            theme,
+                                            node_id,
+                                            tab_bar,
+                                            tabs.len(),
+                                        );
+                                        if !overflow {
+                                            continue;
+                                        }
+                                        if tab_overflow_button_rect(theme, tab_bar)
+                                            .contains(*position)
+                                        {
+                                            next_overflow_button = Some(node_id);
+                                            request_cursor =
+                                                Some(fret_core::CursorIcon::Pointer);
+                                            break;
+                                        }
+                                    }
+                                    if next_overflow_button != self.hovered_tab_overflow_button {
+                                        self.hovered_tab_overflow_button = next_overflow_button;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                    }
+
+                                    if let Some(mut menu) = self.tab_overflow_menu {
+                                        let mut close_menu = false;
+                                        if let Some(&tabs_rect) = layout.get(&menu.tabs) {
+                                            if let Some(DockNode::Tabs { tabs, .. }) =
+                                                dock.graph.node(menu.tabs)
+                                            {
+                                                let (tab_bar, _content) = split_tab_bar(tabs_rect);
+                                                let menu_rect = tab_overflow_menu_rect(
+                                                    theme,
+                                                    tab_bar,
+                                                    tabs.len(),
+                                                );
+                                                let next_hovered = if menu_rect.contains(*position)
+                                                {
+                                                    overflow_menu_row_at_pos(
+                                                        menu_rect,
+                                                        tab_bar,
+                                                        tabs.len(),
+                                                        menu.scroll,
+                                                        *position,
+                                                    )
+                                                } else {
+                                                    None
+                                                };
+                                                if next_hovered != menu.hovered {
+                                                    menu.hovered = next_hovered;
+                                                    invalidate_paint = true;
+                                                    pending_redraws.push(self.window);
+                                                }
+                                                if menu_rect.contains(*position) {
+                                                    request_cursor =
+                                                        Some(fret_core::CursorIcon::Pointer);
+                                                }
+                                            } else {
+                                                close_menu = true;
+                                            }
+                                        } else if menu.hovered.take().is_some() {
+                                            invalidate_paint = true;
+                                            pending_redraws.push(self.window);
+                                        }
+
+                                        if close_menu {
+                                            self.tab_overflow_menu = None;
+                                            invalidate_paint = true;
+                                            pending_redraws.push(self.window);
+                                        } else {
+                                            self.tab_overflow_menu = Some(menu);
+                                        }
+                                    }
                                 } else {
-                                    None
-                                };
-                                let next_tab = hovered.map(|(node, idx, _close)| (node, idx));
-                                let next_close =
-                                    hovered.map(|(_node, _idx, close)| close).unwrap_or(false);
-                                if next_tab != self.hovered_tab
-                                    || next_close != self.hovered_tab_close
-                                {
-                                    self.hovered_tab = next_tab;
-                                    self.hovered_tab_close = next_close;
-                                    invalidate_paint = true;
-                                    pending_redraws.push(self.window);
+                                    if self.hovered_tab.is_some()
+                                        || self.hovered_tab_close
+                                        || self.hovered_tab_overflow_button.is_some()
+                                    {
+                                        self.hovered_tab = None;
+                                        self.hovered_tab_close = false;
+                                        self.hovered_tab_overflow_button = None;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                    }
                                 }
 
                                 if let Some(divider) = self.divider_drag.as_ref() {
@@ -1722,6 +2013,36 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 split_handle_gap,
                                 split_handle_hit_thickness,
                             );
+
+                            if let Some(mut menu) = self.tab_overflow_menu
+                                && let Some(&tabs_rect) = layout.get(&menu.tabs)
+                                && let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(menu.tabs)
+                            {
+                                let (tab_bar, _content) = split_tab_bar(tabs_rect);
+                                let menu_rect =
+                                    tab_overflow_menu_rect(theme, tab_bar, tabs.len());
+                                if menu_rect.contains(*position) {
+                                    let max_scroll = overflow_menu_max_scroll(tab_bar, tabs.len());
+                                    let wheel = delta.x.0 + delta.y.0;
+                                    let next =
+                                        Px((menu.scroll.0 - wheel).clamp(0.0, max_scroll.0));
+                                    if (next.0 - menu.scroll.0).abs() >= 0.01 {
+                                        menu.scroll = next;
+                                        menu.hovered = overflow_menu_row_at_pos(
+                                            menu_rect,
+                                            tab_bar,
+                                            tabs.len(),
+                                            menu.scroll,
+                                            *position,
+                                        );
+                                        self.tab_overflow_menu = Some(menu);
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                    }
+                                    stop_propagation = true;
+                                    return;
+                                }
+                            }
                             let mut scrolled_tabs = false;
                             for (&node_id, &rect) in &layout {
                                 let Some(DockNode::Tabs { tabs, active }) =
@@ -1738,13 +2059,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 }
 
                                 self.clamp_and_ensure_active_visible(
+                                    theme,
                                     node_id,
                                     tab_bar,
                                     tabs.len(),
                                     *active,
                                 );
 
-                                let max_scroll = self.max_tab_scroll(node_id, tab_bar, tabs.len());
+                                let max_scroll =
+                                    self.max_tab_scroll(theme, node_id, tab_bar, tabs.len());
                                 if max_scroll.0 <= 0.0 {
                                     scrolled_tabs = true;
                                     break;
@@ -2182,6 +2505,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     let (tab_bar, _content) =
                                                         split_tab_bar(tabs_rect);
                                                     if self.apply_tab_bar_drag_auto_scroll(
+                                                        theme,
                                                         &dock.graph,
                                                         target,
                                                         tab_bar,
@@ -2444,6 +2768,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
+        let theme = cx.theme().snapshot();
 
         fret_ui::internal_drag::set_route(
             cx.app,
@@ -2501,7 +2826,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 visible_tabs_nodes.insert(node_id);
 
                 let (tab_bar, _content) = split_tab_bar(rect);
-                self.clamp_and_ensure_active_visible(node_id, tab_bar, tabs.len(), *active);
+                self.clamp_and_ensure_active_visible(theme, node_id, tab_bar, tabs.len(), *active);
             }
             self.tab_scroll
                 .retain(|tabs_node, _| visible_tabs_nodes.contains(tabs_node));
@@ -2697,6 +3022,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             {
                 let (tab_bar, _content) = split_tab_bar(tabs_rect);
                 let _ = self.apply_tab_bar_drag_auto_scroll(
+                    theme,
                     &dock.graph,
                     target,
                     tab_bar,
@@ -2783,9 +3109,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tab_widths: &self.tab_widths,
                     hovered_tab: self.hovered_tab,
                     hovered_tab_close: self.hovered_tab_close,
+                    hovered_tab_overflow_button: self.hovered_tab_overflow_button,
                     pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
                     tab_scroll: &self.tab_scroll,
                     tab_close_glyph: self.tab_close_glyph,
+                    tab_overflow_glyph: self.tab_overflow_glyph,
+                    tab_overflow_menu: self.tab_overflow_menu,
                 },
                 overlay_hooks.as_deref(),
                 scene,
@@ -2865,12 +3194,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         tab_widths: &self.tab_widths,
                         hovered_tab: self.hovered_tab,
                         hovered_tab_close: self.hovered_tab_close,
+                        hovered_tab_overflow_button: self.hovered_tab_overflow_button,
                         pressed_tab_close: self
                             .pressed_tab_close
                             .as_ref()
                             .map(|(n, i, _)| (*n, *i)),
                         tab_scroll: &self.tab_scroll,
                         tab_close_glyph: self.tab_close_glyph,
+                        tab_overflow_glyph: self.tab_overflow_glyph,
+                        tab_overflow_menu: self.tab_overflow_menu,
                     },
                     overlay_hooks.as_deref(),
                     scene,

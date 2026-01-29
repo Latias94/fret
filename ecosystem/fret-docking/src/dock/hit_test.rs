@@ -7,6 +7,7 @@ use super::layout::dock_hint_pick_zone;
 use super::layout::split_tab_bar;
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
+use super::tab_overflow::{tab_overflow_button_rect, tab_strip_rect_with_overflow_button};
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: DockNodeId) -> Px {
@@ -43,11 +44,30 @@ pub(super) fn hit_test_tab(
             continue;
         }
         let scroll = tab_scroll_for_node(tab_scroll, node);
-        let geom = tab_widths
+        let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+        let geom_candidate = tab_widths
             .get(&node)
             .filter(|w| w.len() == tabs.len())
-            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
-            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()));
+            .map(|w| TabBarGeometry::variable(strip_candidate, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tabs.len()));
+        let overflow = geom_candidate.max_scroll().0 > 0.0;
+        if overflow {
+            if tab_overflow_button_rect(theme, tab_bar).contains(position) {
+                return None;
+            }
+            if !strip_candidate.contains(position) {
+                return None;
+            }
+        }
+        let geom = if overflow {
+            geom_candidate
+        } else {
+            tab_widths
+                .get(&node)
+                .filter(|w| w.len() == tabs.len())
+                .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()))
+        };
         let idx = geom.hit_test_tab_index(position, scroll)?;
         let panel = tabs.get(idx)?.clone();
         let tab_rect = geom.tab_rect(idx, scroll);
