@@ -1056,12 +1056,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     )
                 } else if is_ui_gallery_data_table_retained_suite {
                     (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
+                                ),
                             ),
-                        )],
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                        ],
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_vlist_window_boundary_suite {
