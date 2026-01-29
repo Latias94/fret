@@ -77,7 +77,7 @@ Docking UI + hit testing + previews:
   - `ecosystem/fret-docking/src/dock/space.rs` (`DockSpace`)
 - Drop target resolution:
   - `ecosystem/fret-docking/src/dock/hit_test.rs`
-  - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `drop_zone_rect`, `float_zone`)
+  - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`, `drop_zone_rect`, `float_zone`)
 - Paint and preview overlays:
   - `ecosystem/fret-docking/src/dock/paint.rs`
 - Tab geometry:
@@ -609,8 +609,11 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
    - For parity work, consider:
      - making one “drop rect set” the source of truth (pad + optional outer docking),
      - and deriving edge splits from that rather than having two competing mechanisms.
-   - [~] Partially implemented: drop selection now uses ImGui-style direction-pad rects + tab-bar rects as the
-     primary source of truth; edge-strip candidates are no longer used for selecting a drop zone.
+   - [~] Partially implemented:
+     - Drop selection now uses ImGui-style direction-pad hit-testing + tab-bar hit-testing as the
+       primary source of truth.
+     - Edge-strip candidates are no longer used for selecting a drop zone.
+     - Outer docking (window-root edge targets) is supported by targeting `layout_root` directly.
    - Notes:
      - `drop_zone_rect(...)` still uses edge thickness for the *preview overlay* when a zone is selected.
 
@@ -627,6 +630,13 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
 4) **Match ImGui’s drop rect geometry formulas**
    - Implement inner vs outer docking hint sets.
    - Scale by a text metric equivalent to `FontSize` (theme metric), not just panel min-dimension.
+   - [~] Implemented in core mechanics:
+     - Geometry formulas: `dock_hint_rects_with_font(...)`
+     - Inner hit testing (anti-flicker quadrant logic): `dock_hint_pick_zone(...)`
+     - Outer docking selection: `HoverTarget.outer` + `DockSpace` targets `layout_root` for edge docking
+   - Remaining polish:
+     - render both inner + outer hint sets simultaneously (ImGui renders inner then outer)
+     - align overlay visuals (alpha/rounding/placement) with ImGui’s `DockNodePreviewDockRender`
 
 5) **Align splitter feel**
    - Adopt a `DockingSeparatorSize`-like knob:
@@ -680,6 +690,8 @@ These numbers are the fastest way to explain why something “feels off”.
     - `ecosystem/fret-docking/src/dock/layout.rs`: `dock_hint_rects_with_font(rect, font_size, outer_docking)`
   - Uses `font.size` from the theme as the `FontSize` equivalent:
     - `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
+  - Inner hit testing matches ImGui’s “anti-flicker” behavior:
+    - `ecosystem/fret-docking/src/dock/layout.rs`: `dock_hint_pick_zone(...)`
 
 ## Edge strip sizing
 

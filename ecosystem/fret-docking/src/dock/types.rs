@@ -57,6 +57,7 @@ pub(super) struct HoverTarget {
     pub(super) tabs: DockNodeId,
     pub(super) zone: DropZone,
     pub(super) insert_index: Option<usize>,
+    pub(super) outer: bool,
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -435,7 +435,7 @@ pub(super) fn paint_drop_hints(
     };
 
     let font_size = theme.metric_required("font.size");
-    let hint_rects = dock_hint_rects_with_font(rect, font_size, false);
+    let hint_rects = dock_hint_rects_with_font(rect, font_size, target.outer);
 
     let inactive_bg_base = theme.color_required("card");
     let inactive_border_base = theme.color_required("border");

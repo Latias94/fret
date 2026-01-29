@@ -3943,6 +3943,103 @@ fn dock_drop_hint_rects_can_select_zone() {
 }
 
 #[test]
+fn dock_outer_drop_rects_target_window_root_even_when_root_is_split() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut root_split: Option<DockNodeId> = None;
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let left = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.left")],
+            active: 0,
+        });
+        let right = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.right")],
+            active: 0,
+        });
+        let split = dock.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left, right],
+            fractions: vec![0.5, 0.5],
+        });
+        root_split = Some(split);
+        dock.graph.set_window_root(window, split);
+        for (key, title) in [
+            (PanelKey::new("core.left"), "Left"),
+            (PanelKey::new("core.right"), "Right"),
+        ] {
+            dock.panels.insert(
+                key,
+                DockPanel {
+                    title: title.to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+    });
+    let root_split = root_split.expect("expected window root split");
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.left"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let root_rect = bounds;
+    let outer_left = dock_hint_rects_with_font(root_rect, Px(13.0), true)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Left).then_some(rect))
+        .expect("expected outer left rect");
+    let position = Point::new(
+        Px(outer_left.origin.x.0 + outer_left.size.width.0 * 0.5),
+        Px(outer_left.origin.y.0 + outer_left.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let hover = app.global::<DockManager>().and_then(|d| d.hover.clone());
+    assert!(
+        matches!(hover, Some(DockDropTarget::Dock(t)) if t.tabs == root_split && t.zone == DropZone::Left && t.outer),
+        "expected outer docking to target window root split, got: {hover:?}",
+    );
+}
+
+#[test]
 fn dock_tab_bar_insert_index_respects_before_after_halves() {
     let window = AppWindowId::default();
 

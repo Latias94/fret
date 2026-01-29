@@ -3,7 +3,6 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{hit_test_split_handle, hit_test_tab, tab_scroll_for_node};
-use super::layout::dock_hint_rects_with_font;
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_space_regions, float_zone, hidden_bounds,
     split_tab_bar,
@@ -29,7 +28,6 @@ use super::viewport::{
 };
 use crate::invalidation::DockInvalidationService;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
-use slotmap::Key as _;
 
 const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
@@ -557,133 +555,87 @@ impl<H: UiHost> Widget<H> for DockSpace {
             dock_previews_enabled: bool,
         }
 
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        enum DockDropCandidateKind {
-            TabBar,
-            Hint(DropZone),
-            FallbackCenter,
-        }
-
-        fn candidate_id(node: DockNodeId, kind: DockDropCandidateKind) -> fret_dnd::DndItemId {
-            let node_id = node.data().as_ffi();
-            let kind_id = match kind {
-                DockDropCandidateKind::TabBar => 1,
-                DockDropCandidateKind::Hint(DropZone::Center) => 2,
-                DockDropCandidateKind::Hint(DropZone::Left) => 3,
-                DockDropCandidateKind::Hint(DropZone::Right) => 4,
-                DockDropCandidateKind::Hint(DropZone::Top) => 5,
-                DockDropCandidateKind::Hint(DropZone::Bottom) => 6,
-                DockDropCandidateKind::FallbackCenter => 255,
-            };
-
-            // A small, stable mixing function to avoid relying on std hasher stability.
-            let mut x = node_id ^ (kind_id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-            x = x.wrapping_mul(0xBF58_476D_1CE4_E5B9);
-            x ^= x >> 32;
-            fret_dnd::DndItemId(x)
-        }
-
-        fn dock_drop_target_via_dnd(
+        fn dock_drop_target(
             graph: &DockGraph,
+            root: DockNodeId,
             layout: &HashMap<DockNodeId, Rect>,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
             font_size: Px,
             position: Point,
         ) -> Option<HoverTarget> {
-            #[derive(Debug, Clone, Copy)]
-            enum HoverKind {
-                TabBar {
-                    tabs: DockNodeId,
-                    tab_bar: Rect,
-                    scroll: Px,
-                    tab_count: usize,
-                },
-                Zone {
-                    tabs: DockNodeId,
-                    zone: DropZone,
-                },
+            fn leaf_tabs_node_at_pos(
+                graph: &DockGraph,
+                layout: &HashMap<DockNodeId, Rect>,
+                position: Point,
+            ) -> Option<(DockNodeId, Rect, usize)> {
+                let mut best: Option<(DockNodeId, Rect, usize, f32)> = None;
+                for (&node, &rect) in layout.iter() {
+                    let Some(DockNode::Tabs { tabs, .. }) = graph.node(node) else {
+                        continue;
+                    };
+                    if tabs.is_empty() || !rect.contains(position) {
+                        continue;
+                    }
+                    let area = rect.size.width.0 * rect.size.height.0;
+                    match best {
+                        None => best = Some((node, rect, tabs.len(), area)),
+                        Some((_best_node, _best_rect, _best_len, best_area)) => {
+                            if area < best_area {
+                                best = Some((node, rect, tabs.len(), area));
+                            }
+                        }
+                    }
+                }
+                best.map(|(node, rect, len, _)| (node, rect, len))
             }
 
-            let mut nodes: Vec<(DockNodeId, Rect)> = layout.iter().map(|(&n, &r)| (n, r)).collect();
-            nodes.sort_by_key(|(node, _)| node.data().as_ffi());
-
-            let mut idx = fret_dnd::RectDroppableIndex::<HoverKind>::default();
-
-            for (node, rect) in nodes {
-                let Some(DockNode::Tabs { tabs, .. }) = graph.node(node) else {
-                    continue;
-                };
-                if tabs.is_empty() {
-                    continue;
-                }
-
+            let leaf = leaf_tabs_node_at_pos(graph, layout, position);
+            if let Some((tabs_node, rect, tab_count)) = leaf {
                 let (tab_bar, _content) = split_tab_bar(rect);
-                let scroll = tab_scroll_for_node(tab_scroll, node);
-
-                let tab_id = candidate_id(node, DockDropCandidateKind::TabBar);
-                idx.push_rect(
-                    tab_id,
-                    tab_bar,
-                    30,
-                    false,
-                    HoverKind::TabBar {
-                        tabs: node,
-                        tab_bar,
-                        scroll,
-                        tab_count: tabs.len(),
-                    },
-                );
-
-                for (zone, hint_rect) in dock_hint_rects_with_font(rect, font_size, false) {
-                    let hint_id = candidate_id(node, DockDropCandidateKind::Hint(zone));
-                    idx.push_rect(
-                        hint_id,
-                        hint_rect,
-                        20,
-                        false,
-                        HoverKind::Zone { tabs: node, zone },
-                    );
-                }
-
-                let fallback_id = candidate_id(node, DockDropCandidateKind::FallbackCenter);
-                idx.push_rect(
-                    fallback_id,
-                    rect,
-                    0,
-                    false,
-                    HoverKind::Zone {
-                        tabs: node,
+                if tab_bar.contains(position) {
+                    let scroll = tab_scroll_for_node(tab_scroll, tabs_node);
+                    return Some(HoverTarget {
+                        tabs: tabs_node,
                         zone: DropZone::Center,
-                    },
-                );
+                        insert_index: Some({
+                            let geom = tab_widths
+                                .get(&tabs_node)
+                                .filter(|w| w.len() == tab_count)
+                                .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                                .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+                            geom.compute_insert_index(position, scroll)
+                        }),
+                        outer: false,
+                    });
+                }
             }
 
-            let (_id, kind) = idx.pick_pointer_within(position)?;
-            match kind {
-                HoverKind::TabBar {
-                    tabs,
-                    tab_bar,
-                    scroll,
-                    tab_count,
-                } => Some(HoverTarget {
-                    tabs,
-                    zone: DropZone::Center,
-                    insert_index: Some({
-                        let geom = tab_widths
-                            .get(&tabs)
-                            .filter(|w| w.len() == tab_count)
-                            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
-                            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
-                        geom.compute_insert_index(position, scroll)
-                    }),
-                }),
-                HoverKind::Zone { tabs, zone } => Some(HoverTarget {
-                    tabs,
+            if let Some(&root_rect) = layout.get(&root)
+                && let Some(zone) =
+                    super::layout::dock_hint_pick_zone(root_rect, font_size, true, position)
+                && zone != DropZone::Center
+            {
+                return Some(HoverTarget {
+                    tabs: root,
                     zone,
                     insert_index: None,
-                }),
+                    outer: true,
+                });
             }
+
+            if let Some((tabs_node, rect, _tab_count)) = leaf {
+                let zone = super::layout::dock_hint_pick_zone(rect, font_size, false, position)
+                    .unwrap_or(DropZone::Center);
+                return Some(HoverTarget {
+                    tabs: tabs_node,
+                    zone,
+                    insert_index: None,
+                    outer: false,
+                });
+            }
+
+            None
         }
 
         fn is_outside_bounds_with_margin(bounds: Rect, position: Point, margin: Px) -> bool {
@@ -758,8 +710,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
 
             let layout = compute_layout_map(graph, layout_root, layout_bounds);
-            dock_drop_target_via_dnd(graph, &layout, tab_scroll, tab_widths, font_size, position)
-                .map(DockDropTarget::Dock)
+            dock_drop_target(
+                graph,
+                layout_root,
+                &layout,
+                tab_scroll,
+                tab_widths,
+                font_size,
+                position,
+            )
+            .map(DockDropTarget::Dock)
         }
 
         fn resolve_dock_drop_target(

@@ -3,7 +3,7 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 #[cfg(test)]
-use super::layout::dock_hint_rects_with_font;
+use super::layout::dock_hint_pick_zone;
 use super::layout::split_tab_bar;
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
@@ -81,25 +81,15 @@ pub(super) fn hit_test_drop_target(
                 tabs: node,
                 zone: DropZone::Center,
                 insert_index: Some(insert_index),
+                outer: false,
             });
-        }
-
-        // ImGui-style direction-pad hit targets near the center of the hovered dock node.
-        // This makes split docking discoverable and avoids requiring the cursor to be near edges.
-        for (zone, hint_rect) in dock_hint_rects_with_font(rect, Px(13.0), false) {
-            if hint_rect.contains(position) {
-                return Some(HoverTarget {
-                    tabs: node,
-                    zone,
-                    insert_index: None,
-                });
-            }
         }
 
         return Some(HoverTarget {
             tabs: node,
-            zone: DropZone::Center,
+            zone: dock_hint_pick_zone(rect, Px(13.0), false, position).unwrap_or(DropZone::Center),
             insert_index: None,
+            outer: false,
         });
     }
     None
