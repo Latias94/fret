@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret_core::{Color, Px};
 use fret_ui::element::AnyElement;
 use fret_ui::element::ContainerProps;
@@ -12,6 +14,7 @@ use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
 use fret_ui::element::ScrollbarStyle;
+use fret_ui::element::SemanticsProps;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
@@ -48,6 +51,7 @@ pub struct ScrollAreaViewport {
     children: Vec<AnyElement>,
     axis: ScrollAxis,
     probe_unbounded: bool,
+    viewport_test_id: Option<Arc<str>>,
 }
 
 impl ScrollAreaViewport {
@@ -57,6 +61,7 @@ impl ScrollAreaViewport {
             children,
             axis: ScrollAxis::Y,
             probe_unbounded: true,
+            viewport_test_id: None,
         }
     }
 
@@ -67,6 +72,11 @@ impl ScrollAreaViewport {
 
     pub fn probe_unbounded(mut self, probe_unbounded: bool) -> Self {
         self.probe_unbounded = probe_unbounded;
+        self
+    }
+
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
         self
     }
 }
@@ -222,6 +232,14 @@ impl ScrollAreaRoot {
         let show_scrollbar = self.show_scrollbar;
 
         cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+            let ScrollAreaViewport {
+                children: viewport_children,
+                axis: viewport_axis,
+                probe_unbounded: viewport_probe_unbounded,
+                viewport_test_id,
+                ..
+            } = viewport;
+
             let handle = scroll_handle
                 .unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
 
@@ -247,7 +265,7 @@ impl ScrollAreaRoot {
                 (true, true) => ScrollAxis::Both,
                 (true, false) => ScrollAxis::X,
                 (false, true) => ScrollAxis::Y,
-                (false, false) => viewport.axis,
+                (false, false) => viewport_axis,
             };
 
             let overflow_x = wants_x && max_offset.x.0 > 0.01;
@@ -271,9 +289,22 @@ impl ScrollAreaRoot {
                         layout: scroll_layout,
                         axis,
                         scroll_handle: Some(handle.clone()),
-                        probe_unbounded: viewport.probe_unbounded,
+                        probe_unbounded: viewport_probe_unbounded,
                     },
-                    move |_cx| viewport.children,
+                    move |cx| match viewport_test_id {
+                        Some(test_id) => {
+                            let wrapped = cx.semantics(
+                                SemanticsProps {
+                                    role: fret_core::SemanticsRole::Group,
+                                    test_id: Some(test_id),
+                                    ..Default::default()
+                                },
+                                move |_cx| viewport_children,
+                            );
+                            vec![wrapped]
+                        }
+                        None => viewport_children,
+                    },
                 );
 
                 let scroll_id = scroll.id;
@@ -506,6 +537,7 @@ pub struct ScrollArea {
     scroll_hide_delay_ticks: u64,
     layout: LayoutRefinement,
     scroll_handle: Option<ScrollHandle>,
+    viewport_test_id: Option<Arc<str>>,
 }
 
 impl ScrollArea {
@@ -519,6 +551,7 @@ impl ScrollArea {
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
             layout: LayoutRefinement::default(),
             scroll_handle: None,
+            viewport_test_id: None,
         }
     }
 
@@ -556,8 +589,18 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut root = ScrollAreaRoot::new(ScrollAreaViewport::new(self.children).axis(self.axis))
+        let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
+        if let Some(test_id) = self.viewport_test_id {
+            viewport = viewport.viewport_test_id(test_id);
+        }
+
+        let mut root = ScrollAreaRoot::new(viewport)
             .show_scrollbar(self.show_scrollbar)
             .type_(self.scrollbar_type)
             .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)
