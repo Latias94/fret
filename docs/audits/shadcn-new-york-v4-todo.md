@@ -25,3 +25,9 @@ Prefer adding deterministic gates over adding more smoke coverage.
 - Prototype a “variants contract JSON” generator for one recipe-heavy component (e.g. Button).
   Evaluate maintenance cost before scaling to more components.
 
+## P2 (Tooling)
+
+- Keep `tools/golden_coverage.ps1` honest by reporting coverage as two dimensions:
+  - **Gated** (string-literal heuristic, high-signal intent)
+  - **Smoke-parse** (dynamic traversal, low-signal sanity)
+  Avoid docs claiming “100% covered” unless both dimensions are stated.

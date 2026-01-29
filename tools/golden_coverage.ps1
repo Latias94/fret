@@ -104,19 +104,63 @@ if ($total -gt 0) {
   $coverage = [Math]::Round(($usedCount * 100.0) / $total, 1)
 }
 
+$smokeCandidate = $null
+$smokeStyle = $null
+function Get-SmokeStyleFromTest([string]$path, [string]$kind) {
+  if (-not (Test-Path $path)) {
+    return $null
+  }
+
+  $text = Get-Content -Raw -LiteralPath $path
+  $matches = [regex]::Matches($text, '\\.join\\("([^"]+)"\\)')
+  if (-not $matches -or $matches.Count -eq 0) {
+    return $null
+  }
+
+  $tokens = @()
+  foreach ($m in $matches) {
+    $tokens += $m.Groups[1].Value
+  }
+
+  for ($i = 0; $i -lt ($tokens.Count - 1); $i++) {
+    if ($tokens[$i] -eq "goldens" -and $tokens[$i + 1] -eq $kind) {
+      $styleTokens = @()
+      if ($i + 2 -le $tokens.Count - 1) {
+        $styleTokens = $tokens[($i + 2)..($tokens.Count - 1)]
+      }
+      if ($styleTokens.Count -gt 0) {
+        return ($styleTokens -join "/")
+      }
+      return $null
+    }
+  }
+
+  return $null
+}
+
 $smokeTest = $null
 $smokeCoverage = $null
 if ($Kind -eq "shadcn-web") {
   $candidate = Join-Path $testDir "shadcn_web_goldens_smoke.rs"
   if (Test-Path $candidate) {
-    $smokeTest = $candidate
-    $smokeCoverage = 100.0
+    $smokeCandidate = $candidate
+    $smokeStyle = Get-SmokeStyleFromTest $candidate $Kind
   }
 }
 if ($Kind -eq "radix-web") {
   $candidate = Join-Path $testDir "radix_web_goldens_smoke.rs"
   if (Test-Path $candidate) {
-    $smokeTest = $candidate
+    $smokeCandidate = $candidate
+    $smokeStyle = Get-SmokeStyleFromTest $candidate $Kind
+  }
+}
+
+if ($smokeCandidate) {
+  if (-not $smokeStyle) {
+    $smokeTest = $smokeCandidate
+    $smokeCoverage = 100.0
+  } elseif ($smokeStyle -eq $Style) {
+    $smokeTest = $smokeCandidate
     $smokeCoverage = 100.0
   }
 }
@@ -126,6 +170,8 @@ if ($AsMarkdown) {
   Write-Output ('- `{0}` goldens{1}: {2} files, {3} keys; {4} gated keys ({5}%) [string-literal heuristic], {6} ungated keys' -f $Kind, $trackedNote, $totalFiles, $total, $usedCount, $coverage, $missingCount)
   if ($smokeTest) {
     Write-Output ('  - smoke-parse coverage: {0}% (via `{1}`)' -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
+  } elseif ($smokeCandidate -and $smokeStyle -and $smokeStyle -ne $Style) {
+    Write-Output ('  - smoke-parse coverage: n/a (smoke test targets `{0}`, not `{1}`)' -f $smokeStyle, $Style)
   }
 } else {
   Write-Host ("Golden coverage ({0}/{1})" -f $Kind, $Style)
@@ -139,6 +185,8 @@ if ($AsMarkdown) {
   Write-Host ("  Ungated:   {0} keys [not referenced by tests]" -f $missingCount)
   if ($smokeTest) {
     Write-Host ("  Smoke:     yes ({0}%, {1})" -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
+  } elseif ($smokeCandidate -and $smokeStyle -and $smokeStyle -ne $Style) {
+    Write-Host ("  Smoke:     n/a (smoke test targets {0}, not {1})" -f $smokeStyle, $Style)
   } else {
     Write-Host ("  Smoke:     n/a")
   }

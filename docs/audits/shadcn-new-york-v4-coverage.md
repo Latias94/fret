@@ -37,6 +37,8 @@ Notes:
   a perfect proxy for “high-signal behavior is gated”.
 - `shadcn_web_goldens_smoke.rs` provides a separate, *dynamic* “smoke-parse” pass that ensures we
   can parse the JSON and that the exported rectangles are finite.
+- `tools/golden_coverage.ps1` reports “smoke-parse coverage” only when it can infer that the smoke
+  test targets the requested `-Style` (otherwise it prints `n/a` to avoid false confidence).
 - To avoid local, uncommitted goldens skewing the counts, prefer `-TrackedOnly`.
 
 - Golden files (tracked): `512`

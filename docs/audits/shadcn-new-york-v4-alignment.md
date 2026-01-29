@@ -14,9 +14,9 @@ For coverage status (what is gated vs only has goldens), see:
 - Chart-specific audit: `docs/audits/shadcn-chart.md`
 - Depth checklist (interaction + constrained viewport targets): `docs/audits/shadcn-new-york-v4-depth-checklist.md`
 
-Coverage snapshot (time of writing):
+Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
-- shadcn-web `v4/new-york-v4`: `471/471` keys referenced (`100%`)
+- shadcn-web `v4/new-york-v4`: `473/473` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-01-29
 
 Heuristic “where we already have gates” (top key families by prefix):
 
