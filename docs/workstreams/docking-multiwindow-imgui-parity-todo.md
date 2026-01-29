@@ -146,8 +146,20 @@ Each TODO is labeled:
 
 ## P2 — Style/parenting and future-proofing (ADR 0154 dependent)
 
-- [ ] DW-P2-style-001 DockFloating window style requests (taskbar visibility, focus on appearing, tool window).
+- [~] DW-P2-style-001 DockFloating window style requests (taskbar visibility, focus on appearing, tool window).
   - Gate: `docs/adr/0154-window-styles-and-utility-windows.md` acceptance and implementation.
+  - Current implementation (v1 subset; best-effort per backend):
+    - `CreateWindowRequest` carries a portable `role` and `style` request (ADR 0154 shape).
+    - Docking tear-off windows request `TaskbarVisibility::Hide` and `ActivationPolicy::Activates`.
+    - Desktop runner applies `with_active(...)` and Windows `skip_taskbar` at creation time.
+  - Evidence anchors:
+    - Portable request surface: `crates/fret-runtime/src/effect.rs` (`WindowStyleRequest`, `WindowRole`, `TaskbarVisibility`, `ActivationPolicy`)
+    - Re-exports: `crates/fret-runtime/src/lib.rs`, `crates/fret-app/src/lib.rs`
+    - Docking create request wiring: `ecosystem/fret-docking/src/runtime.rs` (`WindowRequest::Create` for `DockFloating`)
+    - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/mod.rs` (`create_os_window`)
+  - Remaining gaps (keep ADR 0154 scope honest):
+    - No portable capabilities for style facets yet (only best-effort application).
+    - Tool-window parenting/alt-tab semantics beyond skip-taskbar are backend-specific.
 
 - [ ] DW-P2-macos-002 Parent/child window relationship for DockFloating (macOS).
   - Non-normative reference: winit parent_window support calls `NSWindow.addChildWindow_ordered(...)`
