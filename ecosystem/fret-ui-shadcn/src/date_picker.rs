@@ -5,18 +5,17 @@ use std::sync::Arc;
 use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
 use crate::calendar::Calendar;
-use crate::popover::{Popover, PopoverAlign, PopoverSide};
+use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 
 #[derive(Clone)]
 pub struct DatePicker {
@@ -171,8 +170,6 @@ impl DatePicker {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open = self.open.clone();
             let month = self.month.clone();
             let selected = self.selected.clone();
@@ -210,25 +207,23 @@ impl DatePicker {
                             .into_element(cx)
                     },
                     move |cx| {
-                        let props = decl_style::container_props(
-                            &theme,
-                            ChromeRefinement::default().p(Space::N2),
-                            LayoutRefinement::default(),
-                        );
-                        cx.container(props, move |cx| {
-                            let mut calendar = Calendar::new(month.clone(), selected.clone())
-                                .week_start(self.week_start)
-                                .show_outside_days(self.show_outside_days)
-                                .disable_outside_days(self.disable_outside_days)
-                                .close_on_select(open_content.clone())
-                                .initial_focus_out(initial_focus_out.clone());
+                        let mut calendar = Calendar::new(month.clone(), selected.clone())
+                            .week_start(self.week_start)
+                            .show_outside_days(self.show_outside_days)
+                            .disable_outside_days(self.disable_outside_days)
+                            .close_on_select(open_content.clone())
+                            .initial_focus_out(initial_focus_out.clone());
 
-                            if let Some(pred) = disabled_predicate.clone() {
-                                calendar = calendar.disabled_by(move |d| pred(d));
-                            }
+                        if let Some(pred) = disabled_predicate.clone() {
+                            calendar = calendar.disabled_by(move |d| pred(d));
+                        }
 
-                            vec![calendar.into_element(cx)]
-                        })
+                        let calendar = calendar.into_element(cx);
+                        PopoverContent::new([calendar])
+                            // shadcn/ui DatePicker demo uses `PopoverContent` with `w-auto p-0`.
+                            .refine_style(ChromeRefinement::default().p(Space::N0))
+                            .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+                            .into_element(cx)
                     },
                 )
         })
