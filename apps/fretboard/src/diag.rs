@@ -1180,12 +1180,6 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             resolve_path(
                                 &workspace_root,
                                 PathBuf::from(
-                                    "tools/diag-scripts/ui-gallery-table-retained-sort-desc.json",
-                                ),
-                            ),
-                            resolve_path(
-                                &workspace_root,
-                                PathBuf::from(
                                     "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
                                 ),
                             ),
