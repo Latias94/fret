@@ -1125,6 +1125,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
                 if !launch_env
                     .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VIEW_CACHE".to_string(), "1".to_string()));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL".to_string(),
+                        "1".to_string(),
+                    ));
+                }
+                if !launch_env
+                    .iter()
                     .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_RETAINED")
                 {
                     launch_env.push((
@@ -1138,11 +1153,27 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_max.or(Some(64));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
             }
 
             if is_ui_gallery_tree_retained_suite {
                 if warmup_frames == 0 {
                     warmup_frames = 5;
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VIEW_CACHE".to_string(), "1".to_string()));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL".to_string(),
+                        "1".to_string(),
+                    ));
                 }
                 if !launch_env
                     .iter()
@@ -1156,6 +1187,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_max.or(Some(128));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_wheel_scroll_test_id =
                     check_wheel_scroll_test_id.or(Some("ui-gallery-tree-row-0".to_string()));
                 check_stale_paint_test_id =
@@ -1165,6 +1197,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if is_ui_gallery_data_table_retained_suite {
                 if warmup_frames == 0 {
                     warmup_frames = 5;
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VIEW_CACHE".to_string(), "1".to_string()));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL".to_string(),
+                        "1".to_string(),
+                    ));
                 }
                 if !launch_env
                     .iter()
@@ -1181,6 +1228,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_max.or(Some(128));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_wheel_scroll_test_id =
                     check_wheel_scroll_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
                 check_stale_paint_test_id =
@@ -1191,12 +1239,28 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if warmup_frames == 0 {
                     warmup_frames = 5;
                 }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VIEW_CACHE".to_string(), "1".to_string()));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL".to_string(),
+                        "1".to_string(),
+                    ));
+                }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_wheel_scroll_test_id = check_wheel_scroll_test_id
                     .or(Some("ui-gallery-table-retained-row-0".to_string()));
                 check_stale_paint_test_id = check_stale_paint_test_id
