@@ -721,6 +721,7 @@ pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
     props: TableViewProps,
     header_label: Arc<dyn Fn(&ColumnDef<TData>) -> Arc<str>>,
     cell_at: Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement>,
+    debug_header_cell_test_id_prefix: Option<Arc<str>>,
     debug_row_test_id_prefix: Option<Arc<str>>,
 ) -> AnyElement
 where
@@ -814,6 +815,7 @@ where
         let state = state.clone();
         let columns = columns.clone();
         let header_label = Arc::clone(&header_label);
+        let debug_header_cell_test_id_prefix = debug_header_cell_test_id_prefix.clone();
 
         cx.container(
             ContainerProps {
@@ -846,6 +848,13 @@ where
                                 let sort_state = sort_for_column(&sorting, &col.id);
                                 let col_id = col.id.clone();
                                 let state = state.clone();
+                                let debug_test_id: Option<Arc<str>> =
+                                    debug_header_cell_test_id_prefix.as_ref().map(|prefix| {
+                                        Arc::<str>::from(format!(
+                                            "{prefix}{id}",
+                                            id = col_id.as_ref()
+                                        ))
+                                    });
 
                                 cx.pressable(
                                     PressableProps {
@@ -853,6 +862,7 @@ where
                                         a11y: PressableA11y {
                                             role: Some(SemanticsRole::Button),
                                             label: Some(label.clone()),
+                                            test_id: debug_test_id.clone(),
                                             ..Default::default()
                                         },
                                         ..Default::default()
