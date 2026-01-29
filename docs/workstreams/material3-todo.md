@@ -574,7 +574,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `dropdown_menu_dismisses_and_restores_focus_across_schemes`).
 - [x] Verify Select dismissal and focus restore across light/dark + TonalSpot/Expressive schemes.
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`select_dismisses_and_restores_focus_across_schemes`,
-    `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes`,
+    `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes` (ArrowUp/ArrowDown/Enter/Space open keys),
     `select_roving_scrolls_focused_option_into_view`, `select_open_scrolls_selected_option_into_view`,
     `select_listbox_typeahead_moves_focus_skipping_disabled_options`).
 - [x] Add golden-style visual snapshots per component state (light/dark, density variants).

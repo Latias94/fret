@@ -4024,6 +4024,8 @@ fn select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_ac
     let keyboard_open_keys = [
         (KeyCode::ArrowDown, "arrow_down"),
         (KeyCode::ArrowUp, "arrow_up"),
+        (KeyCode::Enter, "enter"),
+        (KeyCode::Space, "space"),
     ];
 
     for (mode, variant, label) in cases {
