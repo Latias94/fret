@@ -169,6 +169,25 @@ Repeat=3 (more stable signal):
 - After (commit `3fa3bba`): `total_time_us p50/p95/max = 90832/99562/99562`, `layout_time_us p50/p95/max = 83175/91319/91319`
 - Delta: `total_time_us p50=-35.9%`, `p95=-33.2%`; `layout_time_us p50=-38.0%`, `p95=-35.4%`
 
+## 3.5 Matrix Result (VirtualList steady-state scroll, worst frame)
+
+This matrix uses a different script that avoids the jump/edit controls so it remains compatible across the VirtualList
+feature toggles:
+
+- Script: `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json`
+- Note: the script includes `reset_diagnostics` before the final wheel events, so the result reflects steady-state
+  scroll behavior rather than initial mount.
+- Args: `--repeat 3 --timeout-ms 180000 --warmup-frames 0 --sort time --top 1`
+- Output dir: `target/perf-matrix-vlist-smooth/`
+
+| Case | Env | total p50/p95 (us) | layout p50/p95 (us) | worst (us) |
+|---|---|---:|---:|---:|
+| baseline | (none) | 6614 / 7377 | 6097 / 6788 | 7377 |
+| vlist_minimal | `FRET_UI_GALLERY_VLIST_MINIMAL=1` | 3288 / 3746 | 2848 / 3641 | 3746 |
+| vlist_known_heights | `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1` | 5869 / 6278 | 5276 / 5604 | 6278 |
+| vlist_retained | `FRET_UI_GALLERY_VLIST_RETAINED=1` | 6736 / 6790 | 6195 / 6205 | 6790 |
+| vlist_row_cache | `FRET_UI_GALLERY_VLIST_ROW_CACHE=1` | 7962 / 8556 | 7299 / 7945 | 8556 |
+
 ## 4) Hypotheses (what we think is actually happening)
 
 H1) The `Scroll` probe’s `AvailableSpace::MaxContent` contract is correct for “true unbounded content extent”, but it is
