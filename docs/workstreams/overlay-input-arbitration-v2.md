@@ -10,7 +10,8 @@ progress here to avoid document ownership conflicts.
 Primary roadmap document:
 
 - `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
-- TODO tracker (keep updated during implementation): `docs/workstreams/overlay-input-arbitration-v2-todo.md`
+- TODO tracker (main): `docs/workstreams/overlay-input-arbitration-v2-todo.md`
+- Worktree tracker (input-dispatch-v2 branches): `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md`
 
 Related ADRs:
 
@@ -125,7 +126,25 @@ Related ADRs:
     `hover_overlay_is_click_through_while_closing`)
 - Policy-level Radix outcome regression:
   - `ecosystem/fret-ui-kit/src/window_overlays/tests.rs` (`non_modal_overlay_can_disable_outside_pointer_events_while_open`)
+- Shadcn parity regression:
+  - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_outside_press_click_through_closes_without_overriding_underlay_focus`)
+  - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_close_transition_remains_click_through`)
+  - `ecosystem/fret-ui-shadcn/src/menubar.rs` (`menubar_submenu_safe_hover_corridor_cancels_close_timer`)
+  - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_click_through_outside_press_closes_and_focuses_underlay`)
+  - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_modal_outside_press_closes_without_activating_underlay`)
+  - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_submenu_safe_hover_corridor_observes_pointer_move_under_pointer_occlusion`)
+  - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_close_transition_is_click_through_and_drops_pointer_occlusion`)
+  - `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` (`dropdown_menu_close_transition_does_not_drive_submenu_timers`)
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_modal_outside_press_closes_without_activating_underlay`)
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_is_click_through_and_drops_pointer_occlusion`)
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_close_transition_does_not_drive_submenu_timers`)
+  - `ecosystem/fret-ui-shadcn/src/context_menu.rs` (`context_menu_submenu_safe_hover_corridor_cancels_close_timer_under_pointer_occlusion`)
+  - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`hover_card_close_transition_is_click_through`)
+  - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (`tooltip_close_transition_is_click_through`)
 
 ## Next (P0 follow-ups)
 
-See the TODO tracker for current status and evidence: `docs/workstreams/overlay-input-arbitration-v2-todo.md`.
+See the TODO trackers for current status and evidence:
+
+- `docs/workstreams/overlay-input-arbitration-v2-todo.md` (main)
+- `docs/workstreams/overlay-input-arbitration-v2-todo-input-dispatch-v2.md` (input-dispatch-v2 branches)

@@ -18,6 +18,23 @@ impl Default for DocId {
     }
 }
 
+/// A URI-like document identity for workspace shells.
+///
+/// This is intentionally a thin wrapper; normalization and scheme decisions are left to the
+/// workspace layer.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DocUri(String);
+
+impl DocUri {
+    pub fn new(uri: impl Into<String>) -> Self {
+        Self(uri.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Revision(pub u64);
 
@@ -26,6 +43,87 @@ pub enum Edit {
     Insert { at: usize, text: String },
     Delete { range: Range<usize> },
     Replace { range: Range<usize>, text: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppliedEdit {
+    pub edit: Edit,
+    pub inverse: Edit,
+    pub delta: BufferDelta,
+}
+
+/// A committed, invertible text transaction expressed as UTF-8 byte-index edits.
+///
+/// The transaction is self-contained: it includes the inverse edits computed from the buffer
+/// state at apply time.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TextBufferTx {
+    pub edits: Vec<Edit>,
+    pub inverse_edits: Vec<Edit>,
+}
+
+impl TextBufferTx {
+    pub fn is_empty(&self) -> bool {
+        self.edits.is_empty()
+    }
+
+    pub fn invert(&self) -> Self {
+        Self {
+            edits: self.inverse_edits.iter().rev().cloned().collect(),
+            inverse_edits: self.edits.iter().rev().cloned().collect(),
+        }
+    }
+}
+
+/// Builder for a multi-edit transaction.
+///
+/// This type does not hold references into the buffer; callers apply edits via
+/// `TextBuffer::apply_in_transaction`.
+#[derive(Debug, Clone, Default)]
+pub struct TextBufferTransaction {
+    edits: Vec<Edit>,
+    inverse_edits: Vec<Edit>,
+}
+
+impl TextBufferTransaction {
+    /// Convert a live transaction snapshot into a committed, invertible transaction.
+    ///
+    /// This is equivalent to `snapshot()`, but uses the "commit" vocabulary used by
+    /// undo/history layers.
+    pub fn snapshot_tx(&self) -> TextBufferTx {
+        self.snapshot()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.edits.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.edits.clear();
+        self.inverse_edits.clear();
+    }
+
+    pub fn snapshot(&self) -> TextBufferTx {
+        TextBufferTx {
+            edits: self.edits.clone(),
+            inverse_edits: self.inverse_edits.clone(),
+        }
+    }
+
+    /// Commit the transaction, consuming the builder and producing an invertible transaction.
+    ///
+    /// This is equivalent to `into_tx()`, but uses the "commit" vocabulary used by
+    /// undo/history layers.
+    pub fn commit(self) -> TextBufferTx {
+        self.into_tx()
+    }
+
+    pub fn into_tx(self) -> TextBufferTx {
+        TextBufferTx {
+            edits: self.edits,
+            inverse_edits: self.inverse_edits,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,6 +155,7 @@ pub enum EditError {
 #[derive(Debug, Clone)]
 pub struct TextBuffer {
     doc: DocId,
+    uri: Option<DocUri>,
     revision: Revision,
     text: String,
     line_starts: Vec<usize>,
@@ -64,12 +163,17 @@ pub struct TextBuffer {
 
 impl TextBuffer {
     pub fn new(doc: DocId, text: String) -> Result<Self, EditError> {
+        Self::new_with_uri(doc, None, text)
+    }
+
+    pub fn new_with_uri(doc: DocId, uri: Option<DocUri>, text: String) -> Result<Self, EditError> {
         if !text.is_char_boundary(text.len()) {
             return Err(EditError::NotCharBoundary);
         }
 
         let mut buf = Self {
             doc,
+            uri,
             revision: Revision(0),
             text,
             line_starts: Vec::new(),
@@ -80,6 +184,14 @@ impl TextBuffer {
 
     pub fn doc(&self) -> DocId {
         self.doc
+    }
+
+    pub fn uri(&self) -> Option<&DocUri> {
+        self.uri.as_ref()
+    }
+
+    pub fn set_uri(&mut self, uri: Option<DocUri>) {
+        self.uri = uri;
     }
 
     pub fn revision(&self) -> Revision {
@@ -110,7 +222,7 @@ impl TextBuffer {
         let start = self.line_start(line)?;
         let end = self
             .line_start(line.saturating_add(1))
-            .unwrap_or_else(|| self.text.len());
+            .unwrap_or(self.text.len());
         Some(start..end.min(self.text.len()))
     }
 
@@ -193,6 +305,100 @@ impl TextBuffer {
         })
     }
 
+    pub fn apply_tx(&mut self, tx: &TextBufferTx) -> Result<(), EditError> {
+        for edit in &tx.edits {
+            self.apply(edit.clone())?;
+        }
+        Ok(())
+    }
+
+    /// Begin a new text transaction (buffer-level begin/update/commit/cancel vocabulary).
+    pub fn transaction_begin(&self) -> TextBufferTransaction {
+        TextBufferTransaction::default()
+    }
+
+    /// Update an in-flight transaction by applying an edit and recording its inverse.
+    pub fn transaction_update(
+        &mut self,
+        tx: &mut TextBufferTransaction,
+        edit: Edit,
+    ) -> Result<BufferDelta, EditError> {
+        self.apply_in_transaction(tx, edit)
+    }
+
+    /// Commit a transaction builder into an invertible transaction object.
+    pub fn transaction_commit(&self, tx: TextBufferTransaction) -> TextBufferTx {
+        tx.into_tx()
+    }
+
+    /// Cancel an in-flight transaction by rolling back the recorded inverse edits.
+    pub fn transaction_cancel(&mut self, tx: &TextBufferTransaction) -> Result<(), EditError> {
+        self.rollback_transaction(tx)
+    }
+
+    pub fn apply_with_inverse(&mut self, edit: Edit) -> Result<AppliedEdit, EditError> {
+        let inverse = match &edit {
+            Edit::Insert { at, text } => {
+                self.validate_index(*at)?;
+                if !text.is_char_boundary(text.len()) {
+                    return Err(EditError::NotCharBoundary);
+                }
+                Edit::Delete {
+                    range: (*at)..at.saturating_add(text.len()),
+                }
+            }
+            Edit::Delete { range } => {
+                self.validate_range(range)?;
+                let Some(removed) = self.text.get(range.clone()) else {
+                    return Err(EditError::RangeEndOutOfBounds);
+                };
+                Edit::Insert {
+                    at: range.start,
+                    text: removed.to_string(),
+                }
+            }
+            Edit::Replace { range, text } => {
+                self.validate_range(range)?;
+                if !text.is_char_boundary(text.len()) {
+                    return Err(EditError::NotCharBoundary);
+                }
+                let Some(removed) = self.text.get(range.clone()) else {
+                    return Err(EditError::RangeEndOutOfBounds);
+                };
+                Edit::Replace {
+                    range: range.start..range.start.saturating_add(text.len()),
+                    text: removed.to_string(),
+                }
+            }
+        };
+
+        let delta = self.apply(edit.clone())?;
+        Ok(AppliedEdit {
+            edit,
+            inverse,
+            delta,
+        })
+    }
+
+    pub fn apply_in_transaction(
+        &mut self,
+        tx: &mut TextBufferTransaction,
+        edit: Edit,
+    ) -> Result<BufferDelta, EditError> {
+        let applied = self.apply_with_inverse(edit)?;
+        let delta = applied.delta;
+        tx.edits.push(applied.edit);
+        tx.inverse_edits.push(applied.inverse);
+        Ok(delta)
+    }
+
+    pub fn rollback_transaction(&mut self, tx: &TextBufferTransaction) -> Result<(), EditError> {
+        for edit in tx.inverse_edits.iter().rev() {
+            self.apply(edit.clone())?;
+        }
+        Ok(())
+    }
+
     fn validate_index(&self, idx: usize) -> Result<(), EditError> {
         if idx > self.text.len() {
             return Err(EditError::IndexOutOfBounds);
@@ -220,7 +426,7 @@ impl TextBuffer {
         self.line_starts.clear();
         self.line_starts.push(0);
         for (idx, ch) in self.text.char_indices() {
-            if ch == '\n' && idx + 1 <= self.text.len() {
+            if ch == '\n' {
                 self.line_starts.push(idx + 1);
             }
         }
@@ -300,5 +506,125 @@ mod tests {
         assert_eq!(buf.line_text(2), Some(""));
         assert_eq!(buf.line_byte_range_including_newline(1), Some(2..4));
         assert_eq!(buf.line_byte_range(1), Some(2..3));
+    }
+
+    #[test]
+    fn transaction_invert_roundtrip() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "abc".to_string()).unwrap();
+        let mut txn = TextBufferTransaction::default();
+
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Insert {
+                    at: 3,
+                    text: "d".to_string(),
+                },
+            )
+            .unwrap();
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Insert {
+                    at: 4,
+                    text: "e".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(buf.text(), "abcde");
+
+        let tx = txn.snapshot();
+        assert_eq!(tx.edits.len(), 2);
+        assert_eq!(tx.inverse_edits.len(), 2);
+
+        let undo_tx = tx.invert();
+        buf.apply_tx(&undo_tx).unwrap();
+        assert_eq!(buf.text(), "abc");
+
+        let redo_tx = undo_tx.invert();
+        buf.apply_tx(&redo_tx).unwrap();
+        assert_eq!(buf.text(), "abcde");
+    }
+
+    #[test]
+    fn rollback_transaction_restores_text() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "hello".to_string()).unwrap();
+        let mut txn = TextBufferTransaction::default();
+
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Insert {
+                    at: 5,
+                    text: " world".to_string(),
+                },
+            )
+            .unwrap();
+        let _ = buf
+            .apply_in_transaction(
+                &mut txn,
+                Edit::Replace {
+                    range: 0..5,
+                    text: "hi".to_string(),
+                },
+            )
+            .unwrap();
+        assert_eq!(buf.text(), "hi world");
+
+        buf.rollback_transaction(&txn).unwrap();
+        assert_eq!(buf.text(), "hello");
+    }
+
+    #[test]
+    fn transaction_hooks_vocabulary_roundtrip() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "hello".to_string()).unwrap();
+
+        let mut txn = buf.transaction_begin();
+        let _ = buf
+            .transaction_update(
+                &mut txn,
+                Edit::Insert {
+                    at: 5,
+                    text: " world".to_string(),
+                },
+            )
+            .unwrap();
+        let _ = buf
+            .transaction_update(
+                &mut txn,
+                Edit::Replace {
+                    range: 0..5,
+                    text: "hi".to_string(),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(buf.text(), "hi world");
+        let committed = buf.transaction_commit(txn.clone());
+
+        buf.transaction_cancel(&txn).unwrap();
+        assert_eq!(buf.text(), "hello");
+
+        buf.apply_tx(&committed).unwrap();
+        assert_eq!(buf.text(), "hi world");
+    }
+
+    #[test]
+    fn buffer_stores_optional_uri() {
+        let doc = DocId::new();
+        let uri = DocUri::new("file:///tmp/hello.txt");
+        let mut buf =
+            TextBuffer::new_with_uri(doc, Some(uri.clone()), "hello".to_string()).unwrap();
+        assert_eq!(buf.uri().map(DocUri::as_str), Some("file:///tmp/hello.txt"));
+
+        buf.set_uri(None);
+        assert_eq!(buf.uri(), None);
+
+        buf.set_uri(Some(uri));
+        assert_eq!(buf.uri().map(DocUri::as_str), Some("file:///tmp/hello.txt"));
     }
 }

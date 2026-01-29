@@ -169,7 +169,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
   - Follow-up: remove the global "skip sweep when reuse exists" stopgap by relying on explicit liveness under cache-root reuse (dirty views + notify + cache key gates).
 
 - [x] GPUI-MVP2-cache-005 Reintroduce declarative node GC with explicit cache-root liveness.
-  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC + cache-root subtree recording), `crates/fret-ui/src/tree/mod.rs` (liveness reachability + parent-pointer repair), `crates/fret-ui/src/elements/runtime.rs` (per-root subtree lists), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
+  - Touches: `crates/fret-ui/src/declarative/mount.rs` (GC + cache-root subtree recording), `crates/fret-ui/src/tree/mod.rs` (liveness reachability + attachment/ownership bookkeeping repair), `crates/fret-ui/src/elements/runtime.rs` (per-root subtree lists), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
   - Goal: collect truly-detached nodes without deleting live cached subtrees (keep `ui-gallery-overlay-torture.json` green under shell reuse).
   - Contract: `docs/adr/0191-declarative-liveness-roots-and-gc-under-view-cache-reuse.md` (Accepted).
   - Fix (v1):
@@ -212,9 +212,9 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Export the sever-parent mapping (parent node -> element id/path + cache-root flags) so the detach callsite can be tied back to the authoring UI structure.
     - Add debug-only diagnostics for `NodeEntry.root` overwrites (element + old_root + new_root + debug paths) to validate or falsify the “cross-root ownership overwrite” hypothesis.
     - Re-run the overlay torture with the stopgap disabled and use the new fields to decide whether the fix is:
-      - missing liveness roots (root selection / visibility semantics), or
-      - root ownership pollution, or
-      - a real attachment edge drop (the subtree truly becomes detached).
+      - missing liveness roots (root selection / visibility semantics),
+      - root ownership / attachment bookkeeping drift (the subtree becomes an island even though the app still expects it to be interactive), or
+      - a true structural detach (authoring/runtime edge drop) that must be attributed to a callsite.
   - Done when:
     - The `view_cache_has_reuse_roots` stopgap is removed and both overlay regression harnesses remain green under cache+shell reuse.
   - Diagnostics:

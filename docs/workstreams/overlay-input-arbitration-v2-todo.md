@@ -25,6 +25,10 @@ Keep this list short and evidence-backed:
   - Evidence: `crates/fret-ui/src/tree/dispatch.rs`, `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - Capture revocation dispatches deterministic `PointerCancel` reasons.
   - Evidence: `crates/fret-core/src/input.rs`, `crates/fret-ui/src/tree/dispatch.rs`
+- Modal close transitions keep the pointer barrier while allowing focus restoration/redirection.
+  - Evidence: `crates/fret-ui/src/tree/layers.rs` (`blocks_underlay_focus`, `active_focus_layers`),
+    `ecosystem/fret-ui-kit/src/window_overlays/state.rs` (`apply_modal_layer`),
+    `ecosystem/fret-ui-shadcn/src/dialog.rs` (`dialog_close_transition_on_close_auto_focus_can_prevent_default_and_restore_focus`)
 
 ## P0 — Conformance Suite Expansion (Hard-to-change Boundaries)
 

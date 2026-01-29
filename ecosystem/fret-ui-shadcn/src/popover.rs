@@ -783,7 +783,10 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
+    use crate::test_support::render_overlay_frame;
     use fret_app::App;
     use fret_core::{
         AppWindowId, Corners, MouseButton, PathCommand, Point, Rect, Size as CoreSize, SvgId,
@@ -976,6 +979,556 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    fn render_popover_frame_with_auto_focus_hooks(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        arrow: bool,
+        underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_id_cell: Option<Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>>>,
+        popover_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        popover_content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+        on_close_auto_focus: Option<OnCloseAutoFocus>,
+    ) -> fret_ui::elements::GlobalElementId {
+        OverlayController::begin_frame(app, window);
+
+        let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let underlay_id_cell = underlay_id_cell.clone();
+                let underlay_id_out = underlay_id_out.clone();
+                let underlay = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(300.0));
+                            layout.inset.left = Some(Px(400.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st, id| {
+                        underlay_id_out.set(Some(id));
+                        if let Some(underlay_id_cell) = underlay_id_cell.as_ref() {
+                            *underlay_id_cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
+                        }
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let popover_focus_id_out = popover_focus_id_out.clone();
+                let popover_content_id_out = popover_content_id_out.clone();
+                let popover = Popover::new(open.clone())
+                    .auto_focus(true)
+                    .arrow(arrow)
+                    .on_open_auto_focus(on_open_auto_focus.clone())
+                    .on_close_auto_focus(on_close_auto_focus.clone())
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let focusable = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(160.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    popover_focus_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+                            let content = PopoverContent::new(vec![focusable]).into_element(cx);
+                            popover_content_id_out.set(Some(content.id));
+                            content
+                        },
+                    );
+
+                vec![underlay, popover]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        trigger_id.expect("trigger id")
+    }
+
+    fn render_popover_frame_with_open_auto_focus_redirect_target(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        arrow: bool,
+        underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        underlay_id_cell: Option<Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>>>,
+        initial_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        redirect_focus_id_cell: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>>,
+        redirect_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        on_open_auto_focus: Option<OnOpenAutoFocus>,
+    ) -> fret_ui::elements::GlobalElementId {
+        OverlayController::begin_frame(app, window);
+
+        let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let underlay_id_cell = underlay_id_cell.clone();
+                let underlay_id_out = underlay_id_out.clone();
+                let underlay = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(300.0));
+                            layout.inset.left = Some(Px(400.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st, id| {
+                        underlay_id_out.set(Some(id));
+                        if let Some(underlay_id_cell) = underlay_id_cell.as_ref() {
+                            *underlay_id_cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
+                        }
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        cx.pressable_toggle_bool(&open);
+                        trigger_id = Some(id);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let redirect_focus_id_cell = redirect_focus_id_cell.clone();
+                let popover = Popover::new(open.clone())
+                    .auto_focus(true)
+                    .arrow(arrow)
+                    .on_open_auto_focus(on_open_auto_focus.clone())
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let initial = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(160.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    initial_focus_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let redirect = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(160.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    redirect_focus_id_out.set(Some(id));
+                                    *redirect_focus_id_cell
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner()) = Some(id);
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            PopoverContent::new(vec![initial, redirect]).into_element(cx)
+                        },
+                    );
+
+                vec![underlay, popover]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        trigger_id.expect("trigger id")
+    }
+
+    #[test]
+    fn popover_open_auto_focus_can_be_prevented() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |_host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        let trigger = render_popover_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            underlay_id.clone(),
+            None,
+            popover_focus_id.clone(),
+            popover_content_id.clone(),
+            None,
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(FrameId(2));
+        let _ = render_popover_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            underlay_id,
+            None,
+            popover_focus_id.clone(),
+            popover_content_id,
+            Some(handler),
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+
+        let popover_focus = popover_focus_id.get().expect("popover focus element");
+        let popover_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, popover_focus)
+                .expect("focusable");
+        assert_ne!(
+            ui.focus(),
+            Some(popover_focus_node),
+            "expected preventDefault to suppress focusing the popover content"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected focus to remain on trigger when open autofocus is prevented"
+        );
+    }
+
+    #[test]
+    fn popover_open_auto_focus_can_be_redirected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let initial_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let redirect_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let redirect_focus_id_cell: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
+        let redirect_focus_id_for_handler = redirect_focus_id_cell.clone();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnOpenAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let id = redirect_focus_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(id) = id {
+                host.request_focus(id);
+            }
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        let trigger = render_popover_frame_with_open_auto_focus_redirect_target(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            underlay_id.clone(),
+            None,
+            initial_focus_id.clone(),
+            redirect_focus_id_cell.clone(),
+            redirect_focus_id_out.clone(),
+            None,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        app.set_frame_id(FrameId(2));
+        let _ = render_popover_frame_with_open_auto_focus_redirect_target(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            underlay_id,
+            None,
+            initial_focus_id.clone(),
+            redirect_focus_id_cell,
+            redirect_focus_id_out.clone(),
+            Some(handler),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_open_auto_focus to run"
+        );
+
+        let initial_focus = initial_focus_id.get().expect("initial focus element");
+        let initial_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, initial_focus)
+                .expect("initial focus");
+        let redirect_focus = redirect_focus_id_out.get().expect("redirect focus element");
+        let redirect_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, redirect_focus)
+                .expect("redirect focus");
+        assert_ne!(
+            ui.focus(),
+            Some(initial_focus_node),
+            "expected redirect to override the default initial focus"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(redirect_focus_node),
+            "expected open autofocus redirect to win when preventDefault is set"
+        );
+    }
+
+    #[test]
+    fn popover_close_auto_focus_can_be_prevented_and_redirected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let underlay_id_cell: Arc<Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+            Arc::new(Mutex::new(None));
+        let underlay_id_for_handler = underlay_id_cell.clone();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let id = underlay_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(id) = id {
+                host.request_focus(id);
+            }
+            req.prevent_default();
+        });
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        let _trigger = render_popover_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            underlay_id.clone(),
+            Some(underlay_id_cell.clone()),
+            popover_focus_id.clone(),
+            popover_content_id.clone(),
+            None,
+            Some(handler.clone()),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Popover content needs the trigger bounds from the previous frame.
+        app.set_frame_id(FrameId(2));
+        let _ = render_popover_frame_with_auto_focus_hooks(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            underlay_id.clone(),
+            Some(underlay_id_cell.clone()),
+            popover_focus_id.clone(),
+            popover_content_id.clone(),
+            None,
+            Some(handler.clone()),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let popover_focus = popover_focus_id.get().expect("popover focus element");
+        let popover_focus_node =
+            fret_ui::elements::node_for_element(&mut app, window, popover_focus)
+                .expect("focusable");
+        ui.set_focus(Some(popover_focus_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        let settle_frames =
+            fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 as usize + 2;
+        for i in 0..settle_frames {
+            app.set_frame_id(FrameId(3 + i as u64));
+            let _ = render_popover_frame_with_auto_focus_hooks(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                false,
+                underlay_id.clone(),
+                Some(underlay_id_cell.clone()),
+                popover_focus_id.clone(),
+                popover_content_id.clone(),
+                None,
+                Some(handler.clone()),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let underlay = underlay_id.get().expect("underlay element");
+        let underlay_node =
+            fret_ui::elements::node_for_element(&mut app, window, underlay).expect("underlay node");
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_close_auto_focus to run"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected preventDefault close autofocus to allow redirecting focus"
+        );
     }
 
     #[test]
@@ -1219,6 +1772,11 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(true),
+            "expected click-through outside press to still activate the underlay when dismissal is prevented"
+        );
         let reason = dismiss_reason.get();
         let Some(fret_ui::action::DismissReason::OutsidePress { pointer }) = reason else {
             panic!("expected outside-press dismissal, got {reason:?}");
@@ -2661,5 +3219,877 @@ mod tests {
         apply_command_effects(&mut ui, &mut app, &mut services);
         assert_eq!(ui.focus(), Some(b_node));
         assert_ne!(ui.focus(), Some(underlay_node));
+    }
+
+    #[test]
+    fn modal_popover_close_transition_keeps_modal_barrier_blocking_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices, frame: u64| {
+                app.set_frame_id(FrameId(frame));
+
+                OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "modal-popover-close-transition-barrier",
+                    |cx| {
+                        let underlay_activated = underlay_activated.clone();
+                        let underlay = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |cx, _st| {
+                                cx.pressable_set_bool(&underlay_activated, true);
+                                Vec::new()
+                            },
+                        );
+
+                        let trigger = cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout.inset.left = Some(Px(20.0));
+                                    layout.inset.top = Some(Px(20.0));
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st| {
+                                cx.pressable_toggle_bool(&open);
+                                Vec::new()
+                            },
+                        );
+
+                        let popover = Popover::new(open.clone())
+                            .modal(true)
+                            .auto_focus(false)
+                            .into_element(
+                                cx,
+                                |_cx| trigger,
+                                |cx| {
+                                    PopoverContent::new(vec![
+                                        cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                    ])
+                                    .into_element(cx)
+                                },
+                            );
+
+                        vec![underlay, popover]
+                    },
+                );
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+            };
+
+        // Frame 1: closed.
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open -> barrier root should exist.
+        render_frame(&mut ui, &mut app, &mut services, 2);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected modal popover to install a modal barrier root"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false) -> barrier must remain active.
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let barrier_root = snap
+            .barrier_root
+            .expect("expected barrier root to remain while the modal popover is closing");
+        let barrier_layer = ui.node_layer(barrier_root).expect("barrier layer");
+        let barrier = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == barrier_layer)
+            .expect("barrier debug layer info");
+        assert!(barrier.visible);
+        assert!(barrier.hit_testable);
+        assert!(
+            barrier.blocks_underlay_input,
+            "expected modal barrier layer to block underlay input"
+        );
+
+        // Click the underlay. The modal barrier should block the click-through while closing.
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while the modal popover is closing"
+        );
+
+        // After the exit transition settles, the barrier must drop and the underlay becomes
+        // interactive again.
+        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        for i in 0..settle_frames {
+            render_frame(&mut ui, &mut app, &mut services, 4 + i);
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_none(),
+            "expected barrier root to clear once the exit transition completes"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(true),
+            "underlay should activate once the barrier is removed"
+        );
+    }
+
+    #[test]
+    fn modal_popover_close_transition_restores_trigger_focus_while_barrier_blocks_underlay_pointer()
+    {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let _ = render_overlay_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "modal-popover-close-transition-focus-restore",
+                |cx| {
+                    let underlay_activated = underlay_activated.clone();
+                    let underlay = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_set_bool(&underlay_activated, true);
+                            Vec::new()
+                        },
+                    );
+
+                    let trigger_id_out = trigger_id_out.clone();
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout.inset.left = Some(Px(20.0));
+                                layout.inset.top = Some(Px(20.0));
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: fret_ui::element::PressableA11y {
+                                test_id: Some(Arc::from("trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            trigger_id_out.set(Some(id));
+                            cx.pressable_toggle_bool(&open);
+                            Vec::new()
+                        },
+                    );
+
+                    let focusable_id_out = focusable_id_out.clone();
+                    let popover = Popover::new(open.clone())
+                        .modal(true)
+                        .auto_focus(false)
+                        .into_element(
+                            cx,
+                            |_cx| trigger,
+                            move |cx| {
+                                let focusable = cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(200.0));
+                                            layout.size.height = Length::Px(Px(44.0));
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        a11y: fret_ui::element::PressableA11y {
+                                            test_id: Some(Arc::from("popover-focusable")),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |_cx, _st, id| {
+                                        focusable_id_out.set(Some(id));
+                                        Vec::new()
+                                    },
+                                );
+                                PopoverContent::new(vec![focusable]).into_element(cx)
+                            },
+                        );
+
+                    vec![underlay, popover]
+                },
+            );
+        };
+
+        // Frame 1: closed.
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open -> barrier root should exist.
+        render_frame(&mut ui, &mut app, &mut services);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected modal popover to install a modal barrier root"
+        );
+
+        let focusable_id = focusable_id_out.get().expect("popover focusable id");
+        let focusable_node = fret_ui::elements::node_for_element(&mut app, window, focusable_id)
+            .expect("popover focusable");
+        ui.set_focus(Some(focusable_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false) -> focus should be restored even
+        // though pointer interactions remain blocked by the barrier.
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected close transition to restore focus to the trigger"
+        );
+
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while the modal popover is closing"
+        );
+    }
+
+    #[test]
+    fn modal_popover_close_transition_on_close_auto_focus_can_prevent_default_and_restore_focus() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let trigger_id_cell: Arc<std::sync::Mutex<Option<fret_ui::elements::GlobalElementId>>> =
+            Arc::new(std::sync::Mutex::new(None));
+        let trigger_id_for_handler = trigger_id_cell.clone();
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_for_handler = calls.clone();
+        let handler: OnCloseAutoFocus = Arc::new(move |host, _action_cx, req| {
+            calls_for_handler.fetch_add(1, Ordering::SeqCst);
+            let trigger = trigger_id_for_handler
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .clone();
+            if let Some(trigger) = trigger {
+                host.request_focus(trigger);
+            }
+            req.prevent_default();
+        });
+
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let focusable_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let _ = render_overlay_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "modal-popover-close-transition-on-close-auto-focus",
+                |cx| {
+                    let underlay_activated = underlay_activated.clone();
+                    let underlay = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_set_bool(&underlay_activated, true);
+                            Vec::new()
+                        },
+                    );
+
+                    let trigger_id_out = trigger_id_out.clone();
+                    let trigger_id_cell = trigger_id_cell.clone();
+                    let open_for_trigger = open.clone();
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout.inset.left = Some(Px(20.0));
+                                layout.inset.top = Some(Px(20.0));
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: fret_ui::element::PressableA11y {
+                                test_id: Some(Arc::from("trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _st, id| {
+                            trigger_id_out.set(Some(id));
+                            *trigger_id_cell.lock().unwrap_or_else(|e| e.into_inner()) = Some(id);
+                            cx.pressable_toggle_bool(&open_for_trigger);
+                            Vec::new()
+                        },
+                    );
+
+                    let focusable_id_out = focusable_id_out.clone();
+                    let handler = handler.clone();
+                    let popover = Popover::new(open.clone())
+                        .modal(true)
+                        .auto_focus(false)
+                        .consume_outside_pointer_events(true)
+                        .on_close_auto_focus(Some(handler))
+                        .into_element(
+                            cx,
+                            |_cx| trigger,
+                            move |cx| {
+                                let focusable = cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(200.0));
+                                            layout.size.height = Length::Px(Px(44.0));
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        a11y: fret_ui::element::PressableA11y {
+                                            test_id: Some(Arc::from("popover-focusable")),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |_cx, _st, id| {
+                                        focusable_id_out.set(Some(id));
+                                        Vec::new()
+                                    },
+                                );
+                                PopoverContent::new(vec![focusable]).into_element(cx)
+                            },
+                        );
+
+                    vec![underlay, popover]
+                },
+            );
+        };
+
+        // Frame 1: closed.
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        ui.set_focus(Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open -> barrier root should exist.
+        render_frame(&mut ui, &mut app, &mut services);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected modal popover to install a modal barrier root"
+        );
+
+        let focusable_id = focusable_id_out.get().expect("focusable id");
+        let focusable_node = fret_ui::elements::node_for_element(&mut app, window, focusable_id)
+            .expect("focusable node");
+        ui.set_focus(Some(focusable_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing -> handler should be able to restore focus while barrier blocks pointer.
+        render_frame(&mut ui, &mut app, &mut services);
+
+        assert!(
+            calls.load(Ordering::SeqCst) > 0,
+            "expected on_close_auto_focus to run"
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected on_close_auto_focus to restore focus to the trigger"
+        );
+
+        let click = Point::new(Px(10.0), Px(10.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should remain inert while the modal popover is closing"
+        );
+    }
+
+    #[test]
+    fn popover_close_transition_is_click_through_and_observer_inert() {
+        use fret_core::{Event, MouseButtons};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let frame_bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            frame_bounds: Rect,
+            open: Model<bool>,
+            underlay_clicked: Model<bool>,
+            underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            frame: u64,
+        ) {
+            app.set_frame_id(FrameId(frame));
+
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                frame_bounds,
+                "popover-close-transition-invariants",
+                |cx| {
+                    let underlay_id_out = underlay_id_out.clone();
+                    let content_id_out = content_id_out.clone();
+                    let underlay_clicked = underlay_clicked.clone();
+                    let open = open.clone();
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let underlay =
+                                cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout.size.height = Length::Fill;
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        ..Default::default()
+                                    },
+                                    {
+                                        let underlay_id_out = underlay_id_out.clone();
+                                        let underlay_clicked = underlay_clicked.clone();
+                                        move |cx, _st, id| {
+                                            underlay_id_out.set(Some(id));
+                                            cx.pressable_toggle_bool(&underlay_clicked);
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        }
+                                    },
+                                );
+
+                            let trigger = cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout.inset.left = Some(Px(20.0));
+                                        layout.inset.top = Some(Px(20.0));
+                                        layout.position = fret_ui::element::PositionStyle::Absolute;
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                {
+                                    let open = open.clone();
+                                    move |cx, _st| {
+                                        cx.pressable_toggle_bool(&open);
+                                        Vec::new()
+                                    }
+                                },
+                            );
+
+                            let popover =
+                                Popover::new(open.clone()).auto_focus(false).into_element(
+                                    cx,
+                                    |_cx| trigger,
+                                    move |cx| {
+                                        let content = PopoverContent::new(vec![
+                                            ui::raw_text(cx, "content").into_element(cx),
+                                        ])
+                                        .into_element(cx);
+                                        content_id_out.set(Some(content.id));
+                                        content
+                                    },
+                                );
+
+                            vec![underlay, popover]
+                        },
+                    )]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, frame_bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, frame_bounds, 1.0);
+        }
+
+        // Frame 1: mount closed.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            frame_bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            1,
+        );
+
+        // Frame 2: open.
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            frame_bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            2,
+        );
+        let content_element = content_id.get().expect("content element id");
+        let content_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_element).expect("node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .map(|n| n.bounds)
+            .expect("content bounds");
+        let content_center = Point::new(
+            Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
+            Px(content_bounds.origin.y.0 + content_bounds.size.height.0 * 0.5),
+        );
+
+        // Frame 3: close transition begins (present=true, interactive=false).
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            frame_bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            3,
+        );
+
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected popover content to remain mounted during close transition"
+        );
+
+        let content_node =
+            fret_ui::elements::node_for_element(&mut app, window, content_element).expect("node");
+        let content_layer = ui.node_layer(content_node).expect("content layer");
+        let layer = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == content_layer)
+            .expect("overlay layer");
+        assert!(layer.visible);
+        assert!(!layer.hit_testable);
+        assert_eq!(
+            layer.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
+        assert!(!layer.wants_pointer_move_events);
+        assert!(!layer.wants_timer_events);
+
+        // Even if pointer events hit where the popover is painted, they must go through while
+        // closing.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: content_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: content_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_clicked),
+            Some(true),
+            "expected close-transition clicks to reach the underlay"
+        );
+
+        // Pointer move should not install timers while closing (no hover policies running).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(10.0), Px(10.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let effects = app.flush_effects();
+        assert!(
+            !effects.iter().any(|e| matches!(e, Effect::SetTimer { .. })),
+            "expected close transition to not arm timers; effects={effects:?}"
+        );
     }
 }

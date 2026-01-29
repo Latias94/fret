@@ -996,6 +996,12 @@ impl DockingArbitrationDriver {
                     right_anchor,
                 });
             state.ui.set_root(root);
+            // Ensure the retained harness nodes participate in hit-testing and event routing.
+            // Without explicit parent/child wiring, `layout_in` can position nodes for paint, but
+            // pointer hit-testing will not descend into them (it only follows the UI tree).
+            state
+                .ui
+                .set_children(root, vec![*dock_space, left_anchor, right_anchor]);
             root
         });
 

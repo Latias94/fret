@@ -20,6 +20,25 @@ enum DockTearOffCompletion {
     CancelAndCloseWindow,
 }
 
+#[derive(Default)]
+struct DockFloatingOsWindowRegistry {
+    windows: std::collections::HashSet<AppWindowId>,
+}
+
+impl DockFloatingOsWindowRegistry {
+    fn register(&mut self, window: AppWindowId) {
+        self.windows.insert(window);
+    }
+
+    fn remove(&mut self, window: AppWindowId) {
+        self.windows.remove(&window);
+    }
+
+    fn contains(&self, window: AppWindowId) -> bool {
+        self.windows.contains(&window)
+    }
+}
+
 #[derive(Debug, Clone)]
 struct DockTearOffPending {
     source_window: AppWindowId,
@@ -217,7 +236,21 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return false;
             }
 
-            app.with_global_mut(DockManager::default, |dock, app| {
+            let maybe_close_window = match &op {
+                DockOp::ClosePanel { window, .. } => Some(*window),
+                DockOp::MovePanel { source_window, .. } => Some(*source_window),
+                DockOp::FloatPanelToWindow { source_window, .. } => Some(*source_window),
+                DockOp::FloatPanelInWindow { source_window, .. } => Some(*source_window),
+                DockOp::MergeWindowInto { source_window, .. } => Some(*source_window),
+                _ => None,
+            }
+            .filter(|w| {
+                app.global::<DockFloatingOsWindowRegistry>()
+                    .is_some_and(|reg| reg.contains(*w))
+            });
+
+            let mut should_auto_close = false;
+            let handled = app.with_global_mut(DockManager::default, |dock, app| {
                 let now = app.tick_id();
                 app.with_global_mut(DockTearOffMachine::default, |machine, _app| match &op {
                     DockOp::ClosePanel { panel, .. }
@@ -233,6 +266,12 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 let changed = dock.graph.apply_op(&op);
                 if !changed {
                     return false;
+                }
+
+                if let Some(window) = maybe_close_window
+                    && dock.graph.collect_panels_in_window(window).is_empty()
+                {
+                    should_auto_close = true;
                 }
 
                 match &op {
@@ -291,7 +330,19 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     DockOp::RequestFloatPanelToNewWindow { .. } => unreachable!(),
                 }
                 true
-            })
+            });
+
+            if handled
+                && should_auto_close
+                && let Some(window) = maybe_close_window
+            {
+                app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
+                    reg.remove(window);
+                });
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            }
+
+            handled
         }
     }
 }
@@ -326,7 +377,7 @@ pub fn handle_dock_window_created<H: UiHost>(
         return true;
     }
 
-    app.with_global_mut(DockManager::default, |dock, app| {
+    let handled = app.with_global_mut(DockManager::default, |dock, app| {
         let changed = dock
             .graph
             .float_panel_to_window(*source_window, panel.clone(), new_window);
@@ -346,7 +397,15 @@ pub fn handle_dock_window_created<H: UiHost>(
         dock.clear_viewport_layout_for_window(new_window);
         invalidate_windows(app, [*source_window, new_window]);
         true
-    })
+    });
+
+    if handled {
+        app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
+            reg.register(new_window);
+        });
+    }
+
+    handled
 }
 
 /// Merge a closing floating dock window back into a target window.
@@ -366,6 +425,10 @@ pub fn handle_dock_before_close_window<H: UiHost>(
     if app.global::<DockManager>().is_none() {
         return true;
     }
+
+    app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
+        reg.remove(closing_window);
+    });
 
     app.with_global_mut(DockManager::default, |dock, app| {
         if dock.graph.window_root(closing_window).is_none() {
@@ -392,7 +455,7 @@ pub fn handle_dock_before_close_window<H: UiHost>(
 mod tests {
     use super::*;
     use crate::test_host::TestHost;
-    use fret_core::{DockNode, PanelKey};
+    use fret_core::{DockNode, DropZone, PanelKey};
     use slotmap::KeyData;
 
     #[test]
@@ -610,6 +673,140 @@ mod tests {
             .expect("expected active drag session");
         assert_eq!(drag.source_window, window_b);
         assert_eq!(drag.current_window, window_b);
+    }
+
+    #[test]
+    fn redock_from_dock_floating_window_auto_closes_empty_os_window() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        assert!(handle_dock_op(
+            &mut app,
+            DockOp::RequestFloatPanelToNewWindow {
+                source_window: window_a,
+                panel: panel.clone(),
+                anchor: None,
+            }
+        ));
+
+        let create = app
+            .take_effects()
+            .iter()
+            .find_map(|e| match e {
+                Effect::Window(WindowRequest::Create(req)) => Some(req.clone()),
+                _ => None,
+            })
+            .expect("expected WindowRequest::Create");
+
+        assert!(handle_dock_window_created(&mut app, &create, window_b));
+        app.take_effects();
+
+        let target_tabs = app
+            .global::<DockManager>()
+            .expect("dock manager exists")
+            .graph
+            .first_tabs_in_window(window_a)
+            .expect("expected a target tabs node in the main window");
+
+        assert!(handle_dock_op(
+            &mut app,
+            DockOp::MovePanel {
+                source_window: window_b,
+                panel: panel.clone(),
+                target_window: window_a,
+                target_tabs,
+                zone: DropZone::Center,
+                insert_index: None,
+            }
+        ));
+
+        let effects = app.take_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::Window(WindowRequest::Close(w)) if *w == window_b)),
+            "expected an auto-close request for the now-empty dock-floating OS window"
+        );
+
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.collect_panels_in_window(window_b).is_empty(),
+            "expected the source window to be empty after re-docking its last panel"
+        );
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            "expected the panel to be present in the target window after re-dock"
+        );
+    }
+
+    #[test]
+    fn before_close_window_merges_dock_floating_panels_into_target_window() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let window_b = AppWindowId::from(KeyData::from_ffi(2));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+
+            let tabs_a = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("main.placeholder")],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs_a);
+
+            let tabs_b = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_b, tabs_b);
+        });
+
+        assert!(
+            handle_dock_before_close_window(&mut app, window_b, window_a),
+            "expected before_close hook to allow closing after merging"
+        );
+
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert!(
+            dock.graph.window_root(window_b).is_none(),
+            "expected closing window root to be removed after merge"
+        );
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            "expected panel to be merged into target window"
+        );
     }
 
     #[test]
