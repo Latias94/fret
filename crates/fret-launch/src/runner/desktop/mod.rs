@@ -2799,9 +2799,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         #[cfg(windows)]
         {
-            use winit::platform::windows::WindowAttributesExtWindows as _;
             if let Some(taskbar) = style.taskbar {
-                attrs = attrs.with_skip_taskbar(matches!(taskbar, TaskbarVisibility::Hide));
+                let platform = winit::platform::windows::WindowAttributesWindows::default()
+                    .with_skip_taskbar(matches!(taskbar, TaskbarVisibility::Hide));
+                attrs = attrs.with_platform_attributes(Box::new(platform));
             }
         }
         let window = Arc::<dyn Window>::from(
