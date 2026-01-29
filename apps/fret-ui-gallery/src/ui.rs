@@ -284,7 +284,18 @@ pub(crate) fn content_view(
                     .items_start(),
                 |cx| {
                     vec![
-                        cx.text(title),
+                        cx.text_props(TextProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout
+                            },
+                            text: Arc::from(title),
+                            style: None,
+                            color: None,
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Ellipsis,
+                        }),
                         cx.text_props(TextProps {
                             layout: {
                                 let mut layout = fret_ui::element::LayoutStyle::default();
