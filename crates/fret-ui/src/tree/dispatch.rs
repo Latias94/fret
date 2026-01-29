@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
@@ -438,7 +438,10 @@ impl<H: UiHost> UiTree<H> {
         if self.focus == Some(requested_focus) {
             return false;
         }
-        if !self.node_in_any_layer(requested_focus, active_roots) {
+        // Focus gating should be resilient to temporarily-broken parent pointers under retained /
+        // view-cache-reused subtrees. Use reachability from active layer roots via child edges as
+        // the authoritative layer membership check.
+        if !self.is_reachable_from_any_root_via_children(requested_focus, active_roots) {
             return false;
         }
 
@@ -446,6 +449,39 @@ impl<H: UiHost> UiTree<H> {
             return true;
         };
         self.is_descendant(trap_root, requested_focus)
+    }
+
+    fn is_reachable_from_any_root_via_children(&self, target: NodeId, roots: &[NodeId]) -> bool {
+        if roots.is_empty() {
+            return false;
+        }
+        if roots.iter().any(|&root| root == target) {
+            return true;
+        }
+
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = Vec::new();
+        for &root in roots {
+            if visited.insert(root) {
+                stack.push(root);
+            }
+        }
+
+        while let Some(node) = stack.pop() {
+            let Some(entry) = self.nodes.get(node) else {
+                continue;
+            };
+            for &child in &entry.children {
+                if child == target {
+                    return true;
+                }
+                if visited.insert(child) {
+                    stack.push(child);
+                }
+            }
+        }
+
+        false
     }
 
     fn dispatch_event_to_node_chain(
