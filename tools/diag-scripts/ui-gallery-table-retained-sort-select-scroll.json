@@ -39,7 +39,6 @@
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-name" } },
     { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-header-name" } },
     { "type": "wait_frames", "n": 2 },
 
     {
