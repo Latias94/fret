@@ -31,7 +31,7 @@ fn axis_len(rect: Rect, axis: Axis) -> f32 {
 
 fn preserve_child_ix(side: BoundarySide) -> usize {
     match side {
-        // Resizing the "end" edge should keep the "start" subtree stable (ImGui WantLockSizeOnce).
+        // Resizing the "end" edge should keep the "start" subtree stable.
         BoundarySide::End => 0,
         BoundarySide::Start => 1,
     }
@@ -102,7 +102,7 @@ fn collect_same_axis_locks_in_subtree(
     }
 }
 
-/// Compute ImGui-style nested-split stabilization locks for a binary split handle.
+/// Compute nested-split stabilization locks for a binary split handle.
 ///
 /// When resizing a splitter, we want only the *touching* leaf nodes to change size.
 /// Same-axis nested splits should keep their "inner siblings" stable to avoid linked splitters.

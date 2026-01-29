@@ -126,8 +126,8 @@ pub(super) fn dock_drop_edge_thickness(rect: Rect) -> Px {
     let min_dim = rect.size.width.0.min(rect.size.height.0);
     // Keep split zones usable on large panels, but avoid making "center tab" drops difficult.
     // Also keep the thickness sane on small panels.
-    // ImGui-style: edge splits should be easy to hit even on big panels; we still cap it so the
-    // center/tab drop remains a first-class target.
+    // Edge splits should be easy to hit even on big panels; we still cap it so the center/tab
+    // drop remains a first-class target.
     let base = (min_dim * 0.30).clamp(20.0, 120.0);
     let cap = (min_dim * 0.44).clamp(20.0, 120.0);
     Px(base.min(cap))
@@ -179,10 +179,7 @@ pub(super) fn dock_hint_pick_zone(
     outer_docking: bool,
     position: Point,
 ) -> Option<DropZone> {
-    // Align with Dear ImGui docking branch hit testing.
-    //
-    // Reference:
-    // - `repo-ref/imgui/imgui.cpp`: `DockNodeCalcDropRectsAndTestMousePos(...)`
+    // Direction-pad hit-testing modeled after common docking UX.
     let parent_smaller_axis = rect.size.width.0.min(rect.size.height.0);
     let font = font_size.0.max(0.0);
     let hs_for_central_nodes = (font * 1.5).min((font * 0.5).max(parent_smaller_axis / 8.0));
@@ -257,13 +254,8 @@ pub(super) fn dock_hint_rects_with_font(
     font_size: Px,
     outer_docking: bool,
 ) -> [(DropZone, Rect); 5] {
-    // Align with Dear ImGui docking branch mental model:
-    // - compute a 5-way “direction pad” around the center of the hovered dock node,
-    // - with sizing derived from font size and panel size,
-    // - and a distinct geometry for "outer docking" (bigger targets spaced further out).
-    //
-    // Reference:
-    // - `repo-ref/imgui/imgui.cpp`: `DockNodeCalcDropRectsAndTestMousePos(...)`
+    // Compute a 5-way “direction pad” around the center of the hovered dock node, with sizing
+    // derived from font size and panel size. Outer docking uses bigger targets spaced further out.
     let parent_smaller_axis = rect.size.width.0.min(rect.size.height.0);
     let font = font_size.0.max(0.0);
     let hs_for_central_nodes = (font * 1.5).min((font * 0.5).max(parent_smaller_axis / 8.0));

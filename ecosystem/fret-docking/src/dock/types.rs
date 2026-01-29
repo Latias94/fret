@@ -2,7 +2,7 @@ use fret_core::{
     AppWindowId, Axis, DockNodeId, DropZone, PanelKey, TextBlobId, TextMetrics,
     geometry::{Point, Rect},
 };
-use fret_runtime::TickId;
+use fret_runtime::{FrameId, TickId};
 
 #[derive(Debug, Clone)]
 pub(super) struct DockPanelDragPayload {
@@ -10,6 +10,7 @@ pub(super) struct DockPanelDragPayload {
     pub(super) grab_offset: Point,
     pub(super) start_tick: TickId,
     pub(super) tear_off_requested: bool,
+    pub(super) tear_off_oob_start_frame: Option<FrameId>,
     pub(super) dock_previews_enabled: bool,
 }
 

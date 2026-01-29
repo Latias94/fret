@@ -2224,6 +2224,7 @@ fn dock_space_kicks_paint_cache_on_drag_transition_for_cache_root() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -2272,6 +2273,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -3053,6 +3055,7 @@ fn dock_drag_requests_animation_frames_while_dragging() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -3362,6 +3365,7 @@ fn dock_drag_suppresses_viewport_capture_start_for_other_pointer() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -3607,6 +3611,7 @@ fn dock_tab_drop_outside_window_requests_float() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -3637,6 +3642,103 @@ fn dock_tab_drop_outside_window_requests_float() {
                 if *panel == PanelKey::new("core.hierarchy")
         )),
         "expected a float request effect when dropping outside the window"
+    );
+}
+
+#[test]
+fn dock_drag_only_requests_tear_off_after_stable_oob_frame() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let outside = Point::new(Px(-32.0), Px(12.0));
+
+    // Frame N: first OOB hover should not request a tear-off yet (debounce).
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected no tear-off request on first OOB over, got: {effects:?}"
+    );
+
+    // Frame N+1: still OOB -> request tear-off.
+    app.advance_frame();
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: outside,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    let effects = app.take_effects();
+    assert!(
+        effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected tear-off request after stable OOB, got: {effects:?}"
     );
 }
 
@@ -3678,6 +3780,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -3767,6 +3870,7 @@ fn dock_tab_drop_on_float_zone_floats_in_window_even_when_tear_off_enabled() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -3851,6 +3955,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -3925,6 +4030,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -4003,6 +4109,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -4128,6 +4235,7 @@ fn dock_outer_drop_rects_target_window_root_even_when_root_is_split() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -4161,6 +4269,303 @@ fn dock_outer_drop_rects_target_window_root_even_when_root_is_split() {
         matches!(hover, Some(DockDropTarget::Dock(t)) if t.tabs == root_split && t.zone == DropZone::Left && t.outer),
         "expected outer docking to target window root split, got: {hover:?}",
     );
+}
+
+#[test]
+fn dock_drop_left_emits_move_panel_and_splits_tabs_node() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut tabs_node: Option<DockNodeId> = None;
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.left"), PanelKey::new("core.right")],
+            active: 0,
+        });
+        tabs_node = Some(tabs);
+        dock.graph.set_window_root(window, tabs);
+        for (key, title) in [
+            (PanelKey::new("core.left"), "Left"),
+            (PanelKey::new("core.right"), "Right"),
+        ] {
+            dock.panels.insert(
+                key,
+                DockPanel {
+                    title: title.to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+    });
+    let tabs_node = tabs_node.expect("expected tabs node");
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.left"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let left_rect = dock_hint_rects_with_font(dock_bounds, Px(13.0), false)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Left).then_some(rect))
+        .expect("expected inner left rect");
+    let position = Point::new(
+        Px(left_rect.origin.x.0 + left_rect.size.width.0 * 0.5),
+        Px(left_rect.origin.y.0 + left_rect.size.height.0 * 0.5),
+    );
+
+    for kind in [InternalDragKind::Over, InternalDragKind::Drop] {
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+    }
+
+    let effects = app.take_effects();
+    let op = effects.iter().find_map(|e| match e {
+        Effect::Dock(op) => Some(op.clone()),
+        _ => None,
+    });
+    let Some(op) = op else {
+        panic!("expected a Dock op, got: {effects:?}");
+    };
+    let DockOp::MovePanel {
+        target_tabs,
+        zone,
+        panel,
+        ..
+    } = &op
+    else {
+        panic!("expected MovePanel, got: {op:?}");
+    };
+    assert_eq!(*target_tabs, tabs_node);
+    assert_eq!(*zone, DropZone::Left);
+    assert_eq!(*panel, PanelKey::new("core.left"));
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let applied = dock
+            .graph
+            .apply_op_checked(&op)
+            .expect("apply must succeed");
+        assert!(applied);
+
+        let root = dock.graph.window_root(window).expect("window root exists");
+        let Some(DockNode::Split { axis, children, .. }) = dock.graph.node(root) else {
+            panic!(
+                "expected root to become a split after left docking, got: {:?}",
+                dock.graph.node(root)
+            );
+        };
+        assert_eq!(*axis, fret_core::Axis::Horizontal);
+        assert_eq!(children.len(), 2);
+
+        let left = children[0];
+        let right = children[1];
+        let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(left) else {
+            panic!("expected left child tabs");
+        };
+        let Some(DockNode::Tabs {
+            tabs: right_tabs, ..
+        }) = dock.graph.node(right)
+        else {
+            panic!("expected right child tabs");
+        };
+        assert!(tabs.contains(&PanelKey::new("core.left")));
+        assert!(right_tabs.contains(&PanelKey::new("core.right")));
+    });
+}
+
+#[test]
+fn dock_drop_outer_left_emits_move_panel_and_wraps_window_root() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut root_split: Option<DockNodeId> = None;
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let left = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.left")],
+            active: 0,
+        });
+        let right = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.right"), PanelKey::new("core.right2")],
+            active: 0,
+        });
+        let split = dock.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left, right],
+            fractions: vec![0.5, 0.5],
+        });
+        root_split = Some(split);
+        dock.graph.set_window_root(window, split);
+        for (key, title) in [
+            (PanelKey::new("core.left"), "Left"),
+            (PanelKey::new("core.right"), "Right"),
+            (PanelKey::new("core.right2"), "Right2"),
+        ] {
+            dock.panels.insert(
+                key,
+                DockPanel {
+                    title: title.to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+    });
+    let root_split = root_split.expect("expected window root split");
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(12.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.right"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let outer_left = dock_hint_rects_with_font(bounds, Px(13.0), true)
+        .into_iter()
+        .find_map(|(zone, rect)| (zone == DropZone::Left).then_some(rect))
+        .expect("expected outer left rect");
+    let position = Point::new(
+        Px(outer_left.origin.x.0 + outer_left.size.width.0 * 0.5),
+        Px(outer_left.origin.y.0 + outer_left.size.height.0 * 0.5),
+    );
+
+    for kind in [InternalDragKind::Over, InternalDragKind::Drop] {
+        ui.dispatch_event(
+            &mut app,
+            &mut text,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+    }
+
+    let effects = app.take_effects();
+    let op = effects.iter().find_map(|e| match e {
+        Effect::Dock(op) => Some(op.clone()),
+        _ => None,
+    });
+    let Some(op) = op else {
+        panic!("expected a Dock op, got: {effects:?}");
+    };
+    let DockOp::MovePanel {
+        target_tabs,
+        zone,
+        panel,
+        ..
+    } = &op
+    else {
+        panic!("expected MovePanel, got: {op:?}");
+    };
+    assert_eq!(*target_tabs, root_split);
+    assert_eq!(*zone, DropZone::Left);
+    assert_eq!(*panel, PanelKey::new("core.right"));
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let applied = dock
+            .graph
+            .apply_op_checked(&op)
+            .expect("apply must succeed");
+        assert!(applied);
+
+        let root = dock.graph.window_root(window).expect("window root exists");
+        let Some(DockNode::Split { axis, children, .. }) = dock.graph.node(root) else {
+            panic!("expected window root split");
+        };
+        assert_eq!(*axis, fret_core::Axis::Horizontal);
+        assert_eq!(children.len(), 2);
+
+        let left = children[0];
+        let right = children[1];
+        let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(left) else {
+            panic!("expected left child tabs");
+        };
+        assert!(tabs.contains(&PanelKey::new("core.right")));
+
+        // The previous root split should become the right child.
+        assert_eq!(right, root_split);
+        fn collect_panels(graph: &DockGraph, node: DockNodeId, out: &mut Vec<PanelKey>) {
+            let Some(node) = graph.node(node) else {
+                return;
+            };
+            match node {
+                DockNode::Tabs { tabs, .. } => out.extend(tabs.iter().cloned()),
+                DockNode::Split { children, .. } => {
+                    for &child in children {
+                        collect_panels(graph, child, out);
+                    }
+                }
+                DockNode::Floating { child } => collect_panels(graph, *child, out),
+            }
+        }
+
+        let mut subtree_panels = Vec::new();
+        collect_panels(&dock.graph, right, &mut subtree_panels);
+        assert!(subtree_panels.contains(&PanelKey::new("core.left")));
+        assert!(subtree_panels.contains(&PanelKey::new("core.right2")));
+    });
 }
 
 #[test]
@@ -4284,6 +4689,7 @@ fn dock_center_drop_overlay_draws_tab_preview_for_drag_payload() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -4368,6 +4774,7 @@ fn dock_drag_requires_explicit_target_or_hint_rects() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -4518,6 +4925,7 @@ fn dock_drag_auto_scrolls_tab_bar_near_edges() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },
     );
@@ -4664,6 +5072,7 @@ fn dock_tab_drop_emits_insert_index_based_on_over_tab_halves() {
                 grab_offset: Point::new(Px(0.0), Px(0.0)),
                 start_tick: fret_runtime::TickId(0),
                 tear_off_requested: false,
+                tear_off_oob_start_frame: None,
                 dock_previews_enabled: true,
             },
         );
@@ -4775,6 +5184,7 @@ fn dock_tab_drop_reorders_tabs_when_applying_move_panel() {
                 grab_offset: Point::new(Px(0.0), Px(0.0)),
                 start_tick: fret_runtime::TickId(0),
                 tear_off_requested: false,
+                tear_off_oob_start_frame: None,
                 dock_previews_enabled: true,
             },
         );

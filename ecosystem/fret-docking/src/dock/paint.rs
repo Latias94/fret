@@ -690,7 +690,7 @@ pub(super) fn paint_drop_hints(
     let border = Edges::all(Px(2.0));
     let corner_radii = fret_core::Corners::all(Px(radius_sm.0.max(4.0)));
 
-    // Draw a plate behind the inner 5-way pad, closer to ImGui/Godot affordances.
+    // Draw a plate behind the inner 5-way pad, closer to common editor docking affordances.
     let pad = Px(pad_sm.0.max(6.0));
     let mut min_x: f32 = f32::INFINITY;
     let mut min_y: f32 = f32::INFINITY;
@@ -764,8 +764,8 @@ pub(super) fn paint_drop_hints(
         }
     };
 
-    // Match ImGui's mental model: inner and outer hint sets can coexist; the active set is
-    // determined by which family of drop rects was hit-tested.
+    // Inner and outer hint sets can coexist; the active set is determined by which family of
+    // drop rects was hit-tested.
     paint_set(&inner_rects, !target.outer, false, 1.0);
     if let Some(outer_rects) = outer_rects.as_ref() {
         paint_set(outer_rects, target.outer, true, 0.80);
@@ -818,7 +818,7 @@ fn paint_drop_hint_icon(
         corner_radii: fret_core::Corners::all(frame_radius),
     });
 
-    // Base fill so the highlighted region reads as "target placement" (ImGui-like).
+    // Base fill so the highlighted region reads as "target placement".
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(order + 1),
         rect: inner,

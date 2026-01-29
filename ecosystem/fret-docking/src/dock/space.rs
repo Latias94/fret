@@ -681,6 +681,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             grab_offset: Point,
             start_tick: fret_runtime::TickId,
             tear_off_requested: bool,
+            tear_off_oob_start_frame: Option<fret_runtime::FrameId>,
             dock_previews_enabled: bool,
         }
 
@@ -933,7 +934,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     // Tear-off (new OS window) is only triggered by leaving the window bounds.
                     //
                     // `float_zone(...)` is a Fret-specific affordance to force in-window floating;
-                    // it should not request a new OS window (ImGui-style).
+                    // it must never request a new OS window.
                     let wants_tear_off = allow_tear_off && !window_bounds.contains(position);
                     if wants_tear_off {
                         if drag.tear_off_requested || mark_drag_tear_off_requested {
@@ -1048,6 +1049,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     grab_offset: p.grab_offset,
                     start_tick: p.start_tick,
                     tear_off_requested: p.tear_off_requested,
+                    tear_off_oob_start_frame: p.tear_off_oob_start_frame,
                     dock_previews_enabled: p.dock_previews_enabled,
                 })
         });
@@ -1084,6 +1086,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let mut update_drag: Option<(Point, bool)> = None;
         let mut end_dock_drag = false;
         let mut mark_drag_tear_off_requested = false;
+        let mut set_drag_tear_off_oob_start_frame: Option<Option<fret_runtime::FrameId>> = None;
 
         fret_ui::internal_drag::set_route(
             cx.app,
@@ -1436,9 +1439,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         invalidate_layout = true;
                                         // For tear-off, we want the tab itself to stay under the
                                         // cursor after it becomes index 0 in its own floating window
-                                        // (ImGui-style). Our `DockFloating` windows render only a
-                                        // `DockSpace` starting at (0,0), so the correct anchor is the
-                                        // *tab-local* grab offset (not the window-local cursor pos).
+                                        // after the panel is extracted. Our `DockFloating` windows
+                                        // render only a `DockSpace` starting at (0,0), so the correct
+                                        // anchor is the *tab-local* grab offset (not the window-local
+                                        // cursor position).
                                         let tab_rect = layout
                                             .get(&tabs_node)
                                             .copied()
@@ -1613,6 +1617,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
                                                 tear_off_requested: false,
+                                                tear_off_oob_start_frame: None,
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
@@ -2410,7 +2415,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let prev_hover = dock.hover.clone();
                                     let mut dragging = drag.dragging;
                                     if drag.source_window == self.window {
-                                        // Match ImGui's default drag threshold (~6 logical px).
+                                        // Use the default drag threshold (~6 logical px).
                                         let activation = fret_dnd::ActivationConstraint::Distance {
                                             px: docking_interaction_settings.tab_drag_threshold.0,
                                         };
@@ -2432,13 +2437,31 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                                     if dragging {
                                         let margin = Px(10.0);
+                                        let oob = is_outside_bounds_with_margin(
+                                            window_bounds,
+                                            position,
+                                            margin,
+                                        );
+                                        if allow_tear_off && drag.source_window == self.window {
+                                            match (oob, drag.tear_off_oob_start_frame) {
+                                                (true, None) => {
+                                                    set_drag_tear_off_oob_start_frame =
+                                                        Some(Some(now_frame));
+                                                }
+                                                (false, Some(_)) => {
+                                                    set_drag_tear_off_oob_start_frame = Some(None);
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+
+                                        let stable_oob = oob
+                                            && drag
+                                                .tear_off_oob_start_frame
+                                                .is_some_and(|f| f != now_frame);
                                         let requested_tear_off = allow_tear_off
                                             && drag.source_window == self.window
-                                            && is_outside_bounds_with_margin(
-                                                window_bounds,
-                                                position,
-                                                margin,
-                                            )
+                                            && stable_oob
                                             && !drag.tear_off_requested
                                             && !mark_drag_tear_off_requested;
 
@@ -2689,9 +2712,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             drag.position = position;
             drag.dragging = dragging;
-            if mark_drag_tear_off_requested {
-                if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
+            if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
+                if mark_drag_tear_off_requested {
                     payload.tear_off_requested = true;
+                    payload.tear_off_oob_start_frame = None;
+                }
+                if let Some(next) = set_drag_tear_off_oob_start_frame {
+                    payload.tear_off_oob_start_frame = next;
                 }
             }
         }

@@ -440,13 +440,14 @@ Open parity question:
   - Fret:
     - Tear-off is capability-gated (`caps.ui.window_hover_detection != None` etc).
     - A new OS window is requested when:
-      - cursor exits the window bounds (with a margin), and
+      - cursor exits the window bounds (with a margin) and remains out-of-bounds for a full frame (debounced), and
       - the request has not already been made for this drag payload.
     - Note:
       - `float_zone(...)` is a Fret-specific affordance to force **in-window** floating; it should not request a new OS window.
   - Evidence anchors:
     - `ecosystem/fret-docking/src/dock/space.rs` (tear-off request logic)
     - `ecosystem/fret-docking/src/runtime.rs` (`DockTearOffMachine` idempotency)
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_only_requests_tear_off_after_stable_oob_frame`)
 
 ## 5.3 Cross-window hover and drop routing
 
