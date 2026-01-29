@@ -283,6 +283,8 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - Fret now renders the direction-pad hint UI even when no drop target is currently selected
       (mirrors ImGui's always-visible drop boxes while dragging over a valid host), but keeps the
       "drop allowed" gating aligned with ImGui's explicit-target semantics.
+    - During same-tab-bar reorders (same source/target tabs node + `insert_index`), Fret suppresses the
+      direction-pad hint UI so the tab-reorder affordance is not visually competing with docking hints.
     - Hint pad highlights are only shown when hovering a pad rect, not merely when docking is
       allowed via an explicit target band (matches ImGui's `IsSplitDirExplicit` behavior).
     - Floating in-window dock containers treat the **floating title bar** as an explicit target
@@ -321,9 +323,13 @@ This section is where “I can’t dock left” / “it docks the wrong side” 
     - Sizing derives from font size + panel min-dimension, with a distinct geometry for:
       - inner docking (`outer_docking = false`)
       - outer docking (`outer_docking = true`)
+    - Hint pad sizing can be tuned without changing typography by scaling the effective font size:
+      - `DockingInteractionSettings::dock_hint_scale_inner`
+      - `DockingInteractionSettings::dock_hint_scale_outer`
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeCalcDropRectsAndTestMousePos`)
     - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`)
+    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (hint font scaling + paint/hit-test wiring)
     - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drop_hint_rects_can_select_zone`)
 
 Known semantic deltas to track:

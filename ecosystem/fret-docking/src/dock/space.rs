@@ -3894,119 +3894,145 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 scene,
             );
 
+            let drag_source_tabs_for_preview = dock_drag_source_tabs.or_else(|| {
+                dock_drag_panel
+                    .as_ref()
+                    .zip(dock_drag_source_window)
+                    .and_then(|(panel, source_window)| {
+                        dock.graph
+                            .find_panel_in_window(source_window, panel)
+                            .map(|(tabs, _active)| tabs)
+                    })
+            });
+
             if is_dock_dragging {
-                paint_drop_hints(
-                    theme,
-                    dock_drag_pos.and_then(|position| {
-                        fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
-                            const EPS: f32 = 0.001;
-                            let x0 = rect.origin.x.0;
-                            let y0 = rect.origin.y.0;
-                            let x1 = x0 + rect.size.width.0;
-                            let y1 = y0 + rect.size.height.0;
+                let suppress_hints_for_tab_reorder = hover.as_ref().is_some_and(|hover| {
+                    let DockDropTarget::Dock(target) = hover else {
+                        return false;
+                    };
+                    let is_tab_bar_reorder =
+                        target.zone == DropZone::Center && target.insert_index.is_some();
+                    let is_same_tabs = drag_source_tabs_for_preview
+                        .is_some_and(|source_tabs| source_tabs == target.tabs);
+                    is_tab_bar_reorder && is_same_tabs && !target.outer
+                });
 
-                            let max_x = if x1 > x0 { (x1 - EPS).max(x0) } else { x0 };
-                            let max_y = if y1 > y0 { (y1 - EPS).max(y0) } else { y0 };
+                if !suppress_hints_for_tab_reorder {
+                    paint_drop_hints(
+                        theme,
+                        dock_drag_pos.and_then(|position| {
+                            fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
+                                const EPS: f32 = 0.001;
+                                let x0 = rect.origin.x.0;
+                                let y0 = rect.origin.y.0;
+                                let x1 = x0 + rect.size.width.0;
+                                let y1 = y0 + rect.size.height.0;
 
-                            Point::new(
-                                Px(point.x.0.clamp(x0, max_x)),
-                                Px(point.y.0.clamp(y0, max_y)),
-                            )
-                        }
+                                let max_x = if x1 > x0 { (x1 - EPS).max(x0) } else { x0 };
+                                let max_y = if y1 > y0 { (y1 - EPS).max(y0) } else { y0 };
 
-                        fn distance2_point_to_rect(point: Point, rect: Rect) -> f32 {
-                            let x0 = rect.origin.x.0;
-                            let y0 = rect.origin.y.0;
-                            let x1 = x0 + rect.size.width.0;
-                            let y1 = y0 + rect.size.height.0;
-
-                            let dx = if point.x.0 < x0 {
-                                x0 - point.x.0
-                            } else if point.x.0 > x1 {
-                                point.x.0 - x1
-                            } else {
-                                0.0
-                            };
-                            let dy = if point.y.0 < y0 {
-                                y0 - point.y.0
-                            } else if point.y.0 > y1 {
-                                point.y.0 - y1
-                            } else {
-                                0.0
-                            };
-                            dx * dx + dy * dy
-                        }
-
-                        if float_zone(dock_bounds).contains(position) || !bounds.contains(position)
-                        {
-                            return None;
-                        }
-
-                        let mut layout_root = root;
-                        let mut layout_bounds = dock_bounds;
-                        let mut layout_ctx = &root_layout;
-                        let mut effective_position = position;
-                        for (floating, chrome, layout) in floating_layouts.iter().rev() {
-                            if chrome.close_button.contains(position) {
-                                continue;
+                                Point::new(
+                                    Px(point.x.0.clamp(x0, max_x)),
+                                    Px(point.y.0.clamp(y0, max_y)),
+                                )
                             }
-                            if chrome.outer.contains(position) {
-                                layout_root = floating.floating;
-                                layout_bounds = chrome.inner;
-                                layout_ctx = layout;
-                                effective_position = if chrome.title_bar.contains(position) {
-                                    let projected = Point::new(
-                                        Px(chrome.inner.origin.x.0
-                                            + chrome.inner.size.width.0 * 0.5),
-                                        Px(chrome.inner.origin.y.0
-                                            + chrome.inner.size.height.0 * 0.5),
-                                    );
-                                    clamp_point_inside_rect(chrome.inner, projected)
+
+                            fn distance2_point_to_rect(point: Point, rect: Rect) -> f32 {
+                                let x0 = rect.origin.x.0;
+                                let y0 = rect.origin.y.0;
+                                let x1 = x0 + rect.size.width.0;
+                                let y1 = y0 + rect.size.height.0;
+
+                                let dx = if point.x.0 < x0 {
+                                    x0 - point.x.0
+                                } else if point.x.0 > x1 {
+                                    point.x.0 - x1
                                 } else {
-                                    clamp_point_inside_rect(chrome.inner, position)
+                                    0.0
                                 };
-                                break;
+                                let dy = if point.y.0 < y0 {
+                                    y0 - point.y.0
+                                } else if point.y.0 > y1 {
+                                    point.y.0 - y1
+                                } else {
+                                    0.0
+                                };
+                                dx * dx + dy * dy
                             }
-                        }
-                        if !layout_bounds.contains(effective_position) {
-                            return None;
-                        }
 
-                        let mut best: Option<(DockNodeId, f32, f32)> = None;
-                        for (&node_id, &rect) in layout_ctx.iter() {
-                            let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
-                                continue;
-                            };
-                            if tabs.is_empty() {
-                                continue;
+                            if float_zone(dock_bounds).contains(position)
+                                || !bounds.contains(position)
+                            {
+                                return None;
                             }
-                            let dist2 = distance2_point_to_rect(effective_position, rect);
-                            let area = rect.size.width.0 * rect.size.height.0;
-                            match best {
-                                None => best = Some((node_id, dist2, area)),
-                                Some((_best_node, best_dist2, best_area)) => {
-                                    let better = dist2 < best_dist2
-                                        || (dist2 == best_dist2 && area < best_area);
-                                    if better {
-                                        best = Some((node_id, dist2, area));
+
+                            let mut layout_root = root;
+                            let mut layout_bounds = dock_bounds;
+                            let mut layout_ctx = &root_layout;
+                            let mut effective_position = position;
+                            for (floating, chrome, layout) in floating_layouts.iter().rev() {
+                                if chrome.close_button.contains(position) {
+                                    continue;
+                                }
+                                if chrome.outer.contains(position) {
+                                    layout_root = floating.floating;
+                                    layout_bounds = chrome.inner;
+                                    layout_ctx = layout;
+                                    effective_position = if chrome.title_bar.contains(position) {
+                                        let projected = Point::new(
+                                            Px(chrome.inner.origin.x.0
+                                                + chrome.inner.size.width.0 * 0.5),
+                                            Px(chrome.inner.origin.y.0
+                                                + chrome.inner.size.height.0 * 0.5),
+                                        );
+                                        clamp_point_inside_rect(chrome.inner, projected)
+                                    } else {
+                                        clamp_point_inside_rect(chrome.inner, position)
+                                    };
+                                    break;
+                                }
+                            }
+                            if !layout_bounds.contains(effective_position) {
+                                return None;
+                            }
+
+                            let mut best: Option<(DockNodeId, f32, f32)> = None;
+                            for (&node_id, &rect) in layout_ctx.iter() {
+                                let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id)
+                                else {
+                                    continue;
+                                };
+                                if tabs.is_empty() {
+                                    continue;
+                                }
+                                let dist2 = distance2_point_to_rect(effective_position, rect);
+                                let area = rect.size.width.0 * rect.size.height.0;
+                                match best {
+                                    None => best = Some((node_id, dist2, area)),
+                                    Some((_best_node, best_dist2, best_area)) => {
+                                        let better = dist2 < best_dist2
+                                            || (dist2 == best_dist2 && area < best_area);
+                                        if better {
+                                            best = Some((node_id, dist2, area));
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        best.map(|(leaf_tabs, _dist2, _area)| DockDropHints {
-                            root: layout_root,
-                            leaf_tabs,
-                        })
-                    }),
-                    hover.clone(),
-                    hint_font_size_inner,
-                    hint_font_size_outer,
-                    self.window,
-                    bounds,
-                    &layout_all,
-                    scene,
-                );
+                            best.map(|(leaf_tabs, _dist2, _area)| DockDropHints {
+                                root: layout_root,
+                                leaf_tabs,
+                            })
+                        }),
+                        hover.clone(),
+                        hint_font_size_inner,
+                        hint_font_size_outer,
+                        self.window,
+                        bounds,
+                        &layout_all,
+                        scene,
+                    );
+                }
             }
             paint_drop_overlay(
                 theme,
@@ -4017,16 +4043,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &layout_all,
                 &self.tab_scroll,
                 &self.tab_widths,
-                dock_drag_source_tabs.or_else(|| {
-                    dock_drag_panel
-                        .as_ref()
-                        .zip(dock_drag_source_window)
-                        .and_then(|(panel, source_window)| {
-                            dock.graph
-                                .find_panel_in_window(source_window, panel)
-                                .map(|(tabs, _active)| tabs)
-                        })
-                }),
+                drag_source_tabs_for_preview,
                 drag_tab_title,
                 close_glyph_present,
                 scene,
