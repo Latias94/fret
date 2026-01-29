@@ -113,7 +113,8 @@ pub fn tree_view<H: UiHost>(
 /// item subtrees without forcing a parent cache-root rerender.
 ///
 /// Notes:
-/// - v1 only supports fixed row height (no measured mode).
+/// - This defaults to fixed row height for predictable perf. If you need variable-height rows,
+///   use [`tree_view_retained_with_measure_mode`] with `VirtualListMeasureMode::Measured`.
 /// - `debug_row_test_id_prefix` is intended for scripted UI Gallery harnesses.
 pub fn tree_view_retained<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -125,7 +126,36 @@ pub fn tree_view_retained<H: UiHost>(
 where
     H: 'static,
 {
-    tree_view_retained_impl(cx, items, state, size, debug_row_test_id_prefix)
+    tree_view_retained_with_measure_mode(
+        cx,
+        items,
+        state,
+        size,
+        fret_ui::element::VirtualListMeasureMode::Fixed,
+        debug_row_test_id_prefix,
+    )
+}
+
+/// A variant of [`tree_view_retained`] that allows opting into measured (variable-height) rows.
+pub fn tree_view_retained_with_measure_mode<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    items: Model<Vec<crate::TreeItem>>,
+    state: Model<TreeState>,
+    size: Size,
+    measure_mode: fret_ui::element::VirtualListMeasureMode,
+    debug_row_test_id_prefix: Option<Arc<str>>,
+) -> AnyElement
+where
+    H: 'static,
+{
+    tree_view_retained_impl(
+        cx,
+        items,
+        state,
+        size,
+        measure_mode,
+        debug_row_test_id_prefix,
+    )
 }
 
 pub fn tree_view_with_renderer<H: UiHost>(
@@ -328,6 +358,7 @@ fn tree_view_retained_impl<H: UiHost>(
     items: Model<Vec<crate::TreeItem>>,
     state: Model<TreeState>,
     size: Size,
+    measure_mode: fret_ui::element::VirtualListMeasureMode,
     debug_row_test_id_prefix: Option<Arc<str>>,
 ) -> AnyElement
 where
@@ -380,7 +411,7 @@ where
 
     let mut options = fret_ui::element::VirtualListOptions::new(row_h, 2);
     options.items_revision = items_revision;
-    options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+    options.measure_mode = measure_mode;
     options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
     let mut fill_layout = LayoutStyle::default();

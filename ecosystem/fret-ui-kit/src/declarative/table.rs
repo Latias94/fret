@@ -702,7 +702,7 @@ where
 /// Retained-host virtualized table helper (virt-003 / ADR 0192).
 ///
 /// This is an opt-in surface intended for perf/correctness harnesses. v0 is intentionally minimal:
-/// - fixed-height body rows only (no measured mode)
+/// - fixed-height or measured body rows (controlled by `props.row_measure_mode`)
 /// - flat (non-grouped) tables only
 /// - single-column sorting only
 /// - focusable "List" semantics with keyboard navigation and typeahead (opt-in labels)
@@ -822,6 +822,16 @@ where
 
     let mut options = VirtualListOptions::new(row_h, props.overscan);
     options.items_revision = items_revision;
+    match props.row_measure_mode {
+        TableRowMeasureMode::Fixed => {
+            options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+            options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
+        }
+        TableRowMeasureMode::Measured => {
+            options.measure_mode = fret_ui::element::VirtualListMeasureMode::Measured;
+            options.key_cache = fret_ui::element::VirtualListKeyCacheMode::AllKeys;
+        }
+    }
 
     let header = {
         let state = state.clone();
