@@ -4,6 +4,7 @@ param(
   [string]$Style = "v4/new-york-v4",
   [string]$RepoRoot,
   [bool]$NormalizeOpenSuffix = $true,
+  [switch]$TrackedOnly,
   [int]$TopMissing = 50,
   [switch]$GroupMissingByPrefix,
   [switch]$GroupUsedByPrefix,
@@ -47,9 +48,29 @@ if (-not (Test-Path $testDir)) {
   throw "Missing test directory: $testDir"
 }
 
-$goldenNames = Get-ChildItem -Path $goldenDir -File -Filter "*.json" |
-  ForEach-Object { $_.BaseName } |
-  Sort-Object -Unique
+$goldenNames = if ($TrackedOnly) {
+  $repoRootAbs = (Resolve-Path $RepoRoot).Path
+  $goldenDirAbs = (Resolve-Path $goldenDir).Path
+
+  if (-not $goldenDirAbs.StartsWith($repoRootAbs + [System.IO.Path]::DirectorySeparatorChar)) {
+    throw "GoldenDir is not under RepoRoot (RepoRoot=$repoRootAbs, GoldenDir=$goldenDirAbs)"
+  }
+
+  $relGoldenDir = $goldenDirAbs.Substring($repoRootAbs.Length + 1) -replace '\\', '/'
+  $tracked = git -C $RepoRoot ls-files -- $relGoldenDir
+  if ($LASTEXITCODE -ne 0) {
+    throw "git ls-files failed (RepoRoot=$RepoRoot, GoldenDir=$relGoldenDir)"
+  }
+
+  @($tracked) |
+    Where-Object { $_ -like "*.json" } |
+    ForEach-Object { [System.IO.Path]::GetFileNameWithoutExtension($_) } |
+    Sort-Object -Unique
+} else {
+  Get-ChildItem -Path $goldenDir -File -Filter "*.json" |
+    ForEach-Object { $_.BaseName } |
+    Sort-Object -Unique
+}
 
 $goldenKeys = $goldenNames
 if ($Kind -eq "shadcn-web" -and $NormalizeOpenSuffix) {
@@ -83,17 +104,44 @@ if ($total -gt 0) {
   $coverage = [Math]::Round(($usedCount * 100.0) / $total, 1)
 }
 
+$smokeTest = $null
+$smokeCoverage = $null
+if ($Kind -eq "shadcn-web" -and $Style -eq "v4/new-york-v4") {
+  $candidate = Join-Path $testDir "shadcn_web_goldens_smoke.rs"
+  if (Test-Path $candidate) {
+    $smokeTest = $candidate
+    $smokeCoverage = 100.0
+  }
+}
+if ($Kind -eq "radix-web" -and $Style -eq "primitives") {
+  $candidate = Join-Path $testDir "radix_web_goldens_smoke.rs"
+  if (Test-Path $candidate) {
+    $smokeTest = $candidate
+    $smokeCoverage = 100.0
+  }
+}
+
 if ($AsMarkdown) {
-  Write-Output ('- `{0}` goldens: {1} files, {2} keys; {3} keys referenced ({4}%), {5} keys not referenced' -f $Kind, $totalFiles, $total, $usedCount, $coverage, $missingCount)
+  $trackedNote = if ($TrackedOnly) { " (tracked-only)" } else { "" }
+  Write-Output ('- `{0}` goldens{1}: {2} files, {3} keys; {4} keys referenced ({5}%), {6} keys not referenced' -f $Kind, $trackedNote, $totalFiles, $total, $usedCount, $coverage, $missingCount)
+  if ($smokeTest) {
+    Write-Output ('  - smoke-parse coverage: {0}% (via `{1}`)' -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
+  }
 } else {
   Write-Host ("Golden coverage ({0}/{1})" -f $Kind, $Style)
   Write-Host ("  RepoRoot:  {0}" -f $RepoRoot)
   Write-Host ("  GoldenDir: {0}" -f $goldenDir)
   Write-Host ("  TestsDir:  {0}" -f $testDir)
+  Write-Host ("  Tracked:   {0}" -f $(if ($TrackedOnly) { "yes" } else { "no" }))
   Write-Host ("  Files:     {0}" -f $totalFiles)
   Write-Host ("  Keys:      {0} (NormalizeOpenSuffix={1})" -f $total, $NormalizeOpenSuffix)
   Write-Host ("  Used keys: {0} ({1}%)" -f $usedCount, $coverage)
   Write-Host ("  Missing:   {0} keys" -f $missingCount)
+  if ($smokeTest) {
+    Write-Host ("  Smoke:     yes ({0}%, {1})" -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
+  } else {
+    Write-Host ("  Smoke:     n/a")
+  }
 }
 
 if ($ShowUsed) {

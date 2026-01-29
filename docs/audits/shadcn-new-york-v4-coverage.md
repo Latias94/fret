@@ -29,10 +29,18 @@ Practical rule:
 
 This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
-- Golden files: `510`
-- Golden keys (normalized `.open` suffix): `471`
-- Keys referenced by tests: `471` (`100%`)
-- Keys not referenced by tests: `0`
+Notes:
+
+- `tools/golden_coverage.ps1` currently counts a key as “referenced” if the key appears as a
+  **string literal** somewhere under `ecosystem/fret-ui-shadcn/tests`.
+- This is a good proxy for “this golden is exercised by some test”, but it is not a perfect proxy
+  for “high-signal behavior is gated”.
+- To avoid local, uncommitted goldens skewing the counts, prefer `-TrackedOnly`.
+
+- Golden files (tracked): `512`
+- Golden keys (tracked, normalized `.open` suffix): `473`
+- Keys referenced by tests (string-literal heuristic): `473` (`100%`)
+- Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -70,10 +78,10 @@ The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-sha
 Recompute locally:
 
 ```powershell
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowMissing -TopMissing 50
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowUsed
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -GroupUsedByPrefix -TopGroups 20
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowMissing -TopMissing 50
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowUsed
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUsedByPrefix -TopGroups 20
 ```
 
 To drill into a specific family:
