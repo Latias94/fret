@@ -3122,6 +3122,94 @@ fn assert_shadow_insets_match(
     }
 }
 
+fn assert_overlay_panel_size_matches_by_portal_slot_theme(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_role: SemanticsRole,
+    settle_frames: u64,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
+
+    let bounds = web
+        .themes
+        .get(web_theme_name)
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(640.0), Px(480.0)),
+            )
+        });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![build_frame1(cx, &open)],
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for tick in 0..settle_frames.max(1) {
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            tick + 1 == settle_frames.max(1),
+            |cx| vec![build_frame(cx, &open)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let _overlay = largest_semantics_node(&snap, fret_role)
+        .unwrap_or_else(|| panic!("missing fret semantics node: {fret_role:?}"));
+
+    let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
+        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.w"),
+        quad.rect.size.width.0,
+        web_w,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.h"),
+        quad.rect.size.height.0,
+        web_h,
+        1.0,
+    );
+}
+
 fn assert_overlay_shadow_insets_match(
     web_name: &str,
     web_portal_slot: &str,
@@ -3285,6 +3373,102 @@ fn assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
     assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
 }
 
+fn assert_click_overlay_panel_size_matches_by_portal_slot_theme(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_trigger_role: SemanticsRole,
+    fret_trigger_label: &str,
+    settle_frames: u64,
+    build: impl Fn(&mut ElementContext<'_, App>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == fret_trigger_role && n.label.as_deref() == Some(fret_trigger_label))
+        .unwrap_or_else(|| {
+            panic!(
+                "missing trigger semantics node: {fret_trigger_role:?} label={fret_trigger_label:?} for {web_name}"
+            )
+        });
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    for tick in 0..settle_frames.max(1) {
+        let request_semantics = tick + 1 == settle_frames.max(1);
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx)],
+        );
+    }
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
+        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.w"),
+        quad.rect.size.width.0,
+        web_w,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.h"),
+        quad.rect.size.height.0,
+        web_h,
+        1.0,
+    );
+}
+
 fn assert_context_menu_shadow_insets_match(
     web_name: &str,
     web_portal_slot: &str,
@@ -3364,6 +3548,106 @@ fn assert_context_menu_shadow_insets_match(
 
     let candidates = fret_drop_shadow_insets_candidates(&scene, quad.rect);
     assert_shadow_insets_match(web_name, web_theme_name, &expected, &candidates);
+}
+
+fn assert_context_menu_panel_size_matches_by_portal_slot_theme(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_role: SemanticsRole,
+    trigger_label: &str,
+    settle_frames: u64,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &open)],
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(trigger_label))
+        .unwrap_or_else(|| panic!("missing trigger semantics node: Button {trigger_label:?}"));
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    for tick in 0..settle_frames.max(1) {
+        let request_semantics = tick + 1 == settle_frames.max(1);
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &open)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let _overlay = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == fret_role)
+        .unwrap_or_else(|| panic!("missing fret semantics node: {fret_role:?}"));
+
+    let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
+        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.w"),
+        quad.rect.size.width.0,
+        web_w,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.h"),
+        quad.rect.size.height.0,
+        web_h,
+        1.0,
+    );
 }
 
 fn largest_semantics_node<'a>(
@@ -4754,6 +5038,32 @@ fn web_vs_fret_dropdown_menu_demo_surface_colors_match_web_dark() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "dropdown-menu-demo",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "dropdown-menu-demo",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_shadow_matches_web() {
     use fret_ui_shadcn::{
         Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
@@ -5597,6 +5907,47 @@ fn build_shadcn_context_menu_demo(
                 ]
             },
         )
+}
+
+fn build_shadcn_context_menu_demo_stateful(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    #[derive(Default)]
+    struct Models {
+        checked_bookmarks: Option<Model<bool>>,
+        checked_full_urls: Option<Model<bool>>,
+        radio_person: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let existing = cx.with_state(Models::default, |st| {
+        match (
+            st.checked_bookmarks.as_ref(),
+            st.checked_full_urls.as_ref(),
+            st.radio_person.as_ref(),
+        ) {
+            (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+            _ => None,
+        }
+    });
+
+    let (checked_bookmarks, checked_full_urls, radio_person) = if let Some(existing) = existing {
+        existing
+    } else {
+        let checked_bookmarks = cx.app.models_mut().insert(false);
+        let checked_full_urls = cx.app.models_mut().insert(true);
+        let radio_person = cx.app.models_mut().insert(Some(Arc::from("benoit")));
+
+        cx.with_state(Models::default, |st| {
+            st.checked_bookmarks = Some(checked_bookmarks.clone());
+            st.checked_full_urls = Some(checked_full_urls.clone());
+            st.radio_person = Some(radio_person.clone());
+        });
+
+        (checked_bookmarks, checked_full_urls, radio_person)
+    };
+
+    build_shadcn_context_menu_demo(cx, open, checked_bookmarks, checked_full_urls, radio_person)
 }
 
 fn render_context_menu_demo_settled(
@@ -7462,6 +7813,34 @@ fn web_vs_fret_context_menu_panel_chrome_matches() {
 }
 
 #[test]
+fn web_vs_fret_context_menu_demo_panel_size_matches_web() {
+    assert_context_menu_panel_size_matches_by_portal_slot_theme(
+        "context-menu-demo",
+        "context-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        "Right click here",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_context_menu_demo_stateful,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_panel_size_matches_web_dark() {
+    assert_context_menu_panel_size_matches_by_portal_slot_theme(
+        "context-menu-demo",
+        "context-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        "Right click here",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_context_menu_demo_stateful,
+    );
+}
+
+#[test]
 fn web_vs_fret_context_menu_demo_shadow_matches_web() {
     assert_context_menu_shadow_insets_match(
         "context-menu-demo",
@@ -7526,6 +7905,34 @@ fn web_vs_fret_menubar_panel_chrome_matches() {
             ])])
             .into_element(cx)
         },
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_panel_size_matches_web() {
+    assert_click_overlay_panel_size_matches_by_portal_slot_theme(
+        "menubar-demo",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "File",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_panel_size_matches_web_dark() {
+    assert_click_overlay_panel_size_matches_by_portal_slot_theme(
+        "menubar-demo",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "File",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
     );
 }
 

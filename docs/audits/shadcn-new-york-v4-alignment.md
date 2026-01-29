@@ -162,6 +162,8 @@ Recent fixes:
 Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_dropdown_menu_panel_chrome_matches`).
+- Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_panel_size_matches_web`, `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`).
 - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`).
 - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
@@ -210,6 +212,8 @@ Recent fixes:
 - Panel chrome now matches upstream `rounded-md` (radius token) and `shadow-md` / `shadow-lg` split.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
+  - Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_panel_size_matches_web`, `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_shadow_matches_web`, `web_vs_fret_context_menu_demo_shadow_matches_web_dark`).
   - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
@@ -246,6 +250,8 @@ Recent fixes:
   real glyph metrics instead of a character-count estimate.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
+  - Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_panel_size_matches_web`, `web_vs_fret_menubar_demo_panel_size_matches_web_dark`).
   - Root shadow (`shadow-xs`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_root_shadow_matches_web`, `web_vs_fret_menubar_root_shadow_matches_web_dark`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`

@@ -37,7 +37,9 @@ Evidence anchors:
   `assert_menubar_demo_constrained_scroll_state_matches`,
   `assert_menubar_demo_submenu_*`)
   and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-  (`web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`,
+  (`web_vs_fret_menubar_demo_panel_size_matches_web`,
+  `web_vs_fret_menubar_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_menubar_demo_focused_item_chrome_matches_web`)
 
 ### DropdownMenu (`dropdown-menu-demo*`, `context-menu-demo*`)
@@ -68,8 +70,12 @@ Evidence anchors:
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
   (`assert_dropdown_menu_demo_constrained_scroll_state_matches`,
   `assert_context_menu_demo_constrained_scroll_state_matches`)
-  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (item state chrome)
-  (`web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`,
+  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (item state chrome + panel size)
+  (`web_vs_fret_dropdown_menu_demo_panel_size_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_context_menu_demo_panel_size_matches_web`,
+  `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`,
   `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`, plus `*_dark` variants).
