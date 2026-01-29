@@ -4431,10 +4431,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
         };
-        let Some(drag) = self.app.drag(pointer_id) else {
+        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
+            .app
+            .drag(pointer_id)
+            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
+        else {
             return self.clear_internal_drag_hover_if_needed();
         };
-        if !drag.cross_window_hover {
+        if !cross_window_hover {
             return self.clear_internal_drag_hover_if_needed();
         }
 
@@ -4455,7 +4459,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // window (ImGui-style).
         let prefer_not = self
             .dock_tearoff_follow
-            .filter(|_| drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
+            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
             .map(|f| f.window);
 
         // Prefer the window we already hovered, if the cursor is still inside it. This makes
@@ -4472,8 +4476,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let hovered = hovered.or_else(|| {
             // For dock tear-off, keep delivering `InternalDrag::Over` to the source window even
             // when the cursor is outside all windows so the UI can react before mouse-up.
-            (drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
-                .then_some(drag.source_window)
+            (drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
+                .then_some(drag_source_window)
                 .filter(|w| self.windows.contains_key(*w))
         });
         if hovered != self.internal_drag_hover_window {
@@ -4503,6 +4507,39 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
+        if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
+            && std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some()
+        {
+            if let Some(state) = self.windows.get(current) {
+                let size_phys = state.window.surface_size();
+                let scale = state.window.scale_factor();
+                let size_logical: winit::dpi::LogicalSize<f32> = size_phys.to_logical(scale);
+                let margin = 32.0f32;
+                let oob = pos.x.0 < -margin
+                    || pos.y.0 < -margin
+                    || pos.x.0 > size_logical.width + margin
+                    || pos.y.0 > size_logical.height + margin;
+                if oob {
+                    let outer = state.window.outer_position().ok();
+                    let deco = state.window.surface_position();
+                    dock_tearoff_log(format_args!(
+                        "[cursor-oob] window={:?} screen=({:.1},{:.1}) local=({:.1},{:.1}) size=({:.1},{:.1}) scale={:.3} outer={:?} deco=({},{})",
+                        current,
+                        screen_pos.x,
+                        screen_pos.y,
+                        pos.x.0,
+                        pos.y.0,
+                        size_logical.width,
+                        size_logical.height,
+                        scale,
+                        outer,
+                        deco.x,
+                        deco.y,
+                    ));
+                }
+            }
+        }
+
         if let Some(d) = self.app.drag_mut(pointer_id) {
             d.current_window = current;
             d.position = pos;
@@ -4517,16 +4554,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
-        let Some(drag) = self.app.drag(pointer_id) else {
+        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
+            .app
+            .drag(pointer_id)
+            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
+        else {
             return false;
         };
-        if !drag.cross_window_hover {
+        if !cross_window_hover {
             return false;
         }
 
         let screen_pos = self
             .cursor_screen_pos
-            .or_else(|| self.cursor_screen_pos_fallback_for_window(drag.source_window));
+            .or_else(|| self.cursor_screen_pos_fallback_for_window(drag_source_window));
         let Some(screen_pos) = screen_pos else {
             return false;
         };
@@ -4541,7 +4582,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let prefer_not = self
             .dock_tearoff_follow
-            .filter(|_| drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
+            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
             .map(|f| f.window);
 
         // Prefer the last hovered window if possible; window overlap makes hit-testing ambiguous.
@@ -4557,7 +4598,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .or(self.internal_drag_hover_window);
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
-        let target = target.unwrap_or(drag.source_window);
+        let target = target.unwrap_or(drag_source_window);
         let pos = self.local_pos_for_window(target, screen_pos).or_else(|| {
             if self.internal_drag_hover_window == Some(target) {
                 self.internal_drag_hover_pos
@@ -4569,13 +4610,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        if drag.kind == fret_app::DRAG_KIND_DOCK_PANEL
-            && target != drag.source_window
+        if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
+            && target != drag_source_window
             && let Some(runtime) = self.windows.get(target)
         {
             let sender = self
                 .windows
-                .get(drag.source_window)
+                .get(drag_source_window)
                 .map(|w| w.window.as_ref());
             let _ = bring_window_to_front(runtime.window.as_ref(), sender);
         }
@@ -4604,10 +4645,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         window: fret_core::AppWindowId,
     ) -> Option<PhysicalPosition<f64>> {
         let state = self.windows.get(window)?;
-        let inner = state.window.surface_position();
+        // `Window::surface_position()` is defined as the decoration offset from the outer
+        // window position to the client/surface origin (ImGui-style multi-viewport contract).
+        // Convert it to a screen-space client origin before adding a local cursor position.
+        let outer = state.window.outer_position().ok()?;
+        let deco = state.window.surface_position();
         let scale = state.window.scale_factor();
-        let x = inner.x as f64 + state.platform.input.cursor_pos.x.0 as f64 * scale;
-        let y = inner.y as f64 + state.platform.input.cursor_pos.y.0 as f64 * scale;
+        let origin_x = outer.x as f64 + deco.x as f64;
+        let origin_y = outer.y as f64 + deco.y as f64;
+        let x = origin_x + state.platform.input.cursor_pos.x.0 as f64 * scale;
+        let y = origin_y + state.platform.input.cursor_pos.y.0 as f64 * scale;
         Some(PhysicalPosition::new(x, y))
     }
 
@@ -4619,10 +4666,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get(window) else {
             return false;
         };
-        let inner = state.window.surface_position();
+        let Ok(outer) = state.window.outer_position() else {
+            return false;
+        };
+        let deco = state.window.surface_position();
         let size = state.window.surface_size();
-        let left = inner.x as f64;
-        let top = inner.y as f64;
+        let left = outer.x as f64 + deco.x as f64;
+        let top = outer.y as f64 + deco.y as f64;
         let right = left + size.width as f64;
         let bottom = top + size.height as f64;
         screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
@@ -4634,9 +4684,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
     ) -> Option<Point> {
         let state = self.windows.get(window)?;
-        let inner = state.window.surface_position();
+        let outer = state.window.outer_position().ok()?;
+        let deco = state.window.surface_position();
+        let origin_x = outer.x as f64 + deco.x as f64;
+        let origin_y = outer.y as f64 + deco.y as f64;
         let local_physical =
-            PhysicalPosition::new(screen_pos.x - inner.x as f64, screen_pos.y - inner.y as f64);
+            PhysicalPosition::new(screen_pos.x - origin_x, screen_pos.y - origin_y);
         let local_logical: winit::dpi::LogicalPosition<f32> =
             local_physical.to_logical(state.window.scale_factor());
         Some(Point::new(Px(local_logical.x), Px(local_logical.y)))
@@ -4652,10 +4705,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let Some(state) = self.windows.get(w) else {
                 continue;
             };
-            let inner = state.window.surface_position();
+            let Ok(outer) = state.window.outer_position() else {
+                continue;
+            };
+            let deco = state.window.surface_position();
             let size = state.window.surface_size();
-            let left = inner.x as f64;
-            let top = inner.y as f64;
+            let left = outer.x as f64 + deco.x as f64;
+            let top = outer.y as f64 + deco.y as f64;
             let right = left + size.width as f64;
             let bottom = top + size.height as f64;
             if screen_pos.x >= left
