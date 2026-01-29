@@ -326,6 +326,9 @@ This section is where “I can’t dock left” / “it docks the wrong side” 
     - Hint pad sizing can be tuned without changing typography by scaling the effective font size:
       - `DockingInteractionSettings::dock_hint_scale_inner`
       - `DockingInteractionSettings::dock_hint_scale_outer`
+    - These knobs are user-configurable via `settings.json` in `fret-app`:
+      - `docking.dock_hint_scale_inner`
+      - `docking.dock_hint_scale_outer`
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeCalcDropRectsAndTestMousePos`)
     - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`)
