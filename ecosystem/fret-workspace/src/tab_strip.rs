@@ -39,11 +39,25 @@ fn fill_layout() -> LayoutStyle {
     layout
 }
 
+fn tab_list_semantics_layout() -> LayoutStyle {
+    // The tab strip is commonly placed into "center" regions of editor-like top bars where it
+    // must be allowed to shrink; otherwise, long tab titles can push right-side controls out of
+    // the window.
+    //
+    // This mirrors Tailwind's `w-full min-w-0 flex-shrink` rule of thumb.
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.min_width = Some(Px(0.0));
+    layout.flex.shrink = 1.0;
+    layout
+}
+
 fn row_layout(height: Px) -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Px(height);
-    layout.flex.shrink = 0.0;
+    layout.size.min_width = Some(Px(0.0));
+    layout.flex.shrink = 1.0;
     layout
 }
 
@@ -107,7 +121,9 @@ fn fixed_square_layout(size: Px) -> LayoutStyle {
 
 fn fill_grow_layout() -> LayoutStyle {
     let mut layout = fill_layout();
+    layout.size.min_width = Some(Px(0.0));
     layout.flex.grow = 1.0;
+    layout.flex.shrink = 1.0;
     layout
 }
 
@@ -426,6 +442,7 @@ impl WorkspaceTabStrip {
 
         cx.semantics(
             SemanticsProps {
+                layout: tab_list_semantics_layout(),
                 role: SemanticsRole::TabList,
                 ..Default::default()
             },
