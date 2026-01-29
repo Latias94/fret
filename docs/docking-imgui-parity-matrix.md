@@ -278,8 +278,17 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - `DockDragInversionSettings` supports:
       - `DockByDefault` + modifier to invert, or
       - `DockOnlyWhenModifier`.
-    - Fret applies an ImGui-style **explicit target gating** rule:
-      - no docking preview unless hovering the explicit target (tab bar) or one of the direction-pad hint rects.
+    - Fret applies an ImGui-style **explicit target gating** rule for *drop allow/commit*:
+      - docking is only committed when hovering the explicit target (tab bar) or one of the direction-pad hint rects.
+    - Fret now renders the direction-pad hint UI even when no drop target is currently selected
+      (mirrors ImGui's always-visible drop boxes while dragging over a valid host), but keeps the
+      "drop allowed" gating aligned with ImGui's explicit-target semantics.
+    - During same-tab-bar reorders (same source/target tabs node + `insert_index`), Fret suppresses the
+      direction-pad hint UI so the tab-reorder affordance is not visually competing with docking hints.
+    - Hint pad highlights are only shown when hovering a pad rect, not merely when docking is
+      allowed via an explicit target band (matches ImGui's `IsSplitDirExplicit` behavior).
+    - Floating in-window dock containers treat the **floating title bar** as an explicit target
+      for center docking (ImGui parity: "title/tab bar band" behavior).
     - However, Fret still does not have a direct equivalent of ImGui’s “explicit target rect = title bar band”
       for non-tab-window chrome.
   - Evidence anchors:
@@ -314,9 +323,16 @@ This section is where “I can’t dock left” / “it docks the wrong side” 
     - Sizing derives from font size + panel min-dimension, with a distinct geometry for:
       - inner docking (`outer_docking = false`)
       - outer docking (`outer_docking = true`)
+    - Hint pad sizing can be tuned without changing typography by scaling the effective font size:
+      - `DockingInteractionSettings::dock_hint_scale_inner`
+      - `DockingInteractionSettings::dock_hint_scale_outer`
+    - These knobs are user-configurable via `settings.json` in `fret-app`:
+      - `docking.dock_hint_scale_inner`
+      - `docking.dock_hint_scale_outer`
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeCalcDropRectsAndTestMousePos`)
     - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`)
+    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (hint font scaling + paint/hit-test wiring)
     - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drop_hint_rects_can_select_zone`)
 
 Known semantic deltas to track:
@@ -325,9 +341,9 @@ Known semantic deltas to track:
 - Fret currently uses a small amount of custom hit logic (center radius + quadrant selection) to reduce flicker when moving
   diagonally between pads.
 
-## 4.2 Edge split zones (left/right/top/bottom strips)
+## 4.2 Edge split zones (left/right/top/bottom preview areas)
 
-- [~] **Split preview overlays match the committed split zone**
+- [x] **Split preview overlays match the committed split zone**
   - ImGui:
     - Preview uses the chosen `dir` to compute the final split rectangles.
   - Fret:
@@ -647,7 +663,8 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
      - Edge-strip candidates are no longer used for selecting a drop zone.
      - Outer docking (window-root edge targets) is supported by targeting `layout_root` directly.
    - Notes:
-     - `drop_zone_rect(...)` still uses edge thickness for the *preview overlay* when a zone is selected.
+     - `drop_zone_rect(...)` renders a 50/50 split preview, aligned with the currently-committed
+       split behavior in `fret-core`.
 
 3) **Add conformance tests that pin the chosen target**
    - Add tests for:
@@ -667,7 +684,7 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
      - Inner hit testing (anti-flicker quadrant logic): `dock_hint_pick_zone(...)`
      - Outer docking selection: `HoverTarget.outer` + `DockSpace` targets `layout_root` for edge docking
    - Remaining polish:
-     - render both inner + outer hint sets simultaneously (ImGui renders inner then outer)
+     - verify hint render ordering and overlap parity (ImGui renders inner then outer)
      - align overlay visuals (alpha/rounding/placement) with ImGui’s `DockNodePreviewDockRender`
 
 5) **Align splitter feel**

@@ -30,6 +30,10 @@ pub struct DockingInteractionSettings {
     /// When true, suppress bubbling of secondary right-click events while a viewport capture
     /// session is active (e.g. during a left-drag marquee).
     pub suppress_context_menu_during_viewport_capture: bool,
+    /// Scale factor for the inner docking hint pad geometry (1.0 matches current ImGui-parity).
+    pub dock_hint_scale_inner: f32,
+    /// Scale factor for the outer docking hint pad geometry (1.0 matches current ImGui-parity).
+    pub dock_hint_scale_outer: f32,
 }
 
 impl Default for DockingInteractionSettings {
@@ -41,6 +45,8 @@ impl Default for DockingInteractionSettings {
             split_handle_gap: Px(0.0),
             viewport_context_menu_drag_threshold: Px(6.0),
             suppress_context_menu_during_viewport_capture: true,
+            dock_hint_scale_inner: 1.0,
+            dock_hint_scale_outer: 1.0,
         }
     }
 }
