@@ -617,13 +617,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 }
             }
 
-            // Match Dear ImGui's "explicit target gating" (reduces visual noise):
-            // - We only show/allow docking when hovering over:
-            //   - the explicit target (tab bar), or
-            //   - an explicit drop rect (inner/outer direction pads).
-            //
-            // Reference:
-            // - `repo-ref/imgui/imgui.cpp`: `DockNodePreviewDockSetup(...)` (is_explicit_target + IsSplitDirExplicit)
+            // Reduce visual noise: only show/allow docking previews when hovering over:
+            // - the explicit target (tab bar), or
+            // - an explicit drop rect (inner/outer direction pads).
             if let Some(&root_rect) = layout.get(&root)
                 && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
                 && root != leaf_tabs
