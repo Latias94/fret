@@ -718,6 +718,7 @@ fn macos_mouse_location() -> Option<cocoa::foundation::NSPoint> {
 }
 
 #[cfg(target_os = "macos")]
+#[allow(deprecated)]
 #[derive(Clone, Copy, Debug, Default)]
 struct MacCursorTransform {
     scale_factor: f64,
@@ -729,6 +730,78 @@ struct MacCursorTransform {
 }
 
 #[cfg(target_os = "macos")]
+#[allow(deprecated)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct MacCursorScreenKey {
+    origin_x: i32,
+    origin_y: i32,
+    width: i32,
+    height: i32,
+    scale_milli: i32,
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+impl MacCursorScreenKey {
+    fn from_frame(frame: cocoa::foundation::NSRect, scale_factor: f64) -> Self {
+        Self {
+            origin_x: frame.origin.x.round() as i32,
+            origin_y: frame.origin.y.round() as i32,
+            width: frame.size.width.round() as i32,
+            height: frame.size.height.round() as i32,
+            scale_milli: (scale_factor * 1000.0).round() as i32,
+        }
+    }
+
+    fn unknown(scale_factor: f64) -> Self {
+        Self {
+            origin_x: 0,
+            origin_y: 0,
+            width: 0,
+            height: 0,
+            scale_milli: (scale_factor * 1000.0).round() as i32,
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+fn macos_screen_key_for_point(point: cocoa::foundation::NSPoint) -> Option<MacCursorScreenKey> {
+    use cocoa::base::id;
+    use cocoa::foundation::NSRect;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let Some(class) = Class::get("NSScreen") else {
+            return None;
+        };
+        let screens: id = msg_send![class, screens];
+        if screens.is_null() {
+            return None;
+        }
+        let count: usize = msg_send![screens, count];
+        for idx in 0..count {
+            let screen: id = msg_send![screens, objectAtIndex: idx];
+            if screen.is_null() {
+                continue;
+            }
+            let frame: NSRect = msg_send![screen, frame];
+            let min_x = frame.origin.x;
+            let min_y = frame.origin.y;
+            let max_x = min_x + frame.size.width;
+            let max_y = min_y + frame.size.height;
+            if point.x >= min_x && point.x < max_x && point.y >= min_y && point.y < max_y {
+                let scale_factor: f64 = msg_send![screen, backingScaleFactor];
+                return Some(MacCursorScreenKey::from_frame(frame, scale_factor));
+            }
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
 impl MacCursorTransform {
     fn update_from_sample(
         &mut self,
@@ -794,6 +867,84 @@ impl MacCursorTransform {
             ));
         }
         out
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+#[derive(Default)]
+struct MacCursorTransformTable {
+    by_screen: HashMap<MacCursorScreenKey, MacCursorTransform>,
+    last_used: Option<MacCursorScreenKey>,
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+impl MacCursorTransformTable {
+    fn update_from_window_sample(
+        &mut self,
+        winit_screen_pos: PhysicalPosition<f64>,
+        cocoa_pos: cocoa::foundation::NSPoint,
+        scale_factor: f64,
+    ) {
+        let key = macos_screen_key_for_point(cocoa_pos).unwrap_or_else(|| {
+            // If we can't resolve the screen (AppKit oddities), still store a transform so we can
+            // map `NSEvent::mouseLocation` during cross-window drags without integrating deltas.
+            MacCursorScreenKey::unknown(scale_factor)
+        });
+        let transform = self
+            .by_screen
+            .entry(key)
+            .or_insert_with(MacCursorTransform::default);
+        transform.update_from_sample(winit_screen_pos, cocoa_pos, scale_factor);
+        self.last_used = Some(key);
+    }
+
+    fn map_with_key_hint(
+        &mut self,
+        cocoa_pos: cocoa::foundation::NSPoint,
+        key_hint: Option<MacCursorScreenKey>,
+    ) -> Option<PhysicalPosition<f64>> {
+        let hint_hit = key_hint.is_some_and(|k| self.by_screen.contains_key(&k));
+        let last_hit = self
+            .last_used
+            .is_some_and(|k| self.by_screen.contains_key(&k));
+        let selection = if hint_hit {
+            "key"
+        } else if last_hit {
+            "last"
+        } else {
+            "any"
+        };
+
+        let transform = key_hint
+            .and_then(|k| self.by_screen.get(&k).copied())
+            .or_else(|| self.last_used.and_then(|k| self.by_screen.get(&k).copied()))
+            .or_else(|| self.by_screen.values().next().copied())?;
+
+        let out = transform.map(cocoa_pos);
+
+        if macos_cursor_trace_enabled() {
+            dock_tearoff_log(format_args!(
+                "[cursor-refresh] cocoa=({:.1},{:.1}) selection={} key={:?} last={:?} transforms={}",
+                cocoa_pos.x,
+                cocoa_pos.y,
+                selection,
+                key_hint,
+                self.last_used,
+                self.by_screen.len(),
+            ));
+        }
+
+        if let Some(key) = key_hint {
+            self.last_used = Some(key);
+        }
+
+        Some(out)
+    }
+
+    fn map(&mut self, cocoa_pos: cocoa::foundation::NSPoint) -> Option<PhysicalPosition<f64>> {
+        self.map_with_key_hint(cocoa_pos, macos_screen_key_for_point(cocoa_pos))
     }
 }
 
@@ -1007,7 +1158,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     file_dialog: NativeFileDialog,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
-    macos_cursor_transform: Option<MacCursorTransform>,
+    macos_cursor_transform: MacCursorTransformTable,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
     internal_drag_pointer_id: Option<fret_core::PointerId>,
@@ -1099,6 +1250,40 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
 
     #[cfg(target_os = "macos")]
+    fn macos_bootstrap_cursor_transform_from_active_drag(&mut self) -> bool {
+        let Some(pointer_id) = self.dock_drag_pointer_id() else {
+            return false;
+        };
+        let Some(drag) = self.app.drag(pointer_id) else {
+            return false;
+        };
+        let window = drag.current_window;
+        let Some(screen_pos) = self.cursor_screen_pos_fallback_for_window(window) else {
+            return false;
+        };
+        let scale_factor = self
+            .windows
+            .get(window)
+            .map(|s| s.window.scale_factor())
+            .unwrap_or(1.0);
+        self.macos_calibrate_cursor_transform_from_window_sample(screen_pos, scale_factor);
+        true
+    }
+
+    #[cfg(target_os = "macos")]
+    fn macos_refresh_cursor_screen_pos_for_dock_drag(&mut self) {
+        if self.dock_drag_pointer_id().is_none() && self.dock_tearoff_follow.is_none() {
+            return;
+        }
+        if self.macos_refresh_cursor_screen_pos_from_nsevent() {
+            return;
+        }
+        if self.macos_bootstrap_cursor_transform_from_active_drag() {
+            let _ = self.macos_refresh_cursor_screen_pos_from_nsevent();
+        }
+    }
+
+    #[cfg(target_os = "macos")]
     fn macos_calibrate_cursor_transform_from_window_sample(
         &mut self,
         winit_screen_pos: PhysicalPosition<f64>,
@@ -1107,21 +1292,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(cocoa_pos) = macos_mouse_location() else {
             return;
         };
-        let transform = self
-            .macos_cursor_transform
-            .get_or_insert_with(Default::default);
-        transform.update_from_sample(winit_screen_pos, cocoa_pos, scale_factor);
+        self.macos_cursor_transform.update_from_window_sample(
+            winit_screen_pos,
+            cocoa_pos,
+            scale_factor,
+        );
     }
 
     #[cfg(target_os = "macos")]
     fn macos_refresh_cursor_screen_pos_from_nsevent(&mut self) -> bool {
-        let Some(transform) = self.macos_cursor_transform else {
-            return false;
-        };
         let Some(cocoa_pos) = macos_mouse_location() else {
             return false;
         };
-        self.cursor_screen_pos = Some(transform.map(cocoa_pos));
+        let Some(mapped) = self.macos_cursor_transform.map(cocoa_pos) else {
+            return false;
+        };
+        self.cursor_screen_pos = Some(mapped);
         true
     }
 
@@ -2136,7 +2322,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             file_dialog: NativeFileDialog::default(),
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
-            macos_cursor_transform: None,
+            macos_cursor_transform: MacCursorTransformTable::default(),
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
             internal_drag_pointer_id: None,
@@ -4332,12 +4518,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     #[cfg(target_os = "macos")]
     fn maybe_finish_dock_drag_released_outside(&mut self) -> bool {
-        if self.dock_drag_pointer_id() != Some(fret_core::PointerId(0)) {
+        let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
-        }
+        };
 
         let (source_window, current_window, dragging) = {
-            let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
+            let Some(drag) = self.app.drag(pointer_id) else {
                 return false;
             };
             if !drag.cross_window_hover
@@ -4351,14 +4537,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         dock_tearoff_log(format_args!(
-            "[poll-up] source={:?} current={:?} screen_pos={:?} dragging={}",
-            source_window, current_window, self.cursor_screen_pos, dragging
+            "[poll-up] pointer={:?} source={:?} current={:?} screen_pos={:?} dragging={}",
+            pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
         ));
 
         // If the mouse was released outside any window, winit may not deliver a `MouseInput`
         // event to any window. Use the regular cursor-based drop routing so docking back into an
         // existing window still works (ImGui-style).
-        if let Some(d) = self.app.drag_mut(fret_core::PointerId(0))
+        if let Some(d) = self.app.drag_mut(pointer_id)
             && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
         {
             d.dragging = true;
@@ -4372,10 +4558,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         if self
             .app
-            .drag(fret_core::PointerId(0))
+            .drag(pointer_id)
             .is_some_and(|d| d.cross_window_hover)
         {
-            self.app.cancel_drag(fret_core::PointerId(0));
+            self.app.cancel_drag(pointer_id);
             let _ = self.clear_internal_drag_hover_if_needed();
         }
 
@@ -4428,6 +4614,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
+        #[cfg(target_os = "macos")]
+        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
         };
@@ -4551,6 +4740,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
+        #[cfg(target_os = "macos")]
+        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
@@ -4899,6 +5091,105 @@ fn local_pos_for_screen_pos(
 mod tests {
     use super::*;
     use winit::dpi::{PhysicalPosition, PhysicalSize};
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_cursor_transform_table_prefers_key_hint_then_last_used() {
+        let key_a = MacCursorScreenKey {
+            origin_x: 0,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 2000,
+        };
+        let key_b = MacCursorScreenKey {
+            origin_x: 100,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 2000,
+        };
+
+        let mut table = MacCursorTransformTable::default();
+        table.by_screen.insert(
+            key_a,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 10.0,
+                y_offset: 100.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+        table.by_screen.insert(
+            key_b,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 20.0,
+                y_offset: 200.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+
+        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_a))
+            .expect("expected mapping");
+        assert_eq!(mapped, PhysicalPosition::new(11.0, 98.0));
+        assert_eq!(table.last_used, Some(key_a));
+
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, None)
+            .expect("expected mapping via last_used");
+        assert_eq!(mapped, PhysicalPosition::new(11.0, 98.0));
+
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_b))
+            .expect("expected mapping");
+        assert_eq!(mapped, PhysicalPosition::new(21.0, 198.0));
+        assert_eq!(table.last_used, Some(key_b));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_cursor_transform_table_falls_back_to_any_transform() {
+        let key_a = MacCursorScreenKey {
+            origin_x: 0,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 1000,
+        };
+        let key_b = MacCursorScreenKey {
+            origin_x: 200,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 1000,
+        };
+
+        let mut table = MacCursorTransformTable::default();
+        table.by_screen.insert(
+            key_a,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 5.0,
+                y_offset: 50.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+
+        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_b))
+            .expect("expected mapping via any transform");
+        assert_eq!(mapped, PhysicalPosition::new(6.0, 48.0));
+    }
 
     #[test]
     fn client_origin_screen_adds_decoration_offset() {
