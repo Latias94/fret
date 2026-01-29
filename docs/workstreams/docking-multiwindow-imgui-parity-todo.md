@@ -115,11 +115,17 @@ Each TODO is labeled:
     - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/mod.rs`
     - Docking UI gating (tear-off affordance): `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
 
-- [ ] DW-P1-win-002 Windows placement correctness under DPI and decorations.
+- [~] DW-P1-win-002 Windows placement correctness under DPI and decorations.
   - Goal: initial window placement for tear-off aligns with cursor grab and respects non-client offsets.
   - Evidence anchors:
     - Position heuristics: `crates/fret-launch/src/runner/desktop/mod.rs` (`compute_window_position_from_cursor`, “decoration offset refinement” comments)
     - DPI semantics: `docs/adr/0017-multi-window-display-and-dpi.md`
+    - Cursor-grab aligned initial placement (best-effort until OS window exists):
+      - `crates/fret-launch/src/runner/desktop/mod.rs` (`compute_window_position_from_cursor_grab_estimate`)
+      - `crates/fret-launch/src/runner/desktop/mod.rs` (`outer_pos_for_cursor_grab` tests)
+  - Acceptance (manual; Windows):
+    - Mixed-DPI (100% + 150%): tear off a tab near the cursor; the new window should appear with the cursor over the grabbed tab (no large “jump”).
+    - With window decorations enabled: initial placement should not be offset by titlebar height.
 
 - [ ] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
   - Goal: on platforms where programmatic window movement is best-effort, disable follow-mode and keep
