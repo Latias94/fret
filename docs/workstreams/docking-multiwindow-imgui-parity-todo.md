@@ -46,12 +46,14 @@ Each TODO is labeled:
     - Tear off a tab into a new OS window, then re-dock it into main → the floating OS window closes.
     - Drag the last remaining tab out of a floating window → source window closes without leaving a blank shell.
 
-- [~] DW-P0-macos-002 Make global cursor tracking robust outside windows on macOS.
+- [x] DW-P0-macos-002 Make global cursor tracking robust outside windows on macOS.
   - Goal: reduce `cursor_screen_pos` drift when the cursor is outside any window during dock drag.
   - Evidence anchors:
     - Cursor screen position updates: `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - Cross-window routing uses `cursor_screen_pos`: `crates/fret-launch/src/runner/desktop/mod.rs`
     - Online calibration + sampling: `crates/fret-launch/src/runner/desktop/mod.rs` (`MacCursorTransform`, `macos_mouse_location`, `macos_refresh_cursor_screen_pos_from_nsevent`)
+    - Screen-keyed transform table + bootstrap: `crates/fret-launch/src/runner/desktop/mod.rs` (`MacCursorTransformTable`, `macos_refresh_cursor_screen_pos_for_dock_drag`)
+    - Button events also refresh/calibrate (not only pointer-move): `crates/fret-launch/src/runner/desktop/app_handler.rs` (`PointerButton` path)
     - Diagnostics: `FRET_MACOS_CURSOR_TRACE=1` (emits cursor calibration + mapping lines into `target/fret-dock-tearoff.log` when `FRET_DOCK_TEAROFF_LOG=1` is also set)
   - Acceptance:
     - During a dock drag, move outside all windows and back: hover/drop target selection remains correct.
@@ -66,12 +68,15 @@ Each TODO is labeled:
   - Acceptance:
     - Close a floating window via OS close button → its panels reappear in main window.
 
-- [~] DW-P0-ux-004 “No stuck follow”: tear-off follow always stops on cancel paths.
+- [x] DW-P0-ux-004 “No stuck follow”: tear-off follow always stops on cancel paths.
   - Evidence anchors:
     - Follow state machine: `crates/fret-launch/src/runner/desktop/mod.rs` (`dock_tearoff_follow`, `stop_dock_tearoff_follow`)
     - Cancel/drag end guard: `crates/fret-launch/src/runner/desktop/mod.rs` (`update_dock_tearoff_follow`)
     - about_to_wait guard: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`about_to_wait`)
     - Escape cancel: `crates/fret-ui/src/tree/dispatch.rs` and runner cancel path `crates/fret-launch/src/runner/desktop/app_handler.rs`
+    - Release-outside + poll-up no longer hardcode `PointerId(0)`:
+      - `crates/fret-launch/src/runner/desktop/app_handler.rs` (`DeviceEvent::Button` fallback, `WindowEvent::PointerButton` left-up)
+      - `crates/fret-launch/src/runner/desktop/mod.rs` (`maybe_finish_dock_drag_released_outside`)
   - Acceptance:
     - Escape during dock drag cancels and stops follow.
     - Mouse-up outside any window completes drop and stops follow.
@@ -110,23 +115,51 @@ Each TODO is labeled:
     - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/mod.rs`
     - Docking UI gating (tear-off affordance): `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
 
-- [ ] DW-P1-win-002 Windows placement correctness under DPI and decorations.
+- [~] DW-P1-win-002 Windows placement correctness under DPI and decorations.
   - Goal: initial window placement for tear-off aligns with cursor grab and respects non-client offsets.
   - Evidence anchors:
     - Position heuristics: `crates/fret-launch/src/runner/desktop/mod.rs` (`compute_window_position_from_cursor`, “decoration offset refinement” comments)
     - DPI semantics: `docs/adr/0017-multi-window-display-and-dpi.md`
+    - Cursor-grab aligned initial placement (best-effort until OS window exists):
+      - `crates/fret-launch/src/runner/desktop/mod.rs` (`compute_window_position_from_cursor_grab_estimate`)
+      - `crates/fret-launch/src/runner/desktop/mod.rs` (`outer_pos_for_cursor_grab` tests)
+  - Acceptance (manual; Windows):
+    - Mixed-DPI (100% + 150%): tear off a tab near the cursor; the new window should appear with the cursor over the grabbed tab (no large “jump”).
+    - With window decorations enabled: initial placement should not be offset by titlebar height.
 
-- [ ] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
+- [~] DW-P1-linux-003 Wayland-safe degradation policy for follow-mode.
   - Goal: on platforms where programmatic window movement is best-effort, disable follow-mode and keep
     cross-window docking predictable (in-window floating fallback if needed).
+  - Degradation policy (Wayland):
+    - Disable OS tear-off (`ui.window_tear_off=false`) and window-under-cursor routing (`ui.window_hover_detection=none`).
+    - Preserve `ui.multi_window=true` (apps may still open multiple OS windows), but docking tear-off uses
+      in-window floating fallback instead of creating DockFloating OS windows.
   - Evidence anchors:
-    - Capability gating: `crates/fret-launch/src/runner/desktop/mod.rs` (backend capabilities)
+    - Wayland session detection + capability downgrade: `crates/fret-launch/src/runner/desktop/mod.rs` (`linux_is_wayland_session`, `backend_platform_capabilities`)
+    - Tear-off request degradation (no `CreateWindowKind::DockFloating` when tear-off is disabled): `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`)
     - Docking UI gating: `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
+    - Unit tests: `crates/fret-launch/src/runner/desktop/mod.rs` (`is_wayland_session_*`)
+  - Acceptance (manual; Linux Wayland compositor):
+    - Run `cargo run -p fret-demo --bin docking_arbitration_demo`.
+    - Attempt to tear off a tab: no new OS window should be created; the panel should float inside the same OS window.
+    - Optional: with `FRET_DOCK_TEAROFF_LOG=1`, the log should not contain `[effect-window-create]` lines for DockFloating.
 
 ## P2 — Style/parenting and future-proofing (ADR 0154 dependent)
 
-- [ ] DW-P2-style-001 DockFloating window style requests (taskbar visibility, focus on appearing, tool window).
+- [~] DW-P2-style-001 DockFloating window style requests (taskbar visibility, focus on appearing, tool window).
   - Gate: `docs/adr/0154-window-styles-and-utility-windows.md` acceptance and implementation.
+  - Current implementation (v1 subset; best-effort per backend):
+    - `CreateWindowRequest` carries a portable `role` and `style` request (ADR 0154 shape).
+    - Docking tear-off windows request `TaskbarVisibility::Hide` and `ActivationPolicy::Activates`.
+    - Desktop runner applies `with_active(...)` and Windows `skip_taskbar` at creation time.
+  - Evidence anchors:
+    - Portable request surface: `crates/fret-runtime/src/effect.rs` (`WindowStyleRequest`, `WindowRole`, `TaskbarVisibility`, `ActivationPolicy`)
+    - Re-exports: `crates/fret-runtime/src/lib.rs`, `crates/fret-app/src/lib.rs`
+    - Docking create request wiring: `ecosystem/fret-docking/src/runtime.rs` (`WindowRequest::Create` for `DockFloating`)
+    - Runner application (Windows focus/taskbar): `crates/fret-launch/src/runner/desktop/mod.rs` (`create_os_window`)
+  - Remaining gaps (keep ADR 0154 scope honest):
+    - No portable capabilities for style facets yet (only best-effort application).
+    - Tool-window parenting/alt-tab semantics beyond skip-taskbar are backend-specific.
 
 - [ ] DW-P2-macos-002 Parent/child window relationship for DockFloating (macOS).
   - Non-normative reference: winit parent_window support calls `NSWindow.addChildWindow_ordered(...)`

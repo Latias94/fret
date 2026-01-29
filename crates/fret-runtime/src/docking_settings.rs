@@ -5,6 +5,16 @@ pub struct DockingInteractionSettings {
     pub drag_inversion: DockDragInversionSettings,
     /// Drag activation threshold for docking tab drags (window-local logical pixels).
     pub tab_drag_threshold: Px,
+    /// Split handle hit thickness (window-local logical pixels).
+    ///
+    /// Dear ImGui exposes this concept as `Style.DockingSeparatorSize` (scaled).
+    pub split_handle_hit_thickness: Px,
+    /// Split handle gap between panels (window-local logical pixels).
+    ///
+    /// This is kept as an explicit knob because it affects both:
+    /// - the computed panel rects, and
+    /// - the split handle centers/hit rects.
+    pub split_handle_gap: Px,
     /// Drag distance threshold for suppressing viewport right-click context menus (screen px).
     ///
     /// Docking forwards viewport pointer input via `Effect::ViewportInput` and uses pointer capture
@@ -27,6 +37,8 @@ impl Default for DockingInteractionSettings {
         Self {
             drag_inversion: DockDragInversionSettings::default(),
             tab_drag_threshold: Px(6.0),
+            split_handle_hit_thickness: Px(6.0),
+            split_handle_gap: Px(0.0),
             viewport_context_menu_drag_threshold: Px(6.0),
             suppress_context_menu_during_viewport_capture: true,
         }
