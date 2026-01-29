@@ -160,6 +160,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
     expands format-string templates via `expand_key_templates`, excludes `src/bin` from runtime scans, filters typography-only sassvar keys).
   - Notes: This audit treats Material Web v30 sassvars as the source of truth for key existence (unknown keys are flagged),
     helping us avoid inventing Fret-only `md.*` keys during refactors.
+  - Repro: `cargo run -p fret-ui-material3 --bin material3_token_audit -- --debug` should report `missing injected keys: 0`
+    and no `Unknown keys` section.
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.
@@ -577,6 +579,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes` (ArrowUp/ArrowDown/Enter/Space open keys),
     `select_roving_scrolls_focused_option_into_view`, `select_open_scrolls_selected_option_into_view`,
     `select_listbox_typeahead_moves_focus_skipping_disabled_options`).
+  - Notes: Select menu item typography defaults to `md.sys.typescale.label-large` (Material Web v30 uses `label-large` for the menu list-item label).
 - [x] Add golden-style visual snapshots per component state (light/dark, density variants).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_controls_suite_goldens_v1`, `material3_headless_overlays_suite_goldens_v1`, `material3_headless_text_field_suite_goldens_v1`),
     `goldens/material3-headless/v1/material3-*.json` (controls suite, overlay suite, text-field suite; includes `scale1_0`/`scale1_25`/`scale2_0` variants and overlay cases such as `both_open` + `select_open`).
