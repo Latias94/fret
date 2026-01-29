@@ -213,10 +213,10 @@ Non-normative guidance:
 - winit supports `WindowAttributes::with_parent_window(...)`, and on macOS it calls
   `NSWindow.addChildWindow_ordered(...)` internally (see `repo-ref/winit/.../window_delegate.rs`).
 
-Expected touch points:
+Implementation anchors:
 
-- Extend `WindowCreateSpec` (or the runner’s create-window path) to optionally attach a parent window for
-  `CreateWindowKind::DockFloating`.
+- Parent window handle selection (DockFloating only): `crates/fret-launch/src/runner/desktop/mod.rs` (`create_window_from_request`)
+- Create-time wiring via winit `with_parent_window(...)`: `crates/fret-launch/src/runner/desktop/mod.rs` (`create_os_window`)
 
 Acceptance checks:
 
