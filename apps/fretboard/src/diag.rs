@@ -1726,9 +1726,43 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if warmup_frames == 0 {
                     warmup_frames = 5;
                 }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VIEW_CACHE".to_string(), "1".to_string()));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL".to_string(),
+                        "1".to_string(),
+                    ));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS".to_string(),
+                        "1".to_string(),
+                    ));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_MINIMAL")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VLIST_MINIMAL".to_string(), "1".to_string()));
+                }
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_vlist_scroll_window_dirty_max =
                     check_vlist_scroll_window_dirty_max.or(Some(4));
+                check_wheel_scroll_test_id =
+                    check_wheel_scroll_test_id.or(Some("ui-gallery-virtual-list-root".to_string()));
+                check_stale_paint_test_id =
+                    check_stale_paint_test_id.or(Some("ui-gallery-virtual-list-root".to_string()));
             }
 
             let reuse_process = launch.is_none();
