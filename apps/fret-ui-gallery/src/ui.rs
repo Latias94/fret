@@ -2207,7 +2207,7 @@ fn preview_web_ime_harness(
                         .layout(LayoutRefinement::default().w_full().h_full())
                         .gap(Space::N2),
                     |cx| {
-                        vec![
+                        let mut lines = vec![
                             cx.text(format!("ime_enabled={ime_enabled}")),
                             cx.text(format!("preedit={preedit:?}")),
                             cx.text(format!("committed_tail={committed_tail:?}")),
@@ -2220,7 +2220,51 @@ fn preview_web_ime_harness(
                                 st.ime_enabled_count,
                                 st.ime_disabled_count
                             )),
-                        ]
+                        ];
+
+                        let snapshot = cx
+                            .app
+                            .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
+                            .cloned();
+                        if let Some(snapshot) = snapshot {
+                            lines.push(cx.text("bridge_debug_snapshot (wasm textarea):"));
+                            lines.push(cx.text(format!(
+                                "  enabled={} composing={} suppress_next_input={}",
+                                snapshot.enabled as u8,
+                                snapshot.composing as u8,
+                                snapshot.suppress_next_input as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_input_type={:?}",
+                                snapshot.last_input_type.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_beforeinput_data={:?}",
+                                snapshot.last_beforeinput_data.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_input_data={:?}",
+                                snapshot.last_input_data.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_key_code={:?} last_cursor_area={:?}",
+                                snapshot.last_key_code, snapshot.last_cursor_area
+                            )));
+                            lines.push(cx.text(format!(
+                                "  counts: beforeinput={} input={} suppressed={} comp_start={} comp_update={} comp_end={} cursor_area_set={}",
+                                snapshot.beforeinput_seen,
+                                snapshot.input_seen,
+                                snapshot.suppressed_input_seen,
+                                snapshot.composition_start_seen,
+                                snapshot.composition_update_seen,
+                                snapshot.composition_end_seen,
+                                snapshot.cursor_area_set_seen,
+                            )));
+                        } else {
+                            lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
+                        }
+
+                        lines
                     },
                 );
                 vec![body]

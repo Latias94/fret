@@ -57,8 +57,8 @@ Legend:
 
 ### Observability (debug-only)
 
-- [ ] Counters: last `inputType`, whether suppressed, last composing state.
-- [ ] Counters: last caret-rect anchor and whether positioning was attempted.
+- [x] Counters: last `inputType`, whether suppressed, last composing state.
+- [x] Counters: last caret-rect anchor and whether positioning was attempted.
 
 ### Harness
 
@@ -119,7 +119,7 @@ Evidence anchors:
 
 - [x] Prepare text per visible display row only (no monolithic document blob).
 - [x] Define row cache keys and budgets (viewport-bounded, LRU-ish).
-- [ ] Ensure theme-only changes remain paint-only (no reshaping).
+- [x] Ensure theme-only changes remain paint-only (no reshaping).
 
 ### Input/IME integration
 

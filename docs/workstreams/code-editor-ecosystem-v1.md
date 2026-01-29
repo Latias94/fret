@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
 
 Status: Draft (workstream document; normative contracts live in ADRs)
-Last updated: 2026-01-27
+Last updated: 2026-01-29
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
 It is intentionally non-authoritative; the normative contracts are:
@@ -276,12 +276,13 @@ Legend:
   - `composition*` → `ImeEvent`,
   - command-dispatch suppression to avoid double insert.
 - [x] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
-- [ ] Add debug-only counters/logging for bridge behavior (last inputType, suppression reason, focused state).
+- [x] Add debug-only counters/logging for bridge behavior (snapshot published as a global for harness views).
 - [x] Add a web harness page (or demo mode) dedicated to IME conformance.
 
 Evidence anchors:
 
 - `crates/fret-platform-web/src/wasm.rs` (`WebImeBridge`, `WebPlatformServices::handle_effects`)
+- `crates/fret-core/src/input.rs` (`WebImeBridgeDebugSnapshot`)
 - `crates/fret-core/src/utf.rs` (`utf16_range_to_utf8_byte_range`)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_web_ime_harness`)
