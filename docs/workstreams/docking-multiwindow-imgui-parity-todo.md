@@ -161,7 +161,7 @@ Each TODO is labeled:
     - No portable capabilities for style facets yet (only best-effort application).
     - Tool-window parenting/alt-tab semantics beyond skip-taskbar are backend-specific.
 
-- [~] DW-P2-macos-002 Parent/child window relationship for DockFloating (macOS).
+- [x] DW-P2-macos-002 Parent/child window relationship for DockFloating (macOS).
   - Goal: attach DockFloating OS windows as child/tool windows of their source window so ordering and
     Space/fullscreen behavior is closer to ImGui/Editor expectations.
   - Evidence anchors:

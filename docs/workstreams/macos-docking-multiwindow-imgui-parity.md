@@ -208,6 +208,11 @@ Goal:
 - Make dock-floating windows behave like tool/child windows relative to the source window for ordering and
   Space/fullscreen behavior where appropriate.
 
+Status (2026-01-29):
+
+- Implemented as a best-effort parent/child relationship for `CreateWindowKind::DockFloating` on macOS by
+  passing the source window handle to winit `WindowAttributes::with_parent_window(...)`.
+
 Non-normative guidance:
 
 - winit supports `WindowAttributes::with_parent_window(...)`, and on macOS it calls
