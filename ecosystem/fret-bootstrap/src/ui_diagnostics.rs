@@ -661,6 +661,26 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
+            UiActionStepV1::CaptureScreenshot { label } => {
+                let dir = self
+                    .last_dump_dir
+                    .clone()
+                    .or_else(|| self.dump_bundle(label.as_deref()));
+                if let Some(dir) = dir {
+                    let _ = write_latest_pointer(&self.cfg.out_dir, &dir);
+                    let _ = std::fs::write(dir.join("screenshot.request"), b"1\n");
+                    active.wait_until = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-capture_screenshot-no-bundle"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("capture_screenshot_no_bundle".to_string());
+                    output.request_redraw = true;
+                }
+            }
             UiActionStepV1::PressKey {
                 key,
                 modifiers,
@@ -2366,6 +2386,9 @@ pub enum UiActionStepV1 {
         predicate: UiPredicateV1,
     },
     CaptureBundle {
+        label: Option<String>,
+    },
+    CaptureScreenshot {
         label: Option<String>,
     },
 }
@@ -6141,6 +6164,8 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         "enter" | "return" => Some(KeyCode::Enter),
         "tab" => Some(KeyCode::Tab),
         "space" => Some(KeyCode::Space),
+        "backspace" => Some(KeyCode::Backspace),
+        "delete" | "del" => Some(KeyCode::Delete),
         "f1" => Some(KeyCode::F1),
         "f2" => Some(KeyCode::F2),
         "f3" => Some(KeyCode::F3),
@@ -6161,7 +6186,50 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         "end" => Some(KeyCode::End),
         "page_up" => Some(KeyCode::PageUp),
         "page_down" => Some(KeyCode::PageDown),
-        _ => None,
+        _ => {
+            if key.len() == 1 {
+                return Some(match key.as_bytes()[0] {
+                    b'a' => KeyCode::KeyA,
+                    b'b' => KeyCode::KeyB,
+                    b'c' => KeyCode::KeyC,
+                    b'd' => KeyCode::KeyD,
+                    b'e' => KeyCode::KeyE,
+                    b'f' => KeyCode::KeyF,
+                    b'g' => KeyCode::KeyG,
+                    b'h' => KeyCode::KeyH,
+                    b'i' => KeyCode::KeyI,
+                    b'j' => KeyCode::KeyJ,
+                    b'k' => KeyCode::KeyK,
+                    b'l' => KeyCode::KeyL,
+                    b'm' => KeyCode::KeyM,
+                    b'n' => KeyCode::KeyN,
+                    b'o' => KeyCode::KeyO,
+                    b'p' => KeyCode::KeyP,
+                    b'q' => KeyCode::KeyQ,
+                    b'r' => KeyCode::KeyR,
+                    b's' => KeyCode::KeyS,
+                    b't' => KeyCode::KeyT,
+                    b'u' => KeyCode::KeyU,
+                    b'v' => KeyCode::KeyV,
+                    b'w' => KeyCode::KeyW,
+                    b'x' => KeyCode::KeyX,
+                    b'y' => KeyCode::KeyY,
+                    b'z' => KeyCode::KeyZ,
+                    b'0' => KeyCode::Digit0,
+                    b'1' => KeyCode::Digit1,
+                    b'2' => KeyCode::Digit2,
+                    b'3' => KeyCode::Digit3,
+                    b'4' => KeyCode::Digit4,
+                    b'5' => KeyCode::Digit5,
+                    b'6' => KeyCode::Digit6,
+                    b'7' => KeyCode::Digit7,
+                    b'8' => KeyCode::Digit8,
+                    b'9' => KeyCode::Digit9,
+                    _ => return None,
+                });
+            }
+            None
+        }
     }
 }
 
