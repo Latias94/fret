@@ -234,15 +234,18 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - default `DockingInteractionSettings::tab_drag_threshold = Px(6.0)` (`crates/fret-runtime/src/docking_settings.rs`)
     - activation constraint used in `DockSpace` (`ecosystem/fret-docking/src/dock/space.rs`).
 
-- [~] **“Dock drag mode” is explicit and stable**
+- [x] **“Dock drag mode” is explicit and stable**
   - ImGui:
     - `BeginDockableDragDropSource` has a TODO: “Need to make this stateful and explicit”.
     - It currently infers “drag docking” from shift policy + click offset being in title bar band.
   - Fret:
     - Uses `DockDragInversionSettings` to decide whether docking previews are active for this drag.
-    - The decision is recomputed per `InternalDrag` event from modifiers.
-  - Notes:
-    - For parity, we likely want an explicit “dock-drag mode” latched at drag start (to avoid modifier-flapping mid-drag).
+    - The decision is **latched at drag activation** into `DockPanelDragPayload::dock_previews_enabled` and then treated as
+      stable for the remainder of the drag session (prevents modifier-flapping).
+  - Evidence anchors:
+    - `crates/fret-runtime/src/docking_settings.rs` (`DockDragInversionSettings`)
+    - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload::dock_previews_enabled`)
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_latches_dock_preview_policy_on_activation`)
 
 - [ ] **Undock semantics: whole node/group vs single tab**
   - ImGui:
@@ -266,9 +269,14 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - `DockDragInversionSettings` supports:
       - `DockByDefault` + modifier to invert, or
       - `DockOnlyWhenModifier`.
-    - However, Fret currently does not have a direct equivalent of ImGui’s “explicit target rect = title bar band”.
+    - Fret applies an ImGui-style **explicit target gating** rule:
+      - no docking preview unless hovering the explicit target (tab bar) or one of the direction-pad hint rects.
+    - However, Fret still does not have a direct equivalent of ImGui’s “explicit target rect = title bar band”
+      for non-tab-window chrome.
   - Evidence anchors:
     - Fret inversion: `crates/fret-runtime/src/docking_settings.rs`
+    - Fret gating: `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target(...)`)
+    - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_requires_explicit_target_or_hint_rects`)
     - ImGui gating: `repo-ref/imgui/imgui.cpp` (`BeginDockableDragDropSource`, `DockNodePreviewDockSetup`)
 
 Recommendation for parity tracking:
@@ -293,30 +301,32 @@ This section is where “I can’t dock left” / “it docks the wrong side” 
       - 4 directional rects positioned around the center
     - sizes scale with `FontSize` and panel size.
   - Fret:
-    - `dock_hint_rects(rect)` builds a 5-way pad centered on the hovered dock node rect.
-    - size scales with panel min-dimension, clamped to 34–56 logical px.
+    - `dock_hint_rects_with_font(rect, font_size, outer_docking)` builds a 5-way pad centered on the hovered dock node rect.
+    - Sizing derives from font size + panel min-dimension, with a distinct geometry for:
+      - inner docking (`outer_docking = false`)
+      - outer docking (`outer_docking = true`)
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeCalcDropRectsAndTestMousePos`)
-    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects`)
+    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`)
+    - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drop_hint_rects_can_select_zone`)
 
 Known semantic deltas to track:
 
-- ImGui has distinct **inner vs outer docking** sizing (`outer_docking` parameter).
-- Fret currently does not model “outer docking” as a separate hint set; it uses:
-  - direction-pad hints **and**
-  - edge split zones.
+- ImGui exposes additional style knobs that influence the exact “hand feel” (e.g. docking separator size).
+- Fret currently uses a small amount of custom hit logic (center radius + quadrant selection) to reduce flicker when moving
+  diagonally between pads.
 
 ## 4.2 Edge split zones (left/right/top/bottom strips)
 
-- [~] **Edge split zones are easy to hit on large panels**
+- [~] **Split preview overlays match the committed split zone**
   - ImGui:
-    - Splits are decided based on the direction-pad drop rects + split ratio (`DockNodeCalcSplitRects`).
+    - Preview uses the chosen `dir` to compute the final split rectangles.
   - Fret:
-    - `drop_zone_rect(rect, zone)` creates edge strips with thickness derived from panel size.
+    - Uses `drop_zone_rect(rect, zone)` to render the *resulting split overlay* for a chosen `DropZone`.
+    - Hit-testing selects the zone via the direction-pad hint rects, not via edge strips.
   - Evidence anchors:
-    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_drop_edge_thickness`, `drop_zone_rect`)
-  - Notes:
-    - Because Fret has both direction-pad hints and edge strips, priority/overlap matters.
+    - Fret: `ecosystem/fret-docking/src/dock/paint.rs` (`paint_drop_overlay(...)`)
+    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`drop_zone_rect`)
 
 ## 4.3 Candidate priority and overlap behavior
 
@@ -324,16 +334,14 @@ Known semantic deltas to track:
   - ImGui:
     - Preview selection is tied directly to drop rect hit-testing order inside `DockNodePreviewDockSetup`.
   - Fret:
-    - `dock_drop_target_via_dnd` registers overlapping rectangles into a picker with weights:
-      - Tab bar: 30
-      - Direction-pad hints: 20
-      - Edge strips: 10
-      - Fallback: 0
+    - Docking previews are gated by explicit targets:
+      - tab bar (explicit target) wins and yields an `insert_index`
+      - otherwise, the last-matched direction-pad rect wins (aligned with ImGui's loop structure)
+      - outer docking rects take precedence when the cursor is within the outer hint set
   - Evidence anchors:
-    - `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target_via_dnd`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target(...)`)
   - Parity risk:
-    - When the direction-pad hint overlaps with the edge strip on small panels, “left” might resolve to a different zone
-      than expected unless weights/rects match ImGui’s mental model.
+    - If the outer/inner rect sizing diverges across DPI scales, the “easiest to hit” target may feel different.
 
 ## 4.4 Splitter drag behavior (resize feel)
 
