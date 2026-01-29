@@ -22453,6 +22453,78 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
 }
 
 #[test]
+fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(600.0)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    use fret_ui_headless::calendar::CalendarMonth;
+    let month_model: Model<CalendarMonth> = app
+        .models_mut()
+        .insert(CalendarMonth::new(2026, time::Month::January));
+    let selected: Model<Option<time::Date>> = app.models_mut().insert(None);
+
+    let calendar_bg: Rc<Cell<Option<fret_core::Color>>> = Rc::new(Cell::new(None));
+    let calendar_bg_for_render = calendar_bg.clone();
+    let render = move |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let calendar_bg = calendar_bg_for_render.clone();
+        let month_model = month_model.clone();
+        let selected = selected.clone();
+
+        vec![fret_ui_shadcn::card::card_content(cx, move |cx| {
+            let calendar = fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
+                .into_element(cx);
+            match &calendar.kind {
+                fret_ui::element::ElementKind::Container(props) => {
+                    let bg = props
+                        .background
+                        .expect("calendar root background (resolved)");
+                    calendar_bg.set(Some(bg));
+                }
+                other => panic!("expected calendar root container, got {other:?}"),
+            }
+
+            [calendar]
+        })]
+    };
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-layout",
+        &render,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let actual_bg = calendar_bg
+        .get()
+        .expect("calendar card-content background captured");
+    assert!(
+        color_to_rgba(actual_bg).a <= 0.001,
+        "expected transparent calendar bg inside CardContent, got {:?}",
+        color_to_rgba(actual_bg)
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_calendar_04_geometry_matches() {
     assert_calendar_single_month_variant_geometry_matches_web("calendar-04");
 }

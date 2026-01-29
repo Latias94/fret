@@ -206,14 +206,18 @@ Evidence anchors:
   (`[[data-slot=popover-content]_&]:bg-transparent` / `[[data-slot=card-content]_&]:bg-transparent`).
   In Fret, this is modeled as a "surface slot" context installed by the `Popover` recipe for its
   content subtree (see `ecosystem/fret-ui-shadcn/src/surface_slot.rs`, `ecosystem/fret-ui-shadcn/src/popover.rs`).
-  CardContent propagation is still TODO (we currently gate only the popover path).
+  CardContent propagation is modeled via `fret_ui_shadcn::card::card_content` (provider-based, for
+  cases where descendants need to observe `data-slot=card-content` semantics). This path currently
+  has a contract gate (transparent background within the scope), but no dedicated shadcn-web page
+  is extracted yet to compare against.
 
 Evidence anchors:
 
 - Goldens: `goldens/shadcn-web/v4/new-york-v4/calendar-*.json`
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
   (`assert_calendar_single_month_variant_geometry_matches_web`, `web_vs_fret_layout_calendar_01_background_matches_web`,
-  `web_vs_fret_layout_calendar_22_open_background_matches_web`)
+  `web_vs_fret_layout_calendar_22_open_background_matches_web`,
+  `web_vs_fret_layout_calendar_background_transparent_in_card_content_scope`)
 
 ## Charts (wrapper UI + interaction snapshots)
 

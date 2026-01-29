@@ -8,6 +8,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
+use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 
 fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme.color_required("card");
@@ -93,6 +94,18 @@ where
     Card::new(f(cx)).into_element(cx)
 }
 
+pub fn card_content<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
+        CardContent::new(f(cx)).into_element(cx)
+    })
+}
+
 #[derive(Debug, Clone)]
 pub struct CardHeader {
     children: Vec<AnyElement>,
@@ -144,12 +157,14 @@ impl CardContent {
             LayoutRefinement::default().w_full(),
         );
         let children = self.children;
-        shadcn_layout::container_vstack(
-            cx,
-            props,
-            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
-            children,
-        )
+        with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+                children,
+            )
+        })
     }
 }
 
