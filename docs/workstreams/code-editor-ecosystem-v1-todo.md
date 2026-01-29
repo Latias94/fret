@@ -169,7 +169,7 @@ Evidence anchors:
 - [~] Incremental update strategy (best-effort; visible window prioritized).
 - [x] Materialize spans only for visible rows.
 - [x] Expose a UI Gallery toggle for manual validation.
-- [ ] Theme changes update paint-only styles without reshaping.
+- [x] Theme changes update paint-only styles without reshaping.
 
 ---
 

@@ -274,8 +274,82 @@ impl AttributedText {
         Self { text, spans }
     }
 
+    /// Returns true if `self` and `other` have identical shaping-relevant content.
+    ///
+    /// This intentionally ignores paint-only fields (e.g. colors, underlines). It is useful for
+    /// caching/layout decisions where theme-driven paint changes should not force reshaping.
+    pub fn shaping_eq(&self, other: &Self) -> bool {
+        if self.text != other.text {
+            return false;
+        }
+        if self.spans.len() != other.spans.len() {
+            return false;
+        }
+        self.spans
+            .iter()
+            .zip(other.spans.iter())
+            .all(|(a, b)| a.len == b.len && a.shaping == b.shaping)
+    }
+
     pub fn is_valid(&self) -> bool {
         spans_are_valid(self.text.as_ref(), self.spans.as_ref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn attributed_text_shaping_eq_ignores_paint() {
+        let text: Arc<str> = Arc::<str>::from("hello");
+        let base = TextSpan {
+            len: text.len(),
+            shaping: Default::default(),
+            paint: Default::default(),
+        };
+
+        let mut spans_a = vec![base.clone()];
+        spans_a[0].paint.fg = Some(Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        });
+        let mut spans_b = vec![base];
+        spans_b[0].paint.fg = Some(Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        });
+
+        let a = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_a));
+        let b = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_b));
+        assert_ne!(a, b, "full equality should include paint");
+        assert!(
+            a.shaping_eq(&b),
+            "shaping_eq should ignore paint-only changes"
+        );
+    }
+
+    #[test]
+    fn attributed_text_shaping_eq_detects_shaping_changes() {
+        let text: Arc<str> = Arc::<str>::from("hello");
+        let spans_a = vec![TextSpan {
+            len: text.len(),
+            shaping: Default::default(),
+            paint: Default::default(),
+        }];
+        let mut spans_b = spans_a.clone();
+        spans_b[0].shaping.weight = Some(FontWeight(700));
+
+        let a = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_a));
+        let b = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_b));
+        assert!(
+            !a.shaping_eq(&b),
+            "shaping_eq must treat shaping changes as unequal"
+        );
     }
 }
 
