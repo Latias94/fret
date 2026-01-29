@@ -2893,6 +2893,69 @@ fn web_find_active_element_chrome(theme: &WebGoldenTheme) -> WebHighlightedNodeC
     WebHighlightedNodeChrome { bg, fg }
 }
 
+fn web_find_menu_item_chrome_by_slot_variant_and_text(
+    theme: &WebGoldenTheme,
+    item_slot: &str,
+    variant: &str,
+    text: &str,
+) -> WebHighlightedNodeChrome {
+    fn collect<'a>(
+        node: &'a WebNode,
+        item_slot: &str,
+        variant: &str,
+        text: &str,
+        out: &mut Vec<&'a WebNode>,
+    ) {
+        let is_menuitem = node
+            .attrs
+            .get("role")
+            .is_some_and(|v| v.as_str() == "menuitem");
+        let is_item_slot = node
+            .attrs
+            .get("data-slot")
+            .is_some_and(|v| v.as_str() == item_slot);
+        let is_variant = node
+            .attrs
+            .get("data-variant")
+            .is_some_and(|v| v.as_str() == variant);
+        let has_text = node.text.as_deref() == Some(text);
+        if is_menuitem && is_item_slot && is_variant && has_text {
+            out.push(node);
+        }
+        for child in &node.children {
+            collect(child, item_slot, variant, text, out);
+        }
+    }
+
+    let mut candidates: Vec<&WebNode> = Vec::new();
+    collect(&theme.root, item_slot, variant, text, &mut candidates);
+    for portal in &theme.portals {
+        collect(portal, item_slot, variant, text, &mut candidates);
+    }
+    for wrapper in &theme.portal_wrappers {
+        collect(wrapper, item_slot, variant, text, &mut candidates);
+    }
+
+    let node = candidates.first().copied().unwrap_or_else(|| {
+        panic!("web menu item not found: slot={item_slot} variant={variant:?} text={text:?}")
+    });
+
+    let bg = node
+        .computed_style
+        .get("backgroundColor")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web menu item backgroundColor");
+    let fg = node
+        .computed_style
+        .get("color")
+        .map(String::as_str)
+        .and_then(parse_css_color)
+        .expect("web menu item color");
+
+    WebHighlightedNodeChrome { bg, fg }
+}
+
 fn web_find_highlighted_listbox_option_chrome(
     theme: &WebGoldenTheme,
     item_slot: &str,
@@ -7077,6 +7140,190 @@ fn web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches
 #[test]
 fn web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web_dark() {
     assert_context_menu_submenu_destructive_focused_item_chrome_matches_web(
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+fn assert_context_menu_submenu_destructive_item_idle_fg_matches_web(
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open("context-menu-demo.submenu-kbd");
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_menu_item_chrome_by_slot_variant_and_text(
+        theme,
+        "context-menu-item",
+        "destructive",
+        "Delete",
+    );
+    assert!(
+        expected.bg.a <= 0.01,
+        "context-menu-demo.submenu-kbd {web_theme_name}: expected destructive item bg to be transparent, got={expected:?}"
+    );
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1440.0), Px(900.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(false);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(true);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
+        .expect("context-menu trigger semantics node");
+
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let (snap2, _) = render_context_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        &open,
+        checked_bookmarks.clone(),
+        checked_full_urls.clone(),
+        radio_person.clone(),
+    );
+
+    let more_tools = snap2
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"))
+        .expect("context-menu More Tools item semantics node");
+    ui.set_focus(Some(more_tools.id));
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+
+    // Settle the submenu open motion.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(500 + tick),
+            tick + 1 == settle_frames,
+            |cx| {
+                vec![build_shadcn_context_menu_demo(
+                    cx,
+                    &open,
+                    checked_bookmarks.clone(),
+                    checked_full_urls.clone(),
+                    radio_person.clone(),
+                )]
+            },
+        );
+    }
+
+    let snap3 = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot after submenu open")
+        .clone();
+    let delete = snap3
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Delete"))
+        .expect("context-menu submenu destructive Delete item semantics node");
+    assert!(
+        !delete.flags.focused,
+        "context-menu-demo.submenu-kbd {web_theme_name}: expected Delete to be idle (not focused)"
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(600),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (_, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let text = find_best_text_color_near(
+        &scene,
+        delete.bounds,
+        leftish_text_probe_point(delete.bounds),
+    )
+    .unwrap_or_else(|| {
+        panic!(
+            "context-menu-demo.submenu-kbd {web_theme_name}: destructive idle menu item text color"
+        )
+    });
+    assert_rgba_close(
+        &format!(
+            "context-menu-demo.submenu-kbd {web_theme_name} destructive idle menu item text color"
+        ),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_destructive_item_idle_fg_matches_web() {
+    assert_context_menu_submenu_destructive_item_idle_fg_matches_web(
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_destructive_item_idle_fg_matches_web_dark() {
+    assert_context_menu_submenu_destructive_item_idle_fg_matches_web(
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );

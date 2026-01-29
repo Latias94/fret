@@ -57,6 +57,7 @@ Evidence anchors:
 - Hovered/highlighted item chrome (bg/fg): **Gated** (`*.highlight-first.open.json`)
 - Keyboard roving focus visuals (focused item bg/fg): **Gated** (`*.focus-first.open.json`)
 - Destructive variant focus tint (bg/fg): **Gated** (`context-menu-demo.submenu-kbd-delete-focus.open.json`)
+- Destructive variant idle fg (no highlight): **Gated** (`context-menu-demo.submenu-kbd.open.json`)
 
 Evidence anchors:
 
