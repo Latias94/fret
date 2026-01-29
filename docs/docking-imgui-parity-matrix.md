@@ -530,26 +530,29 @@ The rule of thumb:
   - Why this must be crate-owned:
     - Prevents every app/demo from reinventing idempotency and close-on-empty.
 
-- [~] **A single “driver-facing” integration surface**
-  - Today demos manually call the `handle_*` helpers.
-  - Proposed (v1) facade API:
+- [x] **A single “driver-facing” integration surface**
+  - Implemented (v1) facade API:
     - `fret_docking::DockingRuntime` (pure helper object, no platform code):
-      - `on_dock_effect(app, DockOp)` (wraps `handle_dock_op`)
+      - `on_dock_op(app, DockOp)` (wraps `handle_dock_op`)
       - `on_window_created(app, &CreateWindowRequest, new_window)`
-      - `before_close_window(app, closing_window, main_window)`
-  - Goal:
-    - Demos become one-liners, and the facade becomes the stable public API.
+      - `before_close_window(app, closing_window)` (merges into the configured main window)
+  - Evidence anchors:
+    - `ecosystem/fret-docking/src/facade.rs` (`DockingRuntime`)
+    - `apps/fret-examples/src/docking_demo.rs` (uses `DockingRuntime`)
+    - `apps/fret-examples/src/docking_arbitration_demo.rs` (uses `DockingRuntime`)
 
-- [~] **A “mount contract” helper for `DockSpace`**
+- [x] **A “mount contract” helper for `DockSpace`**
   - Requirement (ADR 0072):
     - Create one `DockSpace` per window and keep it alive.
     - Ensure it is attached into the UI tree so hit-testing can descend.
-  - Proposed (v1) helper:
+  - Implemented (v1) helper:
     - `fret_docking::mount_dock_space(ui, window) -> DockSpaceMount`
-      - returns `{ dock_space: NodeId, root: NodeId }` or similar
-      - ensures `ui.set_children(root, ...)` is correct by construction
+      - creates a dock space node and mounts it as the UI root
+    - `fret_docking::mount_dock_space_with_test_id(...)`
   - Why crate-owned:
     - Prevents the class of bugs where a demo lays out a node but forgets to wire parent/children.
+  - Evidence anchors:
+    - `ecosystem/fret-docking/src/dock/mod.rs` (`mount_dock_space(...)`, `DockSpaceMount`)
 
 - [~] **Optional: a structured diagnostic stream**
   - Proposed `DockingDiagnostics`:

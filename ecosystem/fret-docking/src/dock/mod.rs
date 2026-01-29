@@ -116,5 +116,41 @@ pub fn create_dock_space_node_with_test_id<H: UiHost>(
     ui.create_node_retained(DockSpace::new(window).with_semantics_test_id(test_id))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DockSpaceMount {
+    pub root: NodeId,
+    pub dock_space: NodeId,
+}
+
+/// Create a dock space node and mount it as the UI root.
+///
+/// This helper exists to prevent integration bugs where a dock space node is created but never
+/// mounted into the tree (which would break hit testing and internal drag routing).
+pub fn mount_dock_space<H: UiHost>(
+    ui: &mut fret_ui::UiTree<H>,
+    window: fret_core::AppWindowId,
+) -> DockSpaceMount {
+    let dock_space = create_dock_space_node(ui, window);
+    ui.set_root(dock_space);
+    DockSpaceMount {
+        root: dock_space,
+        dock_space,
+    }
+}
+
+/// `mount_dock_space(...)` variant that also sets a semantics test id.
+pub fn mount_dock_space_with_test_id<H: UiHost>(
+    ui: &mut fret_ui::UiTree<H>,
+    window: fret_core::AppWindowId,
+    test_id: &'static str,
+) -> DockSpaceMount {
+    let dock_space = create_dock_space_node_with_test_id(ui, window, test_id);
+    ui.set_root(dock_space);
+    DockSpaceMount {
+        root: dock_space,
+        dock_space,
+    }
+}
+
 #[cfg(test)]
 mod tests;
