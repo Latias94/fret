@@ -6735,12 +6735,22 @@ fn preview_overlay(
                             .toggle_model(popover_open.clone())
                             .into_element(cx);
 
-                        shadcn::PopoverContent::new(vec![
-                            cx.text("Popover content"),
-                            open_dialog,
-                            close,
-                        ])
-                        .into_element(cx)
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::from("ui-gallery-popover-content")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    shadcn::PopoverContent::new(vec![
+                                        cx.text("Popover content"),
+                                        open_dialog,
+                                        close,
+                                    ])
+                                    .into_element(cx),
+                                ]
+                            },
+                        )
                     },
                 );
 
@@ -6754,27 +6764,39 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::DialogContent::new(vec![
-                        shadcn::DialogHeader::new(vec![
-                            shadcn::DialogTitle::new("Dialog").into_element(cx),
-                            shadcn::DialogDescription::new("Escape / overlay click closes")
+                    cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            test_id: Some(Arc::from("ui-gallery-dialog-content")),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                shadcn::DialogContent::new(vec![
+                                    shadcn::DialogHeader::new(vec![
+                                        shadcn::DialogTitle::new("Dialog").into_element(cx),
+                                        shadcn::DialogDescription::new(
+                                            "Escape / overlay click closes",
+                                        )
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    shadcn::DialogFooter::new(vec![
+                                        shadcn::Button::new("Close")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("ui-gallery-dialog-close")
+                                            .toggle_model(dialog_open.clone())
+                                            .into_element(cx),
+                                        shadcn::Button::new("Confirm")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-dialog-confirm")
+                                            .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
                                 .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::DialogFooter::new(vec![
-                            shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .test_id("ui-gallery-dialog-close")
-                                .toggle_model(dialog_open.clone())
-                                .into_element(cx),
-                            shadcn::Button::new("Confirm")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .test_id("ui-gallery-dialog-confirm")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx)
+                            ]
+                        },
+                    )
                 },
             );
 
@@ -6788,27 +6810,43 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::AlertDialogContent::new(vec![
-                        shadcn::AlertDialogHeader::new(vec![
-                            shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                    cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            test_id: Some(Arc::from("ui-gallery-alert-dialog-content")),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                shadcn::AlertDialogContent::new(vec![
+                                    shadcn::AlertDialogHeader::new(vec![
+                                        shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                                            .into_element(cx),
+                                        shadcn::AlertDialogDescription::new(
+                                            "This is non-closable by overlay click.",
+                                        )
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    shadcn::AlertDialogFooter::new(vec![
+                                        shadcn::AlertDialogCancel::new(
+                                            "Cancel",
+                                            alert_dialog_open.clone(),
+                                        )
+                                        .test_id("ui-gallery-alert-dialog-cancel")
+                                        .into_element(cx),
+                                        shadcn::AlertDialogAction::new(
+                                            "Continue",
+                                            alert_dialog_open.clone(),
+                                        )
+                                        .test_id("ui-gallery-alert-dialog-action")
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
                                 .into_element(cx),
-                            shadcn::AlertDialogDescription::new(
-                                "This is non-closable by overlay click.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::AlertDialogFooter::new(vec![
-                            shadcn::AlertDialogCancel::new("Cancel", alert_dialog_open.clone())
-                                .test_id("ui-gallery-alert-dialog-cancel")
-                                .into_element(cx),
-                            shadcn::AlertDialogAction::new("Continue", alert_dialog_open.clone())
-                                .test_id("ui-gallery-alert-dialog-action")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx)
+                            ]
+                        },
+                    )
                 },
             );
 
@@ -6820,26 +6858,38 @@ fn preview_overlay(
                     |cx| {
                         shadcn::Button::new("Sheet")
                             .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-sheet-trigger")
                             .toggle_model(sheet_open.clone())
                             .into_element(cx)
                     },
                     |cx| {
-                        shadcn::SheetContent::new(vec![
-                            shadcn::SheetHeader::new(vec![
-                                shadcn::SheetTitle::new("Sheet").into_element(cx),
-                                shadcn::SheetDescription::new("A modal side panel.")
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::from("ui-gallery-sheet-content")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    shadcn::SheetContent::new(vec![
+                                        shadcn::SheetHeader::new(vec![
+                                            shadcn::SheetTitle::new("Sheet").into_element(cx),
+                                            shadcn::SheetDescription::new("A modal side panel.")
+                                                .into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                        shadcn::SheetFooter::new(vec![
+                                            shadcn::Button::new("Close")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .test_id("ui-gallery-sheet-close")
+                                                .toggle_model(sheet_open.clone())
+                                                .into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                    ])
                                     .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::SheetFooter::new(vec![
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(sheet_open.clone())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
+                                ]
+                            },
+                        )
                     },
                 );
 
@@ -6934,22 +6984,32 @@ fn preview_overlay(
                 cx,
                 stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
                 |cx| {
+                    let theme = Theme::global(&*cx.app).clone();
+                    let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
+
+                    let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
+                        let layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.flex(
+                            fret_ui::element::FlexProps {
+                                layout,
+                                direction: fret_core::Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::Start,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: true,
+                            },
+                            |_cx| children,
+                        )
+                    };
+
                     vec![
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [dropdown, context_menu, overlay_reset],
-                        ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [tooltip, hover_card, popover, underlay, dialog],
-                        ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [alert_dialog, sheet],
-                        ),
+                        row(cx, vec![dropdown, context_menu, overlay_reset]),
+                        row(cx, vec![tooltip, hover_card, popover, underlay, dialog]),
+                        row(cx, vec![alert_dialog, sheet]),
                         portal_geometry,
                     ]
                 },

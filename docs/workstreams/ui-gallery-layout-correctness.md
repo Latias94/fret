@@ -152,6 +152,8 @@ Implementation note:
   - Resizable/split panel wrappers and handle rows
 - [ ] Add a lightweight “page-sweep” script that visits a few core pages and asserts `bounds_within_window` for `ui-gallery-page-*` roots.
   - Current coverage (kept intentionally small): `intro`, `layout`, `scroll_area`, `tabs`, `accordion`, `overlay`, `resizable`.
+- [ ] Add an overlay regression script that opens key modals/popovers and asserts bounds:
+  - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
 - [ ] For each new P0 issue:
   - [ ] Add a `tools/diag-scripts/ui-gallery-...json` repro (navigate + wait_until + bounds assertions + `capture_bundle` + `capture_screenshot`).
   - [ ] Add minimal hot-region `test_id` anchors (prefer `cx.semantics` wrappers; do not overload a11y labels).
