@@ -261,23 +261,30 @@ Legend:
 - [ ] Review ADR 0193 and confirm crate split and v1 baseline (windowed surface first).
 - [ ] Review ADR 0194 and confirm the preferred seam:
   - window-scoped `InputContext.text_boundary_mode` + override stack.
-- [ ] Review ADR 0195 and confirm web strategy:
+- [x] Review ADR 0195 and confirm web strategy:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation rules,
   - proxy mode (no full document mirroring).
 
 ### 1) Web runner IME bridge (ADR 0195)
 
-- [ ] Define DOM element strategy: textarea creation, attach layer, z-order and isolation.
-- [ ] Define focus lifecycle and mapping to `Effect::ImeAllow`.
-- [ ] Define caret anchoring mapping to `Effect::ImeSetCursorArea` (best-effort, mobile-leaning).
-- [ ] Define event translation and suppression rules:
+- [~] Define DOM element strategy: textarea creation, attach layer, z-order and isolation (global element today; per-window attachment TBD).
+- [x] Define focus lifecycle and mapping to `Effect::ImeAllow`.
+- [x] Define caret anchoring mapping to `Effect::ImeSetCursorArea` (best-effort, mobile-leaning).
+- [x] Define event translation and suppression rules:
   - `beforeinput` → `TextInput` (filtered),
   - `composition*` → `ImeEvent`,
   - command-dispatch suppression to avoid double insert.
-- [ ] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
+- [x] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
 - [ ] Add debug-only counters/logging for bridge behavior (last inputType, suppression reason, focused state).
-- [ ] Add a web harness page (or demo mode) dedicated to IME conformance.
+- [x] Add a web harness page (or demo mode) dedicated to IME conformance.
+
+Evidence anchors:
+
+- `crates/fret-platform-web/src/wasm.rs` (`WebImeBridge`, `WebPlatformServices::handle_effects`)
+- `crates/fret-core/src/utf.rs` (`utf16_range_to_utf8_byte_range`)
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_web_ime_harness`)
 
 ### 2) Word boundaries seam (ADR 0194)
 

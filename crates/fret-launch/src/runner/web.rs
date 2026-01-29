@@ -236,7 +236,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.dnd.external_payload = fret_runtime::ExternalDragPayloadKind::None;
         available.dnd.external_position = fret_runtime::ExternalDragPositionQuality::None;
         available.ime.enabled = true;
-        available.ime.set_cursor_area = false;
+        available.ime.set_cursor_area = true;
         available.fs.real_paths = false;
         available.fs.file_dialogs = true;
         available.shell.open_url = true;
@@ -1016,30 +1016,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         fret_core::CursorIcon::RowResize => winit::cursor::CursorIcon::RowResize,
                     };
                     window.set_cursor(Cursor::Icon(cursor));
-                }
-                Effect::ImeAllow {
-                    window: target,
-                    enabled,
-                } => {
-                    if target != self.app_window {
-                        continue;
-                    }
-                    let dirty = self.platform.set_ime_allowed(enabled);
-                    if dirty {
-                        self.platform.prepare_frame(window);
-                    }
-                }
-                Effect::ImeSetCursorArea {
-                    window: target,
-                    rect,
-                } => {
-                    if target != self.app_window {
-                        continue;
-                    }
-                    let dirty = self.platform.set_ime_cursor_area(rect);
-                    if dirty {
-                        self.platform.prepare_frame(window);
-                    }
                 }
                 Effect::ImageRegisterRgba8 {
                     window: target_window,

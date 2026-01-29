@@ -36,6 +36,7 @@ pub struct WebPlatformServices {
     timers: HashMap<TimerToken, WebTimer>,
     file_dialogs: Rc<RefCell<WebFileDialogState>>,
     ime: Option<WebImeBridge>,
+    last_ime_cursor_area: Option<fret_core::Rect>,
     waker: Option<WebWaker>,
 }
 
@@ -502,12 +503,18 @@ impl WebPlatformServices {
                             self.queued_events.clone(),
                             self.waker.clone(),
                         );
+                        if let Some(bridge) = self.ime.as_mut()
+                            && let Some(rect) = self.last_ime_cursor_area
+                        {
+                            bridge.set_cursor_area(rect);
+                        }
                     }
                     if let Some(bridge) = self.ime.as_mut() {
                         bridge.set_enabled(enabled);
                     }
                 }
                 Effect::ImeSetCursorArea { rect, .. } => {
+                    self.last_ime_cursor_area = Some(rect);
                     if let Some(bridge) = self.ime.as_mut() {
                         bridge.set_cursor_area(rect);
                     }

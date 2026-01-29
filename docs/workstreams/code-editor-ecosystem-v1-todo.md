@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-01-27
+Last updated: 2026-01-29
 
 This is the checkbox tracker companion to:
 
@@ -27,11 +27,11 @@ Legend:
 - [ ] Review ADR 0193 and confirm crate split and v1 baseline (windowed surface first).
 - [ ] Review ADR 0194 and confirm the preferred seam:
   - window-scoped `InputContext.text_boundary_mode` + override stack.
-- [ ] Review ADR 0195 and confirm web strategy:
+- [x] Review ADR 0195 and confirm web strategy:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation,
   - proxy mode (no full document mirroring).
-- [ ] Add 1–3 evidence anchors per ADR (file paths / tests) once implementation starts.
+- [~] Add 1–3 evidence anchors per ADR (file paths / tests) once implementation starts.
 
 ---
 
