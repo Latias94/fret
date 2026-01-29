@@ -3,9 +3,10 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{hit_test_split_handle, hit_test_tab, tab_scroll_for_node};
+use super::layout::dock_hint_rects_with_font;
 use super::layout::{
-    active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
-    drop_zone_rect, float_zone, hidden_bounds, split_tab_bar,
+    active_panel_content_bounds, compute_layout_map, dock_space_regions, float_zone, hidden_bounds,
+    split_tab_bar,
 };
 use super::manager::DockManager;
 use super::paint::{
@@ -532,6 +533,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &fret_core::Event) {
         let theme = cx.theme().snapshot();
+        let font_size = theme.metric_required("font.size");
 
         let mut pending_effects: Vec<Effect> = Vec::new();
         let mut pending_redraws: Vec<fret_core::AppWindowId> = Vec::new();
@@ -552,13 +554,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
             grab_offset: Point,
             start_tick: fret_runtime::TickId,
             tear_off_requested: bool,
+            dock_previews_enabled: bool,
         }
 
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         enum DockDropCandidateKind {
             TabBar,
             Hint(DropZone),
-            Edge(DropZone),
             FallbackCenter,
         }
 
@@ -571,11 +573,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 DockDropCandidateKind::Hint(DropZone::Right) => 4,
                 DockDropCandidateKind::Hint(DropZone::Top) => 5,
                 DockDropCandidateKind::Hint(DropZone::Bottom) => 6,
-                DockDropCandidateKind::Edge(DropZone::Left) => 10,
-                DockDropCandidateKind::Edge(DropZone::Right) => 11,
-                DockDropCandidateKind::Edge(DropZone::Top) => 12,
-                DockDropCandidateKind::Edge(DropZone::Bottom) => 13,
-                DockDropCandidateKind::Edge(DropZone::Center) => 14,
                 DockDropCandidateKind::FallbackCenter => 255,
             };
 
@@ -591,6 +588,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             layout: &HashMap<DockNodeId, Rect>,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            font_size: Px,
             position: Point,
         ) -> Option<HoverTarget> {
             #[derive(Debug, Clone, Copy)]
@@ -637,29 +635,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                 );
 
-                for (zone, hint_rect) in dock_hint_rects(rect) {
+                for (zone, hint_rect) in dock_hint_rects_with_font(rect, font_size, false) {
                     let hint_id = candidate_id(node, DockDropCandidateKind::Hint(zone));
                     idx.push_rect(
                         hint_id,
                         hint_rect,
                         20,
-                        false,
-                        HoverKind::Zone { tabs: node, zone },
-                    );
-                }
-
-                for zone in [
-                    DropZone::Left,
-                    DropZone::Right,
-                    DropZone::Top,
-                    DropZone::Bottom,
-                ] {
-                    let edge_rect = drop_zone_rect(rect, zone);
-                    let edge_id = candidate_id(node, DockDropCandidateKind::Edge(zone));
-                    idx.push_rect(
-                        edge_id,
-                        edge_rect,
-                        10,
                         false,
                         HoverKind::Zone { tabs: node, zone },
                     );
@@ -763,6 +744,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            font_size: Px,
             position: Point,
         ) -> Option<DockDropTarget> {
             if !window_bounds.contains(position) || float_zone(dock_bounds).contains(position) {
@@ -776,7 +758,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
 
             let layout = compute_layout_map(graph, layout_root, layout_bounds);
-            dock_drop_target_via_dnd(graph, &layout, tab_scroll, tab_widths, position)
+            dock_drop_target_via_dnd(graph, &layout, tab_scroll, tab_widths, font_size, position)
                 .map(DockDropTarget::Dock)
         }
 
@@ -790,6 +772,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            font_size: Px,
             position: Point,
         ) -> Option<DockDropTarget> {
             if invert_docking {
@@ -805,6 +788,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     window_bounds,
                     tab_scroll,
                     tab_widths,
+                    font_size,
                     position,
                 )
             })
@@ -950,6 +934,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     grab_offset: p.grab_offset,
                     start_tick: p.start_tick,
                     tear_off_requested: p.tear_off_requested,
+                    dock_previews_enabled: p.dock_previews_enabled,
                 })
         });
         let has_pending_dock_drag = self.pending_dock_drags.contains_key(&pointer_id);
@@ -1353,6 +1338,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         && let Some(pending) =
                                             self.pending_dock_drags.remove(&pointer_id)
                                     {
+                                        let wants_dock_previews = docking_interaction_settings
+                                            .drag_inversion
+                                            .wants_dock_previews(*modifiers);
                                         start_dock_drag = Some((
                                             pending.start,
                                             DockPanelDragPayload {
@@ -1360,6 +1348,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
                                                 tear_off_requested: false,
+                                                dock_previews_enabled: wants_dock_previews,
                                             },
                                             *position,
                                         ));
@@ -1979,14 +1968,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     },
                     fret_core::Event::InternalDrag(e) => {
                         let position = e.position;
-                        let wants_dock_previews = docking_interaction_settings
-                            .drag_inversion
-                            .wants_dock_previews(e.modifiers);
-                        let invert_docking = !wants_dock_previews;
                         match e.kind {
                             fret_core::InternalDragKind::Enter
                             | fret_core::InternalDragKind::Over => {
                                 if let Some(drag) = dock_drag.as_ref() {
+                                    let invert_docking = !drag.dock_previews_enabled;
                                     let prev_hover = dock.hover.clone();
                                     let mut dragging = drag.dragging;
                                     if drag.source_window == self.window {
@@ -2051,6 +2037,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 window_bounds,
                                                 &self.tab_scroll,
                                                 &self.tab_widths,
+                                                font_size,
                                                 position,
                                             );
                                         }
@@ -2077,6 +2064,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             fret_core::InternalDragKind::Drop => {
                                 let prev_hover = dock.hover.clone();
                                 if let Some(drag) = dock_drag.as_ref() {
+                                    let invert_docking = !drag.dock_previews_enabled;
                                     let mut dragging = drag.dragging;
                                     if !dragging && drag.source_window != self.window {
                                         dragging = true;
@@ -2093,6 +2081,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             window_bounds,
                                             &self.tab_scroll,
                                             &self.tab_widths,
+                                            font_size,
                                             position,
                                         );
                                         let intent = resolve_dock_drop_intent(

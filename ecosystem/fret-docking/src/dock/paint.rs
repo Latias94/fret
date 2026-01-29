@@ -3,7 +3,7 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{tab_close_rect, tab_scroll_for_node};
-use super::layout::{dock_hint_rects, drop_zone_rect, split_tab_bar};
+use super::layout::{dock_hint_rects_with_font, drop_zone_rect, split_tab_bar};
 use super::manager::DockManager;
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
@@ -434,7 +434,8 @@ pub(super) fn paint_drop_hints(
         return;
     };
 
-    let hint_rects = dock_hint_rects(rect);
+    let font_size = theme.metric_required("font.size");
+    let hint_rects = dock_hint_rects_with_font(rect, font_size, false);
 
     let inactive_bg_base = theme.color_required("card");
     let inactive_border_base = theme.color_required("border");

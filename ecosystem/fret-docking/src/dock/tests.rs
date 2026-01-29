@@ -1,6 +1,6 @@
 use super::hit_test::hit_test_drop_target;
 use super::layout::{
-    active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
+    active_panel_content_bounds, compute_layout_map, dock_hint_rects_with_font, dock_space_regions,
     split_tab_bar,
 };
 use super::prelude_core::*;
@@ -2182,6 +2182,7 @@ fn dock_space_kicks_paint_cache_on_drag_transition_for_cache_root() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
@@ -2229,6 +2230,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = harness.app.drag_mut(fret_core::PointerId(0)) {
@@ -2829,6 +2831,172 @@ fn docking_tab_drag_threshold_is_configurable_via_settings() {
 }
 
 #[test]
+fn dock_drag_latches_dock_preview_policy_on_activation() {
+    let settings = fret_runtime::DockingInteractionSettings {
+        tab_drag_threshold: Px(0.0),
+        drag_inversion: fret_runtime::DockDragInversionSettings {
+            modifier: fret_runtime::DockDragInversionModifier::Ctrl,
+            policy: fret_runtime::DockDragInversionPolicy::DockOnlyWhenModifier,
+        },
+        ..Default::default()
+    };
+
+    // Case 1: drag starts without modifier, then modifier changes during drag.
+    // The "dock previews enabled" flag must be latched at activation, not recomputed per event.
+    {
+        let mut harness = DockViewportHarness::new();
+        harness.layout();
+        harness.app.set_global(settings);
+
+        let tab_pos = harness.tab_point(0);
+        harness.ui.dispatch_event(
+            &mut harness.app,
+            &mut harness.text,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: tab_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let _ = harness.app.take_effects();
+
+        harness.ui.dispatch_event(
+            &mut harness.app,
+            &mut harness.text,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                position: tab_pos,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let _ = harness.app.take_effects();
+
+        let dock_previews_enabled = harness
+            .app
+            .drag(fret_core::PointerId(0))
+            .and_then(|d| {
+                d.payload::<DockPanelDragPayload>()
+                    .map(|p| p.dock_previews_enabled)
+            })
+            .expect("expected an active dock drag session");
+        assert!(
+            !dock_previews_enabled,
+            "expected docking previews to be disabled without modifier"
+        );
+
+        let position = Point::new(Px(400.0), Px(300.0));
+        harness.ui.dispatch_event(
+            &mut harness.app,
+            &mut harness.text,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind: InternalDragKind::Over,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+
+        let hover = harness
+            .app
+            .global::<DockManager>()
+            .and_then(|d| d.hover.clone());
+        assert!(
+            matches!(hover, Some(DockDropTarget::Float { window }) if window == harness.window),
+            "expected latched preview state to keep hover as Float even when modifier changes, got: {hover:?}",
+        );
+    }
+
+    // Case 2: drag starts with modifier, then modifier is released. Must remain dock-enabled.
+    {
+        let mut harness = DockViewportHarness::new();
+        harness.layout();
+        harness.app.set_global(settings);
+
+        let tab_pos = harness.tab_point(0);
+        harness.ui.dispatch_event(
+            &mut harness.app,
+            &mut harness.text,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: tab_pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let _ = harness.app.take_effects();
+
+        harness.ui.dispatch_event(
+            &mut harness.app,
+            &mut harness.text,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                position: tab_pos,
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    ..Default::default()
+                },
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let _ = harness.app.take_effects();
+
+        let dock_previews_enabled = harness
+            .app
+            .drag(fret_core::PointerId(0))
+            .and_then(|d| {
+                d.payload::<DockPanelDragPayload>()
+                    .map(|p| p.dock_previews_enabled)
+            })
+            .expect("expected an active dock drag session");
+        assert!(
+            dock_previews_enabled,
+            "expected docking previews to be enabled with modifier"
+        );
+
+        let position = Point::new(Px(400.0), Px(300.0));
+        harness.ui.dispatch_event(
+            &mut harness.app,
+            &mut harness.text,
+            &Event::InternalDrag(InternalDragEvent {
+                position,
+                kind: InternalDragKind::Over,
+                modifiers: Modifiers::default(),
+                pointer_id: fret_core::PointerId(0),
+            }),
+        );
+
+        let hover = harness
+            .app
+            .global::<DockManager>()
+            .and_then(|d| d.hover.clone());
+        assert!(
+            matches!(hover, Some(DockDropTarget::Dock(_))),
+            "expected latched preview state to keep hover as Dock even when modifier is released, got: {hover:?}",
+        );
+    }
+}
+
+#[test]
 fn dock_drag_requests_animation_frames_while_dragging() {
     let mut harness = DockViewportHarness::new();
     harness.layout();
@@ -2843,6 +3011,7 @@ fn dock_drag_requests_animation_frames_while_dragging() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = harness.app.drag_mut(fret_core::PointerId(0)) {
@@ -3151,6 +3320,7 @@ fn dock_drag_suppresses_viewport_capture_start_for_other_pointer() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     let _ = harness.app.take_effects();
@@ -3395,6 +3565,7 @@ fn dock_tab_drop_outside_window_requests_float() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
@@ -3465,6 +3636,7 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
@@ -3555,6 +3727,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
@@ -3628,6 +3801,7 @@ fn dock_tab_drop_outside_window_floats_in_window_when_multi_window_is_disabled()
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
@@ -3705,6 +3879,7 @@ fn dock_tab_drop_outside_routes_to_dock_space() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            dock_previews_enabled: true,
         },
     );
     if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
@@ -3752,7 +3927,7 @@ fn dock_drop_hint_rects_can_select_zone() {
     layout.insert(tabs, rect);
     let tab_scroll = std::collections::HashMap::new();
 
-    for (expected, hint_rect) in dock_hint_rects(rect) {
+    for (expected, hint_rect) in dock_hint_rects_with_font(rect, Px(13.0), false) {
         if expected == DropZone::Center {
             continue;
         }
@@ -3879,6 +4054,7 @@ fn dock_tab_drop_emits_insert_index_based_on_over_tab_halves() {
                 grab_offset: Point::new(Px(0.0), Px(0.0)),
                 start_tick: fret_runtime::TickId(0),
                 tear_off_requested: false,
+                dock_previews_enabled: true,
             },
         );
         if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
@@ -3989,6 +4165,7 @@ fn dock_tab_drop_reorders_tabs_when_applying_move_panel() {
                 grab_offset: Point::new(Px(0.0), Px(0.0)),
                 start_tick: fret_runtime::TickId(0),
                 tear_off_requested: false,
+                dock_previews_enabled: true,
             },
         );
         if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {

@@ -77,7 +77,7 @@ Docking UI + hit testing + previews:
   - `ecosystem/fret-docking/src/dock/space.rs` (`DockSpace`)
 - Drop target resolution:
   - `ecosystem/fret-docking/src/dock/hit_test.rs`
-  - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects`, `drop_zone_rect`, `float_zone`)
+  - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `drop_zone_rect`, `float_zone`)
 - Paint and preview overlays:
   - `ecosystem/fret-docking/src/dock/paint.rs`
 - Tab geometry:
@@ -593,9 +593,12 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
 ## Phase A (P0): Correctness + stable contracts
 
 1) **Latch dock preview mode at drag start**
-   - Today Fret recomputes “dock previews enabled” from modifiers every `InternalDrag` event.
-   - For parity and determinism, latch at drag start:
-     - record `{ dock_previews_enabled: bool }` into the drag payload or a global drag state table.
+   - [x] Implemented: latch at drag activation and store `dock_previews_enabled` in the drag payload.
+   - Rationale: avoids mid-drag mode flips from modifier jitter and keeps target resolution deterministic.
+   - Evidence:
+     - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload`)
+     - `ecosystem/fret-docking/src/dock/space.rs` (drag activation writes the flag; internal drag reads it)
+     - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_latches_dock_preview_policy_on_activation`)
 
 2) **Unify drop target selection into a single, explicit algorithm**
    - ImGui’s behavior is driven by explicit drop rect hit-testing (`DockNodePreviewDockSetup`).
@@ -606,6 +609,10 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
    - For parity work, consider:
      - making one “drop rect set” the source of truth (pad + optional outer docking),
      - and deriving edge splits from that rather than having two competing mechanisms.
+   - [~] Partially implemented: drop selection now uses ImGui-style direction-pad rects + tab-bar rects as the
+     primary source of truth; edge-strip candidates are no longer used for selecting a drop zone.
+   - Notes:
+     - `drop_zone_rect(...)` still uses edge thickness for the *preview overlay* when a zone is selected.
 
 3) **Add conformance tests that pin the chosen target**
    - Add tests for:
@@ -668,15 +675,17 @@ These numbers are the fastest way to explain why something “feels off”.
     - `hs_h = trunc(hs_for_central_nodes * 0.80)`
     - `off = trunc(vec2(parent_w * 0.5 - hs_h, parent_h * 0.5 - hs_h))`
 
-- Fret (from `dock_hint_rects`):
-  - `size = clamp(min_dim * 0.095, 34, 56)`
-  - `gap = clamp(size * 0.35, 10, 16)`
-  - `step = size + gap` (offset to left/right/top/bottom hints)
+- Fret:
+  - Implemented to match the ImGui formulas (inner/outer switch supported in geometry helper):
+    - `ecosystem/fret-docking/src/dock/layout.rs`: `dock_hint_rects_with_font(rect, font_size, outer_docking)`
+  - Uses `font.size` from the theme as the `FontSize` equivalent:
+    - `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
 
 ## Edge strip sizing
 
 - Fret (from `dock_drop_edge_thickness`):
   - `thickness = clamp(min_dim * 0.30, 20, 120)` (capped with an additional `min_dim * 0.44` clamp)
+  - Note: edge strips are no longer used as drop-zone candidates; they remain an overlay geometry helper.
 
 ---
 

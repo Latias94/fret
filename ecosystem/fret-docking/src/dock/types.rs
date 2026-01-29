@@ -10,6 +10,7 @@ pub(super) struct DockPanelDragPayload {
     pub(super) grab_offset: Point,
     pub(super) start_tick: TickId,
     pub(super) tear_off_requested: bool,
+    pub(super) dock_previews_enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

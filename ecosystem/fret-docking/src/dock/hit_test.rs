@@ -2,9 +2,9 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::layout::split_tab_bar;
 #[cfg(test)]
-use super::layout::{dock_drop_edge_thickness, dock_hint_rects};
+use super::layout::dock_hint_rects_with_font;
+use super::layout::split_tab_bar;
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
@@ -86,7 +86,7 @@ pub(super) fn hit_test_drop_target(
 
         // ImGui-style direction-pad hit targets near the center of the hovered dock node.
         // This makes split docking discoverable and avoids requiring the cursor to be near edges.
-        for (zone, hint_rect) in dock_hint_rects(rect) {
+        for (zone, hint_rect) in dock_hint_rects_with_font(rect, Px(13.0), false) {
             if hint_rect.contains(position) {
                 return Some(HoverTarget {
                     tabs: node,
@@ -96,29 +96,9 @@ pub(super) fn hit_test_drop_target(
             }
         }
 
-        let thickness = dock_drop_edge_thickness(rect).0;
-        let left = position.x.0 - rect.origin.x.0;
-        let right = rect.origin.x.0 + rect.size.width.0 - position.x.0;
-        let top = position.y.0 - rect.origin.y.0;
-        let bottom = rect.origin.y.0 + rect.size.height.0 - position.y.0;
-
-        let mut zone = DropZone::Center;
-        let mut best = thickness;
-        for (candidate, dist) in [
-            (DropZone::Left, left),
-            (DropZone::Right, right),
-            (DropZone::Top, top),
-            (DropZone::Bottom, bottom),
-        ] {
-            if dist < best {
-                best = dist;
-                zone = candidate;
-            }
-        }
-
         return Some(HoverTarget {
             tabs: node,
-            zone,
+            zone: DropZone::Center,
             insert_index: None,
         });
     }

@@ -148,32 +148,65 @@ pub(super) fn float_zone(bounds: Rect) -> Rect {
     }
 }
 
-pub(super) fn dock_hint_rects(rect: Rect) -> [(DropZone, Rect); 5] {
-    // Match the mental model of ImGui docking: an explicit 5-way “direction pad” near the
-    // center of the hovered dock node. Hit-testing uses the same rects.
-    let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
-    let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
+pub(super) fn dock_hint_rects_with_font(
+    rect: Rect,
+    font_size: Px,
+    outer_docking: bool,
+) -> [(DropZone, Rect); 5] {
+    // Align with Dear ImGui docking branch mental model:
+    // - compute a 5-way “direction pad” around the center of the hovered dock node,
+    // - with sizing derived from font size and panel size,
+    // - and a distinct geometry for "outer docking" (bigger targets spaced further out).
+    //
+    // Reference:
+    // - `repo-ref/imgui/imgui.cpp`: `DockNodeCalcDropRectsAndTestMousePos(...)`
+    let parent_smaller_axis = rect.size.width.0.min(rect.size.height.0);
+    let font = font_size.0.max(0.0);
+    let hs_for_central_nodes = (font * 1.5).min((font * 0.5).max(parent_smaller_axis / 8.0));
 
-    let min_dim = rect.size.width.0.min(rect.size.height.0);
-    // Scale targets up on larger panels to make split docking feel effortless (Unity/ImGui-like),
-    // while keeping it usable on small panels.
-    let size = Px((min_dim * 0.095).clamp(34.0, 56.0));
-    let gap = Px((size.0 * 0.35).clamp(10.0, 16.0));
-    let step = Px(size.0 + gap.0);
-
-    let mk = |dx: f32, dy: f32| -> Rect {
-        Rect::new(
-            Point::new(Px(cx + dx - size.0 * 0.5), Px(cy + dy - size.0 * 0.5)),
-            Size::new(size, size),
-        )
+    let (hs_w, hs_h, off_x, off_y) = if outer_docking {
+        let hs_w = (hs_for_central_nodes * 1.50).trunc();
+        let hs_h = (hs_for_central_nodes * 0.80).trunc();
+        let off_x = (rect.size.width.0 * 0.5 - hs_h).trunc();
+        let off_y = (rect.size.height.0 * 0.5 - hs_h).trunc();
+        (hs_w, hs_h, off_x, off_y)
+    } else {
+        let hs_w = hs_for_central_nodes.trunc();
+        let hs_h = (hs_for_central_nodes * 0.90).trunc();
+        let off = (hs_w * 2.40).trunc();
+        (hs_w, hs_h, off, off)
     };
 
+    let cx = (rect.origin.x.0 + rect.size.width.0 * 0.5).trunc();
+    let cy = (rect.origin.y.0 + rect.size.height.0 * 0.5).trunc();
+
+    let center = Rect::new(
+        Point::new(Px(cx - hs_w), Px(cy - hs_w)),
+        Size::new(Px(hs_w * 2.0), Px(hs_w * 2.0)),
+    );
+    let left = Rect::new(
+        Point::new(Px(cx - off_x - hs_h), Px(cy - hs_w)),
+        Size::new(Px(hs_h * 2.0), Px(hs_w * 2.0)),
+    );
+    let right = Rect::new(
+        Point::new(Px(cx + off_x - hs_h), Px(cy - hs_w)),
+        Size::new(Px(hs_h * 2.0), Px(hs_w * 2.0)),
+    );
+    let top = Rect::new(
+        Point::new(Px(cx - hs_w), Px(cy - off_y - hs_h)),
+        Size::new(Px(hs_w * 2.0), Px(hs_h * 2.0)),
+    );
+    let bottom = Rect::new(
+        Point::new(Px(cx - hs_w), Px(cy + off_y - hs_h)),
+        Size::new(Px(hs_w * 2.0), Px(hs_h * 2.0)),
+    );
+
     [
-        (DropZone::Center, mk(0.0, 0.0)),
-        (DropZone::Left, mk(-step.0, 0.0)),
-        (DropZone::Right, mk(step.0, 0.0)),
-        (DropZone::Top, mk(0.0, -step.0)),
-        (DropZone::Bottom, mk(0.0, step.0)),
+        (DropZone::Center, center),
+        (DropZone::Left, left),
+        (DropZone::Right, right),
+        (DropZone::Top, top),
+        (DropZone::Bottom, bottom),
     ]
 }
 
