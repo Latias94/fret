@@ -62,7 +62,8 @@ pub use input::{
     TextBoundaryMode, format_chord, format_sequence,
 };
 pub use interaction_diagnostics::{
-    DockDragDiagnostics, DockingInteractionDiagnostics, ViewportCaptureDiagnostics,
+    DockDragDiagnostics, DockDropResolveDiagnostics, DockDropResolveSource,
+    DockDropTargetDiagnostics, DockingInteractionDiagnostics, ViewportCaptureDiagnostics,
     WindowInteractionDiagnosticsStore,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};

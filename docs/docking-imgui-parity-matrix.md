@@ -502,12 +502,18 @@ Open parity question:
     - has debug logging macros (e.g. `IMGUI_DEBUG_LOG_DOCKING`) and internal debug windows.
   - Fret:
     - macOS: `FRET_DOCK_TEAROFF_LOG=1` + `FRET_MACOS_CURSOR_TRACE=1` writes to `target/fret-dock-tearoff.log`.
-    - Needs a cross-platform, structured “drop target resolve trace” toggle for:
-      - window-local cursor position
-      - candidate rects selected
-      - chosen zone + reason (pad vs edge)
-  - Suggested future hook:
-    - A lightweight, capability-gated diagnostic stream similar to `Event::ImageUpdateApplied` policy (ADR 0126 style).
+    - Implemented (v1): a structured per-frame “drop target resolve” snapshot recorded into
+      `WindowInteractionDiagnosticsStore` while a dock drag is active:
+      - cursor position (window-local)
+      - window/dock bounds
+      - resolved target (tabs/zone/outer/insert_index)
+      - resolution source (`TabBar`, `InnerHintRect`, `OuterHintRect`, etc.)
+    - Remaining gap:
+      - record full candidate rect sets (all hint rects + any gating decisions), not just the final pick.
+  - Evidence anchors:
+    - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockDropResolveDiagnostics`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (writes diagnostics during internal drag hover)
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_records_drop_target_diagnostics_for_inner_left_hint_rect`)
 
 ---
 
