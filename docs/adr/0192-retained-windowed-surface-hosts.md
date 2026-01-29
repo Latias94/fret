@@ -1,6 +1,6 @@
 # ADR 0192: Retained Windowed Surface Hosts (Sliver-Style, GPUI/Flutter-Aligned)
 
-Status: Proposed
+Status: Accepted (v0 fixed-height hosts; extended coverage in progress)
 
 ## Context
 
@@ -117,4 +117,3 @@ Scripted harnesses (fretboard diag bundles) SHOULD include:
 - Flutter slivers / retained element lifecycle:
   - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`_InactiveElements`, `finalizeTree`)
   - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`
-
