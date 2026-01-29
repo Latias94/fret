@@ -340,7 +340,7 @@ Supported selectors (v1 MVP):
 - `move_pointer`
 - `drag_pointer` (optional `button`, `steps`)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
-- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
+- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`, `a-z`, `0-9`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
