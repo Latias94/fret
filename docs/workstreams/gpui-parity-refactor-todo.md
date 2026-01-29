@@ -752,6 +752,8 @@ topics (if/when we implement them):
       - Scripts:
         - `tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json`
         - `tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json`
+      - Keyboard nav/typeahead (not yet scripted via diagnostics):
+        - `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`, `RetainedTableKeyboardNavState`)
       - Gate (suite): `fretboard diag suite ui-gallery-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0 --check-stale-paint ui-gallery-table-retained-row-0 ...`
       - Evidence bundles (cache+shell, release):
         - `target/fret-diag-table-retained-suite-shell1/1769653530154-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
