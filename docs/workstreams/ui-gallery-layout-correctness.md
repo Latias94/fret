@@ -138,6 +138,7 @@ These are the most common “editor UI” failure modes, expressed in tailwind l
   - Scroll areas used inside flex stacks
   - Cards/dialogs/sheets/popovers content wrappers
   - Resizable/split panel wrappers and handle rows
+- [ ] Add a lightweight “page-sweep” script that visits a few core pages and asserts `bounds_within_window` for `ui-gallery-page-*` roots.
 - [ ] For each new P0 issue:
   - [ ] Add a `tools/diag-scripts/ui-gallery-...json` repro (navigate + wait_until + bounds assertions + `capture_bundle` + `capture_screenshot`).
   - [ ] Add minimal hot-region `test_id` anchors (prefer `cx.semantics` wrappers; do not overload a11y labels).

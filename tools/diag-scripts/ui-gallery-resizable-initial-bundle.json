@@ -36,7 +36,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-resizable-panels" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-resizable" }
       },
       "timeout_frames": 240
     },
@@ -44,8 +44,8 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-resizable-panels" },
-        "padding_px": 4.0
+        "target": { "kind": "test_id", "id": "ui-gallery-page-resizable" },
+        "padding_px": 0.0
       },
       "timeout_frames": 240
     },

@@ -266,6 +266,8 @@ pub(crate) fn content_view(
     let bisect = ui_gallery_bisect_flags();
 
     let (title, origin, docs_md, usage_md) = page_meta(selected);
+    let page_test_id: Arc<str> =
+        Arc::from(format!("ui-gallery-page-{}", selected.replace('_', "-")));
 
     let header = stack::hstack(
         cx,
@@ -464,15 +466,23 @@ pub(crate) fn content_view(
     };
 
     cx.named("ui_gallery.content_view_root", |cx| {
-        cx.container(
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
-                    .p(Space::N6),
-                LayoutRefinement::default().w_full().h_full(),
-            ),
-            |_cx| [content],
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(page_test_id),
+                ..Default::default()
+            },
+            move |cx| {
+                [cx.container(
+                    decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(theme.color_required("background")))
+                            .p(Space::N6),
+                        LayoutRefinement::default().w_full().h_full(),
+                    ),
+                    |_cx| [content],
+                )]
+            },
         )
     })
 }
