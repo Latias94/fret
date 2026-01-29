@@ -829,7 +829,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        let t0 = std::time::Instant::now();
+        let t0 = fret_core::time::Instant::now();
         let Ok(uploaded_bytes) = super::yuv_gpu::write_nv12_rect(
             &gfx.ctx.queue,
             planes,
@@ -1160,7 +1160,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     ) {
                         continue;
                     }
-                    let t0 = std::time::Instant::now();
+                    let t0 = fret_core::time::Instant::now();
                     match super::yuv::nv12_to_rgba8_rect(super::yuv::Nv12ToRgba8RectInput {
                         width,
                         height,
@@ -1229,7 +1229,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 } => {
                     stats.yuv_conversions_attempted =
                         stats.yuv_conversions_attempted.saturating_add(1);
-                    let t0 = std::time::Instant::now();
+                    let t0 = fret_core::time::Instant::now();
                     match super::yuv::i420_to_rgba8_rect(super::yuv::I420ToRgba8RectInput {
                         width,
                         height,
