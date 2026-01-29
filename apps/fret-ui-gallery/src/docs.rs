@@ -356,6 +356,24 @@ use fret_ui_kit::declarative::tree::tree_view;
 ```
 "#;
 
+pub(crate) const DOC_TABLE_RETAINED_TORTURE: &str = r#"
+## Table (retained torture harness)
+
+This page is a baseline for the **UI Kit table surface** running on the virt-003 retained host path (ADR 0192).
+
+It exists to validate:
+
+- overscan window boundary updates reconcile attach/detach deltas (without notify-based dirty views),
+- header sorting + row selection remain correct under cache-root reuse,
+- scripted regressions stay stable as we migrate more of the full table surface into retained hosts (GPUI-MVP5-eco-002).
+"#;
+
+pub(crate) const USAGE_TABLE_RETAINED_TORTURE: &str = r#"
+```rust
+use fret_ui_kit::declarative::table::table_virtualized_retained_v0;
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 

@@ -600,6 +600,7 @@ fn page_preview(
         }
         PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
+        PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -6124,6 +6125,161 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
     vec![header, cx.container(container_props, |_cx| vec![tree])]
+}
+
+fn preview_table_retained_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+
+    #[derive(Clone)]
+    struct TableRow {
+        id: u64,
+        name: Arc<str>,
+        status: Arc<str>,
+        cpu: u32,
+        mem_mb: u32,
+    }
+
+    #[derive(Default)]
+    struct TableTortureModels {
+        data: Option<Arc<[TableRow]>>,
+        columns: Option<Arc<[ColumnDef<TableRow>]>>,
+        state: Option<Model<TableState>>,
+    }
+
+    let (data, columns, state) = cx.with_state(TableTortureModels::default, |st| {
+        (st.data.clone(), st.columns.clone(), st.state.clone())
+    });
+
+    let (data, columns, state) = match (data, columns, state) {
+        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+        _ => {
+            let mut rows: Vec<TableRow> = Vec::with_capacity(50_000);
+            for i in 0..50_000u64 {
+                rows.push(TableRow {
+                    id: i,
+                    name: Arc::from(format!("Row {i}")),
+                    status: Arc::from(if i % 3 == 0 {
+                        "idle"
+                    } else if i % 3 == 1 {
+                        "busy"
+                    } else {
+                        "offline"
+                    }),
+                    cpu: ((i * 7) % 100) as u32,
+                    mem_mb: (128 + (i % 4096)) as u32,
+                });
+            }
+            let data: Arc<[TableRow]> = Arc::from(rows);
+
+            let cols: Vec<ColumnDef<TableRow>> = vec![
+                ColumnDef::new("name").sort_by(|a: &TableRow, b: &TableRow| a.name.cmp(&b.name)),
+                ColumnDef::new("status")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.status.cmp(&b.status)),
+                ColumnDef::new("cpu%").sort_by(|a: &TableRow, b: &TableRow| a.cpu.cmp(&b.cpu)),
+                ColumnDef::new("mem_mb")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.mem_mb.cmp(&b.mem_mb)),
+            ];
+            let columns: Arc<[ColumnDef<TableRow>]> = Arc::from(cols);
+
+            let state = cx.app.models_mut().insert(TableState::default());
+
+            cx.with_state(TableTortureModels::default, |st| {
+                st.data = Some(data.clone());
+                st.columns = Some(columns.clone());
+                st.state = Some(state.clone());
+            });
+
+            (data, columns, state)
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text(
+                    "Goal: baseline harness for `fret-ui-kit::declarative::table` running on the virt-003 retained host path.",
+                ),
+                cx.text(
+                    "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
+                ),
+            ]
+        },
+    );
+
+    let table =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-table-retained-torture-root")),
+                    ..Default::default()
+                },
+                |cx| {
+                    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+                    let state_revision = cx.app.models().revision(&state).unwrap_or(0);
+                    let items_revision = 1 ^ state_revision.rotate_left(17);
+
+                    let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
+                    props.overscan = 10;
+                    props.row_height = Some(Px(28.0));
+                    props.row_measure_mode =
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed;
+                    props.enable_column_grouping = false;
+                    props.enable_column_resizing = false;
+
+                    let header_label =
+                        Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
+                    let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
+                    let cell_at = Arc::new(
+                        |cx: &mut ElementContext<'_, App>,
+                         col: &ColumnDef<TableRow>,
+                         row: &TableRow| {
+                            match col.id.as_ref() {
+                                "name" => cx.text(row.name.as_ref()),
+                                "status" => cx.text(row.status.as_ref()),
+                                "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                _ => cx.text("?"),
+                            }
+                        },
+                    );
+
+                    vec![
+                        fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                            cx,
+                            data.clone(),
+                            columns.clone(),
+                            state.clone(),
+                            &scroll_handle,
+                            items_revision,
+                            row_key_at,
+                            props,
+                            header_label,
+                            cell_at,
+                            Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
+                            Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+                        ),
+                    ]
+                },
+            )]
+        });
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![header, cx.container(container_props, |_cx| vec![table])]
 }
 
 fn preview_data_grid(

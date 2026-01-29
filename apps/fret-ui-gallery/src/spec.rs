@@ -108,6 +108,7 @@ pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
     "windowed_rows_surface_interactive_torture";
 pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
+pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
@@ -171,6 +172,8 @@ pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_interactive_torture";
 pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
 pub(crate) const CMD_NAV_TREE_TORTURE: &str = "ui_gallery.nav.select.tree_torture";
+pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
+    "ui_gallery.nav.select.table_retained_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
@@ -513,6 +516,23 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_TREE_TORTURE,
                 docs::USAGE_TREE_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_TABLE_RETAINED_TORTURE,
+                "Table (Retained Torture)",
+                "UI Kit Table / Retained Host Harness",
+                "fret-ui-kit (virt-003 retained table v0)",
+                CMD_NAV_TABLE_RETAINED_TORTURE,
+                &[
+                    "table",
+                    "virtualized",
+                    "retained",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_TABLE_RETAINED_TORTURE,
+                docs::USAGE_TABLE_RETAINED_TORTURE,
             ),
         ],
     },
