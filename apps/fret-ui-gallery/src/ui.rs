@@ -842,6 +842,14 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             ]
         },
     );
+    let grid = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-grid")),
+            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-grid")),
+            ..Default::default()
+        },
+        move |_cx| [grid],
+    );
 
     let note = {
         let props = decl_style::container_props(
@@ -856,6 +864,14 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             vec![cx.text("Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.")]
         })
     };
+    let note = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-note")),
+            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-note")),
+            ..Default::default()
+        },
+        move |_cx| [note],
+    );
 
     vec![grid, note]
 }

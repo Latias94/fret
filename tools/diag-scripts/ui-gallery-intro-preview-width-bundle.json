@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "wait_frames", "n": 120 },
+    { "type": "capture_bundle", "label": "ui-gallery-intro-preview-width" }
+  ]
+}
+

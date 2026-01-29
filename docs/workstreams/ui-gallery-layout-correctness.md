@@ -59,6 +59,7 @@ Use `fretboard diag compare`:
 | ID | Severity | Page | Symptom | Repro Script | Status | Owner | Notes |
 |---|---:|---|---|---|---|---|---|
 | L1 | P0 | `resizable` | Resizable panel group height looks wrong (ignores the intended `h_px(320)` in the demo; can collapse to ~0 when parent height is indefinite). | `tools/diag-scripts/ui-gallery-resizable-initial-bundle.json` | Fixed (pending merge) | codex | Evidence bundles: `.fret/diag-resizable-bundle/1769674921459-ui-gallery-resizable-initial/frame.bmp` (before) vs `.fret/diag-resizable-bundle/1769675245065-ui-gallery-resizable-initial/frame.bmp` (after). Debug label: `SemanticsProps.label="Debug:ui-gallery:resizable-panels"`, `test_id="ui-gallery-resizable-panels"`. |
+| L2 | P0 | `intro` | “Core / UI Kit / Shadcn” preview cards (and the note) can be laid out wider than the window (tab panel expands to max-content width). | `tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json` | Fixed (pending merge) | codex | Debug anchors: `label="Debug:ui-gallery:intro:preview-grid"`, `test_id="ui-gallery-intro-preview-grid"` and `label="Debug:ui-gallery:intro:preview-note"`, `test_id="ui-gallery-intro-preview-note"`. |
 
 ### L1 Notes (Resizable Panels)
 
@@ -67,6 +68,15 @@ Use `fretboard diag compare`:
 - Fix: only default to Fill when the caller did not specify width/height; do not force
   `props.layout.size` to Fill/Fill.
 - Regression: `ecosystem/fret-ui-shadcn/tests/resizable_panel_group_layout.rs`.
+
+### L2 Notes (Intro Preview Width / Tabs TabPanel)
+
+- Root cause: `fret-ui-shadcn` `TabsContent` / `TabPanel` was auto-sized (shrink-wrapped), so
+  max-content descendants could force the tab panel wider than its parent.
+- Fix: make `TabsContent` default to `w_full().min_w_0()` (and keep optional `flex_1()` when
+  `content_fill_remaining` is enabled).
+- Regression: keep `tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json` anchored via
+  `ui-gallery-intro-preview-grid` / `ui-gallery-intro-preview-note` test IDs.
 
 ## 4) Next Actions
 
