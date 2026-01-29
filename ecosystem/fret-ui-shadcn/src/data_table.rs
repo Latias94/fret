@@ -133,6 +133,7 @@ impl DataTable {
         get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
         header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
         cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+        debug_header_cell_test_id_prefix: Option<Arc<str>>,
         debug_row_test_id_prefix: Option<Arc<str>>,
     ) -> AnyElement
     where
@@ -213,6 +214,7 @@ impl DataTable {
                     view_props,
                     header_label,
                     cell_at,
+                    debug_header_cell_test_id_prefix,
                     debug_row_test_id_prefix,
                 ),
             ]
