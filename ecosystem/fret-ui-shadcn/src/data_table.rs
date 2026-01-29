@@ -211,6 +211,7 @@ impl DataTable {
                     &scroll_handle,
                     items_revision,
                     row_key_at,
+                    None,
                     view_props,
                     header_label,
                     cell_at,
