@@ -3830,6 +3830,29 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             )
                         }
 
+                        fn distance2_point_to_rect(point: Point, rect: Rect) -> f32 {
+                            let x0 = rect.origin.x.0;
+                            let y0 = rect.origin.y.0;
+                            let x1 = x0 + rect.size.width.0;
+                            let y1 = y0 + rect.size.height.0;
+
+                            let dx = if point.x.0 < x0 {
+                                x0 - point.x.0
+                            } else if point.x.0 > x1 {
+                                point.x.0 - x1
+                            } else {
+                                0.0
+                            };
+                            let dy = if point.y.0 < y0 {
+                                y0 - point.y.0
+                            } else if point.y.0 > y1 {
+                                point.y.0 - y1
+                            } else {
+                                0.0
+                            };
+                            dx * dx + dy * dy
+                        }
+
                         if float_zone(dock_bounds).contains(position) || !bounds.contains(position)
                         {
                             return None;
@@ -3837,14 +3860,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                         let mut layout_root = root;
                         let mut layout_bounds = dock_bounds;
+                        let mut layout_ctx = &root_layout;
                         let mut effective_position = position;
-                        for (floating, chrome, _layout) in floating_layouts.iter().rev() {
+                        for (floating, chrome, layout) in floating_layouts.iter().rev() {
                             if chrome.close_button.contains(position) {
                                 continue;
                             }
                             if chrome.outer.contains(position) {
                                 layout_root = floating.floating;
                                 layout_bounds = chrome.inner;
+                                layout_ctx = layout;
                                 effective_position = if chrome.title_bar.contains(position) {
                                     let projected = Point::new(
                                         Px(chrome.inner.origin.x.0
@@ -3863,29 +3888,29 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             return None;
                         }
 
-                        let mut best: Option<(DockNodeId, f32)> = None;
-                        for (&node_id, &rect) in layout_all.iter() {
-                            if !rect.contains(effective_position) {
-                                continue;
-                            }
+                        let mut best: Option<(DockNodeId, f32, f32)> = None;
+                        for (&node_id, &rect) in layout_ctx.iter() {
                             let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
                                 continue;
                             };
                             if tabs.is_empty() {
                                 continue;
                             }
+                            let dist2 = distance2_point_to_rect(effective_position, rect);
                             let area = rect.size.width.0 * rect.size.height.0;
                             match best {
-                                None => best = Some((node_id, area)),
-                                Some((_best_node, best_area)) => {
-                                    if area < best_area {
-                                        best = Some((node_id, area));
+                                None => best = Some((node_id, dist2, area)),
+                                Some((_best_node, best_dist2, best_area)) => {
+                                    let better = dist2 < best_dist2
+                                        || (dist2 == best_dist2 && area < best_area);
+                                    if better {
+                                        best = Some((node_id, dist2, area));
                                     }
                                 }
                             }
                         }
 
-                        best.map(|(leaf_tabs, _area)| DockDropHints {
+                        best.map(|(leaf_tabs, _dist2, _area)| DockDropHints {
                             root: layout_root,
                             leaf_tabs,
                         })
