@@ -24,15 +24,35 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
     }
 
     let q_lower = q.to_ascii_lowercase();
-    if item.label.to_ascii_lowercase().contains(&q_lower) {
+    let q_norm: String = q_lower
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
+
+    let matches_norm = |haystack: &str| {
+        if q_norm.is_empty() {
+            return false;
+        }
+        let norm: String = haystack
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        norm.contains(&q_norm)
+    };
+
+    if item.id.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.id) {
         return true;
     }
-    if item.origin.to_ascii_lowercase().contains(&q_lower) {
+    if item.label.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.label) {
+        return true;
+    }
+    if item.origin.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.origin) {
         return true;
     }
     item.tags
         .iter()
-        .any(|t| t.to_ascii_lowercase().contains(&q_lower))
+        .any(|t| t.to_ascii_lowercase().contains(&q_lower) || matches_norm(t))
 }
 
 pub(crate) fn sidebar_view(
@@ -5940,6 +5960,7 @@ fn preview_data_table_torture(
                                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                                     _ => cx.text("?"),
                                 },
+                                Some(Arc::<str>::from("ui-gallery-data-table-header-")),
                                 Some(Arc::<str>::from("ui-gallery-data-table-row-")),
                             )
                     } else {
