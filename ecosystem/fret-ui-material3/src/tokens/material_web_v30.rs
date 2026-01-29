@@ -3,8 +3,8 @@
 // Source: Material Web v30 sassvars in `repo-ref\material-web\tokens\versions\v30_0\sass`
 
 use fret_core::{Corners, FontId, FontWeight, Px, TextSlant, TextStyle};
-use fret_ui::theme::CubicBezier;
 use fret_ui::ThemeConfig;
+use fret_ui::theme::CubicBezier;
 
 pub(crate) fn inject_sys_state(cfg: &mut ThemeConfig) {
     cfg.numbers.insert(

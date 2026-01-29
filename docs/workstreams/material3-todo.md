@@ -158,6 +158,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Add a token audit tool (coverage report vs code + material-web sassvars).
   - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (filters allowlisted Fret-only keys,
     expands format-string templates via `expand_key_templates`, excludes `src/bin` from runtime scans, filters typography-only sassvar keys).
+  - Notes: This audit treats Material Web v30 sassvars as the source of truth for key existence (unknown keys are flagged),
+    helping us avoid inventing Fret-only `md.*` keys during refactors.
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.

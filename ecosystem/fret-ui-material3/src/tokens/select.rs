@@ -58,14 +58,14 @@ pub(crate) fn container_corner(theme: &Theme, variant: SelectVariant) -> Corners
 }
 
 pub(crate) fn container_background(theme: &Theme, variant: SelectVariant, disabled: bool) -> Color {
-    let key = match (variant, disabled) {
-        (SelectVariant::Outlined, false) => "md.comp.outlined-select.text-field.container.color",
-        (SelectVariant::Outlined, true) => {
-            "md.comp.outlined-select.text-field.disabled.container.color"
-        }
-        (SelectVariant::Filled, false) => "md.comp.filled-select.text-field.container.color",
-        (SelectVariant::Filled, true) => {
-            "md.comp.filled-select.text-field.disabled.container.color"
+    let key = match variant {
+        SelectVariant::Outlined => "md.comp.outlined-select.text-field.container.color",
+        SelectVariant::Filled => {
+            if disabled {
+                "md.comp.filled-select.text-field.disabled.container.color"
+            } else {
+                "md.comp.filled-select.text-field.container.color"
+            }
         }
     };
     let mut color = theme
@@ -206,13 +206,11 @@ pub(crate) fn active_indicator(
 }
 
 pub(crate) fn input_text_style(theme: &Theme, variant: SelectVariant) -> Option<TextStyle> {
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.text-field.input-text",
-        SelectVariant::Filled => "md.comp.filled-select.text-field.input-text",
-    };
-    theme
-        .text_style_by_key(key)
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"))
+    let _ = variant;
+    // Material Web v30 models Select typography via `*.font/size/weight/tracking/line-height` and
+    // a `*.type` mixin token (not a scalar key). For now, use the canonical sys typescale and keep
+    // component-specific typography as a future import step.
+    theme.text_style_by_key("md.sys.typescale.body-large")
 }
 
 pub(crate) fn input_text_color(
@@ -409,13 +407,10 @@ pub(crate) fn menu_list_item_label_text_style(
     theme: &Theme,
     variant: SelectVariant,
 ) -> Option<TextStyle> {
-    let key = match variant {
-        SelectVariant::Outlined => "md.comp.outlined-select.menu.list-item.label-text",
-        SelectVariant::Filled => "md.comp.filled-select.menu.list-item.label-text",
-    };
-    theme
-        .text_style_by_key(key)
-        .or_else(|| theme.text_style_by_key("md.sys.typescale.label-large"))
+    let _ = variant;
+    // Material Web v30 `menu.list-item.label-text.type` is a mixin. The underlying scalars map to
+    // sys `body-large`, so use that as the stable default in v1.
+    theme.text_style_by_key("md.sys.typescale.body-large")
 }
 
 pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: SelectVariant) -> Color {

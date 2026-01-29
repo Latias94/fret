@@ -566,11 +566,11 @@ fn select_trigger_element<H: UiHost>(
 
                 let state_layer_target = if enabled && st.pressed {
                     theme
-                        .number_by_key("md.sys.state.pressed.state-layer.opacity")
+                        .number_by_key("md.sys.state.pressed.state-layer-opacity")
                         .unwrap_or(0.1)
                 } else if enabled && focused {
                     theme
-                        .number_by_key("md.sys.state.focus.state-layer.opacity")
+                        .number_by_key("md.sys.state.focus.state-layer-opacity")
                         .unwrap_or(0.1)
                 } else if hovered {
                     hover_opacity
@@ -579,7 +579,7 @@ fn select_trigger_element<H: UiHost>(
                 };
 
                 let ripple_base_opacity = theme
-                    .number_by_key("md.sys.state.pressed.state-layer.opacity")
+                    .number_by_key("md.sys.state.pressed.state-layer-opacity")
                     .unwrap_or(0.1);
                 let config = material_pressable_indication_config(theme, None);
                 let overlay = material_ink_layer_for_pressable(
@@ -984,24 +984,24 @@ fn select_list_item<H: UiHost>(
                     .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"));
                 let state_layer_target = if enabled && st.pressed {
                     theme
-                        .number_by_key("md.sys.state.pressed.state-layer.opacity")
+                        .number_by_key("md.sys.state.pressed.state-layer-opacity")
                         .unwrap_or(0.1)
                 } else if enabled && st.hovered {
                     theme
-                        .number_by_key("md.sys.state.hover.state-layer.opacity")
+                        .number_by_key("md.sys.state.hover.state-layer-opacity")
                         .unwrap_or(0.08)
                 } else if enabled
                     && st.focused
                     && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window))
                 {
                     theme
-                        .number_by_key("md.sys.state.focus.state-layer.opacity")
+                        .number_by_key("md.sys.state.focus.state-layer-opacity")
                         .unwrap_or(0.1)
                 } else {
                     0.0
                 };
                 let ripple_base_opacity = theme
-                    .number_by_key("md.sys.state.pressed.state-layer.opacity")
+                    .number_by_key("md.sys.state.pressed.state-layer-opacity")
                     .unwrap_or(0.1);
                 let config = material_pressable_indication_config(theme, None);
                 let overlay = material_ink_layer_for_pressable(
