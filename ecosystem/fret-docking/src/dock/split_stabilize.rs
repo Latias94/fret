@@ -153,6 +153,8 @@ pub(super) fn apply_same_axis_locks(
     layout_root: DockNodeId,
     layout_bounds: Rect,
     axis: Axis,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     locks: &[SplitSizeLock],
 ) {
     if locks.is_empty() {
@@ -160,7 +162,13 @@ pub(super) fn apply_same_axis_locks(
     }
 
     for lock in locks {
-        let layout = compute_layout_map(graph, layout_root, layout_bounds);
+        let layout = compute_layout_map(
+            graph,
+            layout_root,
+            layout_bounds,
+            split_handle_gap,
+            split_handle_hit_thickness,
+        );
         let Some(&bounds) = layout.get(&lock.split) else {
             continue;
         };
@@ -182,8 +190,8 @@ pub(super) fn apply_same_axis_locks(
             bounds,
             2,
             fractions,
-            DOCK_SPLIT_HANDLE_GAP,
-            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            split_handle_gap,
+            split_handle_hit_thickness,
             &[],
         );
         if computed.avail <= 0.0 || computed.mins.len() != 2 {

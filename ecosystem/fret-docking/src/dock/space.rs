@@ -717,6 +717,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
             font_size: Px,
+            split_handle_gap: Px,
+            split_handle_hit_thickness: Px,
             position: Point,
         ) -> Option<DockDropTarget> {
             if !window_bounds.contains(position) || float_zone(dock_bounds).contains(position) {
@@ -729,7 +731,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 return None;
             }
 
-            let layout = compute_layout_map(graph, layout_root, layout_bounds);
+            let layout = compute_layout_map(
+                graph,
+                layout_root,
+                layout_bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+            );
             dock_drop_target(
                 graph,
                 layout_root,
@@ -753,6 +761,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
             font_size: Px,
+            split_handle_gap: Px,
+            split_handle_hit_thickness: Px,
             position: Point,
         ) -> Option<DockDropTarget> {
             if invert_docking {
@@ -769,6 +779,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tab_scroll,
                     tab_widths,
                     font_size,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
                     position,
                 )
             })
@@ -930,6 +942,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::DockingInteractionSettings>()
             .copied()
             .unwrap_or_default();
+        let split_handle_gap = docking_interaction_settings.split_handle_gap;
+        let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let window_bounds = cx
             .app
             .global::<WindowMetricsService>()
@@ -1094,12 +1108,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 dock_bounds,
                                 *position,
                             );
-                            let layout =
-                                compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                            let layout = compute_layout_map(
+                                &dock.graph,
+                                layout_root,
+                                layout_bounds,
+                                split_handle_gap,
+                                split_handle_hit_thickness,
+                            );
                             if *button == fret_core::MouseButton::Left {
                                 if !handled
                                     && let Some(handle) =
-                                        hit_test_split_handle(&dock.graph, &layout, *position)
+                                        hit_test_split_handle(
+                                            &dock.graph,
+                                            &layout,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
+                                            *position,
+                                        )
                                 {
                                     let locks = compute_same_axis_locks_for_split_drag(
                                         &dock.graph,
@@ -1382,10 +1407,21 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         dock_bounds,
                                         *position,
                                     );
-                                    let layout =
-                                        compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                                    let layout = compute_layout_map(
+                                        &dock.graph,
+                                        layout_root,
+                                        layout_bounds,
+                                        split_handle_gap,
+                                        split_handle_hit_thickness,
+                                    );
                                     if let Some(handle) =
-                                        hit_test_split_handle(&dock.graph, &layout, *position)
+                                        hit_test_split_handle(
+                                            &dock.graph,
+                                            &layout,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
+                                            *position,
+                                        )
                                     {
                                         request_cursor = Some(match handle.axis {
                                             fret_core::Axis::Horizontal => {
@@ -1411,8 +1447,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         dock_bounds,
                                         *position,
                                     );
-                                    let layout =
-                                        compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                                    let layout = compute_layout_map(
+                                        &dock.graph,
+                                        layout_root,
+                                        layout_bounds,
+                                        split_handle_gap,
+                                        split_handle_hit_thickness,
+                                    );
                                     hit_test_tab(
                                         &dock.graph,
                                         &layout,
@@ -1466,8 +1507,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         children_len,
                                         &fractions_now,
                                         divider.handle.handle_ix,
-                                        DOCK_SPLIT_HANDLE_GAP,
-                                        DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+                                        split_handle_gap,
+                                        split_handle_hit_thickness,
                                         &[],
                                         divider.handle.grab_offset,
                                         *position,
@@ -1479,6 +1520,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             divider.layout_root,
                                             divider.layout_bounds,
                                             divider.handle.axis,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
                                             &divider.locks,
                                         );
                                         invalidate_layout = true;
@@ -1542,6 +1585,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             &dock.graph,
                                             layout_root,
                                             layout_bounds,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
                                         );
                                         let hit = hit_test_active_viewport_panel(
                                             &dock.graph,
@@ -1602,8 +1647,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 dock_bounds,
                                 *position,
                             );
-                            let layout =
-                                compute_layout_map(&dock.graph, layout_root, layout_bounds);
+                            let layout = compute_layout_map(
+                                &dock.graph,
+                                layout_root,
+                                layout_bounds,
+                                split_handle_gap,
+                                split_handle_hit_thickness,
+                            );
                             let mut scrolled_tabs = false;
                             for (&node_id, &rect) in &layout {
                                 let Some(DockNode::Tabs { tabs, active }) =
@@ -1781,7 +1831,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 request_pointer_capture = Some(None);
 
                                 let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                                let mut layout = compute_layout_map(&dock.graph, root, dock_bounds);
+                                let mut layout = compute_layout_map(
+                                    &dock.graph,
+                                    root,
+                                    dock_bounds,
+                                    split_handle_gap,
+                                    split_handle_hit_thickness,
+                                );
                                 if !layout.contains_key(&tabs_node) {
                                     for floating in dock.graph.floating_windows(self.window) {
                                         let chrome = Self::floating_chrome(floating.rect);
@@ -1789,6 +1845,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             &dock.graph,
                                             floating.floating,
                                             chrome.inner,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
                                         );
                                         if l.contains_key(&tabs_node) {
                                             layout = l;
@@ -1915,8 +1973,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     let (_chrome, dock_bounds) =
                                         dock_space_regions(self.last_bounds);
                                     if dock_bounds.contains(*position) {
-                                        let layout =
-                                            compute_layout_map(&dock.graph, root, dock_bounds);
+                                        let layout = compute_layout_map(
+                                            &dock.graph,
+                                            root,
+                                            dock_bounds,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
+                                        );
                                         if let Some(hit) = hit_test_active_viewport_panel(
                                             &dock.graph,
                                             &dock.panels,
@@ -2018,6 +2081,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 &self.tab_scroll,
                                                 &self.tab_widths,
                                                 font_size,
+                                                split_handle_gap,
+                                                split_handle_hit_thickness,
                                                 position,
                                             );
                                         }
@@ -2062,6 +2127,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             &self.tab_scroll,
                                             &self.tab_widths,
                                             font_size,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
                                             position,
                                         );
                                         let intent = resolve_dock_drop_intent(
@@ -2259,6 +2326,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
         cx.observe_model(&invalidation_model, Invalidation::Layout);
 
         self.last_bounds = cx.bounds;
+        let docking_interaction_settings = cx
+            .app
+            .global::<fret_runtime::DockingInteractionSettings>()
+            .copied()
+            .unwrap_or_default();
+        let split_handle_gap = docking_interaction_settings.split_handle_gap;
+        let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let hidden = hidden_bounds(Size::new(Px(0.0), Px(0.0)));
 
         fret_ui::internal_drag::set_route(
@@ -2278,12 +2352,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let dock = cx.app.global::<DockManager>()?;
             let root = dock.graph.window_root(self.window)?;
             let (_chrome, dock_bounds) = dock_space_regions(cx.bounds);
-            let mut layout = compute_layout_map(&dock.graph, root, dock_bounds);
+            let mut layout = compute_layout_map(
+                &dock.graph,
+                root,
+                dock_bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+            );
 
             for floating in dock.graph.floating_windows(self.window) {
                 let chrome = Self::floating_chrome(floating.rect);
-                let floating_layout =
-                    compute_layout_map(&dock.graph, floating.floating, chrome.inner);
+                let floating_layout = compute_layout_map(
+                    &dock.graph,
+                    floating.floating,
+                    chrome.inner,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                );
                 for (k, v) in floating_layout {
                     layout.insert(k, v);
                 }
@@ -2432,6 +2517,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let app = &mut *cx.app;
         let services = &mut *cx.services;
         let scene = &mut *cx.scene;
+        let docking_interaction_settings = app
+            .global::<fret_runtime::DockingInteractionSettings>()
+            .copied()
+            .unwrap_or_default();
+        let split_handle_gap = docking_interaction_settings.split_handle_gap;
+        let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let dock_drag_panel = app
             .find_drag_pointer_id(|d| {
                 d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
@@ -2448,7 +2539,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 return None;
             };
 
-            let root_layout = compute_layout_map(&dock.graph, root, dock_bounds);
+            let root_layout = compute_layout_map(
+                &dock.graph,
+                root,
+                dock_bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+            );
 
             let mut floating_layouts: Vec<(
                 fret_core::DockFloatingWindow,
@@ -2458,7 +2555,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let mut layout_all = root_layout.clone();
             for floating in dock.graph.floating_windows(self.window) {
                 let chrome = Self::floating_chrome(floating.rect);
-                let layout = compute_layout_map(&dock.graph, floating.floating, chrome.inner);
+                let layout = compute_layout_map(
+                    &dock.graph,
+                    floating.floating,
+                    chrome.inner,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                );
                 for (k, v) in layout.iter() {
                     layout_all.insert(*k, *v);
                 }
@@ -2642,6 +2745,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &dock.graph,
                 &layout_all,
                 self.divider_drag.as_ref().map(|d| d.handle.split),
+                split_handle_gap,
+                split_handle_hit_thickness,
                 scale_factor,
                 scene,
             );

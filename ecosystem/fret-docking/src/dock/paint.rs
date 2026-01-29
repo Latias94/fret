@@ -251,6 +251,8 @@ pub(super) fn paint_split_handles(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     active: Option<DockNodeId>,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     scale_factor: f32,
     scene: &mut Scene,
 ) {
@@ -271,8 +273,8 @@ pub(super) fn paint_split_handles(
             bounds,
             children.len(),
             fractions,
-            DOCK_SPLIT_HANDLE_GAP,
-            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            split_handle_gap,
+            split_handle_hit_thickness,
             &[],
         );
 
@@ -284,7 +286,7 @@ pub(super) fn paint_split_handles(
 
         let handle = ResizeHandle {
             axis: *axis,
-            hit_thickness: DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            hit_thickness: split_handle_hit_thickness,
             paint_device_px: 1.0,
         };
         for center in computed.handle_centers {

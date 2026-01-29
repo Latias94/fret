@@ -102,6 +102,8 @@ pub(super) fn hit_test_drop_target(
 pub(super) fn hit_test_split_handle(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     position: Point,
 ) -> Option<DividerDragState> {
     for (&node, &bounds) in layout.iter() {
@@ -125,8 +127,8 @@ pub(super) fn hit_test_split_handle(
             bounds,
             children.len(),
             fractions,
-            DOCK_SPLIT_HANDLE_GAP,
-            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            split_handle_gap,
+            split_handle_hit_thickness,
             &[],
         );
         for (handle_ix, rect) in computed.handle_hit_rects.iter().enumerate() {

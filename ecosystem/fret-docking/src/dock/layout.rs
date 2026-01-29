@@ -9,9 +9,18 @@ pub(super) fn compute_layout_map(
     graph: &DockGraph,
     root: DockNodeId,
     bounds: Rect,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
 ) -> std::collections::HashMap<DockNodeId, Rect> {
     let mut layout = std::collections::HashMap::new();
-    compute_layout_map_impl(graph, root, bounds, &mut layout);
+    compute_layout_map_impl(
+        graph,
+        root,
+        bounds,
+        split_handle_gap,
+        split_handle_hit_thickness,
+        &mut layout,
+    );
     layout
 }
 
@@ -19,6 +28,8 @@ fn compute_layout_map_impl(
     graph: &DockGraph,
     node: DockNodeId,
     bounds: Rect,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     out: &mut std::collections::HashMap<DockNodeId, Rect>,
 ) {
     let Some(n) = graph.node(node) else {
@@ -42,16 +53,30 @@ fn compute_layout_map_impl(
                 bounds,
                 count,
                 fractions,
-                DOCK_SPLIT_HANDLE_GAP,
-                DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+                split_handle_gap,
+                split_handle_hit_thickness,
                 &[],
             );
             for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
-                compute_layout_map_impl(graph, child, rect, out);
+                compute_layout_map_impl(
+                    graph,
+                    child,
+                    rect,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    out,
+                );
             }
         }
         DockNode::Floating { child } => {
-            compute_layout_map_impl(graph, *child, bounds, out);
+            compute_layout_map_impl(
+                graph,
+                *child,
+                bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                out,
+            );
         }
     }
 }

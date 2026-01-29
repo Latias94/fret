@@ -350,11 +350,11 @@ Known semantic deltas to track:
     - Uses `Style.DockingSeparatorSize` (scaled by scale factor) as the primary thickness knob.
     - Splitter update occurs in `DockNodeTreeUpdateSplitter`.
   - Fret:
-    - Uses `DOCK_SPLIT_HANDLE_HIT_THICKNESS = Px(6.0)` and paints a 1px line in device px.
+    - Uses `DockingInteractionSettings::split_handle_hit_thickness` (default `Px(6.0)`) and paints a 1px line in device px.
     - Splitter layout + hit rects come from `resizable_panel_group::compute_layout(...)`.
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockingSeparatorSize`, `DockNodeTreeUpdateSplitter`)
-    - Fret: `ecosystem/fret-docking/src/dock/consts.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
+    - Fret: `crates/fret-runtime/src/docking_settings.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
 
 - [~] **“Touching splitter” stabilization (prevent drift across nested splits)**
   - ImGui:

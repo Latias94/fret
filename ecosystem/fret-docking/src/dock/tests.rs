@@ -205,10 +205,13 @@ impl DockViewportHarness {
             .global::<DockManager>()
             .and_then(|dock| dock.graph.window_root(self.window))
             .expect("expected dock window root");
+        let settings = fret_runtime::DockingInteractionSettings::default();
         let layout = compute_layout_map(
             &self.app.global::<DockManager>().unwrap().graph,
             root,
             dock_bounds,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
         );
         let root_rect = layout.get(&root).copied().expect("expected root rect");
         let (tab_bar, _content) = split_tab_bar(root_rect);
@@ -877,7 +880,14 @@ fn docking_viewport_panels_are_laid_out_before_overlay_layout_and_do_not_couple_
         let dock = app.global::<DockManager>().expect("dock manager");
         let root = dock.graph.window_root(window).expect("dock root");
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
-        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+        let settings = fret_runtime::DockingInteractionSettings::default();
+        let layout = compute_layout_map(
+            &dock.graph,
+            root,
+            dock_bounds,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
+        );
         let active = active_panel_content_bounds(&dock.graph, &layout);
         let left = active.get(&panel_left).copied().expect("left bounds");
         let right = active.get(&panel_right).copied().expect("right bounds");
@@ -1022,7 +1032,14 @@ fn docking_bounds_for_element_reports_last_frame_panel_rects() {
         let dock = app.global::<DockManager>().expect("dock manager");
         let root = dock.graph.window_root(window).expect("dock root");
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
-        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+        let settings = fret_runtime::DockingInteractionSettings::default();
+        let layout = compute_layout_map(
+            &dock.graph,
+            root,
+            dock_bounds,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
+        );
         let active = active_panel_content_bounds(&dock.graph, &layout);
         (
             active.get(&panel_left).copied().expect("left bounds"),
@@ -1060,7 +1077,14 @@ fn docking_bounds_for_element_reports_last_frame_panel_rects() {
         let dock = app.global::<DockManager>().expect("dock manager");
         let root = dock.graph.window_root(window).expect("dock root");
         let (_chrome, dock_bounds) = dock_space_regions(bounds);
-        let layout = compute_layout_map(&dock.graph, root, dock_bounds);
+        let settings = fret_runtime::DockingInteractionSettings::default();
+        let layout = compute_layout_map(
+            &dock.graph,
+            root,
+            dock_bounds,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
+        );
         let active = active_panel_content_bounds(&dock.graph, &layout);
         (
             active.get(&panel_left).copied().expect("left bounds"),
@@ -1843,10 +1867,13 @@ fn dock_space_layout_assigns_active_panel_content_bounds_via_panel_nodes() {
         .and_then(|dock| dock.graph.window_root(window))
         .expect("expected dock window root");
     let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let settings = fret_runtime::DockingInteractionSettings::default();
     let dock_layout = compute_layout_map(
         &app.global::<DockManager>().unwrap().graph,
         root,
         dock_bounds,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
     );
     let active =
         active_panel_content_bounds(&app.global::<DockManager>().unwrap().graph, &dock_layout);
@@ -1952,7 +1979,14 @@ fn same_axis_nested_split_drag_preserves_inner_sibling_width() {
     });
 
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(600.0), Px(80.0)));
-    let layout0 = compute_layout_map(&graph, root, bounds);
+    let settings = fret_runtime::DockingInteractionSettings::default();
+    let layout0 = compute_layout_map(
+        &graph,
+        root,
+        bounds,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+    );
 
     let a0 = layout0.get(&a).expect("missing a").size.width.0;
     let b0 = layout0.get(&b).expect("missing b").size.width.0;
@@ -1995,10 +2029,18 @@ fn same_axis_nested_split_drag_preserves_inner_sibling_width() {
         root,
         bounds,
         fret_core::Axis::Horizontal,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
         &locks,
     );
 
-    let layout1 = compute_layout_map(&graph, root, bounds);
+    let layout1 = compute_layout_map(
+        &graph,
+        root,
+        bounds,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+    );
     let a1 = layout1.get(&a).expect("missing a").size.width.0;
     let b1 = layout1.get(&b).expect("missing b").size.width.0;
 
