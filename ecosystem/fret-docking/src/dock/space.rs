@@ -1757,7 +1757,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             }
 
                             if !handled
-                                && let Some((tabs_node, tabs_rect, tab_count)) = {
+                                && let Some((tabs_node, tabs_rect, _tab_count)) = {
                                     let mut best: Option<(DockNodeId, Rect, usize, f32)> = None;
                                     for (&node, &rect) in layout.iter() {
                                         let Some(DockNode::Tabs { tabs, .. }) =
