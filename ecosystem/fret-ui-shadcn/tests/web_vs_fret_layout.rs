@@ -24060,6 +24060,44 @@ fn assert_chart_tooltip_rect_matches_web(
     })
     .expect("web chart tooltip node");
 
+    let advanced_layout = matches!(
+        kind,
+        fret_ui_shadcn::ChartTooltipContentKind::AdvancedKcalTotal
+    ) && web_name == "chart-tooltip-advanced";
+
+    let (web_item_0, web_item_1, web_total_row) = if advanced_layout {
+        let item_row = |name: &str| {
+            find_first(web_tooltip, &|n| {
+                n.tag == "div"
+                    && class_has_token(n, "flex")
+                    && class_has_token(n, "w-full")
+                    && class_has_token(n, "items-center")
+                    && class_has_token(n, "gap-2")
+                    && contains_text(n, name)
+            })
+            .unwrap_or_else(|| panic!("web chart tooltip item row for {name}"))
+        };
+
+        let total_row = find_first(web_tooltip, &|n| {
+            n.tag == "div"
+                && class_has_token(n, "flex")
+                && class_has_token(n, "basis-full")
+                && class_has_token(n, "border-t")
+                && class_has_token(n, "mt-1.5")
+                && class_has_token(n, "pt-1.5")
+                && contains_text(n, "Total")
+        })
+        .expect("web chart tooltip total row");
+
+        (
+            Some(item_row("Running")),
+            Some(item_row("Swimming")),
+            Some(total_row),
+        )
+    } else {
+        (None, None, None)
+    };
+
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
@@ -24078,6 +24116,9 @@ fn assert_chart_tooltip_rect_matches_web(
                 fret_ui_shadcn::ChartTooltipItem::new("Running", "380"),
                 fret_ui_shadcn::ChartTooltipItem::new("Swimming", "420"),
             ]);
+        if advanced_layout {
+            tooltip = tooltip.test_id_prefix(label.clone());
+        }
         if let Some(width) = fixed_width_border_box {
             tooltip = tooltip.fixed_width_border_box(width);
         }
@@ -24107,6 +24148,38 @@ fn assert_chart_tooltip_rect_matches_web(
         .unwrap_or_else(|| panic!("missing fret chart tooltip semantics for {web_name}"));
 
     assert_rect_close_px(web_name, tooltip.bounds, web_tooltip.rect, 1.0);
+
+    if advanced_layout {
+        let item_0_label = format!("{label}:item-0");
+        let item_1_label = format!("{label}:item-1");
+        let total_row_label = format!("{label}:total-row");
+
+        let item_0 = find_semantics(&snap, SemanticsRole::Panel, Some(&item_0_label))
+            .expect("missing fret chart tooltip item-0 semantics");
+        let item_1 = find_semantics(&snap, SemanticsRole::Panel, Some(&item_1_label))
+            .expect("missing fret chart tooltip item-1 semantics");
+        let total_row = find_semantics(&snap, SemanticsRole::Panel, Some(&total_row_label))
+            .expect("missing fret chart tooltip total-row semantics");
+
+        assert_rect_close_px(
+            "chart-tooltip-advanced item-0",
+            item_0.bounds,
+            web_item_0.expect("web item-0").rect,
+            1.0,
+        );
+        assert_rect_close_px(
+            "chart-tooltip-advanced item-1",
+            item_1.bounds,
+            web_item_1.expect("web item-1").rect,
+            1.0,
+        );
+        assert_rect_close_px(
+            "chart-tooltip-advanced total-row",
+            total_row.bounds,
+            web_total_row.expect("web total-row").rect,
+            1.0,
+        );
+    }
 }
 
 fn assert_chart_legend_rect_matches_web(web_name: &str) {

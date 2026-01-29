@@ -32,6 +32,8 @@ Current:
   - Tooltip variants gated so far: `chart-tooltip-default`, `chart-tooltip-indicator-line`, `chart-tooltip-indicator-none`,
     `chart-tooltip-label-none`, `chart-tooltip-icons`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`,
     `chart-tooltip-formatter`, `chart-tooltip-advanced`, `chart-tooltip-demo`.
+  - Depth note: `chart-tooltip-advanced` additionally gates the internal item rows + “Total” row bounds via an
+    opt-in `ChartTooltipContent::test_id_prefix(...)` semantics hook (used only by golden tests).
   - Legend variants gated so far: `chart-area-legend`, `chart-bar-demo-legend`, `chart-radar-legend`, `chart-pie-legend`.
 - Series-geometry gates (engine math, not full rendering):
   - `chart-bar-default`: bar rect layout matches web (nice Y domain + single-series bar geometry).
@@ -56,7 +58,7 @@ Current:
 
 Breadth status:
 
-- All `chart-*` goldens in `goldens/shadcn-web/v4/new-york-v4` are referenced by at least one test.
+- All `chart-*` goldens in `goldens/shadcn-web/v4/new-york-v4` are at least smoke-covered (parse + theme extraction).
 - Depth varies: many gates validate math against web SVG bounds, but do not yet cover full interaction
   state machines (hover/active index), tooltip anchoring, accessibility metadata, and “full-stack” cursor/marker rendering.
 

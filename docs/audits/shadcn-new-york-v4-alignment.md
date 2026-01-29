@@ -50,13 +50,13 @@ Recent breadth wins:
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
 - **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
   - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,
-    `chart-tooltip-formatter`, `chart-tooltip-advanced`.
+    `chart-tooltip-formatter`, `chart-tooltip-advanced` (including internal item rows + “Total” row bounds).
   - Pie legend variant includes `chart-pie-legend` (recharts wrapper + shadcn `*:basis-1/4` layout).
   - Hover-mid scripted snapshots now gate tooltip panel size and cursor rect geometry for the interactive line/bar pages.
 
 ### Largest remaining gaps (by golden family)
 
-All golden keys are referenced by tests (breadth coverage is complete). Remaining work is primarily
+All golden keys are at least smoke-covered (parse + theme extraction). Remaining work is primarily
 **depth**: making sure each family has high-signal gates (not just “exists / within bounds”) across
 the viewports and interaction states that shape behavior.
 
