@@ -109,6 +109,7 @@ pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
 pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
 pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
+pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
@@ -174,6 +175,8 @@ pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_
 pub(crate) const CMD_NAV_TREE_TORTURE: &str = "ui_gallery.nav.select.tree_torture";
 pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
     "ui_gallery.nav.select.table_retained_torture";
+pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
+    "ui_gallery.nav.select.ai_transcript_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
@@ -533,6 +536,25 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_TABLE_RETAINED_TORTURE,
                 docs::USAGE_TABLE_RETAINED_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_AI_TRANSCRIPT_TORTURE,
+                "AI Transcript (Torture)",
+                "AI Transcript / Long Conversation Harness",
+                "fret-ui-ai (conversation surface)",
+                CMD_NAV_AI_TRANSCRIPT_TORTURE,
+                &[
+                    "ai",
+                    "chat",
+                    "conversation",
+                    "scroll",
+                    "virtualized",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_AI_TRANSCRIPT_TORTURE,
+                docs::USAGE_AI_TRANSCRIPT_TORTURE,
             ),
         ],
     },

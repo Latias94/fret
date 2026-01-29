@@ -1535,6 +1535,7 @@ dependencies = [
  "fret-render",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-ai",
  "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-material3",

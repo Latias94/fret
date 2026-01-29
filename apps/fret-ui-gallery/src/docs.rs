@@ -374,6 +374,29 @@ use fret_ui_kit::declarative::table::table_virtualized_retained_v0;
 ```
 "#;
 
+pub(crate) const DOC_AI_TRANSCRIPT_TORTURE: &str = r#"
+## AI transcript (torture harness)
+
+This page is a baseline for **long scrolling conversations** (chat transcripts).
+
+It exists to validate:
+
+- scroll stability under view-cache reuse (no stale paint),
+- virtualization correctness under composable message rows (virt-003 retained hosts; ADR 0192),
+- future migrations toward prepaint-windowed/ephemeral updates (ADR 0190/0193).
+"#;
+
+pub(crate) const USAGE_AI_TRANSCRIPT_TORTURE: &str = r#"
+```rust
+use fret_ui_ai::{ConversationMessage, ConversationTranscript, MessageRole};
+
+let transcript = ConversationTranscript::new(vec![
+    ConversationMessage::new(1, MessageRole::User, "Hello"),
+    ConversationMessage::new(2, MessageRole::Assistant, "Hi!"),
+]);
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 
