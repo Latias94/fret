@@ -7097,55 +7097,12 @@ fn assert_dropdown_menu_demo_constrained_scroll_state_matches(web_name: &str) {
         .iter()
         .find(|n| n.role == SemanticsRole::Menu)
         .expect("fret root menu semantics");
-    let wheel_pos = Point::new(
-        Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
-        Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
-    );
 
-    let mut did_match_web_scroll_state = false;
-    for attempt in 0..10 {
-        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-        let Some(root_menu) = snap.nodes.iter().find(|n| n.role == SemanticsRole::Menu) else {
-            panic!("fret root menu semantics missing");
-        };
-        let first_visible = fret_first_visible_menu_item_label(&snap, root_menu.bounds, &labels)
-            .unwrap_or("<missing>");
-
-        if first_visible == expected_first_visible_label {
-            did_match_web_scroll_state = true;
-            break;
-        }
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(PointerEvent::Wheel {
-                pointer_id: fret_core::PointerId::default(),
-                position: wheel_pos,
-                delta: Point::new(Px(0.0), Px(-40.0)),
-                modifiers: Modifiers::default(),
-                pointer_type: PointerType::Mouse,
-            }),
-        );
-
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + settle_frames + attempt),
-            true,
-            |cx| {
-                let el = render(cx);
-                vec![pad_root(cx, Px(0.0), el)]
-            },
-        );
-    }
-
-    assert!(
-        did_match_web_scroll_state,
-        "{web_name}: failed to scroll dropdown menu to match first visible item; expected={expected_first_visible_label:?}"
+    let first_visible =
+        fret_first_visible_menu_item_label(&snap, root_menu.bounds, &labels).unwrap_or("<missing>");
+    assert_eq!(
+        first_visible, expected_first_visible_label,
+        "{web_name}: first visible menu item label mismatch"
     );
 }
 
@@ -11479,60 +11436,11 @@ fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
         .filter(|n| n.role == SemanticsRole::Menu)
         .max_by(|a, b| a.bounds.size.height.0.total_cmp(&b.bounds.size.height.0))
         .expect("fret root menu semantics");
-    let wheel_pos = Point::new(
-        Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
-        Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
-    );
-
-    let mut did_match_web_scroll_state = false;
-    for attempt in 0..10 {
-        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-        let Some(root_menu) = snap
-            .nodes
-            .iter()
-            .filter(|n| n.role == SemanticsRole::Menu)
-            .max_by(|a, b| a.bounds.size.height.0.total_cmp(&b.bounds.size.height.0))
-        else {
-            panic!("fret root menu semantics missing");
-        };
-
-        let first_visible = fret_first_visible_menu_item_label(&snap, root_menu.bounds, &labels)
-            .unwrap_or("<missing>");
-        if first_visible == expected_first_visible_label {
-            did_match_web_scroll_state = true;
-            break;
-        }
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(PointerEvent::Wheel {
-                pointer_id: fret_core::PointerId::default(),
-                position: wheel_pos,
-                delta: Point::new(Px(0.0), Px(-40.0)),
-                modifiers: Modifiers::default(),
-                pointer_type: PointerType::Mouse,
-            }),
-        );
-
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + settle_frames + attempt),
-            true,
-            |cx| {
-                let el = render(cx);
-                vec![pad_root(cx, Px(0.0), el)]
-            },
-        );
-    }
-
-    assert!(
-        did_match_web_scroll_state,
-        "{web_name}: failed to scroll context menu to match first visible item; expected={expected_first_visible_label:?}"
+    let first_visible =
+        fret_first_visible_menu_item_label(&snap, root_menu.bounds, &labels).unwrap_or("<missing>");
+    assert_eq!(
+        first_visible, expected_first_visible_label,
+        "{web_name}: first visible menu item label mismatch"
     );
 }
 
@@ -15936,59 +15844,11 @@ fn assert_menubar_demo_constrained_scroll_state_matches(web_name: &str) {
         .iter()
         .find(|n| n.role == SemanticsRole::Menu)
         .expect("fret root menu semantics");
-    let wheel_pos = Point::new(
-        Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
-        Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
-    );
-
-    let mut did_match_web_scroll_state = false;
-    for attempt in 0..10 {
-        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-        let Some(root_menu) = snap.nodes.iter().find(|n| n.role == SemanticsRole::Menu) else {
-            panic!("fret root menu semantics missing");
-        };
-        let first_visible = fret_first_visible_menu_item_label(&snap, root_menu.bounds, &labels)
-            .unwrap_or("<missing>");
-        if first_visible == expected_first_visible_label {
-            did_match_web_scroll_state = true;
-            break;
-        }
-
-        ui.dispatch_event(
-            &mut app,
-            &mut services,
-            &Event::Pointer(PointerEvent::Wheel {
-                pointer_id: fret_core::PointerId::default(),
-                position: wheel_pos,
-                delta: Point::new(Px(0.0), Px(-40.0)),
-                modifiers: Modifiers::default(),
-                pointer_type: PointerType::Mouse,
-            }),
-        );
-
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + settle_frames + attempt),
-            true,
-            |cx| {
-                let menubar = build_menubar_demo(
-                    cx,
-                    view_bookmarks_bar.clone(),
-                    view_full_urls.clone(),
-                    profile_value.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), menubar)]
-            },
-        );
-    }
-
-    assert!(
-        did_match_web_scroll_state,
-        "{web_name}: failed to scroll menubar menu to match first visible item; expected={expected_first_visible_label:?}"
+    let first_visible =
+        fret_first_visible_menu_item_label(&snap, root_menu.bounds, &labels).unwrap_or("<missing>");
+    assert_eq!(
+        first_visible, expected_first_visible_label,
+        "{web_name}: first visible menu item label mismatch"
     );
 }
 
