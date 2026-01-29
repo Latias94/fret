@@ -3730,6 +3730,88 @@ fn dock_tab_drop_outside_window_does_not_request_tear_off_twice() {
 }
 
 #[test]
+fn dock_tab_drop_on_float_zone_floats_in_window_even_when_tear_off_enabled() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: PanelKey::new("core.hierarchy"),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    // Inside `float_zone(...)`: (8..42, 8..42) in the default dock bounds.
+    let pos = Point::new(Px(16.0), Px(16.0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: pos,
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let effects = app.take_effects();
+    assert!(
+        effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::FloatPanelInWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "expected in-window floating when dropping on float_zone(...)"
+    );
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Dock(DockOp::RequestFloatPanelToNewWindow { panel, .. })
+                if *panel == PanelKey::new("core.hierarchy")
+        )),
+        "float_zone(...) must not request a new OS window"
+    );
+}
+
+#[test]
 fn dock_tab_drop_outside_window_floats_in_window_when_tear_off_disabled() {
     let window = AppWindowId::default();
 

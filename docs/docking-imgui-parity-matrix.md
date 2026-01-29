@@ -442,6 +442,8 @@ Open parity question:
     - A new OS window is requested when:
       - cursor exits the window bounds (with a margin), and
       - the request has not already been made for this drag payload.
+    - Note:
+      - `float_zone(...)` is a Fret-specific affordance to force **in-window** floating; it should not request a new OS window.
   - Evidence anchors:
     - `ecosystem/fret-docking/src/dock/space.rs` (tear-off request logic)
     - `ecosystem/fret-docking/src/runtime.rs` (`DockTearOffMachine` idempotency)

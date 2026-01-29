@@ -911,7 +911,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
             target: Option<DockDropTarget>,
             drag: &DockDragSnapshot,
             target_window: fret_core::AppWindowId,
-            dock_bounds: Rect,
             window_bounds: Rect,
             position: Point,
             allow_tear_off: bool,
@@ -931,9 +930,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     insert_index: target.insert_index,
                 },
                 Some(DockDropTarget::Float { .. }) => {
-                    let wants_tear_off = allow_tear_off
-                        && (!window_bounds.contains(position)
-                            || float_zone(dock_bounds).contains(position));
+                    // Tear-off (new OS window) is only triggered by leaving the window bounds.
+                    //
+                    // `float_zone(...)` is a Fret-specific affordance to force in-window floating;
+                    // it should not request a new OS window (ImGui-style).
+                    let wants_tear_off = allow_tear_off && !window_bounds.contains(position);
                     if wants_tear_off {
                         if drag.tear_off_requested || mark_drag_tear_off_requested {
                             DockDropIntent::None
@@ -2328,7 +2329,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             target,
                                             drag,
                                             self.window,
-                                            dock_bounds,
                                             window_bounds,
                                             *position,
                                             allow_tear_off,
@@ -2569,7 +2569,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             target,
                                             drag,
                                             self.window,
-                                            dock_bounds,
                                             window_bounds,
                                             position,
                                             allow_tear_off,
