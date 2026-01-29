@@ -55,7 +55,7 @@
     },
     { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-9999" } },
 
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-torture-root" }, "delta_y": 120.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-9999" }, "delta_y": -120.0 },
     { "type": "wait_frames", "n": 5 },
 
     { "type": "capture_bundle", "label": "ui-gallery-table-retained-sort-desc" }
