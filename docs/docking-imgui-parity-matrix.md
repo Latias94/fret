@@ -508,8 +508,7 @@ Open parity question:
       - window/dock bounds
       - resolved target (tabs/zone/outer/insert_index)
       - resolution source (`TabBar`, `InnerHintRect`, `OuterHintRect`, etc.)
-    - Remaining gap:
-      - record full candidate rect sets (all hint rects + any gating decisions), not just the final pick.
+      - candidate rect sets (float zone + direction pads + tab bar, etc.)
   - Evidence anchors:
     - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockDropResolveDiagnostics`)
     - `ecosystem/fret-docking/src/dock/space.rs` (writes diagnostics during internal drag hover)

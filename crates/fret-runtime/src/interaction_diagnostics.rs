@@ -50,6 +50,26 @@ pub enum DockDropResolveSource {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DockDropCandidateRectKind {
+    WindowBounds,
+    DockBounds,
+    FloatZone,
+    LayoutBounds,
+    RootRect,
+    LeafTabsRect,
+    TabBarRect,
+    InnerHintRect,
+    OuterHintRect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockDropCandidateRectDiagnostics {
+    pub kind: DockDropCandidateRectKind,
+    pub zone: Option<DropZone>,
+    pub rect: Rect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DockDropTargetDiagnostics {
     pub layout_root: DockNodeId,
     pub tabs: DockNodeId,
@@ -58,7 +78,7 @@ pub struct DockDropTargetDiagnostics {
     pub outer: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DockDropResolveDiagnostics {
     pub pointer_id: PointerId,
     pub position: Point,
@@ -66,6 +86,7 @@ pub struct DockDropResolveDiagnostics {
     pub dock_bounds: Rect,
     pub source: DockDropResolveSource,
     pub resolved: Option<DockDropTargetDiagnostics>,
+    pub candidates: Vec<DockDropCandidateRectDiagnostics>,
 }
 
 #[derive(Default)]

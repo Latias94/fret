@@ -698,6 +698,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
             font_size: Px,
             position: Point,
+            mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> Option<(HoverTarget, fret_runtime::DockDropResolveSource)> {
             fn leaf_tabs_node_at_pos(
                 graph: &DockGraph,
@@ -727,8 +728,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             let leaf = leaf_tabs_node_at_pos(graph, layout, position);
             if let Some((tabs_node, rect, tab_count)) = leaf {
+                if let Some(candidates) = candidates.as_deref_mut() {
+                    candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                        kind: fret_runtime::DockDropCandidateRectKind::LeafTabsRect,
+                        zone: None,
+                        rect,
+                    });
+                }
                 let (tab_bar, _content) = split_tab_bar(rect);
                 if tab_bar.contains(position) {
+                    if let Some(candidates) = candidates.as_deref_mut() {
+                        candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                            kind: fret_runtime::DockDropCandidateRectKind::TabBarRect,
+                            zone: None,
+                            rect: tab_bar,
+                        });
+                    }
                     let scroll = tab_scroll_for_node(tab_scroll, tabs_node);
                     return Some((
                         HoverTarget {
@@ -761,6 +776,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     super::layout::dock_hint_pick_zone(root_rect, font_size, true, position)
                 && zone != DropZone::Center
             {
+                if let Some(candidates) = candidates.as_deref_mut() {
+                    candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                        kind: fret_runtime::DockDropCandidateRectKind::RootRect,
+                        zone: None,
+                        rect: root_rect,
+                    });
+                    for (z, r) in
+                        super::layout::dock_hint_rects_with_font(root_rect, font_size, true)
+                    {
+                        candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                            kind: fret_runtime::DockDropCandidateRectKind::OuterHintRect,
+                            zone: Some(z),
+                            rect: r,
+                        });
+                    }
+                }
                 return Some((
                     HoverTarget {
                         tabs: root,
@@ -778,6 +809,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 && let Some(zone) =
                     super::layout::dock_hint_pick_zone(rect, font_size, false, position)
             {
+                if let Some(candidates) = candidates.as_deref_mut() {
+                    for (z, r) in super::layout::dock_hint_rects_with_font(rect, font_size, false) {
+                        candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                            kind: fret_runtime::DockDropCandidateRectKind::InnerHintRect,
+                            zone: Some(z),
+                            rect: r,
+                        });
+                    }
+                }
                 return Some((
                     HoverTarget {
                         tabs: tabs_node,
@@ -856,7 +896,25 @@ impl<H: UiHost> Widget<H> for DockSpace {
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
+            mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> (Option<DockDropTarget>, fret_runtime::DockDropResolveSource) {
+            if let Some(candidates) = candidates.as_deref_mut() {
+                candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                    kind: fret_runtime::DockDropCandidateRectKind::WindowBounds,
+                    zone: None,
+                    rect: window_bounds,
+                });
+                candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                    kind: fret_runtime::DockDropCandidateRectKind::DockBounds,
+                    zone: None,
+                    rect: dock_bounds,
+                });
+                candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                    kind: fret_runtime::DockDropCandidateRectKind::FloatZone,
+                    zone: None,
+                    rect: float_zone(dock_bounds),
+                });
+            }
             if !window_bounds.contains(position) {
                 return (
                     Some(DockDropTarget::Float { window }),
@@ -873,6 +931,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
             let (layout_root, layout_bounds) =
                 layout_context_for_position(graph, window, root, dock_bounds, position);
             if !layout_bounds.contains(position) {
+                if let Some(candidates) = candidates.as_deref_mut() {
+                    candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
+                        kind: fret_runtime::DockDropCandidateRectKind::LayoutBounds,
+                        zone: None,
+                        rect: layout_bounds,
+                    });
+                }
                 return (None, fret_runtime::DockDropResolveSource::LayoutBoundsMiss);
             }
 
@@ -891,6 +956,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 tab_widths,
                 font_size,
                 position,
+                candidates,
             )
             .map(|(target, source)| (Some(DockDropTarget::Dock(target)), source))
             .unwrap_or((None, fret_runtime::DockDropResolveSource::None))
@@ -910,6 +976,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
+            candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> (Option<DockDropTarget>, fret_runtime::DockDropResolveSource) {
             if invert_docking {
                 return (
@@ -936,6 +1003,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 split_handle_gap,
                 split_handle_hit_thickness,
                 position,
+                candidates,
             )
         }
 
@@ -961,6 +1029,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             dock_bounds: Rect,
             source: fret_runtime::DockDropResolveSource,
             target: Option<&DockDropTarget>,
+            candidates: Vec<fret_runtime::DockDropCandidateRectDiagnostics>,
         ) -> fret_runtime::DockDropResolveDiagnostics {
             fret_runtime::DockDropResolveDiagnostics {
                 pointer_id,
@@ -969,6 +1038,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 dock_bounds,
                 source,
                 resolved: dock_drop_target_diagnostics(target),
+                candidates,
             }
         }
 
@@ -2552,6 +2622,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         }
 
                                         if !requested_tear_off {
+                                            let mut candidates =
+                                                Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
                                             let (hover, source) = resolve_dock_drop_target(
                                                 None,
                                                 invert_docking,
@@ -2566,6 +2638,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 split_handle_gap,
                                                 split_handle_hit_thickness,
                                                 position,
+                                                diagnostics_enabled.then_some(&mut candidates),
                                             );
                                             dock.hover = hover;
                                             if diagnostics_enabled {
@@ -2578,6 +2651,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                         dock_bounds,
                                                         source,
                                                         dock.hover.as_ref(),
+                                                        candidates,
                                                     ),
                                                 ));
                                             }
@@ -2656,6 +2730,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
 
                                     if dragging {
+                                        let mut candidates =
+                                            Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
                                         let (target, source) = resolve_dock_drop_target(
                                             prev_hover.clone(),
                                             invert_docking,
@@ -2670,6 +2746,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             split_handle_gap,
                                             split_handle_hit_thickness,
                                             position,
+                                            diagnostics_enabled.then_some(&mut candidates),
                                         );
                                         if diagnostics_enabled {
                                             self.dock_drop_resolve_diagnostics = Some((
@@ -2681,6 +2758,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     dock_bounds,
                                                     source,
                                                     target.as_ref(),
+                                                    candidates,
                                                 ),
                                             ));
                                         }
@@ -3036,7 +3114,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 );
             let dock_drop_resolve = self
                 .dock_drop_resolve_diagnostics
-                .and_then(|(f, d)| (f == frame_id).then_some(d));
+                .as_ref()
+                .and_then(|(f, d)| (f == &frame_id).then(|| d.clone()));
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,

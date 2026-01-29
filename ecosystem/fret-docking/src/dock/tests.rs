@@ -2391,6 +2391,7 @@ fn dock_drag_records_drop_target_diagnostics_for_inner_left_hint_rect() {
         .expect("expected docking interaction diagnostics to be published for the window/frame");
     let diag = dock
         .dock_drop_resolve
+        .as_ref()
         .expect("expected drop target diagnostics to be published");
     assert_eq!(
         diag.source,
@@ -2399,6 +2400,15 @@ fn dock_drag_records_drop_target_diagnostics_for_inner_left_hint_rect() {
     let resolved = diag.resolved.expect("expected a resolved dock target");
     assert_eq!(resolved.zone, DropZone::Left);
     assert!(!resolved.outer);
+    assert!(
+        diag.candidates.iter().any(|c| {
+            c.kind == fret_runtime::DockDropCandidateRectKind::InnerHintRect
+                && c.zone == Some(DropZone::Left)
+                && c.rect == left_rect
+        }),
+        "expected diagnostics to include the inner left hint rect, got: {:?}",
+        diag.candidates
+    );
 }
 
 #[test]
