@@ -1,6 +1,6 @@
 # ADR 0193: Ephemeral Prepaint Items (v1)
 
-Status: Proposed
+Status: Accepted (v1 contract; implementation in progress)
 
 ## Context
 
