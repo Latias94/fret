@@ -24,7 +24,7 @@ scroll buttons + max-height clamping), not as incidental layout.
 - Menu content insets + overall menu height: **Gated**
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
-- Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`)
+- Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`, `*.submenu-kbd-vp1440x240.open.json`)
 - SubTrigger open-state chrome (`data-state=open` bg/fg): **Gated** (`*.submenu-kbd.open.json`)
 - Hovered/highlighted item chrome (bg/fg): **Gated** (`menubar-demo.highlight-first.open.json`)
 - Keyboard roving focus visuals (focused item bg/fg): **Gated** (`menubar-demo.focus-first.open.json`)
@@ -43,6 +43,8 @@ Evidence anchors:
   `web_vs_fret_menubar_demo_panel_size_matches_web_dark`,
   `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web`,
   `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_panel_size_matches_web_dark`,
   `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_menubar_demo_focused_item_chrome_matches_web`)
 
@@ -54,7 +56,7 @@ Evidence anchors:
 - Menu content insets + overall menu height: **Gated**
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
-- Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`)
+- Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`, `*.submenu-kbd-vp1440x240.open.json`)
 - SubTrigger open-state chrome (`data-state=open` bg/fg): **Gated** (`*.submenu-kbd.open.json`)
 - Hovered/highlighted item chrome (bg/fg): **Gated** (`*.highlight-first.open.json`)
 - Keyboard roving focus visuals (focused item bg/fg): **Gated** (`*.focus-first.open.json`)
@@ -84,10 +86,14 @@ Evidence anchors:
   `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`,
   `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web`,
   `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web_dark`,
   `web_vs_fret_context_menu_demo_panel_size_matches_web`,
   `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`,
   `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web`,
   `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_context_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_context_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web_dark`,
   `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`,
   `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`,
@@ -123,6 +129,56 @@ Evidence anchors:
   `web_vs_fret_select_demo_focused_option_chrome_matches_web`,
   `web_vs_fret_combobox_demo_focused_option_chrome_matches_web`,
   `web_vs_fret_command_dialog_focused_item_chrome_matches_web`, and `*_dark` variants)
+
+## Overlays: popover / tooltip / hover card
+
+Goal: gate panel sizing (padding/border outcomes) under constrained viewports early, so "clamp/shift/flip"
+changes do not hide styling regressions.
+
+### Popover (`popover-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`popover-demo.vp1440x240.open.json`)
+- Panel size (portal `w/h`): **Gated** (`popover-demo.open.json`, `popover-demo.vp1440x240.open.json`)
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/popover-demo*.open.json`
+- Placement gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_popover_demo_overlay_placement_matches`, `web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport`)
+- Panel size gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_popover_demo_panel_size_matches_web`, `web_vs_fret_popover_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_popover_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_popover_demo_tiny_viewport_panel_size_matches_web_dark`)
+
+### Tooltip (`tooltip-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`tooltip-demo.vp1440x240.open.json`)
+- Panel size (portal `w/h`): **Gated** (`tooltip-demo.open.json`, `tooltip-demo.vp1440x240.open.json`)
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/tooltip-demo*.open.json`
+- Placement gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_tooltip_demo_overlay_placement_matches`, `web_vs_fret_tooltip_demo_overlay_placement_matches_tiny_viewport`)
+- Panel size gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_tooltip_demo_panel_size_matches_web`, `web_vs_fret_tooltip_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web_dark`)
+
+### HoverCard (`hover-card-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`hover-card-demo.vp1440x240.open.json`)
+- Panel size (portal `w/h`): **Gated** (`hover-card-demo.open.json`, `hover-card-demo.vp1440x240.open.json`)
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/hover-card-demo*.open.json`
+- Placement gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_hover_card_demo_overlay_placement_matches`, `web_vs_fret_hover_card_demo_overlay_placement_matches_tiny_viewport`)
+- Panel size gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_hover_card_demo_panel_size_matches_web`, `web_vs_fret_hover_card_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web_dark`)
 
 ## Controls: pressed / disabled states
 

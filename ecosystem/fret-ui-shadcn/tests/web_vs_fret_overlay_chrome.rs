@@ -3345,6 +3345,85 @@ fn assert_overlay_panel_size_matches_by_portal_slot_theme(
     );
 }
 
+fn assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    settle_frames: u64,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![build_frame1(cx, &open)],
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for tick in 0..settle_frames.max(1) {
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            tick + 1 == settle_frames.max(1),
+            |cx| vec![build_frame(cx, &open)],
+        );
+    }
+
+    let (_snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
+        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.w"),
+        quad.rect.size.width.0,
+        web_w,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.h"),
+        quad.rect.size.height.0,
+        web_h,
+        1.0,
+    );
+}
+
 fn assert_overlay_shadow_insets_match(
     web_name: &str,
     web_portal_slot: &str,
@@ -4141,6 +4220,130 @@ fn assert_hover_overlay_surface_colors_match_by_portal_slot_theme(
             0.03,
         );
     }
+}
+
+fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_role: SemanticsRole,
+    fret_trigger_label: &str,
+    settle_frames: u64,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(640.0), Px(480.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let trigger_id_out: std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>> =
+        std::rc::Rc::new(std::cell::Cell::new(None));
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_frame1(cx, &trigger_id_out)],
+    );
+
+    let frame1_snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger_semantics = frame1_snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(fret_trigger_label))
+        .unwrap_or_else(|| {
+            panic!(
+                "missing trigger semantics node: Button label={fret_trigger_label:?} for {web_name}"
+            )
+        });
+    let trigger_center = Point::new(
+        Px(trigger_semantics.bounds.origin.x.0 + trigger_semantics.bounds.size.width.0 * 0.5),
+        Px(trigger_semantics.bounds.origin.y.0 + trigger_semantics.bounds.size.height.0 * 0.5),
+    );
+
+    let trigger_element = trigger_id_out.get().expect("trigger element id");
+    let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+        .expect("trigger node");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::KeyA,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.set_focus(Some(trigger_node));
+    hover_open_at(&mut ui, &mut app, &mut services, trigger_center);
+
+    for tick in 0..settle_frames.max(1) {
+        let request_semantics = tick + 1 == settle_frames.max(1);
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| vec![build_frame(cx, &trigger_id_out)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let overlay = largest_semantics_node(&snap, fret_role).unwrap_or_else(|| {
+        let mut roles: Vec<String> = snap.nodes.iter().map(|n| format!("{:?}", n.role)).collect();
+        roles.sort();
+        roles.dedup();
+        panic!("missing fret semantics node: {fret_role:?}; roles={roles:?}");
+    });
+
+    let quad = find_best_chrome_quad(&scene, overlay.bounds)
+        .or_else(|| find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border))
+        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.w"),
+        quad.rect.size.width.0,
+        web_w,
+        1.0,
+    );
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.h"),
+        quad.rect.size.height.0,
+        web_h,
+        1.0,
+    );
 }
 
 fn assert_menu_subcontent_surface_colors_match_by_portal_slot_theme(
@@ -8401,6 +8604,143 @@ fn web_vs_fret_popover_panel_chrome_matches() {
     );
 }
 
+fn build_shadcn_popover_demo_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_core::Px;
+    use fret_ui::Theme;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+    use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
+
+    Popover::new(open.clone()).into_element(
+        cx,
+        |cx| {
+            Button::new("Open popover")
+                .variant(ButtonVariant::Outline)
+                .into_element(cx)
+        },
+        |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let sm_px = theme.metric_required("font.size");
+            let sm_line_height = theme.metric_required("font.line_height");
+            let muted_fg = theme.color_required("muted.foreground");
+
+            // popover-demo uses `h4.leading-none.font-medium` (line height = 16px).
+            let title = ui::text(cx, "Dimensions")
+                .text_size_px(sm_px)
+                .line_height_px(Px(16.0))
+                .font_medium()
+                .nowrap()
+                .into_element(cx);
+            // popover-demo uses `p.text-sm.text-muted-foreground` (line height = 20px).
+            let description = ui::text(cx, "Set the dimensions for the layer.")
+                .text_size_px(sm_px)
+                .line_height_px(sm_line_height)
+                .text_color(ColorRef::Color(muted_fg))
+                .into_element(cx);
+            let header = stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N2),
+                move |_cx| vec![title, description],
+            );
+
+            fn labeled_input_row<H: fret_ui::UiHost>(
+                cx: &mut ElementContext<'_, H>,
+                label: &str,
+                value: &str,
+            ) -> AnyElement {
+                use fret_core::Px;
+                use fret_ui_kit::declarative::stack;
+                use fret_ui_kit::{LayoutRefinement, Space};
+                use fret_ui_shadcn::{Input, Label};
+
+                let label_el = Label::new(label).into_element(cx);
+                let model = cx.app.models_mut().insert(value.to_string());
+                let input_el = Input::new(model)
+                    .a11y_label(label)
+                    .refine_layout(LayoutRefinement::default().h_px(Px(32.0)).flex_grow(1.0))
+                    .into_element(cx);
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N4).items_center(),
+                    move |_cx| vec![label_el, input_el],
+                )
+            }
+
+            let rows = vec![
+                labeled_input_row(cx, "Width", "100%"),
+                labeled_input_row(cx, "Max. width", "300px"),
+                labeled_input_row(cx, "Height", "25px"),
+                labeled_input_row(cx, "Max. height", "none"),
+            ];
+            let fields = stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N2),
+                move |_cx| rows,
+            );
+
+            PopoverContent::new([header, fields])
+                .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+                .into_element(cx)
+        },
+    )
+}
+
+#[test]
+fn web_vs_fret_popover_demo_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "popover-demo",
+        "popover-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_popover_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_popover_demo_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "popover-demo",
+        "popover-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_popover_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_popover_demo_tiny_viewport_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "popover-demo.vp1440x240",
+        "popover-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_popover_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_popover_demo_tiny_viewport_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "popover-demo.vp1440x240",
+        "popover-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_popover_demo_page,
+    );
+}
+
 #[test]
 fn web_vs_fret_dropdown_menu_panel_chrome_matches() {
     assert_overlay_chrome_matches(
@@ -9227,7 +9567,135 @@ fn web_vs_fret_tooltip_panel_chrome_matches() {
                 .into_element(cx);
             trigger.set(Some(trigger_el.id));
 
-            let content_el = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Add to library")])
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
+                .into_element(cx);
+
+            fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_panel_size_matches_web() {
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
+        "tooltip-demo",
+        "tooltip-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Tooltip,
+        "Hover",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, trigger| {
+            let trigger_el = fret_ui_shadcn::Button::new("Hover")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx);
+            trigger.set(Some(trigger_el.id));
+
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
+                .into_element(cx);
+
+            fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_panel_size_matches_web_dark() {
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
+        "tooltip-demo",
+        "tooltip-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Tooltip,
+        "Hover",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, trigger| {
+            let trigger_el = fret_ui_shadcn::Button::new("Hover")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx);
+            trigger.set(Some(trigger_el.id));
+
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
+                .into_element(cx);
+
+            fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web() {
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
+        "tooltip-demo.vp1440x240",
+        "tooltip-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Tooltip,
+        "Hover",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, trigger| {
+            let trigger_el = fret_ui_shadcn::Button::new("Hover")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx);
+            trigger.set(Some(trigger_el.id));
+
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
+                .into_element(cx);
+
+            fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web_dark() {
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
+        "tooltip-demo.vp1440x240",
+        "tooltip-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Tooltip,
+        "Hover",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, trigger| {
+            let trigger_el = fret_ui_shadcn::Button::new("Hover")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx);
+            trigger.set(Some(trigger_el.id));
+
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
                 .into_element(cx);
 
             fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
@@ -9254,7 +9722,11 @@ fn web_vs_fret_tooltip_surface_colors_match_web() {
                 .into_element(cx);
             trigger.set(Some(trigger_el.id));
 
-            let content_el = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Add to library")])
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
                 .into_element(cx);
 
             fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
@@ -9281,7 +9753,11 @@ fn web_vs_fret_tooltip_surface_colors_match_web_dark() {
                 .into_element(cx);
             trigger.set(Some(trigger_el.id));
 
-            let content_el = fret_ui_shadcn::TooltipContent::new(vec![cx.text("Add to library")])
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
                 .into_element(cx);
 
             fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
@@ -9308,6 +9784,130 @@ fn web_vs_fret_hover_card_panel_chrome_matches() {
                 .open(Some(open.clone()))
                 .into_element(cx)
         },
+    );
+}
+
+fn build_shadcn_hover_card_demo_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_core::Px;
+    use fret_ui::Theme;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+    use fret_ui_shadcn::{
+        Avatar, AvatarFallback, AvatarImage, Button, ButtonVariant, HoverCard, HoverCardContent,
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+    let sm_px = theme.metric_required("font.size");
+    let sm_line_height = theme.metric_required("font.line_height");
+    let xs_px = theme
+        .metric_by_key("component.tooltip.text_px")
+        .unwrap_or(Px((sm_px.0 - 2.0).max(10.0)));
+    let xs_line_height = theme
+        .metric_by_key("component.tooltip.line_height")
+        .unwrap_or(Px((sm_line_height.0 - 4.0).max(12.0)));
+    let muted_fg = theme.color_required("muted.foreground");
+
+    let trigger_el = Button::new("@nextjs")
+        .variant(ButtonVariant::Link)
+        .into_element(cx);
+
+    let avatar = Avatar::new([
+        AvatarImage::maybe(None).into_element(cx),
+        AvatarFallback::new("VC").into_element(cx),
+    ])
+    .into_element(cx);
+
+    let heading = ui::text(cx, "@nextjs")
+        .text_size_px(sm_px)
+        .line_height_px(sm_line_height)
+        .font_semibold()
+        .into_element(cx);
+    let body = ui::text(
+        cx,
+        "The React Framework – created and maintained by @vercel.",
+    )
+    .text_size_px(sm_px)
+    .line_height_px(sm_line_height)
+    .into_element(cx);
+    let joined = ui::text(cx, "Joined December 2021")
+        .text_size_px(xs_px)
+        .line_height_px(xs_line_height)
+        .text_color(ColorRef::Color(muted_fg))
+        .into_element(cx);
+
+    let text_block = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N1)
+            .layout(LayoutRefinement::default().w_px(Px(238.0))),
+        move |_cx| vec![heading, body, joined],
+    );
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N4)
+            .layout(LayoutRefinement::default().w_full()),
+        move |_cx| vec![avatar, text_block],
+    );
+
+    let content_el = HoverCardContent::new([row])
+        .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+        .into_element(cx);
+
+    HoverCard::new(trigger_el, content_el)
+        .open(Some(open.clone()))
+        .into_element(cx)
+}
+
+#[test]
+fn web_vs_fret_hover_card_demo_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
+        "hover-card-demo",
+        "hover-card-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_hover_card_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_hover_card_demo_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
+        "hover-card-demo",
+        "hover-card-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_hover_card_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
+        "hover-card-demo.vp1440x240",
+        "hover-card-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_hover_card_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
+        "hover-card-demo.vp1440x240",
+        "hover-card-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_hover_card_demo_page,
     );
 }
 
