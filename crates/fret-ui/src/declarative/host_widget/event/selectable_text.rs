@@ -188,19 +188,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             }
 
             fn select_line(text: &str, idx: usize) -> (usize, usize) {
-                if text.is_empty() {
-                    return (0, 0);
-                }
-                let idx = crate::text_edit::utf8::clamp_to_char_boundary(text, idx).min(text.len());
-                let start = text[..idx]
-                    .rfind('\n')
-                    .map(|i| (i + 1).min(text.len()))
-                    .unwrap_or(0);
-                let end = text[idx..]
-                    .find('\n')
-                    .map(|i| (idx + i).min(text.len()))
-                    .unwrap_or(text.len());
-                (start, end)
+                crate::text_edit::utf8::select_line_range(text, idx)
             }
 
             let boundary_mode = cx.input_ctx.text_boundary_mode;

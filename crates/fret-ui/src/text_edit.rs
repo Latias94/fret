@@ -198,7 +198,7 @@ pub(crate) mod utf8 {
             .unwrap_or(0);
         let end = text[idx..]
             .find('\n')
-            .map(|i| (idx + i).min(text.len()))
+            .map(|i| (idx + i + 1).min(text.len()))
             .unwrap_or(text.len());
         (start, end)
     }
