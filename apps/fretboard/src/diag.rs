@@ -1146,6 +1146,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
                 if !launch_env
                     .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS".to_string(),
+                        "1".to_string(),
+                    ));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_MINIMAL")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VLIST_MINIMAL".to_string(), "1".to_string()));
+                }
+                if !launch_env
+                    .iter()
                     .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_RETAINED")
                 {
                     launch_env.push((
