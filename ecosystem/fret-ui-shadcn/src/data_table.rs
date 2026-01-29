@@ -121,7 +121,7 @@ impl DataTable {
     /// cache-root reuse (virt-003 / ADR 0192).
     ///
     /// Notes (v0):
-    /// - fixed-height rows only (measured rows are not supported yet)
+    /// - supports fixed-height and measured (variable-height) rows
     /// - intended for perf/correctness harnesses; API stability is not guaranteed
     pub fn into_element_retained<H: UiHost + 'static, TData>(
         self,
@@ -147,27 +147,6 @@ impl DataTable {
             layout,
             output: _output,
         } = self;
-
-        if measure_rows {
-            return DataTable {
-                overscan,
-                row_height,
-                measure_rows,
-                chrome,
-                layout,
-                output: None,
-            }
-            .into_element(
-                cx,
-                data,
-                data_revision,
-                state,
-                columns,
-                get_row_key,
-                header_label,
-                cell_at,
-            );
-        }
 
         let theme = Theme::global(&*cx.app).clone();
         let border = border_color(&theme);
@@ -195,7 +174,11 @@ impl DataTable {
             let mut view_props = TableViewProps::default();
             view_props.overscan = overscan;
             view_props.row_height = row_height;
-            view_props.row_measure_mode = TableRowMeasureMode::Fixed;
+            view_props.row_measure_mode = if measure_rows {
+                TableRowMeasureMode::Measured
+            } else {
+                TableRowMeasureMode::Fixed
+            };
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = false;
             view_props.draw_frame = false;
