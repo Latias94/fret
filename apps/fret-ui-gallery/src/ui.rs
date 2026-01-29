@@ -5659,19 +5659,30 @@ fn preview_resizable(
         ])
         .into_element(cx);
 
-    let root = shadcn::ResizablePanelGroup::new(h_fractions)
-        .axis(fret_core::Axis::Horizontal)
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
-        .entries(vec![
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
-                .min_px(Px(140.0))
-                .into(),
-            shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new(vec![nested_vertical])
-                .min_px(Px(240.0))
-                .into(),
-        ])
-        .into_element(cx);
+    let root = {
+        let root = shadcn::ResizablePanelGroup::new(h_fractions)
+            .axis(fret_core::Axis::Horizontal)
+            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
+            .entries(vec![
+                shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
+                    .min_px(Px(140.0))
+                    .into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![nested_vertical])
+                    .min_px(Px(240.0))
+                    .into(),
+            ])
+            .into_element(cx);
+
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                label: Some(Arc::<str>::from("Debug:ui-gallery:resizable-panels")),
+                test_id: Some(Arc::<str>::from("ui-gallery-resizable-panels")),
+                ..Default::default()
+            },
+            move |_cx| [root],
+        )
+    };
 
     vec![cx.text("Drag the handles to resize panels."), root]
 }
