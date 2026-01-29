@@ -138,6 +138,10 @@ These are the most common “editor UI” failure modes, expressed in tailwind l
 - Fret rule: scroll viewports inside `flex` should generally have `min_h_0()` so the viewport can actually become smaller than its content.
 - Typical symptom when broken: scroll areas refuse to scroll, or force parent height to grow, or collapse.
 
+Implementation note:
+
+- `fret-ui-shadcn` `ScrollArea` now defaults to `min_w_0().min_h_0()` so it is “safe by default” in editor-like flex shells.
+
 ### 5.3 TODO (Near-term)
 
 - [ ] Add/maintain a “P0-first” issue queue in this doc (table in section 3 stays authoritative).

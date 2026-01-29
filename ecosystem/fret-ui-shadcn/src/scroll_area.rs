@@ -182,7 +182,12 @@ impl ScrollAreaRoot {
             corner: false,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
-            layout: LayoutRefinement::default(),
+            // Allow scroll areas to shrink inside flex containers (Tailwind's `min-w-0 min-h-0`).
+            //
+            // This avoids the classic "flex + scroll" failure mode where the scroll viewport
+            // refuses to shrink below its content size (causing overflow or clipped-to-zero
+            // behavior depending on parent constraints).
+            layout: LayoutRefinement::default().min_w_0().min_h_0(),
             scroll_handle: None,
             show_scrollbar: true,
         }
@@ -287,10 +292,14 @@ impl ScrollAreaRoot {
             if matches!(layout.size.width, Length::Auto) {
                 layout.size.width = Length::Fill;
             }
+            layout.size.min_width.get_or_insert(Px(0.0));
+            layout.size.min_height.get_or_insert(Px(0.0));
             vec![cx.stack_props(StackProps { layout }, move |cx| {
                 let mut scroll_layout = LayoutStyle::default();
                 scroll_layout.size.width = Length::Fill;
                 scroll_layout.size.height = Length::Fill;
+                scroll_layout.size.min_width = Some(Px(0.0));
+                scroll_layout.size.min_height = Some(Px(0.0));
                 scroll_layout.overflow = Overflow::Clip;
 
                 let scroll = cx.scroll(
@@ -560,7 +569,9 @@ impl ScrollArea {
             show_scrollbar: true,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
-            layout: LayoutRefinement::default(),
+            // Same rationale as `ScrollAreaRoot`: make the common case "safe by default" in
+            // editor-like shells where scroll areas routinely live inside flex stacks.
+            layout: LayoutRefinement::default().min_w_0().min_h_0(),
             scroll_handle: None,
             viewport_test_id: None,
             viewport_intrinsic_measure_mode: None,
