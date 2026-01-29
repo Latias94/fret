@@ -1,6 +1,7 @@
 #![cfg(target_os = "macos")]
 
 use std::{
+    cell::RefCell,
     collections::HashMap,
     sync::{Arc, Mutex, OnceLock},
 };
@@ -19,7 +20,7 @@ use cocoa::{
         NSPageDownFunctionKey, NSPageUpFunctionKey, NSRightArrowFunctionKey, NSUpArrowFunctionKey,
     },
     base::{id, nil},
-    foundation::NSInteger,
+    foundation::{NSAutoreleasePool, NSInteger, NSString},
 };
 use fret_core::{AppWindowId, KeyCode};
 use fret_runtime::{
@@ -40,8 +41,11 @@ use super::RunnerUserEvent;
 
 static EVENT_LOOP_PROXY: OnceLock<EventLoopProxy> = OnceLock::new();
 static PROXY_EVENTS: OnceLock<Arc<Mutex<Vec<RunnerUserEvent>>>> = OnceLock::new();
-static MENU_STATE: OnceLock<Mutex<MacosMenuState>> = OnceLock::new();
 static MENU_DELEGATE_CLASS: OnceLock<&'static Class> = OnceLock::new();
+
+thread_local! {
+    static MENU_STATE: RefCell<MacosMenuState> = RefCell::new(MacosMenuState::default());
+}
 
 #[derive(Debug, Clone)]
 struct MacosMenuItemDef {
@@ -91,24 +95,26 @@ pub(crate) fn register_window(window: &dyn Window, app_window: AppWindowId) {
     let Some(ns_window) = ns_window_id(window) else {
         return;
     };
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-    let Ok(mut state) = state.lock() else {
-        return;
-    };
-    state
-        .ns_window_to_app_window
-        .insert(ns_window as isize, app_window);
+    MENU_STATE.with(|state| {
+        let Ok(mut state) = state.try_borrow_mut() else {
+            return;
+        };
+        state
+            .ns_window_to_app_window
+            .insert(ns_window as isize, app_window);
+    });
 }
 
 pub(crate) fn unregister_window(window: &dyn Window) {
     let Some(ns_window) = ns_window_id(window) else {
         return;
     };
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-    let Ok(mut state) = state.lock() else {
-        return;
-    };
-    state.ns_window_to_app_window.remove(&(ns_window as isize));
+    MENU_STATE.with(|state| {
+        let Ok(mut state) = state.try_borrow_mut() else {
+            return;
+        };
+        state.ns_window_to_app_window.remove(&(ns_window as isize));
+    });
 }
 
 pub(crate) fn sync_keymap_from_app(app: &fret_app::App) {
@@ -122,12 +128,13 @@ pub(crate) fn sync_keymap_from_app(app: &fret_app::App) {
         .cloned()
         .unwrap_or_default();
 
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-    let Ok(mut state) = state.lock() else {
-        return;
-    };
-    state.cached_keymap = keymap;
-    state.cached_caps = caps;
+    MENU_STATE.with(|state| {
+        let Ok(mut state) = state.try_borrow_mut() else {
+            return;
+        };
+        state.cached_keymap = keymap;
+        state.cached_caps = caps;
+    });
 }
 
 pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
@@ -137,11 +144,14 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
         .unwrap_or_default();
 
     let windows: Vec<AppWindowId> = {
-        let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-        let Ok(state) = state.lock() else {
-            return;
-        };
-        state.ns_window_to_app_window.values().copied().collect()
+        let mut out = Vec::new();
+        MENU_STATE.with(|state| {
+            let Ok(state) = state.try_borrow() else {
+                return;
+            };
+            out.extend(state.ns_window_to_app_window.values().copied());
+        });
+        out
     };
 
     let mut by_window: HashMap<AppWindowId, WindowCommandGatingSnapshot> = HashMap::new();
@@ -165,19 +175,19 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
         by_window.insert(window, snapshot);
     }
 
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-    let Ok(mut state) = state.lock() else {
-        return;
-    };
-    state.cached_caps = caps;
-    for (window, snapshot) in by_window {
-        state.cached_gating_by_window.insert(window, snapshot);
-    }
+    MENU_STATE.with(|state| {
+        let Ok(mut state) = state.try_borrow_mut() else {
+            return;
+        };
+        state.cached_caps = caps;
+        for (window, snapshot) in by_window {
+            state.cached_gating_by_window.insert(window, snapshot);
+        }
+    });
 }
 
 pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
-    let delegate_class = MENU_DELEGATE_CLASS.get_or_init(menu_delegate_class);
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
+    let delegate_class: &'static Class = *MENU_DELEGATE_CLASS.get_or_init(menu_delegate_class);
 
     let (commands, keymap, caps) = {
         let commands = app.commands().clone();
@@ -204,70 +214,71 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
         dispatch_phase: InputDispatchPhase::Bubble,
     };
 
-    let Ok(mut state) = state.lock() else {
-        return;
-    };
-    state.cached_keymap = keymap;
-    state.cached_caps = caps;
+    MENU_STATE.with(|state| {
+        let Ok(mut state) = state.try_borrow_mut() else {
+            return;
+        };
+        state.cached_keymap = keymap;
+        state.cached_caps = caps;
 
-    unsafe {
-        if state.delegate == nil {
-            let delegate: id = msg_send![delegate_class, new];
-            state.delegate = delegate;
+        unsafe {
+            if state.delegate == nil {
+                let delegate: id = msg_send![delegate_class, new];
+                state.delegate = delegate;
+            }
+
+            let main_menu = NSMenu::new(nil).autorelease();
+            state.tag_to_def.clear();
+            state.next_tag = 1;
+
+            let mut app_menu: Option<&fret_runtime::Menu> = None;
+            let mut other_menus: Vec<&fret_runtime::Menu> = Vec::new();
+            for menu in &menu_bar.menus {
+                if menu.role == Some(MenuRole::App) && app_menu.is_none() {
+                    app_menu = Some(menu);
+                } else {
+                    other_menus.push(menu);
+                }
+            }
+            let menus_iter = app_menu.into_iter().chain(other_menus);
+
+            for menu in menus_iter {
+                let submenu = NSMenu::new(nil).autorelease();
+                let title = ns_string(&menu.title);
+                let _: () = msg_send![submenu, setTitle: title];
+                let _: () = msg_send![submenu, setDelegate: state.delegate];
+
+                for item in &menu.items {
+                    append_menu_item(&mut state, submenu, item, &commands, &base_ctx);
+                }
+
+                let menu_item = NSMenuItem::new(nil).autorelease();
+                let _: () = msg_send![menu_item, setTitle: title];
+                menu_item.setSubmenu_(submenu);
+                main_menu.addItem_(menu_item);
+
+                if menu.role == Some(MenuRole::Window) {
+                    let app = NSApp();
+                    app.setWindowsMenu_(submenu);
+                }
+
+                if menu.role == Some(MenuRole::Help) {
+                    let app = NSApp();
+                    let _: () = msg_send![app, setHelpMenu: submenu];
+                }
+
+                if menu.role == Some(MenuRole::App) {
+                    let app = NSApp();
+                    let _: () = msg_send![app, setAppleMenu: submenu];
+                }
+            }
+
+            let app = NSApp();
+            let _: () = msg_send![app, setMainMenu: main_menu];
+
+            state.main_menu = main_menu;
         }
-
-        let main_menu = NSMenu::new(nil).autorelease();
-
-        state.tag_to_def.clear();
-        state.next_tag = 1;
-
-        let mut app_menu: Option<&fret_runtime::Menu> = None;
-        let mut other_menus: Vec<&fret_runtime::Menu> = Vec::new();
-        for menu in &menu_bar.menus {
-            if menu.role == Some(MenuRole::App) && app_menu.is_none() {
-                app_menu = Some(menu);
-            } else {
-                other_menus.push(menu);
-            }
-        }
-        let menus_iter = app_menu.into_iter().chain(other_menus);
-
-        for menu in menus_iter {
-            let submenu = NSMenu::new(nil).autorelease();
-            let title = ns_string(&menu.title);
-            submenu.setTitle_(title);
-            submenu.setDelegate_(state.delegate);
-
-            for item in &menu.items {
-                append_menu_item(&mut state, submenu, item, &commands, &base_ctx);
-            }
-
-            let menu_item = NSMenuItem::new(nil).autorelease();
-            menu_item.setTitle_(title);
-            menu_item.setSubmenu_(submenu);
-            main_menu.addItem_(menu_item);
-
-            if menu.role == Some(MenuRole::Window) {
-                let app = NSApp();
-                app.setWindowsMenu_(submenu);
-            }
-
-            if menu.role == Some(MenuRole::Help) {
-                let app = NSApp();
-                let _: () = msg_send![app, setHelpMenu: submenu];
-            }
-
-            if menu.role == Some(MenuRole::App) {
-                let app = NSApp();
-                let _: () = msg_send![app, setAppleMenu: submenu];
-            }
-        }
-
-        let app = NSApp();
-        let _: () = msg_send![app, setMainMenu: main_menu];
-
-        state.main_menu = main_menu;
-    }
+    });
 }
 
 pub(crate) fn hide_app() {
@@ -312,10 +323,10 @@ unsafe fn append_menu_item(
         }
         MenuItem::SystemMenu { title, menu_type } => {
             let system_item = NSMenuItem::new(nil).autorelease();
-            system_item.setTitle_(ns_string(title));
+            let _: () = msg_send![system_item, setTitle: ns_string(title)];
             let submenu = NSMenu::new(nil).autorelease();
-            submenu.setTitle_(ns_string(title));
-            submenu.setDelegate_(state.delegate);
+            let _: () = msg_send![submenu, setTitle: ns_string(title)];
+            let _: () = msg_send![submenu, setDelegate: state.delegate];
             system_item.setSubmenu_(submenu);
 
             match menu_type {
@@ -329,11 +340,11 @@ unsafe fn append_menu_item(
         }
         MenuItem::Submenu { title, items, .. } => {
             let submenu_item = NSMenuItem::new(nil).autorelease();
-            submenu_item.setTitle_(ns_string(title));
+            let _: () = msg_send![submenu_item, setTitle: ns_string(title)];
 
             let submenu = NSMenu::new(nil).autorelease();
-            submenu.setTitle_(ns_string(title));
-            submenu.setDelegate_(state.delegate);
+            let _: () = msg_send![submenu, setTitle: ns_string(title)];
+            let _: () = msg_send![submenu, setDelegate: state.delegate];
             for item in items {
                 append_menu_item(state, submenu, item, commands, base_ctx);
             }
@@ -383,7 +394,7 @@ unsafe fn append_menu_item(
                 .initWithTitle_action_keyEquivalent_(ns_string(&label), selector, ns_string(""))
                 .autorelease();
             item.setTarget_(state.delegate);
-            item.setTag_(tag);
+            let _: () = msg_send![item, setTag: tag];
 
             if let Some(seq) = state
                 .cached_keymap
@@ -392,7 +403,7 @@ unsafe fn append_menu_item(
                 && let Some(eq) = key_equivalent_for_code(seq[0].key)
             {
                 let mask = chord_modifiers_to_mask(seq[0]);
-                item.setKeyEquivalent_(ns_string(&eq));
+                let _: () = msg_send![item, setKeyEquivalent: ns_string(&eq)];
                 item.setKeyEquivalentModifierMask_(mask);
             }
 
@@ -628,15 +639,16 @@ fn menu_delegate_class() -> &'static Class {
 
 extern "C" fn fret_menu_item_invoked(_this: &Object, _cmd: Sel, item: id) {
     let tag: NSInteger = unsafe { msg_send![item, tag] };
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-    let Ok(state) = state.lock() else {
+    let Some((window, command)) = MENU_STATE.with(|state| {
+        let Ok(state) = state.try_borrow() else {
+            return None;
+        };
+        let def = state.tag_to_def.get(&tag)?;
+        let window = active_app_window_id(&state);
+        Some((window, def.command.clone()))
+    }) else {
         return;
     };
-    let Some(def) = state.tag_to_def.get(&tag) else {
-        return;
-    };
-    let window = active_app_window_id(&state);
-    let command = def.command.clone();
 
     let Some(events) = PROXY_EVENTS.get() else {
         return;
@@ -666,39 +678,40 @@ extern "C" fn fret_menu_will_open(_this: &Object, _cmd: Sel, _menu: id) {
 extern "C" fn fret_validate_menu_item(_this: &Object, _cmd: Sel, item: id) -> BOOL {
     let tag: NSInteger = unsafe { msg_send![item, tag] };
 
-    let state = MENU_STATE.get_or_init(|| Mutex::new(MacosMenuState::default()));
-    let Ok(state) = state.lock() else {
-        return YES;
-    };
-    let Some(def) = state.tag_to_def.get(&tag) else {
-        return YES;
-    };
+    MENU_STATE.with(|state| {
+        let Ok(state) = state.try_borrow() else {
+            return YES;
+        };
+        let Some(def) = state.tag_to_def.get(&tag) else {
+            return YES;
+        };
 
-    let active_window = active_app_window_id(&state);
+        let active_window = active_app_window_id(&state);
 
-    let caps = state.cached_caps.clone();
-    let fallback = InputContext {
-        platform: Platform::Macos,
-        caps,
-        ui_has_modal: false,
-        window_arbitration: None,
-        focus_is_text_input: false,
-        text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
-        edit_can_undo: true,
-        edit_can_redo: true,
-        dispatch_phase: InputDispatchPhase::Bubble,
-    };
+        let caps = state.cached_caps.clone();
+        let fallback = InputContext {
+            platform: Platform::Macos,
+            caps,
+            ui_has_modal: false,
+            window_arbitration: None,
+            focus_is_text_input: false,
+            text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
+            edit_can_undo: true,
+            edit_can_redo: true,
+            dispatch_phase: InputDispatchPhase::Bubble,
+        };
 
-    let gating = active_window
-        .and_then(|w| state.cached_gating_by_window.get(&w).cloned())
-        .unwrap_or_else(|| WindowCommandGatingSnapshot::new(fallback, HashMap::new()));
+        let gating = active_window
+            .and_then(|w| state.cached_gating_by_window.get(&w).cloned())
+            .unwrap_or_else(|| WindowCommandGatingSnapshot::new(fallback, HashMap::new()));
 
-    let enabled =
-        gating.is_enabled_for_meta(&def.command, def.command_scope, def.command_when.as_ref())
-            && def
-                .item_when
-                .as_ref()
-                .map(|w| w.eval(gating.input_ctx()))
-                .unwrap_or(true);
-    if enabled { YES } else { NO }
+        let enabled =
+            gating.is_enabled_for_meta(&def.command, def.command_scope, def.command_when.as_ref())
+                && def
+                    .item_when
+                    .as_ref()
+                    .map(|w| w.eval(gating.input_ctx()))
+                    .unwrap_or(true);
+        if enabled { YES } else { NO }
+    })
 }

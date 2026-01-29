@@ -37,6 +37,24 @@ pub fn node_for_element<H: UiHost>(
     with_window_state(app, window, |st| st.node_entry(element).map(|e| e.node))
 }
 
+/// Returns the most recent `NodeId` mapping for `element` without preparing element runtime for the
+/// current frame.
+///
+/// This is intended for callers that run *during* tree construction (e.g. overlay policy hooks)
+/// where calling `prepare_window_for_frame` can reset `*_next` state.
+///
+/// Prefer `node_for_element` for normal post-frame queries.
+pub fn peek_node_for_element<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+) -> Option<NodeId> {
+    app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
+        let state = runtime.for_window(window)?;
+        state.node_entry(element).map(|e| e.node)
+    })
+}
+
 /// Returns whether `element` is known to be mounted in the **current frame**.
 ///
 /// `node_for_element` may return a stale mapping by design (cross-frame queries). For policies

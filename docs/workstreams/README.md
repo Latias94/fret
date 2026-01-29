@@ -16,6 +16,8 @@ Active workstreams:
 - `docs/workstreams/state-driven-style-resolution-v1.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
+- `docs/workstreams/foundation-closure-p0.md`
+- `docs/workstreams/foundation-closure-p0-todo.md`
 - `docs/workstreams/overlay-arbitration-polish-todo.md` (v1 complete)
 - `docs/workstreams/overlay-lifecycle-phases.md`
 - `docs/workstreams/docking-multiviewport-arbitration-v1.md`

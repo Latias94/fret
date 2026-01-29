@@ -30,57 +30,85 @@ Each TODO is labeled:
 
 ## P0 — User-visible parity blockers
 
-- [ ] DW-P0-ux-001 Auto-close empty dock-floating OS windows after re-dock.
+- [x] DW-P0-ux-001 Auto-close empty dock-floating OS windows after re-dock.
   - Goal: when the last panel leaves a DockFloating OS window via `DockOp::MovePanel`, close the OS window.
   - Rationale: avoids “empty shell windows” and matches ImGui-class multi-window UX.
   - Constraints:
     - `fret-core` remains pure; window close is a runtime/app policy.
     - Only close windows created for docking (avoid closing app-owned auxiliary windows).
   - Evidence anchors:
-    - Ops wiring: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_op`, `handle_dock_window_created`)
+    - Registry + close emission: `ecosystem/fret-docking/src/runtime.rs` (`DockFloatingOsWindowRegistry`, `handle_dock_op`)
+    - Tear-off window registration: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_window_created`)
     - Graph queries: `crates/fret-core/src/dock.rs` (`collect_panels_in_window`, window roots)
     - Window close effects: `crates/fret-runtime/src/effect.rs` (`WindowRequest::Close`)
+    - Regression: `ecosystem/fret-docking/src/runtime.rs` (`redock_from_dock_floating_window_auto_closes_empty_os_window`)
   - Acceptance:
     - Tear off a tab into a new OS window, then re-dock it into main → the floating OS window closes.
     - Drag the last remaining tab out of a floating window → source window closes without leaving a blank shell.
 
-- [ ] DW-P0-macos-002 Make global cursor tracking robust outside windows on macOS.
+- [~] DW-P0-macos-002 Make global cursor tracking robust outside windows on macOS.
   - Goal: reduce `cursor_screen_pos` drift when the cursor is outside any window during dock drag.
   - Evidence anchors:
     - Cursor screen position updates: `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - Cross-window routing uses `cursor_screen_pos`: `crates/fret-launch/src/runner/desktop/mod.rs`
+    - Online calibration + sampling: `crates/fret-launch/src/runner/desktop/mod.rs` (`MacCursorTransform`, `macos_mouse_location`, `macos_refresh_cursor_screen_pos_from_nsevent`)
+    - Diagnostics: `FRET_MACOS_CURSOR_TRACE=1` (emits cursor calibration + mapping lines into `target/fret-dock-tearoff.log` when `FRET_DOCK_TEAROFF_LOG=1` is also set)
   - Acceptance:
     - During a dock drag, move outside all windows and back: hover/drop target selection remains correct.
 
-- [ ] DW-P0-ux-003 Close button semantics: closing a dock-floating OS window merges its content back.
+- [x] DW-P0-ux-003 Close button semantics: closing a dock-floating OS window merges its content back.
   - Goal: closing a dock-floating window should not discard panels; it should merge into a stable target window.
   - Evidence anchors:
     - Hook: `ecosystem/fret-docking/src/runtime.rs` (`handle_dock_before_close_window`)
     - Runner: `crates/fret-launch/src/runner/desktop/mod.rs` (`before_close_window` call path)
+    - Demo wiring: `apps/fret-examples/src/docking_demo.rs` (`before_close_window`), `apps/fret-examples/src/docking_arbitration_demo.rs` (`before_close_window`)
+    - Regression: `ecosystem/fret-docking/src/runtime.rs` (`before_close_window_merges_dock_floating_panels_into_target_window`)
   - Acceptance:
     - Close a floating window via OS close button → its panels reappear in main window.
 
-- [ ] DW-P0-ux-004 “No stuck follow”: tear-off follow always stops on cancel paths.
+- [~] DW-P0-ux-004 “No stuck follow”: tear-off follow always stops on cancel paths.
   - Evidence anchors:
     - Follow state machine: `crates/fret-launch/src/runner/desktop/mod.rs` (`dock_tearoff_follow`, `stop_dock_tearoff_follow`)
+    - Cancel/drag end guard: `crates/fret-launch/src/runner/desktop/mod.rs` (`update_dock_tearoff_follow`)
+    - about_to_wait guard: `crates/fret-launch/src/runner/desktop/app_handler.rs` (`about_to_wait`)
     - Escape cancel: `crates/fret-ui/src/tree/dispatch.rs` and runner cancel path `crates/fret-launch/src/runner/desktop/app_handler.rs`
   - Acceptance:
     - Escape during dock drag cancels and stops follow.
     - Mouse-up outside any window completes drop and stops follow.
+  - Validation recipe (manual):
+    - Run a docking demo with logs enabled (macOS only):
+      - `FRET_DOCK_TEAROFF_LOG=1 FRET_MACOS_CURSOR_TRACE=1 cargo run -p fret-demo --bin docking_arbitration_demo`
+      - Optional: also set `FRET_MACOS_WINDOW_LOG=1` if you suspect ordering/focus issues.
+    - Start a dock tear-off (create a DockFloating OS window) and ensure follow-mode is active:
+      - Drag a tab out of the window while holding LMB so a new OS window is created.
+      - Move the cursor: the floating window should follow (and the log should contain `[follow-move]` lines).
+    - Cancel via Escape while the drag is active:
+      - Press Escape (without releasing the mouse first).
+      - Expected: the drag session ends and the floating window stops following immediately.
+    - Sanity-check after cancel:
+      - Move the cursor around: the window should not keep moving.
+      - Try another tear-off immediately: follow should still work (no broken internal state).
+    - Log confirmation (macOS):
+      - `target/fret-dock-tearoff.log` should include a `[follow-stop]` line around the time you pressed Escape.
 
 ## P1 — Cross-platform robustness and capability modeling
 
-- [ ] DW-P1-caps-001 Add capability quality signals for window hover + positioning.
+- [x] DW-P1-caps-001 Add capability quality signals for window hover + positioning.
   - Goal: avoid implicit assumptions that all native backends have reliable:
     - window-under-cursor selection,
     - `set_outer_position`,
     - window z-level changes (AlwaysOnTop).
-  - Proposed (non-normative) keys:
-    - `ui.window_hover_detection: None|BestEffort|Reliable`
-    - `ui.window_set_outer_position: None|BestEffort|Reliable`
-    - `ui.window_z_level: None|BestEffort|Reliable`
+  - Contract: keys are defined in ADR 0054 (stable capability signals):
+    - `ui.window_hover_detection: none|best_effort|reliable`
+    - `ui.window_set_outer_position: none|best_effort|reliable`
+    - `ui.window_z_level: none|best_effort|reliable`
   - Rationale: Wayland and sandboxed contexts require graceful degradation.
-  - Contract gate: must land as an ADR update if this expands public runtime surface.
+  - Evidence anchors:
+    - Capability keys + enums: `crates/fret-runtime/src/capabilities.rs`
+    - Re-exports: `crates/fret-runtime/src/lib.rs`
+    - Backend values + clamp: `crates/fret-launch/src/runner/desktop/mod.rs`, `crates/fret-launch/src/runner/web.rs`
+    - Runner gating (follow + window-under-cursor): `crates/fret-launch/src/runner/desktop/mod.rs`
+    - Docking UI gating (tear-off affordance): `ecosystem/fret-docking/src/dock/space.rs` (`allow_tear_off`)
 
 - [ ] DW-P1-win-002 Windows placement correctness under DPI and decorations.
   - Goal: initial window placement for tear-off aligns with cursor grab and respects non-client offsets.
@@ -113,4 +141,3 @@ Keep this list short and use it to prevent drift:
 - macOS-specific logging:
   - `FRET_DOCK_TEAROFF_LOG=1` (`target/fret-dock-tearoff.log`)
   - `FRET_MACOS_WINDOW_LOG=1` (`target/fret-macos-window.log`)
-

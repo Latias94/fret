@@ -1239,6 +1239,7 @@ dependencies = [
  "fret-runtime",
  "getrandom 0.3.4",
  "image",
+ "keyboard-types",
  "objc",
  "pollster",
  "renderdog",

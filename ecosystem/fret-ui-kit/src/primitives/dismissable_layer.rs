@@ -120,6 +120,29 @@ pub fn resolve_branch_nodes_for_elements<H: UiHost>(
     out
 }
 
+/// Resolve dismissable layer branch roots for a popover-like overlay request.
+///
+/// This matches Radix semantics used by menu/popover recipes:
+///
+/// - Click-through overlays treat the trigger as an implicit branch so a trigger click doesn't
+///   first dismiss the overlay and then immediately re-open it.
+/// - Menu-like overlays that disable outside pointer interactions should *not* treat the trigger
+///   as a branch: the trigger press must be considered "outside" so it can close the overlay
+///   without activating the underlay.
+pub fn resolve_branch_nodes_for_popover_request<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    trigger: GlobalElementId,
+    branches: &[GlobalElementId],
+    disable_outside_pointer_events: bool,
+) -> Vec<NodeId> {
+    if disable_outside_pointer_events {
+        resolve_branch_nodes_for_elements(app, window, branches)
+    } else {
+        resolve_branch_nodes_for_trigger_and_elements(app, window, trigger, branches)
+    }
+}
+
 /// Returns true if `focus` is inside the dismissable layer subtree, or inside any branch subtree.
 pub fn focus_is_inside_layer_or_branches<H: UiHost>(
     ui: &UiTree<H>,

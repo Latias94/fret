@@ -227,6 +227,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.ui.multi_window = false;
         available.ui.window_tear_off = false;
         available.ui.cursor_icons = true;
+        available.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
+        available.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
+        available.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
         available.clipboard.text = true;
         available.clipboard.files = false;
         available.dnd.external = false;
@@ -251,6 +254,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.ui.multi_window &= available.ui.multi_window;
         caps.ui.window_tear_off &= available.ui.window_tear_off;
         caps.ui.cursor_icons &= available.ui.cursor_icons;
+        caps.ui.window_hover_detection = caps
+            .ui
+            .window_hover_detection
+            .clamp_to_available(available.ui.window_hover_detection);
+        caps.ui.window_set_outer_position = caps
+            .ui
+            .window_set_outer_position
+            .clamp_to_available(available.ui.window_set_outer_position);
+        caps.ui.window_z_level = caps
+            .ui
+            .window_z_level
+            .clamp_to_available(available.ui.window_z_level);
         caps.clipboard.text &= available.clipboard.text;
         caps.clipboard.files &= available.clipboard.files;
         caps.dnd.external &= available.dnd.external;

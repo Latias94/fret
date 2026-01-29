@@ -32,6 +32,7 @@ pub mod window_text_boundary_mode;
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
+    WindowHoverDetectionQuality, WindowSetOuterPositionQuality, WindowZLevelQuality,
 };
 pub use command::CommandId;
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};

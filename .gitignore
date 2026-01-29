@@ -5,10 +5,6 @@
 /local
 crates/fret-fonts/assets/_sources/
 /.fret/**
-!/.fret/
-!/.fret/settings.json
-!/.fret/keymap.json
-!/.fret/layout.json
 /.worktrees
 /.codanna
 /.fastembed_cache

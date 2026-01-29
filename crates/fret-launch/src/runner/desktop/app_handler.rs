@@ -91,7 +91,19 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
                 }
 
-                #[cfg(not(target_os = "windows"))]
+                #[cfg(target_os = "macos")]
+                {
+                    if !self.macos_refresh_cursor_screen_pos_from_nsevent() {
+                        let Some(pos) = self.cursor_screen_pos else {
+                            return;
+                        };
+
+                        self.cursor_screen_pos =
+                            Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
+                    }
+                }
+
+                #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
                 {
                     let Some(pos) = self.cursor_screen_pos else {
                         return;
@@ -117,6 +129,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 #[cfg(target_os = "windows")]
                 if let Some(p) = win32::cursor_pos_physical() {
                     self.cursor_screen_pos = Some(p);
+                }
+
+                #[cfg(target_os = "macos")]
+                {
+                    let _ = self.macos_refresh_cursor_screen_pos_from_nsevent();
                 }
 
                 // This fallback path is only for releases that occur outside all windows, where
@@ -537,7 +554,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.app.request_redraw(app_window);
             }
             ref ev @ WindowEvent::PointerMoved { .. } => {
-                let (mapped, pos, external_drag_token, screen_pos) = {
+                let (mapped, pos, external_drag_token, screen_pos, _scale_factor) = {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
@@ -551,6 +568,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                     let pos = state.platform.input.cursor_pos;
                     let external_drag_token = state.external_drag_token;
+                    let scale_factor = state.window.scale_factor();
                     let screen_pos = match ev {
                         WindowEvent::PointerMoved {
                             position, source, ..
@@ -566,11 +584,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         _ => None,
                     };
 
-                    (mapped, pos, external_drag_token, screen_pos)
+                    (mapped, pos, external_drag_token, screen_pos, scale_factor)
                 };
 
                 if let Some(p) = screen_pos {
                     self.cursor_screen_pos = Some(p);
+                    #[cfg(target_os = "macos")]
+                    self.macos_calibrate_cursor_transform_from_window_sample(p, _scale_factor);
                 }
 
                 let _ = self.update_dock_tearoff_follow();
@@ -1170,10 +1190,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        if let Some(follow) = self.dock_tearoff_follow
-            && !self.is_left_mouse_down_for_window(follow.source_window)
-        {
-            self.stop_dock_tearoff_follow(Instant::now(), false);
+        if let Some(follow) = self.dock_tearoff_follow {
+            // Stop follow even without pointer motion (e.g. Escape cancels the drag session).
+            if self.dock_drag_pointer_id().is_none()
+                || !self.is_left_mouse_down_for_window(follow.source_window)
+            {
+                self.stop_dock_tearoff_follow(Instant::now(), false);
+            }
         }
 
         self.drain_effects(event_loop);
