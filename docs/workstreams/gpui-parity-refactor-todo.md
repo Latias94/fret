@@ -757,9 +757,11 @@ topics (if/when we implement them):
       - `windowed_rows_surface_scroll_refresh`: worst tick ~2.6ms (layout-dominated).
       - `virtual_list_torture`: worst tick ~29.8ms (layout-dominated).
       - Takeaway: large headroom remains for `GPUI-MVP5-virt-001` (prepaint-driven window to reduce scroll-time rerender/layout work).
-- [~] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
+- [x] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
-  - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.
+  - Done when: scroll-driven window updates do not mark the nearest cache root dirty (window boundary updates reconcile attach/detach deltas during prepaint under view-cache reuse), and the common interactions remain correct and stale-paint safe:
+    - Tree: expand/collapse (toggle) + scrolling under the retained host path.
+    - Table/DataTable: select + sort + keyboard navigation/typeahead + scrolling under the retained host path (including measured/variable-height variants).
   - Progress (v1):
     - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_DATA_TABLE_TORTURE`)
     - Harness implementation: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_table_torture`, `ui-gallery-data-table-torture-root`)
