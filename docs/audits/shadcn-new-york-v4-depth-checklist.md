@@ -25,6 +25,7 @@ scroll buttons + max-height clamping), not as incidental layout.
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
 - Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`)
+- SubTrigger open-state chrome (`data-state=open` bg/fg): **Gated** (`*.submenu-kbd.open.json`)
 - Hovered/highlighted item chrome (bg/fg): **Gated** (`menubar-demo.highlight-first.open.json`)
 - Keyboard roving focus visuals (focused item bg/fg): **Gated** (`menubar-demo.focus-first.open.json`)
 
@@ -52,6 +53,7 @@ Evidence anchors:
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
 - Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`)
+- SubTrigger open-state chrome (`data-state=open` bg/fg): **Gated** (`*.submenu-kbd.open.json`)
 - Hovered/highlighted item chrome (bg/fg): **Gated** (`*.highlight-first.open.json`)
 - Keyboard roving focus visuals (focused item bg/fg): **Gated** (`*.focus-first.open.json`)
 

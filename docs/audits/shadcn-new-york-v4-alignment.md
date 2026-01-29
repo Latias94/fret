@@ -170,6 +170,8 @@ Conformance gates:
   (`web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_dark`).
 - Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_dark`).
+- SubTrigger open-state chrome (`data-state=open` bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_subtrigger_open_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_subtrigger_open_chrome_matches_web_dark`).
 - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`).
 - SubContent size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
@@ -222,6 +224,8 @@ Recent fixes:
     (`web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark`).
   - Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark`).
+  - SubTrigger open-state chrome (`data-state=open` bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_subtrigger_open_chrome_matches_web`, `web_vs_fret_context_menu_demo_subtrigger_open_chrome_matches_web_dark`).
   - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_context_menu_demo_submenu_shadow_matches_web_dark`).
   - SubContent size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
@@ -264,6 +268,8 @@ Recent fixes:
     (`web_vs_fret_menubar_demo_submenu_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_shadow_matches_web_dark`).
   - SubContent size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_demo_submenu_panel_size_matches_web`, `web_vs_fret_menubar_demo_submenu_panel_size_matches_web_dark`).
+  - SubTrigger open-state chrome (`data-state=open` bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_subtrigger_open_chrome_matches_web`, `web_vs_fret_menubar_demo_subtrigger_open_chrome_matches_web_dark`).
   - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark`).
   - Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
