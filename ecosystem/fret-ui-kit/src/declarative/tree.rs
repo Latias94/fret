@@ -440,6 +440,9 @@ where
                     let debug_test_id: Option<Arc<str>> = row_test_id_prefix
                         .as_ref()
                         .map(|prefix| Arc::from(format!("{prefix}-{}", entry.id)));
+                    let debug_toggle_test_id: Option<Arc<str>> = debug_test_id
+                        .as_ref()
+                        .map(|id| Arc::from(format!("{id}-toggle")));
 
                     let row_el = cx.pressable(
                         PressableProps {
@@ -497,6 +500,7 @@ where
                                                         role: Some(SemanticsRole::Button),
                                                         label: Some(Arc::from("Toggle")),
                                                         selected: false,
+                                                        test_id: debug_toggle_test_id.clone(),
                                                         ..Default::default()
                                                     },
                                                     ..Default::default()
