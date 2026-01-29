@@ -5888,6 +5888,10 @@ fn preview_data_table_torture(
 ) -> Vec<AnyElement> {
     use fret_ui_headless::table::{ColumnDef, RowKey};
 
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+
     #[derive(Debug, Clone)]
     struct Row {
         id: u64,
@@ -5984,6 +5988,7 @@ fn preview_data_table_torture(
                         shadcn::DataTable::new()
                             .overscan(10)
                             .row_height(Px(28.0))
+                            .measure_rows(variable_height)
                             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element_retained(
                                 cx,
@@ -5993,8 +5998,26 @@ fn preview_data_table_torture(
                                 columns.clone(),
                                 |row, _index, _parent| RowKey(row.id),
                                 |col| Arc::<str>::from(col.id.as_ref()),
-                                |cx, col, row| match col.id.as_ref() {
-                                    "name" => cx.text(row.name.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
                                     "status" => cx.text(row.status.as_ref()),
                                     "cpu%" => cx.text(format!("{}%", row.cpu)),
                                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
@@ -6007,6 +6030,7 @@ fn preview_data_table_torture(
                         shadcn::DataTable::new()
                             .overscan(10)
                             .row_height(Px(28.0))
+                            .measure_rows(variable_height)
                             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
@@ -6016,8 +6040,26 @@ fn preview_data_table_torture(
                                 columns.clone(),
                                 |row, _index, _parent| RowKey(row.id),
                                 |col| Arc::<str>::from(col.id.as_ref()),
-                                |cx, col, row| match col.id.as_ref() {
-                                    "name" => cx.text(row.name.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
                                     "status" => cx.text(row.status.as_ref()),
                                     "cpu%" => cx.text(format!("{}%", row.cpu)),
                                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
