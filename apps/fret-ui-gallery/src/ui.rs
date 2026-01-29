@@ -439,9 +439,13 @@ pub(crate) fn content_view(
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            shadcn::ScrollArea::new([body])
-                .refine_layout(LayoutRefinement::default().w_full().h_full())
-                .into_element(cx)
+            let mut scroll = shadcn::ScrollArea::new([body])
+                .refine_layout(LayoutRefinement::default().w_full().h_full());
+            if selected == PAGE_VIRTUAL_LIST_TORTURE {
+                scroll =
+                    scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
+            }
+            scroll.into_element(cx)
         })
     };
 
@@ -1693,7 +1697,24 @@ fn preview_virtual_list_torture(
         vec![list]
     });
 
-    vec![header, list]
+    let root = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |_cx| vec![header, list],
+    );
+
+    let root = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-torture-root")),
+            ..Default::default()
+        },
+        |_cx| [root],
+    );
+
+    vec![root]
 }
 
 fn code_view_torture_source() -> Arc<str> {
