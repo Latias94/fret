@@ -121,6 +121,7 @@ We need a stable seam for “word boundary mode”:
 
 - default: Unicode word boundaries for general UI text
 - override: identifier boundaries for code editor surfaces
+- triple-click selects a logical line, including the trailing newline when present
 
 This must be window-scoped and explainable (ADR 0194).
 
