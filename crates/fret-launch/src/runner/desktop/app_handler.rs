@@ -226,6 +226,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             event_loop,
             spec,
             fret_runtime::WindowStyleRequest::default(),
+            None,
         ) {
             Ok(w) => w,
             Err(e) => {
