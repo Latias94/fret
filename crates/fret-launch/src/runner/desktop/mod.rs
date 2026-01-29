@@ -26,9 +26,11 @@ use fret_platform_native::file_dialog::NativeFileDialog;
 use fret_platform_native::open_url::NativeOpenUrl;
 use fret_render::{Renderer, SurfaceState, UploadedRgba8Image, WgpuContext};
 use fret_runner_winit::accessibility;
+#[cfg(windows)]
+use fret_runtime::TaskbarVisibility;
 use fret_runtime::{
-    ExternalDragPayloadKind, ExternalDragPositionQuality, FrameId, PlatformCapabilities,
-    PlatformCompletion, TickId,
+    ActivationPolicy, ExternalDragPayloadKind, ExternalDragPositionQuality, FrameId,
+    PlatformCapabilities, PlatformCompletion, TickId, WindowStyleRequest, WindowZLevel,
 };
 use slotmap::SlotMap;
 use tracing::error;
@@ -2778,6 +2780,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         &mut self,
         event_loop: &dyn ActiveEventLoop,
         spec: WindowCreateSpec,
+        style: WindowStyleRequest,
     ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
         let mut attrs = winit::window::WindowAttributes::default()
             .with_title(spec.title)
@@ -2787,8 +2790,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             } else {
                 spec.visible
             });
+        if let Some(policy) = style.activation {
+            let active = matches!(policy, ActivationPolicy::Activates);
+            attrs = attrs.with_active(active);
+        }
         if let Some(position) = spec.position {
             attrs = attrs.with_position(position);
+        }
+        #[cfg(windows)]
+        {
+            use winit::platform::windows::WindowAttributesExtWindows as _;
+            if let Some(taskbar) = style.taskbar {
+                attrs = attrs.with_skip_taskbar(matches!(taskbar, TaskbarVisibility::Hide));
+            }
         }
         let window = Arc::<dyn Window>::from(
             event_loop
@@ -2805,6 +2819,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         if self.config.accessibility_enabled && spec.visible {
             window.set_visible(true);
+        }
+
+        if let Some(level) = style.z_level {
+            window.set_window_level(match level {
+                WindowZLevel::Normal => WindowLevel::Normal,
+                WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
+            });
         }
 
         Ok((window, accessibility))
@@ -3282,7 +3303,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        let (window, accessibility) = self.create_os_window(event_loop, spec)?;
+        let (window, accessibility) = self.create_os_window(event_loop, spec, request.style)?;
         let surface = {
             let Some(context) = self.context.as_ref() else {
                 return Err(RunnerError::WgpuNotInitialized);

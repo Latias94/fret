@@ -222,7 +222,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         }
 
         let spec = self.config.main_window_spec();
-        let window = match self.create_os_window(event_loop, spec) {
+        let window = match self.create_os_window(
+            event_loop,
+            spec,
+            fret_runtime::WindowStyleRequest::default(),
+        ) {
             Ok(w) => w,
             Err(e) => {
                 error!(error = ?e, "failed to create main window");

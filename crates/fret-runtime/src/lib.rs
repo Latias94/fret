@@ -43,7 +43,10 @@ pub use docking_settings::{
 pub use drag::{
     DRAG_KIND_DOCK_PANEL, DRAG_KIND_DOCK_TABS, DragKindId, DragPhase, DragSession, DragSessionId,
 };
-pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+pub use effect::{
+    ActivationPolicy, CreateWindowKind, CreateWindowRequest, Effect, TaskbarVisibility,
+    WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel,
+};
 pub use execution::{
     DispatchPriority, Dispatcher, DispatcherHandle, InboxDrain, InboxDrainHost, InboxDrainRegistry,
     Runnable,
