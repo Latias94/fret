@@ -80,7 +80,12 @@ if ($Kind -eq "shadcn-web" -and $NormalizeOpenSuffix) {
 }
 
 $testFiles = Get-ChildItem -Path $testDir -File -Filter "*.rs"
-$testText = ($testFiles | ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }) -join "`n"
+
+# "Gated" coverage aims to approximate "dedicated behavior gates", not "dynamic smoke traversal".
+# Exclude `*_goldens_smoke.rs` from the string-literal heuristic so smoke-only keys do not inflate
+# the gated percentage.
+$gateTestFiles = $testFiles | Where-Object { $_.Name -notmatch "_goldens_smoke\\.rs$" }
+$testText = ($gateTestFiles | ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }) -join "`n"
 
 $used = [System.Collections.Generic.HashSet[string]]::new()
 

@@ -32,7 +32,7 @@ This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 Notes:
 
 - `tools/golden_coverage.ps1` currently counts a key as “gated” if the key appears as a
-  **string literal** somewhere under `ecosystem/fret-ui-shadcn/tests`.
+  **string literal** somewhere under `ecosystem/fret-ui-shadcn/tests`, excluding `*_goldens_smoke.rs`.
 - This is a reasonable proxy for “this golden is exercised by some dedicated test”, but it is not
   a perfect proxy for “high-signal behavior is gated”.
 - `shadcn_web_goldens_smoke.rs` provides a separate, *dynamic* “smoke-parse” pass that ensures we
