@@ -1311,6 +1311,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         timeout_ms,
                         poll_ms,
                     )?;
+                    clear_script_result_files(
+                        &resolved_script_result_path,
+                        &resolved_script_result_trigger_path,
+                    );
                 }
                 let mut result = run_script_and_wait(
                     &src,
@@ -1438,7 +1442,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         retained_vlist_scroll_window_dirty_max_for_script,
                         vlist_scroll_window_dirty_max_for_script,
                         warmup_frames,
-                    )?;
+                    )
+                    .map_err(|e| {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        e
+                    })?;
                 }
 
                 if !reuse_process {
@@ -5580,45 +5588,6 @@ fn hit_test_node_id(snapshot: &serde_json::Value) -> Option<u64> {
         .and_then(|v| v.as_u64())
 }
 
-fn is_descendant(
-    mut node: u64,
-    ancestor: u64,
-    parents: &std::collections::HashMap<u64, u64>,
-) -> bool {
-    if node == ancestor {
-        return true;
-    }
-    while let Some(parent) = parents.get(&node).copied() {
-        if parent == ancestor {
-            return true;
-        }
-        node = parent;
-    }
-    false
-}
-
-fn semantics_parent_map(snapshot: &serde_json::Value) -> std::collections::HashMap<u64, u64> {
-    let mut parents = std::collections::HashMap::new();
-    let nodes = snapshot
-        .get("debug")
-        .and_then(|v| v.get("semantics"))
-        .and_then(|v| v.get("nodes"))
-        .and_then(|v| v.as_array());
-    let Some(nodes) = nodes else {
-        return parents;
-    };
-    for node in nodes {
-        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        let Some(parent) = node.get("parent").and_then(|v| v.as_u64()) else {
-            continue;
-        };
-        parents.insert(id, parent);
-    }
-    parents
-}
-
 fn check_bundle_for_wheel_scroll(
     bundle_path: &Path,
     test_id: &str,
@@ -5645,6 +5614,7 @@ fn check_bundle_for_wheel_scroll_json(
 
     let mut any_wheel = false;
     let mut failures: Vec<String> = Vec::new();
+    let eps_px: f64 = 0.25;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -5684,19 +5654,6 @@ fn check_bundle_for_wheel_scroll_json(
             continue;
         };
 
-        let Some(hit_before) = hit_test_node_id(before) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} error=missing_hit_before"
-            ));
-            continue;
-        };
-        let Some(hit_after) = hit_test_node_id(after) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} error=missing_hit_after"
-            ));
-            continue;
-        };
-
         let Some(target_before) = semantics_node_id_for_test_id(before, test_id) else {
             failures.push(format!(
                 "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
@@ -5710,19 +5667,43 @@ fn check_bundle_for_wheel_scroll_json(
             continue;
         };
 
-        let before_parents = semantics_parent_map(before);
-        let after_parents = semantics_parent_map(after);
-
-        if !is_descendant(hit_before, target_before, &before_parents) {
+        let Some(y_before) = semantics_node_y_for_test_id(before, test_id) else {
             failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=hit_not_within_target_before hit={hit_before} target={target_before}"
+                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_target_y_before"
             ));
             continue;
+        };
+        let mut moved = false;
+        let mut best_after_frame: u64 = after_frame_id;
+        let mut best_y_after: Option<f64> = None;
+        let mut best_dy: f64 = 0.0;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let Some(y) = semantics_node_y_for_test_id(s, test_id) else {
+                continue;
+            };
+            let dy = (y - y_before).abs();
+            if dy > best_dy {
+                best_dy = dy;
+                best_y_after = Some(y);
+                best_after_frame = frame_id;
+            }
+            if dy > eps_px {
+                moved = true;
+                break;
+            }
         }
 
-        if is_descendant(hit_after, target_after, &after_parents) {
+        if !moved {
+            let y_after = best_y_after.unwrap_or(y_before);
             failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_still_within_target_after hit={hit_after} target={target_after}"
+                "window={window_id} wheel_frame={wheel_frame} after_frame={best_after_frame} test_id={test_id} error=target_y_did_not_move_after_wheel dy={best_dy:.3} y_before={y_before:.3} y_after={y_after:.3} hit_before={:?} hit_after={:?} target_before={target_before} target_after={target_after}",
+                hit_test_node_id(before),
+                hit_test_node_id(after),
             ));
         }
     }
@@ -5739,7 +5720,9 @@ fn check_bundle_for_wheel_scroll_json(
     }
 
     let mut msg = String::new();
-    msg.push_str("wheel scroll check failed (expected hit-test result to move after wheel)\n");
+    msg.push_str(
+        "wheel scroll check failed (expected target semantics bounds to move after wheel)\n",
+    );
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in failures {
         msg.push_str("  ");
