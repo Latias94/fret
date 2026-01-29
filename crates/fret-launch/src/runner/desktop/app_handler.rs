@@ -94,9 +94,21 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 #[cfg(target_os = "macos")]
                 {
                     if !self.macos_refresh_cursor_screen_pos_from_nsevent() {
+                        let _ = self.macos_bootstrap_cursor_transform_from_active_drag();
+                    }
+                    if !self.macos_refresh_cursor_screen_pos_from_nsevent() {
+                        // Fallback: integrate pointer deltas. This is drift-prone on macOS, so we
+                        // try hard to use `NSEvent::mouseLocation` + calibrated transforms first.
                         let Some(pos) = self.cursor_screen_pos else {
                             return;
                         };
+
+                        if macos_cursor_trace_enabled() {
+                            dock_tearoff_log(format_args!(
+                                "[cursor-delta-fallback] prev=({:.1},{:.1}) delta=({:.1},{:.1})",
+                                pos.x, pos.y, delta.0, delta.1
+                            ));
+                        }
 
                         self.cursor_screen_pos =
                             Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
@@ -122,9 +134,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             } => {
                 // This fallback path is only for releases that occur outside all windows, where
                 // winit may not emit `WindowEvent::MouseInput`.
-                if dock_drag_pointer_id != Some(fret_core::PointerId(0)) {
+                let Some(pointer_id) = dock_drag_pointer_id else {
                     return;
-                }
+                };
 
                 #[cfg(target_os = "windows")]
                 if let Some(p) = win32::cursor_pos_physical() {
@@ -133,7 +145,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                 #[cfg(target_os = "macos")]
                 {
-                    let _ = self.macos_refresh_cursor_screen_pos_from_nsevent();
+                    if !self.macos_refresh_cursor_screen_pos_from_nsevent() {
+                        let _ = self.macos_bootstrap_cursor_transform_from_active_drag();
+                        let _ = self.macos_refresh_cursor_screen_pos_from_nsevent();
+                    }
                 }
 
                 // This fallback path is only for releases that occur outside all windows, where
@@ -150,7 +165,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 // `WindowEvent::MouseInput` to the source window. Use device events to still
                 // terminate cross-window dock drags (Unity/ImGui-style tear-off).
                 let (source_window, current_window, dragging) = {
-                    let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
+                    let Some(drag) = self.app.drag(pointer_id) else {
                         return;
                     };
                     if drag.kind != fret_app::DRAG_KIND_DOCK_PANEL {
@@ -159,8 +174,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     (drag.source_window, drag.current_window, drag.dragging)
                 };
                 dock_tearoff_log(format_args!(
-                    "[device-up] source={:?} current={:?} screen_pos={:?} dragging={}",
-                    source_window, current_window, self.cursor_screen_pos, dragging
+                    "[device-up] pointer={:?} source={:?} current={:?} screen_pos={:?} dragging={}",
+                    pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
                 ));
 
                 #[cfg(target_os = "macos")]
@@ -168,7 +183,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     if self.saw_left_mouse_release_this_turn || macos_is_left_mouse_down() {
                         return;
                     }
-                    if let Some(d) = self.app.drag_mut(fret_core::PointerId(0))
+                    if let Some(d) = self.app.drag_mut(pointer_id)
                         && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
                     {
                         d.dragging = true;
@@ -183,10 +198,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
                 if self
                     .app
-                    .drag(fret_core::PointerId(0))
+                    .drag(pointer_id)
                     .is_some_and(|d| d.cross_window_hover)
                 {
-                    self.app.cancel_drag(fret_core::PointerId(0));
+                    self.app.cancel_drag(pointer_id);
                     let _ = self.clear_internal_drag_hover_if_needed();
                 }
                 // When a floating dock window is following the cursor, a mouse release may occur
@@ -207,7 +222,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         }
 
         let spec = self.config.main_window_spec();
-        let window = match self.create_os_window(event_loop, spec) {
+        let window = match self.create_os_window(
+            event_loop,
+            spec,
+            fret_runtime::WindowStyleRequest::default(),
+        ) {
             Ok(w) => w,
             Err(e) => {
                 error!(error = ?e, "failed to create main window");
@@ -615,7 +634,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             ref ev @ WindowEvent::PointerButton { .. } => {
-                let mapped = {
+                let (mapped, scale_factor) = {
                     let Some(runtime) = self.windows.get_mut(app_window) else {
                         return;
                     };
@@ -625,8 +644,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         ev,
                         &mut mapped,
                     );
-                    mapped
+                    (mapped, runtime.window.scale_factor())
                 };
+
+                if let Some(p) = self.cursor_screen_pos_fallback_for_window(app_window) {
+                    self.cursor_screen_pos = Some(p);
+                    #[cfg(target_os = "macos")]
+                    self.macos_calibrate_cursor_transform_from_window_sample(p, scale_factor);
+                }
 
                 let mut saw_left_down = false;
                 let mut saw_left_up = false;
@@ -662,8 +687,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 if saw_left_up {
                     self.left_mouse_down = false;
                     self.saw_left_mouse_release_this_turn = true;
-                    if left_up_pointer_id == Some(fret_core::PointerId(0)) {
-                        self.route_internal_drag_drop_from_cursor();
+                    // Deliver the cursor-based drop on any left mouse release; this keeps docking
+                    // robust even when the drag pointer id is not `PointerId(0)`.
+                    self.route_internal_drag_drop_from_cursor();
+                    if self.dock_tearoff_follow.is_some() {
                         self.stop_dock_tearoff_follow(Instant::now(), true);
                     }
 
