@@ -75,9 +75,7 @@ impl WindowTextBoundaryModeService {
     }
 
     pub fn pop_mode(&mut self, handle: WindowTextBoundaryModeHandle) -> Option<TextBoundaryMode> {
-        let Some(state) = self.by_window.get_mut(&handle.window) else {
-            return None;
-        };
+        let state = self.by_window.get_mut(&handle.window)?;
 
         let idx = state
             .stack
