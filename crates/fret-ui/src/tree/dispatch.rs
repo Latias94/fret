@@ -181,6 +181,10 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        if !pointer_type_supports_hover(*pointer_type) {
+            return;
+        }
+
         let captured_layer_for_pointer_move = self
             .captured
             .get(pointer_id)
@@ -190,9 +194,7 @@ impl<H: UiHost> UiTree<H> {
             .is_none()
             .then(|| self.topmost_pointer_occlusion_layer(barrier_root))
             .flatten()
-            .filter(|(_, occlusion)| {
-                pointer_type_supports_hover(*pointer_type) && *occlusion != PointerOcclusion::None
-            })
+            .filter(|(_, occlusion)| *occlusion != PointerOcclusion::None)
             .map(|(layer, _)| layer);
         let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
         let mut hit_barrier = false;
