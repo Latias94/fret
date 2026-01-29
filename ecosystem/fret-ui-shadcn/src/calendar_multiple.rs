@@ -247,8 +247,12 @@ impl CalendarMultiple {
             day_grid_width
         };
 
-        let chrome = ChromeRefinement::default().p(Space::N3).merge(self.chrome);
-        let root = LayoutRefinement::default().w_full().merge(self.layout);
+        let bg = theme.color_required("background");
+        let chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(bg))
+            .p(Space::N3)
+            .merge(self.chrome);
+        let root = LayoutRefinement::default().merge(self.layout);
 
         let container_props = decl_style::container_props(&theme, chrome, root);
         cx.container(container_props, move |cx| {

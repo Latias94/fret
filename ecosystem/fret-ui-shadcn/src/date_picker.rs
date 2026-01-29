@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -10,7 +11,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
@@ -220,7 +221,11 @@ impl DatePicker {
                                 .show_outside_days(self.show_outside_days)
                                 .disable_outside_days(self.disable_outside_days)
                                 .close_on_select(open_content.clone())
-                                .initial_focus_out(initial_focus_out.clone());
+                                .initial_focus_out(initial_focus_out.clone())
+                                .refine_style(
+                                    ChromeRefinement::default()
+                                        .bg(ColorRef::Color(Color::TRANSPARENT)),
+                                );
 
                             if let Some(pred) = disabled_predicate.clone() {
                                 calendar = calendar.disabled_by(move |d| pred(d));

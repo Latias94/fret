@@ -197,6 +197,19 @@ Evidence anchors:
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
   (`web_vs_fret_button_default_hover_matches_web`, `web_vs_fret_button_default_pressed_matches_web`, `web_vs_fret_button_default_disabled_matches_web`)
 
+## Dates: calendar / date pickers
+
+- Single-month calendar geometry: **Gated** (`calendar-01`, `calendar-04`, `calendar-06`, `calendar-08`, `calendar-10`, `calendar-13..21`)
+- Calendar root background (standalone): **Gated** (`calendar-01` background quad matches web)
+- Note: upstream `Calendar` becomes background-transparent inside `PopoverContent` / `CardContent` via selector overrides
+  (`[[data-slot=popover-content]_&]:bg-transparent` / `[[data-slot=card-content]_&]:bg-transparent`).
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/calendar-*.json`
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+  (`assert_calendar_single_month_variant_geometry_matches_web`, `web_vs_fret_layout_calendar_01_background_matches_web`)
+
 ## Charts (wrapper UI + interaction snapshots)
 
 - Tooltip panel geometry (wrapper): **Gated**
