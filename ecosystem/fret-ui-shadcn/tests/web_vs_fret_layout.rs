@@ -24,8 +24,10 @@ use fret_ui_shadcn::empty::{
 };
 use fret_ui_shadcn::sidebar::SidebarMenuButtonSize;
 use serde::Deserialize;
+use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::sync::Arc;
 
 mod css_color;
@@ -40,6 +42,8 @@ struct WebGolden {
 struct WebGoldenTheme {
     viewport: WebViewport,
     root: WebNode,
+    #[serde(default)]
+    portals: Vec<WebNode>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -173,6 +177,29 @@ fn find_all<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Vec<&
     out
 }
 
+fn find_first_in_theme<'a>(
+    theme: &'a WebGoldenTheme,
+    pred: &impl Fn(&'a WebNode) -> bool,
+) -> Option<&'a WebNode> {
+    find_first(&theme.root, pred).or_else(|| {
+        theme
+            .portals
+            .iter()
+            .find_map(|portal| find_first(portal, pred))
+    })
+}
+
+fn find_all_in_theme<'a>(
+    theme: &'a WebGoldenTheme,
+    pred: &impl Fn(&'a WebNode) -> bool,
+) -> Vec<&'a WebNode> {
+    let mut out = find_all(&theme.root, pred);
+    for portal in &theme.portals {
+        out.extend(find_all(portal, pred));
+    }
+    out
+}
+
 fn contains_text(node: &WebNode, needle: &str) -> bool {
     if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
         return true;
@@ -264,6 +291,13 @@ fn web_find_scroll_area_thumb_in_scrollbar<'a>(scrollbar: &'a WebNode) -> Option
 
 fn web_find_by_class_token<'a>(root: &'a WebNode, token: &str) -> Option<&'a WebNode> {
     find_first(root, &|n| class_has_token(n, token))
+}
+
+fn web_find_by_class_token_in_theme<'a>(
+    theme: &'a WebGoldenTheme,
+    token: &str,
+) -> Option<&'a WebNode> {
+    find_first_in_theme(theme, &|n| class_has_token(n, token))
 }
 
 fn class_has_token(node: &WebNode, token: &str) -> bool {
@@ -20922,7 +20956,7 @@ fn web_vs_fret_layout_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web
         s.strip_suffix("px")?.parse::<f32>().ok()
     }
 
-    let web_rdp_root = web_find_by_class_token(&theme.root, "rdp-root").expect("web rdp-root");
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
     let web_origin_x = web_rdp_root.rect.x;
     let web_origin_y = web_rdp_root.rect.y;
     let web_padding_left = web_rdp_root
@@ -21235,7 +21269,7 @@ fn days_in_month(year: i32, month: time::Month) -> u8 {
 }
 
 fn parse_calendar_cell_size_px(theme: &WebGoldenTheme) -> Option<Px> {
-    let rdp_root = web_find_by_class_token(&theme.root, "rdp-root")?;
+    let rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root")?;
     let class_name = rdp_root.class_name.as_deref().unwrap_or("");
 
     fn parse_spacing_value(token: &str, prefix: &str) -> Option<f32> {
@@ -21269,7 +21303,7 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
     let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
-    let web_rdp_root = web_find_by_class_token(&theme.root, "rdp-root").expect("web rdp-root");
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
     let web_origin_x = web_rdp_root.rect.x;
     let web_origin_y = web_rdp_root.rect.y;
 
@@ -21291,7 +21325,7 @@ fn assert_calendar_single_month_variant_geometry_matches_web(web_name: &str) {
     let web_show_week_number =
         find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
 
-    let web_month_grids = find_all(&theme.root, &|n| {
+    let web_month_grids = find_all_in_theme(theme, &|n| {
         n.tag == "table" && class_has_token(n, "rdp-month_grid")
     });
     assert_eq!(
@@ -21627,7 +21661,7 @@ fn assert_calendar_multi_month_variant_geometry_matches_web(web_name: &str) {
         s.strip_suffix("px")?.parse::<f32>().ok()
     }
 
-    let web_rdp_root = web_find_by_class_token(&theme.root, "rdp-root").expect("web rdp-root");
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
     let web_origin_x = web_rdp_root.rect.x;
     let web_origin_y = web_rdp_root.rect.y;
 
@@ -22113,7 +22147,7 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
     let web = read_web_golden("calendar-01");
     let theme = web_theme(&web);
 
-    let web_rdp_root = web_find_by_class_token(&theme.root, "rdp-root").expect("web rdp-root");
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
     let web_origin_x = web_rdp_root.rect.x;
     let web_origin_y = web_rdp_root.rect.y;
     let web_bg_css = web_rdp_root
@@ -22126,7 +22160,7 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
     let web_show_week_number =
         find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
 
-    let web_month_grids = find_all(&theme.root, &|n| {
+    let web_month_grids = find_all_in_theme(theme, &|n| {
         n.tag == "table" && class_has_token(n, "rdp-month_grid")
     });
     assert_eq!(web_month_grids.len(), 1, "expected a single month grid");
@@ -22262,6 +22296,157 @@ fn web_vs_fret_layout_calendar_01_background_matches_web() {
     assert_rgba_close(
         "calendar-01 root background",
         color_to_rgba(quad.background),
+        expected_bg,
+        0.02,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
+    let web = read_web_golden("calendar-22.open");
+    let theme = web_theme(&web);
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let web_bg_css = web_rdp_root
+        .computed_style
+        .get("backgroundColor")
+        .expect("web calendar root backgroundColor");
+    let expected_bg =
+        parse_css_color(web_bg_css).unwrap_or_else(|| panic!("invalid css color: {web_bg_css}"));
+
+    let web_month_grids = find_all_in_theme(theme, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    });
+    assert_eq!(web_month_grids.len(), 1, "expected a single month grid");
+    let web_month_grid = web_month_grids[0];
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let web_weekday_headers = find_all_in_theme(theme, &|n| class_has_token(n, "rdp-weekday"));
+    let week_start = web_weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let web_day_buttons = find_all_in_theme(theme, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(
+        !web_day_buttons.is_empty(),
+        "expected calendar day buttons for calendar-22.open"
+    );
+    let web_show_outside_days = web_day_buttons.len() != (days_in_month(year, month) as usize);
+    let web_disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let cell_size = parse_calendar_cell_size_px(&theme);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    use fret_ui_headless::calendar::CalendarMonth;
+    let open: Model<bool> = app.models_mut().insert(true);
+    let month_model: Model<CalendarMonth> =
+        app.models_mut().insert(CalendarMonth::new(year, month));
+    let selected: Model<Option<time::Date>> = app.models_mut().insert(None);
+
+    let calendar_bg: Rc<Cell<Option<fret_core::Color>>> = Rc::new(Cell::new(None));
+    let calendar_bg_for_render = calendar_bg.clone();
+    let render = move |cx: &mut fret_ui::ElementContext<'_, App>| {
+        use fret_ui_kit::{LengthRefinement, Space};
+
+        let popover =
+            fret_ui_shadcn::Popover::new(open.clone()).align(fret_ui_shadcn::PopoverAlign::Start);
+        let calendar_bg = calendar_bg_for_render.clone();
+        let month_model = month_model.clone();
+        let selected = selected.clone();
+        vec![popover.into_element(
+            cx,
+            |cx| fret_ui_shadcn::Button::new("Select date").into_element(cx),
+            move |cx| {
+                let mut calendar =
+                    fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
+                        .week_start(week_start)
+                        .show_outside_days(web_show_outside_days)
+                        .disable_outside_days(web_disable_outside_days);
+                if let Some(cell_size) = cell_size {
+                    calendar = calendar.cell_size(cell_size);
+                }
+
+                let calendar = calendar.into_element(cx);
+                match &calendar.kind {
+                    fret_ui::element::ElementKind::Container(props) => {
+                        let bg = props
+                            .background
+                            .expect("calendar root background (resolved)");
+                        calendar_bg.set(Some(bg));
+                    }
+                    other => panic!("expected calendar root container, got {other:?}"),
+                }
+
+                fret_ui_shadcn::PopoverContent::new(vec![calendar])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+                    .into_element(cx)
+            },
+        )]
+    };
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    for frame in 1..=2 {
+        app.set_frame_id(FrameId(frame));
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "web-vs-fret-layout",
+            &render,
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    }
+
+    let actual_bg = calendar_bg
+        .get()
+        .expect("calendar-22.open calendar root background captured");
+    assert_rgba_close(
+        "calendar-22.open root background",
+        color_to_rgba(actual_bg),
         expected_bg,
         0.02,
     );

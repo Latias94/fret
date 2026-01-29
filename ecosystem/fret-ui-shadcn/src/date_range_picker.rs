@@ -178,11 +178,7 @@ impl DateRangePicker {
                                 .show_outside_days(self.show_outside_days)
                                 .disable_outside_days(self.disable_outside_days)
                                 .close_on_select(open_content.clone())
-                                .initial_focus_out(initial_focus_out.clone())
-                                .refine_style(
-                                    ChromeRefinement::default()
-                                        .bg(ColorRef::Color(Color::TRANSPARENT)),
-                                );
+                                .initial_focus_out(initial_focus_out.clone());
 
                             if let Some(pred) = disabled_predicate.clone() {
                                 calendar = calendar.disabled_by(move |d| pred(d));

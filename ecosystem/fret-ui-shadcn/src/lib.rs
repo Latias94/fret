@@ -86,6 +86,7 @@ pub mod tooltip;
 #[cfg(feature = "app-integration")]
 pub mod app_integration;
 
+mod surface_slot;
 mod ui_builder_ext;
 mod ui_ext;
 

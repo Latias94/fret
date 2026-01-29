@@ -18,6 +18,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{CalendarMonth, month_grid_compact, week_number};
 use time::Month;
@@ -404,10 +405,16 @@ impl Calendar {
         };
 
         let bg = theme.color_required("background");
-        let chrome = ChromeRefinement::default()
+        let mut chrome = ChromeRefinement::default()
             .bg(ColorRef::Color(bg))
-            .p(Space::N3)
-            .merge(self.chrome);
+            .p(Space::N3);
+        if matches!(
+            surface_slot_in_scope(cx),
+            Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+        ) {
+            chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+        }
+        let chrome = chrome.merge(self.chrome);
         let root = LayoutRefinement::default().merge(self.layout);
 
         let container_props = decl_style::container_props(&theme, chrome, root);

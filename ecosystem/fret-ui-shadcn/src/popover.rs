@@ -23,6 +23,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence,
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 
 fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
     fn visit(node: &AnyElement, best: &mut Option<Size>) {
@@ -394,7 +395,11 @@ impl Popover {
                     let inner_size_hint: Rc<Cell<Option<Size>>> = Rc::new(Cell::new(None));
                     let inner_size_hint_for_scope = inner_size_hint.clone();
                     let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
-                        let inner = content(cx, anchor_fallback.unwrap_or_default());
+                        let inner = with_surface_slot_provider(
+                            cx,
+                            ShadcnSurfaceSlot::PopoverContent,
+                            |cx| content(cx, anchor_fallback.unwrap_or_default()),
+                        );
                         inner_id_for_scope.set(Some(inner.id));
                         inner_size_hint_for_scope.set(fixed_size_hint_px(&inner));
                         vec![inner]

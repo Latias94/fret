@@ -201,14 +201,19 @@ Evidence anchors:
 
 - Single-month calendar geometry: **Gated** (`calendar-01`, `calendar-04`, `calendar-06`, `calendar-08`, `calendar-10`, `calendar-13..21`)
 - Calendar root background (standalone): **Gated** (`calendar-01` background quad matches web)
+- Calendar root background (nested popover): **Gated** (`calendar-22.open` background matches web)
 - Note: upstream `Calendar` becomes background-transparent inside `PopoverContent` / `CardContent` via selector overrides
   (`[[data-slot=popover-content]_&]:bg-transparent` / `[[data-slot=card-content]_&]:bg-transparent`).
+  In Fret, this is modeled as a "surface slot" context installed by the `Popover` recipe for its
+  content subtree (see `ecosystem/fret-ui-shadcn/src/surface_slot.rs`, `ecosystem/fret-ui-shadcn/src/popover.rs`).
+  CardContent propagation is still TODO (we currently gate only the popover path).
 
 Evidence anchors:
 
 - Goldens: `goldens/shadcn-web/v4/new-york-v4/calendar-*.json`
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
-  (`assert_calendar_single_month_variant_geometry_matches_web`, `web_vs_fret_layout_calendar_01_background_matches_web`)
+  (`assert_calendar_single_month_variant_geometry_matches_web`, `web_vs_fret_layout_calendar_01_background_matches_web`,
+  `web_vs_fret_layout_calendar_22_open_background_matches_web`)
 
 ## Charts (wrapper UI + interaction snapshots)
 
