@@ -2487,6 +2487,12 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         #[serde(default)]
         padding_px: f32,
+        /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
+        ///
+        /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
+        /// strict edge containment checks by `eps_px`.
+        #[serde(default)]
+        eps_px: f32,
     },
 }
 
@@ -5760,13 +5766,18 @@ fn eval_predicate(
             };
             rects_intersect(node.bounds, window_bounds)
         }
-        UiPredicateV1::BoundsWithinWindow { target, padding_px } => {
+        UiPredicateV1::BoundsWithinWindow {
+            target,
+            padding_px,
+            eps_px,
+        } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
                 return false;
             };
             let bounds = node.bounds;
             let pad = padding_px.max(0.0);
+            let eps = eps_px.max(0.0);
 
             let window_left = window_bounds.origin.x.0 + pad;
             let window_top = window_bounds.origin.y.0 + pad;
@@ -5778,10 +5789,10 @@ fn eval_predicate(
             let node_right = bounds.origin.x.0 + bounds.size.width.0;
             let node_bottom = bounds.origin.y.0 + bounds.size.height.0;
 
-            node_left >= window_left
-                && node_top >= window_top
-                && node_right <= window_right
-                && node_bottom <= window_bottom
+            node_left >= window_left - eps
+                && node_top >= window_top - eps
+                && node_right <= window_right + eps
+                && node_bottom <= window_bottom + eps
         }
     }
 }
@@ -6661,6 +6672,7 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 0.0,
+            eps_px: 0.0,
         };
         assert!(eval_predicate(
             &snapshot,
@@ -6675,6 +6687,7 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 12.0,
+            eps_px: 0.0,
         };
         assert!(
             !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),

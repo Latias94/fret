@@ -415,7 +415,7 @@ Predicates (v1 MVP):
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
  - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
- - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}` (target bounds must be fully contained within the window, optionally padded inward)
+ - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
