@@ -906,6 +906,8 @@ impl DockingArbitrationDriver {
                         logical_window_id: w.logical_window_id.clone(),
                     },
                     anchor: None,
+                    role: fret_runtime::WindowRole::Auxiliary,
+                    style: fret_runtime::WindowStyleRequest::default(),
                 },
             )));
         }

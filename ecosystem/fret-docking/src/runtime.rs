@@ -244,6 +244,12 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     panel,
                 },
                 anchor,
+                role: fret_runtime::WindowRole::Auxiliary,
+                style: fret_runtime::WindowStyleRequest {
+                    taskbar: Some(fret_runtime::TaskbarVisibility::Hide),
+                    activation: Some(fret_runtime::ActivationPolicy::Activates),
+                    z_level: None,
+                },
             })));
             true
         }
@@ -543,6 +549,15 @@ mod tests {
             create.kind,
             CreateWindowKind::DockFloating { source_window, .. } if source_window == window_a
         ));
+        assert_eq!(create.role, fret_runtime::WindowRole::Auxiliary);
+        assert_eq!(
+            create.style.taskbar,
+            Some(fret_runtime::TaskbarVisibility::Hide)
+        );
+        assert_eq!(
+            create.style.activation,
+            Some(fret_runtime::ActivationPolicy::Activates)
+        );
 
         assert!(handle_dock_window_created(&mut app, &create, window_b));
 
