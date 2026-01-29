@@ -1017,6 +1017,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-tree-retained-measured";
             let is_ui_gallery_data_table_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained";
+            let is_ui_gallery_data_table_retained_measured_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained-measured";
             let is_ui_gallery_table_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-table-retained";
             let is_ui_gallery_table_retained_measured_suite =
@@ -1091,6 +1093,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_data_table_retained_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_data_table_retained_measured_suite {
                     (
                         vec![
                             resolve_path(
@@ -1401,6 +1421,56 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 {
                     launch_env.push((
                         "FRET_UI_GALLERY_DATA_TABLE_RETAINED".to_string(),
+                        "1".to_string(),
+                    ));
+                }
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_wheel_scroll_test_id =
+                    check_wheel_scroll_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
+                check_stale_paint_test_id =
+                    check_stale_paint_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
+            }
+
+            if is_ui_gallery_data_table_retained_measured_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE")
+                {
+                    launch_env.push(("FRET_UI_GALLERY_VIEW_CACHE".to_string(), "1".to_string()));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VIEW_CACHE_SHELL".to_string(),
+                        "1".to_string(),
+                    ));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_DATA_TABLE_RETAINED")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_DATA_TABLE_RETAINED".to_string(),
+                        "1".to_string(),
+                    ));
+                }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
+                {
+                    launch_env.push((
+                        "FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT".to_string(),
                         "1".to_string(),
                     ));
                 }
