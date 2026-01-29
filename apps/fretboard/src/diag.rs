@@ -53,6 +53,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut inspect_trigger_path: Option<PathBuf> = None;
     let mut inspect_consume_clicks: Option<bool> = None;
     let mut timeout_ms: u64 = 30_000;
+    let mut timeout_ms_overridden: bool = false;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
@@ -247,6 +248,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --timeout-ms".to_string())?;
+                timeout_ms_overridden = true;
                 i += 1;
             }
             "--poll-ms" => {
@@ -1018,6 +1020,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     None,
                 )
             };
+
+            if !timeout_ms_overridden && let Some(BuiltinSuite::UiGalleryLayout) = builtin_suite {
+                timeout_ms = timeout_ms.max(180_000);
+            }
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
