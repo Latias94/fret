@@ -254,6 +254,7 @@ impl DockSpace {
         scale_factor: f32,
         dock: &DockManager,
         layout: &std::collections::HashMap<DockNodeId, Rect>,
+        drag_panel: Option<&PanelKey>,
     ) {
         self.tab_text_style.size = theme.metric_required("font.size");
         self.tab_close_style.size = theme.metric_required("font.size");
@@ -267,6 +268,9 @@ impl DockSpace {
             for panel in tabs {
                 visible_set.insert(panel.clone());
             }
+        }
+        if let Some(panel) = drag_panel {
+            visible_set.insert(panel.clone());
         }
 
         let same_tabs = visible_set.len() == self.tab_titles.len()
@@ -2421,6 +2425,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
         let app = &mut *cx.app;
         let services = &mut *cx.services;
         let scene = &mut *cx.scene;
+        let dock_drag_panel = app
+            .find_drag_pointer_id(|d| {
+                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    && (d.source_window == self.window || d.current_window == self.window)
+                    && d.dragging
+            })
+            .and_then(|pointer_id| app.drag(pointer_id))
+            .and_then(|drag| drag.payload::<DockPanelDragPayload>())
+            .map(|payload| payload.panel.clone());
 
         let paint_panels = app.with_global_mut_untracked(DockManager::default, |dock, _app| {
             dock.register_dock_space_node(self.window, dock_space_node);
@@ -2447,7 +2460,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             let hover = dock.hover.clone();
 
-            self.rebuild_tab_titles(services, theme, scale_factor, &*dock, &layout_all);
+            self.rebuild_tab_titles(
+                services,
+                theme,
+                scale_factor,
+                &*dock,
+                &layout_all,
+                dock_drag_panel.as_ref(),
+            );
+            let drag_tab_title = dock_drag_panel
+                .as_ref()
+                .and_then(|panel| self.tab_titles.get(panel).copied());
+            let close_glyph_present = self.tab_close_glyph.is_some();
             self.tab_widths.clear();
             for (&node_id, &_rect) in layout_all.iter() {
                 let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id) else {
@@ -2634,6 +2658,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &layout_all,
                 &self.tab_scroll,
                 &self.tab_widths,
+                drag_tab_title,
+                close_glyph_present,
                 scene,
             );
 

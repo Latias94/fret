@@ -7,6 +7,7 @@ use super::layout::{dock_hint_rects_with_font, drop_zone_rect, split_tab_bar};
 use super::manager::DockManager;
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
+use super::tab_bar_geometry::dock_tab_width_for_title;
 use fret_ui::retained_bridge::ResizeHandle;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
@@ -310,6 +311,8 @@ pub(super) fn paint_drop_overlay(
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
     tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+    drag_tab_title: Option<PreparedTabTitle>,
+    close_glyph_present: bool,
     scene: &mut Scene,
 ) {
     let Some(target) = target else {
@@ -358,6 +361,66 @@ pub(super) fn paint_drop_overlay(
                     border_color: Color { a: 0.45, ..primary },
                     corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                 });
+                if let Some(title) = drag_tab_title {
+                    let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
+                    let tab_count = match graph.node(target.tabs) {
+                        Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+                        _ => 0,
+                    };
+                    let geom = tab_widths
+                        .get(&target.tabs)
+                        .filter(|w| w.len() == tab_count)
+                        .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                        .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+
+                    let insert_index = target.insert_index.unwrap_or(tab_count);
+                    let mut x = geom.insert_x(insert_index.min(tab_count), scroll).0;
+                    let mut w = dock_tab_width_for_title(
+                        theme,
+                        title.metrics.size.width,
+                        close_glyph_present,
+                    )
+                    .0;
+
+                    let min_x = tab_bar.origin.x.0;
+                    let max_x = tab_bar.origin.x.0 + tab_bar.size.width.0;
+                    if x < min_x {
+                        x = min_x;
+                    }
+                    if x > max_x {
+                        x = max_x;
+                    }
+                    w = w.max(0.0).min((max_x - x).max(0.0));
+                    if w > 6.0 {
+                        let preview = Rect::new(
+                            Point::new(Px(x), tab_bar.origin.y),
+                            Size::new(Px(w), tab_bar.size.height),
+                        );
+                        scene.push(SceneOp::Quad {
+                            order: fret_core::DrawOrder(9_995),
+                            rect: preview,
+                            background: Color { a: 0.22, ..primary },
+                            border: Edges::all(Px(2.0)),
+                            border_color: Color { a: 0.85, ..primary },
+                            corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+                        });
+
+                        let pad_x = theme.metric_required("metric.padding.md");
+                        let text_x = Px(preview.origin.x.0 + pad_x.0.max(0.0));
+                        let inner_y = preview.origin.y.0
+                            + ((preview.size.height.0 - title.metrics.size.height.0) * 0.5);
+                        let text_y = Px(inner_y + title.metrics.baseline.0);
+                        let fg = theme.color_required("foreground");
+                        scene.push(SceneOp::PushClipRect { rect: preview });
+                        scene.push(SceneOp::Text {
+                            order: fret_core::DrawOrder(9_996),
+                            origin: Point::new(text_x, text_y),
+                            text: title.blob,
+                            color: Color { a: 0.92, ..fg },
+                        });
+                        scene.push(SceneOp::PopClip);
+                    }
+                }
                 if let Some(i) = target.insert_index {
                     let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
                     let tab_count = match graph.node(target.tabs) {
