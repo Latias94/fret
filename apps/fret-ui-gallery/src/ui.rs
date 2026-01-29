@@ -6045,6 +6045,10 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     use fret_ui_kit::TreeItem;
     use fret_ui_kit::TreeState;
 
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+
     #[derive(Default)]
     struct TreeTortureModels {
         items: Option<Model<Vec<TreeItem>>>,
@@ -6078,10 +6082,16 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                             Vec::with_capacity(leaves_per_folder as usize);
                         for l in 0..leaves_per_folder {
                             let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
-                            leaves.push(
-                                TreeItem::new(leaf_id, format!("Leaf {r}/{f}/{l} (id={leaf_id})"))
-                                    .disabled(leaf_id % 97 == 0),
-                            );
+                            let label = if variable_height && leaf_id % 15 == 0 {
+                                format!(
+                                    "Leaf {r}/{f}/{l} (id={leaf_id})\nDetails: id={} seed={}",
+                                    leaf_id,
+                                    leaf_id.wrapping_mul(2654435761)
+                                )
+                            } else {
+                                format!("Leaf {r}/{f}/{l} (id={leaf_id})")
+                            };
+                            leaves.push(TreeItem::new(leaf_id, label).disabled(leaf_id % 97 == 0));
                         }
 
                         folders.push(
@@ -6137,13 +6147,26 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                     .is_some();
 
                 if retained {
-                    vec![fret_ui_kit::declarative::tree::tree_view_retained(
-                        cx,
-                        items,
-                        state,
-                        fret_ui_kit::Size::Medium,
-                        Some(Arc::<str>::from("ui-gallery-tree-row")),
-                    )]
+                    if variable_height {
+                        vec![
+                            fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
+                                cx,
+                                items,
+                                state,
+                                fret_ui_kit::Size::Medium,
+                                fret_ui::element::VirtualListMeasureMode::Measured,
+                                Some(Arc::<str>::from("ui-gallery-tree-row")),
+                            ),
+                        ]
+                    } else {
+                        vec![fret_ui_kit::declarative::tree::tree_view_retained(
+                            cx,
+                            items,
+                            state,
+                            fret_ui_kit::Size::Medium,
+                            Some(Arc::<str>::from("ui-gallery-tree-row")),
+                        )]
+                    }
                 } else {
                     vec![fret_ui_kit::declarative::tree::tree_view(
                         cx,
@@ -6171,6 +6194,9 @@ fn preview_table_retained_torture(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
 
     #[derive(Clone)]
     struct TableRow {
@@ -6269,8 +6295,11 @@ fn preview_table_retained_torture(
                     let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
                     props.overscan = 10;
                     props.row_height = Some(Px(28.0));
-                    props.row_measure_mode =
-                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed;
+                    props.row_measure_mode = if variable_height {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Measured
+                    } else {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed
+                    };
                     props.enable_column_grouping = false;
                     props.enable_column_resizing = false;
 
@@ -6278,11 +6307,29 @@ fn preview_table_retained_torture(
                         Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
                     let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
                     let cell_at = Arc::new(
-                        |cx: &mut ElementContext<'_, App>,
-                         col: &ColumnDef<TableRow>,
-                         row: &TableRow| {
+                        move |cx: &mut ElementContext<'_, App>,
+                              col: &ColumnDef<TableRow>,
+                              row: &TableRow| {
                             match col.id.as_ref() {
-                                "name" => cx.text(row.name.as_ref()),
+                                "name" => {
+                                    if variable_height && row.id % 15 == 0 {
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N0),
+                                            |cx| {
+                                                vec![
+                                                    cx.text(row.name.as_ref()),
+                                                    cx.text(format!(
+                                                        "Details: id={} cpu={} mem={}",
+                                                        row.id, row.cpu, row.mem_mb
+                                                    )),
+                                                ]
+                                            },
+                                        )
+                                    } else {
+                                        cx.text(row.name.as_ref())
+                                    }
+                                }
                                 "status" => cx.text(row.status.as_ref()),
                                 "cpu%" => cx.text(format!("{}%", row.cpu)),
                                 "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
