@@ -10,6 +10,7 @@ use fret_ui::element::Length;
 use fret_ui::element::Overflow;
 use fret_ui::element::PositionStyle;
 use fret_ui::element::ScrollAxis;
+use fret_ui::element::ScrollIntrinsicMeasureMode;
 use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
@@ -52,6 +53,7 @@ pub struct ScrollAreaViewport {
     axis: ScrollAxis,
     probe_unbounded: bool,
     viewport_test_id: Option<Arc<str>>,
+    intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
 }
 
 impl ScrollAreaViewport {
@@ -62,6 +64,7 @@ impl ScrollAreaViewport {
             axis: ScrollAxis::Y,
             probe_unbounded: true,
             viewport_test_id: None,
+            intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
         }
     }
 
@@ -77,6 +80,11 @@ impl ScrollAreaViewport {
 
     pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
+        self.intrinsic_measure_mode = mode;
         self
     }
 }
@@ -237,6 +245,7 @@ impl ScrollAreaRoot {
                 axis: viewport_axis,
                 probe_unbounded: viewport_probe_unbounded,
                 viewport_test_id,
+                intrinsic_measure_mode,
                 ..
             } = viewport;
 
@@ -290,6 +299,7 @@ impl ScrollAreaRoot {
                         axis,
                         scroll_handle: Some(handle.clone()),
                         probe_unbounded: viewport_probe_unbounded,
+                        intrinsic_measure_mode,
                     },
                     move |cx| match viewport_test_id {
                         Some(test_id) => {
@@ -538,6 +548,7 @@ pub struct ScrollArea {
     layout: LayoutRefinement,
     scroll_handle: Option<ScrollHandle>,
     viewport_test_id: Option<Arc<str>>,
+    viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
 }
 
 impl ScrollArea {
@@ -552,6 +563,7 @@ impl ScrollArea {
             layout: LayoutRefinement::default(),
             scroll_handle: None,
             viewport_test_id: None,
+            viewport_intrinsic_measure_mode: None,
         }
     }
 
@@ -594,10 +606,18 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
+        self.viewport_intrinsic_measure_mode = Some(mode);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
         if let Some(test_id) = self.viewport_test_id {
             viewport = viewport.viewport_test_id(test_id);
+        }
+        if let Some(mode) = self.viewport_intrinsic_measure_mode {
+            viewport = viewport.intrinsic_measure_mode(mode);
         }
 
         let mut root = ScrollAreaRoot::new(viewport)

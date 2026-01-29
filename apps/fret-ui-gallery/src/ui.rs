@@ -444,6 +444,9 @@ pub(crate) fn content_view(
             if selected == PAGE_VIRTUAL_LIST_TORTURE {
                 scroll =
                     scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
+                scroll = scroll.viewport_intrinsic_measure_mode(
+                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+                );
             }
             scroll.into_element(cx)
         })

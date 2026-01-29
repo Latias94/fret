@@ -1245,6 +1245,7 @@ impl WorkspaceTabStrip {
                                         // `scroll_content_row_layout`) to avoid recursive
                                         // "fill-to-max" probing that can blow the stack in layout.
                                         probe_unbounded: true,
+                                        ..Default::default()
                                     }),
                                     children,
                                 )

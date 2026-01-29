@@ -478,6 +478,14 @@ impl ElementHostWidget {
         )
         .entered();
 
+        if props.intrinsic_measure_mode == crate::element::ScrollIntrinsicMeasureMode::Viewport {
+            return clamp_to_constraints_in_measure(
+                available_px_or_zero(cx.constraints),
+                props.layout,
+                cx.constraints,
+            );
+        }
+
         let width_determined = match props.layout.size.width {
             Length::Px(_) => true,
             Length::Fill => {

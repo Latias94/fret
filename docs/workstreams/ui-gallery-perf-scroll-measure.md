@@ -104,7 +104,23 @@ Code anchors:
 - `apps/fret-ui-gallery/src/ui.rs` (conditional `viewport_test_id(...)`)
 - `ecosystem/fret-ui-shadcn/src/scroll_area.rs` (`ScrollArea::viewport_test_id`)
 
-### 3.2 Add a trace span for `measure_scroll`
+### 3.2 Add a Scroll “intrinsic measurement” mode
+
+Scroll measurement can now be configured to treat the scroll container as a viewport-sized barrier during intrinsic
+measurement passes:
+
+- `ScrollIntrinsicMeasureMode::Viewport`
+
+This is intended for large “virtual surfaces” where measuring the full scrollable subtree under Min/MaxContent is both
+expensive and semantically misleading (extent should come from metrics, not recursive subtree measurement).
+
+Code anchors:
+
+- `crates/fret-ui/src/element.rs` (`ScrollIntrinsicMeasureMode`, `ScrollProps::intrinsic_measure_mode`)
+- `ecosystem/fret-ui-shadcn/src/scroll_area.rs` (`ScrollArea::viewport_intrinsic_measure_mode`)
+- `apps/fret-ui-gallery/src/ui.rs` (enabled only for `virtual_list_torture`)
+
+### 3.3 Add a trace span for `measure_scroll`
 
 `measure_scroll` now emits a `fret_ui.measure_scroll` trace span with:
 

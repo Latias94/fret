@@ -1490,6 +1490,7 @@ pub struct ScrollProps {
     pub layout: LayoutStyle,
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
+    pub intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
     /// When true (default), scroll containers probe their content with a very large available size
     /// along the scroll axis to measure the full scrollable extent.
     ///
@@ -1508,9 +1509,25 @@ impl Default for ScrollProps {
             layout,
             axis: ScrollAxis::Y,
             scroll_handle: None,
+            intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
             probe_unbounded: true,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollIntrinsicMeasureMode {
+    /// Default behavior: scroll measurement probes children (potentially using MaxContent on the
+    /// scroll axis when `probe_unbounded` is true).
+    Content,
+    /// Treat the scroll container as a viewport-sized barrier in intrinsic measurement contexts.
+    ///
+    /// This avoids recursively measuring large scrollable subtrees (virtualized surfaces, large
+    /// tables, code views) during Min/MaxContent measurement passes.
+    ///
+    /// Note: this affects only `measure()` / intrinsic sizing; final layout under definite
+    /// available space is unchanged.
+    Viewport,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
