@@ -154,6 +154,8 @@ Implementation note:
   - Current coverage (kept intentionally small): `intro`, `layout`, `scroll_area`, `tabs`, `accordion`, `overlay`, `resizable`.
 - [ ] Add an overlay regression script that opens key modals/popovers and asserts bounds:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
+- [ ] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
+  - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - [ ] For each new P0 issue:
   - [ ] Add a `tools/diag-scripts/ui-gallery-...json` repro (navigate + wait_until + bounds assertions + `capture_bundle` + `capture_screenshot`).
   - [ ] Add minimal hot-region `test_id` anchors (prefer `cx.semantics` wrappers; do not overload a11y labels).
