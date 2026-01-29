@@ -102,7 +102,7 @@ Examples:
   fretboard diag run tools/diag-scripts/todo-baseline.json --dir target/fret-diag-todo-auto --launch -- cargo run -p fret-demo --bin todo_demo
   fretboard diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json --pack --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag suite ui-gallery          # runs the curated UI gallery suite (app must be running)
-  fretboard diag suite ui-gallery-layout   # runs layout-focused UI gallery repro scripts (app must be running)
+  fretboard diag suite ui-gallery-layout   # runs layout-focused UI gallery repro scripts (includes a small page sweep)
   fretboard diag stats ./target/fret-diag/1234  # summarizes invalidation + other frame stats from a `bundle.json`
   fretboard diag perf ui-gallery --launch -- cargo run -p fret-ui-gallery --release
   fretboard diag perf ui-gallery --warmup-frames 5 --launch -- cargo run -p fret-ui-gallery --release
