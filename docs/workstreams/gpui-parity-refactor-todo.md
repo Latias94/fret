@@ -675,6 +675,17 @@ topics (if/when we implement them):
     - Note: `fretboard diag suite ui-gallery-virt-retained` now defaults to `--warmup-frames 5` plus the retained VirtualList gates above when not explicitly provided.
     - Evidence bundle (cache+shell, release, minimal harness; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-suite2/1769511343500-script-step-0048-wheel/bundle.json`
     - Evidence bundle (measured rows; cache+shell, release; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-measured-local1/1769676590792-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+    - Gate (suite, measured retained all-in-one): `fretboard diag suite ui-gallery-retained-measured --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --dir target/fret-diag-retained-measured-all-local1 --launch -- cargo run -p fret-ui-gallery --release`
+      - Defaults: `ui-gallery-retained-measured` enables view-cache+shell plus the measured variants for VirtualList/Tree/DataTable/Table, and uses multi-test-id wheel-scroll + stale-paint gates.
+      - Evidence bundles (measured all-in-one; cache+shell, release):
+        - `target/fret-diag-retained-measured-all-local1/1769680828211-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680867856-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680899431-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680928063-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680957492-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680985681-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769681014581-ui-gallery-table-retained-sort-select-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769681042494-ui-gallery-table-retained-keyboard-typeahead/bundle.json`
   - Tree harness (retained host consumer):
     - Script: `tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json`
     - Script (toggle + scroll): `tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json`
