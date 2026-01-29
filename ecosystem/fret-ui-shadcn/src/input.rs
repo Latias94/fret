@@ -385,8 +385,8 @@ fn input_with_style<H: UiHost>(
     props.text_style = text_style;
     props.layout.size = SizeStyle {
         width: Length::Fill,
+        height: Length::Px(resolved.min_height),
         min_width: Some(fret_core::Px(0.0)),
-        min_height: Some(resolved.min_height),
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
