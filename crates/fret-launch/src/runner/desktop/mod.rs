@@ -4651,10 +4651,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let outer = state.window.outer_position().ok()?;
         let deco = state.window.surface_position();
         let scale = state.window.scale_factor();
-        let origin_x = outer.x as f64 + deco.x as f64;
-        let origin_y = outer.y as f64 + deco.y as f64;
-        let x = origin_x + state.platform.input.cursor_pos.x.0 as f64 * scale;
-        let y = origin_y + state.platform.input.cursor_pos.y.0 as f64 * scale;
+        let origin = client_origin_screen(outer, deco);
+        let x = origin.x + state.platform.input.cursor_pos.x.0 as f64 * scale;
+        let y = origin.y + state.platform.input.cursor_pos.y.0 as f64 * scale;
         Some(PhysicalPosition::new(x, y))
     }
 
@@ -4671,11 +4670,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
         let deco = state.window.surface_position();
         let size = state.window.surface_size();
-        let left = outer.x as f64 + deco.x as f64;
-        let top = outer.y as f64 + deco.y as f64;
-        let right = left + size.width as f64;
-        let bottom = top + size.height as f64;
-        screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
+        screen_pos_in_client(client_origin_screen(outer, deco), size, screen_pos)
     }
 
     fn local_pos_for_window(
@@ -4686,13 +4681,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let state = self.windows.get(window)?;
         let outer = state.window.outer_position().ok()?;
         let deco = state.window.surface_position();
-        let origin_x = outer.x as f64 + deco.x as f64;
-        let origin_y = outer.y as f64 + deco.y as f64;
-        let local_physical =
-            PhysicalPosition::new(screen_pos.x - origin_x, screen_pos.y - origin_y);
-        let local_logical: winit::dpi::LogicalPosition<f32> =
-            local_physical.to_logical(state.window.scale_factor());
-        Some(Point::new(Px(local_logical.x), Px(local_logical.y)))
+        Some(local_pos_for_screen_pos(
+            client_origin_screen(outer, deco),
+            state.window.scale_factor(),
+            screen_pos,
+        ))
     }
 
     fn window_under_cursor(
@@ -4864,5 +4857,91 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn new_app(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         Self::new(config, app, driver)
+    }
+}
+
+fn client_origin_screen(
+    outer: winit::dpi::PhysicalPosition<i32>,
+    decoration_offset: winit::dpi::PhysicalPosition<i32>,
+) -> winit::dpi::PhysicalPosition<f64> {
+    winit::dpi::PhysicalPosition::new(
+        outer.x as f64 + decoration_offset.x as f64,
+        outer.y as f64 + decoration_offset.y as f64,
+    )
+}
+
+fn screen_pos_in_client(
+    client_origin: winit::dpi::PhysicalPosition<f64>,
+    client_size: winit::dpi::PhysicalSize<u32>,
+    screen_pos: winit::dpi::PhysicalPosition<f64>,
+) -> bool {
+    let left = client_origin.x;
+    let top = client_origin.y;
+    let right = left + client_size.width as f64;
+    let bottom = top + client_size.height as f64;
+    screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
+}
+
+fn local_pos_for_screen_pos(
+    client_origin: winit::dpi::PhysicalPosition<f64>,
+    scale_factor: f64,
+    screen_pos: winit::dpi::PhysicalPosition<f64>,
+) -> Point {
+    let local_physical = winit::dpi::PhysicalPosition::new(
+        screen_pos.x - client_origin.x,
+        screen_pos.y - client_origin.y,
+    );
+    let local_logical: winit::dpi::LogicalPosition<f32> = local_physical.to_logical(scale_factor);
+    Point::new(Px(local_logical.x), Px(local_logical.y))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use winit::dpi::{PhysicalPosition, PhysicalSize};
+
+    #[test]
+    fn client_origin_screen_adds_decoration_offset() {
+        let outer = winit::dpi::PhysicalPosition::new(100, 200);
+        let deco = winit::dpi::PhysicalPosition::new(12, 34);
+        let origin = client_origin_screen(outer, deco);
+        assert_eq!(origin, PhysicalPosition::new(112.0, 234.0));
+    }
+
+    #[test]
+    fn screen_pos_in_client_uses_half_open_bounds() {
+        let origin = PhysicalPosition::new(10.0, 20.0);
+        let size = PhysicalSize::new(100u32, 50u32);
+
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(10.0, 20.0)
+        ));
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(109.9, 69.9)
+        ));
+
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(110.0, 20.0)
+        ));
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(10.0, 70.0)
+        ));
+    }
+
+    #[test]
+    fn local_pos_for_screen_pos_respects_scale_factor() {
+        let origin = PhysicalPosition::new(100.0, 200.0);
+        let scale = 2.0;
+        let screen_pos = PhysicalPosition::new(120.0, 240.0);
+        let local = local_pos_for_screen_pos(origin, scale, screen_pos);
+        assert_eq!(local, Point::new(Px(10.0), Px(20.0)));
     }
 }

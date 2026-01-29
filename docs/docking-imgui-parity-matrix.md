@@ -208,6 +208,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
   - Evidence anchors:
     - Fret conversion helpers: `crates/fret-launch/src/runner/desktop/mod.rs` (`local_pos_for_window`, `screen_pos_in_window`).
     - Dock UI assumes window-local input: `ecosystem/fret-docking/src/dock/space.rs` (uses `WindowMetricsService::inner_bounds` + event positions).
+    - Fret unit tests (client origin + scale): `crates/fret-launch/src/runner/desktop/mod.rs` (`client_origin_screen_adds_decoration_offset`, `local_pos_for_screen_pos_respects_scale_factor`).
   - Notes:
     - Keep this item `[~]` until we have a dedicated conformance test covering mixed-DPI multi-monitor + overlap.
 
