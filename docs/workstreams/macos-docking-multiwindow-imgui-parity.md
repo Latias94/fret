@@ -222,6 +222,8 @@ Acceptance checks:
 
 - When the source window is key and the user tears off a tab, the floating window reliably stays above the
   source window during the drag.
+- After tear-off, switching Spaces (and/or toggling fullscreen on the source) should keep the floating window
+  in a predictable relationship to the source window (no “orphaned in another Space” surprises).
 
 ### P1: Spaces/fullscreen conventions (explicitly locked)
 

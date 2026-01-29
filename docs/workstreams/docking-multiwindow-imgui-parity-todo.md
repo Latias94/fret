@@ -170,8 +170,11 @@ Each TODO is labeled:
   - Non-normative reference: winit parent_window support calls `NSWindow.addChildWindow_ordered(...)`
     (`repo-ref/winit/winit-appkit/src/window_delegate.rs`).
   - Acceptance (manual; macOS):
-    - Tear off a tab to create a DockFloating window.
-    - Move the source window: the DockFloating window should stay associated (child/tool posture) rather than behaving like an unrelated app window.
+    - Run: `cargo run -p fret-demo --bin docking_arbitration_demo`
+    - Tear off a tab to create a DockFloating OS window.
+    - Move the source window around: the DockFloating window should behave like a child/tool window (stay associated rather than behaving like an unrelated app window).
+    - Switch Spaces (or enter fullscreen on the source window): the DockFloating window should follow the expected Space/fullscreen conventions (no “lost on another Space” surprises).
+    - Close the source window: DockFloating windows should not become “stuck” in a bad z-order state; closing behavior should remain consistent with `DW-P0-ux-003` merge semantics.
 
 ## Regression harness
 
