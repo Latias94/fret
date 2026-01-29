@@ -6261,7 +6261,9 @@ fn preview_table_retained_torture(
                             &scroll_handle,
                             items_revision,
                             row_key_at,
-                            Some(Arc::new(|row: &TableRow, _index: usize| row.name.clone())),
+                            Some(Arc::new(|row: &TableRow, _index: usize| {
+                                Arc::from(row.id.to_string())
+                            })),
                             props,
                             header_label,
                             cell_at,
