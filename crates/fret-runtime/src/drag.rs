@@ -6,6 +6,7 @@ use fret_core::{AppWindowId, Point, PointerId};
 pub struct DragKindId(pub u64);
 
 pub const DRAG_KIND_DOCK_PANEL: DragKindId = DragKindId(1);
+pub const DRAG_KIND_DOCK_TABS: DragKindId = DragKindId(2);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DragSessionId(pub u64);

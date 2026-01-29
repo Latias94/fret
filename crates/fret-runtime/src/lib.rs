@@ -40,7 +40,9 @@ pub use docking_settings::{
     DockDragInversionModifier, DockDragInversionPolicy, DockDragInversionSettings,
     DockingInteractionSettings,
 };
-pub use drag::{DRAG_KIND_DOCK_PANEL, DragKindId, DragPhase, DragSession, DragSessionId};
+pub use drag::{
+    DRAG_KIND_DOCK_PANEL, DRAG_KIND_DOCK_TABS, DragKindId, DragPhase, DragSession, DragSessionId,
+};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 pub use execution::{
     DispatchPriority, Dispatcher, DispatcherHandle, InboxDrain, InboxDrainHost, InboxDrainRegistry,

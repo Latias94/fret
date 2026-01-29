@@ -239,8 +239,10 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
             let maybe_close_window = match &op {
                 DockOp::ClosePanel { window, .. } => Some(*window),
                 DockOp::MovePanel { source_window, .. } => Some(*source_window),
+                DockOp::MoveTabs { source_window, .. } => Some(*source_window),
                 DockOp::FloatPanelToWindow { source_window, .. } => Some(*source_window),
                 DockOp::FloatPanelInWindow { source_window, .. } => Some(*source_window),
+                DockOp::FloatTabsInWindow { source_window, .. } => Some(*source_window),
                 DockOp::MergeWindowInto { source_window, .. } => Some(*source_window),
                 _ => None,
             }
@@ -259,6 +261,9 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     | DockOp::FloatPanelInWindow { panel, .. } => {
                         machine.prune_expired(now);
                         machine.cancel_for_panel(panel);
+                    }
+                    DockOp::MoveTabs { .. } | DockOp::FloatTabsInWindow { .. } => {
+                        machine.prune_expired(now);
                     }
                     _ => machine.prune_expired(now),
                 });
@@ -284,6 +289,15 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         dock.clear_viewport_layout_for_window(*target_window);
                         invalidate_windows(app, [*source_window, *target_window]);
                     }
+                    DockOp::MoveTabs {
+                        source_window,
+                        target_window,
+                        ..
+                    } => {
+                        dock.clear_viewport_layout_for_window(*source_window);
+                        dock.clear_viewport_layout_for_window(*target_window);
+                        invalidate_windows(app, [*source_window, *target_window]);
+                    }
                     DockOp::FloatPanelToWindow {
                         source_window,
                         new_window,
@@ -294,6 +308,15 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         invalidate_windows(app, [*source_window, *new_window]);
                     }
                     DockOp::FloatPanelInWindow {
+                        source_window,
+                        target_window,
+                        ..
+                    } => {
+                        dock.clear_viewport_layout_for_window(*source_window);
+                        dock.clear_viewport_layout_for_window(*target_window);
+                        invalidate_windows(app, [*source_window, *target_window]);
+                    }
+                    DockOp::FloatTabsInWindow {
                         source_window,
                         target_window,
                         ..

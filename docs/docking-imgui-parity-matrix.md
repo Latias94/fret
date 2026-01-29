@@ -67,7 +67,7 @@ Docking model and ops:
 - Dock graph model:
   - `crates/fret-core/src/dock.rs` (`DockGraph`, `DockNode`, `DropZone`)
 - Dock ops vocabulary:
-  - `crates/fret-core/src/dock_op.rs` (`DockOp::*`)
+  - `crates/fret-core/src/dock_op.rs` (`DockOp::*`, including `MoveTabs`, `FloatTabsInWindow`)
 - Dock layout helpers:
   - `crates/fret-core/src/dock_layout.rs` (split math helpers; keep `fret-core` pure)
 
@@ -75,6 +75,8 @@ Docking UI + hit testing + previews:
 
 - Dock host widget (interaction core):
   - `ecosystem/fret-docking/src/dock/space.rs` (`DockSpace`)
+- Dock drag payloads (cross-window internal drags):
+  - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload`, `DockTabsDragPayload`)
 - Drop target resolution:
   - `ecosystem/fret-docking/src/dock/hit_test.rs`
   - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`, `drop_zone_rect`, `float_zone`)
@@ -104,6 +106,8 @@ Runner integration (multi-window routing, internal drags, window positioning/fol
 - UI runtime internal drag routing:
   - `crates/fret-ui/src/drag_route.rs`
   - `crates/fret-ui/src/tree/dispatch.rs` (internal drag anchor routing)
+  - Drag kinds:
+    - `crates/fret-runtime/src/drag.rs` (`DRAG_KIND_DOCK_PANEL`, `DRAG_KIND_DOCK_TABS`)
 
 ---
 
@@ -116,7 +120,7 @@ Runner integration (multi-window routing, internal drags, window positioning/fol
 | Dock ops / transactions | `ImGuiDockRequest` queue + node mutations | `DockOp` emitted via `Effect::Dock(...)` (ADR 0013) |
 | Dock preview targeting | `DockNodePreviewDockSetup` + `DockNodeCalcDropRectsAndTestMousePos` | `dock_drop_target_via_dnd` + `dock_hint_rects`/`drop_zone_rect` |
 | “Shift to dock” policy | `ImGuiIO::ConfigDockingWithShift` | `DockDragInversionSettings` (`crates/fret-runtime/src/docking_settings.rs`) |
-| Drag payload | DragDrop payload `IMGUI_PAYLOAD_TYPE_WINDOW` | Internal drag session payload `DockPanelDragPayload` (cross-window) |
+| Drag payload | DragDrop payload `IMGUI_PAYLOAD_TYPE_WINDOW` | Internal drag session payloads: `DockPanelDragPayload` (single panel) + `DockTabsDragPayload` (tab stack) |
 | Hovered viewport/window under moving window | backend sets `MouseHoveredViewport` or fallback heuristics | runner tracks `cursor_screen_pos` + `window_under_cursor(...)` |
 | DPI space | Mostly screen-space pixels (`ImVec2`, `MousePos`) | Window-local logical px (`Px`) + scale factor in `WindowMetricsService` |
 
@@ -250,14 +254,16 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload::dock_previews_enabled`)
     - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_latches_dock_preview_policy_on_activation`)
 
-- [ ] **Undock semantics: whole node/group vs single tab**
+- [~] **Undock semantics: whole node/group vs single tab**
   - ImGui:
     - Supports “move/undock node” (group) via `StartMouseMovingWindowOrNode` and `DockContextQueueUndockNode`.
   - Fret:
-    - Current drag payload is panel/tab oriented.
-  - Open design question:
-    - Do we want “drag tab bar empty space” to move the whole group?
-    - If yes, define a new payload kind and DockOp surface (likely outside `fret-core` if it is purely policy).
+    - Supports *both*:
+      - single-panel drag (`DockPanelDragPayload`, `DockOp::MovePanel` / `DockOp::FloatPanel*`), and
+      - whole tab-stack drag from tab-bar empty space (`DockTabsDragPayload`, `DockOp::MoveTabs` / `DockOp::FloatTabsInWindow`).
+    - Current gap vs ImGui:
+      - tab-stack drag does not tear off into a new OS window yet (it floats in-window only).
+      - we do not yet have an equivalent of “move node from title-bar band” for non-tab-window chrome.
 
 ---
 

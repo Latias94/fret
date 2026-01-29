@@ -25,6 +25,19 @@ pub enum DockOp {
         insert_index: Option<usize>,
     },
 
+    /// Move an entire tab stack ("dock node") as a group.
+    ///
+    /// This is used for editor-grade interactions like dragging the tab bar empty space to
+    /// undock/move the whole group, rather than a single tab.
+    MoveTabs {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        target_window: AppWindowId,
+        target_tabs: DockNodeId,
+        zone: DropZone,
+        insert_index: Option<usize>,
+    },
+
     FloatPanelToWindow {
         source_window: AppWindowId,
         panel: PanelKey,
@@ -47,6 +60,14 @@ pub enum DockOp {
     FloatPanelInWindow {
         source_window: AppWindowId,
         panel: PanelKey,
+        target_window: AppWindowId,
+        rect: Rect,
+    },
+
+    /// Float a whole tab stack into an in-window floating dock container.
+    FloatTabsInWindow {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
         target_window: AppWindowId,
         rect: Rect,
     },

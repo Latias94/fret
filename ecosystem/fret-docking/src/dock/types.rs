@@ -14,6 +14,16 @@ pub(super) struct DockPanelDragPayload {
     pub(super) dock_previews_enabled: bool,
 }
 
+#[derive(Debug, Clone)]
+pub(super) struct DockTabsDragPayload {
+    pub(super) source_tabs: DockNodeId,
+    pub(super) tabs: Vec<PanelKey>,
+    pub(super) active: usize,
+    pub(super) grab_offset: Point,
+    pub(super) start_tick: TickId,
+    pub(super) dock_previews_enabled: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(super) enum DockDropTarget {
     Dock(HoverTarget),
@@ -31,9 +41,23 @@ pub(super) enum DockDropIntent {
         zone: DropZone,
         insert_index: Option<usize>,
     },
+    MoveTabs {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        target_window: AppWindowId,
+        target_tabs: DockNodeId,
+        zone: DropZone,
+        insert_index: Option<usize>,
+    },
     FloatPanelInWindow {
         source_window: AppWindowId,
         panel: PanelKey,
+        target_window: AppWindowId,
+        rect: Rect,
+    },
+    FloatTabsInWindow {
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
         target_window: AppWindowId,
         rect: Rect,
     },
