@@ -736,6 +736,11 @@ topics (if/when we implement them):
     - Scripted scroll capture: `tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json`
     - Tree torture can opt into the retained host path (virt-003 consumer) via `FRET_UI_GALLERY_TREE_RETAINED=1`.
       - Script: `tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json`
+      - Script (toggle + scroll): `tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json`
+      - Debug affordance: retained tree rows expose deterministic toggle button IDs (`ui-gallery-tree-row-<id>-toggle`) for scripted expand/collapse gates.
+      - Evidence bundles (cache+shell, release):
+        - `target/fret-diag-tree-retained-suite-shell3/1769649443728-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-tree-retained-suite-shell3/1769649473084-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
     - Bundle-based stale-paint check:
       - Generate (example): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --dir target/fret-diag-perf-data-table-torture --launch -- cargo run -p fret-ui-gallery --release`
       - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-data-table-torture-root`
