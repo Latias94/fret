@@ -234,7 +234,7 @@ pub fn select_line_range(text: &str, idx: usize) -> (usize, usize) {
         .unwrap_or(0);
     let end = text[idx..]
         .find('\n')
-        .map(|i| (idx + i).min(text.len()))
+        .map(|i| (idx + i + 1).min(text.len()))
         .unwrap_or(text.len());
     (start, end)
 }
@@ -340,6 +340,13 @@ mod tests {
         let text = "a😃b";
         let after_emoji = 1 + "😃".len();
         assert_eq!(prev_char_boundary(text, after_emoji), 1);
+    }
+
+    #[test]
+    fn select_line_range_includes_trailing_newline() {
+        assert_eq!(select_line_range("hello\nworld", 0), (0, 6));
+        assert_eq!(select_line_range("hello\nworld", 5), (0, 6));
+        assert_eq!(select_line_range("hello\nworld", 6), (6, 11));
     }
 
     #[test]
