@@ -409,8 +409,8 @@ pub(crate) fn menu_list_item_label_text_style(
 ) -> Option<TextStyle> {
     let _ = variant;
     // Material Web v30 `menu.list-item.label-text.type` is a mixin. The underlying scalars map to
-    // sys `body-large`, so use that as the stable default in v1.
-    theme.text_style_by_key("md.sys.typescale.body-large")
+    // sys `label-large`, so use that as the stable default in v1.
+    theme.text_style_by_key("md.sys.typescale.label-large")
 }
 
 pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: SelectVariant) -> Color {
