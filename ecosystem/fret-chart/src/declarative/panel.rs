@@ -1,6 +1,6 @@
+use fret_core::time::{Duration, Instant};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 
 use delinea::engine::model::{ChartPatch, PatchMode};
 use delinea::engine::window::DataWindow;
