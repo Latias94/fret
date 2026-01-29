@@ -430,12 +430,20 @@ pub(super) fn paint_drop_hints(
         return;
     };
 
-    let Some(rect) = layout.get(&target.tabs).copied() else {
+    let Some(active_rect) = layout.get(&target.tabs).copied() else {
         return;
     };
 
     let font_size = theme.metric_required("font.size");
-    let hint_rects = dock_hint_rects_with_font(rect, font_size, target.outer);
+    let inner_rect = layout
+        .get(&target.leaf_tabs)
+        .copied()
+        .unwrap_or(active_rect);
+    let root_rect = layout.get(&target.root).copied().unwrap_or(active_rect);
+
+    let show_outer = target.root != target.leaf_tabs;
+    let inner_rects = dock_hint_rects_with_font(inner_rect, font_size, false);
+    let outer_rects = show_outer.then(|| dock_hint_rects_with_font(root_rect, font_size, true));
 
     let inactive_bg_base = theme.color_required("card");
     let inactive_border_base = theme.color_required("border");
@@ -466,13 +474,13 @@ pub(super) fn paint_drop_hints(
     let border = Edges::all(Px(2.0));
     let corner_radii = fret_core::Corners::all(Px(radius_sm.0.max(4.0)));
 
-    // Draw a plate behind the 5-way pad, closer to ImGui/Godot affordances.
+    // Draw a plate behind the inner 5-way pad, closer to ImGui/Godot affordances.
     let pad = Px(pad_sm.0.max(6.0));
     let mut min_x: f32 = f32::INFINITY;
     let mut min_y: f32 = f32::INFINITY;
     let mut max_x: f32 = f32::NEG_INFINITY;
     let mut max_y: f32 = f32::NEG_INFINITY;
-    for &(_zone, r) in hint_rects.iter() {
+    for &(_zone, r) in inner_rects.iter() {
         min_x = min_x.min(r.origin.x.0);
         min_y = min_y.min(r.origin.y.0);
         max_x = max_x.max(r.origin.x.0 + r.size.width.0);
@@ -502,24 +510,49 @@ pub(super) fn paint_drop_hints(
         });
     }
 
-    for &(zone, hint_rect) in hint_rects.iter() {
-        let is_active = zone == target.zone;
-        let bg = if is_active { active_bg } else { inactive_bg };
-        let stroke = if is_active {
-            active_border
-        } else {
-            inactive_border
-        };
+    let mut paint_set = |hint_rects: &[(DropZone, Rect); 5],
+                         active_set: bool,
+                         skip_center: bool,
+                         inactive_alpha: f32| {
+        for &(zone, hint_rect) in hint_rects.iter() {
+            if skip_center && zone == DropZone::Center {
+                continue;
+            }
+            let is_active = active_set && zone == target.zone;
+            let bg = if is_active {
+                active_bg
+            } else {
+                Color {
+                    a: inactive_bg.a * inactive_alpha,
+                    ..inactive_bg
+                }
+            };
+            let stroke = if is_active {
+                active_border
+            } else {
+                Color {
+                    a: inactive_border.a * inactive_alpha,
+                    ..inactive_border
+                }
+            };
 
-        scene.push(SceneOp::Quad {
-            order,
-            rect: hint_rect,
-            background: bg,
-            border,
-            border_color: stroke,
-            corner_radii,
-        });
-        paint_drop_hint_icon(theme, zone, hint_rect, is_active, scene, order.0 + 1);
+            scene.push(SceneOp::Quad {
+                order,
+                rect: hint_rect,
+                background: bg,
+                border,
+                border_color: stroke,
+                corner_radii,
+            });
+            paint_drop_hint_icon(theme, zone, hint_rect, is_active, scene, order.0 + 1);
+        }
+    };
+
+    // Match ImGui's mental model: inner and outer hint sets can coexist; the active set is
+    // determined by which family of drop rects was hit-tested.
+    paint_set(&inner_rects, !target.outer, false, 1.0);
+    if let Some(outer_rects) = outer_rects.as_ref() {
+        paint_set(outer_rects, target.outer, true, 0.80);
     }
 }
 

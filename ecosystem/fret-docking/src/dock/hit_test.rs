@@ -79,6 +79,8 @@ pub(super) fn hit_test_drop_target(
             let insert_index = geom.compute_insert_index(position, scroll);
             return Some(HoverTarget {
                 tabs: node,
+                root: node,
+                leaf_tabs: node,
                 zone: DropZone::Center,
                 insert_index: Some(insert_index),
                 outer: false,
@@ -87,6 +89,8 @@ pub(super) fn hit_test_drop_target(
 
         return Some(HoverTarget {
             tabs: node,
+            root: node,
+            leaf_tabs: node,
             zone: dock_hint_pick_zone(rect, Px(13.0), false, position).unwrap_or(DropZone::Center),
             insert_index: None,
             outer: false,

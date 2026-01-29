@@ -55,6 +55,8 @@ pub(super) struct DividerDragState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct HoverTarget {
     pub(super) tabs: DockNodeId,
+    pub(super) root: DockNodeId,
+    pub(super) leaf_tabs: DockNodeId,
     pub(super) zone: DropZone,
     pub(super) insert_index: Option<usize>,
     pub(super) outer: bool,

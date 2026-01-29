@@ -597,6 +597,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     let scroll = tab_scroll_for_node(tab_scroll, tabs_node);
                     return Some(HoverTarget {
                         tabs: tabs_node,
+                        root,
+                        leaf_tabs: tabs_node,
                         zone: DropZone::Center,
                         insert_index: Some({
                             let geom = tab_widths
@@ -616,8 +618,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     super::layout::dock_hint_pick_zone(root_rect, font_size, true, position)
                 && zone != DropZone::Center
             {
+                let leaf_tabs = leaf
+                    .map(|(tabs_node, _rect, _len)| tabs_node)
+                    .unwrap_or(root);
                 return Some(HoverTarget {
                     tabs: root,
+                    root,
+                    leaf_tabs,
                     zone,
                     insert_index: None,
                     outer: true,
@@ -629,6 +636,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     .unwrap_or(DropZone::Center);
                 return Some(HoverTarget {
                     tabs: tabs_node,
+                    root,
+                    leaf_tabs: tabs_node,
                     zone,
                     insert_index: None,
                     outer: false,
