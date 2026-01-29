@@ -132,6 +132,43 @@ Code anchors:
 
 - `crates/fret-ui/src/declarative/host_widget/measure.rs` (`measure_scroll`)
 
+## 3.4 A/B Result (VirtualList torture, worst frame)
+
+Script:
+
+- `tools/diag-scripts/ui-gallery-virtual-list-torture.json`
+- Env: `FRET_UI_GALLERY_START_PAGE=virtual_list_torture`
+- Args: `--warmup-frames 0 --sort time --top 1`
+
+Before (baseline):
+
+- Commit: `288116a` (`docs(workstreams): add ui gallery scroll perf tracker`)
+- Worst bundle: `target/fret-diag/1769667032519-script-step-0011-click/bundle.json`
+- Worst totals: `total_time_us=140743`, `layout_time_us=133058`
+- Top solve: `measure_time_us=58777`
+- Top measure: `Scroll measure_time_us=47888` with child `Semantics test_id=ui-gallery-content-viewport-virtual_list_torture (measure_time_us=47876)`
+
+After (with intrinsic viewport barrier):
+
+- Commit: `3fa3bba` (`feat(ui): add scroll intrinsic viewport measure mode`)
+- Worst bundle: `target/fret-diag/1769666829955-script-step-0011-click/bundle.json`
+- Worst totals: `total_time_us=91079`, `layout_time_us=83373`
+- Top solve: `measure_time_us=9787`
+- Top measures (now): `Text measure_time_us=5088`, `Scroll measure_time_us=3366` (no longer attributes a large child subtree; expected under viewport mode)
+
+Delta:
+
+- Worst frame `total_time_us`: `-49664` (~`-35.3%`)
+- Worst frame `layout_time_us`: `-49685` (~`-37.3%`)
+- Top solve `measure_time_us`: `-48990` (~`-83.4%`)
+
+Repeat=3 (more stable signal):
+
+- Args: `--repeat 3 --timeout-ms 180000 --warmup-frames 0 --sort time --top 1`
+- Baseline (commit `288116a`): `total_time_us p50/p95/max = 141758/149084/149084`, `layout_time_us p50/p95/max = 134080/141404/141404`
+- After (commit `3fa3bba`): `total_time_us p50/p95/max = 90832/99562/99562`, `layout_time_us p50/p95/max = 83175/91319/91319`
+- Delta: `total_time_us p50=-35.9%`, `p95=-33.2%`; `layout_time_us p50=-38.0%`, `p95=-35.4%`
+
 ## 4) Hypotheses (what we think is actually happening)
 
 H1) The `Scroll` probe’s `AvailableSpace::MaxContent` contract is correct for “true unbounded content extent”, but it is
@@ -175,6 +212,11 @@ The gallery exposes:
 - `FRET_UI_GALLERY_VIEW_CACHE_INNER`
 
 Use `fretboard diag perf ... --env ...` to build cached/uncached comparisons.
+
+Initial data point (VirtualList torture, commit `3fa3bba`, repeat=3, warmup=0):
+
+- No view cache: `total_time_us p50/p95 = 90832/99562` (see §3.4)
+- View cache on (`VIEW_CACHE=1`, `SHELL=1`, `INNER=1`): `total_time_us p50/p95 = 94963/95429` (`--dir target/fret-diag-after-r3-vc2`)
 
 ## 6) Plan (detailed, staged)
 
