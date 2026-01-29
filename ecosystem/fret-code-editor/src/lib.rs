@@ -236,7 +236,8 @@ impl CodeEditorHandle {
         st.row_text_cache_queue.clear();
         #[cfg(feature = "syntax")]
         {
-            st.syntax_row_cache_language = None;
+            st.syntax_row_cache_rev = st.buffer.revision();
+            st.syntax_row_cache_language = st.language.clone();
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
@@ -1201,15 +1202,30 @@ fn apply_and_record_edit(
     }
 
     st.preedit = None;
-    let group = st.undo_group.as_mut().expect("undo group must exist");
-    st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?;
+    let delta = {
+        let group = st.undo_group.as_mut().expect("undo group must exist");
+        st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?
+    };
+    #[cfg(feature = "syntax")]
+    invalidate_syntax_row_cache_for_delta(st, delta);
+    #[cfg(not(feature = "syntax"))]
+    let _ = delta;
     st.selection = next_selection;
+
+    let (buffer_tx, inverse_selection, coalesce_key) = {
+        let group = st.undo_group.as_ref().expect("undo group must exist");
+        (
+            group.tx.snapshot(),
+            group.before_selection,
+            group.coalesce_key.clone(),
+        )
+    };
     let record = UndoRecord::new(CodeEditorTx {
-        buffer_tx: group.tx.snapshot(),
+        buffer_tx,
         selection: next_selection,
-        inverse_selection: group.before_selection,
+        inverse_selection,
     })
-    .coalesce_key(group.coalesce_key.clone());
+    .coalesce_key(coalesce_key);
     st.undo.record_or_coalesce(record);
     Some(())
 }
@@ -1231,6 +1247,15 @@ fn undo(st: &mut CodeEditorState) -> bool {
         }
         Ok::<_, ()>(())
     });
+    #[cfg(feature = "syntax")]
+    {
+        if applied {
+            st.syntax_row_cache_rev = st.buffer.revision();
+            st.syntax_row_cache_tick = 0;
+            st.syntax_row_cache.clear();
+            st.syntax_row_cache_queue.clear();
+        }
+    }
     applied
 }
 
@@ -1251,6 +1276,15 @@ fn redo(st: &mut CodeEditorState) -> bool {
         }
         Ok::<_, ()>(())
     });
+    #[cfg(feature = "syntax")]
+    {
+        if applied {
+            st.syntax_row_cache_rev = st.buffer.revision();
+            st.syntax_row_cache_tick = 0;
+            st.syntax_row_cache.clear();
+            st.syntax_row_cache_queue.clear();
+        }
+    }
     applied
 }
 
@@ -1593,14 +1627,64 @@ fn materialize_preedit_rich_text(
 }
 
 #[cfg(feature = "syntax")]
+const SYNTAX_CACHE_LOOKBACK_ROWS: usize = 64;
+
+#[cfg(feature = "syntax")]
+const SYNTAX_CACHE_LOOKAHEAD_ROWS: usize = 64;
+
+#[cfg(feature = "syntax")]
+fn invalidate_syntax_row_cache_for_delta(
+    st: &mut CodeEditorState,
+    delta: fret_code_editor_buffer::BufferDelta,
+) {
+    // Keep the revision in sync so cached-row requests don't force a full cache clear.
+    st.syntax_row_cache_rev = delta.after;
+    if st.syntax_row_cache.is_empty() {
+        return;
+    }
+
+    let start = delta.lines.start.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
+    let line_count = st.buffer.line_count();
+    let before_len = st.syntax_row_cache.len();
+
+    if delta.lines.old_count != delta.lines.new_count {
+        // Line count changed: row indices at/after the edit point may have shifted.
+        // Keep only entries that are strictly before the invalidation start.
+        st.syntax_row_cache.retain(|row, _| *row < start);
+    } else {
+        let affected_end = delta
+            .lines
+            .start
+            .saturating_add(delta.lines.new_count.saturating_sub(1));
+        let end = affected_end
+            .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
+            .min(line_count.saturating_sub(1));
+        st.syntax_row_cache
+            .retain(|row, _| *row < start || *row > end);
+    }
+
+    if st.syntax_row_cache.len() != before_len {
+        rebuild_syntax_row_cache_queue(st);
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn rebuild_syntax_row_cache_queue(st: &mut CodeEditorState) {
+    let mut entries: Vec<(usize, u64)> = st
+        .syntax_row_cache
+        .iter()
+        .map(|(row, (_, tick))| (*row, *tick))
+        .collect();
+    entries.sort_by_key(|(_, tick)| *tick);
+    st.syntax_row_cache_queue = entries.into();
+}
+
+#[cfg(feature = "syntax")]
 fn cached_row_syntax_spans(
     st: &mut CodeEditorState,
     row: usize,
     max_entries: usize,
 ) -> Arc<[SyntaxSpan]> {
-    const LOOKBACK_ROWS: usize = 64;
-    const LOOKAHEAD_ROWS: usize = 64;
-
     let rev = st.buffer.revision();
     if st.syntax_row_cache_rev != rev || st.syntax_row_cache_language != st.language {
         st.syntax_row_cache_rev = rev;
@@ -1629,9 +1713,9 @@ fn cached_row_syntax_spans(
         return Arc::<[SyntaxSpan]>::from([]);
     }
 
-    let chunk_start = row.saturating_sub(LOOKBACK_ROWS);
+    let chunk_start = row.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
     let chunk_end = row
-        .saturating_add(LOOKAHEAD_ROWS)
+        .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
         .min(line_count.saturating_sub(1));
     populate_syntax_row_cache_for_chunk(st, chunk_start, chunk_end, language, max_entries, tick);
 
@@ -1970,6 +2054,50 @@ mod tests {
         assert!(
             any_highlight,
             "expected at least one highlighted span for rust"
+        );
+    }
+
+    #[cfg(feature = "syntax-rust")]
+    #[test]
+    fn syntax_cache_invalidation_preserves_far_rows_on_inline_edit() {
+        let mut text = String::new();
+        for _ in 0..200 {
+            text.push_str("fn main() {}\n");
+        }
+
+        let handle = CodeEditorHandle::new(text.as_str());
+        handle.set_language(Some(Arc::<str>::from("rust")));
+
+        let mut st = handle.state.borrow_mut();
+        let max_entries = 4096;
+        let _ = cached_row_syntax_spans(&mut st, 0, max_entries);
+        let _ = cached_row_syntax_spans(&mut st, 150, max_entries);
+        assert!(
+            st.syntax_row_cache.contains_key(&150),
+            "expected far-row cache entries to be populated"
+        );
+
+        apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            Edit::Insert {
+                at: 0,
+                text: "x".to_string(),
+            },
+            Selection {
+                anchor: 1,
+                focus: 1,
+            },
+        )
+        .expect("apply edit");
+
+        assert!(
+            st.syntax_row_cache.contains_key(&150),
+            "expected far-row cache entries to survive inline edit invalidation"
+        );
+        assert!(
+            !st.syntax_row_cache.contains_key(&0),
+            "expected near-row cache entries to be invalidated"
         );
     }
 }
