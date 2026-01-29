@@ -59,7 +59,7 @@ Use `fretboard diag compare`:
 |---|---:|---|---|---|---|---|---|
 | L1 | P0 | `resizable` | Resizable panel group height looks wrong (ignores the intended `h_px(320)` in the demo; can collapse to ~0 when parent height is indefinite). | `tools/diag-scripts/ui-gallery-resizable-initial-bundle.json` | Fixed (pending merge) | codex | Evidence bundles: `.fret/diag-resizable-bundle/1769674921459-ui-gallery-resizable-initial/frame.bmp` (before) vs `.fret/diag-resizable-bundle/1769675245065-ui-gallery-resizable-initial/frame.bmp` (after). Debug label: `SemanticsProps.label="Debug:ui-gallery:resizable-panels"`, `test_id="ui-gallery-resizable-panels"`. |
 | L2 | P0 | `intro` | “Core / UI Kit / Shadcn” preview cards (and the note) can be laid out wider than the window (tab panel expands to max-content width). | `tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json` | Fixed (pending merge) | codex | Debug anchors: `label="Debug:ui-gallery:intro:preview-grid"`, `test_id="ui-gallery-intro-preview-grid"` and `label="Debug:ui-gallery:intro:preview-note"`, `test_id="ui-gallery-intro-preview-note"`. |
-| L3 | P0 | `workspace` | Workspace top bar can clip critical controls: the right-side “Command palette” button and tab-strip scroll buttons can end up off-window when tab strip overflows (missing `min-w-0`/shrink constraints on flex/scroll containers). | `tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json` | In progress | codex | Regression gate: `bounds_within_window(test_id=\"ui-gallery-command-palette\", eps_px=1.0)`. |
+| L3 | P0 | `workspace` | Workspace top bar can clip critical controls: the right-side “Command palette” button and tab-strip scroll buttons can end up off-window when tab strip overflows (missing `min-w-0`/shrink constraints on flex/scroll containers). | `tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json` | Fixed (pending merge) | codex | Evidence: `target/fret-diag/1769692404766-ui-gallery-topbar-command-palette-visible/frame.bmp`. Regression gate: `bounds_within_window(test_id=\"ui-gallery-command-palette\", eps_px=1.0)`. |
 
 ### L1 Notes (Resizable Panels)
 
@@ -84,6 +84,12 @@ Use `fretboard diag compare`:
 - Add `SemanticsProps.test_id` / labels to make the hot region and broken bounds discoverable in bundles and dumps.
 - Convert the repro into a `crates/fret-ui/src/declarative/tests/*` test when possible.
 - Keep a small layout-only suite runnable via `fretboard diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`.
+- Add a small-window sweep run (catches overflow earlier):
+
+```powershell
+$env:FRET_UI_GALLERY_MAIN_WINDOW_SIZE="800x600"
+cargo run -p fretboard -- diag suite ui-gallery-layout --env FRET_DIAG_SCREENSHOT=1 --launch -- cargo run -p fret-ui-gallery --release
+```
 
 ## 5) Work Plan (TODOs + Milestones)
 

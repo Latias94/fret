@@ -2083,9 +2083,41 @@ pub fn build_app() -> App {
 }
 
 pub fn build_runner_config() -> WinitRunnerConfig {
+    fn parse_main_window_size_override() -> Option<winit::dpi::LogicalSize<f64>> {
+        let raw = std::env::var("FRET_UI_GALLERY_MAIN_WINDOW_SIZE").ok()?;
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        let mut parts = trimmed
+            .split(|c: char| c == 'x' || c == 'X' || c == ',' || c.is_whitespace())
+            .filter(|p| !p.trim().is_empty());
+
+        let w = parts.next()?.trim().parse::<f64>().ok()?;
+        let h = parts.next()?.trim().parse::<f64>().ok()?;
+        if w <= 0.0 || h <= 0.0 {
+            return None;
+        }
+
+        Some(winit::dpi::LogicalSize::new(w, h))
+    }
+
+    let main_window_size = match parse_main_window_size_override() {
+        Some(size) => {
+            tracing::info!(
+                w = size.width,
+                h = size.height,
+                "ui-gallery overriding main_window_size via FRET_UI_GALLERY_MAIN_WINDOW_SIZE"
+            );
+            size
+        }
+        None => winit::dpi::LogicalSize::new(1080.0, 720.0),
+    };
+
     WinitRunnerConfig {
         main_window_title: "fret-ui-gallery".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(1080.0, 720.0),
+        main_window_size,
         ..Default::default()
     }
 }
