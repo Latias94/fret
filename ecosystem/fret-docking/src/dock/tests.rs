@@ -4093,7 +4093,7 @@ fn dock_drag_over_floating_title_bar_resolves_center_dock_target() {
         matches!(
             hover,
             Some(DockDropTarget::Dock(t))
-                if t.zone == DropZone::Center && t.insert_index.is_none() && !t.outer
+                if t.zone == DropZone::Center && t.insert_index.is_none() && !t.outer && !t.explicit
         ),
         "expected center dock target when hovering floating title bar, got: {hover:?}"
     );
@@ -4785,6 +4785,7 @@ fn dock_center_drop_overlay_excludes_tab_bar() {
             zone: DropZone::Center,
             insert_index: None,
             outer: false,
+            explicit: true,
         }));
     });
 
@@ -4859,6 +4860,7 @@ fn dock_center_drop_overlay_draws_tab_preview_for_drag_payload() {
             zone: DropZone::Center,
             insert_index: None,
             outer: false,
+            explicit: true,
         }));
         target_tabs
     });

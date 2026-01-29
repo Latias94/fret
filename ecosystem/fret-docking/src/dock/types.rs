@@ -91,6 +91,12 @@ pub(super) struct HoverTarget {
     pub(super) zone: DropZone,
     pub(super) insert_index: Option<usize>,
     pub(super) outer: bool,
+    /// Whether the cursor is explicitly hovering a direction-pad drop rect.
+    ///
+    /// This is used to avoid highlighting the pad when docking is merely allowed due to an
+    /// "explicit target band" (tab bar, floating title bar) rather than the cursor being over a
+    /// specific drop rect.
+    pub(super) explicit: bool,
 }
 
 #[derive(Debug, Clone, Copy)]

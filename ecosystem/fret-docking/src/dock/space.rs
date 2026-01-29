@@ -803,6 +803,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 geom.compute_insert_index(position, scroll)
                             }),
                             outer: false,
+                            explicit: false,
                         },
                         fret_runtime::DockDropResolveSource::TabBar,
                     ));
@@ -842,6 +843,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         zone,
                         insert_index: None,
                         outer: true,
+                        explicit: true,
                     },
                     fret_runtime::DockDropResolveSource::OuterHintRect,
                 ));
@@ -868,6 +870,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         zone,
                         insert_index: None,
                         outer: false,
+                        explicit: true,
                     },
                     fret_runtime::DockDropResolveSource::InnerHintRect,
                 ));
@@ -984,6 +987,60 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     Some(DockDropTarget::Float { window }),
                     fret_runtime::DockDropResolveSource::FloatZone,
                 );
+            }
+
+            if let Some((floating, chrome, FloatingHitKind::TitleBar)) =
+                hit_test_floating(graph, window, position)
+            {
+                let layout_bounds = chrome.inner;
+                let layout = compute_layout_map(
+                    graph,
+                    floating,
+                    layout_bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                );
+                let center = Point::new(
+                    Px(layout_bounds.origin.x.0 + layout_bounds.size.width.0 * 0.5),
+                    Px(layout_bounds.origin.y.0 + layout_bounds.size.height.0 * 0.5),
+                );
+                let mut best: Option<(DockNodeId, f32)> = None;
+                for (&node_id, &rect) in layout.iter() {
+                    if !rect.contains(center) {
+                        continue;
+                    }
+                    let Some(DockNode::Tabs { tabs, .. }) = graph.node(node_id) else {
+                        continue;
+                    };
+                    if tabs.is_empty() {
+                        continue;
+                    }
+                    let area = rect.size.width.0 * rect.size.height.0;
+                    match best {
+                        None => best = Some((node_id, area)),
+                        Some((_best_node, best_area)) => {
+                            if area < best_area {
+                                best = Some((node_id, area));
+                            }
+                        }
+                    }
+                }
+
+                if let Some((leaf_tabs, _area)) = best {
+                    return (
+                        Some(DockDropTarget::Dock(HoverTarget {
+                            tabs: leaf_tabs,
+                            root: floating,
+                            leaf_tabs,
+                            zone: DropZone::Center,
+                            insert_index: None,
+                            outer: false,
+                            explicit: false,
+                        })),
+                        fret_runtime::DockDropResolveSource::FloatingTitleBar,
+                    );
+                }
+                return (None, fret_runtime::DockDropResolveSource::None);
             }
 
             let (layout_root, layout_bounds, effective_position) =

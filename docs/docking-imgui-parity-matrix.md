@@ -283,6 +283,8 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - Fret now renders the direction-pad hint UI even when no drop target is currently selected
       (mirrors ImGui's always-visible drop boxes while dragging over a valid host), but keeps the
       "drop allowed" gating aligned with ImGui's explicit-target semantics.
+    - Hint pad highlights are only shown when hovering a pad rect, not merely when docking is
+      allowed via an explicit target band (matches ImGui's `IsSplitDirExplicit` behavior).
     - Floating in-window dock containers treat the **floating title bar** as an explicit target
       for center docking (ImGui parity: "title/tab bar band" behavior).
     - However, Fret still does not have a direct equivalent of ImGui’s “explicit target rect = title bar band”

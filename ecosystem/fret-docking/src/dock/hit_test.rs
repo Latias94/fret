@@ -104,6 +104,7 @@ pub(super) fn hit_test_drop_target(
                 zone: DropZone::Center,
                 insert_index: Some(insert_index),
                 outer: false,
+                explicit: false,
             });
         }
 
@@ -114,6 +115,7 @@ pub(super) fn hit_test_drop_target(
             zone: dock_hint_pick_zone(rect, Px(13.0), false, position).unwrap_or(DropZone::Center),
             insert_index: None,
             outer: false,
+            explicit: true,
         });
     }
     None

@@ -653,7 +653,10 @@ pub(super) fn paint_drop_hints(
     };
     let active_matches_hints =
         active.is_some_and(|t| t.root == hints.root && t.leaf_tabs == hints.leaf_tabs);
-    let active_zone = active_matches_hints.then(|| active.unwrap().zone);
+    let active_zone = active_matches_hints
+        .then(|| active.unwrap())
+        .filter(|t| t.explicit)
+        .map(|t| t.zone);
     let active_outer = active_matches_hints && active.unwrap().outer;
     let inner_active_set = active_zone.is_some() && !active_outer;
     let outer_active_set = active_zone.is_some() && active_outer;
