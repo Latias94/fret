@@ -465,6 +465,19 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
+        let _span = tracing::trace_span!(
+            "fret_ui.measure_scroll",
+            node = ?cx.node,
+            axis = ?props.axis,
+            probe_unbounded = props.probe_unbounded,
+            child_count = cx.children.len(),
+            known_w = ?cx.constraints.known.width,
+            known_h = ?cx.constraints.known.height,
+            avail_w = ?cx.constraints.available.width,
+            avail_h = ?cx.constraints.available.height,
+        )
+        .entered();
+
         let width_determined = match props.layout.size.width {
             Length::Px(_) => true,
             Length::Fill => {
@@ -540,9 +553,16 @@ impl ElementHostWidget {
             },
         );
         let max_child = if let Some(cached) = cached {
+            tracing::trace!(cache_hit = true, "scroll probe cached");
             cached
         } else {
+            let started = fret_core::time::Instant::now();
             let measured = max_non_absolute_children(cx, window, child_constraints);
+            tracing::trace!(
+                cache_hit = false,
+                probe_time_us = started.elapsed().as_micros() as u64,
+                "scroll probe measured"
+            );
             crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
