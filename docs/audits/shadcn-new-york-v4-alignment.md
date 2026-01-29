@@ -158,12 +158,14 @@ Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
 - Menu panel width now grows beyond the `8rem` floor when labels are longer (using a longest-label estimate for popper sizing).
+- Button trigger height is now pinned to the Tailwind `h-*` border-box height across variants (including `outline`), so constrained-viewport max-height clamps match shadcn-web when the menu is bottom-clamped.
 
 Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_dropdown_menu_panel_chrome_matches`).
 - Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-  (`web_vs_fret_dropdown_menu_demo_panel_size_matches_web`, `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`).
+  (`web_vs_fret_dropdown_menu_demo_panel_size_matches_web`, `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web_dark`).
 - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`).
 - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
@@ -217,7 +219,8 @@ Recent fixes:
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
   - Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-    (`web_vs_fret_context_menu_demo_panel_size_matches_web`, `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`).
+    (`web_vs_fret_context_menu_demo_panel_size_matches_web`, `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`,
+    `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web_dark`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_shadow_matches_web`, `web_vs_fret_context_menu_demo_shadow_matches_web_dark`).
   - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
@@ -263,7 +266,8 @@ Recent fixes:
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
   - Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-    (`web_vs_fret_menubar_demo_panel_size_matches_web`, `web_vs_fret_menubar_demo_panel_size_matches_web_dark`).
+    (`web_vs_fret_menubar_demo_panel_size_matches_web`, `web_vs_fret_menubar_demo_panel_size_matches_web_dark`,
+    `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web_dark`).
   - Root shadow (`shadow-xs`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_root_shadow_matches_web`, `web_vs_fret_menubar_root_shadow_matches_web_dark`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`

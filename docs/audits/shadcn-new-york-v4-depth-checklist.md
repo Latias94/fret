@@ -41,6 +41,8 @@ Evidence anchors:
   and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_menubar_demo_panel_size_matches_web`,
   `web_vs_fret_menubar_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web_dark`,
   `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_menubar_demo_focused_item_chrome_matches_web`)
 
@@ -80,8 +82,12 @@ Evidence anchors:
   and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (item state chrome + panel size)
   (`web_vs_fret_dropdown_menu_demo_panel_size_matches_web`,
   `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web_dark`,
   `web_vs_fret_context_menu_demo_panel_size_matches_web`,
   `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web_dark`,
   `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`,
   `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`,
