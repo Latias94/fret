@@ -638,6 +638,8 @@ pub(super) fn paint_drop_hints(
     theme: fret_ui::ThemeSnapshot,
     hints: Option<DockDropHints>,
     target: Option<DockDropTarget>,
+    hint_font_size_inner: Px,
+    hint_font_size_outer: Px,
     _window: fret_core::AppWindowId,
     _bounds: Rect,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
@@ -666,10 +668,10 @@ pub(super) fn paint_drop_hints(
     };
     let root_rect = layout.get(&hints.root).copied().unwrap_or(inner_rect);
 
-    let font_size = theme.metric_required("font.size");
     let show_outer = hints.root != hints.leaf_tabs;
-    let inner_rects = dock_hint_rects_with_font(inner_rect, font_size, false);
-    let outer_rects = show_outer.then(|| dock_hint_rects_with_font(root_rect, font_size, true));
+    let inner_rects = dock_hint_rects_with_font(inner_rect, hint_font_size_inner, false);
+    let outer_rects =
+        show_outer.then(|| dock_hint_rects_with_font(root_rect, hint_font_size_outer, true));
 
     let inactive_bg_base = theme.color_required("card");
     let inactive_border_base = theme.color_required("border");

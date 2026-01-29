@@ -739,7 +739,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             layout: &HashMap<DockNodeId, Rect>,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
-            font_size: Px,
+            hint_font_size_inner: Px,
+            hint_font_size_outer: Px,
             position: Point,
             mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> Option<(HoverTarget, fret_runtime::DockDropResolveSource)> {
@@ -815,8 +816,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
             if let Some(&root_rect) = layout.get(&root)
                 && let Some((leaf_tabs, _leaf_rect, _leaf_tab_count)) = leaf
                 && root != leaf_tabs
-                && let Some(zone) =
-                    super::layout::dock_hint_pick_zone(root_rect, font_size, true, position)
+                && let Some(zone) = super::layout::dock_hint_pick_zone(
+                    root_rect,
+                    hint_font_size_outer,
+                    true,
+                    position,
+                )
                 && zone != DropZone::Center
             {
                 if let Some(candidates) = candidates.as_deref_mut() {
@@ -825,9 +830,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         zone: None,
                         rect: root_rect,
                     });
-                    for (z, r) in
-                        super::layout::dock_hint_rects_with_font(root_rect, font_size, true)
-                    {
+                    for (z, r) in super::layout::dock_hint_rects_with_font(
+                        root_rect,
+                        hint_font_size_outer,
+                        true,
+                    ) {
                         candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                             kind: fret_runtime::DockDropCandidateRectKind::OuterHintRect,
                             zone: Some(z),
@@ -851,10 +858,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             if let Some((tabs_node, rect, _tab_count)) = leaf
                 && let Some(zone) =
-                    super::layout::dock_hint_pick_zone(rect, font_size, false, position)
+                    super::layout::dock_hint_pick_zone(rect, hint_font_size_inner, false, position)
             {
                 if let Some(candidates) = candidates.as_deref_mut() {
-                    for (z, r) in super::layout::dock_hint_rects_with_font(rect, font_size, false) {
+                    for (z, r) in
+                        super::layout::dock_hint_rects_with_font(rect, hint_font_size_inner, false)
+                    {
                         candidates.push(fret_runtime::DockDropCandidateRectDiagnostics {
                             kind: fret_runtime::DockDropCandidateRectKind::InnerHintRect,
                             zone: Some(z),
@@ -937,7 +946,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
-            font_size: Px,
+            hint_font_size_inner: Px,
+            hint_font_size_outer: Px,
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
@@ -1092,7 +1102,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &layout,
                 tab_scroll,
                 tab_widths,
-                font_size,
+                hint_font_size_inner,
+                hint_font_size_outer,
                 effective_position,
                 candidates,
             )
@@ -1110,7 +1121,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
-            font_size: Px,
+            hint_font_size_inner: Px,
+            hint_font_size_outer: Px,
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
@@ -1137,7 +1149,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 window_bounds,
                 tab_scroll,
                 tab_widths,
-                font_size,
+                hint_font_size_inner,
+                hint_font_size_outer,
                 split_handle_gap,
                 split_handle_hit_thickness,
                 position,
@@ -1432,6 +1445,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::DockingInteractionSettings>()
             .copied()
             .unwrap_or_default();
+        let hint_font_size_inner = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_inner.max(0.0))
+        .max(0.0));
+        let hint_font_size_outer = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_outer.max(0.0))
+        .max(0.0));
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let window_bounds = cx
@@ -3018,22 +3037,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         if !requested_tear_off {
                                             let mut candidates =
                                                 Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
-                                            let (hover, source) = resolve_dock_drop_target(
-                                                None,
-                                                invert_docking,
-                                                self.window,
-                                                &dock.graph,
-                                                root,
-                                                dock_bounds,
-                                                window_bounds,
-                                                &self.tab_scroll,
-                                                &self.tab_widths,
-                                                font_size,
-                                                split_handle_gap,
-                                                split_handle_hit_thickness,
-                                                position,
-                                                diagnostics_enabled.then_some(&mut candidates),
-                                            );
+	                                            let (hover, source) = resolve_dock_drop_target(
+	                                                None,
+	                                                invert_docking,
+	                                                self.window,
+	                                                &dock.graph,
+	                                                root,
+	                                                dock_bounds,
+	                                                window_bounds,
+	                                                &self.tab_scroll,
+	                                                &self.tab_widths,
+	                                                hint_font_size_inner,
+	                                                hint_font_size_outer,
+	                                                split_handle_gap,
+	                                                split_handle_hit_thickness,
+	                                                position,
+	                                                diagnostics_enabled.then_some(&mut candidates),
+	                                            );
                                             dock.hover = hover;
                                             if diagnostics_enabled {
                                                 self.dock_drop_resolve_diagnostics = Some((
@@ -3136,22 +3156,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     if dragging {
                                         let mut candidates =
                                             Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
-                                        let (target, source) = resolve_dock_drop_target(
-                                            prev_hover.clone(),
-                                            invert_docking,
-                                            self.window,
-                                            &dock.graph,
-                                            root,
-                                            dock_bounds,
-                                            window_bounds,
-                                            &self.tab_scroll,
-                                            &self.tab_widths,
-                                            font_size,
-                                            split_handle_gap,
-                                            split_handle_hit_thickness,
-                                            position,
-                                            diagnostics_enabled.then_some(&mut candidates),
-                                        );
+	                                        let (target, source) = resolve_dock_drop_target(
+	                                            prev_hover.clone(),
+	                                            invert_docking,
+	                                            self.window,
+	                                            &dock.graph,
+	                                            root,
+	                                            dock_bounds,
+	                                            window_bounds,
+	                                            &self.tab_scroll,
+	                                            &self.tab_widths,
+	                                            hint_font_size_inner,
+	                                            hint_font_size_outer,
+	                                            split_handle_gap,
+	                                            split_handle_hit_thickness,
+	                                            position,
+	                                            diagnostics_enabled.then_some(&mut candidates),
+	                                        );
                                         if diagnostics_enabled {
                                             self.dock_drop_resolve_diagnostics = Some((
                                                 now_frame,
@@ -3600,6 +3621,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .global::<fret_runtime::DockingInteractionSettings>()
             .copied()
             .unwrap_or_default();
+        let hint_font_size_inner = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_inner.max(0.0))
+        .max(0.0));
+        let hint_font_size_outer = Px((font_size.0
+            * docking_interaction_settings.dock_hint_scale_outer.max(0.0))
+        .max(0.0));
         let split_handle_gap = docking_interaction_settings.split_handle_gap;
         let split_handle_hit_thickness = docking_interaction_settings.split_handle_hit_thickness;
         let frame_id = app.frame_id();
@@ -3973,6 +4000,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         })
                     }),
                     hover.clone(),
+                    hint_font_size_inner,
+                    hint_font_size_outer,
                     self.window,
                     bounds,
                     &layout_all,
