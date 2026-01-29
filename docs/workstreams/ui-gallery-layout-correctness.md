@@ -83,3 +83,69 @@ Use `fretboard diag compare`:
 - Add `SemanticsProps.test_id` / labels to make the hot region and broken bounds discoverable in bundles and dumps.
 - Convert the repro into a `crates/fret-ui/src/declarative/tests/*` test when possible.
 - Keep a small layout-only suite runnable via `fretboard diag suite ui-gallery-layout --launch -- cargo run -p fret-ui-gallery --release`.
+
+## 5) Work Plan (TODOs + Milestones)
+
+This workstream is intentionally **demo-driven** and **contract-aware**:
+
+- Prefer fixing issues at the correct layer (mechanism vs policy) to avoid scattering one-off callsite tweaks.
+- Prefer **deterministic scripted repros** over manual “it looks wrong” reports.
+- Use the smallest amount of diagnostics metadata needed (`test_id` + optional label wrappers).
+
+### 5.1 Milestones
+
+| Milestone | Outcome | Exit Criteria |
+|---|---|---|
+| M0 | A repeatable layout regression harness | `fretboard diag suite ui-gallery-layout` passes locally and produces bundles + `frame.bmp` on demand. |
+| M1 | High-risk layout invariants audited (shadcn ecosystem) | A short list of “layout invariants” is codified (see 5.2) and every relevant container component is checked for defaults. |
+| M2 | P0 issues converted into repro scripts | Every P0 issue has: (1) script, (2) hot-region anchors, (3) before/after evidence bundle dirs recorded in this doc. |
+| M3 | Regression prevention | Each fixed P0 has either a unit test (preferred) or a dedicated script in `ui-gallery-layout` suite (acceptable fallback). |
+| M4 | Ongoing maintenance | New layout regressions are filed into this tracker first (ID + severity + script) before deeper refactors. |
+
+### 5.2 Layout Invariants (tailwind-aligned “risk semantics”)
+
+These are the most common “editor UI” failure modes, expressed in tailwind language with the intended Fret meaning.
+
+**Invariant A — Flex children must be allowed to shrink**
+
+- Tailwind: `min-w-0` / `min-h-0`
+- Fret rule: any `flex_1()` child that can contain long text, grids, or scroll views should default to `min_w_0()` (and `min_h_0()` for vertical flex) unless there is a strong reason not to.
+- Typical symptom when broken: tab panels / cards / columns expand to max-content and overflow the window.
+
+**Invariant B — Do not force-fill caller sizing**
+
+- Tailwind: `w-full` / `h-full` defaults that override user intent
+- Fret rule: components may choose sensible defaults, but should not unconditionally overwrite the caller’s explicit size constraints.
+- Typical symptom when broken: “height collapses to ~0 in auto-height parents” or “unexpected full-window stretching”.
+
+**Invariant C — No-wrap text must be boxed in**
+
+- Tailwind: `text-nowrap` + `truncate`
+- Fret rule: if a subtree introduces `TextWrap::None` / ellipsis behavior, it must live under a width-constrained container (`w_full + min_w_0` in flex contexts, or explicit max width).
+- Typical symptom when broken: a single label can blow up the layout width of an entire panel.
+
+**Invariant D — Scroll areas need a min constraint in flex**
+
+- Tailwind: `min-h-0` (the classic flex + scroll gotcha)
+- Fret rule: scroll viewports inside `flex` should generally have `min_h_0()` so the viewport can actually become smaller than its content.
+- Typical symptom when broken: scroll areas refuse to scroll, or force parent height to grow, or collapse.
+
+### 5.3 TODO (Near-term)
+
+- [ ] Add/maintain a “P0-first” issue queue in this doc (table in section 3 stays authoritative).
+- [ ] Audit shadcn containers for Invariants A–D:
+  - Tabs content / panels
+  - Scroll areas used inside flex stacks
+  - Cards/dialogs/sheets/popovers content wrappers
+  - Resizable/split panel wrappers and handle rows
+- [ ] For each new P0 issue:
+  - [ ] Add a `tools/diag-scripts/ui-gallery-...json` repro (navigate + wait_until + bounds assertions + `capture_bundle` + `capture_screenshot`).
+  - [ ] Add minimal hot-region `test_id` anchors (prefer `cx.semantics` wrappers; do not overload a11y labels).
+  - [ ] Capture before/after evidence bundle dirs and record them under the issue row.
+- [ ] When a fix changes a shadcn default, update the corresponding snapshot tests if they are intentional (document the reasoning in the PR/commit message).
+
+### 5.4 TODO (Mid-term)
+
+- [ ] Expand `fretboard diag suite ui-gallery-layout` as P0 issues grow (keep it small; no perf tortures here).
+- [ ] Convert script-only regressions into unit tests where feasible (pure layout / semantics assertions).
+- [ ] Document “known safe defaults” per container component (one paragraph each) to prevent future drift.
