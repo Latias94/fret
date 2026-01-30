@@ -50,12 +50,14 @@
     },
     { "type": "wait_frames", "n": 30 },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-trigger" } },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-trigger" } },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-popover-trigger" } },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-popover-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-content" }
       },
       "timeout_frames": 240
     },
@@ -63,18 +65,18 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-popover-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-content" },
         "padding_px": 0.0,
         "eps_px": 1.0
       },
       "timeout_frames": 240
     },
-    { "type": "capture_bundle", "label": "ui-gallery-overlay-portal-geometry-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-overlay-portal-geometry-open" },
+    { "type": "capture_bundle", "label": "ui-gallery-overlay-popover-scroll-clamp-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-overlay-popover-scroll-clamp-open" },
 
     {
       "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-scroll-area" },
+      "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
       "delta_y": 600.0
     },
     { "type": "wait_frames", "n": 10 },
@@ -82,16 +84,16 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-popover-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-content" },
         "padding_px": 0.0,
         "eps_px": 1.0
       },
       "timeout_frames": 240
     },
-    { "type": "capture_bundle", "label": "ui-gallery-overlay-portal-geometry-after-scroll" },
-    { "type": "capture_screenshot", "label": "ui-gallery-overlay-portal-geometry-after-scroll" },
+    { "type": "capture_bundle", "label": "ui-gallery-overlay-popover-scroll-clamp-after-scroll" },
+    { "type": "capture_screenshot", "label": "ui-gallery-overlay-popover-scroll-clamp-after-scroll" },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-portal-geometry-popover-close" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-popover-close" } },
     { "type": "wait_frames", "n": 10 }
   ]
 }

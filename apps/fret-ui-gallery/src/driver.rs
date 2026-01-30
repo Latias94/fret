@@ -147,6 +147,7 @@ struct UiGalleryWindowState {
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -430,6 +431,7 @@ impl UiGalleryDriver {
         let text_area = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
         let context_menu_open = app.models_mut().insert(false);
+        let context_menu_edge_open = app.models_mut().insert(false);
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
@@ -549,6 +551,7 @@ impl UiGalleryDriver {
             text_area,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             cmdk_open,
             cmdk_query,
             last_action,
@@ -1004,6 +1007,7 @@ impl UiGalleryDriver {
         let text_area = state.text_area.clone();
         let dropdown_open = state.dropdown_open.clone();
         let context_menu_open = state.context_menu_open.clone();
+        let context_menu_edge_open = state.context_menu_edge_open.clone();
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
@@ -1381,6 +1385,7 @@ impl UiGalleryDriver {
                                             text_area.clone(),
                                             dropdown_open.clone(),
                                             context_menu_open.clone(),
+                                            context_menu_edge_open.clone(),
                                             cmdk_open.clone(),
                                             cmdk_query.clone(),
                                             last_action.clone(),
@@ -1469,6 +1474,7 @@ impl UiGalleryDriver {
                                         text_area.clone(),
                                         dropdown_open.clone(),
                                         context_menu_open.clone(),
+                                        context_menu_edge_open.clone(),
                                         cmdk_open.clone(),
                                         cmdk_query.clone(),
                                         last_action.clone(),

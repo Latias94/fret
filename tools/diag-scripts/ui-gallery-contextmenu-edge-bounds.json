@@ -43,20 +43,29 @@
     { "type": "wait_frames", "n": 20 },
 
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-trigger-edge" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger-edge" }
     },
     { "type": "wait_frames", "n": 5 },
     {
       "type": "click",
       "button": "right",
-      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger-edge" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-edge-item-action" }
       },
       "timeout_frames": 240
     },
@@ -64,7 +73,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" },
+        "target": { "kind": "test_id", "id": "ui-gallery-context-edge-item-action" },
         "padding_px": 0.0,
         "eps_px": 1.0
       },

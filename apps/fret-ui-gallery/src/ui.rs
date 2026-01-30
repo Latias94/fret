@@ -255,6 +255,7 @@ pub(crate) fn content_view(
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -411,6 +412,7 @@ pub(crate) fn content_view(
         text_area,
         dropdown_open,
         context_menu_open,
+        context_menu_edge_open,
         cmdk_open,
         cmdk_query,
         last_action,
@@ -551,6 +553,7 @@ fn page_preview(
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -597,6 +600,7 @@ fn page_preview(
             portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             last_action,
             text_input,
             text_area,
@@ -628,6 +632,7 @@ fn page_preview(
             portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             last_action.clone(),
         ),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
@@ -2530,6 +2535,7 @@ fn preview_chrome_torture(
     portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -2571,6 +2577,7 @@ fn preview_chrome_torture(
                 portal_geometry_popover_open,
                 dropdown_open,
                 context_menu_open,
+                context_menu_edge_open,
                 last_action,
             ));
 
@@ -6517,6 +6524,7 @@ fn preview_overlay(
     portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnDismissRequest;
@@ -6544,6 +6552,7 @@ fn preview_overlay(
 
                 let dropdown_open = dropdown_open.clone();
                 let context_menu_open = context_menu_open.clone();
+                let context_menu_edge_open = context_menu_edge_open.clone();
                 let popover_open = popover_open.clone();
                 let dialog_open = dialog_open.clone();
                 let alert_dialog_open = alert_dialog_open.clone();
@@ -6554,6 +6563,9 @@ fn preview_overlay(
                 let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
                     let _ = host.models_mut().update(&dropdown_open, |v| *v = false);
                     let _ = host.models_mut().update(&context_menu_open, |v| *v = false);
+                    let _ = host
+                        .models_mut()
+                        .update(&context_menu_edge_open, |v| *v = false);
                     let _ = host.models_mut().update(&popover_open, |v| *v = false);
                     let _ = host.models_mut().update(&dialog_open, |v| *v = false);
                     let _ = host.models_mut().update(&alert_dialog_open, |v| *v = false);
@@ -6642,6 +6654,30 @@ fn preview_overlay(
                     ]
                 },
             );
+
+            let context_menu_edge = shadcn::ContextMenu::new(context_menu_edge_open.clone())
+                .into_element(
+                    cx,
+                    |cx| {
+                        shadcn::Button::new("ContextMenu (edge, right click)")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-context-trigger-edge")
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Action")
+                                    .test_id("ui-gallery-context-edge-item-action")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                            shadcn::ContextMenuEntry::Separator,
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Disabled").disabled(true),
+                            ),
+                        ]
+                    },
+                );
 
             let underlay = shadcn::Button::new("Underlay (outside-press target)")
                 .variant(shadcn::ButtonVariant::Secondary)
@@ -7075,8 +7111,28 @@ fn preview_overlay(
                         )
                     };
 
+                    let row_end = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
+                        let layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.flex(
+                            fret_ui::element::FlexProps {
+                                layout,
+                                direction: fret_core::Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::End,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            |_cx| children,
+                        )
+                    };
+
                     vec![
                         row(cx, vec![dropdown, context_menu, overlay_reset]),
+                        row_end(cx, vec![context_menu_edge]),
                         row(cx, vec![tooltip, hover_card, popover, underlay, dialog]),
                         row(cx, vec![alert_dialog, sheet]),
                         portal_geometry,
