@@ -15717,138 +15717,7 @@ fn assert_menubar_demo_submenu_overlay_placement_matches(web_name: &str) {
     let expected_w = web_sub_menu.rect.w;
     let expected_h = web_sub_menu.rect.h;
 
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    setup_app_with_shadcn_theme(&mut app);
-    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
-    let view_full_urls: Model<bool> = app.models_mut().insert(true);
-    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
-
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-    let mut services = StyleAwareServices::default();
-
-    let bounds = bounds_for_web_theme(&theme);
-
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(1),
-        true,
-        |cx| {
-            let menubar = build_menubar_demo(
-                cx,
-                view_bookmarks_bar.clone(),
-                view_full_urls.clone(),
-                profile_value.clone(),
-            );
-            vec![pad_root(cx, Px(0.0), menubar)]
-        },
-    );
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
-    let click_point = Point::new(
-        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
-        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: click_point,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            pointer_type: PointerType::Mouse,
-            click_count: 1,
-        }),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Up {
-            pointer_id: fret_core::PointerId::default(),
-            position: click_point,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            is_click: true,
-            pointer_type: PointerType::Mouse,
-            click_count: 1,
-        }),
-    );
-
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
-    for tick in 0..settle_frames {
-        let request_semantics = tick + 1 == settle_frames;
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + tick),
-            request_semantics,
-            |cx| {
-                let menubar = build_menubar_demo(
-                    cx,
-                    view_bookmarks_bar.clone(),
-                    view_full_urls.clone(),
-                    profile_value.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), menubar)]
-            },
-        );
-    }
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
-        .expect("fret submenu trigger semantics (Share)");
-    ui.set_focus(Some(trigger.id));
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
-
-    for tick in 0..settle_frames {
-        let request_semantics = tick + 1 == settle_frames;
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + settle_frames + tick),
-            request_semantics,
-            |cx| {
-                let menubar = build_menubar_demo(
-                    cx,
-                    view_bookmarks_bar.clone(),
-                    view_full_urls.clone(),
-                    profile_value.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), menubar)]
-            },
-        );
-    }
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let (_, snap) = build_menubar_demo_submenu_snapshot(web_name);
     let trigger = snap
         .nodes
         .iter()
@@ -15933,6 +15802,15 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
     let mut services = StyleAwareServices::default();
 
     let bounds = bounds_for_web_theme(&theme);
+    let render = |cx: &mut ElementContext<'_, App>| {
+        let menubar = build_menubar_demo(
+            cx,
+            view_bookmarks_bar.clone(),
+            view_full_urls.clone(),
+            profile_value.clone(),
+        );
+        vec![pad_root(cx, Px(0.0), menubar)]
+    };
 
     render_frame(
         &mut ui,
@@ -15942,15 +15820,7 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
         bounds,
         FrameId(1),
         true,
-        |cx| {
-            let menubar = build_menubar_demo(
-                cx,
-                view_bookmarks_bar.clone(),
-                view_full_urls.clone(),
-                profile_value.clone(),
-            );
-            vec![pad_root(cx, Px(0.0), menubar)]
-        },
+        render,
     );
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
@@ -15990,6 +15860,7 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
     );
 
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let mut frame: u64 = 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -15998,37 +15869,139 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
             &mut services,
             window,
             bounds,
-            FrameId(2 + tick),
+            FrameId(frame + tick),
             request_semantics,
-            |cx| {
-                let menubar = build_menubar_demo(
-                    cx,
-                    view_bookmarks_bar.clone(),
-                    view_full_urls.clone(),
-                    profile_value.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), menubar)]
-            },
+            render,
         );
     }
+    frame += settle_frames;
 
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let share_trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
-        .expect("fret submenu trigger semantics (Share)");
-    ui.set_focus(Some(share_trigger.id));
+    if web_name.contains("submenu-kbd") {
+        // Match the web golden extraction script behavior:
+        // - `scrollIntoView({ block: "center" })` on the submenu trigger element
+        // - focus the trigger and press ArrowRight
+        let mut snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        for _ in 0..3 {
+            let trigger = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+                .expect("fret submenu trigger semantics (Share)");
+            let root_menu = snap
+                .nodes
+                .iter()
+                .filter(|n| n.role == SemanticsRole::Menu)
+                .find(|m| fret_rect_contains(m.bounds, trigger.bounds))
+                .or_else(|| snap.nodes.iter().find(|n| n.role == SemanticsRole::Menu))
+                .expect("fret root menu semantics");
 
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
+            let root_center_y = root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5;
+            let trigger_center_y = trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5;
+            let dy = trigger_center_y - root_center_y;
+            if dy.abs() <= 1.0 {
+                break;
+            }
+
+            let wheel_pos = Point::new(
+                Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
+                Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
+            );
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    pointer_id: fret_core::PointerId::default(),
+                    position: wheel_pos,
+                    delta: Point::new(Px(0.0), Px(-dy)),
+                    modifiers: Modifiers::default(),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                FrameId(frame),
+                true,
+                render,
+            );
+            frame += 1;
+            snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        }
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+            .expect("fret submenu trigger semantics (Share, scrolled)");
+        ui.set_focus(Some(trigger.id));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            render,
+        );
+        frame += 1;
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let focused = fret_focused_label(&snap);
+        assert_eq!(
+            focused,
+            Some("Share"),
+            "{web_name}: failed to focus submenu trigger (Share); focused={focused:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+    } else {
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+            .expect("fret submenu trigger semantics (Share)");
+        let root_menu = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Menu)
+            .find(|m| fret_rect_contains(m.bounds, trigger.bounds))
+            .or_else(|| snap.nodes.iter().find(|n| n.role == SemanticsRole::Menu))
+            .expect("fret root menu semantics");
+        assert!(
+            fret_rect_contains(root_menu.bounds, trigger.bounds),
+            "{web_name}: submenu trigger is not visible in root menu panel (expected to open submenu by hover)"
+        );
+
+        let hover_point = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId::default(),
+                position: hover_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+    }
 
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
@@ -16038,17 +16011,9 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
             &mut services,
             window,
             bounds,
-            FrameId(2 + settle_frames + tick),
+            FrameId(frame + tick),
             request_semantics,
-            |cx| {
-                let menubar = build_menubar_demo(
-                    cx,
-                    view_bookmarks_bar.clone(),
-                    view_full_urls.clone(),
-                    profile_value.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), menubar)]
-            },
+            render,
         );
     }
 
@@ -16057,7 +16022,7 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
 }
 
 fn assert_menubar_demo_submenu_constrained_menu_content_insets_match(web_name: &str) {
-    let web = read_web_golden_open(web_name);
+    let (web, snap) = build_menubar_demo_submenu_snapshot(web_name);
     let theme = web_theme(&web);
     let expected_slots = ["menubar-content", "menubar-sub-content"];
     let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
@@ -16065,139 +16030,6 @@ fn assert_menubar_demo_submenu_constrained_menu_content_insets_match(web_name: &
         .iter()
         .map(|slot| web_portal_node_by_data_slot(&theme, slot).rect.h)
         .collect();
-
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    setup_app_with_shadcn_theme(&mut app);
-    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
-    let view_full_urls: Model<bool> = app.models_mut().insert(true);
-    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
-
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-    let mut services = StyleAwareServices::default();
-
-    let bounds = bounds_for_web_theme(&theme);
-
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(1),
-        true,
-        |cx| {
-            let menubar = build_menubar_demo(
-                cx,
-                view_bookmarks_bar.clone(),
-                view_full_urls.clone(),
-                profile_value.clone(),
-            );
-            vec![pad_root(cx, Px(0.0), menubar)]
-        },
-    );
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let file_trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
-        .expect("fret menubar trigger semantics (File)");
-    let click_point = Point::new(
-        Px(file_trigger.bounds.origin.x.0 + file_trigger.bounds.size.width.0 * 0.5),
-        Px(file_trigger.bounds.origin.y.0 + file_trigger.bounds.size.height.0 * 0.5),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: click_point,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            pointer_type: PointerType::Mouse,
-            click_count: 1,
-        }),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Up {
-            pointer_id: fret_core::PointerId::default(),
-            position: click_point,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            is_click: true,
-            pointer_type: PointerType::Mouse,
-            click_count: 1,
-        }),
-    );
-
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
-    for tick in 0..settle_frames {
-        let request_semantics = tick + 1 == settle_frames;
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + tick),
-            request_semantics,
-            |cx| {
-                let menubar = build_menubar_demo(
-                    cx,
-                    view_bookmarks_bar.clone(),
-                    view_full_urls.clone(),
-                    profile_value.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), menubar)]
-            },
-        );
-    }
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let share_trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
-        .expect("fret submenu trigger semantics (Share)");
-    ui.set_focus(Some(share_trigger.id));
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
-
-    for tick in 0..settle_frames {
-        let request_semantics = tick + 1 == settle_frames;
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(2 + settle_frames + tick),
-            request_semantics,
-            |cx| {
-                let menubar = build_menubar_demo(
-                    cx,
-                    view_bookmarks_bar.clone(),
-                    view_full_urls.clone(),
-                    profile_value.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), menubar)]
-            },
-        );
-    }
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
     assert_sorted_insets_match(web_name, &actual, &expected);
 
