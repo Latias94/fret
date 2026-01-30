@@ -39,8 +39,6 @@
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-data-table-header-name" } },
     { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-data-table-header-name" } },
-    { "type": "wait_frames", "n": 2 },
 
     {
       "type": "wait_until",
@@ -54,6 +52,16 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-data-table-row-0" } },
     { "type": "wait_frames", "n": 2 },
 
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }, "delta_y": 120.0 },
+    { "type": "wait_frames", "n": 2 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }, "delta_y": 120.0 },
     { "type": "wait_frames", "n": 2 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-data-table-torture-root" }, "delta_y": 120.0 },
