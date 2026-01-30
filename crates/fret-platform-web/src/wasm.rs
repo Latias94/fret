@@ -141,9 +141,20 @@ impl WebImeBridge {
         let _ = style.set_property("position", "fixed");
         let _ = style.set_property("left", "0px");
         let _ = style.set_property("top", "0px");
-        let _ = style.set_property("opacity", "0");
-        let _ = style.set_property("width", "1px");
-        let _ = style.set_property("height", "1px");
+        // Keep the element effectively invisible but still "layout-real" so browser IME can anchor
+        // composition UI reliably across platforms (ADR 0195).
+        let _ = style.set_property("opacity", "0.001");
+        let _ = style.set_property("width", "20px");
+        let _ = style.set_property("height", "20px");
+        let _ = style.set_property("margin", "0");
+        let _ = style.set_property("padding", "0");
+        let _ = style.set_property("border", "0");
+        let _ = style.set_property("outline", "none");
+        let _ = style.set_property("background", "transparent");
+        let _ = style.set_property("color", "transparent");
+        let _ = style.set_property("caret-color", "transparent");
+        let _ = style.set_property("font-size", "16px");
+        let _ = style.set_property("line-height", "20px");
         let _ = style.set_property("pointer-events", "none");
         let _ = style.set_property("z-index", "2147483647");
         let _ = textarea_el.set_attribute("aria-hidden", "true");
