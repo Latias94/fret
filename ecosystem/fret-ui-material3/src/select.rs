@@ -512,6 +512,9 @@ fn select_trigger_element<H: UiHost>(
     style: SelectStyle,
 ) -> SelectTriggerOutput {
     let anchor_id_out: Cell<GlobalElementId> = Cell::new(GlobalElementId(0));
+    let hovered_out: Cell<bool> = Cell::new(false);
+    let focused_out: Cell<bool> = Cell::new(false);
+    let focus_visible_out: Cell<bool> = Cell::new(false);
     let has_leading_icon = leading_icon.is_some();
     let leading_icon_size = crate::foundation::context::resolved_icon_size(
         cx,
@@ -582,15 +585,25 @@ fn select_trigger_element<H: UiHost>(
             || token_container_bg,
         );
 
-        let focused = states.contains(WidgetStates::FOCUSED);
+        let mut states_for_style = states;
+        // Align with Material Web: when the menu is open, the field is treated as focused.
+        // (see `select/internal/select.ts`: `.focused=${this.focused || this.open}`)
+        if open {
+            states_for_style |= WidgetStates::FOCUSED;
+        }
+
+        let focused = states_for_style.contains(WidgetStates::FOCUSED);
         let focus_visible = states.contains(WidgetStates::FOCUS_VISIBLE);
         let hovered = enabled && st.hovered;
+        hovered_out.set(hovered);
+        focused_out.set(focused);
+        focus_visible_out.set(focus_visible);
 
         let (token_text_color, token_text_opacity) =
             select_tokens::input_text_color(theme, variant, hovered, !enabled, error, focused);
         let text_color = resolve_override_slot_with(
             style.text_color.as_ref(),
-            states,
+            states_for_style,
             |color| color.resolve(theme),
             || token_text_color,
         );
@@ -600,7 +613,7 @@ fn select_trigger_element<H: UiHost>(
             select_tokens::trailing_icon_color(theme, variant, hovered, !enabled, error, focused);
         let icon_color = resolve_override_slot_with(
             style.trailing_icon_color.as_ref(),
-            states,
+            states_for_style,
             |color| color.resolve(theme),
             || token_icon_color,
         );
@@ -610,7 +623,7 @@ fn select_trigger_element<H: UiHost>(
             select_tokens::leading_icon_color(theme, variant, hovered, !enabled, error, focused);
         let leading_icon_color = resolve_override_slot_with(
             style.leading_icon_color.as_ref(),
-            states,
+            states_for_style,
             |color| color.resolve(theme),
             || leading_icon_color,
         );
@@ -621,7 +634,7 @@ fn select_trigger_element<H: UiHost>(
         let outline = outline.map(|(w, c)| {
             let c = resolve_override_slot_opt_with(
                 style.outline_color.as_ref(),
-                states,
+                states_for_style,
                 |color| color.resolve(theme),
                 || Some(c),
             )
@@ -635,7 +648,7 @@ fn select_trigger_element<H: UiHost>(
         let indicator = indicator.map(|(h, c)| {
             let c = resolve_override_slot_opt_with(
                 style.active_indicator_color.as_ref(),
-                states,
+                states_for_style,
                 |color| color.resolve(theme),
                 || Some(c),
             )
@@ -939,8 +952,20 @@ fn select_trigger_element<H: UiHost>(
     let anchor_id = anchor_id_out.get();
 
     let mut supporting_states = WidgetStates::empty();
+    let hovered = hovered_out.get();
+    let focused = focused_out.get();
+    let focus_visible = focus_visible_out.get();
     if disabled {
         supporting_states |= WidgetStates::DISABLED;
+    }
+    if hovered {
+        supporting_states |= WidgetStates::HOVERED;
+    }
+    if focused {
+        supporting_states |= WidgetStates::FOCUSED;
+    }
+    if focus_visible {
+        supporting_states |= WidgetStates::FOCUS_VISIBLE;
     }
     if open {
         supporting_states |= WidgetStates::OPEN;
@@ -968,8 +993,10 @@ fn select_trigger_element<H: UiHost>(
                     &supporting_style_override,
                     text.clone(),
                     has_leading_icon.then_some(leading_icon_size),
-                    !disabled,
+                    hovered,
+                    disabled,
                     error,
+                    focused,
                 ),
             ]
         })
@@ -1168,8 +1195,10 @@ fn select_supporting_text<H: UiHost>(
     style_override: &SelectStyle,
     text: Arc<str>,
     leading_icon_size: Option<Px>,
-    enabled: bool,
+    hovered: bool,
+    disabled: bool,
     error: bool,
+    focused: bool,
 ) -> AnyElement {
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
@@ -1186,7 +1215,11 @@ fn select_supporting_text<H: UiHost>(
             style_override.supporting_text_color.as_ref(),
             states,
             |color| color.resolve(theme),
-            || select_tokens::supporting_text_color(theme, variant, false, !enabled, error, false),
+            || {
+                select_tokens::supporting_text_color(
+                    theme, variant, hovered, disabled, error, focused,
+                )
+            },
         )),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
