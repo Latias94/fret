@@ -635,7 +635,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             ref ev @ WindowEvent::PointerButton { .. } => {
-                let (mapped, scale_factor) = {
+                let (mapped, _scale_factor) = {
                     let Some(runtime) = self.windows.get_mut(app_window) else {
                         return;
                     };
@@ -651,7 +651,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 if let Some(p) = self.cursor_screen_pos_fallback_for_window(app_window) {
                     self.cursor_screen_pos = Some(p);
                     #[cfg(target_os = "macos")]
-                    self.macos_calibrate_cursor_transform_from_window_sample(p, scale_factor);
+                    self.macos_calibrate_cursor_transform_from_window_sample(p, _scale_factor);
                 }
 
                 let mut saw_left_down = false;
