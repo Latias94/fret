@@ -48,7 +48,7 @@ Notes:
 - Golden files (tracked): `512`
 - Golden keys (tracked, normalized `.open` suffix): `473`
 - Gated keys (string-literal heuristic): `473` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `276` (`58.4%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `287` (`60.7%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 Note on “targeted” gates:
@@ -70,25 +70,29 @@ The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/t
 
 - `chart` (84)
 - `calendar` (34)
+- `button` (29)
 - `input` (27)
-- `button` (26)
 - `form` (19)
 - `navigation` (17)
 - `sidebar` (16)
 - `typography` (14)
 - `toggle` (13)
 - `field` (12)
-- `dropdown` (11)
+- `dropdown` (12)
+- `select` (11)
+- `menubar` (11)
 - `spinner` (10)
 - `sheet` (10)
 - `scroll` (10)
-- `menubar` (10)
+- `context` (10)
 - `item` (10)
+- `combobox` (9)
 - `breadcrumb` (9)
 - `textarea` (8)
-- `select` (9)
-- `combobox` (8)
-- `context` (8)
+- `empty` (7)
+- `carousel` (6)
+- `otp` (5)
+- `login` (5)
 
 Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
 
