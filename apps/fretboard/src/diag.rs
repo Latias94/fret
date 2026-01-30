@@ -71,6 +71,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_dock_drag_min: Option<u64> = None;
     let mut check_viewport_capture_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
+    let mut check_retained_vlist_attach_detach_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
     let mut check_retained_vlist_scroll_window_dirty_max: Option<u64> = None;
     let mut check_vlist_scroll_window_dirty_max: Option<u64> = None;
@@ -430,6 +431,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 check_retained_vlist_attach_detach_max = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --check-retained-vlist-attach-detach-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-retained-vlist-attach-detach-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-retained-vlist-attach-detach-min".to_string()
+                    );
+                };
+                check_retained_vlist_attach_detach_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-retained-vlist-attach-detach-min".to_string()
                 })?);
                 i += 1;
             }
@@ -894,6 +907,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_dock_drag_min.is_some()
                     || check_viewport_capture_min.is_some()
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
+                    || check_retained_vlist_attach_detach_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
                     || check_retained_vlist_scroll_window_dirty_max.is_some()
                     || check_vlist_scroll_window_dirty_max.is_some()
@@ -923,6 +937,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_dock_drag_min,
                         check_viewport_capture_min,
                         check_retained_vlist_reconcile_no_notify_min,
+                        check_retained_vlist_attach_detach_min,
                         check_retained_vlist_attach_detach_max,
                         check_retained_vlist_scroll_window_dirty_max,
                         check_vlist_scroll_window_dirty_max,
@@ -1829,6 +1844,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(256));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -1855,6 +1872,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(256));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -1881,6 +1900,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(512));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -2003,6 +2024,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_dock_drag_min.is_some()
                     || check_viewport_capture_min.is_some()
                     || retained_vlist_gate_for_script.is_some()
+                    || check_retained_vlist_attach_detach_min.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some()
                     || retained_vlist_scroll_window_dirty_max_for_script.is_some()
                     || vlist_scroll_window_dirty_max_for_script.is_some();
@@ -2044,6 +2066,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_dock_drag_min.or(suite_dock_drag_min),
                         check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script,
+                        check_retained_vlist_attach_detach_min,
                         retained_vlist_attach_detach_max_for_script,
                         retained_vlist_scroll_window_dirty_max_for_script,
                         vlist_scroll_window_dirty_max_for_script,
@@ -2706,6 +2729,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 && min > 0
             {
                 check_bundle_for_retained_vlist_reconcile_no_notify_min(
+                    bundle_path.as_path(),
+                    min,
+                    warmup_frames,
+                )?;
+            }
+            if let Some(min) = check_retained_vlist_attach_detach_min
+                && min > 0
+            {
+                check_bundle_for_retained_vlist_attach_detach_min(
                     bundle_path.as_path(),
                     min,
                     warmup_frames,
@@ -3836,6 +3868,7 @@ fn apply_post_run_checks(
     check_dock_drag_min: Option<u64>,
     check_viewport_capture_min: Option<u64>,
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
+    check_retained_vlist_attach_detach_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
     check_retained_vlist_scroll_window_dirty_max: Option<u64>,
     check_vlist_scroll_window_dirty_max: Option<u64>,
@@ -3888,6 +3921,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_retained_vlist_reconcile_no_notify_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_retained_vlist_attach_detach_min
+        && min > 0
+    {
+        check_bundle_for_retained_vlist_attach_detach_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(max_delta) = check_retained_vlist_attach_detach_max {
         check_bundle_for_retained_vlist_attach_detach_max(bundle_path, max_delta, warmup_frames)?;
@@ -7027,6 +7065,140 @@ fn check_bundle_for_retained_vlist_attach_detach_max(
     )
 }
 
+fn check_bundle_for_retained_vlist_attach_detach_min(
+    bundle_path: &Path,
+    min_delta: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_retained_vlist_attach_detach_min_json(
+        &bundle,
+        bundle_path,
+        min_delta,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_retained_vlist_attach_detach_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_delta: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut reconcile_events: u64 = 0;
+    let mut reconcile_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut best_delta: u64 = 0;
+    let mut best_frame_id: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let list_count = s
+                .get("debug")
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.len() as u64)
+                .unwrap_or(0);
+            let stats_count = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let count = list_count.max(stats_count);
+            if count == 0 {
+                continue;
+            }
+
+            reconcile_frames = reconcile_frames.saturating_add(1);
+            reconcile_events = reconcile_events.saturating_add(count);
+
+            let records = s
+                .get("debug")
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            let (attached, detached) = if records.is_empty() {
+                let stats = s
+                    .get("debug")
+                    .and_then(|v| v.get("stats"))
+                    .and_then(|v| v.as_object());
+                let attached = stats
+                    .and_then(|v| v.get("retained_virtual_list_attached_items"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let detached = stats
+                    .and_then(|v| v.get("retained_virtual_list_detached_items"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                (attached, detached)
+            } else {
+                let attached = records
+                    .iter()
+                    .map(|r| {
+                        r.get("attached_items")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                    })
+                    .sum::<u64>();
+                let detached = records
+                    .iter()
+                    .map(|r| {
+                        r.get("detached_items")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                    })
+                    .sum::<u64>();
+                (attached, detached)
+            };
+
+            let delta = attached.saturating_add(detached);
+            if delta > best_delta {
+                best_delta = delta;
+                best_frame_id = frame_id;
+            }
+            if delta >= min_delta {
+                return Ok(());
+            }
+        }
+    }
+
+    if reconcile_events == 0 {
+        return Err(format!(
+            "expected at least 1 retained virtual-list reconcile event (required for attach/detach min check), got 0 \
+(warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    Err(format!(
+        "retained virtual-list attach/detach delta never reached the configured minimum\n\
+bundle: {}\n\
+min_delta={min_delta} best_delta={best_delta} best_frame_id={best_frame_id} reconcile_events={reconcile_events} reconcile_frames={reconcile_frames} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}",
+        bundle_path.display()
+    ))
+}
+
 fn check_bundle_for_retained_vlist_attach_detach_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -9831,6 +10003,87 @@ mod tests {
             0,
         )
         .expect("expected delta<=25");
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_attach_detach_min_passes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "stats": {
+                            "retained_virtual_list_reconciles": 1,
+                            "retained_virtual_list_attached_items": 1,
+                            "retained_virtual_list_detached_items": 0
+                        }
+                    }
+                }]
+            }]
+        });
+
+        check_bundle_for_retained_vlist_attach_detach_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            0,
+        )
+        .expect("expected delta>=1");
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_attach_detach_min_fails_when_below_threshold() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "stats": {
+                            "retained_virtual_list_reconciles": 1,
+                            "retained_virtual_list_attached_items": 0,
+                            "retained_virtual_list_detached_items": 0
+                        }
+                    }
+                }]
+            }]
+        });
+
+        let err = check_bundle_for_retained_vlist_attach_detach_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            0,
+        )
+        .expect_err("expected delta<1 to fail");
+        assert!(err.contains("attach/detach delta never reached"));
+        assert!(err.contains("min_delta=1"));
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_attach_detach_min_fails_when_missing_reconciles() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": { "stats": { "retained_virtual_list_reconciles": 0 } }
+                }]
+            }]
+        });
+
+        let err = check_bundle_for_retained_vlist_attach_detach_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            0,
+        )
+        .expect_err("expected missing reconcile events");
+        assert!(err.contains("expected at least 1 retained virtual-list reconcile event"));
     }
 
     #[test]
