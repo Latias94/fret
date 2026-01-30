@@ -419,6 +419,28 @@ pub(crate) const USAGE_INSPECTOR_TORTURE: &str = r#"
 ```
 "#;
 
+pub(crate) const DOC_FILE_TREE_TORTURE: &str = r#"
+## File tree (torture harness)
+
+This page is a baseline for **file-tree / outline surfaces**:
+
+- large scrolling lists with indentation (tree depth),
+- stable row identity under view-cache reuse,
+- hover/selection chrome that should not force rerenders.
+
+It exists to validate:
+
+- retained-host window boundary updates (attach/detach deltas, no notify-driven dirtiness),
+- stale-paint safety while scrolling under cache+shell,
+- readiness for migrating editor file trees and outlines (GPUI-MVP5-eco-009).
+"#;
+
+pub(crate) const USAGE_FILE_TREE_TORTURE: &str = r#"
+```rust
+// This harness uses `virtual_list_keyed_retained_with_layout_fn` directly.
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 

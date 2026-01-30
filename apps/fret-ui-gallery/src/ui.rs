@@ -604,6 +604,7 @@ fn page_preview(
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
+        PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -6421,6 +6422,129 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
     semantics.role = fret_core::SemanticsRole::List;
     semantics.layout = list_layout;
     semantics.test_id = Some(Arc::<str>::from("ui-gallery-inspector-root"));
+    let list = cx.semantics(semantics, |_cx| vec![list]);
+
+    vec![cx.cached_subtree_with(
+        CachedSubtreeProps::default().contained_layout(true),
+        |_cx| vec![list],
+    )]
+}
+
+fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let len: usize = std::env::var("FRET_UI_GALLERY_FILE_TREE_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(50_000);
+    let row_height = Px(26.0);
+    let overscan = 12;
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(460.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    let options =
+        fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height);
+
+    let theme = theme.clone();
+    let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
+        let is_dir = (index % 7) == 0;
+        let depth = (index % 8) as f32;
+        let indent_px = Px(depth * 12.0);
+
+        let zebra = (index % 2) == 0;
+        let base_bg = if zebra {
+            theme.color_required("muted")
+        } else {
+            theme.color_required("background")
+        };
+        let hover_bg = theme.color_required("accent");
+
+        cx.pressable(
+            fret_ui::element::PressableProps {
+                enabled: true,
+                ..Default::default()
+            },
+            |cx, st| {
+                let background = if st.pressed || st.hovered {
+                    hover_bg
+                } else {
+                    base_bg
+                };
+
+                let spacer = cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: fret_ui::element::LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: fret_ui::element::Length::Px(indent_px),
+                                height: fret_ui::element::Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                );
+
+                let icon = cx.text(if is_dir { ">" } else { "-" });
+                let label = cx.text(if is_dir {
+                    format!("dir_{index}")
+                } else {
+                    format!("file_{index}.rs")
+                });
+
+                let mut row_props = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default().bg(ColorRef::Color(background)),
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(MetricRef::Px(row_height)),
+                );
+                row_props.layout.overflow = fret_ui::element::Overflow::Clip;
+                let row_layout = row_props.layout;
+
+                let row = cx.container(row_props, |cx| {
+                    vec![stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().h_full())
+                            .gap(Space::N2)
+                            .items_center(),
+                        |_cx| vec![spacer, icon, label],
+                    )]
+                });
+
+                let mut semantics = fret_ui::element::SemanticsProps::default();
+                semantics.layout = row_layout;
+                semantics.test_id = Some(Arc::<str>::from(format!(
+                    "ui-gallery-file-tree-node-{index}-label"
+                )));
+                vec![cx.semantics(semantics, |_cx| vec![row])]
+            },
+        )
+    };
+
+    let list = cx.virtual_list_keyed_retained_with_layout_fn(
+        list_layout,
+        len,
+        options,
+        &scroll_handle,
+        |i| i as fret_ui::ItemKey,
+        row,
+    );
+
+    let mut semantics = fret_ui::element::SemanticsProps::default();
+    semantics.role = fret_core::SemanticsRole::List;
+    semantics.layout = list_layout;
+    semantics.test_id = Some(Arc::<str>::from("ui-gallery-file-tree-root"));
     let list = cx.semantics(semantics, |_cx| vec![list]);
 
     vec![cx.cached_subtree_with(
