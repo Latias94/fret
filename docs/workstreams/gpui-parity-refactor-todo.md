@@ -596,8 +596,11 @@ topics (if/when we implement them):
     visible window requires a cache-root rerender to rebuild the item subtree. The v2 goal is to move “window derivation + ephemeral items”
     into prepaint (ADR 0190), so scroll-driven window updates do not necessarily imply a cache-root rerender.
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
-    row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
-    (tracked in ADR 0192).
+     row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
+     (tracked in ADR 0192).
+  - Clarification: the legacy `virtual_list_keyed` API (frame-local `FnMut` row closures) cannot support “attach/detach on cache-hit frames”
+    by construction. The v2 path for GPUI-like prepaint-driven window updates therefore focuses on retained-host surfaces (ADR 0192) and
+    ergonomic ecosystem wrappers that adopt them by default.
   - Progress (v1):
     - VirtualList rerender frames now compute `render_window_range` against the latest scroll-handle offset (including out-of-band `set_offset`),
       reducing “window jump -> layout updates -> next frame rerender” one-frame lag.
