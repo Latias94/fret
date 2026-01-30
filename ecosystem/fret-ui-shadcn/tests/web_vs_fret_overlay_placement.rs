@@ -7417,6 +7417,20 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
 
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
+    let root_labels = &[
+        "Mark as Read",
+        "Archive",
+        "Snooze",
+        "Add to Calendar",
+        "Add to List",
+        "Label As...",
+        "Trash",
+    ];
+    let expected_first_visible_label = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(theme, "dropdown-menu-content"),
+        root_labels,
+    )
+    .unwrap_or_else(|| panic!("missing web first visible menu item for {web_name}"));
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -7524,13 +7538,122 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
         },
     );
 
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let mut frame: u64 = 3;
+
+    // Match the web golden extraction script behavior:
+    // - `scrollIntoView({ block: "center" })` on the submenu trigger element
+    // - focus the trigger and press ArrowRight
+    let mut snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    for _ in 0..3 {
+        let root_menu = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("fret root menu semantics");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Label As...")
+            })
+            .expect("fret submenu trigger semantics (Label As...)");
+
+        let root_center_y = root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5;
+        let trigger_center_y = trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5;
+        let dy = trigger_center_y - root_center_y;
+        if dy.abs() <= 1.0 {
+            break;
+        }
+
+        let wheel_pos = Point::new(
+            Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
+            Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
+                position: wheel_pos,
+                delta: Point::new(Px(0.0), Px(-dy)),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+        frame += 1;
+        snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    }
+
     let trigger = snap
         .nodes
         .iter()
         .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Label As..."))
-        .expect("fret submenu trigger semantics");
-    ui.set_focus(Some(trigger.id));
+        .expect("fret submenu trigger semantics (Label As..., scrolled)");
+    let focus_point = Point::new(
+        Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+        Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: focus_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: focus_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(frame),
+        true,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    frame += 1;
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let focused = fret_focused_label(&snap);
+    assert_eq!(
+        focused,
+        Some("Label As..."),
+        "{web_name}: failed to focus submenu trigger (Label As...); focused={focused:?}"
+    );
 
     ui.dispatch_event(
         &mut app,
@@ -7542,7 +7665,6 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
         },
     );
 
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -7551,7 +7673,7 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
             &mut services,
             window,
             bounds,
-            FrameId(3 + tick),
+            FrameId(frame + tick as u64),
             request_semantics,
             |cx| {
                 let el = render(cx);
@@ -7561,6 +7683,27 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
     }
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Label As..."))
+        .expect("fret submenu trigger semantics (Label As..., final)");
+    let menus: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .collect();
+    let root_menu = menus
+        .iter()
+        .find(|m| fret_rect_contains(m.bounds, trigger.bounds))
+        .expect("fret root menu contains submenu trigger");
+    let actual_first_visible =
+        fret_first_visible_menu_item_label(&snap, root_menu.bounds, root_labels)
+            .unwrap_or("<missing>");
+    assert_eq!(
+        actual_first_visible, expected_first_visible_label,
+        "{web_name}: root menu scroll state mismatch"
+    );
     (web, snap)
 }
 
