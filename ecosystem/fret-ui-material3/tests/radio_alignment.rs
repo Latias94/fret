@@ -4887,6 +4887,186 @@ fn select_open_scrolls_selected_option_into_view() {
 }
 
 #[test]
+fn select_menu_matches_anchor_width_and_clamps_height_to_available_space() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("v0")));
+    let items: Arc<[SelectItem]> = (0..40)
+        .map(|i| SelectItem::new(Arc::<str>::from(format!("v{i}")), format!("Item {i}")))
+        .collect::<Vec<_>>()
+        .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let mut l = fret_ui::element::LayoutStyle::default();
+                l.position = fret_ui::element::PositionStyle::Absolute;
+                l.inset = fret_ui::element::InsetStyle {
+                    top: Some(Px(200.0)),
+                    left: Some(Px(24.0)),
+                    right: None,
+                    bottom: None,
+                };
+                l.size.width = fret_ui::element::Length::Px(Px(240.0));
+                l.size.height = fret_ui::element::Length::Auto;
+                l.overflow = fret_ui::element::Overflow::Visible;
+
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: l,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            Select::new(selected_model)
+                                .a11y_label("select")
+                                .placeholder("Pick one")
+                                .items(items)
+                                .test_id("select-trigger")
+                                .into_element(cx),
+                        ]
+                    },
+                )]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected select-trigger bounds");
+    let click_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    for _ in 0..20 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot");
+
+    let listbox_node: NodeId = snapshot
+        .nodes
+        .iter()
+        .find_map(|node| {
+            (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
+        })
+        .expect("expected select-trigger-listbox in semantics snapshot");
+    let listbox_bounds = ui
+        .debug_node_visual_bounds(listbox_node)
+        .expect("expected listbox bounds");
+
+    let epsilon = 0.01;
+    assert!(
+        (listbox_bounds.size.width.0 - trigger_bounds.size.width.0).abs() <= epsilon,
+        "expected listbox width to match trigger width"
+    );
+
+    let collision_top = 48.0;
+    let collision_bottom = 48.0;
+    let gap = 4.0;
+
+    let outer_top = bounds.origin.y.0 + collision_top;
+    let outer_bottom = bounds.origin.y.0 + bounds.size.height.0 - collision_bottom;
+    let anchor_top = trigger_bounds.origin.y.0;
+    let anchor_bottom = trigger_bounds.origin.y.0 + trigger_bounds.size.height.0;
+
+    let available_above = anchor_top - (outer_top + gap);
+    let available_below = outer_bottom - (anchor_bottom + gap);
+    let available = available_above.max(available_below).max(0.0);
+
+    assert!(
+        listbox_bounds.size.height.0 <= available + epsilon,
+        "expected listbox height to clamp to available space (got {}, want <= {})",
+        listbox_bounds.size.height.0,
+        available
+    );
+    assert!(
+        (listbox_bounds.size.height.0 - available).abs() <= 0.5,
+        "expected listbox height to match available space when content overflows (got {}, want ~ {})",
+        listbox_bounds.size.height.0,
+        available
+    );
+}
+
+#[test]
 fn select_listbox_typeahead_moves_focus_skipping_disabled_options() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::{Select, SelectItem};

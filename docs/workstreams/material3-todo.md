@@ -592,7 +592,12 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`select_dismisses_and_restores_focus_across_schemes`,
     `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes` (ArrowUp/ArrowDown/Enter/Space open keys),
     `select_roving_scrolls_focused_option_into_view`, `select_open_scrolls_selected_option_into_view`,
-    `select_listbox_typeahead_moves_focus_skipping_disabled_options`).
+    `select_listbox_typeahead_moves_focus_skipping_disabled_options`,
+    `select_menu_matches_anchor_width_and_clamps_height_to_available_space`).
+  - Evidence (reference): `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Menu.kt`
+    (`MenuVerticalMargin = 48.dp`),
+    `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt`
+    (`exposedDropdownSize(matchAnchorWidth)`, `calculateMaxHeight`).
   - Notes: Select menu item typography defaults to `md.sys.typescale.label-large` (Material Web v30 uses `label-large` for the menu list-item label).
 - [x] Add golden-style visual snapshots per component state (light/dark, density variants).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_controls_suite_goldens_v1`, `material3_headless_overlays_suite_goldens_v1`, `material3_headless_text_field_suite_goldens_v1`),

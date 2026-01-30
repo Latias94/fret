@@ -328,20 +328,22 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
             let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, Px(0.0));
 
-            let min_width = Px(anchor.size.width.0.max(128.0));
             let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
-            let max_visible = 7.0;
-            let max_height = Px(item_height.0 * max_visible);
-            let estimated_height =
-                Px((item_height.0 * (select.items.len().max(1) as f32)).min(max_height.0));
-            let estimated = Size::new(min_width, estimated_height);
+            let desired_width = anchor.size.width;
+            let desired_height = Px(item_height.0 * (select.items.len().max(1) as f32));
+            let desired = Size::new(desired_width, desired_height);
 
             let direction = direction_prim::use_direction_in_scope(cx, None);
             let placement =
                 popper::PopperContentPlacement::new(direction, Side::Bottom, Align::Start, Px(4.0))
-                    .with_collision_padding(dropdown_menu_tokens::collision_padding(&theme));
+                    .with_collision_padding(Edges {
+                        left: Px(8.0),
+                        right: Px(8.0),
+                        top: Px(48.0),
+                        bottom: Px(48.0),
+                    });
 
-            let layout = popper::popper_content_layout_sized(outer, anchor, estimated, placement);
+            let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
 
             let initial_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let initial_focus_id_for_list = initial_focus_id.clone();
