@@ -2,11 +2,12 @@
 //
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
-use super::layout::split_tab_bar;
 #[cfg(test)]
-use super::layout::{dock_drop_edge_thickness, dock_hint_rects};
+use super::layout::dock_hint_pick_zone;
+use super::layout::split_tab_bar;
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
+use super::tab_overflow::{tab_overflow_button_rect, tab_strip_rect_with_overflow_button};
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
 pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: DockNodeId) -> Px {
@@ -43,11 +44,30 @@ pub(super) fn hit_test_tab(
             continue;
         }
         let scroll = tab_scroll_for_node(tab_scroll, node);
-        let geom = tab_widths
+        let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+        let geom_candidate = tab_widths
             .get(&node)
             .filter(|w| w.len() == tabs.len())
-            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
-            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()));
+            .map(|w| TabBarGeometry::variable(strip_candidate, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tabs.len()));
+        let overflow = geom_candidate.max_scroll().0 > 0.0;
+        if overflow {
+            if tab_overflow_button_rect(theme, tab_bar).contains(position) {
+                return None;
+            }
+            if !strip_candidate.contains(position) {
+                return None;
+            }
+        }
+        let geom = if overflow {
+            geom_candidate
+        } else {
+            tab_widths
+                .get(&node)
+                .filter(|w| w.len() == tabs.len())
+                .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()))
+        };
         let idx = geom.hit_test_tab_index(position, scroll)?;
         let panel = tabs.get(idx)?.clone();
         let tab_rect = geom.tab_rect(idx, scroll);
@@ -79,47 +99,23 @@ pub(super) fn hit_test_drop_target(
             let insert_index = geom.compute_insert_index(position, scroll);
             return Some(HoverTarget {
                 tabs: node,
+                root: node,
+                leaf_tabs: node,
                 zone: DropZone::Center,
                 insert_index: Some(insert_index),
+                outer: false,
+                explicit: false,
             });
-        }
-
-        // ImGui-style direction-pad hit targets near the center of the hovered dock node.
-        // This makes split docking discoverable and avoids requiring the cursor to be near edges.
-        for (zone, hint_rect) in dock_hint_rects(rect) {
-            if hint_rect.contains(position) {
-                return Some(HoverTarget {
-                    tabs: node,
-                    zone,
-                    insert_index: None,
-                });
-            }
-        }
-
-        let thickness = dock_drop_edge_thickness(rect).0;
-        let left = position.x.0 - rect.origin.x.0;
-        let right = rect.origin.x.0 + rect.size.width.0 - position.x.0;
-        let top = position.y.0 - rect.origin.y.0;
-        let bottom = rect.origin.y.0 + rect.size.height.0 - position.y.0;
-
-        let mut zone = DropZone::Center;
-        let mut best = thickness;
-        for (candidate, dist) in [
-            (DropZone::Left, left),
-            (DropZone::Right, right),
-            (DropZone::Top, top),
-            (DropZone::Bottom, bottom),
-        ] {
-            if dist < best {
-                best = dist;
-                zone = candidate;
-            }
         }
 
         return Some(HoverTarget {
             tabs: node,
-            zone,
+            root: node,
+            leaf_tabs: node,
+            zone: dock_hint_pick_zone(rect, Px(13.0), false, position).unwrap_or(DropZone::Center),
             insert_index: None,
+            outer: false,
+            explicit: true,
         });
     }
     None
@@ -128,6 +124,8 @@ pub(super) fn hit_test_drop_target(
 pub(super) fn hit_test_split_handle(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     position: Point,
 ) -> Option<DividerDragState> {
     for (&node, &bounds) in layout.iter() {
@@ -151,8 +149,8 @@ pub(super) fn hit_test_split_handle(
             bounds,
             children.len(),
             fractions,
-            DOCK_SPLIT_HANDLE_GAP,
-            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            split_handle_gap,
+            split_handle_hit_thickness,
             &[],
         );
         for (handle_ix, rect) in computed.handle_hit_rects.iter().enumerate() {

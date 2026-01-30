@@ -67,7 +67,7 @@ Docking model and ops:
 - Dock graph model:
   - `crates/fret-core/src/dock.rs` (`DockGraph`, `DockNode`, `DropZone`)
 - Dock ops vocabulary:
-  - `crates/fret-core/src/dock_op.rs` (`DockOp::*`)
+  - `crates/fret-core/src/dock_op.rs` (`DockOp::*`, including `MoveTabs`, `FloatTabsInWindow`)
 - Dock layout helpers:
   - `crates/fret-core/src/dock_layout.rs` (split math helpers; keep `fret-core` pure)
 
@@ -75,13 +75,17 @@ Docking UI + hit testing + previews:
 
 - Dock host widget (interaction core):
   - `ecosystem/fret-docking/src/dock/space.rs` (`DockSpace`)
+- Dock drag payloads (cross-window internal drags):
+  - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload`, `DockTabsDragPayload`)
 - Drop target resolution:
   - `ecosystem/fret-docking/src/dock/hit_test.rs`
-  - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects`, `drop_zone_rect`, `float_zone`)
+  - `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`, `drop_zone_rect`, `float_zone`)
 - Paint and preview overlays:
   - `ecosystem/fret-docking/src/dock/paint.rs`
 - Tab geometry:
   - `ecosystem/fret-docking/src/dock/tab_bar_geometry.rs`
+- Tab overflow affordances:
+  - `ecosystem/fret-docking/src/dock/tab_overflow.rs`
 - Split stabilization:
   - `ecosystem/fret-docking/src/dock/split_stabilize.rs`
 - Interaction settings:
@@ -102,6 +106,8 @@ Runner integration (multi-window routing, internal drags, window positioning/fol
 - UI runtime internal drag routing:
   - `crates/fret-ui/src/drag_route.rs`
   - `crates/fret-ui/src/tree/dispatch.rs` (internal drag anchor routing)
+  - Drag kinds:
+    - `crates/fret-runtime/src/drag.rs` (`DRAG_KIND_DOCK_PANEL`, `DRAG_KIND_DOCK_TABS`)
 
 ---
 
@@ -114,7 +120,7 @@ Runner integration (multi-window routing, internal drags, window positioning/fol
 | Dock ops / transactions | `ImGuiDockRequest` queue + node mutations | `DockOp` emitted via `Effect::Dock(...)` (ADR 0013) |
 | Dock preview targeting | `DockNodePreviewDockSetup` + `DockNodeCalcDropRectsAndTestMousePos` | `dock_drop_target_via_dnd` + `dock_hint_rects`/`drop_zone_rect` |
 | “Shift to dock” policy | `ImGuiIO::ConfigDockingWithShift` | `DockDragInversionSettings` (`crates/fret-runtime/src/docking_settings.rs`) |
-| Drag payload | DragDrop payload `IMGUI_PAYLOAD_TYPE_WINDOW` | Internal drag session payload `DockPanelDragPayload` (cross-window) |
+| Drag payload | DragDrop payload `IMGUI_PAYLOAD_TYPE_WINDOW` | Internal drag session payloads: `DockPanelDragPayload` (single panel) + `DockTabsDragPayload` (tab stack) |
 | Hovered viewport/window under moving window | backend sets `MouseHoveredViewport` or fallback heuristics | runner tracks `cursor_screen_pos` + `window_under_cursor(...)` |
 | DPI space | Mostly screen-space pixels (`ImVec2`, `MousePos`) | Window-local logical px (`Px`) + scale factor in `WindowMetricsService` |
 
@@ -208,6 +214,7 @@ inability to hit a specific docking direction are often coordinate-space bugs.
   - Evidence anchors:
     - Fret conversion helpers: `crates/fret-launch/src/runner/desktop/mod.rs` (`local_pos_for_window`, `screen_pos_in_window`).
     - Dock UI assumes window-local input: `ecosystem/fret-docking/src/dock/space.rs` (uses `WindowMetricsService::inner_bounds` + event positions).
+    - Fret unit tests (client origin + scale): `crates/fret-launch/src/runner/desktop/mod.rs` (`client_origin_screen_adds_decoration_offset`, `local_pos_for_screen_pos_respects_scale_factor`).
   - Notes:
     - Keep this item `[~]` until we have a dedicated conformance test covering mixed-DPI multi-monitor + overlap.
 
@@ -234,24 +241,29 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - default `DockingInteractionSettings::tab_drag_threshold = Px(6.0)` (`crates/fret-runtime/src/docking_settings.rs`)
     - activation constraint used in `DockSpace` (`ecosystem/fret-docking/src/dock/space.rs`).
 
-- [~] **“Dock drag mode” is explicit and stable**
+- [x] **“Dock drag mode” is explicit and stable**
   - ImGui:
     - `BeginDockableDragDropSource` has a TODO: “Need to make this stateful and explicit”.
     - It currently infers “drag docking” from shift policy + click offset being in title bar band.
   - Fret:
     - Uses `DockDragInversionSettings` to decide whether docking previews are active for this drag.
-    - The decision is recomputed per `InternalDrag` event from modifiers.
-  - Notes:
-    - For parity, we likely want an explicit “dock-drag mode” latched at drag start (to avoid modifier-flapping mid-drag).
+    - The decision is **latched at drag activation** into `DockPanelDragPayload::dock_previews_enabled` and then treated as
+      stable for the remainder of the drag session (prevents modifier-flapping).
+  - Evidence anchors:
+    - `crates/fret-runtime/src/docking_settings.rs` (`DockDragInversionSettings`)
+    - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload::dock_previews_enabled`)
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_latches_dock_preview_policy_on_activation`)
 
-- [ ] **Undock semantics: whole node/group vs single tab**
+- [~] **Undock semantics: whole node/group vs single tab**
   - ImGui:
     - Supports “move/undock node” (group) via `StartMouseMovingWindowOrNode` and `DockContextQueueUndockNode`.
   - Fret:
-    - Current drag payload is panel/tab oriented.
-  - Open design question:
-    - Do we want “drag tab bar empty space” to move the whole group?
-    - If yes, define a new payload kind and DockOp surface (likely outside `fret-core` if it is purely policy).
+    - Supports *both*:
+      - single-panel drag (`DockPanelDragPayload`, `DockOp::MovePanel` / `DockOp::FloatPanel*`), and
+      - whole tab-stack drag from tab-bar empty space (`DockTabsDragPayload`, `DockOp::MoveTabs` / `DockOp::FloatTabsInWindow`).
+    - Current gap vs ImGui:
+      - tab-stack drag does not tear off into a new OS window yet (it floats in-window only).
+      - we do not yet have an equivalent of “move node from title-bar band” for non-tab-window chrome.
 
 ---
 
@@ -266,9 +278,23 @@ inability to hit a specific docking direction are often coordinate-space bugs.
     - `DockDragInversionSettings` supports:
       - `DockByDefault` + modifier to invert, or
       - `DockOnlyWhenModifier`.
-    - However, Fret currently does not have a direct equivalent of ImGui’s “explicit target rect = title bar band”.
+    - Fret applies an ImGui-style **explicit target gating** rule for *drop allow/commit*:
+      - docking is only committed when hovering the explicit target (tab bar) or one of the direction-pad hint rects.
+    - Fret now renders the direction-pad hint UI even when no drop target is currently selected
+      (mirrors ImGui's always-visible drop boxes while dragging over a valid host), but keeps the
+      "drop allowed" gating aligned with ImGui's explicit-target semantics.
+    - During same-tab-bar reorders (same source/target tabs node + `insert_index`), Fret suppresses the
+      direction-pad hint UI so the tab-reorder affordance is not visually competing with docking hints.
+    - Hint pad highlights are only shown when hovering a pad rect, not merely when docking is
+      allowed via an explicit target band (matches ImGui's `IsSplitDirExplicit` behavior).
+    - Floating in-window dock containers treat the **floating title bar** as an explicit target
+      for center docking (ImGui parity: "title/tab bar band" behavior).
+    - However, Fret still does not have a direct equivalent of ImGui’s “explicit target rect = title bar band”
+      for non-tab-window chrome.
   - Evidence anchors:
     - Fret inversion: `crates/fret-runtime/src/docking_settings.rs`
+    - Fret gating: `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target(...)`)
+    - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_requires_explicit_target_or_hint_rects`)
     - ImGui gating: `repo-ref/imgui/imgui.cpp` (`BeginDockableDragDropSource`, `DockNodePreviewDockSetup`)
 
 Recommendation for parity tracking:
@@ -293,30 +319,39 @@ This section is where “I can’t dock left” / “it docks the wrong side” 
       - 4 directional rects positioned around the center
     - sizes scale with `FontSize` and panel size.
   - Fret:
-    - `dock_hint_rects(rect)` builds a 5-way pad centered on the hovered dock node rect.
-    - size scales with panel min-dimension, clamped to 34–56 logical px.
+    - `dock_hint_rects_with_font(rect, font_size, outer_docking)` builds a 5-way pad centered on the hovered dock node rect.
+    - Sizing derives from font size + panel min-dimension, with a distinct geometry for:
+      - inner docking (`outer_docking = false`)
+      - outer docking (`outer_docking = true`)
+    - Hint pad sizing can be tuned without changing typography by scaling the effective font size:
+      - `DockingInteractionSettings::dock_hint_scale_inner`
+      - `DockingInteractionSettings::dock_hint_scale_outer`
+    - These knobs are user-configurable via `settings.json` in `fret-app`:
+      - `docking.dock_hint_scale_inner`
+      - `docking.dock_hint_scale_outer`
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockNodeCalcDropRectsAndTestMousePos`)
-    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects`)
+    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_hint_rects_with_font`, `dock_hint_pick_zone`)
+    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (hint font scaling + paint/hit-test wiring)
+    - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drop_hint_rects_can_select_zone`)
 
 Known semantic deltas to track:
 
-- ImGui has distinct **inner vs outer docking** sizing (`outer_docking` parameter).
-- Fret currently does not model “outer docking” as a separate hint set; it uses:
-  - direction-pad hints **and**
-  - edge split zones.
+- ImGui exposes additional style knobs that influence the exact “hand feel” (e.g. docking separator size).
+- Fret currently uses a small amount of custom hit logic (center radius + quadrant selection) to reduce flicker when moving
+  diagonally between pads.
 
-## 4.2 Edge split zones (left/right/top/bottom strips)
+## 4.2 Edge split zones (left/right/top/bottom preview areas)
 
-- [~] **Edge split zones are easy to hit on large panels**
+- [x] **Split preview overlays match the committed split zone**
   - ImGui:
-    - Splits are decided based on the direction-pad drop rects + split ratio (`DockNodeCalcSplitRects`).
+    - Preview uses the chosen `dir` to compute the final split rectangles.
   - Fret:
-    - `drop_zone_rect(rect, zone)` creates edge strips with thickness derived from panel size.
+    - Uses `drop_zone_rect(rect, zone)` to render the *resulting split overlay* for a chosen `DropZone`.
+    - Hit-testing selects the zone via the direction-pad hint rects, not via edge strips.
   - Evidence anchors:
-    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`dock_drop_edge_thickness`, `drop_zone_rect`)
-  - Notes:
-    - Because Fret has both direction-pad hints and edge strips, priority/overlap matters.
+    - Fret: `ecosystem/fret-docking/src/dock/paint.rs` (`paint_drop_overlay(...)`)
+    - Fret: `ecosystem/fret-docking/src/dock/layout.rs` (`drop_zone_rect`)
 
 ## 4.3 Candidate priority and overlap behavior
 
@@ -324,16 +359,14 @@ Known semantic deltas to track:
   - ImGui:
     - Preview selection is tied directly to drop rect hit-testing order inside `DockNodePreviewDockSetup`.
   - Fret:
-    - `dock_drop_target_via_dnd` registers overlapping rectangles into a picker with weights:
-      - Tab bar: 30
-      - Direction-pad hints: 20
-      - Edge strips: 10
-      - Fallback: 0
+    - Docking previews are gated by explicit targets:
+      - tab bar (explicit target) wins and yields an `insert_index`
+      - otherwise, the last-matched direction-pad rect wins (aligned with ImGui's loop structure)
+      - outer docking rects take precedence when the cursor is within the outer hint set
   - Evidence anchors:
-    - `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target_via_dnd`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (`dock_drop_target(...)`)
   - Parity risk:
-    - When the direction-pad hint overlaps with the edge strip on small panels, “left” might resolve to a different zone
-      than expected unless weights/rects match ImGui’s mental model.
+    - If the outer/inner rect sizing diverges across DPI scales, the “easiest to hit” target may feel different.
 
 ## 4.4 Splitter drag behavior (resize feel)
 
@@ -342,11 +375,11 @@ Known semantic deltas to track:
     - Uses `Style.DockingSeparatorSize` (scaled by scale factor) as the primary thickness knob.
     - Splitter update occurs in `DockNodeTreeUpdateSplitter`.
   - Fret:
-    - Uses `DOCK_SPLIT_HANDLE_HIT_THICKNESS = Px(6.0)` and paints a 1px line in device px.
+    - Uses `DockingInteractionSettings::split_handle_hit_thickness` (default `Px(6.0)`) and paints a 1px line in device px.
     - Splitter layout + hit rects come from `resizable_panel_group::compute_layout(...)`.
   - Evidence anchors:
     - ImGui: `repo-ref/imgui/imgui.cpp` (`DockingSeparatorSize`, `DockNodeTreeUpdateSplitter`)
-    - Fret: `ecosystem/fret-docking/src/dock/consts.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
+    - Fret: `crates/fret-runtime/src/docking_settings.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
 
 - [~] **“Touching splitter” stabilization (prevent drift across nested splits)**
   - ImGui:
@@ -379,13 +412,17 @@ behavior from its TabBar implementation, whereas Fret implements a dedicated doc
 
 - [~] **Tab strip scrolling behavior**
   - ImGui: TabBar supports scrolling, tab list popup, and per-tab sizing.
-  - Fret: has `tab_scroll` state and wheel-based scroll, but parity on:
-    - “auto scroll the active tab into view”
-    - scroll easing vs step
-    - edge cases under drag
-    is still evolving.
+  - Fret:
+    - has `tab_scroll` state
+    - supports wheel-based scrolling
+    - supports drag-time edge auto-scroll when hovering near the tab bar left/right edges (keeps insert position reachable under overflow)
+    - supports “tab list” popup (overflow menu) for overflowed tab bars
+  - Still evolving:
+    - scroll feel knobs (speed/easing), scroll buttons
   - Evidence:
-    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (wheel path + `tab_scroll`)
+    - Fret: `ecosystem/fret-docking/src/dock/space.rs` (`tab_scroll`, `apply_tab_bar_drag_auto_scroll(...)`)
+    - Fret: `ecosystem/fret-docking/src/dock/tab_overflow.rs` (overflow button/menu geometry + row math)
+    - Fret conformance: `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_auto_scrolls_tab_bar_near_edges`)
 
 - [~] **Close button semantics**
   - ImGui: per-tab close buttons, plus node “close all” and host close button interactions.
@@ -425,11 +462,14 @@ Open parity question:
   - Fret:
     - Tear-off is capability-gated (`caps.ui.window_hover_detection != None` etc).
     - A new OS window is requested when:
-      - cursor exits the window bounds (with a margin), and
+      - cursor exits the window bounds (with a margin) and remains out-of-bounds for a full frame (debounced), and
       - the request has not already been made for this drag payload.
+    - Note:
+      - `float_zone(...)` is a Fret-specific affordance to force **in-window** floating; it should not request a new OS window.
   - Evidence anchors:
     - `ecosystem/fret-docking/src/dock/space.rs` (tear-off request logic)
     - `ecosystem/fret-docking/src/runtime.rs` (`DockTearOffMachine` idempotency)
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_only_requests_tear_off_after_stable_oob_frame`)
 
 ## 5.3 Cross-window hover and drop routing
 
@@ -484,12 +524,17 @@ Open parity question:
     - has debug logging macros (e.g. `IMGUI_DEBUG_LOG_DOCKING`) and internal debug windows.
   - Fret:
     - macOS: `FRET_DOCK_TEAROFF_LOG=1` + `FRET_MACOS_CURSOR_TRACE=1` writes to `target/fret-dock-tearoff.log`.
-    - Needs a cross-platform, structured “drop target resolve trace” toggle for:
-      - window-local cursor position
-      - candidate rects selected
-      - chosen zone + reason (pad vs edge)
-  - Suggested future hook:
-    - A lightweight, capability-gated diagnostic stream similar to `Event::ImageUpdateApplied` policy (ADR 0126 style).
+    - Implemented (v1): a structured per-frame “drop target resolve” snapshot recorded into
+      `WindowInteractionDiagnosticsStore` while a dock drag is active:
+      - cursor position (window-local)
+      - window/dock bounds
+      - resolved target (tabs/zone/outer/insert_index)
+      - resolution source (`TabBar`, `InnerHintRect`, `OuterHintRect`, etc.)
+      - candidate rect sets (float zone + direction pads + tab bar, etc.)
+  - Evidence anchors:
+    - `crates/fret-runtime/src/interaction_diagnostics.rs` (`DockDropResolveDiagnostics`)
+    - `ecosystem/fret-docking/src/dock/space.rs` (writes diagnostics during internal drag hover)
+    - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_records_drop_target_diagnostics_for_inner_left_hint_rect`)
 
 ---
 
@@ -522,26 +567,29 @@ The rule of thumb:
   - Why this must be crate-owned:
     - Prevents every app/demo from reinventing idempotency and close-on-empty.
 
-- [~] **A single “driver-facing” integration surface**
-  - Today demos manually call the `handle_*` helpers.
-  - Proposed (v1) facade API:
+- [x] **A single “driver-facing” integration surface**
+  - Implemented (v1) facade API:
     - `fret_docking::DockingRuntime` (pure helper object, no platform code):
-      - `on_dock_effect(app, DockOp)` (wraps `handle_dock_op`)
+      - `on_dock_op(app, DockOp)` (wraps `handle_dock_op`)
       - `on_window_created(app, &CreateWindowRequest, new_window)`
-      - `before_close_window(app, closing_window, main_window)`
-  - Goal:
-    - Demos become one-liners, and the facade becomes the stable public API.
+      - `before_close_window(app, closing_window)` (merges into the configured main window)
+  - Evidence anchors:
+    - `ecosystem/fret-docking/src/facade.rs` (`DockingRuntime`)
+    - `apps/fret-examples/src/docking_demo.rs` (uses `DockingRuntime`)
+    - `apps/fret-examples/src/docking_arbitration_demo.rs` (uses `DockingRuntime`)
 
-- [~] **A “mount contract” helper for `DockSpace`**
+- [x] **A “mount contract” helper for `DockSpace`**
   - Requirement (ADR 0072):
     - Create one `DockSpace` per window and keep it alive.
     - Ensure it is attached into the UI tree so hit-testing can descend.
-  - Proposed (v1) helper:
+  - Implemented (v1) helper:
     - `fret_docking::mount_dock_space(ui, window) -> DockSpaceMount`
-      - returns `{ dock_space: NodeId, root: NodeId }` or similar
-      - ensures `ui.set_children(root, ...)` is correct by construction
+      - creates a dock space node and mounts it as the UI root
+    - `fret_docking::mount_dock_space_with_test_id(...)`
   - Why crate-owned:
     - Prevents the class of bugs where a demo lays out a node but forgets to wire parent/children.
+  - Evidence anchors:
+    - `ecosystem/fret-docking/src/dock/mod.rs` (`mount_dock_space(...)`, `DockSpaceMount`)
 
 - [~] **Optional: a structured diagnostic stream**
   - Proposed `DockingDiagnostics`:
@@ -593,9 +641,12 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
 ## Phase A (P0): Correctness + stable contracts
 
 1) **Latch dock preview mode at drag start**
-   - Today Fret recomputes “dock previews enabled” from modifiers every `InternalDrag` event.
-   - For parity and determinism, latch at drag start:
-     - record `{ dock_previews_enabled: bool }` into the drag payload or a global drag state table.
+   - [x] Implemented: latch at drag activation and store `dock_previews_enabled` in the drag payload.
+   - Rationale: avoids mid-drag mode flips from modifier jitter and keeps target resolution deterministic.
+   - Evidence:
+     - `ecosystem/fret-docking/src/dock/types.rs` (`DockPanelDragPayload`)
+     - `ecosystem/fret-docking/src/dock/space.rs` (drag activation writes the flag; internal drag reads it)
+     - `ecosystem/fret-docking/src/dock/tests.rs` (`dock_drag_latches_dock_preview_policy_on_activation`)
 
 2) **Unify drop target selection into a single, explicit algorithm**
    - ImGui’s behavior is driven by explicit drop rect hit-testing (`DockNodePreviewDockSetup`).
@@ -606,6 +657,14 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
    - For parity work, consider:
      - making one “drop rect set” the source of truth (pad + optional outer docking),
      - and deriving edge splits from that rather than having two competing mechanisms.
+   - [~] Partially implemented:
+     - Drop selection now uses ImGui-style direction-pad hit-testing + tab-bar hit-testing as the
+       primary source of truth.
+     - Edge-strip candidates are no longer used for selecting a drop zone.
+     - Outer docking (window-root edge targets) is supported by targeting `layout_root` directly.
+   - Notes:
+     - `drop_zone_rect(...)` renders a 50/50 split preview, aligned with the currently-committed
+       split behavior in `fret-core`.
 
 3) **Add conformance tests that pin the chosen target**
    - Add tests for:
@@ -620,6 +679,13 @@ This is an opinionated sequencing plan for “mechanics first, then hand feel”
 4) **Match ImGui’s drop rect geometry formulas**
    - Implement inner vs outer docking hint sets.
    - Scale by a text metric equivalent to `FontSize` (theme metric), not just panel min-dimension.
+   - [~] Implemented in core mechanics:
+     - Geometry formulas: `dock_hint_rects_with_font(...)`
+     - Inner hit testing (anti-flicker quadrant logic): `dock_hint_pick_zone(...)`
+     - Outer docking selection: `HoverTarget.outer` + `DockSpace` targets `layout_root` for edge docking
+   - Remaining polish:
+     - verify hint render ordering and overlap parity (ImGui renders inner then outer)
+     - align overlay visuals (alpha/rounding/placement) with ImGui’s `DockNodePreviewDockRender`
 
 5) **Align splitter feel**
    - Adopt a `DockingSeparatorSize`-like knob:
@@ -668,15 +734,19 @@ These numbers are the fastest way to explain why something “feels off”.
     - `hs_h = trunc(hs_for_central_nodes * 0.80)`
     - `off = trunc(vec2(parent_w * 0.5 - hs_h, parent_h * 0.5 - hs_h))`
 
-- Fret (from `dock_hint_rects`):
-  - `size = clamp(min_dim * 0.095, 34, 56)`
-  - `gap = clamp(size * 0.35, 10, 16)`
-  - `step = size + gap` (offset to left/right/top/bottom hints)
+- Fret:
+  - Implemented to match the ImGui formulas (inner/outer switch supported in geometry helper):
+    - `ecosystem/fret-docking/src/dock/layout.rs`: `dock_hint_rects_with_font(rect, font_size, outer_docking)`
+  - Uses `font.size` from the theme as the `FontSize` equivalent:
+    - `ecosystem/fret-docking/src/dock/space.rs`, `ecosystem/fret-docking/src/dock/paint.rs`
+  - Inner hit testing matches ImGui’s “anti-flicker” behavior:
+    - `ecosystem/fret-docking/src/dock/layout.rs`: `dock_hint_pick_zone(...)`
 
 ## Edge strip sizing
 
 - Fret (from `dock_drop_edge_thickness`):
   - `thickness = clamp(min_dim * 0.30, 20, 120)` (capped with an additional `min_dim * 0.44` clamp)
+  - Note: edge strips are no longer used as drop-zone candidates; they remain an overlay geometry helper.
 
 ---
 

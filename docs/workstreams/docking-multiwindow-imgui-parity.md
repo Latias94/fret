@@ -149,6 +149,11 @@ Typical hotspots:
 - lack of a reliable global cursor position under some compositors,
 - decoration offsets differ across WMs; initial placement may drift without a stable “outer rect” contract.
 
+Current policy (Wayland):
+
+- Disable docking OS tear-off and prefer in-window floating fallback to keep docking predictable (see
+  `docs/workstreams/docking-multiwindow-imgui-parity-todo.md` `DW-P1-linux-003`).
+
 ## Capabilities (contract) — windowing quality signals (v1)
 
 To avoid platform forks inside widgets, use the windowing quality signals in ADR 0054:

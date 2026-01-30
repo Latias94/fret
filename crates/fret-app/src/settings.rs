@@ -120,6 +120,8 @@ impl SettingsFileV1 {
 pub struct DockingSettingsV1 {
     pub drag_inversion: DockDragInversionSettingsV1,
     pub tab_drag_threshold_px: f32,
+    pub dock_hint_scale_inner: f32,
+    pub dock_hint_scale_outer: f32,
 }
 
 impl Default for DockingSettingsV1 {
@@ -127,6 +129,8 @@ impl Default for DockingSettingsV1 {
         Self {
             drag_inversion: DockDragInversionSettingsV1::default(),
             tab_drag_threshold_px: 6.0,
+            dock_hint_scale_inner: 1.0,
+            dock_hint_scale_outer: 1.0,
         }
     }
 }
@@ -178,9 +182,27 @@ impl SettingsFileV1 {
             default_tab_drag_threshold_px
         };
 
+        let default_dock_hint_scale_inner =
+            fret_runtime::DockingInteractionSettings::default().dock_hint_scale_inner;
+        let dock_hint_scale_inner = if self.docking.dock_hint_scale_inner.is_finite() {
+            self.docking.dock_hint_scale_inner.max(0.0)
+        } else {
+            default_dock_hint_scale_inner
+        };
+
+        let default_dock_hint_scale_outer =
+            fret_runtime::DockingInteractionSettings::default().dock_hint_scale_outer;
+        let dock_hint_scale_outer = if self.docking.dock_hint_scale_outer.is_finite() {
+            self.docking.dock_hint_scale_outer.max(0.0)
+        } else {
+            default_dock_hint_scale_outer
+        };
+
         fret_runtime::DockingInteractionSettings {
             drag_inversion: self.docking.drag_inversion.clone().into(),
             tab_drag_threshold: fret_core::Px(tab_drag_threshold_px),
+            dock_hint_scale_inner,
+            dock_hint_scale_outer,
             ..Default::default()
         }
     }
@@ -264,6 +286,34 @@ mod tests {
         assert_eq!(
             settings.docking_interaction_settings().tab_drag_threshold,
             fret_runtime::DockingInteractionSettings::default().tab_drag_threshold
+        );
+    }
+
+    #[test]
+    fn docking_hint_scale_negative_is_clamped_to_zero() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.dock_hint_scale_inner = -1.0;
+        settings.docking.dock_hint_scale_outer = -2.0;
+
+        let resolved = settings.docking_interaction_settings();
+        assert_eq!(resolved.dock_hint_scale_inner, 0.0);
+        assert_eq!(resolved.dock_hint_scale_outer, 0.0);
+    }
+
+    #[test]
+    fn docking_hint_scale_nan_falls_back_to_default() {
+        let mut settings = SettingsFileV1::default();
+        settings.docking.dock_hint_scale_inner = f32::NAN;
+        settings.docking.dock_hint_scale_outer = f32::NAN;
+
+        let resolved = settings.docking_interaction_settings();
+        assert_eq!(
+            resolved.dock_hint_scale_inner,
+            fret_runtime::DockingInteractionSettings::default().dock_hint_scale_inner
+        );
+        assert_eq!(
+            resolved.dock_hint_scale_outer,
+            fret_runtime::DockingInteractionSettings::default().dock_hint_scale_outer
         );
     }
 }
