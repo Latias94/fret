@@ -14,6 +14,9 @@ param(
   [string]$FilterUsedPrefix,
   [switch]$ShowUsed,
   [switch]$ShowMissing,
+  [switch]$ShowTargetedMissing,
+  [string[]]$TargetedGateExcludeFiles = @("web_vs_fret_layout.rs", "snapshots.rs"),
+  [switch]$ShowGateBreakdown,
   [switch]$AsMarkdown
 )
 
@@ -84,29 +87,52 @@ $testFiles = Get-ChildItem -Path $testDir -File -Filter "*.rs"
 # "Gated" coverage aims to approximate "dedicated behavior gates", not "dynamic smoke traversal".
 # Exclude `*_goldens_smoke.rs` from the string-literal heuristic so smoke-only keys do not inflate
 # the gated percentage.
-$gateTestFiles = $testFiles | Where-Object { $_.Name -notmatch "_goldens_smoke\\.rs$" }
-$testText = ($gateTestFiles | ForEach-Object { Get-Content -Raw -LiteralPath $_.FullName }) -join "`n"
+$gateTestFiles = $testFiles | Where-Object { $_.Name -notlike "*_goldens_smoke.rs" }
 
 $used = [System.Collections.Generic.HashSet[string]]::new()
+$usedTargeted = [System.Collections.Generic.HashSet[string]]::new()
+$usedByFile = @{}
 
-foreach ($name in $goldenKeys) {
-  $needle = '"' + $name + '"'
-  if ($testText.Contains($needle)) {
-    [void]$used.Add($name)
+foreach ($file in $gateTestFiles) {
+  $text = Get-Content -Raw -LiteralPath $file.FullName
+  $fileUsed = [System.Collections.Generic.HashSet[string]]::new()
+
+  foreach ($name in $goldenKeys) {
+    $needle = '"' + $name + '"'
+    if ($text.Contains($needle)) {
+      [void]$fileUsed.Add($name)
+      [void]$used.Add($name)
+
+      if (-not ($TargetedGateExcludeFiles -contains $file.Name)) {
+        [void]$usedTargeted.Add($name)
+      }
+    }
   }
+
+  $usedByFile[$file.Name] = $fileUsed
 }
 
 $usedNames = @($used) | Sort-Object
 $missingNames = $goldenKeys | Where-Object { -not $used.Contains($_) }
 
+$usedTargetedNames = @($usedTargeted) | Sort-Object
+$targetedMissingNames = $goldenKeys | Where-Object { -not $usedTargeted.Contains($_) }
+
 $totalFiles = $goldenNames.Count
 $total = $goldenKeys.Count
 $usedCount = $usedNames.Count
 $missingCount = $missingNames.Count
+$usedTargetedCount = $usedTargetedNames.Count
+$targetedMissingCount = $targetedMissingNames.Count
 
 $coverage = 0.0
 if ($total -gt 0) {
   $coverage = [Math]::Round(($usedCount * 100.0) / $total, 1)
+}
+
+$targetedCoverage = 0.0
+if ($total -gt 0) {
+  $targetedCoverage = [Math]::Round(($usedTargetedCount * 100.0) / $total, 1)
 }
 
 $smokeCandidate = $null
@@ -172,7 +198,9 @@ if ($smokeCandidate) {
 
 if ($AsMarkdown) {
   $trackedNote = if ($TrackedOnly) { " (tracked-only)" } else { "" }
-  Write-Output ('- `{0}` goldens{1}: {2} files, {3} keys; {4} gated keys ({5}%) [string-literal heuristic], {6} ungated keys' -f $Kind, $trackedNote, $totalFiles, $total, $usedCount, $coverage, $missingCount)
+  Write-Output ('- `{0}` goldens{1}: {2} files, {3} keys' -f $Kind, $trackedNote, $totalFiles, $total)
+  Write-Output ('  - gated (any non-smoke test): {0} keys ({1}%) [string-literal heuristic], {2} missing' -f $usedCount, $coverage, $missingCount)
+  Write-Output ('  - targeted gates (excluding {0}): {1} keys ({2}%), {3} missing' -f (($TargetedGateExcludeFiles | Sort-Object) -join ", "), $usedTargetedCount, $targetedCoverage, $targetedMissingCount)
   if ($smokeTest) {
     Write-Output ('  - smoke-parse coverage: {0}% (via `{1}`)' -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
   } elseif ($smokeCandidate -and $smokeStyle -and $smokeStyle -ne $Style) {
@@ -186,8 +214,10 @@ if ($AsMarkdown) {
   Write-Host ("  Tracked:   {0}" -f $(if ($TrackedOnly) { "yes" } else { "no" }))
   Write-Host ("  Files:     {0}" -f $totalFiles)
   Write-Host ("  Keys:      {0} (NormalizeOpenSuffix={1})" -f $total, $NormalizeOpenSuffix)
-  Write-Host ("  Gated:     {0} keys ({1}%) [string-literal heuristic]" -f $usedCount, $coverage)
-  Write-Host ("  Ungated:   {0} keys [not referenced by tests]" -f $missingCount)
+  Write-Host ("  Gated:     {0} keys ({1}%) [any non-smoke test, string-literal heuristic]" -f $usedCount, $coverage)
+  Write-Host ("  Ungated:   {0} keys [not referenced by non-smoke tests]" -f $missingCount)
+  Write-Host ("  Targeted:  {0} keys ({1}%) [excluding: {2}]" -f $usedTargetedCount, $targetedCoverage, (($TargetedGateExcludeFiles | Sort-Object) -join ", "))
+  Write-Host ("  Untargeted:{0} keys [only gated by excluded files]" -f $targetedMissingCount)
   if ($smokeTest) {
     Write-Host ("  Smoke:     yes ({0}%, {1})" -f $smokeCoverage, (Split-Path -Leaf $smokeTest))
   } elseif ($smokeCandidate -and $smokeStyle -and $smokeStyle -ne $Style) {
@@ -207,6 +237,42 @@ if ($ShowMissing) {
   Write-Host ""
   Write-Host ("Ungated keys (first {0}):" -f $TopMissing)
   $missingNames | Select-Object -First $TopMissing | ForEach-Object { Write-Host ("  {0}" -f $_) }
+}
+
+if ($ShowTargetedMissing) {
+  Write-Host ""
+  Write-Host ("Untargeted keys (first {0}) [only gated by excluded files]:" -f $TopMissing)
+  $targetedMissingNames | Select-Object -First $TopMissing | ForEach-Object { Write-Host ("  {0}" -f $_) }
+}
+
+if ($ShowGateBreakdown) {
+  $rows = @()
+  foreach ($k in $usedByFile.Keys) {
+    $rows += [pscustomobject]@{
+      File = $k
+      Keys = @($usedByFile[$k]).Count
+    }
+  }
+
+  $rows = $rows | Sort-Object Keys -Descending
+
+  if ($AsMarkdown) {
+    Write-Output ""
+    Write-Output "### Gate breakdown (keys referenced per test file)"
+    foreach ($row in $rows) {
+      $pct = 0.0
+      if ($total -gt 0) { $pct = [Math]::Round(($row.Keys * 100.0) / $total, 1) }
+      Write-Output ("- `{0}`: {1} ({2}%)" -f $row.File, $row.Keys, $pct)
+    }
+  } else {
+    Write-Host ""
+    Write-Host "Gate breakdown (keys referenced per test file):"
+    foreach ($row in $rows) {
+      $pct = 0.0
+      if ($total -gt 0) { $pct = [Math]::Round(($row.Keys * 100.0) / $total, 1) }
+      Write-Host ("  {0}: {1} ({2}%)" -f $row.File, $row.Keys, $pct)
+    }
+  }
 }
 
 if ($GroupMissingByPrefix) {

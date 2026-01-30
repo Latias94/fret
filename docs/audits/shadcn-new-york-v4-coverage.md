@@ -40,10 +40,15 @@ Notes:
 - `tools/golden_coverage.ps1` reports “smoke-parse coverage” only when it can infer that the smoke
   test targets the requested `-Style` (otherwise it prints `n/a` to avoid false confidence).
 - To avoid local, uncommitted goldens skewing the counts, prefer `-TrackedOnly`.
+- In addition to the “any gate” percentage, `tools/golden_coverage.ps1` reports a **targeted**
+  percentage that excludes the broad “catch-all” layout file(s) (`web_vs_fret_layout.rs` and
+  `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
+  checks” rather than “is every page referenced somewhere”.
 
 - Golden files (tracked): `512`
 - Golden keys (tracked, normalized `.open` suffix): `473`
 - Gated keys (string-literal heuristic): `473` (`100%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `172` (`36.4%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
@@ -84,8 +89,10 @@ Recompute locally:
 ```powershell
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowMissing -TopMissing 50
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowTargetedMissing -TopMissing 50
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowUsed
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUsedByPrefix -TopGroups 20
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowGateBreakdown
 ```
 
 To drill into a specific family:
