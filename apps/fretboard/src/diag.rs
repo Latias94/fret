@@ -1985,14 +1985,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     }
                 }
 
-                let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min
-                    .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min;
                 let retained_vlist_attach_detach_max_for_script =
-                    check_retained_vlist_attach_detach_max
-                        .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                    check_retained_vlist_attach_detach_max;
                 let retained_vlist_scroll_window_dirty_max_for_script =
-                    check_retained_vlist_scroll_window_dirty_max
-                        .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                    check_retained_vlist_scroll_window_dirty_max;
                 let vlist_scroll_window_dirty_max_for_script = check_vlist_scroll_window_dirty_max
                     .filter(|_| ui_gallery_script_requires_vlist_window_boundary_gate(&src));
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
@@ -3616,17 +3613,6 @@ fn docking_arbitration_script_default_gates(
         }
         _ => (None, None, None),
     }
-}
-
-fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bool {
-    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
-        return false;
-    };
-
-    matches!(
-        name,
-        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
-    )
 }
 
 fn ui_gallery_script_requires_vlist_window_boundary_gate(script: &Path) -> bool {
