@@ -66,6 +66,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
+    let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
     let mut check_dock_drag_min: Option<u64> = None;
@@ -362,6 +363,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_view_cache_reuse_min =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-view-cache-reuse-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-prepaint-actions-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-prepaint-actions-min".to_string());
+                };
+                check_prepaint_actions_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-prepaint-actions-min".to_string()
                     })?);
                 i += 1;
             }
@@ -902,6 +914,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
+                    || check_prepaint_actions_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -932,6 +945,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
+                        check_prepaint_actions_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min,
                         check_dock_drag_min,
@@ -2050,6 +2064,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
+                    || check_prepaint_actions_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -2092,6 +2107,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
+                        check_prepaint_actions_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
                         check_dock_drag_min.or(suite_dock_drag_min),
@@ -3908,6 +3924,7 @@ fn apply_post_run_checks(
     check_hover_layout_max: Option<u32>,
     check_gc_sweep_liveness: bool,
     check_view_cache_reuse_min: Option<u64>,
+    check_prepaint_actions_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     check_viewport_input_min: Option<u64>,
     check_dock_drag_min: Option<u64>,
@@ -3941,6 +3958,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_view_cache_reuse_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_prepaint_actions_min
+        && min > 0
+    {
+        check_bundle_for_prepaint_actions_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_overlay_synthesis_min
         && min > 0
@@ -6858,6 +6880,86 @@ fn check_bundle_for_view_cache_reuse_min_json(
 
     Err(format!(
         "expected at least {min_reuse_events} view-cache reuse events, got {reuse_events} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+in bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_prepaint_actions_min(
+    bundle_path: &Path,
+    min_acted_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_prepaint_actions_min_json(
+        &bundle,
+        bundle_path,
+        min_acted_frames,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_prepaint_actions_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_acted_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut acted_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if !view_cache_active {
+                continue;
+            }
+
+            let actions_len = s
+                .get("debug")
+                .and_then(|v| v.get("prepaint_actions"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.len())
+                .unwrap_or(0);
+            if actions_len > 0 {
+                acted_frames = acted_frames.saturating_add(1);
+                if acted_frames >= min_acted_frames {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_acted_frames} snapshots with non-empty debug.prepaint_actions, got {acted_frames} \
 (any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
 in bundle: {}",
         bundle_path.display()
@@ -9848,6 +9950,88 @@ mod tests {
             check_bundle_for_view_cache_reuse_min_json(&bundle, Path::new("bundle.json"), 2, 1)
                 .expect_err("expected reuse<2 due to warmup");
         assert!(err.contains("expected at least 2 view-cache reuse events"));
+        assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn check_bundle_for_prepaint_actions_min_counts_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "prepaint_actions": [
+                                    { "kind": "invalidate", "invalidation": "paint" }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "prepaint_actions": []
+                            }
+                        },
+                        {
+                            "frame_id": 2,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "prepaint_actions": [
+                                    { "kind": "request_redraw" }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_prepaint_actions_min_json(&bundle, Path::new("bundle.json"), 2, 0)
+            .expect("expected acted_frames>=2");
+    }
+
+    #[test]
+    fn check_bundle_for_prepaint_actions_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "frame_id": 0,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "prepaint_actions": [
+                                    { "kind": "invalidate", "invalidation": "paint" }
+                                ]
+                            }
+                        },
+                        {
+                            "frame_id": 1,
+                            "debug": {
+                                "stats": { "view_cache_active": true },
+                                "prepaint_actions": [
+                                    { "kind": "request_redraw" }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_prepaint_actions_min_json(&bundle, Path::new("bundle.json"), 2, 1)
+                .expect_err("expected acted_frames<2 due to warmup");
+        assert!(
+            err.contains("expected at least 2 snapshots with non-empty debug.prepaint_actions")
+        );
         assert!(err.contains("got 1"));
     }
 
