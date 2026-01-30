@@ -2501,6 +2501,17 @@ fn caret_stops_for_slice(
         return out;
     }
 
+    let last_cluster_end = clusters
+        .iter()
+        .map(|c| c.text_range.end)
+        .max()
+        .unwrap_or(0)
+        .min(slice.len());
+    let effective_line_width_px = clusters
+        .iter()
+        .flat_map(|c| [c.x0, c.x1])
+        .fold(line_width_px, |acc, x| acc.max(x.max(0.0)));
+
     let mut cluster_i = 0usize;
     for &b in &boundaries {
         let idx = base_offset + b;
@@ -2518,6 +2529,13 @@ fn caret_stops_for_slice(
                 first.x1.max(0.0)
             } else {
                 first.x0.max(0.0)
+            }
+        } else if b > last_cluster_end {
+            let last = clusters.last().unwrap_or(&clusters[0]);
+            if last.is_rtl {
+                0.0
+            } else {
+                effective_line_width_px
             }
         } else if cluster_i >= clusters.len() {
             let last = clusters.last().unwrap_or(&clusters[0]);
@@ -2913,8 +2931,8 @@ mod tests {
     };
     use cosmic_text::Family;
     use fret_core::{
-        AttributedText, Color, DecorationLineStyle, FontWeight, Point, Px, Rect, Size,
-        StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
+        AttributedText, CaretAffinity, Color, DecorationLineStyle, FontWeight, Point, Px, Rect,
+        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
         TextWrap, UnderlineStyle,
     };
     use std::sync::Arc;
@@ -3394,6 +3412,85 @@ mod tests {
                 "expected decoration to stay within the text box (bottom)"
             );
         }
+    }
+
+    #[test]
+    fn trailing_space_at_soft_wrap_is_selectable() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "hello world";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
+        let x_space_end = text
+            .caret_x(single_blob, 6)
+            .expect("caret_x at end of space");
+        let x_w_end = text.caret_x(single_blob, 7).expect("caret_x after 'w'");
+        assert!(
+            x_w_end.0 > x_space_end.0 + 0.1,
+            "expected the 'w' to advance beyond the trailing space"
+        );
+
+        // Force a soft wrap at the boundary between the space and the next word. This keeps the
+        // space as a trailing character at the visual end of the first line.
+        let max_width = Px((x_space_end.0 + x_w_end.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare(content, &style, wrapped_constraints);
+        let blob_ref = text.blob(blob).expect("wrapped blob");
+        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
+
+        let first = &blob_ref.shape.lines[0];
+        assert!(
+            first.end >= 6,
+            "expected the first visual line to include the trailing space (end={})",
+            first.end
+        );
+
+        let caret_after_o = text
+            .caret_rect(blob, 5, CaretAffinity::Downstream)
+            .expect("caret rect after 'o'");
+        let caret_after_space = text
+            .caret_rect(blob, 6, CaretAffinity::Upstream)
+            .expect("caret rect after space (upstream)");
+        assert!(
+            caret_after_space.origin.x.0 > caret_after_o.origin.x.0 + 0.1,
+            "expected the trailing space to have positive width in caret geometry"
+        );
+
+        let mut rects = Vec::new();
+        text.selection_rects(blob, (5, 6), &mut rects)
+            .expect("selection rects");
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect for the trailing space"
+        );
+
+        text.release(single_blob);
+        text.release(blob);
     }
 
     #[test]

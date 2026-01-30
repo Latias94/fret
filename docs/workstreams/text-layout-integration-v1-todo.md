@@ -207,4 +207,8 @@ Exit criteria:
     `TextService::{hit_test_point,caret_rect,selection_rects_clipped}` on mixed-direction sample strings.
 - [x] TLI1-008: Add decoration rendering tests (underline/strikethrough) under non-integer scale factors.
   - Evidence: `crates/fret-render/src/text.rs` (`decorations_are_pixel_snapped_under_non_integer_scale_factor`).
-- [ ] TLI1-009: Decide trailing-whitespace selection policy and test it.
+- [x] TLI1-009: Decide trailing-whitespace selection policy and test it.
+  - Chosen: trailing spaces at soft-wrap boundaries remain selectable; caret geometry at the wrap boundary is
+    disambiguated via `CaretAffinity` (upstream=end-of-prev-line, downstream=start-of-next-line).
+  - Evidence: `crates/fret-render/src/text.rs` (`trailing_space_at_soft_wrap_is_selectable`),
+    `crates/fret-render/src/text.rs` (`caret_stops_for_slice`).
