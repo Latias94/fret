@@ -79,6 +79,8 @@ _None tracked at this time._
 - Interaction test: `menubar_hover_switches_open_menu`
 - Interaction test: `menubar_triggers_roving_moves_focus_with_arrow_keys`
 - Contract test: `menubar_items_have_collection_position_metadata_excluding_separators`
+- Submenu openSteps parity (web-vs-fret): `menubar-demo.submenu-kbd*` follows the extractor semantics (`scrollIntoView({ block: "center" })` + focus + ArrowRight),
+  while `menubar-demo.submenu` opens via hover after driving the submenu open-delay timer from effects.
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_menubar_open_geometry_matches_fret`).
 - shadcn-web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
