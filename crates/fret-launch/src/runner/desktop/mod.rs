@@ -2781,7 +2781,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         event_loop: &dyn ActiveEventLoop,
         spec: WindowCreateSpec,
         style: WindowStyleRequest,
-        parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
+        _parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
     ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
         let mut attrs = winit::window::WindowAttributes::default()
             .with_title(spec.title)
@@ -2800,18 +2800,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         #[cfg(windows)]
         {
-            use winit::platform::windows::WindowAttributesExtWindows as _;
             if let Some(taskbar) = style.taskbar {
-                attrs = attrs.with_skip_taskbar(matches!(taskbar, TaskbarVisibility::Hide));
+                let platform = winit::platform::windows::WindowAttributesWindows::default()
+                    .with_skip_taskbar(matches!(taskbar, TaskbarVisibility::Hide));
+                attrs = attrs.with_platform_attributes(Box::new(platform));
             }
         }
         #[cfg(target_os = "macos")]
-        if parent_window.is_some() {
+        if _parent_window.is_some() {
             // macOS tool/aux windows: best-effort parent/child relationship so DockFloating windows
             // follow the parent window's Space/fullscreen lifecycle.
             //
             // winit maps this to `NSWindow.addChildWindow_ordered(...)`.
-            attrs = unsafe { attrs.with_parent_window(parent_window) };
+            attrs = unsafe { attrs.with_parent_window(_parent_window) };
         }
         let window = Arc::<dyn Window>::from(
             event_loop
