@@ -1077,6 +1077,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture";
             let is_ui_gallery_file_tree_torture_interactive_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture-interactive";
+            let is_components_gallery_file_tree_suite =
+                rest.len() == 1 && rest[0] == "components-gallery-file-tree";
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
 
             let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
@@ -1337,6 +1339,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_components_gallery_file_tree_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json",
+                            ),
+                        )],
+                        None,
                     )
                 } else if is_docking_arbitration_suite {
                     (
@@ -1688,6 +1700,39 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_wheel_scroll_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
                 check_stale_paint_test_id =
                     check_stale_paint_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
+            }
+
+            if is_components_gallery_file_tree_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+
+                // Default to a large, script-friendly tree so wheel deltas are likely to cross
+                // overscan boundaries (virt-001 telemetry becomes meaningful).
+                for (key, value) in [
+                    ("FRET_EXAMPLES_VIEW_CACHE", "1"),
+                    ("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE", "1"),
+                    ("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N", "50000"),
+                ] {
+                    if !launch_env.iter().any(|(k, _)| k == key) {
+                        launch_env.push((key.to_string(), value.to_string()));
+                    }
+                }
+
+                // This suite exists to catch regressions in a *real* surface, so require:
+                // - view-cache reuse actually happens,
+                // - at least one window mismatch is observed (so we exercised the boundary),
+                // - and stale-paint checks remain green.
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
+                check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
+                check_stale_paint_test_id = check_stale_paint_test_id
+                    .or(Some("components-gallery-file-tree-root".to_string()));
+
+                // The script can require a longer timeout on cold builds; prefer a generous default
+                // when the caller didn't specify one.
+                if timeout_ms == 30_000 {
+                    timeout_ms = 600_000;
+                }
             }
 
             if is_ui_gallery_table_retained_suite {
