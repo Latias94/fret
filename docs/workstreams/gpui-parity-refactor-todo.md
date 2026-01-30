@@ -803,8 +803,10 @@ topics (if/when we implement them):
       - Keyboard nav/typeahead:
         - `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`, `RetainedTableKeyboardNavState`)
       - Gate (suite): `fretboard diag suite ui-gallery-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 --check-stale-paint ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 ...`
+        - Note: in this multi-script suite, the retained-vlist window-boundary gates apply only to `ui-gallery-table-retained-window-boundary-scroll.json` (the interaction scripts are still gated by wheel-scroll + stale-paint, etc.).
         - Note: `--check-wheel-scroll <test_id>` asserts that the target's semantics bounds move after the first wheel event (it does not require the debug hit-test node id to change).
       - Gate (suite, measured rows): `fretboard diag suite ui-gallery-table-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 --check-stale-paint ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 ...`
+        - Note: in this multi-script suite, the retained-vlist window-boundary gates apply only to `ui-gallery-table-retained-window-boundary-scroll.json` (the interaction scripts are still gated by wheel-scroll + stale-paint, etc.).
         - Defaults: `ui-gallery-table-retained-measured` sets `FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT=1`.
         - Note: the measured-row suite currently excludes `ui-gallery-table-retained-sort-desc` until the sort-direction toggle is made deterministic in scripts (avoid flake from multi-click sort state transitions).
       - Evidence bundles (cache+shell, release):
