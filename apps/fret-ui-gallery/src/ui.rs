@@ -464,7 +464,8 @@ pub(crate) fn content_view(
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
             let mut scroll = shadcn::ScrollArea::new([body])
-                .refine_layout(LayoutRefinement::default().w_full().h_full());
+                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .viewport_test_id("ui-gallery-content-viewport");
             if selected == PAGE_VIRTUAL_LIST_TORTURE {
                 scroll =
                     scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
