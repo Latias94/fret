@@ -1235,7 +1235,7 @@ fn preview_virtual_list_torture(
                 let v = v.to_string_lossy().trim().to_ascii_lowercase();
                 !(v == "0" || v == "false" || v == "no" || v == "off")
             }
-            None => false,
+            None => true,
         };
 
     let row_cache =
