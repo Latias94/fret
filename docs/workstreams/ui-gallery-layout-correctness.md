@@ -168,6 +168,8 @@ Implementation note:
   - `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json` (opens the hover overlays, then scrolls the main content viewport and asserts the overlay stays within the window).
 - [x] Add a submenu bounds regression for dropdown menus:
   - `tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json` (opens the `More` submenu and asserts the nested item stays within the window).
+- [x] Add a bounds regression for context menus:
+  - `tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json` (right-clicks the context menu trigger and asserts the first item stays within the window).
 - [x] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
   - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - [ ] For each new P0 issue:
