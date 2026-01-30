@@ -1126,6 +1126,11 @@ fn preview_view_cache(
 
 fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
     let boxy = |cx: &mut ElementContext<'_, App>, label: &str, color: fret_core::Color| {
+        // Ensure short labels don't accidentally get "min-content" sized under intrinsic probes.
+        // We want the text to wrap against the available inner width of the card, not a
+        // shrink-wrapped leaf width.
+        let mut label_props = TextProps::new(label);
+        label_props.layout.size.width = fret_ui::element::Length::Fill;
         cx.container(
             decl_style::container_props(
                 theme,
@@ -1138,7 +1143,7 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
                 // probes and can cause transient wrap widths (0px) to leak into final layout.
                 LayoutRefinement::default().flex_1().min_w_0(),
             ),
-            |cx| [cx.text(label)],
+            |cx| [cx.text_props(label_props)],
         )
     };
 

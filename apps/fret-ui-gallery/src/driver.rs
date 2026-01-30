@@ -1111,7 +1111,7 @@ impl UiGalleryDriver {
         };
 
         let show_debug_hud = debug_on;
-        let debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
+        let mut debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
             let mut lines: Vec<Arc<str>> = Vec::new();
 
             lines.push(Arc::from(format!(
@@ -1214,6 +1214,13 @@ impl UiGalleryDriver {
         } else {
             None
         };
+        if show_debug_hud && let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
+            debug_hud_lines.push(Arc::from("--- inspector ---"));
+            debug_hud_lines.push(cursor.clone());
+            debug_hud_lines.push(hit.clone());
+            debug_hud_lines.push(focus.clone());
+            debug_hud_lines.push(text.clone());
+        }
 
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
