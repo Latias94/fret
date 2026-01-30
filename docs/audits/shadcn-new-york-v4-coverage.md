@@ -48,7 +48,7 @@ Notes:
 - Golden files (tracked): `512`
 - Golden keys (tracked, normalized `.open` suffix): `473`
 - Gated keys (string-literal heuristic): `473` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `172` (`36.4%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `196` (`41.4%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
@@ -83,6 +83,12 @@ The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/t
 - `select` (9)
 - `combobox` (8)
 - `context` (8)
+
+Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
+
+```powershell
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUntargetedByPrefix -TopGroups 20
+```
 
 Recompute locally:
 
