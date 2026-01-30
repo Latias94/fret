@@ -102,7 +102,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
 
 ### Backlog extracted from the comparison
 
-- [ ] Add a `LocalTextStyle`-like scoped default helper in Material foundation (text style + icon size).
+- [x] Add a `LocalTextStyle`-like scoped default helper in Material foundation (text style + icon size).
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/context.rs` (`with_material_text_style`, `with_material_icon_size`),
+    `ecosystem/fret-ui-material3/src/select.rs` (Select trigger uses `inherited_text_style` for display text).
 - [x] Land `foundation::elevation` (shadow + tonal overlay) and migrate `Surface`-like containers.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/elevation.rs`, `ecosystem/fret-ui-material3/src/foundation/surface.rs`,
     `ecosystem/fret-ui-material3/src/dialog.rs`, `ecosystem/fret-ui-material3/src/menu.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`,
@@ -158,6 +160,10 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Add a token audit tool (coverage report vs code + material-web sassvars).
   - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (filters allowlisted Fret-only keys,
     expands format-string templates via `expand_key_templates`, excludes `src/bin` from runtime scans, filters typography-only sassvar keys).
+  - Notes: This audit treats Material Web v30 sassvars as the source of truth for key existence (unknown keys are flagged),
+    helping us avoid inventing Fret-only `md.*` keys during refactors.
+  - Repro: `cargo run -p fret-ui-material3 --bin material3_token_audit -- --check --debug` should exit 0 and report
+    `missing injected keys: 0` and no `Unknown keys` section.
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.
@@ -198,6 +204,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - [x] Auto-discover `repo-ref/material-web` in git worktrees (fallback to `MATERIAL_WEB_DIR`).
     - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (`default_material_web_dir`),
       `ecosystem/fret-ui-material3/src/bin/material3_token_audit.rs` (`resolve_material_web_dir`).
+  - [x] Add a `--check` mode for `material3_token_import` to make the output reproducible (CI-friendly).
+    - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs` (`--check`, `generate_output`, `rustfmt_file`).
   - [x] Generate sys motion + state (+ focus-indicator) injectors from Material Web sassvars.
     - Evidence: `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`,
       `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`,
@@ -413,17 +421,24 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (menu transition),
     `ecosystem/fret-ui-material3/src/tooltip.rs` (tooltip transition),
     `ecosystem/fret-ui-material3/src/snackbar.rs` (toast-layer motion tokens).
-- [ ] Overlay outcomes (menu, dialog, tooltip):
+- [x] Overlay outcomes (menu, dialog, tooltip):
   - [x] Escape dismissal (menu dropdown)
     - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu),
       `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`).
   - [x] outside press dismissal (menu dropdown)
     - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu),
       `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`).
+  - [x] outside press closes without activating the underlay (menu-like popovers)
+    - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayRequest::dismissible_menu`),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`,
+      `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes`).
   - [x] focus trap/restore (modal) (currently validated via modal navigation drawer)
     - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (focus trap),
       `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (focus restore),
       `ecosystem/fret-ui-primitives/src/focus_scope.rs` (`FocusScopeProps { trap_focus: true }`).
+  - [x] scrim press dismisses without activating the underlay (modal)
+    - Evidence: `ecosystem/fret-ui-material3/src/dialog.rs` (scrim pressable + dismiss handler),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dialog_scrim_dismisses_without_activating_underlay`).
   - [x] scrim defaults (modal navigation drawer)
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.comp.navigation-drawer.scrim.*` defaults),
       `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (token lookup + fade),
@@ -441,9 +456,16 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/navigation_bar.rs` (container surface tint + shadow),
     `ecosystem/fret-ui-material3/src/navigation_drawer.rs` (modal container elevation + shadow),
     `crates/fret-ui/src/paint.rs` (`paint_shadow`).
-- [ ] Shape mapping (corner tokens, per-state expressive shape where applicable).
+- [x] Shape mapping (corner tokens, per-state expressive shape where applicable).
   - [x] Corner set tokens (`md.sys.shape.corner.*.(top|start|end)`) and component shapes that depend on them.
-- [ ] Typography mapping (typescale roles).
+  - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_shape`),
+    `ecosystem/fret-ui-material3/src/tokens/{menu,select,switch}.rs` (typed shape access),
+    `ecosystem/fret-ui-material3/src/{checkbox,menu,navigation_bar,radio,select,switch}.rs`
+    (components consume token-driven `Corners`, including state-layer/focus indicator clipping).
+- [x] Typography mapping (typescale roles).
+  - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_typescale`),
+    `ecosystem/fret-ui-material3/src/{button,dialog,list,menu,navigation_bar,navigation_drawer,navigation_rail,select,snackbar,tabs,tooltip}.rs`
+    (components use `md.sys.typescale.*` or stable per-component aliases such as `md.comp.button.label-text`).
 
 ### Component Surface (MVP set)
 
@@ -569,7 +591,20 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`tooltip_opens_and_closes_on_hover_across_schemes`,
     `dropdown_menu_dismisses_and_restores_focus_across_schemes`).
 - [x] Verify Select dismissal and focus restore across light/dark + TonalSpot/Expressive schemes.
-  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`select_dismisses_and_restores_focus_across_schemes`).
+  - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`select_dismisses_and_restores_focus_across_schemes`,
+    `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes` (ArrowUp/ArrowDown/Enter/Space open keys),
+    `select_roving_scrolls_focused_option_into_view`, `select_open_scrolls_selected_option_into_view`,
+    `select_listbox_typeahead_moves_focus_skipping_disabled_options`,
+    `select_menu_matches_anchor_width_and_clamps_height_to_available_space`).
+  - Evidence: `ecosystem/fret-ui-material3/src/select.rs` (Select trigger: `.leading_icon(...)` / `.label(...)` / `.supporting_text(...)` / `.error(...)` + animated trailing icon; `SelectStyle` override surface includes label/supporting/leading icon slots;
+    supporting text inset aligns with the input text start when a leading icon is present; listbox padding; `SelectItem::{leading_icon,trailing_icon}`),
+    `ecosystem/fret-ui-material3/src/tokens/select.rs` (`text-field.error.*` mapping + `menu_list_item_{leading,trailing}_icon_*` tokens),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (headless suites include select trigger states + `material3_headless_controls_suite_goldens_v1` includes `idle_select_supporting_text_insets` + `material3_headless_overlays_suite_goldens_v1` includes `select_open` and `select_open_hover_selected`),
+  - Evidence (reference): `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Menu.kt`
+    (`MenuVerticalMargin = 48.dp`),
+    `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt`
+    (`exposedDropdownSize(matchAnchorWidth)`, `calculateMaxHeight`).
+  - Notes: Select menu item typography defaults to `md.sys.typescale.label-large` (Material Web v30 uses `label-large` for the menu list-item label).
 - [x] Add golden-style visual snapshots per component state (light/dark, density variants).
   - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_controls_suite_goldens_v1`, `material3_headless_overlays_suite_goldens_v1`, `material3_headless_text_field_suite_goldens_v1`),
     `goldens/material3-headless/v1/material3-*.json` (controls suite, overlay suite, text-field suite; includes `scale1_0`/`scale1_25`/`scale2_0` variants and overlay cases such as `both_open` + `select_open`).

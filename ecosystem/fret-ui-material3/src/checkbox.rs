@@ -160,7 +160,9 @@ impl Checkbox {
                     }
                 }));
 
-                let corner_radii = Corners::all(Px(9999.0));
+                let corner_radii = theme
+                    .corners_by_key("md.sys.shape.corner.full")
+                    .unwrap_or_else(|| Corners::all(Px(9999.0)));
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
@@ -263,7 +265,7 @@ impl Checkbox {
                             cx,
                             pressable_id,
                             now_frame,
-                            Corners::all(Px(9999.0)),
+                            corner_radii,
                             RippleClip::Bounded,
                             state_layer_color,
                             is_pressed,
@@ -312,7 +314,7 @@ fn material_checkbox_chrome<H: UiHost>(
 ) -> AnyElement {
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
-    props.corner_radii = Corners::all(Px(9999.0));
+    props.corner_radii = Corners::all(Px(size.state_layer.0 * 0.5));
     props.layout.size.width = Length::Px(size.state_layer);
     props.layout.size.height = Length::Px(size.state_layer);
     cx.container(props, move |_cx| children)

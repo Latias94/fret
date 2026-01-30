@@ -3,7 +3,7 @@
 //! This module centralizes token key mapping and fallback chains so menu visuals remain stable and
 //! drift-resistant during refactors.
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
 use crate::foundation::content::MaterialContentDefaults;
@@ -42,11 +42,11 @@ pub(crate) fn container_shadow_color(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
 }
 
-pub(crate) fn container_shape_radius(theme: &Theme) -> Px {
+pub(crate) fn container_shape(theme: &Theme) -> Corners {
     theme
-        .metric_by_key("md.comp.menu.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.extra-small"))
-        .unwrap_or(Px(4.0))
+        .corners_by_key("md.comp.menu.container.shape")
+        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
+        .unwrap_or_else(|| Corners::all(Px(4.0)))
 }
 
 pub(crate) fn divider_height(theme: &Theme) -> Px {

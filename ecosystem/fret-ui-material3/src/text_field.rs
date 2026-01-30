@@ -19,6 +19,7 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
+use crate::foundation::floating_label;
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::text_field as text_field_tokens;
 
@@ -341,9 +342,13 @@ impl TextField {
                                     None
                                 };
                                 props.chrome = chrome;
-                                props.text_style = theme
-                                    .text_style_by_key("md.sys.typescale.body-large")
-                                    .unwrap_or(TextStyle::default());
+                                props.text_style =
+                                    crate::foundation::context::inherited_text_style(cx)
+                                        .unwrap_or_else(|| {
+                                            theme
+                                                .text_style_by_key("md.sys.typescale.body-large")
+                                                .unwrap_or(TextStyle::default())
+                                        });
 
                                 props
                             });
@@ -453,48 +458,6 @@ impl TextField {
     }
 }
 
-fn lerp_px(a: Px, b: Px, t: f32) -> Px {
-    let t = t.clamp(0.0, 1.0);
-    Px(a.0 + (b.0 - a.0) * t)
-}
-
-fn lerp_f32(a: f32, b: f32, t: f32) -> f32 {
-    let t = t.clamp(0.0, 1.0);
-    a + (b - a) * t
-}
-
-fn interpolated_label_text_style(theme: &Theme, progress: f32) -> Option<TextStyle> {
-    let large = theme.text_style_by_key("md.sys.typescale.body-large")?;
-    let small = theme.text_style_by_key("md.sys.typescale.body-small")?;
-
-    if large.font != small.font || large.weight != small.weight || large.slant != small.slant {
-        return Some(if progress >= 0.5 { small } else { large });
-    }
-
-    let size = lerp_px(large.size, small.size, progress);
-    let line_height = match (large.line_height, small.line_height) {
-        (Some(a), Some(b)) => Some(lerp_px(a, b, progress)),
-        (Some(a), None) => Some(a),
-        (None, Some(b)) => Some(b),
-        (None, None) => None,
-    };
-    let letter_spacing_em = match (large.letter_spacing_em, small.letter_spacing_em) {
-        (Some(a), Some(b)) => Some(lerp_f32(a, b, progress)),
-        (Some(a), None) => Some(a),
-        (None, Some(b)) => Some(b),
-        (None, None) => None,
-    };
-
-    Some(TextStyle {
-        font: large.font,
-        size,
-        weight: large.weight,
-        slant: large.slant,
-        line_height,
-        letter_spacing_em,
-    })
-}
-
 fn text_field_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -511,11 +474,10 @@ fn text_field_label<H: UiHost>(
     input_bg: Color,
     outline_width: Px,
 ) -> AnyElement {
-    let style = interpolated_label_text_style(theme, progress)
+    let style = floating_label::material_floating_label_text_style(theme, progress)
         .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
 
-    let y = lerp_px(Px(18.0), Px(6.0), progress);
-    let x = Px(16.0);
+    let (x, y) = floating_label::material_floating_label_offsets(progress);
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -524,7 +486,7 @@ fn text_field_label<H: UiHost>(
     layout.inset.right = Some(Px(16.0));
     layout.overflow = Overflow::Visible;
 
-    let floated = progress >= 0.5;
+    let floated = floating_label::is_floated(progress);
 
     let mut patch = ContainerProps::default();
     if variant == TextFieldVariant::Outlined {

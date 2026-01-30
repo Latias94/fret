@@ -510,6 +510,46 @@ fn settle_material3_scene_snapshot_v1(
     settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
 }
 
+fn settle_material3_overlay_scene_snapshot_v1(
+    app: &mut TestHost,
+    ui: &mut UiTree<TestHost>,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    scale_factor: f32,
+    settle_from_frame: usize,
+    total_frames: usize,
+    stable_message: &str,
+    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) -> Material3HeadlessGoldenV1 {
+    let mut settled: Option<Material3HeadlessGoldenV1> = None;
+    for frame in 0..total_frames {
+        let scene = run_overlay_frame_with_scene_scaled(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            scale_factor,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        if frame < settle_from_frame {
+            continue;
+        }
+
+        let snapshot = material3_scene_snapshot_v1(&scene);
+        if let Some(prev) = settled.as_ref() {
+            assert_eq!(snapshot, *prev, "{stable_message}");
+        } else {
+            settled = Some(snapshot);
+        }
+    }
+
+    settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
+}
+
 fn write_or_assert_material3_suite_v1(name: &str, suite: &Material3HeadlessSuiteV1) {
     let path = material3_goldens_dir().join(format!("{name}.json"));
 
@@ -2178,6 +2218,190 @@ fn dialog_focus_is_contained_and_restored_across_schemes() {
 }
 
 #[test]
+fn dialog_scrim_dismisses_without_activating_underlay() {
+    use fret_ui_material3::{Button, Dialog, DialogAction};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(320.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let underlay_toggled = app.models_mut().insert(false);
+
+        let open_model = open.clone();
+        let underlay_model = underlay_toggled.clone();
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                let open_model = open_model.clone();
+                let underlay_model = underlay_model.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let underlay_model = underlay_model.clone();
+                    let underlay = cx.pressable(
+                        fret_ui::element::PressableProps {
+                            enabled: true,
+                            focusable: false,
+                            a11y: fret_ui::element::PressableA11y {
+                                test_id: Some(std::sync::Arc::<str>::from("underlay-fullscreen")),
+                                ..Default::default()
+                            },
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.position = fret_ui::element::PositionStyle::Absolute;
+                                l.size.width = fret_ui::element::Length::Fill;
+                                l.size.height = fret_ui::element::Length::Fill;
+                                l.inset = fret_ui::element::InsetStyle {
+                                    top: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)),
+                                };
+                                l
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_toggle_bool(&underlay_model);
+                            Vec::new()
+                        },
+                    );
+
+                    let dialog = Dialog::new(open_model.clone())
+                        .headline("Dialog")
+                        .supporting_text("Body")
+                        .actions(vec![DialogAction::new("OK").test_id("dialog-ok")])
+                        .test_id("dialog")
+                        .into_element(
+                            cx,
+                            move |cx| {
+                                let trigger = Button::new("Open dialog")
+                                    .test_id("dialog-trigger")
+                                    .into_element(cx);
+                                with_padding(cx, Px(24.0), trigger)
+                            },
+                            |_cx| Vec::new(),
+                        );
+                    vec![underlay, dialog]
+                })
+            };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    (node.test_id.as_deref() == Some("dialog-trigger")).then_some(node.id)
+                })
+            })
+            .unwrap_or_else(|| panic!("expected dialog-trigger in semantics snapshot ({label})"));
+        ui.set_focus(Some(trigger_node));
+        assert_eq!(ui.focus(), Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot");
+        assert!(
+            snapshot.barrier_root.is_some(),
+            "expected modal barrier root while dialog is open ({label})"
+        );
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("dialog-scrim")),
+            "expected dialog scrim node while dialog is open ({label})"
+        );
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("underlay-fullscreen")),
+            "expected underlay-fullscreen node while dialog is open ({label})"
+        );
+
+        let click_at = Point::new(Px(4.0), Px(4.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), click_at),
+        );
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected dialog to dismiss on scrim press ({label})"
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_toggled),
+            Some(false),
+            "expected dialog scrim to prevent underlay activation ({label})"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected dialog to restore focus to trigger after scrim dismissal ({label})"
+        );
+    }
+}
+
+#[test]
 fn modal_navigation_drawer_focus_is_contained_and_restored_across_schemes() {
     use fret_ui_material3::{Button, ModalNavigationDrawer};
 
@@ -2762,7 +2986,7 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
 #[test]
 fn material3_headless_controls_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::{Button, Checkbox, Switch};
+    use fret_ui_material3::{Button, Checkbox, Select, SelectItem, Switch};
 
     let schemes = [
         (
@@ -2809,6 +3033,16 @@ fn material3_headless_controls_suite_goldens_v1() {
             let checkbox_unchecked = app.models_mut().insert(false);
             let switch_on = app.models_mut().insert(true);
             let switch_off = app.models_mut().insert(false);
+            let select_empty: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+            let select_populated: Model<Option<Arc<str>>> =
+                app.models_mut().insert(Some(Arc::<str>::from("beta")));
+
+            let select_items: Arc<[SelectItem]> = vec![
+                SelectItem::new("alpha", "Alpha"),
+                SelectItem::new("beta", "Beta"),
+                SelectItem::new("charlie", "Charlie (disabled)").disabled(true),
+            ]
+            .into();
 
             let render = |ui: &mut UiTree<TestHost>,
                           app: &mut TestHost,
@@ -2841,6 +3075,31 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 .a11y_label("switch off")
                                 .test_id("sw-off")
                                 .into_element(cx),
+                            Select::new(select_empty.clone())
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
+                                .label("Select")
+                                .supporting_text("Supporting text")
+                                .placeholder("Pick one")
+                                .items(select_items.clone())
+                                .test_id("sel-empty")
+                                .into_element(cx),
+                            Select::new(select_populated.clone())
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                .label("Select")
+                                .supporting_text("Supporting text")
+                                .placeholder("Pick one")
+                                .items(select_items.clone())
+                                .test_id("sel-populated")
+                                .into_element(cx),
+                            Select::new(select_empty.clone())
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
+                                .label("Select")
+                                .supporting_text("Error supporting text")
+                                .placeholder("Pick one")
+                                .items(select_items.clone())
+                                .error(true)
+                                .test_id("sel-error")
+                                .into_element(cx),
                         ]
                     });
 
@@ -2870,12 +3129,40 @@ fn material3_headless_controls_suite_goldens_v1() {
                 .unwrap_or_else(|| {
                     panic!("expected btn-filled in semantics snapshot ({label}, {scale})")
                 });
+
+            let select_empty_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("sel-empty")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected sel-empty in semantics snapshot ({label}, {scale})")
+                });
+            let select_error_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("sel-error")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected sel-error in semantics snapshot ({label}, {scale})")
+                });
             let btn_bounds = ui
                 .debug_node_visual_bounds(btn_node)
                 .unwrap_or_else(|| panic!("expected btn-filled bounds ({label}, {scale})"));
             let btn_center = Point::new(
                 Px(btn_bounds.origin.x.0 + btn_bounds.size.width.0 * 0.5),
                 Px(btn_bounds.origin.y.0 + btn_bounds.size.height.0 * 0.5),
+            );
+            let select_error_bounds = ui
+                .debug_node_visual_bounds(select_error_node)
+                .unwrap_or_else(|| panic!("expected sel-error bounds ({label}, {scale})"));
+            let select_error_center = Point::new(
+                Px(select_error_bounds.origin.x.0 + select_error_bounds.size.width.0 * 0.5),
+                Px(select_error_bounds.origin.y.0 + select_error_bounds.size.height.0 * 0.5),
             );
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
@@ -2895,6 +3182,63 @@ fn material3_headless_controls_suite_goldens_v1() {
                     40,
                     &idle_message,
                     &render,
+                ),
+            );
+
+            let render_select_supporting_text_insets =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "select_insets_root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    Select::new(select_empty.clone())
+                                        .label("Select")
+                                        .supporting_text("Supporting text")
+                                        .placeholder("Pick one")
+                                        .items(select_items.clone())
+                                        .test_id("sel-inset-no-icon")
+                                        .into_element(cx),
+                                    Select::new(select_populated.clone())
+                                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                                        .label("Select")
+                                        .supporting_text("Supporting text")
+                                        .placeholder("Pick one")
+                                        .items(select_items.clone())
+                                        .test_id("sel-inset-icon")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let select_supporting_inset_message = format!(
+                "expected the Material3 select supporting text inset scenes to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle_select_supporting_text_insets".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_supporting_inset_message,
+                    &render_select_supporting_text_insets,
                 ),
             );
 
@@ -2945,6 +3289,84 @@ fn material3_headless_controls_suite_goldens_v1() {
                     24,
                     40,
                     &focus_visible_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+            ui.set_focus(Some(select_empty_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+            let select_focus_visible_message = format!(
+                "expected the Material3 select focus-visible scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "focus_visible_select_empty".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_focus_visible_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), select_error_center),
+            );
+
+            let select_hover_message = format!(
+                "expected the Material3 select hover scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "hover_select_error".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_hover_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+            ui.set_focus(Some(select_error_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+            let select_error_focus_visible_message = format!(
+                "expected the Material3 select error focus-visible scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "focus_visible_select_error".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_error_focus_visible_message,
                     &render,
                 ),
             );
@@ -3162,7 +3584,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                 panic!("expected a settled overlays snapshot ({label}, {scale})");
             };
 
-            let select_open_snapshot = {
+            let (select_open_snapshot, select_open_hover_selected_snapshot) = {
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -3174,12 +3596,20 @@ fn material3_headless_overlays_suite_goldens_v1() {
 
                 let selected: Model<Option<Arc<str>>> =
                     app.models_mut().insert(Some(Arc::<str>::from("beta")));
+                let error_selected: Model<Option<Arc<str>>> = app.models_mut().insert(None);
 
                 let items: Arc<[SelectItem]> = vec![
-                    SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
-                    SelectItem::new("beta", "Beta").test_id("select-item-beta"),
+                    SelectItem::new("alpha", "Alpha")
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("select-item-alpha"),
+                    SelectItem::new("beta", "Beta")
+                        .leading_icon(fret_icons::ids::ui::SETTINGS)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("select-item-beta"),
                     SelectItem::new("charlie", "Charlie (disabled)")
                         .disabled(true)
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
                         .test_id("select-item-charlie-disabled"),
                 ]
                 .into();
@@ -3188,6 +3618,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                                    app: &mut TestHost,
                                    services: &mut dyn UiServices| {
                     let selected = selected.clone();
+                    let error_selected = error_selected.clone();
                     let items = items.clone();
                     fret_ui::declarative::render_root(
                         ui,
@@ -3203,13 +3634,27 @@ fn material3_headless_overlays_suite_goldens_v1() {
                             props.align = CrossAlign::Start;
 
                             let select = Select::new(selected)
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
+                                .label("Label")
+                                .supporting_text("Supporting text")
                                 .a11y_label("select")
                                 .placeholder("Pick one")
-                                .items(items)
+                                .items(items.clone())
                                 .test_id("material3-select-trigger")
                                 .into_element(cx);
 
-                            vec![cx.flex(props, move |_cx| vec![select])]
+                            let select_error = Select::new(error_selected)
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                .label("Label")
+                                .supporting_text("Error supporting text")
+                                .a11y_label("select error")
+                                .placeholder("Pick one")
+                                .items(items.clone())
+                                .error(true)
+                                .test_id("material3-select-trigger-error")
+                                .into_element(cx);
+
+                            vec![cx.flex(props, move |_cx| vec![select, select_error])]
                         },
                     )
                 };
@@ -3287,42 +3732,86 @@ fn material3_headless_overlays_suite_goldens_v1() {
                     "expected the select overlay to be open after clicking the trigger ({label}, {scale})"
                 );
 
-                let mut settled: Option<Material3HeadlessGoldenV1> = None;
-                for frame in 0..80 {
-                    let scene = run_overlay_frame_with_scene_scaled(
-                        &mut ui,
+                let select_open_message = format!(
+                    "expected the Material3 select overlay scene to be stable after animations settle ({label}, {scale})"
+                );
+                let select_open_snapshot = settle_material3_overlay_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    44,
+                    80,
+                    &select_open_message,
+                    &render,
+                );
+
+                run_overlay_frame_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let selected_item_node: NodeId = ui
+                    .semantics_snapshot()
+                    .and_then(|snapshot| {
+                        snapshot.nodes.iter().find_map(|node| {
+                            (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+                        })
+                    })
+                    .unwrap_or_else(|| {
+                        panic!("expected select-item-beta in semantics snapshot ({label}, {scale})")
+                    });
+                let selected_item_bounds = ui
+                    .debug_node_visual_bounds(selected_item_node)
+                    .unwrap_or_else(|| {
+                        panic!("expected select-item-beta bounds ({label}, {scale})")
+                    });
+                let hover_at = Point::new(
+                    Px(selected_item_bounds.origin.x.0 + selected_item_bounds.size.width.0 * 0.5),
+                    Px(selected_item_bounds.origin.y.0 + selected_item_bounds.size.height.0 * 0.5),
+                );
+
+                ui.dispatch_event(
+                    &mut app,
+                    &mut services,
+                    &pointer_move(PointerId(1), hover_at),
+                );
+
+                let select_hover_message = format!(
+                    "expected the Material3 select overlay hover-selected scene to be stable after animations settle ({label}, {scale})"
+                );
+                let select_open_hover_selected_snapshot =
+                    settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
+                        &mut ui,
                         &mut services,
                         window,
                         bounds,
                         scale_factor,
-                        false,
-                        |ui, app, services| render(ui, app, services),
+                        44,
+                        80,
+                        &select_hover_message,
+                        &render,
                     );
 
-                    if frame < 44 {
-                        continue;
-                    }
-
-                    let snapshot = material3_scene_snapshot_v1(&scene);
-                    if let Some(prev) = settled.as_ref() {
-                        assert_eq!(
-                            snapshot, *prev,
-                            "expected the Material3 select overlay scene to be stable after animations settle ({label}, {scale})"
-                        );
-                    } else {
-                        settled = Some(snapshot);
-                    }
-                }
-
-                settled.unwrap_or_else(|| {
-                    panic!("expected a settled select overlay snapshot ({label}, {scale})")
-                })
+                (select_open_snapshot, select_open_hover_selected_snapshot)
             };
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
             cases.insert("both_open".to_string(), both_open_snapshot);
             cases.insert("select_open".to_string(), select_open_snapshot);
+            cases.insert(
+                "select_open_hover_selected".to_string(),
+                select_open_hover_selected_snapshot,
+            );
             let suite = Material3HeadlessSuiteV1 { cases };
 
             write_or_assert_material3_suite_v1(
@@ -4000,6 +4489,1060 @@ fn select_dismisses_and_restores_focus_across_schemes() {
             "expected select to restore focus to trigger on Escape ({label})"
         );
     }
+}
+
+#[test]
+fn select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+    let keyboard_open_keys = [
+        (KeyCode::ArrowDown, "arrow_down"),
+        (KeyCode::ArrowUp, "arrow_up"),
+        (KeyCode::Enter, "enter"),
+        (KeyCode::Space, "space"),
+    ];
+
+    for (mode, variant, label) in cases {
+        for (open_key, key_label) in keyboard_open_keys {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(560.0), Px(420.0)),
+            );
+
+            let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+            let underlay_toggled = app.models_mut().insert(false);
+
+            let items: Arc<[SelectItem]> = vec![
+                SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
+                SelectItem::new("beta", "Beta").test_id("select-item-beta"),
+                SelectItem::new("charlie", "Charlie (disabled)")
+                    .disabled(true)
+                    .test_id("select-item-charlie-disabled"),
+            ]
+            .into();
+
+            let selected_model = selected.clone();
+            let underlay_model = underlay_toggled.clone();
+            let render = move |ui: &mut UiTree<TestHost>,
+                               app: &mut TestHost,
+                               services: &mut dyn UiServices| {
+                let selected_model = selected_model.clone();
+                let items = items.clone();
+                let underlay_model = underlay_model.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let select = Select::new(selected_model)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx);
+
+                    let underlay = cx.pressable(
+                        fret_ui::element::PressableProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = fret_ui::element::Length::Px(Px(160.0));
+                                l.size.height = fret_ui::element::Length::Px(Px(40.0));
+                                l
+                            },
+                            a11y: fret_ui::element::PressableA11y {
+                                test_id: Some(Arc::<str>::from("select-underlay-toggle")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_toggle_bool(&underlay_model);
+                            Vec::new()
+                        },
+                    );
+
+                    let mut props = fret_ui::element::FlexProps::default();
+                    props.direction = fret_core::Axis::Vertical;
+                    props.gap = Px(24.0);
+                    // Place the underlay above the trigger so the "outside press" point is
+                    // guaranteed to be outside the select popover (which opens below the trigger).
+                    vec![cx.flex(props, move |_cx| vec![underlay, select])]
+                })
+            };
+
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+
+            let trigger_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected select-trigger in semantics snapshot ({label}, {key_label})")
+                });
+            let underlay_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-underlay-toggle"))
+                            .then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "expected select-underlay-toggle in semantics snapshot ({label}, {key_label})"
+                    )
+                });
+
+            ui.set_focus(Some(trigger_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(open_key));
+            ui.dispatch_event(&mut app, &mut services, &key_up(open_key));
+
+            let mut opened = false;
+            for _ in 0..24 {
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                if stack
+                    .stack
+                    .iter()
+                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+                {
+                    opened = true;
+                    break;
+                }
+            }
+            assert!(
+                opened,
+                "expected select overlay to open on {key_label} ({label})"
+            );
+
+            let selected_option_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected select-item-beta in semantics snapshot ({label}, {key_label})")
+                });
+            let mut focused_selected = ui.focus() == Some(selected_option_node);
+            for _ in 0..12 {
+                if focused_selected {
+                    break;
+                }
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+                focused_selected = ui.focus() == Some(selected_option_node);
+            }
+            if !focused_selected {
+                let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+                    ui.focus().and_then(|focused| {
+                        snapshot
+                            .nodes
+                            .iter()
+                            .find(|node| node.id == focused)
+                            .and_then(|node| node.test_id.as_deref())
+                            .map(|s| s.to_string())
+                    })
+                });
+                panic!(
+                    "expected Select to move focus to the selected option when opening via keyboard ({label}, {key_label}); focus={:?}, focus_test_id={focused_test_id:?}",
+                    ui.focus()
+                );
+            }
+
+            let underlay_bounds = ui
+                .debug_node_visual_bounds(underlay_node)
+                .expect("expected underlay bounds");
+            let click_at = Point::new(
+                Px(underlay_bounds.origin.x.0 + underlay_bounds.size.width.0 * 0.5),
+                Px(underlay_bounds.origin.y.0 + underlay_bounds.size.height.0 * 0.5),
+            );
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_down(PointerId(1), click_at),
+            );
+            ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+            let mut closed = false;
+            for _ in 0..24 {
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    false,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                if !stack
+                    .stack
+                    .iter()
+                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.visible)
+                {
+                    closed = true;
+                    break;
+                }
+            }
+
+            assert!(
+                closed,
+                "expected select overlay to close on outside press after opening via {key_label} ({label})"
+            );
+            assert_eq!(
+                app.models().get_copied(&underlay_toggled),
+                Some(false),
+                "expected select to prevent underlay activation on outside press ({label}, {key_label})"
+            );
+            assert_eq!(
+                ui.focus(),
+                Some(trigger_node),
+                "expected select to restore focus to trigger on outside press ({label}, {key_label})"
+            );
+
+            ui.set_focus(Some(trigger_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(open_key));
+            ui.dispatch_event(&mut app, &mut services, &key_up(open_key));
+
+            let mut reopened = false;
+            for _ in 0..24 {
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                if stack
+                    .stack
+                    .iter()
+                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+                {
+                    reopened = true;
+                    break;
+                }
+            }
+            assert!(
+                reopened,
+                "expected select overlay to re-open on {key_label} ({label})"
+            );
+
+            let selected_option_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected select-item-beta in semantics snapshot ({label}, {key_label})")
+                });
+            let mut focused_selected = ui.focus() == Some(selected_option_node);
+            for _ in 0..12 {
+                if focused_selected {
+                    break;
+                }
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+                focused_selected = ui.focus() == Some(selected_option_node);
+            }
+            if !focused_selected {
+                let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+                    ui.focus().and_then(|focused| {
+                        snapshot
+                            .nodes
+                            .iter()
+                            .find(|node| node.id == focused)
+                            .and_then(|node| node.test_id.as_deref())
+                            .map(|s| s.to_string())
+                    })
+                });
+                panic!(
+                    "expected Select to focus the selected option when reopening via keyboard ({label}, {key_label}); focus={:?}, focus_test_id={focused_test_id:?}",
+                    ui.focus()
+                );
+            }
+
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+
+            let alpha_option_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("select-item-alpha")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "expected select-item-alpha in semantics snapshot ({label}, {key_label})"
+                    )
+                });
+            assert_eq!(
+                ui.focus(),
+                Some(alpha_option_node),
+                "expected ArrowDown to rove focus to the next enabled option (wrap + skip disabled) ({label}, {key_label})"
+            );
+
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Enter));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Enter));
+
+            let mut closed_after_select = false;
+            for _ in 0..24 {
+                run_overlay_frame(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    false,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                if !stack
+                    .stack
+                    .iter()
+                    .any(|e| e.kind == OverlayStackEntryKind::Popover && e.visible)
+                {
+                    closed_after_select = true;
+                    break;
+                }
+            }
+
+            assert!(
+                closed_after_select,
+                "expected select overlay to close after selecting an option ({label}, {key_label})"
+            );
+            assert_eq!(
+                ui.focus(),
+                Some(trigger_node),
+                "expected select to restore focus to trigger after selecting an option ({label}, {key_label})"
+            );
+            assert_eq!(
+                app.models().get_cloned(&selected),
+                Some(Some(Arc::<str>::from("alpha"))),
+                "expected Enter to select the focused option ({label}, {key_label})"
+            );
+        }
+    }
+}
+
+#[test]
+fn select_roving_scrolls_focused_option_into_view() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("item-0")));
+    let mut items_vec: Vec<SelectItem> = Vec::new();
+    for i in 0..20 {
+        let value: Arc<str> = Arc::from(format!("item-{i}"));
+        let label: Arc<str> = Arc::from(format!("Item {i}"));
+        items_vec.push(
+            SelectItem::new(value.clone(), label).test_id(Arc::from(format!("select-item-{i}"))),
+        );
+    }
+    let items: Arc<[SelectItem]> = items_vec.into();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected = selected.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![
+                    Select::new(selected)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx),
+                ]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected select-trigger bounds");
+    let click_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    for _ in 0..12 {
+        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let listbox_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger-listbox in semantics snapshot");
+    let listbox_bounds = ui
+        .debug_node_visual_bounds(listbox_node)
+        .expect("expected listbox bounds");
+
+    let focused = ui.focus().expect("expected focused node after roving");
+    let focused_bounds = ui
+        .debug_node_visual_bounds(focused)
+        .expect("expected focused bounds");
+
+    let epsilon = 0.01;
+    let listbox_top = listbox_bounds.origin.y.0;
+    let listbox_bottom = listbox_bounds.origin.y.0 + listbox_bounds.size.height.0;
+    let focused_top = focused_bounds.origin.y.0;
+    let focused_bottom = focused_bounds.origin.y.0 + focused_bounds.size.height.0;
+    assert!(
+        focused_top + epsilon >= listbox_top && focused_bottom - epsilon <= listbox_bottom,
+        "expected focused option to be visible within listbox viewport after roving"
+    );
+}
+
+#[test]
+fn select_open_scrolls_selected_option_into_view() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("item-18")));
+    let mut items_vec: Vec<SelectItem> = Vec::new();
+    for i in 0..30 {
+        let value: Arc<str> = Arc::from(format!("item-{i}"));
+        let label: Arc<str> = Arc::from(format!("Item {i}"));
+        items_vec.push(
+            SelectItem::new(value.clone(), label).test_id(Arc::from(format!("select-item-{i}"))),
+        );
+    }
+    let items: Arc<[SelectItem]> = items_vec.into();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected = selected.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![
+                    Select::new(selected)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx),
+                ]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let listbox_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger-listbox in semantics snapshot");
+    let listbox_bounds = ui
+        .debug_node_visual_bounds(listbox_node)
+        .expect("expected listbox bounds");
+
+    let selected_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-item-18")).then_some(node.id)
+            })
+        })
+        .expect("expected select-item-18 in semantics snapshot");
+    let selected_bounds = ui
+        .debug_node_visual_bounds(selected_node)
+        .expect("expected selected option bounds");
+
+    let epsilon = 0.01;
+    let listbox_top = listbox_bounds.origin.y.0;
+    let listbox_bottom = listbox_bounds.origin.y.0 + listbox_bounds.size.height.0;
+    let selected_top = selected_bounds.origin.y.0;
+    let selected_bottom = selected_bounds.origin.y.0 + selected_bounds.size.height.0;
+    assert!(
+        selected_top + epsilon >= listbox_top && selected_bottom - epsilon <= listbox_bottom,
+        "expected the selected option to be visible within listbox viewport on open"
+    );
+}
+
+#[test]
+fn select_menu_matches_anchor_width_and_clamps_height_to_available_space() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("v0")));
+    let items: Arc<[SelectItem]> = (0..40)
+        .map(|i| SelectItem::new(Arc::<str>::from(format!("v{i}")), format!("Item {i}")))
+        .collect::<Vec<_>>()
+        .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let mut l = fret_ui::element::LayoutStyle::default();
+                l.position = fret_ui::element::PositionStyle::Absolute;
+                l.inset = fret_ui::element::InsetStyle {
+                    top: Some(Px(200.0)),
+                    left: Some(Px(24.0)),
+                    right: None,
+                    bottom: None,
+                };
+                l.size.width = fret_ui::element::Length::Px(Px(240.0));
+                l.size.height = fret_ui::element::Length::Auto;
+                l.overflow = fret_ui::element::Overflow::Visible;
+
+                vec![cx.container(
+                    fret_ui::element::ContainerProps {
+                        layout: l,
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![
+                            Select::new(selected_model)
+                                .a11y_label("select")
+                                .placeholder("Pick one")
+                                .items(items)
+                                .test_id("select-trigger")
+                                .into_element(cx),
+                        ]
+                    },
+                )]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected select-trigger bounds");
+    let click_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    for _ in 0..20 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot");
+
+    let listbox_node: NodeId = snapshot
+        .nodes
+        .iter()
+        .find_map(|node| {
+            (node.test_id.as_deref() == Some("select-trigger-listbox")).then_some(node.id)
+        })
+        .expect("expected select-trigger-listbox in semantics snapshot");
+    let listbox_bounds = ui
+        .debug_node_visual_bounds(listbox_node)
+        .expect("expected listbox bounds");
+
+    let epsilon = 0.01;
+    assert!(
+        (listbox_bounds.size.width.0 - trigger_bounds.size.width.0).abs() <= epsilon,
+        "expected listbox width to match trigger width"
+    );
+
+    let collision_top = 48.0;
+    let collision_bottom = 48.0;
+    let gap = 4.0;
+
+    let outer_top = bounds.origin.y.0 + collision_top;
+    let outer_bottom = bounds.origin.y.0 + bounds.size.height.0 - collision_bottom;
+    let anchor_top = trigger_bounds.origin.y.0;
+    let anchor_bottom = trigger_bounds.origin.y.0 + trigger_bounds.size.height.0;
+
+    let available_above = anchor_top - (outer_top + gap);
+    let available_below = outer_bottom - (anchor_bottom + gap);
+    let available = available_above.max(available_below).max(0.0);
+
+    assert!(
+        listbox_bounds.size.height.0 <= available + epsilon,
+        "expected listbox height to clamp to available space (got {}, want <= {})",
+        listbox_bounds.size.height.0,
+        available
+    );
+    assert!(
+        (listbox_bounds.size.height.0 - available).abs() <= 0.5,
+        "expected listbox height to match available space when content overflows (got {}, want ~ {})",
+        listbox_bounds.size.height.0,
+        available
+    );
+}
+
+#[test]
+fn select_listbox_typeahead_moves_focus_skipping_disabled_options() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+    let items: Arc<[SelectItem]> = vec![
+        SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
+        SelectItem::new("beta", "Beta").test_id("select-item-beta"),
+        SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("select-item-charlie-disabled"),
+        SelectItem::new("delta", "Delta").test_id("select-item-delta"),
+    ]
+    .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![
+                    Select::new(selected_model)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx),
+                ]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    let beta_option_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+            })
+        })
+        .expect("expected select-item-beta in semantics snapshot");
+    assert_eq!(
+        ui.focus(),
+        Some(beta_option_node),
+        "expected select to focus the selected option when opening via keyboard"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyC));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyC));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.as_deref())
+        })
+    });
+    assert_eq!(
+        focused_test_id,
+        Some("select-item-beta"),
+        "expected typeahead to ignore disabled matches (KeyC)"
+    );
+
+    // Wait for the typeahead buffer to expire (select installs a prefix-buffer typeahead policy).
+    for _ in 0..40 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyD));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyD));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.as_deref())
+        })
+    });
+    assert_eq!(
+        focused_test_id,
+        Some("select-item-delta"),
+        "expected typeahead to rove focus to the matching option (KeyD)"
+    );
 }
 
 fn scale_segment(scale_factor: f32) -> &'static str {
