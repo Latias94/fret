@@ -1,6 +1,9 @@
 #[cfg(feature = "diagnostics")]
 #[test]
 fn removed_subtree_reachability_prefers_frame_context() {
+    use super::{FakeUiServices, TestStack};
+    use crate::tree::{UiDebugRemoveSubtreeFrameContext, UiTree};
+    use fret_core::AppWindowId;
     use fret_runtime::FrameId;
 
     let _app = crate::test_host::TestHost::new();
