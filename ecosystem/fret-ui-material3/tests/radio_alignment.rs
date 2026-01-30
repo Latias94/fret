@@ -2178,6 +2178,190 @@ fn dialog_focus_is_contained_and_restored_across_schemes() {
 }
 
 #[test]
+fn dialog_scrim_dismisses_without_activating_underlay() {
+    use fret_ui_material3::{Button, Dialog, DialogAction};
+
+    let cases = [
+        (SchemeMode::Dark, DynamicVariant::TonalSpot, "dark/tonal"),
+        (SchemeMode::Light, DynamicVariant::TonalSpot, "light/tonal"),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark/expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light/expressive",
+        ),
+    ];
+
+    for (mode, variant, label) in cases {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, mode, variant);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(320.0)),
+        );
+
+        let open = app.models_mut().insert(false);
+        let underlay_toggled = app.models_mut().insert(false);
+
+        let open_model = open.clone();
+        let underlay_model = underlay_toggled.clone();
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                let open_model = open_model.clone();
+                let underlay_model = underlay_model.clone();
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let underlay_model = underlay_model.clone();
+                    let underlay = cx.pressable(
+                        fret_ui::element::PressableProps {
+                            enabled: true,
+                            focusable: false,
+                            a11y: fret_ui::element::PressableA11y {
+                                test_id: Some(std::sync::Arc::<str>::from("underlay-fullscreen")),
+                                ..Default::default()
+                            },
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.position = fret_ui::element::PositionStyle::Absolute;
+                                l.size.width = fret_ui::element::Length::Fill;
+                                l.size.height = fret_ui::element::Length::Fill;
+                                l.inset = fret_ui::element::InsetStyle {
+                                    top: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    left: Some(Px(0.0)),
+                                };
+                                l
+                            },
+                            ..Default::default()
+                        },
+                        move |cx, _st| {
+                            cx.pressable_toggle_bool(&underlay_model);
+                            Vec::new()
+                        },
+                    );
+
+                    let dialog = Dialog::new(open_model.clone())
+                        .headline("Dialog")
+                        .supporting_text("Body")
+                        .actions(vec![DialogAction::new("OK").test_id("dialog-ok")])
+                        .test_id("dialog")
+                        .into_element(
+                            cx,
+                            move |cx| {
+                                let trigger = Button::new("Open dialog")
+                                    .test_id("dialog-trigger")
+                                    .into_element(cx);
+                                with_padding(cx, Px(24.0), trigger)
+                            },
+                            |_cx| Vec::new(),
+                        );
+                    vec![underlay, dialog]
+                })
+            };
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let trigger_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot.nodes.iter().find_map(|node| {
+                    (node.test_id.as_deref() == Some("dialog-trigger")).then_some(node.id)
+                })
+            })
+            .unwrap_or_else(|| panic!("expected dialog-trigger in semantics snapshot ({label})"));
+        ui.set_focus(Some(trigger_node));
+        assert_eq!(ui.focus(), Some(trigger_node));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let snapshot = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot");
+        assert!(
+            snapshot.barrier_root.is_some(),
+            "expected modal barrier root while dialog is open ({label})"
+        );
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("dialog-scrim")),
+            "expected dialog scrim node while dialog is open ({label})"
+        );
+        assert!(
+            snapshot
+                .nodes
+                .iter()
+                .any(|node| node.test_id.as_deref() == Some("underlay-fullscreen")),
+            "expected underlay-fullscreen node while dialog is open ({label})"
+        );
+
+        let click_at = Point::new(Px(4.0), Px(4.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), click_at),
+        );
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected dialog to dismiss on scrim press ({label})"
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_toggled),
+            Some(false),
+            "expected dialog scrim to prevent underlay activation ({label})"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(trigger_node),
+            "expected dialog to restore focus to trigger after scrim dismissal ({label})"
+        );
+    }
+}
+
+#[test]
 fn modal_navigation_drawer_focus_is_contained_and_restored_across_schemes() {
     use fret_ui_material3::{Button, ModalNavigationDrawer};
 

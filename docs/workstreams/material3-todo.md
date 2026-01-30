@@ -419,17 +419,24 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (menu transition),
     `ecosystem/fret-ui-material3/src/tooltip.rs` (tooltip transition),
     `ecosystem/fret-ui-material3/src/snackbar.rs` (toast-layer motion tokens).
-- [ ] Overlay outcomes (menu, dialog, tooltip):
+- [x] Overlay outcomes (menu, dialog, tooltip):
   - [x] Escape dismissal (menu dropdown)
     - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu),
       `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`).
   - [x] outside press dismissal (menu dropdown)
     - Evidence: `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (OverlayRequest::dismissible_menu),
       `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`).
+  - [x] outside press closes without activating the underlay (menu-like popovers)
+    - Evidence: `ecosystem/fret-ui-kit/src/overlay_controller.rs` (`OverlayRequest::dismissible_menu`),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dropdown_menu_dismisses_and_restores_focus_across_schemes`,
+      `select_keyboard_open_sets_initial_focus_and_outside_dismiss_restores_focus_across_schemes`).
   - [x] focus trap/restore (modal) (currently validated via modal navigation drawer)
     - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (focus trap),
       `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (focus restore),
       `ecosystem/fret-ui-primitives/src/focus_scope.rs` (`FocusScopeProps { trap_focus: true }`).
+  - [x] scrim press dismisses without activating the underlay (modal)
+    - Evidence: `ecosystem/fret-ui-material3/src/dialog.rs` (scrim pressable + dismiss handler),
+      `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`dialog_scrim_dismisses_without_activating_underlay`).
   - [x] scrim defaults (modal navigation drawer)
     - Evidence: `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`md.comp.navigation-drawer.scrim.*` defaults),
       `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (token lookup + fade),
