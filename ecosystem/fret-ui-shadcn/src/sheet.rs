@@ -10,6 +10,7 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
@@ -498,10 +499,16 @@ impl SheetContent {
             SheetSide::Left | SheetSide::Right => LayoutRefinement::default()
                 .w_full()
                 .h_full()
+                .min_w_0()
+                .min_h_0()
                 .overflow_hidden(),
             SheetSide::Top | SheetSide::Bottom => {
                 // Auto height by default for top/bottom sheets, matching upstream intent.
-                LayoutRefinement::default().w_full().overflow_hidden()
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .min_h_0()
+                    .overflow_hidden()
             }
         };
         let layout = base_layout.merge(self.layout);
@@ -530,13 +537,15 @@ impl SheetContent {
             props
         };
         let children = self.children;
-        let container = shadcn_layout::container_vstack_gap(
+        let container = shadcn_layout::container_vstack(
             cx,
             ContainerProps {
                 shadow: Some(shadow),
                 ..props
             },
-            Space::N4,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
             children,
         );
 
