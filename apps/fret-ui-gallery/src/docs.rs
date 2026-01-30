@@ -188,6 +188,28 @@ pub(crate) const USAGE_TEXT_SELECTION_PERF: &str = r#"
 ```
 "#;
 
+pub(crate) const DOC_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
+## Text BiDi / RTL (conformance harness)
+
+This page exists to sanity-check text geometry queries under BiDi/RTL strings:
+
+- `TextService::hit_test_point` (mouse → caret)
+- `TextService::caret_rect` (caret → rect)
+- `TextService::selection_rects*` (selection highlight)
+
+It is intentionally a **diagnostic surface**, not a component demo.
+"#;
+
+pub(crate) const USAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
+```rust
+// Click or drag in the diagnostic panel:
+// - normal click: set caret + anchor (collapsed selection)
+// - shift-click / drag: extend selection from the current anchor
+//
+// Try the selectable samples above to validate editor-like text selection on BiDi strings.
+```
+"#;
+
 pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
 ## Web IME (harness)
 

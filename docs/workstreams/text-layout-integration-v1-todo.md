@@ -202,6 +202,8 @@ Exit criteria:
 - [x] TLI1-006: Add multi-line Up/Down caret movement with “preferred x” behavior.
   - Evidence: `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (ArrowUp/ArrowDown),
     `crates/fret-ui/src/declarative/tests/interactions.rs` (`selectable_text_arrow_up_down_uses_preferred_x_across_lines`).
-- [ ] TLI1-007: Add BiDi/RTL conformance strings to UI Gallery and ensure geometry queries match expectations.
+- [x] TLI1-007: Add BiDi/RTL conformance strings to UI Gallery and ensure geometry queries match expectations.
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_text_bidi_rtl_conformance`) uses
+    `TextService::{hit_test_point,caret_rect,selection_rects_clipped}` on mixed-direction sample strings.
 - [ ] TLI1-008: Add decoration rendering tests (underline/strikethrough) under non-integer scale factors.
 - [ ] TLI1-009: Decide trailing-whitespace selection policy and test it.
