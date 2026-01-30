@@ -3584,7 +3584,11 @@ fn material3_headless_overlays_suite_goldens_v1() {
                 panic!("expected a settled overlays snapshot ({label}, {scale})");
             };
 
-            let (select_open_snapshot, select_open_hover_selected_snapshot) = {
+            let (
+                select_open_snapshot,
+                select_open_trigger_snapshot,
+                select_open_hover_selected_snapshot,
+            ) = {
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -3748,6 +3752,21 @@ fn material3_headless_overlays_suite_goldens_v1() {
                     &render,
                 );
 
+                let select_open_trigger_message = format!(
+                    "expected the Material3 select trigger to be stable in open state ({label}, {scale})"
+                );
+                let select_open_trigger_snapshot = settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_open_trigger_message,
+                    &render,
+                );
+
                 run_overlay_frame_scaled(
                     &mut ui,
                     &mut app,
@@ -3802,12 +3821,20 @@ fn material3_headless_overlays_suite_goldens_v1() {
                         &render,
                     );
 
-                (select_open_snapshot, select_open_hover_selected_snapshot)
+                (
+                    select_open_snapshot,
+                    select_open_trigger_snapshot,
+                    select_open_hover_selected_snapshot,
+                )
             };
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
             cases.insert("both_open".to_string(), both_open_snapshot);
             cases.insert("select_open".to_string(), select_open_snapshot);
+            cases.insert(
+                "select_open_trigger".to_string(),
+                select_open_trigger_snapshot,
+            );
             cases.insert(
                 "select_open_hover_selected".to_string(),
                 select_open_hover_selected_snapshot,

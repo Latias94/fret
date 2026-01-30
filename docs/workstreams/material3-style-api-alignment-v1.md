@@ -183,6 +183,9 @@ Public override surface (`SelectStyle` in `ecosystem/fret-ui-material3/src/selec
 - `outline_color` — Select trigger outline color (stateful).
 - `active_indicator_color` — Select trigger active-indicator color (stateful).
 - `text_color` — Select trigger text/placeholder color (stateful).
+- `label_color` — Select trigger floating label text color (stateful).
+- `supporting_text_color` — Select trigger supporting text color (stateful).
+- `leading_icon_color` — Select trigger leading icon color (stateful).
 - `trailing_icon_color` — Select trigger trailing icon color (stateful).
 - `menu_selected_container_color` — Selected option row container color for the listbox (applies with `WidgetStates::SELECTED` on the option row).
 

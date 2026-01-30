@@ -597,9 +597,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `select_listbox_typeahead_moves_focus_skipping_disabled_options`,
     `select_menu_matches_anchor_width_and_clamps_height_to_available_space`).
   - Evidence: `ecosystem/fret-ui-material3/src/select.rs` (Select trigger: `.leading_icon(...)` / `.label(...)` / `.supporting_text(...)` / `.error(...)` + animated trailing icon; `SelectStyle` override surface includes label/supporting/leading icon slots;
-    supporting text inset aligns with the input text start when a leading icon is present; listbox padding; `SelectItem::{leading_icon,trailing_icon}`),
+    supporting text inset aligns with the input text start when a leading icon is present; supporting text color follows hover/focus token branches; open state is treated as focused (Material Web parity); listbox padding; `SelectItem::{leading_icon,trailing_icon}`),
     `ecosystem/fret-ui-material3/src/tokens/select.rs` (`text-field.error.*` mapping + `menu_list_item_{leading,trailing}_icon_*` tokens),
-    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (headless suites include select trigger states + `material3_headless_controls_suite_goldens_v1` includes `idle_select_supporting_text_insets` + `material3_headless_overlays_suite_goldens_v1` includes `select_open` and `select_open_hover_selected`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (headless suites include select trigger states + `material3_headless_controls_suite_goldens_v1` includes `idle_select_supporting_text_insets` + `material3_headless_overlays_suite_goldens_v1` includes `select_open`, `select_open_trigger` and `select_open_hover_selected`),
   - Evidence (reference): `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Menu.kt`
     (`MenuVerticalMargin = 48.dp`),
     `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt`
