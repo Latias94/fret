@@ -352,15 +352,20 @@ where
         }
 
         // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
-        // re-mounting cached subtrees, so cache roots must keep the retained subtree alive.
+        // re-mounting cached subtrees, so view-cache reuse must keep the retained subtree alive
+        // via explicit liveness bookkeeping (ADR 0191).
         //
-        // We only sweep nodes that are both stale and detached from any UI layer.
+        // We only sweep nodes that are both stale and unreachable from the window's liveness
+        // roots:
+        // - layer roots (base + overlays),
+        // - view-cache reuse roots, and
+        // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
+        //   edges on cache-hit frames).
         //
-        // Note: `UiTree::node_layer` relies on parent pointers. If a retained subtree becomes
-        // inconsistent (children edges still attached, but parent pointers broken), `node_layer`
-        // can return `None` even though the node is still reachable from the layer root. In that
-        // case, do not sweep: treat reachability from the layer roots as authoritative for
-        // liveness.
+        // Note: `UiTree::node_layer` relies on parent pointers. Parent pointers can transiently
+        // drift under fearless refactors (e.g. when reusing cached subtrees), so `node_layer == None`
+        // must never be treated as a sufficient signal for liveness. Reachability from the
+        // liveness roots is the authoritative predicate for GC.
         let liveness_roots = ui.all_layer_roots();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers: Option<HashSet<NodeId>> = None;

@@ -176,6 +176,10 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Removed the global “skip sweep while reuse exists” GC stopgap.
     - Made liveness explicit under reuse via layer roots + view-cache reuse roots + per-root subtree membership lists (ADR 0191).
     - Stabilized unkeyed element identity generation by using per-callsite counters (reduces accidental subtree swaps under conditional structure).
+  - Root-cause framing (keep honest):
+    - When a live interactive subtree is swept while view-cache reuse exists, the GC is usually behaving correctly on the graph it sees.
+      The bug is typically that ownership/liveness bookkeeping allowed the subtree to become an *island root* (unreachable from both
+      layer roots and view-cache reuse roots), most often due to incomplete/misaligned subtree membership lists under reuse (ADR 0191).
   - Evidence (cache+shell, sweep enabled):
     - `target/fret-diag-cache005-stopgap-removed-overlay-1769334929510/1769335008125-ui-gallery-overlay-torture/bundle.json`
     - `target/fret-diag-cache005-stopgap-removed-sidebar-1769335037056/1769335040362-ui-gallery-sidebar-scroll-refresh/bundle.json`
