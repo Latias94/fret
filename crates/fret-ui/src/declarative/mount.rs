@@ -1374,14 +1374,41 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                     };
                     let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
 
-                    let range = state.window_range.or_else(|| {
+                    let visible_range = state.metrics.visible_range(offset_axis, viewport, 0);
+                    let ideal_window_range =
                         state
                             .metrics
-                            .visible_range(offset_axis, viewport, props.overscan)
-                    });
-                    state.window_range = range;
-                    state.render_window_range = range;
-                    let range = range?;
+                            .visible_range(offset_axis, viewport, props.overscan);
+
+                    let rendered_range = state.render_window_range;
+                    let window_range = match (rendered_range, visible_range) {
+                        (Some(rendered), Some(visible))
+                            if rendered.count == props.len
+                                && rendered.overscan == props.overscan
+                                && rendered.start_index <= rendered.end_index
+                                && rendered.end_index < rendered.count =>
+                        {
+                            let rendered_outer_start =
+                                rendered.start_index.saturating_sub(rendered.overscan);
+                            let rendered_outer_end = (rendered.end_index + rendered.overscan)
+                                .min(rendered.count.saturating_sub(1));
+                            let window_mismatch = visible.start_index < rendered_outer_start
+                                || visible.end_index > rendered_outer_end;
+
+                            if window_mismatch {
+                                Some(crate::virtual_list::shift_virtual_range_minimally(
+                                    rendered, visible,
+                                ))
+                            } else {
+                                Some(rendered)
+                            }
+                        }
+                        _ => ideal_window_range,
+                    };
+
+                    state.window_range = window_range;
+                    state.render_window_range = window_range;
+                    let range = window_range?;
 
                     let mut indices = (range_extractor)(range)
                         .into_iter()

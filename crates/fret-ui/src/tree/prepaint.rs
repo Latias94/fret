@@ -219,7 +219,9 @@ impl<H: UiHost> UiTree<H> {
                                 && rendered.start_index <= rendered.end_index
                                 && rendered.end_index < rendered.count =>
                         {
-                            Some(Self::shift_virtual_list_window_minimally(rendered, visible))
+                            Some(crate::virtual_list::shift_virtual_range_minimally(
+                                rendered, visible,
+                            ))
                         }
                         _ => ideal_window_range,
                     }
@@ -306,50 +308,6 @@ impl<H: UiHost> UiTree<H> {
                 );
             }
             self.request_redraw_coalesced(app);
-        }
-    }
-
-    fn shift_virtual_list_window_minimally(
-        rendered: crate::virtual_list::VirtualRange,
-        visible: crate::virtual_list::VirtualRange,
-    ) -> crate::virtual_list::VirtualRange {
-        let overscan = rendered.overscan;
-        let count = rendered.count;
-        if count == 0 {
-            return rendered;
-        }
-
-        let inner_len = rendered.end_index.saturating_sub(rendered.start_index);
-        let rendered_outer_start = rendered.start_index.saturating_sub(overscan);
-        let rendered_outer_end = (rendered.end_index + overscan).min(count.saturating_sub(1));
-
-        let mut start = rendered.start_index;
-        let mut end = rendered.end_index;
-
-        if visible.start_index < rendered_outer_start {
-            start = visible.start_index.saturating_add(overscan);
-            end = start.saturating_add(inner_len);
-        } else if visible.end_index > rendered_outer_end {
-            end = visible.end_index.saturating_sub(overscan);
-            start = end.saturating_sub(inner_len);
-        }
-
-        if end >= count {
-            end = count.saturating_sub(1);
-            start = end.saturating_sub(inner_len);
-        }
-        if start >= count {
-            start = count.saturating_sub(1);
-        }
-        if start > end {
-            end = start;
-        }
-
-        crate::virtual_list::VirtualRange {
-            start_index: start,
-            end_index: end,
-            overscan,
-            count,
         }
     }
 
