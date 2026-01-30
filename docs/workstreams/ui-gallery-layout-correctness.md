@@ -161,6 +161,9 @@ Implementation note:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
 - [x] Extend the overlay script with a “flex + scroll” stress interaction:
   - Scroll dialog / sheet viewports to catch `min_h_0` regressions.
+- [x] Extend the overlay script with “hover + menu” coverage:
+  - Tooltip / HoverCard open + bounds assertions
+  - DropdownMenu / ContextMenu open + bounds assertions
 - [x] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
   - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - [ ] For each new P0 issue:
