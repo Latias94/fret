@@ -6347,9 +6347,8 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
     let options =
         fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height);
 
-    let key_at = Arc::new(|i| i as fret_ui::ItemKey);
     let theme = theme.clone();
-    let row = Arc::new(move |cx: &mut ElementContext<'_, App>, index: usize| {
+    let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
         let zebra = (index % 2) == 0;
         let background = if zebra {
             theme.color_required("muted")
@@ -6407,14 +6406,14 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
             "ui-gallery-inspector-row-{index}-label"
         )));
         cx.semantics(semantics, |_cx| vec![row])
-    });
+    };
 
-    let list = cx.virtual_list_keyed_retained_with_layout(
+    let list = cx.virtual_list_keyed_retained_with_layout_fn(
         list_layout,
         len,
         options,
         &scroll_handle,
-        key_at,
+        |i| i as fret_ui::ItemKey,
         row,
     );
 
