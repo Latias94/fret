@@ -132,6 +132,9 @@ impl WebImeBridge {
         textarea.set_spellcheck(false);
         textarea.set_value("");
         textarea.set_tab_index(-1);
+        textarea.set_rows(1);
+        textarea.set_cols(1024);
+        textarea.set_wrap("off");
 
         let textarea_el: HtmlElement = textarea.clone().unchecked_into();
         let _ = textarea_el.set_attribute("autocapitalize", "off");
@@ -144,12 +147,17 @@ impl WebImeBridge {
         // Keep the element effectively invisible but still "layout-real" so browser IME can anchor
         // composition UI reliably across platforms (ADR 0195).
         let _ = style.set_property("opacity", "0.001");
-        let _ = style.set_property("width", "20px");
+        // Avoid line wrapping during composition updates; some IMEs anchor their candidate UI to the
+        // textarea caret position, so wrapping causes vertical jitter as the preedit string grows.
+        let _ = style.set_property("width", "1000px");
         let _ = style.set_property("height", "20px");
         let _ = style.set_property("margin", "0");
         let _ = style.set_property("padding", "0");
         let _ = style.set_property("border", "0");
         let _ = style.set_property("outline", "none");
+        let _ = style.set_property("resize", "none");
+        let _ = style.set_property("overflow", "hidden");
+        let _ = style.set_property("white-space", "pre");
         let _ = style.set_property("background", "transparent");
         let _ = style.set_property("color", "transparent");
         let _ = style.set_property("caret-color", "transparent");
