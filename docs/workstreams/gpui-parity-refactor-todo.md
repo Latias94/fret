@@ -1000,8 +1000,14 @@ topics (if/when we implement them):
       - Evidence bundle (cache+shell, release): `target/fret-diag-file-tree-suite-local4/1769748662066-ui-gallery-file-tree-torture-toggle/bundle.json`
       - Re-verified (cache+shell, release; retained gates enforced incl. attach/detach min): `target/fret-diag-file-tree-suite-min-gate/1769756742386-ui-gallery-file-tree-torture-toggle/bundle.json`
   - Next steps (eco-009 closure path; keep it “real UI surface” oriented):
-    - [ ] Promote the UI Gallery file-tree torture implementation into a reusable `ecosystem/fret-ui-kit` retained component (keep stable test ids),
+    - [x] Promote the UI Gallery file-tree torture implementation into a reusable `ecosystem/fret-ui-kit` retained component (keep stable test ids),
       so future workspace adoption is a “swap the consumer” change, not a rewrite.
+      - Implementation:
+        - `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`)
+        - `apps/fret-ui-gallery/src/ui.rs` (`preview_file_tree_torture` calling into ui-kit)
+      - Closure gate (must stay green):
+        - `fretboard diag suite ui-gallery-file-tree-torture --launch -- cargo run -p fret-ui-gallery --release`
+        - `fretboard diag suite ui-gallery-file-tree-torture-interactive --launch -- cargo run -p fret-ui-gallery --release`
     - [ ] Add a short “candidate surface list” with anchors to real code (as it appears) once `ecosystem/fret-workspace` / `apps/fret-editor` contains
       concrete outline/file-tree/property-list UI surfaces (not just protocols).
     - [ ] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
