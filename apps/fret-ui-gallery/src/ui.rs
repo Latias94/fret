@@ -6431,10 +6431,8 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
 }
 
 fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
-    let len: usize = std::env::var("FRET_UI_GALLERY_FILE_TREE_LEN")
-        .ok()
-        .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(50_000);
+    use std::collections::HashSet;
+
     let row_height = Px(26.0);
     let overscan = 12;
 
@@ -6453,11 +6451,164 @@ fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
     let options =
         fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height);
 
+    #[derive(Clone)]
+    enum FileTreeEntryKind {
+        Dir(Vec<FileTreeEntry>),
+        File,
+    }
+
+    #[derive(Clone)]
+    struct FileTreeEntry {
+        id: u64,
+        label: Arc<str>,
+        kind: FileTreeEntryKind,
+    }
+
+    #[derive(Clone, Default)]
+    struct FileTreeState {
+        expanded: HashSet<u64>,
+        selected: Option<u64>,
+    }
+
+    #[derive(Default)]
+    struct FileTreeTortureModels {
+        entries: Option<Model<Arc<Vec<FileTreeEntry>>>>,
+        state: Option<Model<FileTreeState>>,
+    }
+
+    let (entries, state) = cx.with_state(FileTreeTortureModels::default, |st| {
+        (st.entries.clone(), st.state.clone())
+    });
+    let (entries, state) = match (entries, state) {
+        (Some(entries), Some(state)) => (entries, state),
+        _ => {
+            let (entries_value, state_value) = {
+                let root_count: u64 = std::env::var("FRET_UI_GALLERY_FILE_TREE_ROOTS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(200);
+                let folders_per_root = 10u64;
+                let leaves_per_folder = 25u64;
+
+                let mut expanded: HashSet<u64> = HashSet::new();
+                let mut roots: Vec<FileTreeEntry> = Vec::with_capacity(root_count as usize);
+
+                for r in 0..root_count {
+                    let root_id = r;
+                    expanded.insert(root_id);
+
+                    let mut folders: Vec<FileTreeEntry> =
+                        Vec::with_capacity(folders_per_root as usize);
+                    for f in 0..folders_per_root {
+                        let folder_id = 1_000_000 + r * 100 + f;
+                        expanded.insert(folder_id);
+
+                        let mut leaves: Vec<FileTreeEntry> =
+                            Vec::with_capacity(leaves_per_folder as usize);
+                        for l in 0..leaves_per_folder {
+                            let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
+                            leaves.push(FileTreeEntry {
+                                id: leaf_id,
+                                label: Arc::<str>::from(format!("file_{r}_{f}_{l}.rs")),
+                                kind: FileTreeEntryKind::File,
+                            });
+                        }
+
+                        folders.push(FileTreeEntry {
+                            id: folder_id,
+                            label: Arc::<str>::from(format!("dir_{r}_{f}")),
+                            kind: FileTreeEntryKind::Dir(leaves),
+                        });
+                    }
+
+                    roots.push(FileTreeEntry {
+                        id: root_id,
+                        label: Arc::<str>::from(format!("root_{r}")),
+                        kind: FileTreeEntryKind::Dir(folders),
+                    });
+                }
+
+                (
+                    Arc::new(roots),
+                    FileTreeState {
+                        expanded,
+                        selected: None,
+                    },
+                )
+            };
+
+            let entries = cx.app.models_mut().insert(entries_value);
+            let state = cx.app.models_mut().insert(state_value);
+            cx.with_state(FileTreeTortureModels::default, |st| {
+                st.entries = Some(entries.clone());
+                st.state = Some(state.clone());
+            });
+            (entries, state)
+        }
+    };
+
+    #[derive(Clone)]
+    struct FileTreeRow {
+        id: u64,
+        label: Arc<str>,
+        is_dir: bool,
+        depth: u8,
+    }
+
+    fn flatten_rows(
+        out: &mut Vec<FileTreeRow>,
+        entries: &[FileTreeEntry],
+        expanded: &HashSet<u64>,
+        depth: u8,
+    ) {
+        for entry in entries {
+            let (is_dir, children) = match &entry.kind {
+                FileTreeEntryKind::Dir(children) => (true, Some(children.as_slice())),
+                FileTreeEntryKind::File => (false, None),
+            };
+
+            out.push(FileTreeRow {
+                id: entry.id,
+                label: entry.label.clone(),
+                is_dir,
+                depth,
+            });
+
+            if is_dir && expanded.contains(&entry.id) {
+                if let Some(children) = children {
+                    flatten_rows(out, children, expanded, depth.saturating_add(1));
+                }
+            }
+        }
+    }
+
+    let entries_value = cx
+        .app
+        .models()
+        .get_cloned(&entries)
+        .unwrap_or_else(|| Arc::new(Vec::new()));
+    let state_value = cx.app.models().get_cloned(&state).unwrap_or_default();
+
+    let mut rows: Vec<FileTreeRow> = Vec::new();
+    flatten_rows(&mut rows, &entries_value, &state_value.expanded, 0);
+    let rows = Arc::new(rows);
+    let row_count = rows.len();
+
     let theme = theme.clone();
+    let state_for_row = state.clone();
+    let selected = state_value.selected;
+    let selected_bg = theme.color_required("secondary");
+
+    let rows_for_row = rows.clone();
     let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
-        let is_dir = (index % 7) == 0;
-        let depth = (index % 8) as f32;
-        let indent_px = Px(depth * 12.0);
+        let row_data = rows_for_row.get(index).cloned().unwrap_or(FileTreeRow {
+            id: u64::MAX,
+            label: Arc::<str>::from("missing"),
+            is_dir: false,
+            depth: 0,
+        });
+        let indent_px = Px(row_data.depth as f32 * 12.0);
+        let is_selected = selected == Some(row_data.id);
 
         let zebra = (index % 2) == 0;
         let base_bg = if zebra {
@@ -6473,8 +6624,25 @@ fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
                 ..Default::default()
             },
             |cx, st| {
+                let row_id = row_data.id;
+                let row_is_dir = row_data.is_dir;
+                let state_for_activate = state_for_row.clone();
+                cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&state_for_activate, |st| {
+                        st.selected = Some(row_id);
+                        if row_is_dir {
+                            if !st.expanded.insert(row_id) {
+                                st.expanded.remove(&row_id);
+                            }
+                        }
+                    });
+                    host.request_redraw(action_cx.window);
+                }));
+
                 let background = if st.pressed || st.hovered {
                     hover_bg
+                } else if is_selected {
+                    selected_bg
                 } else {
                     base_bg
                 };
@@ -6494,12 +6662,8 @@ fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
                     |_cx| Vec::new(),
                 );
 
-                let icon = cx.text(if is_dir { ">" } else { "-" });
-                let label = cx.text(if is_dir {
-                    format!("dir_{index}")
-                } else {
-                    format!("file_{index}.rs")
-                });
+                let icon = cx.text(if row_data.is_dir { ">" } else { "-" });
+                let label = cx.text(row_data.label.to_string());
 
                 let mut row_props = decl_style::container_props(
                     &theme,
@@ -6511,7 +6675,7 @@ fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
                 row_props.layout.overflow = fret_ui::element::Overflow::Clip;
                 let row_layout = row_props.layout;
 
-                let row = cx.container(row_props, |cx| {
+                let row_el = cx.container(row_props, |cx| {
                     vec![stack::hstack(
                         cx,
                         stack::HStackProps::default()
@@ -6525,19 +6689,23 @@ fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
                 let mut semantics = fret_ui::element::SemanticsProps::default();
                 semantics.layout = row_layout;
                 semantics.test_id = Some(Arc::<str>::from(format!(
-                    "ui-gallery-file-tree-node-{index}-label"
+                    "ui-gallery-file-tree-node-{}",
+                    row_data.id
                 )));
-                vec![cx.semantics(semantics, |_cx| vec![row])]
+                vec![cx.semantics(semantics, |_cx| vec![row_el])]
             },
         )
     };
 
     let list = cx.virtual_list_keyed_retained_with_layout_fn(
         list_layout,
-        len,
+        row_count,
         options,
         &scroll_handle,
-        |i| i as fret_ui::ItemKey,
+        {
+            let rows = rows.clone();
+            move |i| rows.get(i).map(|r| r.id).unwrap_or_default() as fret_ui::ItemKey
+        },
         row,
     );
 
