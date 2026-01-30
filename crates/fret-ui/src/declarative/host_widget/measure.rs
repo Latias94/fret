@@ -85,6 +85,24 @@ fn clamp_to_constraints_in_measure(
     size
 }
 
+fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap) -> Option<Px> {
+    if let Some(known_w) = constraints.known.width {
+        return Some(known_w);
+    }
+
+    match constraints.available.width {
+        AvailableSpace::Definite(px) => Some(px),
+        AvailableSpace::MaxContent => None,
+        AvailableSpace::MinContent => match wrap {
+            // Model `TextWrap::Word` as "break when needed" for min-content sizing. This keeps the
+            // layout engine honest when it probes intrinsic sizes and later assigns a smaller
+            // definite width (e.g. flex/grid shrink), avoiding multi-line paint overflows.
+            TextWrap::Word => Some(Px(0.0)),
+            TextWrap::None => None,
+        },
+    }
+}
+
 fn max_non_absolute_children<H: UiHost>(
     cx: &mut MeasureCx<'_, H>,
     window: AppWindowId,
@@ -320,11 +338,7 @@ impl ElementHostWidget {
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
         let theme = cx.theme().snapshot();
         let style = props.style.unwrap_or_else(|| default_text_style(theme));
-        let max_width = cx
-            .constraints
-            .known
-            .width
-            .or_else(|| cx.constraints.available.width.definite());
+        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
@@ -345,11 +359,7 @@ impl ElementHostWidget {
     ) -> Size {
         let theme = cx.theme().snapshot();
         let style = props.style.unwrap_or_else(|| default_text_style(theme));
-        let max_width = cx
-            .constraints
-            .known
-            .width
-            .or_else(|| cx.constraints.available.width.definite());
+        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
@@ -372,11 +382,7 @@ impl ElementHostWidget {
     ) -> Size {
         let theme = cx.theme().snapshot();
         let style = props.style.unwrap_or_else(|| default_text_style(theme));
-        let max_width = cx
-            .constraints
-            .known
-            .width
-            .or_else(|| cx.constraints.available.width.definite());
+        let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
             wrap: props.wrap,
