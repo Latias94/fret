@@ -1373,6 +1373,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(64));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -1425,6 +1427,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(64));
                 check_retained_vlist_scroll_window_dirty_max =
