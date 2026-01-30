@@ -664,7 +664,7 @@ topics (if/when we implement them):
         - `--check-wheel-scroll ui-gallery-virtual-list-row-0-label`
         - `--check-stale-paint ui-gallery-virtual-list-row-0-label`
         - plus launch env: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
-          `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`.
+          `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0` (legacy path).
       - Evidence bundle (suite; cache+shell, release): `target/fret-diag-vlist-window-boundary-suite-local2/1769706605050-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
 
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
