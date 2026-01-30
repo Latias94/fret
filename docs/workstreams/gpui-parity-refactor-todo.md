@@ -946,17 +946,21 @@ topics (if/when we implement them):
     - Gate (cache+shell, retained host, release):
       - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-inspector-torture-scroll.json --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --check-view-cache-reuse-min 1 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-inspector-row-0-label --check-stale-paint ui-gallery-inspector-row-0-label --launch -- cargo run -p fret-ui-gallery --release`
     - Evidence bundle (cache+shell, release): `target/fret-diag-inspector-torture-local2/1769735532323-ui-gallery-inspector-torture-scroll/bundle.json`
+    - Re-verified (cache+shell, release; retained gates enforced): `target/fret-diag-inspector-suite-gates-fixed/1769755112630-ui-gallery-inspector-torture-scroll/bundle.json`
     - Builtin suite: `fretboard diag suite ui-gallery-inspector-torture --launch -- cargo run -p fret-ui-gallery --release` defaults to `--warmup-frames 5`, enables `cache+shell`, and enforces the retained VirtualList gates above.
+      - Note (2026-01-30): retained VirtualList post-run checks are applied whenever configured (no per-script whitelist), so suite gates are effective.
     - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_FILE_TREE_TORTURE`), root test id `ui-gallery-file-tree-root`.
       - Row test ids are stable by identity: `ui-gallery-file-tree-node-{numeric_id}` (not row index).
     - Script: `tools/diag-scripts/ui-gallery-file-tree-torture-scroll.json`.
       - Gate (cache+shell, retained host, release):
         - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-file-tree-torture-scroll.json --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --check-view-cache-reuse-min 1 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-file-tree-node-0 --check-stale-paint ui-gallery-file-tree-node-0 --launch -- cargo run -p fret-ui-gallery --release`
     - Evidence bundle (cache+shell, release): `target/fret-diag-file-tree-suite-local3/1769748233062-ui-gallery-file-tree-torture-scroll/bundle.json`
+    - Re-verified (cache+shell, release; retained gates enforced): `target/fret-diag-file-tree-suite-gates-fixed/1769755162531-ui-gallery-file-tree-torture-scroll/bundle.json`
     - Builtin suite: `fretboard diag suite ui-gallery-file-tree-torture --launch -- cargo run -p fret-ui-gallery --release` defaults to `--warmup-frames 5`, enables `cache+shell`, and enforces the retained VirtualList gates above.
     - Interactive script (expand/collapse + selection + scroll): `tools/diag-scripts/ui-gallery-file-tree-torture-toggle.json`.
       - Builtin suite: `fretboard diag suite ui-gallery-file-tree-torture-interactive --launch -- cargo run -p fret-ui-gallery --release`.
       - Evidence bundle (cache+shell, release): `target/fret-diag-file-tree-suite-local4/1769748662066-ui-gallery-file-tree-torture-toggle/bundle.json`
+      - Re-verified (cache+shell, release; retained gates enforced): `target/fret-diag-file-tree-suite-gates-fixed/1769755242979-ui-gallery-file-tree-torture-toggle/bundle.json`
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
