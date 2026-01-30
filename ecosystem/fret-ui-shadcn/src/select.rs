@@ -1467,9 +1467,18 @@ fn select_impl<H: UiHost>(
                     };
 
                     let side_offset = side_offset_override.unwrap_or_else(|| {
-                        theme
-                            .metric_by_key("component.select.popover_offset")
-                            .unwrap_or(Px(6.0))
+                        if position == SelectPosition::Popper {
+                            // shadcn/ui v4 uses a CSS `translate-*` recipe on the content element
+                            // when `position="popper"` instead of a Popper `sideOffset`.
+                            //
+                            // Keep the Popper wrapper flush to the trigger so placement checks
+                            // match upstream `data-radix-popper-content-wrapper` rects.
+                            Px(0.0)
+                        } else {
+                            theme
+                                .metric_by_key("component.select.popover_offset")
+                                .unwrap_or(Px(6.0))
+                        }
                     });
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
@@ -1481,6 +1490,16 @@ fn select_impl<H: UiHost>(
                     )
                     .with_align_offset(align_offset)
                     .with_arrow(arrow_options, arrow_protrusion);
+                    let popper_placement = if position == SelectPosition::Popper {
+                        // Radix Select uses a default collision padding of 10px for popper-positioned
+                        // content. This keeps the wrapper from touching the window edges when the
+                        // trigger is near the boundary.
+                        popper_placement
+                            .with_shift_cross_axis(true)
+                            .with_collision_padding(Edges::all(Px(10.0)))
+                    } else {
+                        popper_placement
+                    };
 
                     let width_probe_w = {
                         let probe = trigger_state
@@ -1538,8 +1557,26 @@ fn select_impl<H: UiHost>(
                         .metric_by_key("component.select.max_list_height")
                         .map(|h| Px(h.0.min(available_h.0)))
                         .unwrap_or(available_h);
-                    let desired_h =
-                        select_list_desired_height(item_h, item_len, max_h, outer.size.height);
+
+                    // shadcn/ui v4 Select content wrapper includes:
+                    // - `p-1` viewport padding
+                    // - `border` width
+                    //
+                    // Compute the desired height in terms of the scrollable content and then add
+                    // the wrapper chrome so placement/size checks match the upstream popper wrapper.
+                    let content_padding_y = Px(4.0 * 2.0);
+                    let border_y = Px(border_width.0 * 2.0);
+                    let chrome_extra_y = Px(content_padding_y.0 + border_y.0);
+
+                    let max_content_h = Px((max_h.0 - chrome_extra_y.0).max(0.0));
+                    let outer_content_h = Px((outer.size.height.0 - chrome_extra_y.0).max(0.0));
+                    let desired_content_h = select_list_desired_height(
+                        item_h,
+                        item_len,
+                        max_content_h,
+                        outer_content_h,
+                    );
+                    let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let resolved = radix_select::select_resolve_content_placement_from_elements(
