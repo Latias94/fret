@@ -2698,13 +2698,14 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
     ]
 }
 
-fn ui_gallery_layout_suite_scripts() -> [&'static str; 7] {
+fn ui_gallery_layout_suite_scripts() -> [&'static str; 8] {
     [
         "tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json",
         "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
         "tools/diag-scripts/ui-gallery-overlay-modals-visible.json",
         "tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json",
         "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
+        "tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json",
         "tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json",
         "tools/diag-scripts/ui-gallery-resizable-initial-bundle.json",
     ]
