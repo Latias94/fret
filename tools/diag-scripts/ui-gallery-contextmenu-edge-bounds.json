@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "overlay" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-overlay" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" }
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "click",
+      "button": "right",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-contextmenu-edge-bounds" },
+    { "type": "capture_screenshot", "label": "ui-gallery-contextmenu-edge-bounds" }
+  ]
+}
