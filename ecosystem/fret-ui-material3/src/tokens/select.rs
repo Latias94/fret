@@ -387,12 +387,15 @@ pub(crate) fn menu_container_shadow_color(theme: &Theme, variant: SelectVariant)
         .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
 }
 
-pub(crate) fn menu_container_shape_radius(theme: &Theme, variant: SelectVariant) -> Px {
+pub(crate) fn menu_container_shape(theme: &Theme, variant: SelectVariant) -> Corners {
     let key = match variant {
         SelectVariant::Outlined => "md.comp.outlined-select.menu.container.shape",
         SelectVariant::Filled => "md.comp.filled-select.menu.container.shape",
     };
-    theme.metric_by_key(key).unwrap_or(Px(4.0))
+    theme
+        .corners_by_key(key)
+        .or_else(|| theme.corners_by_key("md.sys.shape.corner.extra-small"))
+        .unwrap_or_else(|| Corners::all(Px(4.0)))
 }
 
 pub(crate) fn menu_list_item_height(theme: &Theme, variant: SelectVariant) -> Px {

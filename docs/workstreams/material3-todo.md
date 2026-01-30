@@ -447,9 +447,16 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `ecosystem/fret-ui-material3/src/navigation_bar.rs` (container surface tint + shadow),
     `ecosystem/fret-ui-material3/src/navigation_drawer.rs` (modal container elevation + shadow),
     `crates/fret-ui/src/paint.rs` (`paint_shadow`).
-- [ ] Shape mapping (corner tokens, per-state expressive shape where applicable).
+- [x] Shape mapping (corner tokens, per-state expressive shape where applicable).
   - [x] Corner set tokens (`md.sys.shape.corner.*.(top|start|end)`) and component shapes that depend on them.
-- [ ] Typography mapping (typescale roles).
+  - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_shape`),
+    `ecosystem/fret-ui-material3/src/tokens/{menu,select,switch}.rs` (typed shape access),
+    `ecosystem/fret-ui-material3/src/{checkbox,menu,navigation_bar,radio,select,switch}.rs`
+    (components consume token-driven `Corners`, including state-layer/focus indicator clipping).
+- [x] Typography mapping (typescale roles).
+  - Evidence: `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs` (`inject_sys_typescale`),
+    `ecosystem/fret-ui-material3/src/{button,dialog,list,menu,navigation_bar,navigation_drawer,navigation_rail,select,snackbar,tabs,tooltip}.rs`
+    (components use `md.sys.typescale.*` or stable per-component aliases such as `md.comp.button.label-text`).
 
 ### Component Surface (MVP set)
 

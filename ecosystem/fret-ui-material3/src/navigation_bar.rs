@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_runtime::Model;
@@ -381,11 +381,9 @@ fn navigation_bar_item<H: UiHost>(
         }
 
         let height = nav_tokens::container_height(theme);
-        let focus_ring = material_focus_ring_for_component(
-            theme,
-            "md.comp.navigation-bar",
-            Corners::all(Px(0.0)),
-        );
+        let state_layer_shape = nav_tokens::active_indicator_shape(theme);
+        let focus_ring =
+            material_focus_ring_for_component(theme, "md.comp.navigation-bar", state_layer_shape);
 
         let pressable_props = PressableProps {
             enabled,
@@ -440,7 +438,7 @@ fn navigation_bar_item<H: UiHost>(
                     cx,
                     pressable_id,
                     now_frame,
-                    Corners::all(Px(0.0)),
+                    state_layer_shape,
                     RippleClip::Bounded,
                     state_layer_color,
                     is_pressed,

@@ -765,8 +765,7 @@ fn select_listbox_panel<H: UiHost>(
     let container_bg = select_tokens::menu_container_background(&theme, variant);
     let elevation = select_tokens::menu_container_elevation(&theme, variant);
     let shadow_color = select_tokens::menu_container_shadow_color(&theme, variant);
-    let r = select_tokens::menu_container_shape_radius(&theme, variant);
-    let corner = Corners::all(r);
+    let corner = select_tokens::menu_container_shape(&theme, variant);
     let surface =
         material_surface_style(&theme, container_bg, elevation, Some(shadow_color), corner);
 
