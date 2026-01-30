@@ -592,6 +592,20 @@ topics (if/when we implement them):
     - Paint-cache replay now keeps descendant bounds in sync when a cached subtree translates (required for correct hit-testing + semantics under caching).
       - Anchors: `crates/fret-ui/src/tree/paint.rs` (paint-cache replay translates descendant bounds),
         `crates/fret-ui/src/tree/tests/paint_cache.rs` (`paint_cache_replay_translates_descendant_bounds_for_descendants`).
+  - Definition of done (v1; mark `[x]` when all are true):
+    - [ ] There is at least one end-to-end harness where a cache root stays clean (no rerender), but frame-local behavior still updates correctly via prepaint outputs
+      (e.g. drag indicators, hover chrome, windowed surface telemetry).
+    - [ ] A single `bundle.json` contains enough evidence to explain:
+      - why a prepaint output changed (inputs + key),
+      - why a cache root rerendered (if it did), and
+      - what prepaint requested (invalidate/redraw/RAF).
+    - [ ] There is a stable post-run gate for the chosen harness in `fretboard diag stats` (or `diag suite`) so regressions are caught without manual inspection.
+  - Next steps (to close core-000, keep minimal and test-first):
+    - [ ] Pick the closing harness:
+      - option A: `tools/diag-scripts/docking-demo-drag-indicators.json` (paint-only chrome under view-cache reuse)
+      - option B: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (window telemetry + scroll-driven prepaint outputs)
+    - [ ] Add one small gate that asserts “prepaint acted” in the relevant frames (bounded) in addition to existing `--check-stale-paint` / view-cache gates.
+    - [ ] Record a fresh passing evidence bundle and link it here.
 - [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
@@ -602,6 +616,18 @@ topics (if/when we implement them):
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
      row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
      (tracked in ADR 0192).
+  - Execution plan (v2 slices; keep incremental, avoid a big-bang rewrite):
+    - [ ] Pick one primary consumer surface (start with file tree, then inspector/table/tree).
+    - [ ] Move “window derivation” to prepaint outputs (ADR 0190 / ADR 0193), keyed by: viewport + offset + overscan + items revision.
+    - [ ] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
+    - [ ] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
+      `--check-retained-vlist-reconcile-no-notify`, attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`,
+      plus `--check-wheel-scroll` and `--check-stale-paint`.
+    - [ ] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
+  - Definition of done (v2; mark `[x]` when all are true):
+    - [ ] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
+    - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
+    - [ ] The same substrate can be applied to at least one more surface (reused primitives, not a one-off hack).
   - Clarification: the legacy `virtual_list_keyed` API (frame-local `FnMut` row closures) cannot support “attach/detach on cache-hit frames”
     by construction. The v2 path for GPUI-like prepaint-driven window updates therefore focuses on retained-host surfaces (ADR 0192) and
     ergonomic ecosystem wrappers that adopt them by default.
@@ -971,6 +997,12 @@ topics (if/when we implement them):
       - Builtin suite: `fretboard diag suite ui-gallery-file-tree-torture-interactive --launch -- cargo run -p fret-ui-gallery --release`.
       - Evidence bundle (cache+shell, release): `target/fret-diag-file-tree-suite-local4/1769748662066-ui-gallery-file-tree-torture-toggle/bundle.json`
       - Re-verified (cache+shell, release; retained gates enforced incl. attach/detach min): `target/fret-diag-file-tree-suite-min-gate/1769756742386-ui-gallery-file-tree-torture-toggle/bundle.json`
+  - Next steps (eco-009 closure path; keep it “real UI surface” oriented):
+    - [ ] Promote the UI Gallery file-tree torture implementation into a reusable `ecosystem/fret-ui-kit` retained component (keep stable test ids),
+      so future workspace adoption is a “swap the consumer” change, not a rewrite.
+    - [ ] Add a short “candidate surface list” with anchors to real code (as it appears) once `ecosystem/fret-workspace` / `apps/fret-editor` contains
+      concrete outline/file-tree/property-list UI surfaces (not just protocols).
+    - [ ] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
