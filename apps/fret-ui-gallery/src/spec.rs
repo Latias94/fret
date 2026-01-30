@@ -99,6 +99,7 @@ pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
 pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
+pub(crate) const PAGE_TEXT_SELECTION_PERF: &str = "text_selection_perf";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
@@ -161,6 +162,7 @@ pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.vir
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
 pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
+pub(crate) const CMD_NAV_TEXT_SELECTION_PERF: &str = "ui_gallery.nav.select.text_selection_perf";
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
@@ -391,6 +393,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CODE_EDITOR_TORTURE,
                 docs::USAGE_CODE_EDITOR_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_TEXT_SELECTION_PERF,
+                "Text Selection (Perf)",
+                "Text Selection / Selection Rect Culling",
+                "Text integration workstream",
+                CMD_NAV_TEXT_SELECTION_PERF,
+                &["text", "selection", "performance", "diagnostics", "tli1"],
+                docs::DOC_TEXT_SELECTION_PERF,
+                docs::USAGE_TEXT_SELECTION_PERF,
             ),
             PageSpec::new(
                 PAGE_WEB_IME_HARNESS,

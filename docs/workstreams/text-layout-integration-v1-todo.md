@@ -177,7 +177,8 @@ Exit criteria:
     `crates/fret-render/src/text.rs` (`selection_rects_from_lines_clipped`),
     `crates/fret-ui/src/text_area/widget.rs` (selection/preedit paint uses `selection_rects_clipped`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (SelectableText selection paint uses `selection_rects_clipped`).
-- [ ] Add a micro-benchmark-like test/demo in UI Gallery (or a diagnostic counter) to track rect count.
+- [x] Add a micro-benchmark-like test/demo in UI Gallery (or a diagnostic counter) to track rect count.
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_text_selection_perf`).
 
 ### TLI1-M4 — Pixel snapping policy
 

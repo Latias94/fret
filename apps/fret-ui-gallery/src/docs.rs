@@ -169,6 +169,25 @@ let editor = CodeEditor::new(handle)
 ```
 "#;
 
+pub(crate) const DOC_TEXT_SELECTION_PERF: &str = r#"
+## Text selection (perf diagnostics)
+
+This page is a small diagnostic harness for **large selection highlight** behavior:
+
+- A long multi-line text blob is selected end-to-end.
+- The paint path queries selection rects **clipped to the current viewport**.
+
+The goal is to track the number of generated selection rectangles and ensure it scales with
+visible lines (viewport height), not total document length.
+"#;
+
+pub(crate) const USAGE_TEXT_SELECTION_PERF: &str = r#"
+```rust
+// Scroll with the mouse wheel over the demo surface.
+// The overlay shows the current clipped selection-rect count.
+```
+"#;
+
 pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
 ## Web IME (harness)
 
