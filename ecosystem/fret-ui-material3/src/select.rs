@@ -99,6 +99,9 @@ pub struct SelectStyle {
     pub outline_color: OverrideSlot<ColorRef>,
     pub active_indicator_color: OverrideSlot<ColorRef>,
     pub text_color: OverrideSlot<ColorRef>,
+    pub label_color: OverrideSlot<ColorRef>,
+    pub supporting_text_color: OverrideSlot<ColorRef>,
+    pub leading_icon_color: OverrideSlot<ColorRef>,
     pub trailing_icon_color: OverrideSlot<ColorRef>,
     pub menu_selected_container_color: OverrideSlot<ColorRef>,
 }
@@ -127,6 +130,21 @@ impl SelectStyle {
         self
     }
 
+    pub fn label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.label_color = Some(color);
+        self
+    }
+
+    pub fn supporting_text_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.supporting_text_color = Some(color);
+        self
+    }
+
+    pub fn leading_icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.leading_icon_color = Some(color);
+        self
+    }
+
     pub fn trailing_icon_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
         self.trailing_icon_color = Some(color);
         self
@@ -147,6 +165,11 @@ impl SelectStyle {
         self.active_indicator_color =
             merge_override_slot(self.active_indicator_color, other.active_indicator_color);
         self.text_color = merge_override_slot(self.text_color, other.text_color);
+        self.label_color = merge_override_slot(self.label_color, other.label_color);
+        self.supporting_text_color =
+            merge_override_slot(self.supporting_text_color, other.supporting_text_color);
+        self.leading_icon_color =
+            merge_override_slot(self.leading_icon_color, other.leading_icon_color);
         self.trailing_icon_color =
             merge_override_slot(self.trailing_icon_color, other.trailing_icon_color);
         self.menu_selected_container_color = merge_override_slot(
@@ -585,6 +608,12 @@ fn select_trigger_element<H: UiHost>(
 
         let (leading_icon_color, leading_icon_opacity) =
             select_tokens::leading_icon_color(theme, variant, hovered, !enabled, error, focused);
+        let leading_icon_color = resolve_override_slot_with(
+            style.leading_icon_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || leading_icon_color,
+        );
         let leading_icon_opacity = leading_icon_opacity.clamp(0.0, 1.0);
 
         let outline = select_tokens::outline(theme, variant, hovered, !enabled, error, focused)
@@ -830,6 +859,8 @@ fn select_trigger_element<H: UiHost>(
                     })
                 });
 
+                let style_override = style.clone();
+
                 vec![cx.container(chrome, move |cx| {
                     let mut children = vec![overlay];
 
@@ -881,6 +912,8 @@ fn select_trigger_element<H: UiHost>(
                             cx,
                             theme,
                             variant,
+                            states,
+                            &style_override,
                             label.clone(),
                             float_progress,
                             has_leading_icon.then_some(leading_icon_size),
@@ -905,6 +938,15 @@ fn select_trigger_element<H: UiHost>(
 
     let anchor_id = anchor_id_out.get();
 
+    let mut supporting_states = WidgetStates::empty();
+    if disabled {
+        supporting_states |= WidgetStates::DISABLED;
+    }
+    if open {
+        supporting_states |= WidgetStates::OPEN;
+    }
+    let supporting_style_override = style.clone();
+
     let element = if let Some(text) = supporting_text.as_ref() {
         let mut props = FlexProps::default();
         props.layout.size.width = Length::Fill;
@@ -922,6 +964,8 @@ fn select_trigger_element<H: UiHost>(
                     cx,
                     theme,
                     variant,
+                    supporting_states,
+                    &supporting_style_override,
                     text.clone(),
                     has_leading_icon.then_some(leading_icon_size),
                     !disabled,
@@ -1043,6 +1087,8 @@ fn select_trigger_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     variant: SelectVariant,
+    states: WidgetStates,
+    style_override: &SelectStyle,
     text: Arc<str>,
     progress: f32,
     leading_icon_size: Option<Px>,
@@ -1092,8 +1138,11 @@ fn select_trigger_label<H: UiHost>(
             layout: fret_ui::element::LayoutStyle::default(),
             text: text.clone(),
             style,
-            color: Some(select_tokens::label_color(
-                theme, variant, hovered, disabled, error, focused,
+            color: Some(resolve_override_slot_with(
+                style_override.label_color.as_ref(),
+                states,
+                |color| color.resolve(theme),
+                || select_tokens::label_color(theme, variant, hovered, disabled, error, focused),
             )),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
@@ -1115,6 +1164,8 @@ fn select_supporting_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     variant: SelectVariant,
+    states: WidgetStates,
+    style_override: &SelectStyle,
     text: Arc<str>,
     leading_icon_size: Option<Px>,
     enabled: bool,
@@ -1131,8 +1182,11 @@ fn select_supporting_text<H: UiHost>(
         layout,
         text,
         style: theme.text_style_by_key("md.sys.typescale.body-small"),
-        color: Some(select_tokens::supporting_text_color(
-            theme, variant, false, !enabled, error, false,
+        color: Some(resolve_override_slot_with(
+            style_override.supporting_text_color.as_ref(),
+            states,
+            |color| color.resolve(theme),
+            || select_tokens::supporting_text_color(theme, variant, false, !enabled, error, false),
         )),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
