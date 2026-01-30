@@ -102,6 +102,15 @@ pub enum ImeEvent {
         text: String,
         cursor: Option<(usize, usize)>,
     },
+    /// Delete text surrounding the cursor or selection.
+    ///
+    /// This event does not affect the preedit string. See winit's `Ime::DeleteSurrounding` docs.
+    ///
+    /// Offsets are expressed in UTF-8 bytes.
+    DeleteSurrounding {
+        before_bytes: usize,
+        after_bytes: usize,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

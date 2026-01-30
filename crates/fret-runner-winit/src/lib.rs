@@ -537,7 +537,13 @@ impl WinitInputState {
                         text: text.clone(),
                         cursor: *cursor,
                     },
-                    winit::event::Ime::DeleteSurrounding { .. } => return,
+                    winit::event::Ime::DeleteSurrounding {
+                        before_bytes,
+                        after_bytes,
+                    } => fret_core::ImeEvent::DeleteSurrounding {
+                        before_bytes: *before_bytes,
+                        after_bytes: *after_bytes,
+                    },
                 };
                 out.push(Event::Ime(mapped));
             }

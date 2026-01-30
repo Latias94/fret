@@ -149,6 +149,9 @@ Exit criteria:
     - starting composition requires an empty `range` (`range.start == range.end`)
     - while composing, `range` must match the current `marked_text_range`
     - arbitrary marked subranges are not supported until we unify in-buffer composition.
+- [x] Handle winit IME `DeleteSurrounding` requests (UTF-8 bytes, preedit excluded).
+  - Evidence: `crates/fret-runner-winit/src/lib.rs` (event mapping),
+    `crates/fret-ui/src/text_edit.rs` (`ime::apply_event` + tests).
 
 ### TLI1-M3.7 — BiDi / RTL correctness baseline
 

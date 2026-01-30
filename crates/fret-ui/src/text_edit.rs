@@ -875,6 +875,7 @@ pub(crate) mod ime {
         PreeditUpdated { starting: bool },
         CommitApplied,
         CommitDuplicate,
+        DeleteSurroundingApplied,
     }
 
     pub(crate) fn is_composing(preedit: &str, preedit_cursor: Option<(usize, usize)>) -> bool {
@@ -1072,6 +1073,50 @@ pub(crate) mod ime {
                 *preedit = next.clone();
                 *preedit_cursor = *cursor;
                 ApplyResult::PreeditUpdated { starting }
+            }
+            ImeEvent::DeleteSurrounding {
+                before_bytes,
+                after_bytes,
+            } => {
+                if *before_bytes == 0 && *after_bytes == 0 {
+                    return ApplyResult::Noop;
+                }
+
+                let (a, b) = buffer::selection_range(*selection_anchor, *caret);
+
+                let mut start_before = a.saturating_sub(*before_bytes);
+                while start_before > 0 && !text.is_char_boundary(start_before) {
+                    start_before = start_before.saturating_sub(1);
+                }
+
+                let mut end_after = b.saturating_add(*after_bytes).min(text.len());
+                while end_after < text.len() && !text.is_char_boundary(end_after) {
+                    end_after = end_after.saturating_add(1);
+                }
+
+                if start_before == a && end_after == b {
+                    return ApplyResult::Noop;
+                }
+
+                // The deletion is relative to the current selection, but does not remove the
+                // selection itself (winit contract).
+                if end_after > b {
+                    text.replace_range(b..end_after, "");
+                }
+                if start_before < a {
+                    text.replace_range(start_before..a, "");
+                }
+
+                let deleted_before = a.saturating_sub(start_before);
+                if deleted_before > 0 {
+                    *selection_anchor = (*selection_anchor).saturating_sub(deleted_before);
+                    *caret = (*caret).saturating_sub(deleted_before);
+                }
+
+                *selection_anchor = super::utf8::clamp_to_char_boundary(text, *selection_anchor);
+                *caret = super::utf8::clamp_to_char_boundary(text, *caret);
+
+                ApplyResult::DeleteSurroundingApplied
             }
         }
     }
@@ -1274,7 +1319,9 @@ mod grapheme_boundary_tests {
 #[cfg(test)]
 mod ime_tests {
     use super::ime;
+    use fret_core::ImeEvent;
     use fret_core::utf::UtfIndexClamp;
+    use fret_runtime::TickId;
 
     #[test]
     fn composed_utf16_len_counts_preedit_and_surrogates() {
@@ -1378,5 +1425,71 @@ mod ime_tests {
             ),
             (1, 5)
         );
+    }
+
+    #[test]
+    fn delete_surrounding_removes_bytes_without_clearing_preedit() {
+        let mut deduper = ime::Deduper::default();
+        let mut text = "hello".to_string();
+        let mut caret = 2; // between 'e' and 'l'
+        let mut anchor = 2;
+        let mut preedit = "X".to_string();
+        let mut preedit_cursor = Some((0, 1));
+        let mut ime_replace_range = None;
+
+        let result = ime::apply_event(
+            &ImeEvent::DeleteSurrounding {
+                before_bytes: 1,
+                after_bytes: 2,
+            },
+            TickId(1),
+            false,
+            &mut deduper,
+            &mut text,
+            &mut caret,
+            &mut anchor,
+            &mut preedit,
+            &mut preedit_cursor,
+            &mut ime_replace_range,
+        );
+
+        assert_eq!(result, ime::ApplyResult::DeleteSurroundingApplied);
+        assert_eq!(text, "ho");
+        assert_eq!(caret, 1);
+        assert_eq!(anchor, 1);
+        assert_eq!(preedit, "X");
+        assert_eq!(preedit_cursor, Some((0, 1)));
+        assert_eq!(ime_replace_range, None);
+    }
+
+    #[test]
+    fn delete_surrounding_preserves_selected_text() {
+        let mut deduper = ime::Deduper::default();
+        let mut text = "abcdef".to_string();
+        let mut caret = 4; // selects "cd"
+        let mut anchor = 2;
+        let mut preedit = String::new();
+        let mut preedit_cursor = None;
+        let mut ime_replace_range = None;
+
+        let result = ime::apply_event(
+            &ImeEvent::DeleteSurrounding {
+                before_bytes: 1,
+                after_bytes: 1,
+            },
+            TickId(1),
+            false,
+            &mut deduper,
+            &mut text,
+            &mut caret,
+            &mut anchor,
+            &mut preedit,
+            &mut preedit_cursor,
+            &mut ime_replace_range,
+        );
+
+        assert_eq!(result, ime::ApplyResult::DeleteSurroundingApplied);
+        assert_eq!(text, "acdf");
+        assert_eq!((anchor.min(caret), anchor.max(caret)), (1, 3));
     }
 }
