@@ -3,6 +3,11 @@
 This is a short, high-signal backlog to keep the “goldens-driven 1:1” effort grounded.
 Prefer adding deterministic gates over adding more smoke coverage.
 
+Status:
+
+- Tracked shadcn-web `v4/new-york-v4` keys are now **100% gated** and **100% targeted-gated** (excluding `web_vs_fret_layout.rs` / `snapshots.rs`).
+  The remaining work is to raise signal: migrate deeper geometry/paint assertions out of broad files and add viewport variants for behavior-shaping components.
+
 ## P0 (Overlays)
 
 - Menus: destructive *idle* vs *focused* state matrix (ContextMenu done; replicate where applicable).
@@ -15,8 +20,8 @@ Prefer adding deterministic gates over adding more smoke coverage.
 
 ## P0 (Chart)
 
-- Convert `chart-*` from broad gates to **targeted** gates (tracked keys are currently concentrated under `web_vs_fret_layout.rs` / `snapshots.rs`).
-- Start with high-signal geometry contracts (tooltip/legend/pie legend panels) and add a small set of viewport variants early.
+- `chart-*` keys are now covered by targeted gates; migrate the remaining higher-signal geometry assertions out of `web_vs_fret_layout.rs`.
+- Focus next on tooltip/legend/pie label panels under constrained viewports (small width/height, overflow, long labels).
 
 ## P1 (Typography)
 

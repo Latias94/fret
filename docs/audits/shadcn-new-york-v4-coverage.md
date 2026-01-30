@@ -48,7 +48,7 @@ Notes:
 - Golden files (tracked): `512`
 - Golden keys (tracked, normalized `.open` suffix): `473`
 - Gated keys (string-literal heuristic): `473` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `413` (`87.3%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `473` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 Note on “targeted” gates:
@@ -99,6 +99,9 @@ Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fre
 ```powershell
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUntargetedByPrefix -TopGroups 20
 ```
+
+At the time of writing, there are no untargeted groups (all keys are referenced by purpose-built
+gate tests outside the broad catch-all files).
 
 Recompute locally:
 
