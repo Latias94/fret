@@ -150,6 +150,9 @@ stabilize the API surface that external code depends on.
 - **IME geometry** (`bounds_for_range`):
   - empty range: caret rect at the insertion point
   - non-empty range: bounding rect of the visual selection rects for that range
+- **Selection geometry perf**: selection highlight rect generation should support viewport culling
+  when the caller knows the visible region (e.g. scrollable text areas). Implementation hook:
+  `TextService::selection_rects_clipped`.
 - **Preedit representation**:
   - current widgets keep IME preedit text **out of the base buffer** and render it inline
   - any future platform-facing “marked range” queries must define whether ranges are expressed in:

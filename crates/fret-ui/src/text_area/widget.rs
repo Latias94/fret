@@ -1095,12 +1095,17 @@ impl<H: UiHost> Widget<H> for TextArea {
             crate::text_edit::ime::base_to_display_index(self.caret, self.preedit.len(), idx)
         };
 
-        cx.services.selection_rects(
+        let selection_clip = Rect::new(
+            fret_core::Point::new(Px(0.0), self.offset_y),
+            Size::new(inner.size.width, inner.size.height),
+        );
+        cx.services.selection_rects_clipped(
             blob,
             (
                 map_base_to_display(self.selection_anchor),
                 map_base_to_display(self.caret),
             ),
+            selection_clip,
             &mut self.selection_rects,
         );
         for r in &self.selection_rects {
@@ -1124,8 +1129,12 @@ impl<H: UiHost> Widget<H> for TextArea {
         if !self.preedit.is_empty() {
             let start = self.caret;
             let end = self.caret + self.preedit.len();
-            cx.services
-                .selection_rects(blob, (start, end), &mut self.preedit_rects);
+            cx.services.selection_rects_clipped(
+                blob,
+                (start, end),
+                selection_clip,
+                &mut self.preedit_rects,
+            );
             for r in &self.preedit_rects {
                 let rect = Rect::new(
                     fret_core::Point::new(

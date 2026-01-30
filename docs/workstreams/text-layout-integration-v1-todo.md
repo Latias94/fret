@@ -170,8 +170,13 @@ Exit criteria:
 
 Exit criteria:
 
-- [ ] Add rect coalescing for selection highlights (merge adjacent rects per line).
-- [ ] Add culling: only generate selection rects intersecting the current viewport when possible.
+- [x] Add rect coalescing for selection highlights (merge adjacent rects per line).
+  - Evidence: `crates/fret-render/src/text.rs` (`coalesce_selection_rects_in_place`).
+- [x] Add culling: only generate selection rects intersecting the current viewport when possible.
+  - Evidence: `crates/fret-core/src/text.rs` (`TextService::selection_rects_clipped`),
+    `crates/fret-render/src/text.rs` (`selection_rects_from_lines_clipped`),
+    `crates/fret-ui/src/text_area/widget.rs` (selection/preedit paint uses `selection_rects_clipped`),
+    `crates/fret-ui/src/declarative/host_widget/paint.rs` (SelectableText selection paint uses `selection_rects_clipped`).
 - [ ] Add a micro-benchmark-like test/demo in UI Gallery (or a diagnostic counter) to track rect count.
 
 ### TLI1-M4 — Pixel snapping policy

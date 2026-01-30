@@ -429,6 +429,23 @@ pub trait TextService {
     fn selection_rects(&mut self, _blob: TextBlobId, _range: (usize, usize), _out: &mut Vec<Rect>) {
     }
 
+    /// Computes selection rectangles and clips them to `clip` in the same coordinate space.
+    ///
+    /// This is intended for large multi-line selections where generating rectangles for off-screen
+    /// lines is wasteful. Implementations may override this to cull work earlier.
+    ///
+    /// Coordinate space: rects and `clip` are relative to the text origin (x=0, y=0 at top of text box).
+    fn selection_rects_clipped(
+        &mut self,
+        blob: TextBlobId,
+        range: (usize, usize),
+        clip: Rect,
+        out: &mut Vec<Rect>,
+    ) {
+        self.selection_rects(blob, range, out);
+        clip_rects_in_place(clip, out);
+    }
+
     /// Extracts the precomputed caret stop table (byte index -> x offset) for a single-line blob.
     ///
     /// This is primarily intended for UI hit-testing in event handlers, which do not have access
@@ -457,4 +474,38 @@ pub trait TextService {
     }
 
     fn release(&mut self, blob: TextBlobId);
+}
+
+fn clip_rects_in_place(clip: Rect, out: &mut Vec<Rect>) {
+    let clip_x0 = clip.origin.x.0;
+    let clip_y0 = clip.origin.y.0;
+    let clip_x1 = clip_x0 + clip.size.width.0;
+    let clip_y1 = clip_y0 + clip.size.height.0;
+
+    if clip_x1 <= clip_x0 || clip_y1 <= clip_y0 {
+        out.clear();
+        return;
+    }
+
+    out.retain_mut(|r| {
+        let x0 = r.origin.x.0;
+        let y0 = r.origin.y.0;
+        let x1 = x0 + r.size.width.0;
+        let y1 = y0 + r.size.height.0;
+
+        let ix0 = x0.max(clip_x0);
+        let iy0 = y0.max(clip_y0);
+        let ix1 = x1.min(clip_x1);
+        let iy1 = y1.min(clip_y1);
+
+        if ix1 <= ix0 || iy1 <= iy0 {
+            return false;
+        }
+
+        r.origin.x = Px(ix0);
+        r.origin.y = Px(iy0);
+        r.size.width = Px(ix1 - ix0);
+        r.size.height = Px(iy1 - iy0);
+        true
+    });
 }

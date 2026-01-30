@@ -1961,6 +1961,18 @@ impl TextSystem {
         Some(())
     }
 
+    pub fn selection_rects_clipped(
+        &self,
+        blob: TextBlobId,
+        range: (usize, usize),
+        clip: Rect,
+        out: &mut Vec<Rect>,
+    ) -> Option<()> {
+        let blob = self.blobs.get(blob)?;
+        selection_rects_from_lines_clipped(blob.shape.lines.as_ref(), range, clip, out);
+        Some(())
+    }
+
     pub fn release(&mut self, blob: TextBlobId) {
         let (should_remove, remove_shape) = match self.blobs.get_mut(blob) {
             Some(b) => {
@@ -2593,6 +2605,100 @@ fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &m
             Size::new(Px((right.0 - left.0).max(0.0)), line.height),
         ));
     }
+
+    coalesce_selection_rects_in_place(out);
+}
+
+fn selection_rects_from_lines_clipped(
+    lines: &[TextLine],
+    range: (usize, usize),
+    clip: Rect,
+    out: &mut Vec<Rect>,
+) {
+    out.clear();
+    if lines.is_empty() {
+        return;
+    }
+
+    let clip_x0 = clip.origin.x.0;
+    let clip_y0 = clip.origin.y.0;
+    let clip_x1 = clip_x0 + clip.size.width.0;
+    let clip_y1 = clip_y0 + clip.size.height.0;
+    if clip_x1 <= clip_x0 || clip_y1 <= clip_y0 {
+        return;
+    }
+
+    let (a, b) = (range.0.min(range.1), range.0.max(range.1));
+    if a == b {
+        return;
+    }
+
+    let start_idx = lines.partition_point(|line| {
+        let y0 = line.y_top.0;
+        let y1 = (line.y_top.0 + line.height.0).max(y0);
+        y1 <= clip_y0
+    });
+    let end_idx = lines.partition_point(|line| line.y_top.0 < clip_y1);
+    let start_idx = start_idx.min(end_idx);
+    if start_idx >= end_idx {
+        return;
+    }
+
+    for line in &lines[start_idx..end_idx] {
+        let start = a.max(line.start);
+        let end = b.min(line.end);
+        if start >= end {
+            continue;
+        }
+
+        let x0 = caret_x_from_stops(&line.caret_stops, start).0;
+        let x1 = caret_x_from_stops(&line.caret_stops, end).0;
+        let left = x0.min(x1);
+        let right = x0.max(x1);
+
+        let y0 = line.y_top.0;
+        let y1 = (line.y_top.0 + line.height.0).max(y0);
+
+        let ix0 = left.max(clip_x0);
+        let iy0 = y0.max(clip_y0);
+        let ix1 = right.min(clip_x1);
+        let iy1 = y1.min(clip_y1);
+
+        if ix1 <= ix0 || iy1 <= iy0 {
+            continue;
+        }
+
+        out.push(Rect::new(
+            Point::new(Px(ix0), Px(iy0)),
+            Size::new(Px((ix1 - ix0).max(0.0)), Px((iy1 - iy0).max(0.0))),
+        ));
+    }
+
+    coalesce_selection_rects_in_place(out);
+}
+
+fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
+    if rects.len() <= 1 {
+        return;
+    }
+
+    let mut out: Vec<Rect> = Vec::with_capacity(rects.len());
+    for r in rects.drain(..) {
+        match out.last_mut() {
+            Some(prev)
+                if prev.origin.y == r.origin.y
+                    && prev.size.height == r.size.height
+                    && r.origin.x.0 <= prev.origin.x.0 + prev.size.width.0 =>
+            {
+                let x0 = prev.origin.x.0.min(r.origin.x.0);
+                let x1 = (prev.origin.x.0 + prev.size.width.0).max(r.origin.x.0 + r.size.width.0);
+                prev.origin.x = Px(x0);
+                prev.size.width = Px((x1 - x0).max(0.0));
+            }
+            _ => out.push(r),
+        }
+    }
+    *rects = out;
 }
 
 #[cfg(test)]
@@ -2603,8 +2709,8 @@ mod tests {
     };
     use cosmic_text::Family;
     use fret_core::{
-        Color, FontWeight, Px, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
-        TextWrap,
+        Color, FontWeight, Point, Px, Rect, Size, TextConstraints, TextInputRef, TextOverflow,
+        TextSpan, TextStyle, TextWrap,
     };
     use std::sync::Arc;
 
@@ -2774,6 +2880,55 @@ mod tests {
             rects[0].size.width.0 > 0.1,
             "expected a non-empty selection rect"
         );
+    }
+
+    #[test]
+    fn selection_rects_clipped_culls_offscreen_lines() {
+        let mut lines = Vec::new();
+        for i in 0..1000usize {
+            let start = i * 4;
+            let end = start + 4;
+            lines.push(super::TextLine {
+                start,
+                end,
+                width: Px(100.0),
+                y_top: Px((i as f32) * 10.0),
+                height: Px(10.0),
+                caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
+            });
+        }
+
+        let clip = Rect::new(
+            Point::new(Px(0.0), Px(1000.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines_clipped(&lines, (0, 4000), clip, &mut rects);
+
+        assert_eq!(rects.len(), 10);
+        for r in &rects {
+            assert!(r.origin.y.0 >= 1000.0 && r.origin.y.0 < 1100.0);
+            assert!(r.size.height.0 > 0.0);
+        }
+    }
+
+    #[test]
+    fn selection_rects_clipped_trims_partially_visible_line() {
+        let line = super::TextLine {
+            start: 0,
+            end: 4,
+            width: Px(100.0),
+            y_top: Px(0.0),
+            height: Px(10.0),
+            caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
+        };
+        let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines_clipped(&[line], (0, 4), clip, &mut rects);
+
+        assert_eq!(rects.len(), 1);
+        assert!((rects[0].origin.y.0 - 5.0).abs() < 0.001);
+        assert!((rects[0].size.height.0 - 5.0).abs() < 0.001);
     }
 
     #[test]

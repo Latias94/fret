@@ -543,7 +543,12 @@ impl ElementHostWidget {
                     let end = anchor.max(caret);
                     if start < end {
                         let mut rects: Vec<fret_core::Rect> = Vec::new();
-                        cx.services.selection_rects(blob, (start, end), &mut rects);
+                        let clip = fret_core::Rect::new(
+                            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                            cx.bounds.size,
+                        );
+                        cx.services
+                            .selection_rects_clipped(blob, (start, end), clip, &mut rects);
                         let sel_color = cx.theme().color_required("selection.background");
                         for r in rects {
                             let rect = fret_core::Rect::new(
