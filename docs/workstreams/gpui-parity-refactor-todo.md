@@ -619,7 +619,9 @@ topics (if/when we implement them):
      row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
      (tracked in ADR 0192).
   - Execution plan (v2 slices; keep incremental, avoid a big-bang rewrite):
-    - [ ] Pick one primary consumer surface (start with file tree, then inspector/table/tree).
+    - [x] Pick one primary consumer surface (start with file tree, then inspector/table/tree).
+      - Anchors: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`),
+        `apps/fret-ui-gallery/src/ui.rs` (`preview_file_tree_torture`).
     - [ ] Move “window derivation” to prepaint outputs (ADR 0190 / ADR 0193), keyed by: viewport + offset + overscan + items revision.
     - [ ] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
     - [ ] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
