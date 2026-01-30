@@ -67,6 +67,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
+    let mut check_vlist_window_mismatch_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
     let mut check_dock_drag_min: Option<u64> = None;
@@ -375,6 +376,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-prepaint-actions-min".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-vlist-prepaint-window-mismatch-min" | "--check-vlist-window-mismatch-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-vlist-window-mismatch-min".to_string());
+                };
+                check_vlist_window_mismatch_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-vlist-window-mismatch-min".to_string()
+                })?);
                 i += 1;
             }
             "--check-overlay-synthesis-min" => {
@@ -915,6 +926,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_vlist_window_mismatch_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -946,6 +958,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_prepaint_actions_min,
+                        check_vlist_window_mismatch_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min,
                         check_dock_drag_min,
@@ -1896,6 +1909,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
 
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_min =
@@ -1924,6 +1938,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
 
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_min =
@@ -2065,6 +2080,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_vlist_window_mismatch_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -2108,6 +2124,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_prepaint_actions_min,
+                        check_vlist_window_mismatch_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
                         check_dock_drag_min.or(suite_dock_drag_min),
@@ -3925,6 +3942,7 @@ fn apply_post_run_checks(
     check_gc_sweep_liveness: bool,
     check_view_cache_reuse_min: Option<u64>,
     check_prepaint_actions_min: Option<u64>,
+    check_vlist_window_mismatch_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     check_viewport_input_min: Option<u64>,
     check_dock_drag_min: Option<u64>,
@@ -3963,6 +3981,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_prepaint_actions_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_vlist_window_mismatch_min
+        && min > 0
+    {
+        check_bundle_for_vlist_window_mismatch_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_overlay_synthesis_min
         && min > 0
@@ -6960,6 +6983,93 @@ fn check_bundle_for_prepaint_actions_min_json(
 
     Err(format!(
         "expected at least {min_acted_frames} snapshots with non-empty debug.prepaint_actions, got {acted_frames} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+in bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_vlist_window_mismatch_min(
+    bundle_path: &Path,
+    min_mismatch_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_mismatch_min_json(
+        &bundle,
+        bundle_path,
+        min_mismatch_frames,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_vlist_window_mismatch_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_mismatch_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut mismatch_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if !view_cache_active {
+                continue;
+            }
+
+            let windows = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            let any_mismatch = windows.iter().any(|entry| {
+                entry
+                    .get("window_mismatch")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+            });
+
+            if any_mismatch {
+                mismatch_frames = mismatch_frames.saturating_add(1);
+                if mismatch_frames >= min_mismatch_frames {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_mismatch_frames} snapshots with at least one virtual-list window mismatch, got {mismatch_frames} \
 (any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
 in bundle: {}",
         bundle_path.display()
