@@ -1,6 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, CommandId, CommandMeta, Effect, Model, WhenExpr, WindowRequest};
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
@@ -15,7 +16,9 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, TextProps,
 };
+use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
 use fret_ui_shadcn as shadcn;
@@ -27,6 +30,7 @@ struct ComponentsGalleryWindowState {
     root: Option<fret_core::NodeId>,
     items: Model<Vec<TreeItem>>,
     tree_state: Model<TreeState>,
+    file_tree_scroll: VirtualListScrollHandle,
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -71,13 +75,36 @@ impl ComponentsGalleryDriver {
         ]
     }
 
-    fn build_ui(app: &mut App, window: AppWindowId) -> ComponentsGalleryWindowState {
-        let items = app.models_mut().insert(Self::sample_tree_items());
+    fn tree_items_for_demo() -> (Vec<TreeItem>, TreeState) {
+        if std::env::var_os("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE").is_some() {
+            let n: u64 = std::env::var("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(50_000);
+
+            let children: Vec<TreeItem> = (1..=n)
+                .map(|i| TreeItem::new(i, format!("file_{i}.rs")))
+                .collect();
+
+            let root_id: TreeItemId = 0;
+            let items = vec![TreeItem::new(root_id, "root").children(children)];
+            let initial_state = TreeState {
+                selected: Some(root_id),
+                expanded: [root_id].into_iter().collect(),
+            };
+            return (items, initial_state);
+        }
 
         let initial_state = TreeState {
             selected: Some(1),
             expanded: [1, 10, 20].into_iter().collect(),
         };
+        (Self::sample_tree_items(), initial_state)
+    }
+
+    fn build_ui(app: &mut App, window: AppWindowId) -> ComponentsGalleryWindowState {
+        let (items_value, initial_state) = Self::tree_items_for_demo();
+        let items = app.models_mut().insert(items_value);
         let tree_state = app.models_mut().insert(initial_state);
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
@@ -110,12 +137,15 @@ impl ComponentsGalleryDriver {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
+        ui.set_view_cache_enabled(std::env::var_os("FRET_EXAMPLES_VIEW_CACHE").is_some());
+        ui.set_debug_enabled(std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
 
         ComponentsGalleryWindowState {
             ui,
             root: None,
             items,
             tree_state,
+            file_tree_scroll: VirtualListScrollHandle::new(),
             progress,
             checkbox,
             switch,
@@ -187,6 +217,7 @@ impl ComponentsGalleryDriver {
 
         let items = state.items.clone();
         let tree_state = state.tree_state.clone();
+        let file_tree_scroll = state.file_tree_scroll.clone();
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
@@ -251,16 +282,11 @@ impl ComponentsGalleryDriver {
                 let padding = theme.metric_required("metric.padding.md");
                 let bg = theme.color_required("background");
 
-                vec![ui::v_flex(cx, |cx| {
-                    let mut renderer = |cx: &mut fret_ui::ElementContext<'_, App>,
-                                        entry: &fret_ui_kit::TreeEntry,
-                                        _state: fret_ui_kit::TreeRowState| {
-                        vec![cx.text(entry.label.as_ref())]
-                    };
-                                vec![
-                                    cx.text(title),
-                                    cx.text(subtitle),
-                                    markdown::Markdown::new(markdown_sample.clone())
+                 vec![ui::v_flex(cx, |cx| {
+                                 vec![
+                                     cx.text(title),
+                                     cx.text(subtitle),
+                                     markdown::Markdown::new(markdown_sample.clone())
                                         .into_element(cx),
                                     cx.flex(
                                         FlexProps {
@@ -1141,25 +1167,27 @@ impl ComponentsGalleryDriver {
                                             cx.text(
                                                 "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
                                             ),
-                                            cmdk,
-                                        ]
+                                             cmdk,
+                                         ]
+                                     },
+                                 ),
+                                file_tree_view_retained_v0(
+                                    cx,
+                                    items,
+                                    tree_state,
+                                    &file_tree_scroll,
+                                    FileTreeViewProps {
+                                        layout: tree_slot_layout,
+                                        row_height: Px(26.0),
+                                        overscan: 12,
+                                        debug_root_test_id: Some(Arc::<str>::from(
+                                            "components-gallery-file-tree-root",
+                                        )),
+                                        debug_row_test_id_prefix: Some(Arc::<str>::from(
+                                            "components-gallery-file-tree-node",
+                                        )),
                                     },
                                 ),
-                                    cx.container(
-                                        ContainerProps {
-                                            layout: tree_slot_layout,
-                                            ..Default::default()
-                                        },
-                                        |cx| {
-                                            vec![fret_ui_kit::declarative::tree::tree_view_with_renderer(
-                                                cx,
-                                                items,
-                                                tree_state,
-                                                fret_ui_kit::Size::Medium,
-                                                &mut renderer,
-                                            )]
-                                        },
-                                    ),
                                 ]
                     })
                     .size_full()
@@ -1356,8 +1384,13 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
-        let WinitWindowContext { app, state, .. } = context;
+        let WinitWindowContext {
+            app, state, window, ..
+        } = context;
 
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_model_changes(window, changed);
+        });
         state.ui.propagate_model_changes(app, changed);
 
         if changed.contains(&state.ui_font_override.id()) {
@@ -1384,7 +1417,12 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
-        let WinitWindowContext { app, state, .. } = context;
+        let WinitWindowContext {
+            app, state, window, ..
+        } = context;
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_global_changes(app, window, changed);
+        });
         state.ui.propagate_global_changes(app, changed);
     }
 
@@ -1523,6 +1561,19 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             window,
             state,
         } = context;
+
+        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            if !svc.is_enabled() {
+                return false;
+            }
+            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                return true;
+            }
+            svc.maybe_intercept_event_for_picking(app, window, event)
+        });
+        if consumed {
+            return;
+        }
         if matches!(event, Event::WindowCloseRequested) {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
@@ -1652,11 +1703,95 @@ impl WinitAppDriver for ComponentsGalleryDriver {
 
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
+
+        let inspection_active = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                svc.wants_inspection_active(window)
+            });
+        state.ui.set_inspection_active(inspection_active);
+
         scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.drive_script_for_window(app, window, bounds, semantics_snapshot, element_runtime)
+        });
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+
+        if injected_any {
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
+
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                let _ = state.ui.dispatch_command(app, services, &command);
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
+                            }
+                        }
+                        other => deferred_effects.push(other),
+                    }
+                }
+
+                if !applied_any_command {
+                    break;
+                }
+            }
+            for effect in deferred_effects {
+                app.push_effect(effect);
+            }
+
+            state.ui.request_semantics_snapshot();
+            let mut frame =
+                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
+        }
+
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &state.ui,
+                element_runtime,
+                scene,
+            );
+            let _ = svc.maybe_dump_if_triggered();
+            if svc.is_enabled() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
+        });
     }
 
     fn window_create_spec(
