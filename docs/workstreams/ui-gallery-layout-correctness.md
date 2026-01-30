@@ -169,9 +169,9 @@ Implementation note:
 - [x] Add a submenu bounds regression for dropdown menus:
   - `tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json` (opens the `More` submenu and asserts the nested item stays within the window).
 - [x] Add a bounds regression for context menus:
-  - `tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json` (right-clicks the context menu trigger and asserts the first item stays within the window).
-- [x] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
-  - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
+  - `tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json` (right-clicks the dedicated edge trigger `ui-gallery-context-trigger-edge` and asserts the first item stays within the window).
+- [x] Add a popover scroll + clamp regression:
+  - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json` (opens a popover, scrolls the main content viewport, and asserts the popover content stays clamped within the window).
 - [ ] For each new P0 issue:
   - [ ] Add a `tools/diag-scripts/ui-gallery-...json` repro (navigate + wait_until + bounds assertions + `capture_bundle` + `capture_screenshot`).
   - [ ] Add minimal hot-region `test_id` anchors (prefer `cx.semantics` wrappers; do not overload a11y labels).
