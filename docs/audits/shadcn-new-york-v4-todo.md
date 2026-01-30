@@ -17,8 +17,9 @@ Status:
 - DatePicker open overlays:
   - Added popover placement gates for `date-picker-demo.open`, `date-picker-with-presets.open`, and
     `date-picker-with-range.open`.
-  - Remaining depth work: wire the preset `Select` -> date selection behavior (upstream `addDays(new Date(), …)`),
-    then add an interaction golden that opens the Select listbox and validates the combined overlay stacking.
+  - Added a nested listbox placement gate for `date-picker-with-presets.select-open.open` (Select listbox opened inside the popover).
+  - Remaining depth work: wire the preset `Select` -> date selection behavior (upstream `addDays(new Date(), …)`), and
+    add a higher-signal nested overlay gate for stacking order + constrained viewport max-height/scroll behavior.
 - NavigationMenu viewport content insets: current gates allow a small extra tolerance (`2px`) because the Fret test
   harness bounds are more integer-ish than the web's subpixel `border-box` snapshots. Prefer fixing this at the layout
   model level (border/box sizing), not by baking more per-component offsets.

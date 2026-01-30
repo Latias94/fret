@@ -54,6 +54,7 @@ Recent breadth wins:
   ensuring the popover panel provides the background/border/shadow instead of rendering as a transparent overlay.
 - **DatePicker open popover placement**: new shadcn-web `.open` goldens are now gated for
   `date-picker-demo.open`, `date-picker-with-presets.open`, and `date-picker-with-range.open` (portal rect + insets via the shared overlay placement harness).
+- **DatePicker nested overlay placement**: `date-picker-with-presets.select-open.open` now gates the Select listbox popper placement while the popover is open (ComboBox -> ListBox portal).
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
 - **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
   - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,

@@ -1150,7 +1150,10 @@ fn web_theme<'a>(golden: &'a WebGolden) -> &'a WebGoldenTheme {
         .expect("missing theme in web golden")
 }
 
-fn find_first<'a>(node: &'a WebNode, pred: &impl Fn(&'a WebNode) -> bool) -> Option<&'a WebNode> {
+fn find_first<'a>(
+    node: &'a WebNode,
+    pred: &(impl Fn(&'a WebNode) -> bool + ?Sized),
+) -> Option<&'a WebNode> {
     if pred(node) {
         return Some(node);
     }
@@ -2316,46 +2319,77 @@ fn assert_overlay_placement_matches(
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
 
-    let web_trigger = match web_name {
-        "select-scrollable" => find_first(&web.themes["light"].root, &|n| {
-            n.attrs.get("role").is_some_and(|v| v == "combobox")
-        })
-        .or_else(|| {
-            find_first(&web.themes["dark"].root, &|n| {
-                n.attrs.get("role").is_some_and(|v| v == "combobox")
+    let web_trigger = if web_portal_role == Some("listbox") {
+        fn find_in_theme<'a>(
+            t: &'a WebGoldenTheme,
+            pred: &dyn Fn(&WebNode) -> bool,
+        ) -> Option<&'a WebNode> {
+            find_first(&t.root, pred)
+                .or_else(|| t.portal_wrappers.iter().find_map(|n| find_first(n, pred)))
+                .or_else(|| t.portals.iter().find_map(|n| find_first(n, pred)))
+        }
+
+        // Some pages (notably nested demos like `date-picker-with-presets.select-open.open`) have
+        // multiple openable buttons, but only one `role=combobox` anchor that controls the listbox
+        // portal. Prefer that anchor for placement math.
+        let is_open_combobox = |n: &WebNode| {
+            n.tag == "button"
+                && n.attrs.get("role").is_some_and(|v| v == "combobox")
+                && (n
+                    .attrs
+                    .get("data-state")
+                    .is_some_and(|v| v.as_str() == "open")
+                    || n.attrs
+                        .get("aria-expanded")
+                        .is_some_and(|v| v.as_str() == "true"))
+        };
+
+        find_in_theme(&web.themes["light"], &is_open_combobox)
+            .or_else(|| find_in_theme(&web.themes["dark"], &is_open_combobox))
+            .or_else(|| {
+                find_in_theme(&web.themes["light"], &|n| {
+                    n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+                })
             })
-        })
-        .expect("web trigger (combobox)"),
-        "context-menu-demo" => find_first(&web.themes["light"].root, &|n| {
-            n.text
-                .as_deref()
-                .is_some_and(|t| t.contains("Right click here"))
-        })
-        .or_else(|| {
-            find_first(&web.themes["dark"].root, &|n| {
+            .or_else(|| {
+                find_in_theme(&web.themes["dark"], &|n| {
+                    n.tag == "button" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+                })
+            })
+            .expect("web trigger (combobox)")
+    } else {
+        match web_name {
+            "context-menu-demo" => find_first(&web.themes["light"].root, &|n| {
                 n.text
                     .as_deref()
                     .is_some_and(|t| t.contains("Right click here"))
             })
-        })
-        .expect("web trigger (context menu)"),
-        _ => {
-            let is_open_trigger = |n: &WebNode| {
-                n.tag == "button"
-                    && (n
-                        .attrs
-                        .get("data-state")
-                        .is_some_and(|v| v.as_str() == "open")
-                        || n.attrs
-                            .get("aria-expanded")
-                            .is_some_and(|v| v.as_str() == "true"))
-            };
+            .or_else(|| {
+                find_first(&web.themes["dark"].root, &|n| {
+                    n.text
+                        .as_deref()
+                        .is_some_and(|t| t.contains("Right click here"))
+                })
+            })
+            .expect("web trigger (context menu)"),
+            _ => {
+                let is_open_trigger = |n: &WebNode| {
+                    n.tag == "button"
+                        && (n
+                            .attrs
+                            .get("data-state")
+                            .is_some_and(|v| v.as_str() == "open")
+                            || n.attrs
+                                .get("aria-expanded")
+                                .is_some_and(|v| v.as_str() == "true"))
+                };
 
-            find_first(&web.themes["light"].root, &is_open_trigger)
-                .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
-                .or_else(|| find_first(&web.themes["light"].root, &|n| n.tag == "button"))
-                .or_else(|| find_first(&web.themes["dark"].root, &|n| n.tag == "button"))
-                .expect("web trigger (button)")
+                find_first(&web.themes["light"].root, &is_open_trigger)
+                    .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+                    .or_else(|| find_first(&web.themes["light"].root, &|n| n.tag == "button"))
+                    .or_else(|| find_first(&web.themes["dark"].root, &|n| n.tag == "button"))
+                    .expect("web trigger (button)")
+            }
         }
     };
 
@@ -2381,10 +2415,18 @@ fn assert_overlay_placement_matches(
         .or_else(|| find_attr_in_subtree(web_portal, "data-side"))
         .and_then(parse_side)
         .unwrap_or_else(|| infer_side(web_trigger.rect, web_portal.rect));
-    let web_align = find_attr_in_subtree(web_portal_leaf, "data-align")
-        .or_else(|| find_attr_in_subtree(web_portal, "data-align"))
-        .and_then(parse_align)
-        .unwrap_or_else(|| infer_align(web_side, web_trigger.rect, web_portal.rect));
+    let web_align = if web_portal_role == Some("listbox") {
+        // For Radix Select-style listboxes, the `data-align` attribute lives on the inner content
+        // element, while our placement comparisons target the positioned wrapper rect (the popper
+        // content wrapper). Infer the effective alignment from geometry to avoid false mismatches
+        // under collision shifting/clamping.
+        infer_align(web_side, web_trigger.rect, web_portal.rect)
+    } else {
+        find_attr_in_subtree(web_portal_leaf, "data-align")
+            .or_else(|| find_attr_in_subtree(web_portal, "data-align"))
+            .and_then(parse_align)
+            .unwrap_or_else(|| infer_align(web_side, web_trigger.rect, web_portal.rect))
+    };
 
     let expected_gap = rect_main_gap(web_side, web_trigger.rect, web_portal.rect);
     let expected_cross = rect_cross_delta(web_side, web_align, web_trigger.rect, web_portal.rect);
@@ -2446,18 +2488,27 @@ fn assert_overlay_placement_matches(
         .expect("semantics snapshot (open)")
         .clone();
 
-    let trigger = snap_closed
-        .nodes
-        .iter()
-        .find(|n| {
-            if n.role != fret_trigger_role {
+    // Most overlays have a trigger that exists even when the portal is closed. Nested overlay
+    // scenarios (e.g. a Select inside an open Popover) only have their trigger once the parent
+    // overlay is visible. Fall back to the open snapshot in that case.
+    fn find_trigger_in<'a>(
+        snap: &'a SemanticsSnapshot,
+        role: SemanticsRole,
+        label: Option<&str>,
+    ) -> Option<&'a fret_core::SemanticsNode> {
+        snap.nodes.iter().find(|n| {
+            if n.role != role {
                 return false;
             }
-            if let Some(label) = fret_trigger_label {
+            if let Some(label) = label {
                 return n.label.as_deref() == Some(label);
             }
             true
         })
+    }
+
+    let trigger = find_trigger_in(&snap_closed, fret_trigger_role, fret_trigger_label)
+        .or_else(|| find_trigger_in(&snap_open, fret_trigger_role, fret_trigger_label))
         .unwrap_or_else(|| {
             use std::collections::BTreeMap;
 
@@ -2499,20 +2550,20 @@ fn assert_overlay_placement_matches(
             }
 
             let mut role_counts: BTreeMap<&'static str, usize> = BTreeMap::new();
-            for n in &snap_closed.nodes {
+            for n in &snap_open.nodes {
                 *role_counts.entry(role_name(n.role)).or_insert(0) += 1;
             }
 
-            let candidates: Vec<(Option<&str>, Option<&str>)> = snap_closed
+            let candidates: Vec<(Option<&str>, Option<&str>)> = snap_open
                 .nodes
                 .iter()
                 .filter(|n| n.role == fret_trigger_role)
                 .map(|n| (n.label.as_deref(), n.test_id.as_deref()))
                 .collect();
 
-            let roots: Vec<_> = snap_closed.roots.iter().map(|r| r.root).collect();
+            let roots: Vec<_> = snap_open.roots.iter().map(|r| r.root).collect();
 
-            let sample: Vec<(SemanticsRole, Option<&str>, Option<&str>)> = snap_closed
+            let sample: Vec<(SemanticsRole, Option<&str>, Option<&str>)> = snap_open
                 .nodes
                 .iter()
                 .take(30)
@@ -2520,7 +2571,7 @@ fn assert_overlay_placement_matches(
                 .collect();
 
             panic!(
-                "missing fret trigger role={fret_trigger_role:?} label={fret_trigger_label:?} (closed snapshot); roots={roots:?}; role_counts={role_counts:?}; candidates(label,test_id)={candidates:?}; sample(role,label,test_id)={sample:?}"
+                "missing fret trigger role={fret_trigger_role:?} label={fret_trigger_label:?}; roots={roots:?}; role_counts={role_counts:?}; candidates(label,test_id)={candidates:?}; sample(role,label,test_id)={sample:?}"
             );
         });
 
@@ -3076,6 +3127,61 @@ fn web_vs_fret_date_picker_with_presets_open_overlay_placement_matches() {
         SemanticsRole::Button,
         Some("Pick a date"),
         SemanticsRole::Dialog,
+    );
+}
+
+#[test]
+fn web_vs_fret_date_picker_with_presets_select_listbox_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "date-picker-with-presets.select-open",
+        Some("listbox"),
+        |cx, open| {
+            use fret_ui_kit::{ChromeRefinement, LengthRefinement, MetricRef};
+            use fret_ui_shadcn::select::SelectPosition;
+
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+
+            fret_ui_shadcn::Popover::new(open.clone())
+                .align(fret_ui_shadcn::PopoverAlign::Start)
+                .side(fret_ui_shadcn::PopoverSide::Bottom)
+                .into_element(
+                    cx,
+                    |cx| {
+                        fret_ui_shadcn::Button::new("Pick a date")
+                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))),
+                            )
+                            .into_element(cx)
+                    },
+                    move |cx| {
+                        let select = fret_ui_shadcn::Select::new(value.clone(), open.clone())
+                            .placeholder("Select")
+                            .position(SelectPosition::Popper)
+                            .items([
+                                fret_ui_shadcn::SelectItem::new("0", "Today"),
+                                fret_ui_shadcn::SelectItem::new("1", "Tomorrow"),
+                                fret_ui_shadcn::SelectItem::new("3", "In 3 days"),
+                                fret_ui_shadcn::SelectItem::new("7", "In a week"),
+                            ])
+                            .into_element(cx);
+
+                        let body = stack::vstack(
+                            cx,
+                            stack::VStackProps::default().gap(Space::N2).items_stretch(),
+                            move |_cx| vec![select],
+                        );
+
+                        fret_ui_shadcn::PopoverContent::new([body])
+                            .refine_style(ChromeRefinement::default().p(Space::N2))
+                            .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+                            .into_element(cx)
+                    },
+                )
+        },
+        SemanticsRole::ComboBox,
+        None,
+        SemanticsRole::ListBox,
     );
 }
 
