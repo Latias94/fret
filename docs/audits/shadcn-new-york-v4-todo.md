@@ -11,7 +11,9 @@ Status:
 ## P0 (Overlays)
 
 - Menus: destructive *idle* vs *focused* state matrix (ContextMenu done; replicate where applicable).
-- Menus/listboxes: add a constrained-viewport golden gate that asserts **menu height** + scroll buttons/clamp behavior.
+- Menus/listboxes: constrained-viewport gates now assert **menu/listbox height** + scroll behavior for the primary demos
+  (DropdownMenu/ContextMenu/Menubar/SelectScrollable/Combobox). Next: extend the same pattern to any remaining
+  overlay families that expose viewport-dependent sizing (e.g. NavigationMenu content panels).
 - Menubar destructive variant: **not exercised** by `menubar-demo` in upstream `new-york-v4` registry.
   Options:
   - Add a dedicated upstream example (requires upstream changes; avoid), or

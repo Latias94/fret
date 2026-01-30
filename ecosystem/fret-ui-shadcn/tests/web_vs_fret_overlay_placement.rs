@@ -2044,6 +2044,17 @@ fn fret_listbox_option_heights_in_listbox(snap: &fret_core::SemanticsSnapshot) -
         .collect()
 }
 
+fn fret_listbox_height(snap: &fret_core::SemanticsSnapshot) -> f32 {
+    snap.nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::ListBox)
+        .unwrap_or_else(|| panic!("missing fret listbox"))
+        .bounds
+        .size
+        .height
+        .0
+}
+
 fn fret_node_heights_by_test_id(snap: &fret_core::SemanticsSnapshot, test_id: &str) -> Vec<f32> {
     snap.nodes
         .iter()
@@ -9126,6 +9137,141 @@ fn web_vs_fret_select_scrollable_small_viewport_listbox_option_height_matches() 
 #[test]
 fn web_vs_fret_select_scrollable_tiny_viewport_listbox_option_height_matches() {
     assert_select_scrollable_listbox_option_height_matches("select-scrollable.vp1440x240");
+}
+
+fn assert_select_scrollable_listbox_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_listbox = web_select_listbox(theme);
+    let expected_h = web_listbox.rect.h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(theme);
+
+    let value: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        let value = value.clone();
+        let open = open.clone();
+
+        use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+        let entries: Vec<SelectEntry> = vec![
+            SelectGroup::new(vec![
+                SelectLabel::new("North America").into(),
+                SelectItem::new("est", "Eastern Standard Time (EST)").into(),
+                SelectItem::new("cst", "Central Standard Time (CST)").into(),
+                SelectItem::new("mst", "Mountain Standard Time (MST)").into(),
+                SelectItem::new("pst", "Pacific Standard Time (PST)").into(),
+                SelectItem::new("akst", "Alaska Standard Time (AKST)").into(),
+                SelectItem::new("hst", "Hawaii Standard Time (HST)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Europe & Africa").into(),
+                SelectItem::new("gmt", "Greenwich Mean Time (GMT)").into(),
+                SelectItem::new("cet", "Central European Time (CET)").into(),
+                SelectItem::new("eet", "Eastern European Time (EET)").into(),
+                SelectItem::new("west", "Western European Summer Time (WEST)").into(),
+                SelectItem::new("cat", "Central Africa Time (CAT)").into(),
+                SelectItem::new("eat", "East Africa Time (EAT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Asia").into(),
+                SelectItem::new("msk", "Moscow Time (MSK)").into(),
+                SelectItem::new("ist", "India Standard Time (IST)").into(),
+                SelectItem::new("cst_china", "China Standard Time (CST)").into(),
+                SelectItem::new("jst", "Japan Standard Time (JST)").into(),
+                SelectItem::new("kst", "Korea Standard Time (KST)").into(),
+                SelectItem::new("ist_indonesia", "Indonesia Central Standard Time (WITA)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("Australia & Pacific").into(),
+                SelectItem::new("awst", "Australian Western Standard Time (AWST)").into(),
+                SelectItem::new("acst", "Australian Central Standard Time (ACST)").into(),
+                SelectItem::new("aest", "Australian Eastern Standard Time (AEST)").into(),
+                SelectItem::new("nzst", "New Zealand Standard Time (NZST)").into(),
+                SelectItem::new("fjt", "Fiji Time (FJT)").into(),
+            ])
+            .into(),
+            SelectGroup::new(vec![
+                SelectLabel::new("South America").into(),
+                SelectItem::new("art", "Argentina Time (ART)").into(),
+                SelectItem::new("bot", "Bolivia Time (BOT)").into(),
+                SelectItem::new("brt", "Brasilia Time (BRT)").into(),
+                SelectItem::new("clt", "Chile Standard Time (CLT)").into(),
+            ])
+            .into(),
+        ];
+
+        fret_ui_shadcn::Select::new(value, open)
+            .a11y_label("Select")
+            .placeholder("Select a timezone")
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
+            .entries(entries)
+            .into_element(cx)
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual_h = fret_listbox_height(&snap);
+    assert_close(&format!("{web_name} listbox_h"), actual_h, expected_h, 2.0);
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_listbox_height_matches() {
+    assert_select_scrollable_listbox_height_matches("select-scrollable");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_small_viewport_listbox_height_matches() {
+    assert_select_scrollable_listbox_height_matches("select-scrollable.vp1440x450");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_tiny_viewport_listbox_height_matches() {
+    assert_select_scrollable_listbox_height_matches("select-scrollable.vp1440x240");
 }
 
 fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
