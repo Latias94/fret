@@ -15,8 +15,10 @@ Status:
   (DropdownMenu/ContextMenu/Menubar/SelectScrollable/Combobox/NavigationMenu). Next: extend the same pattern to any
   remaining overlay families that expose viewport-dependent sizing.
 - DatePicker open overlays:
-  - Added popover placement gates for `date-picker-demo.open` and `date-picker-with-range.open`.
-  - Next: implement + gate `date-picker-with-presets.open` (Select + calendar composition inside the popover).
+  - Added popover placement gates for `date-picker-demo.open`, `date-picker-with-presets.open`, and
+    `date-picker-with-range.open`.
+  - Remaining depth work: wire the preset `Select` -> date selection behavior (upstream `addDays(new Date(), …)`),
+    then add an interaction golden that opens the Select listbox and validates the combined overlay stacking.
 - NavigationMenu viewport content insets: current gates allow a small extra tolerance (`2px`) because the Fret test
   harness bounds are more integer-ish than the web's subpixel `border-box` snapshots. Prefer fixing this at the layout
   model level (border/box sizing), not by baking more per-component offsets.

@@ -23218,7 +23218,7 @@ fn web_vs_fret_layout_date_picker_demo_trigger_geometry_matches_web() {
         let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
 
         vec![
-            fret_ui_shadcn::DatePicker::new(open, month, selected)
+            fret_ui_shadcn::DatePickerWithPresets::new(open, month, selected)
                 .refine_layout(
                     LayoutRefinement::default().w_px(MetricRef::Px(Px(web_button.rect.w))),
                 )
