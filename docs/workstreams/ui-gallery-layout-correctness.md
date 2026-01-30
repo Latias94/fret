@@ -164,6 +164,8 @@ Implementation note:
 - [x] Extend the overlay script with “hover + menu” coverage:
   - Tooltip / HoverCard open + bounds assertions
   - DropdownMenu / ContextMenu open + bounds assertions
+- [x] Add a scroll + clamp regression for hover overlays:
+  - `tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json` (opens the hover overlays, then scrolls the main content viewport and asserts the overlay stays within the window).
 - [x] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
   - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - [ ] For each new P0 issue:
