@@ -927,10 +927,18 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/docking-demo-drag-indicators.json`
     - Gate: `fretboard diag stats <bundle.json> --check-drag-cache-root-paint-only dock-demo-dock-space`
 
-- [ ] GPUI-MVP5-eco-009 Workspace/inspectors: identify list/outline/file-tree surfaces that should be windowed.
+- [~] GPUI-MVP5-eco-009 Workspace/inspectors: identify list/outline/file-tree surfaces that should be windowed.
   - Touches: `ecosystem/fret-workspace/src/*`, `apps/fret-editor/src/*`.
   - Done when: we have (1) an evidence-backed candidate list, (2) one migrated surface (windowed rows or VirtualList v2),
     and (3) a `diag` script that catches “looks stale / click hits correct but paint is stale” regressions.
+  - Progress (v1):
+    - Note: `apps/fret-editor` currently only contains the inspector protocol/services (no large inspector UI surface yet).
+      To keep eco-009 moving, we exercise the “inspector-like property list” shape in UI Gallery as a stand-in harness.
+    - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_INSPECTOR_TORTURE`), root test id `ui-gallery-inspector-root`.
+    - Script: `tools/diag-scripts/ui-gallery-inspector-torture-scroll.json`.
+    - Gate (cache+shell, retained host, release):
+      - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-inspector-torture-scroll.json --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --check-view-cache-reuse-min 1 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-inspector-row-0-label --check-stale-paint ui-gallery-inspector-row-0-label --launch -- cargo run -p fret-ui-gallery --release`
+    - Evidence bundle (cache+shell, release): `target/fret-diag-inspector-torture-local2/1769735532323-ui-gallery-inspector-torture-scroll/bundle.json`
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
