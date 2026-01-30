@@ -26,6 +26,38 @@ These are not “component bugs”; they are usually caused by **measurement vs 
 
 ## Repro Cases (UI Gallery)
 
+## Repro Steps (UI Gallery)
+
+This workstream tracks integration failures via UI Gallery pages. Use the environment variable (native) or URL
+parameter (web) to jump directly to a target page.
+
+### Native (Windows first)
+
+- Run: `cargo run -p fret-ui-gallery`
+- Start on a page: `FRET_UI_GALLERY_START_PAGE=layout cargo run -p fret-ui-gallery`
+- Enable inspector (prints hit/bounds/text constraints in the status bar): `FRET_UI_GALLERY_INSPECTOR=1`
+
+Relevant pages for this workstream:
+
+- `layout` (repro A)
+- `forms` (repro B)
+- `text_measure_overlay` (measurement vs container overlay harness)
+- `text_bidi_rtl_conformance` (geometry query conformance harness)
+
+### Web / wasm32
+
+Use the dedicated harness:
+
+- `cd apps/fret-ui-gallery-web`
+- `trunk serve`
+
+Then open the printed URL with a page selector:
+
+- `?page=layout`
+- `?page=text_measure_overlay`
+
+See `apps/fret-ui-gallery/README.md` and `apps/fret-ui-gallery-web/README.md` for the up-to-date run instructions.
+
 ### A) Layout page: “Left (fill)” breaks into two lines and the second line paints outside its background
 
 File: `apps/fret-ui-gallery/src/ui.rs` (`preview_layout`)

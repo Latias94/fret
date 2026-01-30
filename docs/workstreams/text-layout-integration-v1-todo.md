@@ -36,11 +36,16 @@ P2 (polish):
 
 Exit criteria:
 
-- [ ] UI Gallery repro steps are documented (native + web).
-- [ ] A debug capture can report, for a selected subtree:
+- [x] UI Gallery repro steps are documented (native + web).
+  - Evidence: `docs/workstreams/text-layout-integration-v1.md` (Repro Steps),
+    `apps/fret-ui-gallery/README.md`, `apps/fret-ui-gallery-web/README.md`.
+- [x] A debug capture can report, for a selected subtree:
   - measured `TextConstraints` (max_width, wrap, overflow, scale_factor)
   - painted `TextConstraints` (same fields)
   - computed layout bounds for the relevant nodes
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (inspector status bar output),
+    `crates/fret-ui/src/declarative/host_widget/{measure.rs,paint.rs}` (records constraints),
+    `crates/fret-ui/src/tree/mod.rs` (`UiDebugTextConstraintsSnapshot`).
 
 ### TLI1-M1 — Measurement/paint consistency hardening
 
