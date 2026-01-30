@@ -16,7 +16,7 @@ anyhow.workspace = true
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-launch = { path = "../../crates/fret-launch" }
+fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }

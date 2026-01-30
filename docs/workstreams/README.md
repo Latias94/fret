@@ -10,10 +10,14 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
+- `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
 - `docs/workstreams/state-driven-style-resolution-v1.md`
+- `docs/workstreams/control-rack-v1.md`
+- `docs/workstreams/control-rack-v1-todo.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
 - `docs/workstreams/foundation-closure-p0.md`
