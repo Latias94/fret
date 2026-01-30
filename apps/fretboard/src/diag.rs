@@ -1505,7 +1505,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     launch_env.push(("FRET_UI_GALLERY_TREE_RETAINED".to_string(), "1".to_string()));
                 }
                 check_retained_vlist_reconcile_no_notify_min =
-                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(2));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -1552,7 +1554,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     ));
                 }
                 check_retained_vlist_reconcile_no_notify_min =
-                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(2));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -1593,7 +1597,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     ));
                 }
                 check_retained_vlist_reconcile_no_notify_min =
-                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(2));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -1643,7 +1649,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     ));
                 }
                 check_retained_vlist_reconcile_no_notify_min =
-                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(2));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
                 check_retained_vlist_scroll_window_dirty_max =
@@ -2010,11 +2018,27 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     }
                 }
 
-                let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min;
+                // Some suites mix "window boundary" scripts (which must prove retained vlist
+                // reconciliation behavior) with interaction scripts (sort/select/toggle) that may
+                // not cross boundaries predictably. Apply the retained-vlist window-boundary gates
+                // only to the scripts that are explicitly designed to cross overscan boundaries.
+                let should_gate_retained_vlist_for_script = !(is_ui_gallery_tree_retained_suite
+                    || is_ui_gallery_tree_retained_measured_suite
+                    || is_ui_gallery_data_table_retained_suite
+                    || is_ui_gallery_data_table_retained_measured_suite)
+                    || ui_gallery_script_requires_retained_vlist_window_boundary_gate(&src);
+
+                let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min
+                    .filter(|_| should_gate_retained_vlist_for_script);
+                let retained_vlist_attach_detach_min_for_script =
+                    check_retained_vlist_attach_detach_min
+                        .filter(|_| should_gate_retained_vlist_for_script);
                 let retained_vlist_attach_detach_max_for_script =
-                    check_retained_vlist_attach_detach_max;
+                    check_retained_vlist_attach_detach_max
+                        .filter(|_| should_gate_retained_vlist_for_script);
                 let retained_vlist_scroll_window_dirty_max_for_script =
-                    check_retained_vlist_scroll_window_dirty_max;
+                    check_retained_vlist_scroll_window_dirty_max
+                        .filter(|_| should_gate_retained_vlist_for_script);
                 let vlist_scroll_window_dirty_max_for_script = check_vlist_scroll_window_dirty_max
                     .filter(|_| ui_gallery_script_requires_vlist_window_boundary_gate(&src));
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
@@ -2028,7 +2052,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_dock_drag_min.is_some()
                     || check_viewport_capture_min.is_some()
                     || retained_vlist_gate_for_script.is_some()
-                    || check_retained_vlist_attach_detach_min.is_some()
+                    || retained_vlist_attach_detach_min_for_script.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some()
                     || retained_vlist_scroll_window_dirty_max_for_script.is_some()
                     || vlist_scroll_window_dirty_max_for_script.is_some();
@@ -2070,7 +2094,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_dock_drag_min.or(suite_dock_drag_min),
                         check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script,
-                        check_retained_vlist_attach_detach_min,
+                        retained_vlist_attach_detach_min_for_script,
                         retained_vlist_attach_detach_max_for_script,
                         retained_vlist_scroll_window_dirty_max_for_script,
                         vlist_scroll_window_dirty_max_for_script,
@@ -3657,6 +3681,20 @@ fn ui_gallery_script_requires_vlist_window_boundary_gate(script: &Path) -> bool 
     };
 
     matches!(name, "ui-gallery-virtual-list-window-boundary-scroll.json")
+}
+
+fn ui_gallery_script_requires_retained_vlist_window_boundary_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+            | "ui-gallery-tree-window-boundary-scroll-retained.json"
+            | "ui-gallery-data-table-window-boundary-scroll-retained.json"
+            | "ui-gallery-table-retained-window-boundary-scroll.json"
+    )
 }
 
 fn ui_gallery_script_requires_overlay_synthesis_gate(script: &Path) -> bool {
