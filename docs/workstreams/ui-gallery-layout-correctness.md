@@ -143,6 +143,8 @@ These are the most common “editor UI” failure modes, expressed in tailwind l
 Implementation note:
 
 - `fret-ui-shadcn` `ScrollArea` now defaults to `min_w_0().min_h_0()` so it is “safe by default” in editor-like flex shells.
+- `fret-ui-shadcn` `DialogContent` / `SheetContent` / `PopoverContent` now default to `min_w_0().min_h_0()` and
+  use shrink-safe internal stacks to reduce “max-content blowup” and flex+scroll edge cases.
 
 ### 5.3 TODO (Near-term)
 
@@ -151,12 +153,14 @@ Implementation note:
   - [x] Tabs content / panels (L2)
   - [x] Scroll areas used inside flex stacks (`ScrollArea` defaults to `min_w_0().min_h_0()`)
   - [x] Resizable/split panel wrappers and handle rows (L1)
-  - [ ] Cards/dialogs/sheets/popovers content wrappers
+  - [x] Cards/dialogs/sheets/popovers content wrappers (shrink-safe defaults)
 - [x] Add a lightweight “page-sweep” script that visits a few core pages and asserts `bounds_within_window` for `ui-gallery-page-*` roots:
   - `tools/diag-scripts/ui-gallery-layout-sweep-core.json`
   - Current coverage (kept intentionally small): `intro`, `layout`, `scroll_area`, `tabs`, `accordion`, `overlay`, `resizable`.
 - [x] Add an overlay regression script that opens key modals/popovers and asserts bounds:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
+- [x] Extend the overlay script with a “flex + scroll” stress interaction:
+  - Scroll dialog / sheet viewports to catch `min_h_0` regressions.
 - [x] Add a portal geometry script that keeps a popover open while scrolling and asserts the overlay stays clamped:
   - `tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json`
 - [ ] For each new P0 issue:
