@@ -6216,6 +6216,18 @@ fn hit_test_node_id(snapshot: &serde_json::Value) -> Option<u64> {
         .and_then(|v| v.as_u64())
 }
 
+fn virtual_list_offset_for_node(snapshot: &serde_json::Value, node: u64) -> Option<f64> {
+    snapshot
+        .get("debug")
+        .and_then(|v| v.get("virtual_list_windows"))
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+        .find(|entry| entry.get("node").and_then(|v| v.as_u64()) == Some(node))
+        .and_then(|entry| entry.get("offset"))
+        .and_then(|v| v.as_f64())
+}
+
 fn check_bundle_for_wheel_scroll(
     bundle_path: &Path,
     test_id: &str,
@@ -6324,10 +6336,15 @@ fn check_bundle_for_wheel_scroll_json(
         };
         any_test_id_match = true;
 
+        let offset_before = virtual_list_offset_for_node(before, target_before)
+            .or_else(|| virtual_list_offset_for_node(before, target_after));
+
         let mut moved = false;
         let mut best_after_frame: u64 = after_frame_id;
         let mut best_y_after: Option<f64> = None;
         let mut best_dy: f64 = 0.0;
+        let mut best_offset_after: Option<f64> = None;
+        let mut best_doffset: f64 = 0.0;
 
         for s in snaps {
             let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -6350,9 +6367,40 @@ fn check_bundle_for_wheel_scroll_json(
         }
 
         if !moved {
+            if let Some(offset_before) = offset_before {
+                for s in snaps {
+                    let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    if frame_id < after_frame {
+                        continue;
+                    }
+
+                    let offset = virtual_list_offset_for_node(s, target_before)
+                        .or_else(|| virtual_list_offset_for_node(s, target_after));
+                    let Some(offset) = offset else {
+                        continue;
+                    };
+
+                    let doffset = (offset - offset_before).abs();
+                    if doffset > best_doffset {
+                        best_doffset = doffset;
+                        best_offset_after = Some(offset);
+                        best_after_frame = frame_id;
+                    }
+
+                    if doffset > eps_px {
+                        moved = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if !moved {
             let y_after = best_y_after.unwrap_or(y_before);
+            let offset_before = offset_before.map(|v| format!("{v:.3}"));
+            let offset_after = best_offset_after.map(|v| format!("{v:.3}"));
             failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} after_frame={best_after_frame} test_id={test_id} error=target_y_did_not_move_after_wheel dy={best_dy:.3} y_before={y_before:.3} y_after={y_after:.3} hit_before={:?} hit_after={:?} target_before={target_before} target_after={target_after}",
+                "window={window_id} wheel_frame={wheel_frame} after_frame={best_after_frame} test_id={test_id} error=target_did_not_move_after_wheel dy={best_dy:.3} y_before={y_before:.3} y_after={y_after:.3} doffset={best_doffset:.3} offset_before={offset_before:?} offset_after={offset_after:?} hit_before={:?} hit_after={:?} target_before={target_before} target_after={target_after}",
                 hit_test_node_id(before),
                 hit_test_node_id(after),
             ));
@@ -6380,7 +6428,7 @@ fn check_bundle_for_wheel_scroll_json(
 
     let mut msg = String::new();
     msg.push_str(
-        "wheel scroll check failed (expected target semantics bounds to move after wheel)\n",
+        "wheel scroll check failed (expected target semantics bounds or scroll offset to change after wheel)\n",
     );
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     for line in failures {
@@ -9379,6 +9427,53 @@ mod tests {
         });
 
         check_bundle_for_wheel_scroll_json(&bundle, Path::new("bundle.json"), "a|b", 0).unwrap();
+    }
+
+    #[test]
+    fn wheel_scroll_gate_accepts_virtual_list_offset_change_for_list_root() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "events": [
+                        { "kind": "pointer.wheel", "frame_id": 2 }
+                    ],
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        { "id": 10, "role": "list", "test_id": "root", "bounds": { "y": 0.0 } }
+                                    ]
+                                },
+                                "virtual_list_windows": [
+                                    { "node": 10, "offset": 0.0 }
+                                ]
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        { "id": 10, "role": "list", "test_id": "root", "bounds": { "y": 0.0 } }
+                                    ]
+                                },
+                                "virtual_list_windows": [
+                                    { "node": 10, "offset": 10.0 }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_wheel_scroll_json(&bundle, Path::new("bundle.json"), "root", 0).unwrap();
     }
 
     #[test]
