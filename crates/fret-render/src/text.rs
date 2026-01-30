@@ -1012,13 +1012,33 @@ fn metrics_from_wrapped_lines(
     lines: &[crate::text_v2::parley_shaper::ShapedLineLayout],
     scale: f32,
 ) -> TextMetrics {
-    let first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+    let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+
+    let mut first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+    if snap_vertical && let Some(first) = lines.first() {
+        let top_px = 0.0_f32;
+        let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+        let height_px = (bottom_px - top_px).max(0.0);
+        first_baseline_px = (top_px + first.baseline.max(0.0))
+            .round()
+            .clamp(top_px, top_px + height_px);
+    }
 
     let mut max_w_px = 0.0_f32;
     let mut total_h_px = 0.0_f32;
-    for line in lines {
-        max_w_px = max_w_px.max(line.width.max(0.0));
-        total_h_px += line.line_height.max(0.0);
+    if snap_vertical {
+        let mut top_px = 0.0_f32;
+        for line in lines {
+            max_w_px = max_w_px.max(line.width.max(0.0));
+            let bottom_px = (top_px + line.line_height.max(0.0)).round().max(top_px);
+            top_px = bottom_px;
+        }
+        total_h_px = top_px;
+    } else {
+        for line in lines {
+            max_w_px = max_w_px.max(line.width.max(0.0));
+            total_h_px += line.line_height.max(0.0);
+        }
     }
 
     TextMetrics {
@@ -1622,6 +1642,18 @@ impl TextSystem {
                     .first()
                     .map(|l| l.baseline.max(0.0))
                     .unwrap_or(0.0);
+                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+                let first_baseline_px = if snap_vertical && let Some(first) = wrapped.lines.first()
+                {
+                    let top_px = 0.0_f32;
+                    let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+                    let height_px = (bottom_px - top_px).max(0.0);
+                    (top_px + first.baseline.max(0.0))
+                        .round()
+                        .clamp(top_px, top_px + height_px)
+                } else {
+                    first_baseline_px
+                };
 
                 let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
 
@@ -1638,9 +1670,25 @@ impl TextSystem {
                     .zip(wrapped.lines.into_iter())
                     .enumerate()
                 {
-                    let line_height_px = line.line_height.max(0.0);
-                    let line_baseline_px = line.baseline.max(0.0);
-                    let line_offset_px = (line_top_px + line_baseline_px) - first_baseline_px;
+                    if snap_vertical {
+                        line_top_px = line_top_px.round();
+                    }
+
+                    let line_height_px_raw = line.line_height.max(0.0);
+                    let line_baseline_px_raw = line.baseline.max(0.0);
+
+                    let (line_height_px, baseline_pos_px) = if snap_vertical {
+                        let bottom_px = (line_top_px + line_height_px_raw).round().max(line_top_px);
+                        let height_px = (bottom_px - line_top_px).max(0.0);
+                        let baseline_pos_px = (line_top_px + line_baseline_px_raw)
+                            .round()
+                            .clamp(line_top_px, line_top_px + height_px);
+                        (height_px, baseline_pos_px)
+                    } else {
+                        (line_height_px_raw, line_top_px + line_baseline_px_raw)
+                    };
+
+                    let line_offset_px = baseline_pos_px - first_baseline_px;
 
                     let slice = &text[range.clone()];
                     let caret_stops = caret_stops_for_slice(
@@ -3013,6 +3061,74 @@ mod tests {
         let k0 = TextBlobKey::new("hello", &base, constraints, 1);
         let k1 = TextBlobKey::new("hello", &base, constraints, 2);
         assert_ne!(k0, k1);
+    }
+
+    #[test]
+    fn multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = {
+            let mut out = String::new();
+            for _ in 0..200 {
+                out.push_str("The quick brown fox jumps over the lazy dog. ");
+            }
+            out
+        };
+
+        let scale_factor = 1.25_f32;
+        let constraints = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(13.0),
+            ..Default::default()
+        };
+
+        let (blob_id, metrics) = text.prepare(&content, &style, constraints);
+        let blob = text.blob(blob_id).expect("prepared blob");
+        let lines = blob.shape.lines.as_ref();
+        assert!(lines.len() > 10, "expected multi-line layout");
+
+        let is_pixel_aligned = |logical: Px| {
+            let px = logical.0 * scale_factor;
+            (px - px.round()).abs() < 1e-3
+        };
+
+        assert!(
+            is_pixel_aligned(metrics.baseline),
+            "expected baseline to align to device pixels under fractional scale"
+        );
+
+        let mut prev_y_px = -1.0_f32;
+        for line in lines {
+            let y_px = line.y_top.0 * scale_factor;
+            let h_px = line.height.0 * scale_factor;
+            assert!(
+                (y_px - y_px.round()).abs() < 1e-3,
+                "expected y_top to be pixel-aligned, got {y_px}"
+            );
+            assert!(
+                (h_px - h_px.round()).abs() < 1e-3 && h_px > 0.0,
+                "expected line height to be positive and pixel-aligned, got {h_px}"
+            );
+            assert!(
+                y_px + 0.5 >= prev_y_px,
+                "expected non-decreasing y_top across lines"
+            );
+            prev_y_px = y_px;
+        }
     }
 
     #[test]

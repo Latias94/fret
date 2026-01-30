@@ -186,8 +186,9 @@ Exit criteria:
 
 - [x] Decide whether to round key typography scalars (line height / baseline) similarly to Zed/GPUI.
   - Chosen: snap vertical line advances/baselines to device pixels under non-integer scale factors; keep horizontal subpixel.
-- [ ] Add a regression test that renders multi-line text under a non-integer scale factor and
+- [x] Add a regression test that renders multi-line text under a non-integer scale factor and
   checks for stable metrics/line offsets (no accumulating drift across lines).
+  - Evidence: `crates/fret-render/src/text.rs` (`multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor`).
 
 ## Backlog (issue-shaped TODOs)
 
