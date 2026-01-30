@@ -17,6 +17,8 @@ param(
   [switch]$ShowTargetedMissing,
   [string[]]$TargetedGateExcludeFiles = @("web_vs_fret_layout.rs", "snapshots.rs"),
   [switch]$ShowGateBreakdown,
+  [switch]$GroupUntargetedByPrefix,
+  [string]$FilterUntargetedPrefix,
   [switch]$AsMarkdown
 )
 
@@ -271,6 +273,41 @@ if ($ShowGateBreakdown) {
       $pct = 0.0
       if ($total -gt 0) { $pct = [Math]::Round(($row.Keys * 100.0) / $total, 1) }
       Write-Host ("  {0}: {1} ({2}%)" -f $row.File, $row.Keys, $pct)
+    }
+  }
+}
+
+if ($FilterUntargetedPrefix) {
+  $filtered = $targetedMissingNames | Where-Object { $_ -like ($FilterUntargetedPrefix + "*") }
+  if ($AsMarkdown) {
+    Write-Output ""
+    Write-Output ("### Untargeted keys: {0} (first {1})" -f $FilterUntargetedPrefix, $TopMissing)
+    $filtered | Select-Object -First $TopMissing | ForEach-Object { Write-Output ("- {0}" -f $_) }
+  } else {
+    Write-Host ""
+    Write-Host ("Untargeted keys: {0} (first {1})" -f $FilterUntargetedPrefix, $TopMissing)
+    $filtered | Select-Object -First $TopMissing | ForEach-Object { Write-Host ("  {0}" -f $_) }
+  }
+}
+
+if ($GroupUntargetedByPrefix) {
+  $prefixes = $targetedMissingNames | ForEach-Object {
+    $parts = $_ -split $GroupSplitPattern
+    if ($parts.Length -gt 0) { $parts[0] } else { $_ }
+  }
+
+  $groups = $prefixes | Group-Object | Sort-Object Count -Descending
+  if ($AsMarkdown) {
+    Write-Output ""
+    Write-Output "### Untargeted groups (heuristic)"
+    $groups | Select-Object -First $TopGroups | ForEach-Object {
+      Write-Output ('- `{0}` ({1})' -f $_.Name, $_.Count)
+    }
+  } else {
+    Write-Host ""
+    Write-Host "Untargeted groups (heuristic):"
+    $groups | Select-Object -First $TopGroups | ForEach-Object {
+      Write-Host ("  {0}: {1}" -f $_.Name, $_.Count)
     }
   }
 }
