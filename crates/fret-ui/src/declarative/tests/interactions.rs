@@ -881,6 +881,258 @@ fn selectable_text_double_and_triple_click_select() {
 }
 
 #[test]
+fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
+    #[derive(Default)]
+    struct LineTextService {
+        text: String,
+    }
+
+    impl LineTextService {
+        fn line_range(&self, line: usize) -> Option<(usize, usize)> {
+            if line == 0 && self.text.is_empty() {
+                return Some((0, 0));
+            }
+
+            let mut start = 0usize;
+            let mut line_idx = 0usize;
+            for (i, ch) in self.text.char_indices() {
+                if ch != '\n' {
+                    continue;
+                }
+                if line_idx == line {
+                    return Some((start, i));
+                }
+                start = i + 1;
+                line_idx += 1;
+            }
+
+            if line_idx == line {
+                return Some((start, self.text.len()));
+            }
+            None
+        }
+
+        fn line_count(&self) -> usize {
+            if self.text.is_empty() {
+                return 1;
+            }
+            self.text.chars().filter(|c| *c == '\n').count() + 1
+        }
+
+        fn index_to_line_col(&self, index: usize) -> (usize, usize) {
+            let index = index.min(self.text.len());
+            let mut line = 0usize;
+            let mut col = 0usize;
+            for (i, ch) in self.text.char_indices() {
+                if i >= index {
+                    break;
+                }
+                if ch == '\n' {
+                    line += 1;
+                    col = 0;
+                } else {
+                    col += 1;
+                }
+            }
+            (line, col)
+        }
+    }
+
+    impl fret_core::TextService for LineTextService {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            self.text = input.text().to_string();
+
+            let line_h = Px(10.0);
+            let lines = self.line_count().max(1) as f32;
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(200.0), Px(line_h.0 * lines)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn caret_rect(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            index: usize,
+            _affinity: fret_core::CaretAffinity,
+        ) -> Rect {
+            let line_h = Px(10.0);
+            let char_w = Px(10.0);
+
+            let (line, col) = self.index_to_line_col(index);
+            Rect::new(
+                Point::new(Px(char_w.0 * (col as f32)), Px(line_h.0 * (line as f32))),
+                Size::new(Px(1.0), line_h),
+            )
+        }
+
+        fn hit_test_point(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            point: Point,
+        ) -> fret_core::HitTestResult {
+            let line_h = 10.0_f32;
+            let char_w = 10.0_f32;
+
+            let mut line = (point.y.0 / line_h).floor() as i32;
+            line = line.clamp(0, self.line_count().saturating_sub(1) as i32);
+            let line = line as usize;
+
+            let (start, end) = self.line_range(line).unwrap_or((0, 0));
+            let len = end.saturating_sub(start);
+
+            let mut col = (point.x.0 / char_w).round() as i32;
+            col = col.clamp(0, len as i32);
+            let col = col as usize;
+
+            fret_core::HitTestResult {
+                index: (start + col).min(self.text.len()),
+                affinity: fret_core::CaretAffinity::Downstream,
+            }
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for LineTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for LineTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = LineTextService::default();
+
+    let text = "0123456789\nabc\n0123456789";
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-preferred-x",
+        |cx| {
+            vec![
+                cx.selectable_text_props(crate::element::SelectableTextProps {
+                    layout: Default::default(),
+                    rich: attributed_plain(text),
+                    style: None,
+                    color: None,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let record =
+        crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+            .expect("selectable record");
+    let element = record.element;
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(80.0), Px(5.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let (caret, preferred_x) = crate::elements::with_element_state(
+        &mut app,
+        window,
+        element,
+        crate::element::SelectableTextState::default,
+        |state| (state.caret, state.preferred_x),
+    );
+    assert_eq!(
+        caret, 14,
+        "expected down to clamp into the short middle line"
+    );
+    assert_eq!(
+        preferred_x,
+        Some(Px(80.0)),
+        "expected preferred_x to preserve the original column"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let caret = crate::elements::with_element_state(
+        &mut app,
+        window,
+        element,
+        crate::element::SelectableTextState::default,
+        |state| state.caret,
+    );
+    assert_eq!(
+        caret, 23,
+        "expected preferred_x to restore the original column on the next long line"
+    );
+}
+
+#[test]
 fn selectable_text_sets_active_text_selection() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

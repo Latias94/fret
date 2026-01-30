@@ -910,6 +910,7 @@ pub struct SelectableTextState {
     pub selection_anchor: usize,
     pub caret: usize,
     pub affinity: CaretAffinity,
+    pub preferred_x: Option<Px>,
     pub dragging: bool,
     pub last_pointer_pos: Option<fret_core::Point>,
 }
@@ -920,6 +921,7 @@ impl Default for SelectableTextState {
             selection_anchor: 0,
             caret: 0,
             affinity: CaretAffinity::Downstream,
+            preferred_x: None,
             dragging: false,
             last_pointer_pos: None,
         }

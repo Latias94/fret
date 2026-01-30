@@ -199,7 +199,9 @@ Exit criteria:
   - Chosen: keep visible with reduced alpha; must not break range→rect queries.
 - [ ] TLI1-005: Add Linux primary selection policy (copy-on-select) behind a feature/setting.
   - Decision (v1): behind a feature/setting; default off.
-- [ ] TLI1-006: Add multi-line Up/Down caret movement with “preferred x” behavior.
+- [x] TLI1-006: Add multi-line Up/Down caret movement with “preferred x” behavior.
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (ArrowUp/ArrowDown),
+    `crates/fret-ui/src/declarative/tests/interactions.rs` (`selectable_text_arrow_up_down_uses_preferred_x_across_lines`).
 - [ ] TLI1-007: Add BiDi/RTL conformance strings to UI Gallery and ensure geometry queries match expectations.
 - [ ] TLI1-008: Add decoration rendering tests (underline/strikethrough) under non-integer scale factors.
 - [ ] TLI1-009: Decide trailing-whitespace selection policy and test it.

@@ -52,6 +52,147 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 return;
             }
 
+            let handle_visual_line_home_end =
+                |this: &mut ElementHostWidget,
+                 cx: &mut EventCx<'_, H>,
+                 extend: bool,
+                 at_line_end: bool| {
+                    let Some(blob) = this.text_cache.blob else {
+                        return;
+                    };
+
+                    let (caret, affinity) = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::element::SelectableTextState::default,
+                        |state| (state.caret, state.affinity),
+                    );
+
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_grapheme_boundary(&props.rich.text, caret);
+                    let caret_rect = cx.services.caret_rect(blob, caret, affinity);
+                    let y = fret_core::Px(caret_rect.origin.y.0 + caret_rect.size.height.0 * 0.5);
+                    let x = if at_line_end {
+                        fret_core::Px(1.0e6)
+                    } else {
+                        fret_core::Px(-1.0e6)
+                    };
+
+                    let hit = cx
+                        .services
+                        .hit_test_point(blob, fret_core::Point::new(x, y));
+                    let next = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        hit.index.min(props.rich.text.len()),
+                    );
+
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::element::SelectableTextState::default,
+                        |state| {
+                            state.caret = next;
+                            if !extend {
+                                state.selection_anchor = next;
+                            }
+                            state.affinity = hit.affinity;
+                            state.dragging = false;
+                            state.preferred_x = None;
+                        },
+                    );
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    sync_active_text_selection(&mut *cx.app, window, this.element);
+                    cx.stop_propagation();
+                };
+
+            let handle_visual_move_vertical =
+                |this: &mut ElementHostWidget,
+                 cx: &mut EventCx<'_, H>,
+                 extend: bool,
+                 down: bool| {
+                    let Some(blob) = this.text_cache.blob else {
+                        return;
+                    };
+
+                    let (caret, anchor, affinity, preferred_x) =
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            this.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                (
+                                    state.caret,
+                                    state.selection_anchor,
+                                    state.affinity,
+                                    state.preferred_x,
+                                )
+                            },
+                        );
+
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_grapheme_boundary(&props.rich.text, caret);
+                    let caret_rect = cx.services.caret_rect(blob, caret, affinity);
+                    let x = preferred_x.unwrap_or(caret_rect.origin.x);
+                    let y = if down {
+                        fret_core::Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0)
+                    } else {
+                        fret_core::Px(caret_rect.origin.y.0 - 1.0)
+                    };
+
+                    let hit = cx
+                        .services
+                        .hit_test_point(blob, fret_core::Point::new(x, y));
+                    let next = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        hit.index.min(props.rich.text.len()),
+                    );
+                    let next_anchor = if extend { anchor } else { next };
+
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::element::SelectableTextState::default,
+                        |state| {
+                            state.selection_anchor = next_anchor;
+                            state.caret = next;
+                            state.affinity = hit.affinity;
+                            state.dragging = false;
+                            state.preferred_x = Some(x);
+                        },
+                    );
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    sync_active_text_selection(&mut *cx.app, window, this.element);
+                    cx.stop_propagation();
+                };
+
+            match *key {
+                fret_core::KeyCode::ArrowUp => {
+                    handle_visual_move_vertical(this, cx, modifiers.shift, false);
+                    return;
+                }
+                fret_core::KeyCode::ArrowDown => {
+                    handle_visual_move_vertical(this, cx, modifiers.shift, true);
+                    return;
+                }
+                fret_core::KeyCode::Home => {
+                    handle_visual_line_home_end(this, cx, modifiers.shift, false);
+                    return;
+                }
+                fret_core::KeyCode::End => {
+                    handle_visual_line_home_end(this, cx, modifiers.shift, true);
+                    return;
+                }
+                _ => {}
+            }
+
             let command: Option<&'static str> = match *key {
                 fret_core::KeyCode::KeyA if modifiers.ctrl || modifiers.meta => {
                     Some("edit.select_all")
@@ -75,22 +216,24 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                         (false, false) => "text.move_right",
                     })
                 }
-                fret_core::KeyCode::Home => Some(if modifiers.shift {
-                    "text.select_home"
-                } else {
-                    "text.move_home"
-                }),
-                fret_core::KeyCode::End => Some(if modifiers.shift {
-                    "text.select_end"
-                } else {
-                    "text.move_end"
-                }),
                 _ => None,
             };
 
             let Some(command) = command else {
                 return;
             };
+
+            if command != "edit.copy" {
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        state.preferred_x = None;
+                    },
+                );
+            }
 
             let (handled, copy_range, needs_repaint) = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -154,6 +297,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                     );
                     state.affinity = fret_core::CaretAffinity::Downstream;
                     state.dragging = false;
+                    state.preferred_x = None;
                 },
             );
             cx.invalidate_self(Invalidation::Paint);
@@ -206,6 +350,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 |state| {
                     state.dragging = true;
                     state.last_pointer_pos = Some(*position);
+                    state.preferred_x = None;
 
                     let hit = hit.unwrap_or(fret_core::HitTestResult {
                         index: 0,
