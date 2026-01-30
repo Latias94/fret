@@ -48,8 +48,14 @@ Notes:
 - Golden files (tracked): `512`
 - Golden keys (tracked, normalized `.open` suffix): `473`
 - Gated keys (string-literal heuristic): `473` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `196` (`41.4%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `210` (`44.4%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
+
+Note on “targeted” gates:
+
+- Most targeted keys have purpose-built assertions, but a small number are still *contract-only* checks
+  (e.g. “golden contains expected tags”) while the deeper paint/layout assertions remain in the
+  broad `web_vs_fret_layout.rs` file (notably `typography-table`).
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
