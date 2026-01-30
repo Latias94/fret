@@ -9,9 +9,18 @@ pub(super) fn compute_layout_map(
     graph: &DockGraph,
     root: DockNodeId,
     bounds: Rect,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
 ) -> std::collections::HashMap<DockNodeId, Rect> {
     let mut layout = std::collections::HashMap::new();
-    compute_layout_map_impl(graph, root, bounds, &mut layout);
+    compute_layout_map_impl(
+        graph,
+        root,
+        bounds,
+        split_handle_gap,
+        split_handle_hit_thickness,
+        &mut layout,
+    );
     layout
 }
 
@@ -19,6 +28,8 @@ fn compute_layout_map_impl(
     graph: &DockGraph,
     node: DockNodeId,
     bounds: Rect,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     out: &mut std::collections::HashMap<DockNodeId, Rect>,
 ) {
     let Some(n) = graph.node(node) else {
@@ -42,16 +53,30 @@ fn compute_layout_map_impl(
                 bounds,
                 count,
                 fractions,
-                DOCK_SPLIT_HANDLE_GAP,
-                DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+                split_handle_gap,
+                split_handle_hit_thickness,
                 &[],
             );
             for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
-                compute_layout_map_impl(graph, child, rect, out);
+                compute_layout_map_impl(
+                    graph,
+                    child,
+                    rect,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    out,
+                );
             }
         }
         DockNode::Floating { child } => {
-            compute_layout_map_impl(graph, *child, bounds, out);
+            compute_layout_map_impl(
+                graph,
+                *child,
+                bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                out,
+            );
         }
     }
 }
@@ -97,46 +122,81 @@ pub(super) fn split_tab_bar(rect: Rect) -> (Rect, Rect) {
     (tab_bar, content)
 }
 
-pub(super) fn dock_drop_edge_thickness(rect: Rect) -> Px {
-    let min_dim = rect.size.width.0.min(rect.size.height.0);
-    // Keep split zones usable on large panels, but avoid making "center tab" drops difficult.
-    // Also keep the thickness sane on small panels.
-    // ImGui-style: edge splits should be easy to hit even on big panels; we still cap it so the
-    // center/tab drop remains a first-class target.
-    let base = (min_dim * 0.30).clamp(20.0, 120.0);
-    let cap = (min_dim * 0.44).clamp(20.0, 120.0);
-    Px(base.min(cap))
-}
-
 pub(super) fn drop_zone_rect(rect: Rect, zone: DropZone) -> Rect {
     if zone == DropZone::Center {
         return rect;
     }
-    let thickness = dock_drop_edge_thickness(rect).0;
+    // Keep preview geometry aligned with the committed split behavior.
+    // `fret-core` currently splits 50/50 for edge drops.
+    let half_w = Px((rect.size.width.0 * 0.5).max(0.0));
+    let half_h = Px((rect.size.height.0 * 0.5).max(0.0));
     match zone {
         DropZone::Left => Rect {
             origin: rect.origin,
-            size: Size::new(Px(thickness), rect.size.height),
+            size: Size::new(half_w, rect.size.height),
         },
         DropZone::Right => Rect {
             origin: Point::new(
-                Px(rect.origin.x.0 + rect.size.width.0 - thickness),
+                Px(rect.origin.x.0 + rect.size.width.0 - half_w.0),
                 rect.origin.y,
             ),
-            size: Size::new(Px(thickness), rect.size.height),
+            size: Size::new(half_w, rect.size.height),
         },
         DropZone::Top => Rect {
             origin: rect.origin,
-            size: Size::new(rect.size.width, Px(thickness)),
+            size: Size::new(rect.size.width, half_h),
         },
         DropZone::Bottom => Rect {
             origin: Point::new(
                 rect.origin.x,
-                Px(rect.origin.y.0 + rect.size.height.0 - thickness),
+                Px(rect.origin.y.0 + rect.size.height.0 - half_h.0),
             ),
-            size: Size::new(rect.size.width, Px(thickness)),
+            size: Size::new(rect.size.width, half_h),
         },
         DropZone::Center => rect,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn drop_zone_rect_matches_half_split_geometry() {
+        let rect = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Left),
+            Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(100.0), Px(100.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Right),
+            Rect::new(
+                Point::new(Px(110.0), Px(20.0)),
+                Size::new(Px(100.0), Px(100.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Top),
+            Rect::new(
+                Point::new(Px(10.0), Px(20.0)),
+                Size::new(Px(200.0), Px(50.0))
+            )
+        );
+        assert_eq!(
+            drop_zone_rect(rect, DropZone::Bottom),
+            Rect::new(
+                Point::new(Px(10.0), Px(70.0)),
+                Size::new(Px(200.0), Px(50.0))
+            )
+        );
+        assert_eq!(drop_zone_rect(rect, DropZone::Center), rect);
     }
 }
 
@@ -148,32 +208,136 @@ pub(super) fn float_zone(bounds: Rect) -> Rect {
     }
 }
 
-pub(super) fn dock_hint_rects(rect: Rect) -> [(DropZone, Rect); 5] {
-    // Match the mental model of ImGui docking: an explicit 5-way “direction pad” near the
-    // center of the hovered dock node. Hit-testing uses the same rects.
-    let cx = rect.origin.x.0 + rect.size.width.0 * 0.5;
-    let cy = rect.origin.y.0 + rect.size.height.0 * 0.5;
+pub(super) fn dock_hint_pick_zone(
+    rect: Rect,
+    font_size: Px,
+    outer_docking: bool,
+    position: Point,
+) -> Option<DropZone> {
+    // Direction-pad hit-testing modeled after common docking UX.
+    let parent_smaller_axis = rect.size.width.0.min(rect.size.height.0);
+    let font = font_size.0.max(0.0);
+    let hs_for_central_nodes = (font * 1.5).min((font * 0.5).max(parent_smaller_axis / 8.0));
 
-    let min_dim = rect.size.width.0.min(rect.size.height.0);
-    // Scale targets up on larger panels to make split docking feel effortless (Unity/ImGui-like),
-    // while keeping it usable on small panels.
-    let size = Px((min_dim * 0.095).clamp(34.0, 56.0));
-    let gap = Px((size.0 * 0.35).clamp(10.0, 16.0));
-    let step = Px(size.0 + gap.0);
+    let hs_w = if outer_docking {
+        (hs_for_central_nodes * 1.50).trunc()
+    } else {
+        hs_for_central_nodes.trunc()
+    };
 
-    let mk = |dx: f32, dy: f32| -> Rect {
+    let cx = (rect.origin.x.0 + rect.size.width.0 * 0.5).trunc();
+    let cy = (rect.origin.y.0 + rect.size.height.0 * 0.5).trunc();
+
+    if !outer_docking {
+        // Custom hit testing for the 5-way selection, designed to reduce flickering when moving
+        // diagonally between sides.
+        let dx = position.x.0 - cx;
+        let dy = position.y.0 - cy;
+        let len2 = dx * dx + dy * dy;
+        let r_threshold_center = hs_w * 1.4;
+        let r_threshold_sides = hs_w * (1.4 + 1.2);
+        if len2 < r_threshold_center * r_threshold_center {
+            return Some(DropZone::Center);
+        }
+        if len2 < r_threshold_sides * r_threshold_sides {
+            return Some(if dx.abs() > dy.abs() {
+                if dx > 0.0 {
+                    DropZone::Right
+                } else {
+                    DropZone::Left
+                }
+            } else if dy > 0.0 {
+                DropZone::Bottom
+            } else {
+                DropZone::Top
+            });
+        }
+    }
+
+    let expand = if outer_docking {
+        0.0
+    } else {
+        (hs_w * 0.30).trunc()
+    };
+    let expand_rect = |r: Rect| -> Rect {
         Rect::new(
-            Point::new(Px(cx + dx - size.0 * 0.5), Px(cy + dy - size.0 * 0.5)),
-            Size::new(size, size),
+            Point::new(Px(r.origin.x.0 - expand), Px(r.origin.y.0 - expand)),
+            Size::new(
+                Px(r.size.width.0 + expand * 2.0),
+                Px(r.size.height.0 + expand * 2.0),
+            ),
         )
     };
 
+    let mut picked: Option<DropZone> = None;
+    for (zone, r) in dock_hint_rects_with_font(rect, font_size, outer_docking) {
+        let hit = if outer_docking {
+            r.contains(position)
+        } else {
+            expand_rect(r).contains(position)
+        };
+        if hit {
+            picked = Some(zone);
+        }
+    }
+
+    picked
+}
+
+pub(super) fn dock_hint_rects_with_font(
+    rect: Rect,
+    font_size: Px,
+    outer_docking: bool,
+) -> [(DropZone, Rect); 5] {
+    // Compute a 5-way “direction pad” around the center of the hovered dock node, with sizing
+    // derived from font size and panel size. Outer docking uses bigger targets spaced further out.
+    let parent_smaller_axis = rect.size.width.0.min(rect.size.height.0);
+    let font = font_size.0.max(0.0);
+    let hs_for_central_nodes = (font * 1.5).min((font * 0.5).max(parent_smaller_axis / 8.0));
+
+    let (hs_w, hs_h, off_x, off_y) = if outer_docking {
+        let hs_w = (hs_for_central_nodes * 1.50).trunc();
+        let hs_h = (hs_for_central_nodes * 0.80).trunc();
+        let off_x = (rect.size.width.0 * 0.5 - hs_h).trunc();
+        let off_y = (rect.size.height.0 * 0.5 - hs_h).trunc();
+        (hs_w, hs_h, off_x, off_y)
+    } else {
+        let hs_w = hs_for_central_nodes.trunc();
+        let hs_h = (hs_for_central_nodes * 0.90).trunc();
+        let off = (hs_w * 2.40).trunc();
+        (hs_w, hs_h, off, off)
+    };
+
+    let cx = (rect.origin.x.0 + rect.size.width.0 * 0.5).trunc();
+    let cy = (rect.origin.y.0 + rect.size.height.0 * 0.5).trunc();
+
+    let center = Rect::new(
+        Point::new(Px(cx - hs_w), Px(cy - hs_w)),
+        Size::new(Px(hs_w * 2.0), Px(hs_w * 2.0)),
+    );
+    let left = Rect::new(
+        Point::new(Px(cx - off_x - hs_h), Px(cy - hs_w)),
+        Size::new(Px(hs_h * 2.0), Px(hs_w * 2.0)),
+    );
+    let right = Rect::new(
+        Point::new(Px(cx + off_x - hs_h), Px(cy - hs_w)),
+        Size::new(Px(hs_h * 2.0), Px(hs_w * 2.0)),
+    );
+    let top = Rect::new(
+        Point::new(Px(cx - hs_w), Px(cy - off_y - hs_h)),
+        Size::new(Px(hs_w * 2.0), Px(hs_h * 2.0)),
+    );
+    let bottom = Rect::new(
+        Point::new(Px(cx - hs_w), Px(cy + off_y - hs_h)),
+        Size::new(Px(hs_w * 2.0), Px(hs_h * 2.0)),
+    );
+
     [
-        (DropZone::Center, mk(0.0, 0.0)),
-        (DropZone::Left, mk(-step.0, 0.0)),
-        (DropZone::Right, mk(step.0, 0.0)),
-        (DropZone::Top, mk(0.0, -step.0)),
-        (DropZone::Bottom, mk(0.0, step.0)),
+        (DropZone::Center, center),
+        (DropZone::Left, left),
+        (DropZone::Right, right),
+        (DropZone::Top, top),
+        (DropZone::Bottom, bottom),
     ]
 }
 

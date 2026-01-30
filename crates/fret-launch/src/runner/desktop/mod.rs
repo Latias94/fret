@@ -26,9 +26,11 @@ use fret_platform_native::file_dialog::NativeFileDialog;
 use fret_platform_native::open_url::NativeOpenUrl;
 use fret_render::{Renderer, SurfaceState, UploadedRgba8Image, WgpuContext};
 use fret_runner_winit::accessibility;
+#[cfg(windows)]
+use fret_runtime::TaskbarVisibility;
 use fret_runtime::{
-    ExternalDragPayloadKind, ExternalDragPositionQuality, FrameId, PlatformCapabilities,
-    PlatformCompletion, TickId,
+    ActivationPolicy, ExternalDragPayloadKind, ExternalDragPositionQuality, FrameId,
+    PlatformCapabilities, PlatformCompletion, TickId, WindowStyleRequest, WindowZLevel,
 };
 use slotmap::SlotMap;
 use tracing::error;
@@ -718,6 +720,7 @@ fn macos_mouse_location() -> Option<cocoa::foundation::NSPoint> {
 }
 
 #[cfg(target_os = "macos")]
+#[allow(deprecated)]
 #[derive(Clone, Copy, Debug, Default)]
 struct MacCursorTransform {
     scale_factor: f64,
@@ -729,6 +732,78 @@ struct MacCursorTransform {
 }
 
 #[cfg(target_os = "macos")]
+#[allow(deprecated)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct MacCursorScreenKey {
+    origin_x: i32,
+    origin_y: i32,
+    width: i32,
+    height: i32,
+    scale_milli: i32,
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+impl MacCursorScreenKey {
+    fn from_frame(frame: cocoa::foundation::NSRect, scale_factor: f64) -> Self {
+        Self {
+            origin_x: frame.origin.x.round() as i32,
+            origin_y: frame.origin.y.round() as i32,
+            width: frame.size.width.round() as i32,
+            height: frame.size.height.round() as i32,
+            scale_milli: (scale_factor * 1000.0).round() as i32,
+        }
+    }
+
+    fn unknown(scale_factor: f64) -> Self {
+        Self {
+            origin_x: 0,
+            origin_y: 0,
+            width: 0,
+            height: 0,
+            scale_milli: (scale_factor * 1000.0).round() as i32,
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+fn macos_screen_key_for_point(point: cocoa::foundation::NSPoint) -> Option<MacCursorScreenKey> {
+    use cocoa::base::id;
+    use cocoa::foundation::NSRect;
+    use objc::runtime::Class;
+    use objc::{msg_send, sel, sel_impl};
+
+    unsafe {
+        let Some(class) = Class::get("NSScreen") else {
+            return None;
+        };
+        let screens: id = msg_send![class, screens];
+        if screens.is_null() {
+            return None;
+        }
+        let count: usize = msg_send![screens, count];
+        for idx in 0..count {
+            let screen: id = msg_send![screens, objectAtIndex: idx];
+            if screen.is_null() {
+                continue;
+            }
+            let frame: NSRect = msg_send![screen, frame];
+            let min_x = frame.origin.x;
+            let min_y = frame.origin.y;
+            let max_x = min_x + frame.size.width;
+            let max_y = min_y + frame.size.height;
+            if point.x >= min_x && point.x < max_x && point.y >= min_y && point.y < max_y {
+                let scale_factor: f64 = msg_send![screen, backingScaleFactor];
+                return Some(MacCursorScreenKey::from_frame(frame, scale_factor));
+            }
+        }
+    }
+    None
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
 impl MacCursorTransform {
     fn update_from_sample(
         &mut self,
@@ -799,7 +874,85 @@ impl MacCursorTransform {
 
 #[cfg(target_os = "macos")]
 #[allow(deprecated)]
-fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
+#[derive(Default)]
+struct MacCursorTransformTable {
+    by_screen: HashMap<MacCursorScreenKey, MacCursorTransform>,
+    last_used: Option<MacCursorScreenKey>,
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+impl MacCursorTransformTable {
+    fn update_from_window_sample(
+        &mut self,
+        winit_screen_pos: PhysicalPosition<f64>,
+        cocoa_pos: cocoa::foundation::NSPoint,
+        scale_factor: f64,
+    ) {
+        let key = macos_screen_key_for_point(cocoa_pos).unwrap_or_else(|| {
+            // If we can't resolve the screen (AppKit oddities), still store a transform so we can
+            // map `NSEvent::mouseLocation` during cross-window drags without integrating deltas.
+            MacCursorScreenKey::unknown(scale_factor)
+        });
+        let transform = self
+            .by_screen
+            .entry(key)
+            .or_insert_with(MacCursorTransform::default);
+        transform.update_from_sample(winit_screen_pos, cocoa_pos, scale_factor);
+        self.last_used = Some(key);
+    }
+
+    fn map_with_key_hint(
+        &mut self,
+        cocoa_pos: cocoa::foundation::NSPoint,
+        key_hint: Option<MacCursorScreenKey>,
+    ) -> Option<PhysicalPosition<f64>> {
+        let hint_hit = key_hint.is_some_and(|k| self.by_screen.contains_key(&k));
+        let last_hit = self
+            .last_used
+            .is_some_and(|k| self.by_screen.contains_key(&k));
+        let selection = if hint_hit {
+            "key"
+        } else if last_hit {
+            "last"
+        } else {
+            "any"
+        };
+
+        let transform = key_hint
+            .and_then(|k| self.by_screen.get(&k).copied())
+            .or_else(|| self.last_used.and_then(|k| self.by_screen.get(&k).copied()))
+            .or_else(|| self.by_screen.values().next().copied())?;
+
+        let out = transform.map(cocoa_pos);
+
+        if macos_cursor_trace_enabled() {
+            dock_tearoff_log(format_args!(
+                "[cursor-refresh] cocoa=({:.1},{:.1}) selection={} key={:?} last={:?} transforms={}",
+                cocoa_pos.x,
+                cocoa_pos.y,
+                selection,
+                key_hint,
+                self.last_used,
+                self.by_screen.len(),
+            ));
+        }
+
+        if let Some(key) = key_hint {
+            self.last_used = Some(key);
+        }
+
+        Some(out)
+    }
+
+    fn map(&mut self, cocoa_pos: cocoa::foundation::NSPoint) -> Option<PhysicalPosition<f64>> {
+        self.map_with_key_hint(cocoa_pos, macos_screen_key_for_point(cocoa_pos))
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[allow(deprecated)]
+fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Window>) -> bool {
     use cocoa::{
         appkit::{NSApp, NSApplication, NSWindow},
         base::{id, nil},
@@ -808,7 +961,7 @@ fn bring_window_to_front(window: &Window, sender: Option<&Window>) -> bool {
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
-    unsafe fn ns_window_id(window: &Window) -> Option<id> {
+    unsafe fn ns_window_id(window: &dyn Window) -> Option<id> {
         let handle = window.window_handle().ok()?;
         let RawWindowHandle::AppKit(h) = handle.as_raw() else {
             return None;
@@ -1007,7 +1160,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     file_dialog: NativeFileDialog,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]
-    macos_cursor_transform: Option<MacCursorTransform>,
+    macos_cursor_transform: MacCursorTransformTable,
     internal_drag_hover_window: Option<fret_core::AppWindowId>,
     internal_drag_hover_pos: Option<Point>,
     internal_drag_pointer_id: Option<fret_core::PointerId>,
@@ -1099,6 +1252,40 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
 
     #[cfg(target_os = "macos")]
+    fn macos_bootstrap_cursor_transform_from_active_drag(&mut self) -> bool {
+        let Some(pointer_id) = self.dock_drag_pointer_id() else {
+            return false;
+        };
+        let Some(drag) = self.app.drag(pointer_id) else {
+            return false;
+        };
+        let window = drag.current_window;
+        let Some(screen_pos) = self.cursor_screen_pos_fallback_for_window(window) else {
+            return false;
+        };
+        let scale_factor = self
+            .windows
+            .get(window)
+            .map(|s| s.window.scale_factor())
+            .unwrap_or(1.0);
+        self.macos_calibrate_cursor_transform_from_window_sample(screen_pos, scale_factor);
+        true
+    }
+
+    #[cfg(target_os = "macos")]
+    fn macos_refresh_cursor_screen_pos_for_dock_drag(&mut self) {
+        if self.dock_drag_pointer_id().is_none() && self.dock_tearoff_follow.is_none() {
+            return;
+        }
+        if self.macos_refresh_cursor_screen_pos_from_nsevent() {
+            return;
+        }
+        if self.macos_bootstrap_cursor_transform_from_active_drag() {
+            let _ = self.macos_refresh_cursor_screen_pos_from_nsevent();
+        }
+    }
+
+    #[cfg(target_os = "macos")]
     fn macos_calibrate_cursor_transform_from_window_sample(
         &mut self,
         winit_screen_pos: PhysicalPosition<f64>,
@@ -1107,21 +1294,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(cocoa_pos) = macos_mouse_location() else {
             return;
         };
-        let transform = self
-            .macos_cursor_transform
-            .get_or_insert_with(Default::default);
-        transform.update_from_sample(winit_screen_pos, cocoa_pos, scale_factor);
+        self.macos_cursor_transform.update_from_window_sample(
+            winit_screen_pos,
+            cocoa_pos,
+            scale_factor,
+        );
     }
 
     #[cfg(target_os = "macos")]
     fn macos_refresh_cursor_screen_pos_from_nsevent(&mut self) -> bool {
-        let Some(transform) = self.macos_cursor_transform else {
-            return false;
-        };
         let Some(cocoa_pos) = macos_mouse_location() else {
             return false;
         };
-        self.cursor_screen_pos = Some(transform.map(cocoa_pos));
+        let Some(mapped) = self.macos_cursor_transform.map(cocoa_pos) else {
+            return false;
+        };
+        self.cursor_screen_pos = Some(mapped);
         true
     }
 
@@ -2136,7 +2324,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             file_dialog: NativeFileDialog::default(),
             cursor_screen_pos: None,
             #[cfg(target_os = "macos")]
-            macos_cursor_transform: None,
+            macos_cursor_transform: MacCursorTransformTable::default(),
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
             internal_drag_pointer_id: None,
@@ -2185,6 +2373,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 caps.ui.window_set_outer_position =
                     fret_runtime::WindowSetOuterPositionQuality::BestEffort;
                 caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::BestEffort;
+
+                // Wayland compositors do not provide a reliable "window under cursor" contract and
+                // may ignore programmatic window positioning/z-level hints. Prefer a predictable
+                // in-window floating fallback over OS tear-off UX (ADR 0054 / ADR 0084).
+                if linux_is_wayland_session() {
+                    caps.ui.window_tear_off = false;
+                    caps.ui.window_hover_detection =
+                        fret_runtime::WindowHoverDetectionQuality::None;
+                    caps.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
+                }
             }
 
             caps.clipboard.text = true;
@@ -2582,6 +2780,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         &mut self,
         event_loop: &dyn ActiveEventLoop,
         spec: WindowCreateSpec,
+        style: WindowStyleRequest,
+        parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
     ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
         let mut attrs = winit::window::WindowAttributes::default()
             .with_title(spec.title)
@@ -2591,8 +2791,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             } else {
                 spec.visible
             });
+        if let Some(policy) = style.activation {
+            let active = matches!(policy, ActivationPolicy::Activates);
+            attrs = attrs.with_active(active);
+        }
         if let Some(position) = spec.position {
             attrs = attrs.with_position(position);
+        }
+        #[cfg(windows)]
+        {
+            use winit::platform::windows::WindowAttributesExtWindows as _;
+            if let Some(taskbar) = style.taskbar {
+                attrs = attrs.with_skip_taskbar(matches!(taskbar, TaskbarVisibility::Hide));
+            }
+        }
+        #[cfg(target_os = "macos")]
+        if parent_window.is_some() {
+            // macOS tool/aux windows: best-effort parent/child relationship so DockFloating windows
+            // follow the parent window's Space/fullscreen lifecycle.
+            //
+            // winit maps this to `NSWindow.addChildWindow_ordered(...)`.
+            attrs = unsafe { attrs.with_parent_window(parent_window) };
         }
         let window = Arc::<dyn Window>::from(
             event_loop
@@ -2609,6 +2828,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         if self.config.accessibility_enabled && spec.visible {
             window.set_visible(true);
+        }
+
+        if let Some(level) = style.z_level {
+            window.set_window_level(match level {
+                WindowZLevel::Normal => WindowLevel::Normal,
+                WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
+            });
         }
 
         Ok((window, accessibility))
@@ -2888,6 +3114,69 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
     }
 
+    fn compute_window_position_from_cursor_grab_estimate(
+        &self,
+        reference_window: fret_core::AppWindowId,
+        new_window_inner_size: winit::dpi::LogicalSize<f64>,
+        grab_offset_logical: Point,
+    ) -> Option<Position> {
+        let screen_pos = self.cursor_screen_pos?;
+        let state = self.windows.get(reference_window)?;
+        let scale = state.window.scale_factor();
+
+        let max_client = winit::dpi::LogicalSize::new(
+            new_window_inner_size.width as f32,
+            new_window_inner_size.height as f32,
+        );
+
+        let mut x = screen_pos.x;
+        let mut y = screen_pos.y;
+
+        if let Some((ox, oy)) = outer_pos_for_cursor_grab(
+            screen_pos,
+            grab_offset_logical,
+            scale,
+            state.window.surface_position(),
+            Some(max_client),
+        ) {
+            x = ox;
+            y = oy;
+        }
+
+        // Best-effort clamping: avoid creating "off-screen" floating windows due to
+        // platform-specific coordinate spaces and DPI conversions.
+        let outer_size = new_window_inner_size.to_physical::<u32>(scale);
+
+        #[cfg(target_os = "windows")]
+        if let Some(work) = win32::monitor_work_area_for_point(screen_pos) {
+            (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                x,
+                y,
+                outer_size,
+                work,
+                Self::WINDOW_VISIBILITY_PADDING_PX,
+            );
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let monitors = Self::monitor_rects_physical(state.window.as_ref());
+            if let Some(idx) = Self::find_monitor_for_point(&monitors, screen_pos)
+                && let Some(monitor) = monitors.get(idx).copied()
+            {
+                (x, y) = Self::clamp_window_outer_pos_to_monitor(
+                    x,
+                    y,
+                    outer_size,
+                    monitor,
+                    Self::WINDOW_VISIBILITY_PADDING_PX,
+                );
+            }
+        }
+
+        Some(PhysicalPosition::new(x.round() as i32, y.round() as i32).into())
+    }
+
     fn compute_window_outer_position_from_cursor_grab(
         &self,
         target_window: fret_core::AppWindowId,
@@ -2897,49 +3186,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let state = self.windows.get(target_window)?;
         let scale = state.window.scale_factor();
 
-        if !grab_offset_logical.x.0.is_finite()
-            || !grab_offset_logical.y.0.is_finite()
-            || grab_offset_logical.x.0 < 0.0
-            || grab_offset_logical.y.0 < 0.0
-        {
-            return None;
-        }
-
         // Clamp the grab point to the target window's current client size. During tear-off, the
         // grab offset comes from the source window's client coordinates; if the new floating
         // window is smaller, keeping the original offset would place the cursor outside the new
         // window (visible as a fixed offset between cursor and window).
         let target_inner = state.window.surface_size();
         let target_inner_logical: winit::dpi::LogicalSize<f32> = target_inner.to_logical(scale);
-        let max_x = target_inner_logical.width;
-        let max_y = target_inner_logical.height;
-        let mut grab_x = grab_offset_logical.x.0;
-        let mut grab_y = grab_offset_logical.y.0;
-        if max_x.is_finite() && max_x > 0.0 {
-            grab_x = grab_x.min(max_x).max(0.0);
-        } else {
-            grab_x = 0.0;
-        }
-        if max_y.is_finite() && max_y > 0.0 {
-            grab_y = grab_y.min(max_y).max(0.0);
-        } else {
-            grab_y = 0.0;
-        }
-
-        // Match ImGui's platform contract:
-        // - viewport pos is client/inner screen position (logical)
-        // - winit expects outer position
-        // - therefore: outer = desired_client - decoration_offset(window)
-        // See `repo-ref/dear-imgui-rs/backends/dear-imgui-winit/src/multi_viewport.rs:winit_set_window_pos`.
-        let deco_offset = state.window.surface_position();
-
-        let grab_client_x = grab_x as f64 * scale;
-        let grab_client_y = grab_y as f64 * scale;
-        let grab_outer_x = deco_offset.x as f64 + grab_client_x;
-        let grab_outer_y = deco_offset.y as f64 + grab_client_y;
-
-        let mut x = screen_pos.x - grab_outer_x;
-        let mut y = screen_pos.y - grab_outer_y;
+        let (mut x, mut y) = outer_pos_for_cursor_grab(
+            screen_pos,
+            grab_offset_logical,
+            scale,
+            state.window.surface_position(),
+            Some(target_inner_logical),
+        )?;
 
         // Align with ImGui docking/multi-viewport behavior:
         // - platform backend sets the window pos as requested
@@ -3020,7 +3279,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // For dock tear-off, initially place near the cursor; we will refine the position
             // after the OS window exists using its own decoration offset (ImGui-style).
             if let CreateWindowKind::DockFloating { source_window, .. } = request.kind {
-                spec.position = self.compute_window_position_from_cursor(source_window);
+                if let Some(anchor) = request.anchor {
+                    // Initial positioning is best-effort until the OS window exists, but it's
+                    // worth approximating with the source window's decoration offset so Windows
+                    // doesn't "jump" after creation under mixed DPI / non-client offsets.
+                    spec.position = self.compute_window_position_from_cursor_grab_estimate(
+                        anchor.window,
+                        spec.size,
+                        anchor.position,
+                    );
+                }
+                if spec.position.is_none() {
+                    spec.position = self.compute_window_position_from_cursor(source_window);
+                }
             }
 
             if spec.position.is_none()
@@ -3041,7 +3312,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        let (window, accessibility) = self.create_os_window(event_loop, spec)?;
+        #[cfg(target_os = "macos")]
+        let parent_window = {
+            use winit::raw_window_handle::HasWindowHandle as _;
+            match request.kind {
+                CreateWindowKind::DockFloating { source_window, .. } => self
+                    .windows
+                    .get(source_window)
+                    .and_then(|w| w.window.window_handle().ok())
+                    .map(|h| h.as_raw()),
+                _ => None,
+            }
+        };
+        #[cfg(not(target_os = "macos"))]
+        let parent_window = None;
+
+        let (window, accessibility) =
+            self.create_os_window(event_loop, spec, request.style, parent_window)?;
         let surface = {
             let Some(context) = self.context.as_ref() else {
                 return Err(RunnerError::WgpuNotInitialized);
@@ -4332,12 +4619,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     #[cfg(target_os = "macos")]
     fn maybe_finish_dock_drag_released_outside(&mut self) -> bool {
-        if self.dock_drag_pointer_id() != Some(fret_core::PointerId(0)) {
+        let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
-        }
+        };
 
         let (source_window, current_window, dragging) = {
-            let Some(drag) = self.app.drag(fret_core::PointerId(0)) else {
+            let Some(drag) = self.app.drag(pointer_id) else {
                 return false;
             };
             if !drag.cross_window_hover
@@ -4351,14 +4638,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         dock_tearoff_log(format_args!(
-            "[poll-up] source={:?} current={:?} screen_pos={:?} dragging={}",
-            source_window, current_window, self.cursor_screen_pos, dragging
+            "[poll-up] pointer={:?} source={:?} current={:?} screen_pos={:?} dragging={}",
+            pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
         ));
 
         // If the mouse was released outside any window, winit may not deliver a `MouseInput`
         // event to any window. Use the regular cursor-based drop routing so docking back into an
         // existing window still works (ImGui-style).
-        if let Some(d) = self.app.drag_mut(fret_core::PointerId(0))
+        if let Some(d) = self.app.drag_mut(pointer_id)
             && d.kind == fret_app::DRAG_KIND_DOCK_PANEL
         {
             d.dragging = true;
@@ -4372,10 +4659,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         if self
             .app
-            .drag(fret_core::PointerId(0))
+            .drag(pointer_id)
             .is_some_and(|d| d.cross_window_hover)
         {
-            self.app.cancel_drag(fret_core::PointerId(0));
+            self.app.cancel_drag(pointer_id);
             let _ = self.clear_internal_drag_hover_if_needed();
         }
 
@@ -4428,13 +4715,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
+        #[cfg(target_os = "macos")]
+        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
         };
-        let Some(drag) = self.app.drag(pointer_id) else {
+        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
+            .app
+            .drag(pointer_id)
+            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
+        else {
             return self.clear_internal_drag_hover_if_needed();
         };
-        if !drag.cross_window_hover {
+        if !cross_window_hover {
             return self.clear_internal_drag_hover_if_needed();
         }
 
@@ -4455,7 +4749,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // window (ImGui-style).
         let prefer_not = self
             .dock_tearoff_follow
-            .filter(|_| drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
+            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
             .map(|f| f.window);
 
         // Prefer the window we already hovered, if the cursor is still inside it. This makes
@@ -4472,8 +4766,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let hovered = hovered.or_else(|| {
             // For dock tear-off, keep delivering `InternalDrag::Over` to the source window even
             // when the cursor is outside all windows so the UI can react before mouse-up.
-            (drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
-                .then_some(drag.source_window)
+            (drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
+                .then_some(drag_source_window)
                 .filter(|w| self.windows.contains_key(*w))
         });
         if hovered != self.internal_drag_hover_window {
@@ -4503,6 +4797,39 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
+        if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
+            && std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some()
+        {
+            if let Some(state) = self.windows.get(current) {
+                let size_phys = state.window.surface_size();
+                let scale = state.window.scale_factor();
+                let size_logical: winit::dpi::LogicalSize<f32> = size_phys.to_logical(scale);
+                let margin = 32.0f32;
+                let oob = pos.x.0 < -margin
+                    || pos.y.0 < -margin
+                    || pos.x.0 > size_logical.width + margin
+                    || pos.y.0 > size_logical.height + margin;
+                if oob {
+                    let outer = state.window.outer_position().ok();
+                    let deco = state.window.surface_position();
+                    dock_tearoff_log(format_args!(
+                        "[cursor-oob] window={:?} screen=({:.1},{:.1}) local=({:.1},{:.1}) size=({:.1},{:.1}) scale={:.3} outer={:?} deco=({},{})",
+                        current,
+                        screen_pos.x,
+                        screen_pos.y,
+                        pos.x.0,
+                        pos.y.0,
+                        size_logical.width,
+                        size_logical.height,
+                        scale,
+                        outer,
+                        deco.x,
+                        deco.y,
+                    ));
+                }
+            }
+        }
+
         if let Some(d) = self.app.drag_mut(pointer_id) {
             d.current_window = current;
             d.position = pos;
@@ -4514,19 +4841,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
+        #[cfg(target_os = "macos")]
+        self.macos_refresh_cursor_screen_pos_for_dock_drag();
+
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
-        let Some(drag) = self.app.drag(pointer_id) else {
+        let Some((drag_kind, drag_source_window, cross_window_hover)) = self
+            .app
+            .drag(pointer_id)
+            .map(|d| (d.kind, d.source_window, d.cross_window_hover))
+        else {
             return false;
         };
-        if !drag.cross_window_hover {
+        if !cross_window_hover {
             return false;
         }
 
         let screen_pos = self
             .cursor_screen_pos
-            .or_else(|| self.cursor_screen_pos_fallback_for_window(drag.source_window));
+            .or_else(|| self.cursor_screen_pos_fallback_for_window(drag_source_window));
         let Some(screen_pos) = screen_pos else {
             return false;
         };
@@ -4541,7 +4875,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         let prefer_not = self
             .dock_tearoff_follow
-            .filter(|_| drag.kind == fret_app::DRAG_KIND_DOCK_PANEL)
+            .filter(|_| drag_kind == fret_app::DRAG_KIND_DOCK_PANEL)
             .map(|f| f.window);
 
         // Prefer the last hovered window if possible; window overlap makes hit-testing ambiguous.
@@ -4557,7 +4891,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .or(self.internal_drag_hover_window);
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
-        let target = target.unwrap_or(drag.source_window);
+        let target = target.unwrap_or(drag_source_window);
         let pos = self.local_pos_for_window(target, screen_pos).or_else(|| {
             if self.internal_drag_hover_window == Some(target) {
                 self.internal_drag_hover_pos
@@ -4569,13 +4903,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        if drag.kind == fret_app::DRAG_KIND_DOCK_PANEL
-            && target != drag.source_window
+        if drag_kind == fret_app::DRAG_KIND_DOCK_PANEL
+            && target != drag_source_window
             && let Some(runtime) = self.windows.get(target)
         {
             let sender = self
                 .windows
-                .get(drag.source_window)
+                .get(drag_source_window)
                 .map(|w| w.window.as_ref());
             let _ = bring_window_to_front(runtime.window.as_ref(), sender);
         }
@@ -4604,10 +4938,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         window: fret_core::AppWindowId,
     ) -> Option<PhysicalPosition<f64>> {
         let state = self.windows.get(window)?;
-        let inner = state.window.surface_position();
+        // `Window::surface_position()` is defined as the decoration offset from the outer
+        // window position to the client/surface origin (ImGui-style multi-viewport contract).
+        // Convert it to a screen-space client origin before adding a local cursor position.
+        let outer = state.window.outer_position().ok()?;
+        let deco = state.window.surface_position();
         let scale = state.window.scale_factor();
-        let x = inner.x as f64 + state.platform.input.cursor_pos.x.0 as f64 * scale;
-        let y = inner.y as f64 + state.platform.input.cursor_pos.y.0 as f64 * scale;
+        let origin = client_origin_screen(outer, deco);
+        let x = origin.x + state.platform.input.cursor_pos.x.0 as f64 * scale;
+        let y = origin.y + state.platform.input.cursor_pos.y.0 as f64 * scale;
         Some(PhysicalPosition::new(x, y))
     }
 
@@ -4619,13 +4958,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get(window) else {
             return false;
         };
-        let inner = state.window.surface_position();
+        let Ok(outer) = state.window.outer_position() else {
+            return false;
+        };
+        let deco = state.window.surface_position();
         let size = state.window.surface_size();
-        let left = inner.x as f64;
-        let top = inner.y as f64;
-        let right = left + size.width as f64;
-        let bottom = top + size.height as f64;
-        screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
+        screen_pos_in_client(client_origin_screen(outer, deco), size, screen_pos)
     }
 
     fn local_pos_for_window(
@@ -4634,12 +4972,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         screen_pos: PhysicalPosition<f64>,
     ) -> Option<Point> {
         let state = self.windows.get(window)?;
-        let inner = state.window.surface_position();
-        let local_physical =
-            PhysicalPosition::new(screen_pos.x - inner.x as f64, screen_pos.y - inner.y as f64);
-        let local_logical: winit::dpi::LogicalPosition<f32> =
-            local_physical.to_logical(state.window.scale_factor());
-        Some(Point::new(Px(local_logical.x), Px(local_logical.y)))
+        let outer = state.window.outer_position().ok()?;
+        let deco = state.window.surface_position();
+        Some(local_pos_for_screen_pos(
+            client_origin_screen(outer, deco),
+            state.window.scale_factor(),
+            screen_pos,
+        ))
     }
 
     fn window_under_cursor(
@@ -4652,10 +4991,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let Some(state) = self.windows.get(w) else {
                 continue;
             };
-            let inner = state.window.surface_position();
+            let Ok(outer) = state.window.outer_position() else {
+                continue;
+            };
+            let deco = state.window.surface_position();
             let size = state.window.surface_size();
-            let left = inner.x as f64;
-            let top = inner.y as f64;
+            let left = outer.x as f64 + deco.x as f64;
+            let top = outer.y as f64 + deco.y as f64;
             let right = left + size.width as f64;
             let bottom = top + size.height as f64;
             if screen_pos.x >= left
@@ -4808,5 +5150,294 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub fn new_app(config: WinitRunnerConfig, app: App, driver: D) -> Self {
         Self::new(config, app, driver)
+    }
+}
+
+fn client_origin_screen(
+    outer: winit::dpi::PhysicalPosition<i32>,
+    decoration_offset: winit::dpi::PhysicalPosition<i32>,
+) -> winit::dpi::PhysicalPosition<f64> {
+    winit::dpi::PhysicalPosition::new(
+        outer.x as f64 + decoration_offset.x as f64,
+        outer.y as f64 + decoration_offset.y as f64,
+    )
+}
+
+fn screen_pos_in_client(
+    client_origin: winit::dpi::PhysicalPosition<f64>,
+    client_size: winit::dpi::PhysicalSize<u32>,
+    screen_pos: winit::dpi::PhysicalPosition<f64>,
+) -> bool {
+    let left = client_origin.x;
+    let top = client_origin.y;
+    let right = left + client_size.width as f64;
+    let bottom = top + client_size.height as f64;
+    screen_pos.x >= left && screen_pos.x < right && screen_pos.y >= top && screen_pos.y < bottom
+}
+
+fn is_wayland_session(xdg_session_type: Option<&str>, wayland_display: Option<&str>) -> bool {
+    if xdg_session_type.is_some_and(|v| v.eq_ignore_ascii_case("wayland")) {
+        return true;
+    }
+    wayland_display.is_some_and(|v| !v.is_empty())
+}
+
+#[cfg(target_os = "linux")]
+fn linux_is_wayland_session() -> bool {
+    let xdg_session_type = std::env::var("XDG_SESSION_TYPE").ok();
+    let wayland_display = std::env::var("WAYLAND_DISPLAY").ok();
+    is_wayland_session(xdg_session_type.as_deref(), wayland_display.as_deref())
+}
+
+fn local_pos_for_screen_pos(
+    client_origin: winit::dpi::PhysicalPosition<f64>,
+    scale_factor: f64,
+    screen_pos: winit::dpi::PhysicalPosition<f64>,
+) -> Point {
+    let local_physical = winit::dpi::PhysicalPosition::new(
+        screen_pos.x - client_origin.x,
+        screen_pos.y - client_origin.y,
+    );
+    let local_logical: winit::dpi::LogicalPosition<f32> = local_physical.to_logical(scale_factor);
+    Point::new(Px(local_logical.x), Px(local_logical.y))
+}
+
+fn outer_pos_for_cursor_grab(
+    screen_pos: PhysicalPosition<f64>,
+    grab_offset_logical: Point,
+    scale_factor: f64,
+    decoration_offset: winit::dpi::PhysicalPosition<i32>,
+    max_client_logical: Option<winit::dpi::LogicalSize<f32>>,
+) -> Option<(f64, f64)> {
+    if !grab_offset_logical.x.0.is_finite()
+        || !grab_offset_logical.y.0.is_finite()
+        || grab_offset_logical.x.0 < 0.0
+        || grab_offset_logical.y.0 < 0.0
+    {
+        return None;
+    }
+
+    let mut grab_x = grab_offset_logical.x.0;
+    let mut grab_y = grab_offset_logical.y.0;
+    if let Some(max) = max_client_logical {
+        if max.width.is_finite() && max.width > 0.0 {
+            grab_x = grab_x.min(max.width).max(0.0);
+        } else {
+            grab_x = 0.0;
+        }
+        if max.height.is_finite() && max.height > 0.0 {
+            grab_y = grab_y.min(max.height).max(0.0);
+        } else {
+            grab_y = 0.0;
+        }
+    }
+
+    // Match ImGui's platform contract:
+    // - viewport pos is client/inner screen position (logical)
+    // - winit expects outer position
+    // - therefore: outer = desired_client - decoration_offset(window)
+    // See `repo-ref/dear-imgui-rs/backends/dear-imgui-winit/src/multi_viewport.rs:winit_set_window_pos`.
+    let grab_client_x = grab_x as f64 * scale_factor;
+    let grab_client_y = grab_y as f64 * scale_factor;
+    let grab_outer_x = decoration_offset.x as f64 + grab_client_x;
+    let grab_outer_y = decoration_offset.y as f64 + grab_client_y;
+
+    let x = screen_pos.x - grab_outer_x;
+    let y = screen_pos.y - grab_outer_y;
+    Some((x, y))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use winit::dpi::{PhysicalPosition, PhysicalSize};
+
+    #[test]
+    fn is_wayland_session_true_for_xdg_session_type_wayland() {
+        assert!(is_wayland_session(Some("wayland"), None));
+        assert!(is_wayland_session(Some("Wayland"), None));
+    }
+
+    #[test]
+    fn is_wayland_session_true_for_wayland_display() {
+        assert!(is_wayland_session(None, Some("wayland-0")));
+    }
+
+    #[test]
+    fn is_wayland_session_false_for_x11_and_no_wayland_display() {
+        assert!(!is_wayland_session(Some("x11"), None));
+        assert!(!is_wayland_session(None, Some("")));
+    }
+
+    #[test]
+    fn outer_pos_for_cursor_grab_accounts_for_decorations_and_scale() {
+        let cursor = PhysicalPosition::new(1000.0, 500.0);
+        let grab = Point::new(Px(20.0), Px(40.0));
+        let scale = 1.5;
+        let deco = winit::dpi::PhysicalPosition::new(10, 30);
+        let max_client = winit::dpi::LogicalSize::new(200.0f32, 200.0f32);
+
+        let (x, y) = outer_pos_for_cursor_grab(cursor, grab, scale, deco, Some(max_client))
+            .expect("expected outer pos");
+        assert_eq!(x, 960.0);
+        assert_eq!(y, 410.0);
+    }
+
+    #[test]
+    fn outer_pos_for_cursor_grab_clamps_to_client_size() {
+        let cursor = PhysicalPosition::new(1000.0, 500.0);
+        let grab = Point::new(Px(9999.0), Px(9999.0));
+        let scale = 2.0;
+        let deco = winit::dpi::PhysicalPosition::new(0, 0);
+        let max_client = winit::dpi::LogicalSize::new(100.0f32, 100.0f32);
+
+        let (x, y) = outer_pos_for_cursor_grab(cursor, grab, scale, deco, Some(max_client))
+            .expect("expected outer pos");
+        assert_eq!(x, 800.0);
+        assert_eq!(y, 300.0);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_cursor_transform_table_prefers_key_hint_then_last_used() {
+        let key_a = MacCursorScreenKey {
+            origin_x: 0,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 2000,
+        };
+        let key_b = MacCursorScreenKey {
+            origin_x: 100,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 2000,
+        };
+
+        let mut table = MacCursorTransformTable::default();
+        table.by_screen.insert(
+            key_a,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 10.0,
+                y_offset: 100.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+        table.by_screen.insert(
+            key_b,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 20.0,
+                y_offset: 200.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+
+        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_a))
+            .expect("expected mapping");
+        assert_eq!(mapped, PhysicalPosition::new(11.0, 98.0));
+        assert_eq!(table.last_used, Some(key_a));
+
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, None)
+            .expect("expected mapping via last_used");
+        assert_eq!(mapped, PhysicalPosition::new(11.0, 98.0));
+
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_b))
+            .expect("expected mapping");
+        assert_eq!(mapped, PhysicalPosition::new(21.0, 198.0));
+        assert_eq!(table.last_used, Some(key_b));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn macos_cursor_transform_table_falls_back_to_any_transform() {
+        let key_a = MacCursorScreenKey {
+            origin_x: 0,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 1000,
+        };
+        let key_b = MacCursorScreenKey {
+            origin_x: 200,
+            origin_y: 0,
+            width: 100,
+            height: 100,
+            scale_milli: 1000,
+        };
+
+        let mut table = MacCursorTransformTable::default();
+        table.by_screen.insert(
+            key_a,
+            MacCursorTransform {
+                scale_factor: 1.0,
+                x_offset: 5.0,
+                y_offset: 50.0,
+                y_flipped: Some(true),
+                last_winit_y: None,
+                last_cocoa_y: None,
+            },
+        );
+
+        let cocoa_pos = cocoa::foundation::NSPoint { x: 1.0, y: 2.0 };
+        let mapped = table
+            .map_with_key_hint(cocoa_pos, Some(key_b))
+            .expect("expected mapping via any transform");
+        assert_eq!(mapped, PhysicalPosition::new(6.0, 48.0));
+    }
+
+    #[test]
+    fn client_origin_screen_adds_decoration_offset() {
+        let outer = winit::dpi::PhysicalPosition::new(100, 200);
+        let deco = winit::dpi::PhysicalPosition::new(12, 34);
+        let origin = client_origin_screen(outer, deco);
+        assert_eq!(origin, PhysicalPosition::new(112.0, 234.0));
+    }
+
+    #[test]
+    fn screen_pos_in_client_uses_half_open_bounds() {
+        let origin = PhysicalPosition::new(10.0, 20.0);
+        let size = PhysicalSize::new(100u32, 50u32);
+
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(10.0, 20.0)
+        ));
+        assert!(screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(109.9, 69.9)
+        ));
+
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(110.0, 20.0)
+        ));
+        assert!(!screen_pos_in_client(
+            origin,
+            size,
+            PhysicalPosition::new(10.0, 70.0)
+        ));
+    }
+
+    #[test]
+    fn local_pos_for_screen_pos_respects_scale_factor() {
+        let origin = PhysicalPosition::new(100.0, 200.0);
+        let scale = 2.0;
+        let screen_pos = PhysicalPosition::new(120.0, 240.0);
+        let local = local_pos_for_screen_pos(origin, scale, screen_pos);
+        assert_eq!(local, Point::new(Px(10.0), Px(20.0)));
     }
 }

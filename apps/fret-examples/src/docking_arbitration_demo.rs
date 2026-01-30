@@ -9,8 +9,7 @@ use fret_core::{
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, create_dock_space_node_with_test_id,
-    handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+    DockViewportOverlayHooksService, DockingRuntime, create_dock_space_node_with_test_id,
     render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
@@ -460,6 +459,7 @@ struct DockingArbitrationWindowState {
 #[derive(Default)]
 struct DockingArbitrationDriver {
     main_window: Option<AppWindowId>,
+    docking_runtime: Option<DockingRuntime>,
     pending_layout: Option<fret_core::DockLayout>,
     restore: Option<DockLayoutRestoreState>,
     logical_windows: HashMap<AppWindowId, String>,
@@ -519,6 +519,7 @@ impl DockingArbitrationDriver {
         }
         Self {
             main_window: None,
+            docking_runtime: None,
             pending_layout,
             restore: None,
             logical_windows: HashMap::new(),
@@ -905,6 +906,8 @@ impl DockingArbitrationDriver {
                         logical_window_id: w.logical_window_id.clone(),
                     },
                     anchor: None,
+                    role: fret_runtime::WindowRole::Auxiliary,
+                    style: fret_runtime::WindowStyleRequest::default(),
                 },
             )));
         }
@@ -996,6 +999,12 @@ impl DockingArbitrationDriver {
                     right_anchor,
                 });
             state.ui.set_root(root);
+            // Ensure the retained harness nodes participate in hit-testing and event routing.
+            // Without explicit parent/child wiring, `layout_in` can position nodes for paint, but
+            // pointer hit-testing will not descend into them (it only follows the UI tree).
+            state
+                .ui
+                .set_children(root, vec![*dock_space, left_anchor, right_anchor]);
             root
         });
 
@@ -1010,6 +1019,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
 
     fn init(&mut self, app: &mut App, main_window: AppWindowId) {
         self.main_window = Some(main_window);
+        self.docking_runtime = Some(DockingRuntime::new(main_window));
         self.logical_windows
             .insert(main_window, Self::MAIN_LOGICAL_WINDOW_ID.to_string());
         self.try_restore_layout_on_init(app, main_window);
@@ -1407,7 +1417,11 @@ impl WinitAppDriver for DockingArbitrationDriver {
     }
 
     fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
-        let _ = handle_dock_op(app, op);
+        let _ = self
+            .docking_runtime
+            .as_ref()
+            .map(|rt| rt.on_dock_op(app, op))
+            .unwrap_or(false);
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -1587,7 +1601,11 @@ impl WinitAppDriver for DockingArbitrationDriver {
     ) {
         match &request.kind {
             CreateWindowKind::DockFloating { .. } => {
-                let _ = handle_dock_window_created(app, request, new_window);
+                let _ = self
+                    .docking_runtime
+                    .as_ref()
+                    .map(|rt| rt.on_window_created(app, request, new_window))
+                    .unwrap_or(false);
                 let logical = self.alloc_floating_logical_window_id();
                 self.logical_windows.insert(new_window, logical);
             }
@@ -1609,9 +1627,11 @@ impl WinitAppDriver for DockingArbitrationDriver {
             self.logical_windows.remove(&window);
         }
 
-        if let Some(main_window) = self.main_window {
-            let _ = handle_dock_before_close_window(app, window, main_window);
-        }
+        let _ = self
+            .docking_runtime
+            .as_ref()
+            .map(|rt| rt.before_close_window(app, window))
+            .unwrap_or(false);
         true
     }
 

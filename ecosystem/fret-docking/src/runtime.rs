@@ -198,9 +198,25 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return false;
             }
 
-            if let Some(caps) = app.global::<PlatformCapabilities>()
-                && !caps.ui.multi_window
-            {
+            if let Some(caps) = app.global::<PlatformCapabilities>() {
+                let tear_off_supported = caps.ui.multi_window
+                    && caps.ui.window_tear_off
+                    && caps.ui.window_hover_detection
+                        != fret_runtime::WindowHoverDetectionQuality::None;
+                if !tear_off_supported {
+                    let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
+                    let rect = default_in_window_float_rect(app, target_window, anchor);
+                    return handle_dock_op(
+                        app,
+                        DockOp::FloatPanelInWindow {
+                            source_window,
+                            panel,
+                            target_window,
+                            rect,
+                        },
+                    );
+                }
+            } else {
                 let target_window = anchor.map(|a| a.window).unwrap_or(source_window);
                 let rect = default_in_window_float_rect(app, target_window, anchor);
                 return handle_dock_op(
@@ -228,6 +244,12 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     panel,
                 },
                 anchor,
+                role: fret_runtime::WindowRole::Auxiliary,
+                style: fret_runtime::WindowStyleRequest {
+                    taskbar: Some(fret_runtime::TaskbarVisibility::Hide),
+                    activation: Some(fret_runtime::ActivationPolicy::Activates),
+                    z_level: None,
+                },
             })));
             true
         }
@@ -239,8 +261,10 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
             let maybe_close_window = match &op {
                 DockOp::ClosePanel { window, .. } => Some(*window),
                 DockOp::MovePanel { source_window, .. } => Some(*source_window),
+                DockOp::MoveTabs { source_window, .. } => Some(*source_window),
                 DockOp::FloatPanelToWindow { source_window, .. } => Some(*source_window),
                 DockOp::FloatPanelInWindow { source_window, .. } => Some(*source_window),
+                DockOp::FloatTabsInWindow { source_window, .. } => Some(*source_window),
                 DockOp::MergeWindowInto { source_window, .. } => Some(*source_window),
                 _ => None,
             }
@@ -259,6 +283,9 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     | DockOp::FloatPanelInWindow { panel, .. } => {
                         machine.prune_expired(now);
                         machine.cancel_for_panel(panel);
+                    }
+                    DockOp::MoveTabs { .. } | DockOp::FloatTabsInWindow { .. } => {
+                        machine.prune_expired(now);
                     }
                     _ => machine.prune_expired(now),
                 });
@@ -284,6 +311,15 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         dock.clear_viewport_layout_for_window(*target_window);
                         invalidate_windows(app, [*source_window, *target_window]);
                     }
+                    DockOp::MoveTabs {
+                        source_window,
+                        target_window,
+                        ..
+                    } => {
+                        dock.clear_viewport_layout_for_window(*source_window);
+                        dock.clear_viewport_layout_for_window(*target_window);
+                        invalidate_windows(app, [*source_window, *target_window]);
+                    }
                     DockOp::FloatPanelToWindow {
                         source_window,
                         new_window,
@@ -294,6 +330,15 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                         invalidate_windows(app, [*source_window, *new_window]);
                     }
                     DockOp::FloatPanelInWindow {
+                        source_window,
+                        target_window,
+                        ..
+                    } => {
+                        dock.clear_viewport_layout_for_window(*source_window);
+                        dock.clear_viewport_layout_for_window(*target_window);
+                        invalidate_windows(app, [*source_window, *target_window]);
+                    }
+                    DockOp::FloatTabsInWindow {
                         source_window,
                         target_window,
                         ..
@@ -504,6 +549,15 @@ mod tests {
             create.kind,
             CreateWindowKind::DockFloating { source_window, .. } if source_window == window_a
         ));
+        assert_eq!(create.role, fret_runtime::WindowRole::Auxiliary);
+        assert_eq!(
+            create.style.taskbar,
+            Some(fret_runtime::TaskbarVisibility::Hide)
+        );
+        assert_eq!(
+            create.style.activation,
+            Some(fret_runtime::ActivationPolicy::Activates)
+        );
 
         assert!(handle_dock_window_created(&mut app, &create, window_b));
 
@@ -565,6 +619,57 @@ mod tests {
                 .iter()
                 .any(|e| matches!(e, Effect::Window(WindowRequest::Create(_)))),
             "expected no OS window creation effect when multi-window is disabled"
+        );
+
+        let dock = app.global::<DockManager>().expect("dock manager exists");
+        assert_eq!(dock.graph.floating_windows(window_a).len(), 1);
+        assert!(
+            dock.graph.find_panel_in_window(window_a, &panel).is_some(),
+            "expected panel to remain in window, inside a floating container"
+        );
+    }
+
+    #[test]
+    fn request_float_degrades_to_in_window_when_tear_off_is_disabled() {
+        let window_a = AppWindowId::from(KeyData::from_ffi(1));
+        let panel = PanelKey::new("test.panel");
+
+        let mut app = TestHost::new();
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.multi_window = true;
+        caps.ui.window_tear_off = false;
+        app.set_global(caps);
+        app.set_global(DockManager::default());
+
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            dock.insert_panel(
+                panel.clone(),
+                crate::DockPanel {
+                    title: "Panel".to_string(),
+                    color: fret_core::Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            let tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![panel.clone()],
+                active: 0,
+            });
+            dock.graph.set_window_root(window_a, tabs);
+        });
+
+        let op = DockOp::RequestFloatPanelToNewWindow {
+            source_window: window_a,
+            panel: panel.clone(),
+            anchor: None,
+        };
+        assert!(handle_dock_op(&mut app, op));
+
+        let effects = app.take_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::Window(WindowRequest::Create(_)))),
+            "expected no OS window creation effect when tear-off is disabled"
         );
 
         let dock = app.global::<DockManager>().expect("dock manager exists");

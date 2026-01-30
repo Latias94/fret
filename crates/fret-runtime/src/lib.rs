@@ -40,8 +40,13 @@ pub use docking_settings::{
     DockDragInversionModifier, DockDragInversionPolicy, DockDragInversionSettings,
     DockingInteractionSettings,
 };
-pub use drag::{DRAG_KIND_DOCK_PANEL, DragKindId, DragPhase, DragSession, DragSessionId};
-pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
+pub use drag::{
+    DRAG_KIND_DOCK_PANEL, DRAG_KIND_DOCK_TABS, DragKindId, DragPhase, DragSession, DragSessionId,
+};
+pub use effect::{
+    ActivationPolicy, CreateWindowKind, CreateWindowRequest, Effect, TaskbarVisibility,
+    WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel,
+};
 pub use execution::{
     DispatchPriority, Dispatcher, DispatcherHandle, InboxDrain, InboxDrainHost, InboxDrainRegistry,
     Runnable,
@@ -62,8 +67,9 @@ pub use input::{
     TextBoundaryMode, format_chord, format_sequence,
 };
 pub use interaction_diagnostics::{
-    DockDragDiagnostics, DockingInteractionDiagnostics, ViewportCaptureDiagnostics,
-    WindowInteractionDiagnosticsStore,
+    DockDragDiagnostics, DockDropCandidateRectDiagnostics, DockDropCandidateRectKind,
+    DockDropResolveDiagnostics, DockDropResolveSource, DockDropTargetDiagnostics,
+    DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};

@@ -89,6 +89,9 @@ pub mod app_integration;
 mod ui_builder_ext;
 mod ui_ext;
 
+#[cfg(test)]
+mod test_support;
+
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionOrientation,
     AccordionTrigger, accordion_multiple, accordion_multiple_uncontrolled, accordion_single,

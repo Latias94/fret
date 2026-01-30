@@ -49,6 +49,7 @@ impl ElementHostWidget {
             ElementInstance::PointerRegion(p) => p.enabled,
             ElementInstance::TextInputRegion(p) => p.enabled,
             ElementInstance::InternalDragRegion(p) => p.enabled,
+            ElementInstance::HoverRegion(_) => false,
             ElementInstance::Semantics(_) => false,
             ElementInstance::SemanticFlex(_) => false,
             ElementInstance::FocusScope(_) => false,

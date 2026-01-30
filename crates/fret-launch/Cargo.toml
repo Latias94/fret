@@ -54,6 +54,7 @@ web-sys = { version = "0.3", features = ["Location", "Window", "console"] }
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "macos"))'.dependencies]
 cocoa.workspace = true
 objc.workspace = true
+keyboard-types.workspace = true
 
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "windows"))'.dependencies]
 windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_UI_WindowsAndMessaging"] }
