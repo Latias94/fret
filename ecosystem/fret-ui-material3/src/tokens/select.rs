@@ -364,6 +364,121 @@ pub(crate) fn input_text_color(
     (color, opacity)
 }
 
+pub(crate) fn leading_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
+    let key = match variant {
+        SelectVariant::Outlined => "md.comp.outlined-select.text-field.leading-icon.size",
+        SelectVariant::Filled => "md.comp.filled-select.text-field.leading-icon.size",
+    };
+    theme.metric_by_key(key).unwrap_or(Px(24.0))
+}
+
+pub(crate) fn leading_icon_color(
+    theme: &Theme,
+    variant: SelectVariant,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> (Color, f32) {
+    let (color_key, opacity_key) = if disabled {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.disabled.leading-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.disabled.leading-icon.color"
+                }
+            },
+            Some(match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.disabled.leading-icon.opacity"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.disabled.leading-icon.opacity"
+                }
+            }),
+        )
+    } else if error && focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.focus.leading-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.focus.leading-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error && hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.hover.leading-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.hover.leading-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.leading-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.leading-icon.color"
+                }
+            },
+            None,
+        )
+    } else if focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.focus.leading-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.focus.leading-icon.color"
+                }
+            },
+            None,
+        )
+    } else if hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.hover.leading-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.hover.leading-icon.color"
+                }
+            },
+            None,
+        )
+    } else {
+        (
+            match variant {
+                SelectVariant::Outlined => "md.comp.outlined-select.text-field.leading-icon.color",
+                SelectVariant::Filled => "md.comp.filled-select.text-field.leading-icon.color",
+            },
+            None,
+        )
+    };
+
+    let color = theme
+        .color_by_key(color_key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+    let opacity = opacity_key
+        .and_then(|k| theme.number_by_key(k))
+        .unwrap_or(1.0);
+    (color, opacity)
+}
+
 pub(crate) fn trailing_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
     let key = match variant {
         SelectVariant::Outlined => "md.comp.outlined-select.text-field.trailing-icon.size",

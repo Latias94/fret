@@ -3036,6 +3036,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 .test_id("sw-off")
                                 .into_element(cx),
                             Select::new(select_empty.clone())
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
                                 .label("Select")
                                 .supporting_text("Supporting text")
                                 .placeholder("Pick one")
@@ -3043,6 +3044,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 .test_id("sel-empty")
                                 .into_element(cx),
                             Select::new(select_populated.clone())
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
                                 .label("Select")
                                 .supporting_text("Supporting text")
                                 .placeholder("Pick one")
@@ -3050,6 +3052,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 .test_id("sel-populated")
                                 .into_element(cx),
                             Select::new(select_empty.clone())
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
                                 .label("Select")
                                 .supporting_text("Error supporting text")
                                 .placeholder("Pick one")
@@ -3466,6 +3469,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                             props.align = CrossAlign::Start;
 
                             let select = Select::new(selected)
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
                                 .label("Label")
                                 .supporting_text("Supporting text")
                                 .a11y_label("select")
@@ -3475,6 +3479,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                                 .into_element(cx);
 
                             let select_error = Select::new(error_selected)
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
                                 .label("Label")
                                 .supporting_text("Error supporting text")
                                 .a11y_label("select error")

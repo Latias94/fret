@@ -650,8 +650,24 @@
           "kind": "push_clip_rect"
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "push_transform"
@@ -686,8 +702,24 @@
           "kind": "push_clip_rect"
         },
         {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
           "kind": "text",
           "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "pop_clip"
         },
         {
           "kind": "svg_mask_icon",
@@ -863,7 +895,7 @@
           "rect": [
             0,
             0,
-            640,
+            960,
             560
           ],
           "background": [
@@ -890,7 +922,7 @@
           "rect": [
             8,
             8,
-            624,
+            944,
             544
           ],
           "background": [
@@ -917,7 +949,7 @@
           "rect": [
             168,
             72,
-            304,
+            624,
             136
           ],
           "background": [
@@ -944,7 +976,7 @@
           "rect": [
             0,
             864,
-            640,
+            960,
             560
           ],
           "background": [
@@ -971,7 +1003,7 @@
           "rect": [
             -20,
             590,
-            680,
+            1000,
             1640
           ],
           "background": [
@@ -998,7 +1030,7 @@
           "rect": [
             -10,
             600,
-            660,
+            980,
             1620
           ],
           "background": [
@@ -1025,7 +1057,7 @@
           "rect": [
             0,
             610,
-            640,
+            960,
             1600
           ],
           "background": [
@@ -1052,7 +1084,7 @@
           "rect": [
             -80,
             540,
-            800,
+            1120,
             1760
           ],
           "background": [
@@ -1079,7 +1111,7 @@
           "rect": [
             -70,
             550,
-            780,
+            1100,
             1740
           ],
           "background": [
@@ -1106,7 +1138,7 @@
           "rect": [
             -60,
             560,
-            760,
+            1080,
             1720
           ],
           "background": [
@@ -1133,7 +1165,7 @@
           "rect": [
             -50,
             570,
-            740,
+            1060,
             1700
           ],
           "background": [
@@ -1160,7 +1192,7 @@
           "rect": [
             -40,
             580,
-            720,
+            1040,
             1680
           ],
           "background": [
@@ -1187,7 +1219,7 @@
           "rect": [
             -30,
             590,
-            700,
+            1020,
             1660
           ],
           "background": [
@@ -1214,7 +1246,7 @@
           "rect": [
             -20,
             600,
-            680,
+            1000,
             1640
           ],
           "background": [
@@ -1241,7 +1273,7 @@
           "rect": [
             0,
             600,
-            640,
+            960,
             1600
           ],
           "background": [

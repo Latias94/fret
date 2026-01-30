@@ -163,6 +163,7 @@ pub struct Select {
     items: Arc<[SelectItem]>,
     variant: SelectVariant,
     disabled: bool,
+    leading_icon: Option<IconId>,
     label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     supporting_text: Option<Arc<str>>,
@@ -185,6 +186,7 @@ impl Select {
             items: Arc::from([]),
             variant: SelectVariant::default(),
             disabled: false,
+            leading_icon: None,
             label: None,
             placeholder: None,
             supporting_text: None,
@@ -207,6 +209,11 @@ impl Select {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
         self
     }
 
@@ -356,6 +363,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             overlay_presence.interactive,
             value_text,
             populated,
+            select.leading_icon.clone(),
             select.label.clone(),
             select.placeholder.clone(),
             select.supporting_text.clone(),
@@ -471,6 +479,7 @@ fn select_trigger_element<H: UiHost>(
     open: bool,
     value_text: Arc<str>,
     populated: bool,
+    leading_icon: Option<IconId>,
     label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     supporting_text: Option<Arc<str>>,
@@ -568,6 +577,14 @@ fn select_trigger_element<H: UiHost>(
             || token_icon_color,
         );
         let icon_opacity = token_icon_opacity.clamp(0.0, 1.0);
+
+        let (leading_icon_color, leading_icon_opacity) =
+            select_tokens::leading_icon_color(theme, variant, hovered, !enabled, error, focused);
+        let leading_icon_opacity = leading_icon_opacity.clamp(0.0, 1.0);
+        let leading_icon_size = crate::foundation::context::resolved_icon_size(
+            cx,
+            select_tokens::leading_icon_size(theme, variant),
+        );
 
         let outline = select_tokens::outline(theme, variant, hovered, !enabled, error, focused)
             .map(|(w, c, opacity)| (w, with_opacity(c, opacity)));
@@ -757,7 +774,10 @@ fn select_trigger_element<H: UiHost>(
                     cx,
                     icon_color,
                     icon_opacity,
-                    select_tokens::trailing_icon_size(theme, variant),
+                    crate::foundation::context::resolved_icon_size(
+                        cx,
+                        select_tokens::trailing_icon_size(theme, variant),
+                    ),
                     chevron_progress,
                 );
 
@@ -811,7 +831,49 @@ fn select_trigger_element<H: UiHost>(
 
                 vec![cx.container(chrome, move |cx| {
                     let mut children = vec![overlay];
-                    children.push(cx.flex(row, move |_cx| vec![text_el, icon_el]));
+
+                    let leading_icon_el = leading_icon.as_ref().map(|icon| {
+                        select_trigger_icon(
+                            cx,
+                            icon,
+                            leading_icon_color,
+                            leading_icon_opacity,
+                            leading_icon_size,
+                        )
+                    });
+
+                    let left_slot = cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = Length::Fill;
+                                l.flex.grow = 1.0;
+                                l.overflow = Overflow::Clip;
+                                l
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let mut left = FlexProps::default();
+                            left.layout.size.width = Length::Fill;
+                            left.layout.overflow = Overflow::Clip;
+                            left.direction = Axis::Horizontal;
+                            left.justify = MainAlign::Start;
+                            left.align = CrossAlign::Center;
+                            left.gap = Px(8.0);
+
+                            vec![cx.flex(left, move |_cx| {
+                                let mut out = Vec::new();
+                                if let Some(icon) = leading_icon_el {
+                                    out.push(icon);
+                                }
+                                out.push(text_el);
+                                out
+                            })]
+                        },
+                    );
+
+                    children.push(cx.flex(row, move |_cx| vec![left_slot, icon_el]));
 
                     if let Some(label) = label.as_ref() {
                         children.push(select_trigger_label(
@@ -871,6 +933,24 @@ fn chevron_down_icon<H: UiHost>(
     size: Px,
 ) -> AnyElement {
     let svg = svg_source_for_icon(cx, &ids::ui::CHEVRON_DOWN);
+
+    let mut props = SvgIconProps::new(svg);
+    props.fit = SvgFit::Contain;
+    props.color = color;
+    props.opacity = opacity;
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    cx.svg_icon_props(props)
+}
+
+fn select_trigger_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    color: Color,
+    opacity: f32,
+    size: Px,
+) -> AnyElement {
+    let svg = svg_source_for_icon(cx, icon);
 
     let mut props = SvgIconProps::new(svg);
     props.fit = SvgFit::Contain;
