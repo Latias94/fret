@@ -192,7 +192,8 @@ Exit criteria:
 
 ## Backlog (issue-shaped TODOs)
 
-- [ ] TLI1-001: Add a debug overlay that draws measured text bounds vs container bounds in UI Gallery.
+- [x] TLI1-001: Add a debug overlay that draws measured text bounds vs container bounds in UI Gallery.
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_text_measure_overlay`).
 - [ ] TLI1-002: Audit `TextOverflow` behavior for multiline (line-clamp needs a design).
 - [ ] TLI1-003: Audit caching keys: width/wrap/overflow/scale/font-stack must be included in both measure and prepare paths.
 - [x] TLI1-004: Decide whether `SelectableText` selection should remain visible when not focused (UX parity vs simplicity).

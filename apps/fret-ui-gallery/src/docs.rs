@@ -210,6 +210,27 @@ pub(crate) const USAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
 ```
 "#;
 
+pub(crate) const DOC_TEXT_MEASURE_OVERLAY: &str = r#"
+## Text measurement overlay (diagnostic)
+
+This page visualizes text measurement vs the allocated layout box:
+
+- the **container bounds** (what layout assigned),
+- and the **measured text box** (what `TextMetrics` reports for the same constraints).
+
+It helps debug mismatches where text appears to overflow its chrome/background or where
+layout sizing and paint sizing disagree.
+"#;
+
+pub(crate) const USAGE_TEXT_MEASURE_OVERLAY: &str = r#"
+```rust
+// The panel draws:
+// - green border: container bounds
+// - yellow border: measured bounds (TextMetrics.size)
+// - cyan line: baseline
+```
+"#;
+
 pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
 ## Web IME (harness)
 
