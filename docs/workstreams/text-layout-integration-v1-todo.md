@@ -195,7 +195,10 @@ Exit criteria:
 - [x] TLI1-001: Add a debug overlay that draws measured text bounds vs container bounds in UI Gallery.
   - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_text_measure_overlay`).
 - [ ] TLI1-002: Audit `TextOverflow` behavior for multiline (line-clamp needs a design).
-- [ ] TLI1-003: Audit caching keys: width/wrap/overflow/scale/font-stack must be included in both measure and prepare paths.
+- [x] TLI1-003: Audit caching keys: width/wrap/overflow/scale/font-stack must be included in both measure and prepare paths.
+  - Evidence: `crates/fret-render/src/text.rs` (`TextBlobKey`, `TextMeasureKey`),
+    `crates/fret-ui/src/declarative/host_widget/paint.rs` (`needs_prepare` checks for width/wrap/overflow/scale/font stack),
+    `crates/fret-ui/src/declarative/tests/layout.rs` (`text_measurement_and_paint_agree_on_overflow_and_scale_factor`).
 - [x] TLI1-004: Decide whether `SelectableText` selection should remain visible when not focused (UX parity vs simplicity).
   - Chosen: keep visible with reduced alpha; must not break range→rect queries.
 - [ ] TLI1-005: Add Linux primary selection policy (copy-on-select) behind a feature/setting.
