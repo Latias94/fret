@@ -569,7 +569,7 @@ topics (if/when we implement them):
 - Cache key gates for reuse beyond `layout` invalidation (bounds/text style/content mask parity with GPUI).
 - “Inspector mode disables caching” semantics (GPUI does this; helps explainability and avoids unstable debug identity).
 
-- [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
+- [x] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
   - Contract: `docs/adr/0193-ephemeral-prepaint-items-v1.md` (Accepted).
@@ -593,19 +593,21 @@ topics (if/when we implement them):
       - Anchors: `crates/fret-ui/src/tree/paint.rs` (paint-cache replay translates descendant bounds),
         `crates/fret-ui/src/tree/tests/paint_cache.rs` (`paint_cache_replay_translates_descendant_bounds_for_descendants`).
   - Definition of done (v1; mark `[x]` when all are true):
-    - [ ] There is at least one end-to-end harness where a cache root stays clean (no rerender), but frame-local behavior still updates correctly via prepaint outputs
+    - [x] There is at least one end-to-end harness where a cache root stays clean (no rerender), but frame-local behavior still updates correctly via prepaint hooks and/or prepaint outputs
       (e.g. drag indicators, hover chrome, windowed surface telemetry).
-    - [ ] A single `bundle.json` contains enough evidence to explain:
+    - [x] A single `bundle.json` contains enough evidence to explain:
       - why a prepaint output changed (inputs + key),
       - why a cache root rerendered (if it did), and
       - what prepaint requested (invalidate/redraw/RAF).
-    - [ ] There is a stable post-run gate for the chosen harness in `fretboard diag stats` (or `diag suite`) so regressions are caught without manual inspection.
+    - [x] There is a stable post-run gate for the chosen harness in `fretboard diag stats` (or `diag suite`) so regressions are caught without manual inspection.
   - Next steps (to close core-000, keep minimal and test-first):
-    - [ ] Pick the closing harness:
-      - option A: `tools/diag-scripts/docking-demo-drag-indicators.json` (paint-only chrome under view-cache reuse)
-      - option B: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (window telemetry + scroll-driven prepaint outputs)
-    - [ ] Add one small gate that asserts “prepaint acted” in the relevant frames (bounded) in addition to existing `--check-stale-paint` / view-cache gates.
-    - [ ] Record a fresh passing evidence bundle and link it here.
+    - [x] Pick the closing harness: `tools/diag-scripts/docking-demo-drag-indicators.json` (paint-only chrome under view-cache reuse)
+    - [x] Add one small gate that asserts “prepaint acted” in the relevant frames (bounded) in addition to existing `--check-stale-paint` / view-cache gates.
+      - Gate: `--check-prepaint-actions-min 1` (counts snapshots with non-empty `debug.prepaint_actions` after warmup).
+    - [x] Record a fresh passing evidence bundle and link it here.
+      - Command:
+        - `cargo run -p fretboard -- diag run tools/diag-scripts/docking-demo-drag-indicators.json --warmup-frames 5 --check-prepaint-actions-min 1 --check-drag-cache-root-paint-only dock-demo-dock-space --check-stale-paint dock-demo-dock-space --env FRET_EXAMPLES_VIEW_CACHE=1 --launch -- cargo run -p fret-demo --bin docking_demo --release`
+      - Evidence: `target/fret-diag/1769776050260-docking-demo-drag-indicators/bundle.json`
 - [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
