@@ -223,7 +223,7 @@ impl UiGalleryDriver {
         ui: &UiTree<App>,
         window: AppWindowId,
         pointer: Option<fret_core::Point>,
-    ) -> (Arc<str>, Arc<str>, Arc<str>) {
+    ) -> (Arc<str>, Arc<str>, Arc<str>, Arc<str>) {
         let hit = pointer.map(|p| ui.debug_hit_test(p));
         let hit_node = hit.as_ref().and_then(|h| h.hit);
         let hit_layers = hit
@@ -292,7 +292,18 @@ impl UiGalleryDriver {
             focused_path.as_deref().unwrap_or(""),
         ));
 
-        (cursor, hit, focus)
+        let text = if let Some(node) = hit_node {
+            let bounds = ui.debug_node_bounds(node);
+            let constraints = ui.debug_text_constraints_snapshot(node);
+            Arc::<str>::from(format!(
+                "text node={:?} bounds={bounds:?} measured={:?} prepared={:?}",
+                node, constraints.measured, constraints.prepared,
+            ))
+        } else {
+            Arc::<str>::from("text node=<none>")
+        };
+
+        (cursor, hit, focus, text)
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
@@ -1579,10 +1590,11 @@ impl UiGalleryDriver {
                             last_debug_stats.layout_time.as_micros(),
                             last_debug_stats.paint_time.as_micros()
                         ))];
-                        if let Some((cursor, hit, focus)) = inspector_status.as_ref() {
+                        if let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
                             right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
+                            right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
                         }
 
                         WorkspaceStatusBar::new()

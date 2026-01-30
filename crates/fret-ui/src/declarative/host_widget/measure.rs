@@ -345,6 +345,8 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
+        cx.tree
+            .debug_record_text_constraints_measured(cx.node, constraints);
         let metrics = cx
             .services
             .text()
@@ -366,6 +368,8 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
+        cx.tree
+            .debug_record_text_constraints_measured(cx.node, constraints);
         let input = fret_core::TextInput::attributed(
             props.rich.text.clone(),
             style.clone(),
@@ -389,6 +393,8 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
+        cx.tree
+            .debug_record_text_constraints_measured(cx.node, constraints);
         let input = fret_core::TextInput::attributed(
             props.rich.text.clone(),
             style.clone(),

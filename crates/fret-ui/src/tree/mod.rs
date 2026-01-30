@@ -9,8 +9,8 @@ use crate::{
 use fret_core::time::{Duration, Instant};
 use fret_core::{
     AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
-    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
-    UiServices, ViewId,
+    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextConstraints,
+    Transform2D, UiServices, ViewId,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
@@ -440,6 +440,12 @@ pub struct UiDebugHitTest {
     pub hit: Option<NodeId>,
     pub active_layer_roots: Vec<NodeId>,
     pub barrier_root: Option<NodeId>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UiDebugTextConstraintsSnapshot {
+    pub measured: Option<TextConstraints>,
+    pub prepared: Option<TextConstraints>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1041,6 +1047,10 @@ pub struct UiTree<H: UiHost> {
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
     #[cfg(feature = "diagnostics")]
     debug_reachable_from_layer_roots: Option<(FrameId, HashSet<NodeId>)>,
+    #[cfg(feature = "diagnostics")]
+    debug_text_constraints_measured: HashMap<NodeId, TextConstraints>,
+    #[cfg(feature = "diagnostics")]
+    debug_text_constraints_prepared: HashMap<NodeId, TextConstraints>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -1135,6 +1145,10 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_removed_subtrees: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_reachable_from_layer_roots: None,
+            #[cfg(feature = "diagnostics")]
+            debug_text_constraints_measured: HashMap::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_text_constraints_prepared: HashMap::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -1330,6 +1344,8 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         {
             self.debug_reachable_from_layer_roots = None;
+            self.debug_text_constraints_measured.clear();
+            self.debug_text_constraints_prepared.clear();
         }
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
@@ -1429,6 +1445,42 @@ impl<H: UiHost> UiTree<H> {
             .or_default();
         entry.total_time += elapsed;
         entry.calls = entry.calls.saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_text_constraints_measured(
+        &mut self,
+        node: NodeId,
+        constraints: TextConstraints,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if self.debug_enabled {
+                self.debug_text_constraints_measured
+                    .insert(node, constraints);
+            }
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (node, constraints);
+        }
+    }
+
+    pub(crate) fn debug_record_text_constraints_prepared(
+        &mut self,
+        node: NodeId,
+        constraints: TextConstraints,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if self.debug_enabled {
+                self.debug_text_constraints_prepared
+                    .insert(node, constraints);
+            }
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (node, constraints);
+        }
     }
 
     fn debug_take_top_measure_children(
@@ -2291,6 +2343,23 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
+    }
+
+    pub fn debug_text_constraints_snapshot(&self, node: NodeId) -> UiDebugTextConstraintsSnapshot {
+        #[cfg(feature = "diagnostics")]
+        {
+            return UiDebugTextConstraintsSnapshot {
+                measured: self.debug_text_constraints_measured.get(&node).copied(),
+                prepared: self.debug_text_constraints_prepared.get(&node).copied(),
+            };
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = node;
+        }
+
+        #[allow(unreachable_code)]
+        UiDebugTextConstraintsSnapshot::default()
     }
 
     /// Returns the node bounds after applying the accumulated `render_transform` stack.

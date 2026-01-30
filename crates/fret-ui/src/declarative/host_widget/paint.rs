@@ -302,6 +302,8 @@ impl ElementHostWidget {
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
+                cx.tree
+                    .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
                 let needs_prepare = self.text_cache.blob.is_none()
@@ -381,6 +383,8 @@ impl ElementHostWidget {
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
+                cx.tree
+                    .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
                 let needs_prepare = self.text_cache.blob.is_none()
@@ -463,6 +467,8 @@ impl ElementHostWidget {
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
+                cx.tree
+                    .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
                 let needs_prepare = self.text_cache.blob.is_none()
