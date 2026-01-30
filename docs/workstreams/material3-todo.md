@@ -160,8 +160,8 @@ These files are primarily *shared policy primitives*, not one-off component layo
     expands format-string templates via `expand_key_templates`, excludes `src/bin` from runtime scans, filters typography-only sassvar keys).
   - Notes: This audit treats Material Web v30 sassvars as the source of truth for key existence (unknown keys are flagged),
     helping us avoid inventing Fret-only `md.*` keys during refactors.
-  - Repro: `cargo run -p fret-ui-material3 --bin material3_token_audit -- --debug` should report `missing injected keys: 0`
-    and no `Unknown keys` section.
+  - Repro: `cargo run -p fret-ui-material3 --bin material3_token_audit -- --check --debug` should exit 0 and report
+    `missing injected keys: 0` and no `Unknown keys` section.
 - [x] Introduce strict token resolver + content defaults (foundation).
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/token_resolver.rs`,
     `ecosystem/fret-ui-material3/src/foundation/content.rs`.
