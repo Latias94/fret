@@ -1173,7 +1173,7 @@ fn render_code_block_text<H: UiHost>(
             let lines = line_count.max(1) as f32;
             Length::Px(Px(line_height.0 * lines))
         }
-        TextWrap::Word => Length::Auto,
+        TextWrap::Word | TextWrap::Grapheme => Length::Auto,
     };
     scroll_layout.overflow = Overflow::Clip;
 
@@ -1181,7 +1181,7 @@ fn render_code_block_text<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.size.width = match text_wrap {
             TextWrap::None => Length::Auto,
-            TextWrap::Word => Length::Fill,
+            TextWrap::Word | TextWrap::Grapheme => Length::Fill,
         };
         layout
     };
