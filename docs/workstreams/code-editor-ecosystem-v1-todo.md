@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-01-29
+Last updated: 2026-01-30
 
 This is the checkbox tracker companion to:
 
@@ -67,6 +67,7 @@ Legend:
   - commit,
   - backspace/arrows,
   - no double-insert on `compositionend`.
+- [ ] Add a validation note for glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
 
 ---
 

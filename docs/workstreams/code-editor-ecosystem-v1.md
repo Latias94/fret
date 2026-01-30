@@ -1,7 +1,14 @@
 # Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
 
 Status: Draft (workstream document; normative contracts live in ADRs)
-Last updated: 2026-01-29
+Last updated: 2026-01-30
+
+Recent changes (2026-01-30):
+
+- Web: avoid wasm panics from unsupported `std::time` usage; prefer `fret_core::time` / wasm-capable time sources.
+- Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
+- Web IME: improve hidden textarea styling to reduce IME activation flakiness.
+- Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
 It is intentionally non-authoritative; the normative contracts are:
