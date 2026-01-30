@@ -1018,7 +1018,12 @@ topics (if/when we implement them):
         - `fretboard diag suite ui-gallery-file-tree-torture-interactive --launch -- cargo run -p fret-ui-gallery --release`
     - [ ] Add a short “candidate surface list” with anchors to real code (as it appears) once `ecosystem/fret-workspace` / `apps/fret-editor` contains
       concrete outline/file-tree/property-list UI surfaces (not just protocols).
-    - [ ] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
+    - [x] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
+      - Target (v0): `apps/fret-examples/src/components_gallery.rs` (file-tree panel).
+      - Script: `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`.
+      - Env (recommended): `FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`, `FRET_DIAG=1`.
+      - Gate (example): `fretboard diag stats <bundle.json> --check-vlist-window-mismatch-min 1 --check-stale-paint components-gallery-file-tree-root`
+      - Evidence bundle (view-cache, release): `target/fret-diag-components-gallery-file-tree-boundary2/1769789840519-script-step-0021-wheel/bundle.json`
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
