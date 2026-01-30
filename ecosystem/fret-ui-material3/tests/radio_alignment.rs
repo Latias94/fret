@@ -510,6 +510,46 @@ fn settle_material3_scene_snapshot_v1(
     settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
 }
 
+fn settle_material3_overlay_scene_snapshot_v1(
+    app: &mut TestHost,
+    ui: &mut UiTree<TestHost>,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    scale_factor: f32,
+    settle_from_frame: usize,
+    total_frames: usize,
+    stable_message: &str,
+    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) -> Material3HeadlessGoldenV1 {
+    let mut settled: Option<Material3HeadlessGoldenV1> = None;
+    for frame in 0..total_frames {
+        let scene = run_overlay_frame_with_scene_scaled(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            scale_factor,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        if frame < settle_from_frame {
+            continue;
+        }
+
+        let snapshot = material3_scene_snapshot_v1(&scene);
+        if let Some(prev) = settled.as_ref() {
+            assert_eq!(snapshot, *prev, "{stable_message}");
+        } else {
+            settled = Some(snapshot);
+        }
+    }
+
+    settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
+}
+
 fn write_or_assert_material3_suite_v1(name: &str, suite: &Material3HeadlessSuiteV1) {
     let path = material3_goldens_dir().join(format!("{name}.json"));
 
@@ -3544,7 +3584,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                 panic!("expected a settled overlays snapshot ({label}, {scale})");
             };
 
-            let select_open_snapshot = {
+            let (select_open_snapshot, select_open_hover_selected_snapshot) = {
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -3692,42 +3732,86 @@ fn material3_headless_overlays_suite_goldens_v1() {
                     "expected the select overlay to be open after clicking the trigger ({label}, {scale})"
                 );
 
-                let mut settled: Option<Material3HeadlessGoldenV1> = None;
-                for frame in 0..80 {
-                    let scene = run_overlay_frame_with_scene_scaled(
-                        &mut ui,
+                let select_open_message = format!(
+                    "expected the Material3 select overlay scene to be stable after animations settle ({label}, {scale})"
+                );
+                let select_open_snapshot = settle_material3_overlay_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    44,
+                    80,
+                    &select_open_message,
+                    &render,
+                );
+
+                run_overlay_frame_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let selected_item_node: NodeId = ui
+                    .semantics_snapshot()
+                    .and_then(|snapshot| {
+                        snapshot.nodes.iter().find_map(|node| {
+                            (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+                        })
+                    })
+                    .unwrap_or_else(|| {
+                        panic!("expected select-item-beta in semantics snapshot ({label}, {scale})")
+                    });
+                let selected_item_bounds = ui
+                    .debug_node_visual_bounds(selected_item_node)
+                    .unwrap_or_else(|| {
+                        panic!("expected select-item-beta bounds ({label}, {scale})")
+                    });
+                let hover_at = Point::new(
+                    Px(selected_item_bounds.origin.x.0 + selected_item_bounds.size.width.0 * 0.5),
+                    Px(selected_item_bounds.origin.y.0 + selected_item_bounds.size.height.0 * 0.5),
+                );
+
+                ui.dispatch_event(
+                    &mut app,
+                    &mut services,
+                    &pointer_move(PointerId(1), hover_at),
+                );
+
+                let select_hover_message = format!(
+                    "expected the Material3 select overlay hover-selected scene to be stable after animations settle ({label}, {scale})"
+                );
+                let select_open_hover_selected_snapshot =
+                    settle_material3_overlay_scene_snapshot_v1(
                         &mut app,
+                        &mut ui,
                         &mut services,
                         window,
                         bounds,
                         scale_factor,
-                        false,
-                        |ui, app, services| render(ui, app, services),
+                        44,
+                        80,
+                        &select_hover_message,
+                        &render,
                     );
 
-                    if frame < 44 {
-                        continue;
-                    }
-
-                    let snapshot = material3_scene_snapshot_v1(&scene);
-                    if let Some(prev) = settled.as_ref() {
-                        assert_eq!(
-                            snapshot, *prev,
-                            "expected the Material3 select overlay scene to be stable after animations settle ({label}, {scale})"
-                        );
-                    } else {
-                        settled = Some(snapshot);
-                    }
-                }
-
-                settled.unwrap_or_else(|| {
-                    panic!("expected a settled select overlay snapshot ({label}, {scale})")
-                })
+                (select_open_snapshot, select_open_hover_selected_snapshot)
             };
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
             cases.insert("both_open".to_string(), both_open_snapshot);
             cases.insert("select_open".to_string(), select_open_snapshot);
+            cases.insert(
+                "select_open_hover_selected".to_string(),
+                select_open_hover_selected_snapshot,
+            );
             let suite = Material3HeadlessSuiteV1 { cases };
 
             write_or_assert_material3_suite_v1(
