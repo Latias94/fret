@@ -416,7 +416,8 @@ This is a suggested sequence that minimizes churn while improving correctness:
    - implement a data-only window snapshot seam (`WindowTextInputSnapshot`) published after paint
      to support Windows-first IME candidate positioning and future a11y bridges (selection/marked
      ranges in UTF-16 over the composed view). Evidence:
-     `crates/fret-runtime/src/window_text_input_snapshot.rs`, `crates/fret-ui/src/tree/paint.rs`
+     `crates/fret-runtime/src/window_text_input_snapshot.rs`, `crates/fret-ui/src/tree/paint.rs`,
+     `crates/fret-launch/src/runner/desktop/app_handler.rs`
 3. **Harden caret/selection behavior**:
    - add grapheme-aware movement mode for emoji safety (at least left/right)
    - add multi-line Up/Down movement with preferred-x

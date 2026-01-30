@@ -132,7 +132,8 @@ Exit criteria:
 - [x] Publish a window-scoped platform text-input snapshot after paint:
   - `focus_is_text_input`, `selection_utf16`, `marked_utf16`, `ime_cursor_area`
   - Evidence: `crates/fret-runtime/src/window_text_input_snapshot.rs`,
-    `crates/fret-ui/src/tree/paint.rs`, `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
+    `crates/fret-ui/src/tree/paint.rs`, `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`,
+    `crates/fret-launch/src/runner/desktop/app_handler.rs` (runner consumes `ime_cursor_area`).
 - [x] Expose a minimal “platform input handler” surface for editable text:
   - selected_text_range
   - marked_text_range

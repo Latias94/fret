@@ -3048,6 +3048,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 svc.remove_window(window);
             },
         );
+        self.app.with_global_mut(
+            fret_runtime::WindowTextInputSnapshotService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
         self.app
             .with_global_mut(WindowMetricsService::default, |svc, _app| {
                 svc.remove(window);
