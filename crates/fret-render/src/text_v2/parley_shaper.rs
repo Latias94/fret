@@ -9,6 +9,16 @@ use parley::style::{
 use std::borrow::Cow;
 use std::ops::Range;
 
+fn min_line_height_for_metrics(ascent: f32, descent: f32) -> f32 {
+    let ascent = ascent.max(0.0);
+    let descent_mag = if descent.is_sign_negative() {
+        (-descent).max(0.0)
+    } else {
+        descent.max(0.0)
+    };
+    ascent + descent_mag
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ParleyGlyph {
     pub id: u32,
@@ -151,6 +161,11 @@ impl ParleyShaper {
         };
 
         let metrics = *line.metrics();
+        let mut line_height = metrics.line_height.max(0.0);
+        line_height = line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
+        if let Some(requested) = base_style.line_height {
+            line_height = line_height.max((requested.0 * scale).max(0.0));
+        }
 
         let mut glyphs: Vec<ParleyGlyph> = Vec::new();
         let mut clusters: Vec<ShapedCluster> = Vec::new();
@@ -197,7 +212,7 @@ impl ParleyShaper {
             ascent: metrics.ascent,
             descent: metrics.descent,
             baseline: metrics.baseline,
-            line_height: metrics.line_height,
+            line_height,
             glyphs,
             clusters,
         }
@@ -321,5 +336,47 @@ mod tests {
         assert!(layout.width >= 0.0);
         assert!(!layout.glyphs.is_empty());
         assert!(!layout.clusters.is_empty());
+    }
+
+    #[test]
+    fn clamps_line_height_to_font_extents() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            line_height: Some(Px(1.0)),
+            ..Default::default()
+        };
+        let input = TextInputRef::plain("Hello", &style);
+
+        let layout = shaper.shape_single_line(input, 1.0);
+        let min = min_line_height_for_metrics(layout.ascent, layout.descent);
+        assert!(
+            layout.line_height + 0.001 >= min,
+            "line_height={} ascent={} descent={} min={}",
+            layout.line_height,
+            layout.ascent,
+            layout.descent,
+            min
+        );
+    }
+
+    #[test]
+    fn respects_explicit_line_height_override() {
+        let mut shaper = ParleyShaper::new_without_system_fonts();
+        shaper.add_fonts(fret_fonts::default_fonts().iter().map(|b| b.to_vec()));
+
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            line_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+        let input = TextInputRef::plain("Hello", &style);
+
+        let layout = shaper.shape_single_line(input, 1.0);
+        assert!(layout.line_height + 0.001 >= 40.0);
     }
 }
