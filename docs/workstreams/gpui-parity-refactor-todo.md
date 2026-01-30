@@ -622,8 +622,14 @@ topics (if/when we implement them):
     - [x] Pick one primary consumer surface (start with file tree, then inspector/table/tree).
       - Anchors: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`),
         `apps/fret-ui-gallery/src/ui.rs` (`preview_file_tree_torture`).
-    - [ ] Move “window derivation” to prepaint outputs (ADR 0190 / ADR 0193), keyed by: viewport + offset + overscan + items revision.
-    - [ ] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
+      - Note: retained-host consumers MUST provide a meaningful `VirtualListOptions.items_revision` so window updates and key caches are explainable.
+        - Evidence: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` folds tree + state revisions into `items_revision`.
+    - [~] Move “window derivation” to prepaint (ADR 0190 / ADR 0193), keyed by: viewport + offset + overscan + items revision.
+      - Current: prepaint updates `VirtualListState.window_range` from interaction records and scroll-handle state (no rerender required for retained hosts).
+      - Next: lift/standardize the derived window into explicit prepaint outputs where needed, and keep the “why did the window change?” story fully explainable from one bundle.
+    - [x] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
+      - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (marks retained hosts for reconcile),
+        `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
     - [ ] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
       `--check-retained-vlist-reconcile-no-notify`, attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`,
       plus `--check-wheel-scroll` and `--check-stale-paint`.
