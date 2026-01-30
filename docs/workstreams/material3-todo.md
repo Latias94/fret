@@ -594,9 +594,10 @@ These files are primarily *shared policy primitives*, not one-off component layo
     `select_roving_scrolls_focused_option_into_view`, `select_open_scrolls_selected_option_into_view`,
     `select_listbox_typeahead_moves_focus_skipping_disabled_options`,
     `select_menu_matches_anchor_width_and_clamps_height_to_available_space`).
-  - Evidence: `ecosystem/fret-ui-material3/src/select.rs` (`SelectItem::{leading_icon,trailing_icon}`, listbox padding),
-    `ecosystem/fret-ui-material3/src/tokens/select.rs` (`menu_list_item_{leading,trailing}_icon_*` tokens),
-    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_overlays_suite_goldens_v1` select case includes icon slots).
+  - Evidence: `ecosystem/fret-ui-material3/src/select.rs` (Select trigger: `.label(...)` / `.supporting_text(...)` / `.error(...)` + animated trailing icon,
+    listbox padding, `SelectItem::{leading_icon,trailing_icon}`),
+    `ecosystem/fret-ui-material3/src/tokens/select.rs` (`text-field.error.*` mapping + `menu_list_item_{leading,trailing}_icon_*` tokens),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (headless suites include select trigger states + `material3_headless_overlays_suite_goldens_v1` select case includes icon slots).
   - Evidence (reference): `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Menu.kt`
     (`MenuVerticalMargin = 48.dp`),
     `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt`

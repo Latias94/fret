@@ -19,7 +19,7 @@ use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollProps,
-    SemanticsProps, SvgIconProps, TextProps,
+    SemanticsProps, SvgIconProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
@@ -37,6 +37,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::surface::material_surface_style;
+use crate::interaction::state_layer::StateLayerAnimator;
 use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::select as select_tokens;
@@ -161,7 +162,10 @@ pub struct Select {
     items: Arc<[SelectItem]>,
     variant: SelectVariant,
     disabled: bool,
+    label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
+    supporting_text: Option<Arc<str>>,
+    error: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     style: SelectStyle,
@@ -180,7 +184,10 @@ impl Select {
             items: Arc::from([]),
             variant: SelectVariant::default(),
             disabled: false,
+            label: None,
             placeholder: None,
+            supporting_text: None,
+            error: false,
             a11y_label: None,
             test_id: None,
             style: SelectStyle::default(),
@@ -202,8 +209,23 @@ impl Select {
         self
     }
 
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn supporting_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.supporting_text = Some(text.into());
+        self
+    }
+
+    pub fn error(mut self, error: bool) -> Self {
+        self.error = error;
         self
     }
 
@@ -291,6 +313,8 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             .get_model_cloned(&select.model, Invalidation::Layout)
             .unwrap_or(None);
 
+        let populated = selected.as_ref().is_some_and(|v| !v.is_empty());
+
         if opening {
             let selected_idx = selected.as_ref().and_then(|value| {
                 select
@@ -309,17 +333,17 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 .scroll_handle
                 .scroll_to_offset(Point::new(Px(0.0), target_y));
         }
-        let display_label = selected
-            .as_ref()
-            .and_then(|value| {
-                select
-                    .items
-                    .iter()
-                    .find(|it| it.value.as_ref() == value.as_ref())
-            })
+
+        let selected_label = selected.as_ref().and_then(|value| {
+            select
+                .items
+                .iter()
+                .find(|it| it.value.as_ref() == value.as_ref())
+        });
+
+        let value_text = selected_label
             .map(|it| it.label.clone())
             .or_else(|| selected.clone())
-            .or_else(|| select.placeholder.clone())
             .unwrap_or_else(|| Arc::<str>::from(""));
 
         let trigger = select_trigger_element(
@@ -327,17 +351,23 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             &theme,
             select.variant,
             select.disabled,
+            select.error,
             overlay_presence.interactive,
-            display_label,
+            value_text,
+            populated,
+            select.label.clone(),
+            select.placeholder.clone(),
+            select.supporting_text.clone(),
             select.a11y_label.clone(),
             select.test_id.clone(),
             runtime.open.clone(),
             select.style.clone(),
         );
+        let anchor_id = trigger.anchor_id;
+        let trigger = trigger.element;
 
         if overlay_presence.present {
-            let trigger_id = trigger.id;
-            let Some(anchor) = fret_ui_kit::overlay::anchor_bounds_for_element(cx, trigger_id)
+            let Some(anchor) = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id)
             else {
                 return trigger;
             };
@@ -407,13 +437,13 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 );
 
             let mut request = fret_ui_kit::overlay_controller::OverlayRequest::dismissible_menu(
-                trigger_id,
-                trigger_id,
+                anchor_id,
+                anchor_id,
                 open_model.clone(),
                 overlay_presence,
                 vec![overlay_root],
             );
-            request.root_name = Some(format!("material3.select.{}", trigger_id.0));
+            request.root_name = Some(format!("material3.select.{}", anchor_id.0));
             request.close_on_window_focus_lost = true;
             request.close_on_window_resize = true;
             request.initial_focus = initial_focus_id.get();
@@ -425,19 +455,33 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
     })
 }
 
+#[derive(Debug)]
+struct SelectTriggerOutput {
+    element: AnyElement,
+    anchor_id: GlobalElementId,
+}
+
 fn select_trigger_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     variant: SelectVariant,
     disabled: bool,
+    error: bool,
     open: bool,
-    label: Arc<str>,
+    value_text: Arc<str>,
+    populated: bool,
+    label: Option<Arc<str>>,
+    placeholder: Option<Arc<str>>,
+    supporting_text: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     open_model: Model<bool>,
     style: SelectStyle,
-) -> AnyElement {
-    cx.pressable_with_id_props(move |cx, st, pressable_id| {
+) -> SelectTriggerOutput {
+    let anchor_id_out: Cell<GlobalElementId> = Cell::new(GlobalElementId(0));
+
+    let container = cx.pressable_with_id_props(|cx, st, pressable_id| {
+        anchor_id_out.set(pressable_id);
         let enabled = !disabled;
 
         let mut states = WidgetStates::from_pressable(cx, st, enabled);
@@ -500,11 +544,12 @@ fn select_trigger_element<H: UiHost>(
             || token_container_bg,
         );
 
-        let focused = states.contains(WidgetStates::FOCUS_VISIBLE);
+        let focused = states.contains(WidgetStates::FOCUSED);
+        let focus_visible = states.contains(WidgetStates::FOCUS_VISIBLE);
         let hovered = enabled && st.hovered;
 
         let (token_text_color, token_text_opacity) =
-            select_tokens::input_text_color(theme, variant, focused, hovered, !enabled);
+            select_tokens::input_text_color(theme, variant, hovered, !enabled, error, focused);
         let text_color = resolve_override_slot_with(
             style.text_color.as_ref(),
             states,
@@ -514,7 +559,7 @@ fn select_trigger_element<H: UiHost>(
         let text_color = with_opacity(text_color, token_text_opacity);
 
         let (token_icon_color, token_icon_opacity) =
-            select_tokens::trailing_icon_color(theme, variant, focused, hovered, !enabled);
+            select_tokens::trailing_icon_color(theme, variant, hovered, !enabled, error, focused);
         let icon_color = resolve_override_slot_with(
             style.trailing_icon_color.as_ref(),
             states,
@@ -523,7 +568,7 @@ fn select_trigger_element<H: UiHost>(
         );
         let icon_opacity = token_icon_opacity.clamp(0.0, 1.0);
 
-        let outline = select_tokens::outline(theme, variant, focused, hovered, !enabled)
+        let outline = select_tokens::outline(theme, variant, hovered, !enabled, error, focused)
             .map(|(w, c, opacity)| (w, with_opacity(c, opacity)));
         let outline = outline.map(|(w, c)| {
             let c = resolve_override_slot_opt_with(
@@ -536,8 +581,9 @@ fn select_trigger_element<H: UiHost>(
             (w, c)
         });
 
-        let indicator = select_tokens::active_indicator(theme, variant, focused, hovered, !enabled)
-            .map(|(h, c, opacity)| (h, with_opacity(c, opacity)));
+        let indicator =
+            select_tokens::active_indicator(theme, variant, hovered, !enabled, error, focused)
+                .map(|(h, c, opacity)| (h, with_opacity(c, opacity)));
         let indicator = indicator.map(|(h, c)| {
             let c = resolve_override_slot_opt_with(
                 style.active_indicator_color.as_ref(),
@@ -582,13 +628,13 @@ fn select_trigger_element<H: UiHost>(
 
                 let now_frame = cx.frame_id.0;
                 let (state_layer_color, hover_opacity) =
-                    select_tokens::hover_state_layer(theme, variant);
+                    select_tokens::hover_state_layer(theme, variant, error);
 
                 let state_layer_target = if enabled && st.pressed {
                     theme
                         .number_by_key("md.sys.state.pressed.state-layer-opacity")
                         .unwrap_or(0.1)
-                } else if enabled && focused {
+                } else if enabled && focus_visible {
                     theme
                         .number_by_key("md.sys.state.focus.state-layer-opacity")
                         .unwrap_or(0.1)
@@ -616,20 +662,98 @@ fn select_trigger_element<H: UiHost>(
                     false,
                 );
 
+                let should_float = focused || open || populated;
+                let duration_ms = theme
+                    .duration_ms_by_key("md.sys.motion.duration.short4")
+                    .unwrap_or(200);
+                let easing = theme
+                    .easing_by_key("md.sys.motion.easing.standard")
+                    .unwrap_or(fret_ui::theme::CubicBezier {
+                        x1: 0.0,
+                        y1: 0.0,
+                        x2: 1.0,
+                        y2: 1.0,
+                    });
+
+                let (float_progress, float_want_frames) =
+                    cx.with_state(SelectTriggerRuntime::default, |rt| {
+                        if rt.float_target != should_float {
+                            rt.float_target = should_float;
+                            rt.float.set_target(
+                                now_frame,
+                                if should_float { 1.0 } else { 0.0 },
+                                duration_ms,
+                                easing,
+                            );
+                        }
+                        rt.float.advance(now_frame);
+                        (rt.float.value(), rt.float.is_active())
+                    });
+
+                let open_duration_ms = dropdown_menu_tokens::open_duration_ms(theme);
+                let close_duration_ms = dropdown_menu_tokens::close_duration_ms(theme);
+                let open_easing = dropdown_menu_tokens::easing(theme);
+
+                let (chevron_progress, chevron_want_frames) =
+                    cx.with_state(SelectChevronRuntime::default, |rt| {
+                        if rt.target_open != open {
+                            rt.target_open = open;
+                            rt.anim.set_target(
+                                now_frame,
+                                if open { 1.0 } else { 0.0 },
+                                if open {
+                                    open_duration_ms
+                                } else {
+                                    close_duration_ms
+                                },
+                                open_easing,
+                            );
+                        }
+                        rt.anim.advance(now_frame);
+                        (rt.anim.value(), rt.anim.is_active())
+                    });
+
+                if float_want_frames || chevron_want_frames {
+                    cx.request_animation_frame();
+                }
+
+                let show_placeholder = if label.is_some() {
+                    (focused || open) && !populated
+                } else {
+                    true
+                };
+                let display_text = if populated {
+                    value_text.clone()
+                } else if show_placeholder {
+                    placeholder.clone().unwrap_or_else(|| Arc::<str>::from(""))
+                } else {
+                    Arc::<str>::from("")
+                };
+                let is_placeholder = !populated && show_placeholder;
+
+                let placeholder_color =
+                    select_tokens::placeholder_color(theme, variant, !enabled, error);
+                let display_color = if is_placeholder {
+                    placeholder_color
+                } else {
+                    text_color
+                };
+
                 let text_el = {
-                    let mut props = TextProps::new(label.clone());
+                    let mut props = TextProps::new(display_text);
                     props.style = select_tokens::input_text_style(theme, variant);
-                    props.color = Some(text_color);
+                    props.color = Some(display_color);
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Ellipsis;
                     cx.text_props(props)
                 };
 
-                let icon_el = chevron_down_icon(
+                let icon_el = chevron_down_icon_rotated(
                     cx,
                     icon_color,
                     icon_opacity,
                     select_tokens::trailing_icon_size(theme, variant),
+                    chevron_progress,
                 );
 
                 let mut row = FlexProps::default();
@@ -649,13 +773,15 @@ fn select_trigger_element<H: UiHost>(
                 let mut chrome = ContainerProps::default();
                 chrome.layout.size.width = Length::Fill;
                 chrome.layout.size.height = Length::Fill;
-                chrome.layout.overflow = Overflow::Clip;
+                chrome.layout.overflow = Overflow::Visible;
                 chrome.background = container_bg;
                 chrome.corner_radii = corner;
+                let mut outline_width_for_notch = Px(0.0);
                 if let Some((outline_width, outline_color)) = outline {
                     if outline_width.0 > 0.0 {
                         chrome.border = Edges::all(outline_width);
                         chrome.border_color = Some(outline_color);
+                        outline_width_for_notch = outline_width;
                     }
                 }
 
@@ -679,8 +805,24 @@ fn select_trigger_element<H: UiHost>(
                 });
 
                 vec![cx.container(chrome, move |cx| {
-                    let mut children =
-                        vec![overlay, cx.flex(row, move |_cx| vec![text_el, icon_el])];
+                    let mut children = vec![overlay];
+                    children.push(cx.flex(row, move |_cx| vec![text_el, icon_el]));
+
+                    if let Some(label) = label.as_ref() {
+                        children.push(select_trigger_label(
+                            cx,
+                            theme,
+                            variant,
+                            label.clone(),
+                            float_progress,
+                            hovered,
+                            !enabled,
+                            error,
+                            focused,
+                            container_bg.unwrap_or(Color::TRANSPARENT),
+                            outline_width_for_notch,
+                        ));
+                    }
                     if let Some(indicator_el) = indicator_el {
                         children.push(indicator_el);
                     }
@@ -690,7 +832,31 @@ fn select_trigger_element<H: UiHost>(
         });
 
         (pressable_props, vec![pointer_region])
-    })
+    });
+
+    let anchor_id = anchor_id_out.get();
+
+    let element = if let Some(text) = supporting_text.as_ref() {
+        let mut props = FlexProps::default();
+        props.layout.size.width = Length::Fill;
+        props.layout.overflow = Overflow::Visible;
+        props.direction = Axis::Vertical;
+        props.gap = Px(4.0);
+        props.align = CrossAlign::Start;
+        props.justify = MainAlign::Start;
+        props.wrap = false;
+
+        cx.flex(props, move |cx| {
+            vec![
+                container,
+                select_supporting_text(cx, theme, variant, text.clone(), !disabled, error),
+            ]
+        })
+    } else {
+        container
+    };
+
+    SelectTriggerOutput { element, anchor_id }
 }
 
 fn chevron_down_icon<H: UiHost>(
@@ -708,6 +874,31 @@ fn chevron_down_icon<H: UiHost>(
     props.layout.size.width = Length::Px(size);
     props.layout.size.height = Length::Px(size);
     cx.svg_icon_props(props)
+}
+
+fn chevron_down_icon_rotated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    color: Color,
+    opacity: f32,
+    size: Px,
+    progress: f32,
+) -> AnyElement {
+    let degrees = 180.0 * progress.clamp(0.0, 1.0);
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.size.width = Length::Px(size);
+    layout.size.height = Length::Px(size);
+
+    cx.visual_transform_props(
+        VisualTransformProps {
+            layout,
+            transform: fret_core::Transform2D::rotation_about_degrees(
+                degrees,
+                Point::new(Px(size.0 * 0.5), Px(size.0 * 0.5)),
+            ),
+        },
+        move |cx| vec![chevron_down_icon(cx, color, opacity, size)],
+    )
 }
 
 fn select_menu_item_icon<H: UiHost>(
@@ -739,6 +930,144 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
         ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
         ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
     }
+}
+
+#[derive(Debug, Default)]
+struct SelectTriggerRuntime {
+    float_target: bool,
+    float: StateLayerAnimator,
+}
+
+#[derive(Debug, Default)]
+struct SelectChevronRuntime {
+    target_open: bool,
+    anim: StateLayerAnimator,
+}
+
+fn lerp_px(a: Px, b: Px, t: f32) -> Px {
+    let t = t.clamp(0.0, 1.0);
+    Px(a.0 + (b.0 - a.0) * t)
+}
+
+fn lerp_f32(a: f32, b: f32, t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    a + (b - a) * t
+}
+
+fn interpolated_label_text_style(theme: &Theme, progress: f32) -> Option<fret_core::TextStyle> {
+    let large = theme.text_style_by_key("md.sys.typescale.body-large")?;
+    let small = theme.text_style_by_key("md.sys.typescale.body-small")?;
+
+    if large.font != small.font || large.weight != small.weight || large.slant != small.slant {
+        return Some(if progress >= 0.5 { small } else { large });
+    }
+
+    let size = lerp_px(large.size, small.size, progress);
+    let line_height = match (large.line_height, small.line_height) {
+        (Some(a), Some(b)) => Some(lerp_px(a, b, progress)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    let letter_spacing_em = match (large.letter_spacing_em, small.letter_spacing_em) {
+        (Some(a), Some(b)) => Some(lerp_f32(a, b, progress)),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+
+    Some(fret_core::TextStyle {
+        font: large.font,
+        size,
+        weight: large.weight,
+        slant: large.slant,
+        line_height,
+        letter_spacing_em,
+    })
+}
+
+fn select_trigger_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    variant: SelectVariant,
+    text: Arc<str>,
+    progress: f32,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+    input_bg: Color,
+    outline_width: Px,
+) -> AnyElement {
+    let style = interpolated_label_text_style(theme, progress)
+        .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
+
+    let y = lerp_px(Px(18.0), Px(6.0), progress);
+    let x = Px(16.0);
+
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.position = fret_ui::element::PositionStyle::Absolute;
+    layout.inset.top = Some(y);
+    layout.inset.left = Some(x);
+    layout.inset.right = Some(Px(16.0));
+    layout.overflow = Overflow::Visible;
+
+    let floated = progress >= 0.5;
+
+    let mut patch = ContainerProps::default();
+    if variant == SelectVariant::Outlined {
+        let patch_padding_x = Px(4.0);
+        let patch_padding_y = Px((outline_width.0 + 1.0).max(0.0));
+        patch.padding = if floated {
+            Edges {
+                top: patch_padding_y,
+                right: patch_padding_x,
+                bottom: patch_padding_y,
+                left: patch_padding_x,
+            }
+        } else {
+            Edges::all(Px(0.0))
+        };
+        patch.background = floated.then_some(input_bg);
+    }
+    patch.layout = layout;
+
+    cx.container(patch, move |cx| {
+        vec![cx.text_props(TextProps {
+            layout: fret_ui::element::LayoutStyle::default(),
+            text: text.clone(),
+            style,
+            color: Some(select_tokens::label_color(
+                theme, variant, hovered, disabled, error, focused,
+            )),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })]
+    })
+}
+
+fn select_supporting_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    variant: SelectVariant,
+    text: Arc<str>,
+    enabled: bool,
+    error: bool,
+) -> AnyElement {
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
+    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
+
+    cx.text_props(TextProps {
+        layout,
+        text,
+        style: theme.text_style_by_key("md.sys.typescale.body-small"),
+        color: Some(select_tokens::supporting_text_color(
+            theme, variant, false, !enabled, error, false,
+        )),
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+    })
 }
 
 fn with_opacity(mut color: Color, opacity: f32) -> Color {

@@ -89,15 +89,27 @@ pub(crate) fn container_background(theme: &Theme, variant: SelectVariant, disabl
     color
 }
 
-pub(crate) fn hover_state_layer(theme: &Theme, variant: SelectVariant) -> (Color, f32) {
+pub(crate) fn hover_state_layer(
+    theme: &Theme,
+    variant: SelectVariant,
+    error: bool,
+) -> (Color, f32) {
     let (color_key, opacity_key) = match variant {
         SelectVariant::Outlined => (
             "md.comp.outlined-select.text-field.hover.state-layer.color",
-            "md.comp.outlined-select.text-field.hover.state-layer.opacity",
+            if error {
+                "md.comp.outlined-select.text-field.error.hover.state-layer.opacity"
+            } else {
+                "md.comp.outlined-select.text-field.hover.state-layer.opacity"
+            },
         ),
         SelectVariant::Filled => (
             "md.comp.filled-select.text-field.hover.state-layer.color",
-            "md.comp.filled-select.text-field.hover.state-layer.opacity",
+            if error {
+                "md.comp.filled-select.text-field.error.hover.state-layer.opacity"
+            } else {
+                "md.comp.filled-select.text-field.hover.state-layer.opacity"
+            },
         ),
     };
 
@@ -112,9 +124,10 @@ pub(crate) fn hover_state_layer(theme: &Theme, variant: SelectVariant) -> (Color
 pub(crate) fn outline(
     theme: &Theme,
     variant: SelectVariant,
-    focused: bool,
     hovered: bool,
     disabled: bool,
+    error: bool,
+    focused: bool,
 ) -> Option<(Px, Color, f32)> {
     if variant != SelectVariant::Outlined {
         return None;
@@ -125,6 +138,24 @@ pub(crate) fn outline(
             "md.comp.outlined-select.text-field.disabled.outline.width",
             "md.comp.outlined-select.text-field.disabled.outline.color",
             Some("md.comp.outlined-select.text-field.disabled.outline.opacity"),
+        )
+    } else if error && focused {
+        (
+            "md.comp.outlined-select.text-field.focus.outline.width",
+            "md.comp.outlined-select.text-field.error.focus.outline.color",
+            None,
+        )
+    } else if error && hovered {
+        (
+            "md.comp.outlined-select.text-field.hover.outline.width",
+            "md.comp.outlined-select.text-field.error.hover.outline.color",
+            None,
+        )
+    } else if error {
+        (
+            "md.comp.outlined-select.text-field.outline.width",
+            "md.comp.outlined-select.text-field.error.outline.color",
+            None,
         )
     } else if focused {
         (
@@ -160,9 +191,10 @@ pub(crate) fn outline(
 pub(crate) fn active_indicator(
     theme: &Theme,
     variant: SelectVariant,
-    focused: bool,
     hovered: bool,
     disabled: bool,
+    error: bool,
+    focused: bool,
 ) -> Option<(Px, Color, f32)> {
     if variant != SelectVariant::Filled {
         return None;
@@ -173,6 +205,24 @@ pub(crate) fn active_indicator(
             "md.comp.filled-select.text-field.disabled.active-indicator.height",
             "md.comp.filled-select.text-field.disabled.active-indicator.color",
             Some("md.comp.filled-select.text-field.disabled.active-indicator.opacity"),
+        )
+    } else if error && focused {
+        (
+            "md.comp.filled-select.text-field.focus.active-indicator.height",
+            "md.comp.filled-select.text-field.error.focus.active-indicator.color",
+            None,
+        )
+    } else if error && hovered {
+        (
+            "md.comp.filled-select.text-field.hover.active-indicator.height",
+            "md.comp.filled-select.text-field.error.hover.active-indicator.color",
+            None,
+        )
+    } else if error {
+        (
+            "md.comp.filled-select.text-field.active-indicator.height",
+            "md.comp.filled-select.text-field.error.active-indicator.color",
+            None,
         )
     } else if focused {
         (
@@ -216,9 +266,10 @@ pub(crate) fn input_text_style(theme: &Theme, variant: SelectVariant) -> Option<
 pub(crate) fn input_text_color(
     theme: &Theme,
     variant: SelectVariant,
-    focused: bool,
     hovered: bool,
     disabled: bool,
+    error: bool,
+    focused: bool,
 ) -> (Color, f32) {
     let (color_key, opacity_key) = if disabled {
         (
@@ -238,6 +289,40 @@ pub(crate) fn input_text_color(
                     "md.comp.filled-select.text-field.disabled.input-text.opacity"
                 }
             }),
+        )
+    } else if error && focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.focus.input-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.focus.input-text.color"
+                }
+            },
+            None,
+        )
+    } else if error && hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.hover.input-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.hover.input-text.color"
+                }
+            },
+            None,
+        )
+    } else if error {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.input-text.color"
+                }
+                SelectVariant::Filled => "md.comp.filled-select.text-field.error.input-text.color",
+            },
+            None,
         )
     } else if focused {
         (
@@ -290,9 +375,10 @@ pub(crate) fn trailing_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
 pub(crate) fn trailing_icon_color(
     theme: &Theme,
     variant: SelectVariant,
-    focused: bool,
     hovered: bool,
     disabled: bool,
+    error: bool,
+    focused: bool,
 ) -> (Color, f32) {
     let (color_key, opacity_key) = if disabled {
         (
@@ -312,6 +398,42 @@ pub(crate) fn trailing_icon_color(
                     "md.comp.filled-select.text-field.disabled.trailing-icon.opacity"
                 }
             }),
+        )
+    } else if error && focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.focus.trailing-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.focus.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error && hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.hover.trailing-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.hover.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.trailing-icon.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.trailing-icon.color"
+                }
+            },
+            None,
         )
     } else if focused {
         (
@@ -355,6 +477,240 @@ pub(crate) fn trailing_icon_color(
         .and_then(|k| theme.number_by_key(k))
         .unwrap_or(1.0);
     (color, opacity)
+}
+
+pub(crate) fn placeholder_color(
+    theme: &Theme,
+    variant: SelectVariant,
+    disabled: bool,
+    _error: bool,
+) -> Color {
+    let base = theme
+        .color_by_key("md.sys.color.on-surface-variant")
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+
+    if !disabled {
+        return base;
+    }
+
+    let opacity_key = match variant {
+        SelectVariant::Outlined => "md.comp.outlined-select.text-field.disabled.input-text.opacity",
+        SelectVariant::Filled => "md.comp.filled-select.text-field.disabled.input-text.opacity",
+    };
+
+    alpha_mul(base, theme.number_by_key(opacity_key).unwrap_or(0.38))
+}
+
+pub(crate) fn label_color(
+    theme: &Theme,
+    variant: SelectVariant,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    let (color_key, opacity_key) = if disabled {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.disabled.label-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.disabled.label-text.color"
+                }
+            },
+            Some(match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.disabled.label-text.opacity"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.disabled.label-text.opacity"
+                }
+            }),
+        )
+    } else if error && focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.focus.label-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.focus.label-text.color"
+                }
+            },
+            None,
+        )
+    } else if error && hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.hover.label-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.hover.label-text.color"
+                }
+            },
+            None,
+        )
+    } else if error {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.label-text.color"
+                }
+                SelectVariant::Filled => "md.comp.filled-select.text-field.error.label-text.color",
+            },
+            None,
+        )
+    } else if focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.focus.label-text.color"
+                }
+                SelectVariant::Filled => "md.comp.filled-select.text-field.focus.label-text.color",
+            },
+            None,
+        )
+    } else if hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.hover.label-text.color"
+                }
+                SelectVariant::Filled => "md.comp.filled-select.text-field.hover.label-text.color",
+            },
+            None,
+        )
+    } else {
+        (
+            match variant {
+                SelectVariant::Outlined => "md.comp.outlined-select.text-field.label-text.color",
+                SelectVariant::Filled => "md.comp.filled-select.text-field.label-text.color",
+            },
+            None,
+        )
+    };
+
+    let color = theme
+        .color_by_key(color_key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+
+    let opacity = opacity_key
+        .and_then(|k| theme.number_by_key(k))
+        .unwrap_or(1.0);
+    alpha_mul(color, opacity)
+}
+
+pub(crate) fn supporting_text_color(
+    theme: &Theme,
+    variant: SelectVariant,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> Color {
+    let (color_key, opacity_key) = if disabled {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.disabled.supporting-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.disabled.supporting-text.color"
+                }
+            },
+            Some(match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.disabled.supporting-text.opacity"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.disabled.supporting-text.opacity"
+                }
+            }),
+        )
+    } else if error && focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.focus.supporting-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.focus.supporting-text.color"
+                }
+            },
+            None,
+        )
+    } else if error && hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.hover.supporting-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.hover.supporting-text.color"
+                }
+            },
+            None,
+        )
+    } else if error {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.error.supporting-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.error.supporting-text.color"
+                }
+            },
+            None,
+        )
+    } else if focused {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.focus.supporting-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.focus.supporting-text.color"
+                }
+            },
+            None,
+        )
+    } else if hovered {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.hover.supporting-text.color"
+                }
+                SelectVariant::Filled => {
+                    "md.comp.filled-select.text-field.hover.supporting-text.color"
+                }
+            },
+            None,
+        )
+    } else {
+        (
+            match variant {
+                SelectVariant::Outlined => {
+                    "md.comp.outlined-select.text-field.supporting-text.color"
+                }
+                SelectVariant::Filled => "md.comp.filled-select.text-field.supporting-text.color",
+            },
+            None,
+        )
+    };
+
+    let color = theme
+        .color_by_key(color_key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+
+    let opacity = opacity_key
+        .and_then(|k| theme.number_by_key(k))
+        .unwrap_or(1.0);
+    alpha_mul(color, opacity)
 }
 
 pub(crate) fn menu_container_background(theme: &Theme, variant: SelectVariant) -> Color {

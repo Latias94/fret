@@ -643,7 +643,40 @@
           "order": 0
         },
         {
-          "kind": "push_clip_r_rect"
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "push_transform"
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_transform"
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
         },
         {
           "kind": "quad",
@@ -664,7 +697,12 @@
           "kind": "pop_clip"
         },
         {
-          "kind": "pop_clip"
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
         },
         {
           "kind": "push_transform"
@@ -866,6 +904,60 @@
             0,
             0,
             0
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            170,
+            70,
+            300,
+            140
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            0,
+            860,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
           ],
           "corner_radii": [
             40,

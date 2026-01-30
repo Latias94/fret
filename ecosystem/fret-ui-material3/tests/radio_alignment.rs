@@ -2946,7 +2946,7 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
 #[test]
 fn material3_headless_controls_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
-    use fret_ui_material3::{Button, Checkbox, Switch};
+    use fret_ui_material3::{Button, Checkbox, Select, SelectItem, Switch};
 
     let schemes = [
         (
@@ -2993,6 +2993,16 @@ fn material3_headless_controls_suite_goldens_v1() {
             let checkbox_unchecked = app.models_mut().insert(false);
             let switch_on = app.models_mut().insert(true);
             let switch_off = app.models_mut().insert(false);
+            let select_empty: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+            let select_populated: Model<Option<Arc<str>>> =
+                app.models_mut().insert(Some(Arc::<str>::from("beta")));
+
+            let select_items: Arc<[SelectItem]> = vec![
+                SelectItem::new("alpha", "Alpha"),
+                SelectItem::new("beta", "Beta"),
+                SelectItem::new("charlie", "Charlie (disabled)").disabled(true),
+            ]
+            .into();
 
             let render = |ui: &mut UiTree<TestHost>,
                           app: &mut TestHost,
@@ -3025,6 +3035,28 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 .a11y_label("switch off")
                                 .test_id("sw-off")
                                 .into_element(cx),
+                            Select::new(select_empty.clone())
+                                .label("Select")
+                                .supporting_text("Supporting text")
+                                .placeholder("Pick one")
+                                .items(select_items.clone())
+                                .test_id("sel-empty")
+                                .into_element(cx),
+                            Select::new(select_populated.clone())
+                                .label("Select")
+                                .supporting_text("Supporting text")
+                                .placeholder("Pick one")
+                                .items(select_items.clone())
+                                .test_id("sel-populated")
+                                .into_element(cx),
+                            Select::new(select_empty.clone())
+                                .label("Select")
+                                .supporting_text("Error supporting text")
+                                .placeholder("Pick one")
+                                .items(select_items.clone())
+                                .error(true)
+                                .test_id("sel-error")
+                                .into_element(cx),
                         ]
                     });
 
@@ -3053,6 +3085,17 @@ fn material3_headless_controls_suite_goldens_v1() {
                 })
                 .unwrap_or_else(|| {
                     panic!("expected btn-filled in semantics snapshot ({label}, {scale})")
+                });
+
+            let select_empty_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("sel-empty")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected sel-empty in semantics snapshot ({label}, {scale})")
                 });
             let btn_bounds = ui
                 .debug_node_visual_bounds(btn_node)
@@ -3129,6 +3172,33 @@ fn material3_headless_controls_suite_goldens_v1() {
                     24,
                     40,
                     &focus_visible_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+            ui.set_focus(Some(select_empty_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+            let select_focus_visible_message = format!(
+                "expected the Material3 select focus-visible scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "focus_visible_select_empty".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_focus_visible_message,
                     &render,
                 ),
             );
@@ -3358,6 +3428,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
 
                 let selected: Model<Option<Arc<str>>> =
                     app.models_mut().insert(Some(Arc::<str>::from("beta")));
+                let error_selected: Model<Option<Arc<str>>> = app.models_mut().insert(None);
 
                 let items: Arc<[SelectItem]> = vec![
                     SelectItem::new("alpha", "Alpha")
@@ -3379,6 +3450,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
                                    app: &mut TestHost,
                                    services: &mut dyn UiServices| {
                     let selected = selected.clone();
+                    let error_selected = error_selected.clone();
                     let items = items.clone();
                     fret_ui::declarative::render_root(
                         ui,
@@ -3394,13 +3466,25 @@ fn material3_headless_overlays_suite_goldens_v1() {
                             props.align = CrossAlign::Start;
 
                             let select = Select::new(selected)
+                                .label("Label")
+                                .supporting_text("Supporting text")
                                 .a11y_label("select")
                                 .placeholder("Pick one")
-                                .items(items)
+                                .items(items.clone())
                                 .test_id("material3-select-trigger")
                                 .into_element(cx);
 
-                            vec![cx.flex(props, move |_cx| vec![select])]
+                            let select_error = Select::new(error_selected)
+                                .label("Label")
+                                .supporting_text("Error supporting text")
+                                .a11y_label("select error")
+                                .placeholder("Pick one")
+                                .items(items.clone())
+                                .error(true)
+                                .test_id("material3-select-trigger-error")
+                                .into_element(cx);
+
+                            vec![cx.flex(props, move |_cx| vec![select, select_error])]
                         },
                     )
                 };

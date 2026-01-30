@@ -77,6 +77,88 @@
         {
           "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
         }
       ],
       "quads": [
@@ -139,7 +221,7 @@
           "rect": [
             190,
             190,
-            580,
+            740,
             500
           ],
           "background": [
@@ -349,6 +431,656 @@
             80,
             80
           ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            3920,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            4780,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            410,
+            4850,
+            300,
+            140
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            5640,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        }
+      ]
+    },
+    "focus_visible_select_empty": {
+      "signature": [
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "push_clip_r_rect"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        }
+      ],
+      "quads": [
+        {
+          "order": 0,
+          "rect": [
+            240,
+            240,
+            420,
+            400
+          ],
+          "background": [
+            624,
+            509,
+            991,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            200,
+            200,
+            200,
+            200
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            800,
+            420,
+            400
+          ],
+          "background": [
+            791,
+            745,
+            815,
+            100
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            200,
+            200,
+            200,
+            200
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            390,
+            1510,
+            180,
+            180
+          ],
+          "background": [
+            624,
+            509,
+            991,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            390,
+            2150,
+            180,
+            180
+          ],
+          "background": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "border": [
+            20,
+            20,
+            20,
+            20
+          ],
+          "corner_radii": [
+            20,
+            20,
+            20,
+            20
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            2720,
+            520,
+            320
+          ],
+          "background": [
+            624,
+            509,
+            991,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            160,
+            160,
+            160,
+            160
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            480,
+            2760,
+            240,
+            240
+          ],
+          "background": [
+            37,
+            20,
+            109,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            120,
+            120,
+            120,
+            120
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            3360,
+            520,
+            320
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            20,
+            20,
+            20,
+            20
+          ],
+          "corner_radii": [
+            160,
+            160,
+            160,
+            160
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            340,
+            3460,
+            160,
+            160
+          ],
+          "background": [
+            296,
+            275,
+            319,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            80,
+            80,
+            80,
+            80
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            3920,
+            680,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            30,
+            30,
+            30,
+            30
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            270,
+            3950,
+            620,
+            500
+          ],
+          "background": [
+            791,
+            745,
+            815,
+            100
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            430,
+            4010,
+            300,
+            180
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            4780,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            410,
+            4850,
+            300,
+            140
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            5640,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
         }
       ]
     },
@@ -425,6 +1157,88 @@
         {
           "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
         }
       ],
       "quads": [
@@ -669,6 +1483,114 @@
             80,
             80,
             80
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            3920,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            4780,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            410,
+            4850,
+            300,
+            140
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            5640,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
           ]
         }
       ]
@@ -742,6 +1664,88 @@
         {
           "kind": "quad",
           "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "quad",
+          "order": 0
+        },
+        {
+          "kind": "push_clip_rect"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "svg_mask_icon",
+          "order": 0
+        },
+        {
+          "kind": "pop_clip"
+        },
+        {
+          "kind": "text",
+          "order": 0
+        },
+        {
+          "kind": "text",
+          "order": 0
         }
       ],
       "quads": [
@@ -959,6 +1963,114 @@
             80,
             80,
             80
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            3920,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            4780,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            410,
+            4850,
+            300,
+            140
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "corner_radii": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "order": 0,
+          "rect": [
+            240,
+            5640,
+            640,
+            560
+          ],
+          "background": [
+            37,
+            34,
+            42,
+            1000
+          ],
+          "border": [
+            10,
+            10,
+            10,
+            10
+          ],
+          "corner_radii": [
+            40,
+            40,
+            40,
+            40
           ]
         }
       ]
