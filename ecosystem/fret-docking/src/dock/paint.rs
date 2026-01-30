@@ -3,10 +3,16 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::hit_test::{tab_close_rect, tab_scroll_for_node};
-use super::layout::{dock_hint_rects, drop_zone_rect, split_tab_bar};
+use super::layout::{dock_hint_rects_with_font, drop_zone_rect, split_tab_bar};
 use super::manager::DockManager;
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
+use super::tab_bar_geometry::dock_tab_width_for_title;
+use super::tab_overflow::{
+    TabOverflowMenuState, overflow_menu_max_scroll, overflow_menu_row_count,
+    overflow_menu_row_height, tab_overflow_button_rect, tab_overflow_menu_rect,
+    tab_strip_rect_with_overflow_button,
+};
 use fret_ui::retained_bridge::ResizeHandle;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 
@@ -17,9 +23,12 @@ pub(super) struct PaintDockParams<'a> {
     pub(super) tab_widths: &'a HashMap<DockNodeId, Arc<[Px]>>,
     pub(super) hovered_tab: Option<(DockNodeId, usize)>,
     pub(super) hovered_tab_close: bool,
+    pub(super) hovered_tab_overflow_button: Option<DockNodeId>,
     pub(super) pressed_tab_close: Option<(DockNodeId, usize)>,
     pub(super) tab_scroll: &'a HashMap<DockNodeId, Px>,
     pub(super) tab_close_glyph: Option<PreparedTabTitle>,
+    pub(super) tab_overflow_glyph: Option<PreparedTabTitle>,
+    pub(super) tab_overflow_menu: Option<TabOverflowMenuState>,
 }
 
 pub(super) fn paint_dock(
@@ -45,9 +54,12 @@ pub(super) fn paint_dock(
         tab_widths,
         hovered_tab,
         hovered_tab_close,
+        hovered_tab_overflow_button,
         pressed_tab_close,
         tab_scroll,
         tab_close_glyph,
+        tab_overflow_glyph,
+        tab_overflow_menu,
     } = params;
     let graph = &dock.graph;
     for (&node_id, &rect) in layout.iter() {
@@ -75,17 +87,29 @@ pub(super) fn paint_dock(
         });
 
         let scroll = tab_scroll_for_node(tab_scroll, node_id);
-        let tab_geom = tab_widths
+        let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+        let tab_geom_candidate = tab_widths
             .get(&node_id)
             .filter(|w| w.len() == tabs.len())
-            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
-            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()));
-        scene.push(SceneOp::PushClipRect { rect: tab_bar });
+            .map(|w| TabBarGeometry::variable(strip_candidate, w.clone()))
+            .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tabs.len()));
+        let overflow = tab_geom_candidate.max_scroll().0 > 0.0;
+        let tab_geom = if overflow {
+            tab_geom_candidate
+        } else {
+            tab_widths
+                .get(&node_id)
+                .filter(|w| w.len() == tabs.len())
+                .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tabs.len()))
+        };
+        let tab_strip = if overflow { strip_candidate } else { tab_bar };
+        scene.push(SceneOp::PushClipRect { rect: tab_strip });
 
         for (i, panel) in tabs.iter().enumerate() {
             let tab_rect = tab_geom.tab_rect(i, scroll);
-            if tab_rect.origin.x.0 + tab_rect.size.width.0 < tab_bar.origin.x.0
-                || tab_rect.origin.x.0 > tab_bar.origin.x.0 + tab_bar.size.width.0
+            if tab_rect.origin.x.0 + tab_rect.size.width.0 < tab_strip.origin.x.0
+                || tab_rect.origin.x.0 > tab_strip.origin.x.0 + tab_strip.size.width.0
             {
                 continue;
             }
@@ -189,6 +213,102 @@ pub(super) fn paint_dock(
 
         scene.push(SceneOp::PopClip);
 
+        if overflow {
+            let button_rect = tab_overflow_button_rect(theme, tab_bar);
+            let hovered = hovered_tab_overflow_button == Some(node_id);
+            let open = tab_overflow_menu.is_some_and(|m| m.tabs == node_id);
+            if hovered || open {
+                scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(10),
+                    rect: button_rect,
+                    background: hover_bg,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(radius_sm),
+                });
+            }
+            if let Some(glyph) = tab_overflow_glyph {
+                let text_x = Px(button_rect.origin.x.0
+                    + (button_rect.size.width.0 - glyph.metrics.size.width.0) * 0.5);
+                let inner_y = button_rect.origin.y.0
+                    + ((button_rect.size.height.0 - glyph.metrics.size.height.0) * 0.5);
+                let text_y = Px(inner_y + glyph.metrics.baseline.0);
+                let color = if hovered || open { fg } else { fg_muted };
+                scene.push(SceneOp::Text {
+                    order: fret_core::DrawOrder(11),
+                    origin: Point::new(text_x, text_y),
+                    text: glyph.blob,
+                    color,
+                });
+            }
+        }
+
+        if let Some(menu) = tab_overflow_menu
+            && menu.tabs == node_id
+        {
+            let menu_rect = tab_overflow_menu_rect(theme, tab_bar, tabs.len());
+            let max_scroll = overflow_menu_max_scroll(tab_bar, tabs.len());
+            let scroll = Px(menu.scroll.0.clamp(0.0, max_scroll.0));
+            let row_h = overflow_menu_row_height(tab_bar).0;
+            if row_h > 0.0 {
+                let bg = theme.color_required("popover");
+                let border = theme.color_required("popover.border");
+                scene.push(SceneOp::Quad {
+                    order: fret_core::DrawOrder(100),
+                    rect: menu_rect,
+                    background: bg,
+                    border: Edges::all(Px(1.0)),
+                    border_color: border,
+                    corner_radii: fret_core::Corners::all(radius_sm),
+                });
+
+                scene.push(SceneOp::PushClipRect { rect: menu_rect });
+                let first = (scroll.0 / row_h).floor().max(0.0) as usize;
+                let offset = scroll.0 - first as f32 * row_h;
+                let visible = overflow_menu_row_count(tabs.len());
+                for row in 0..visible {
+                    let idx = first + row;
+                    let Some(panel) = tabs.get(idx) else {
+                        break;
+                    };
+                    let y = menu_rect.origin.y.0 + row as f32 * row_h - offset;
+                    let row_rect = Rect::new(
+                        Point::new(menu_rect.origin.x, Px(y)),
+                        Size::new(menu_rect.size.width, Px(row_h)),
+                    );
+
+                    let is_hovered = menu.hovered == Some(idx);
+                    let is_active = idx == *active;
+                    if is_hovered {
+                        scene.push(SceneOp::Quad {
+                            order: fret_core::DrawOrder(101),
+                            rect: row_rect,
+                            background: hover_bg,
+                            border: Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                    }
+
+                    if let Some(title) = tab_titles.get(panel) {
+                        let pad_x = pad_md;
+                        let text_x = Px(row_rect.origin.x.0 + pad_x.0);
+                        let inner_y =
+                            row_rect.origin.y.0 + ((row_h - title.metrics.size.height.0) * 0.5);
+                        let text_y = Px(inner_y + title.metrics.baseline.0);
+                        let text_color = if is_active { fg } else { fg_muted };
+                        scene.push(SceneOp::Text {
+                            order: fret_core::DrawOrder(102),
+                            origin: Point::new(text_x, text_y),
+                            text: title.blob,
+                            color: text_color,
+                        });
+                    }
+                }
+                scene.push(SceneOp::PopClip);
+            }
+        }
+
         let active_panel = tabs.get(*active);
         if let Some(panel) = active_panel.and_then(|p| dock.panel(p)) {
             if let Some(vp) = panel.viewport {
@@ -250,6 +370,8 @@ pub(super) fn paint_split_handles(
     graph: &DockGraph,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     active: Option<DockNodeId>,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     scale_factor: f32,
     scene: &mut Scene,
 ) {
@@ -270,8 +392,8 @@ pub(super) fn paint_split_handles(
             bounds,
             children.len(),
             fractions,
-            DOCK_SPLIT_HANDLE_GAP,
-            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            split_handle_gap,
+            split_handle_hit_thickness,
             &[],
         );
 
@@ -283,7 +405,7 @@ pub(super) fn paint_split_handles(
 
         let handle = ResizeHandle {
             axis: *axis,
-            hit_thickness: DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            hit_thickness: split_handle_hit_thickness,
             paint_device_px: 1.0,
         };
         for center in computed.handle_centers {
@@ -310,6 +432,9 @@ pub(super) fn paint_drop_overlay(
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     tab_scroll: &HashMap<DockNodeId, Px>,
     tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+    drag_source_tabs: Option<DockNodeId>,
+    drag_tab_title: Option<PreparedTabTitle>,
+    close_glyph_present: bool,
     scene: &mut Scene,
 ) {
     let Some(target) = target else {
@@ -341,30 +466,125 @@ pub(super) fn paint_drop_overlay(
             };
 
             if target.zone == DropZone::Center {
-                let (tab_bar, _content) = split_tab_bar(rect);
-                scene.push(SceneOp::Quad {
-                    order: fret_core::DrawOrder(9_990),
-                    rect: tab_bar,
-                    background: Color { a: 0.14, ..primary },
-                    border: Edges::all(Px(1.0)),
-                    border_color: Color { a: 0.45, ..primary },
-                    corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
-                });
+                let (tab_bar, content) = split_tab_bar(rect);
+                let same_tabs_reorder = drag_source_tabs.is_some_and(|src| src == target.tabs);
+                if !same_tabs_reorder {
+                    scene.push(SceneOp::Quad {
+                        order: fret_core::DrawOrder(9_985),
+                        rect: content,
+                        background: Color { a: 0.12, ..primary },
+                        border: Edges::all(Px(2.0)),
+                        border_color: Color { a: 0.65, ..primary },
+                        corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+                    });
+                    scene.push(SceneOp::Quad {
+                        order: fret_core::DrawOrder(9_990),
+                        rect: tab_bar,
+                        background: Color { a: 0.14, ..primary },
+                        border: Edges::all(Px(1.0)),
+                        border_color: Color { a: 0.45, ..primary },
+                        corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+                    });
+                }
+                if !same_tabs_reorder && let Some(title) = drag_tab_title {
+                    let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
+                    let tab_count = match graph.node(target.tabs) {
+                        Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
+                        _ => 0,
+                    };
+                    let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+                    let geom_candidate = tab_widths
+                        .get(&target.tabs)
+                        .filter(|w| w.len() == tab_count)
+                        .map(|w| TabBarGeometry::variable(strip_candidate, w.clone()))
+                        .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tab_count));
+                    let overflow = geom_candidate.max_scroll().0 > 0.0;
+                    let geom = if overflow {
+                        geom_candidate
+                    } else {
+                        tab_widths
+                            .get(&target.tabs)
+                            .filter(|w| w.len() == tab_count)
+                            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count))
+                    };
+                    let tab_strip = if overflow { strip_candidate } else { tab_bar };
+
+                    let insert_index = target.insert_index.unwrap_or(tab_count);
+                    let mut x = geom.insert_x(insert_index.min(tab_count), scroll).0;
+                    let mut w = dock_tab_width_for_title(
+                        theme,
+                        title.metrics.size.width,
+                        close_glyph_present,
+                    )
+                    .0;
+
+                    let min_x = tab_strip.origin.x.0;
+                    let max_x = tab_strip.origin.x.0 + tab_strip.size.width.0;
+                    if x < min_x {
+                        x = min_x;
+                    }
+                    if x > max_x {
+                        x = max_x;
+                    }
+                    w = w.max(0.0).min((max_x - x).max(0.0));
+                    if w > 6.0 {
+                        let preview = Rect::new(
+                            Point::new(Px(x), tab_strip.origin.y),
+                            Size::new(Px(w), tab_strip.size.height),
+                        );
+                        scene.push(SceneOp::Quad {
+                            order: fret_core::DrawOrder(9_995),
+                            rect: preview,
+                            background: Color { a: 0.22, ..primary },
+                            border: Edges::all(Px(2.0)),
+                            border_color: Color { a: 0.85, ..primary },
+                            corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
+                        });
+
+                        let pad_x = theme.metric_required("metric.padding.md");
+                        let text_x = Px(preview.origin.x.0 + pad_x.0.max(0.0));
+                        let inner_y = preview.origin.y.0
+                            + ((preview.size.height.0 - title.metrics.size.height.0) * 0.5);
+                        let text_y = Px(inner_y + title.metrics.baseline.0);
+                        let fg = theme.color_required("foreground");
+                        scene.push(SceneOp::PushClipRect { rect: preview });
+                        scene.push(SceneOp::Text {
+                            order: fret_core::DrawOrder(9_996),
+                            origin: Point::new(text_x, text_y),
+                            text: title.blob,
+                            color: Color { a: 0.92, ..fg },
+                        });
+                        scene.push(SceneOp::PopClip);
+                    }
+                }
                 if let Some(i) = target.insert_index {
                     let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
                     let tab_count = match graph.node(target.tabs) {
                         Some(DockNode::Tabs { tabs, .. }) => tabs.len(),
                         _ => 0,
                     };
-                    let geom = tab_widths
+                    let strip_candidate = tab_strip_rect_with_overflow_button(theme, tab_bar);
+                    let geom_candidate = tab_widths
                         .get(&target.tabs)
                         .filter(|w| w.len() == tab_count)
-                        .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
-                        .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+                        .map(|w| TabBarGeometry::variable(strip_candidate, w.clone()))
+                        .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tab_count));
+                    let overflow = geom_candidate.max_scroll().0 > 0.0;
+                    let geom = if overflow {
+                        geom_candidate
+                    } else {
+                        tab_widths
+                            .get(&target.tabs)
+                            .filter(|w| w.len() == tab_count)
+                            .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
+                            .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count))
+                    };
+                    let tab_strip = if overflow { strip_candidate } else { tab_bar };
                     let x = geom.insert_x(i.min(tab_count), scroll).0;
                     let marker = Rect::new(
-                        Point::new(Px(x - 3.0), Px(tab_bar.origin.y.0 + 3.0)),
-                        Size::new(Px(6.0), Px((tab_bar.size.height.0 - 6.0).max(0.0))),
+                        Point::new(Px(x - 3.0), Px(tab_strip.origin.y.0 + 3.0)),
+                        Size::new(Px(6.0), Px((tab_strip.size.height.0 - 6.0).max(0.0))),
                     );
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(10_000),
@@ -416,25 +636,42 @@ pub(super) fn paint_drop_overlay(
 
 pub(super) fn paint_drop_hints(
     theme: fret_ui::ThemeSnapshot,
+    hints: Option<DockDropHints>,
     target: Option<DockDropTarget>,
+    hint_font_size_inner: Px,
+    hint_font_size_outer: Px,
     _window: fret_core::AppWindowId,
     _bounds: Rect,
     layout: &std::collections::HashMap<DockNodeId, Rect>,
     scene: &mut Scene,
 ) {
-    let Some(target) = target else {
+    let Some(hints) = hints else {
         return;
     };
 
-    let DockDropTarget::Dock(target) = target else {
+    let active = match target {
+        Some(DockDropTarget::Dock(t)) => Some(t),
+        _ => None,
+    };
+    let active_matches_hints =
+        active.is_some_and(|t| t.root == hints.root && t.leaf_tabs == hints.leaf_tabs);
+    let active_zone = active_matches_hints
+        .then(|| active.unwrap())
+        .filter(|t| t.explicit)
+        .map(|t| t.zone);
+    let active_outer = active_matches_hints && active.unwrap().outer;
+    let inner_active_set = active_zone.is_some() && !active_outer;
+    let outer_active_set = active_zone.is_some() && active_outer;
+
+    let Some(inner_rect) = layout.get(&hints.leaf_tabs).copied() else {
         return;
     };
+    let root_rect = layout.get(&hints.root).copied().unwrap_or(inner_rect);
 
-    let Some(rect) = layout.get(&target.tabs).copied() else {
-        return;
-    };
-
-    let hint_rects = dock_hint_rects(rect);
+    let show_outer = hints.root != hints.leaf_tabs;
+    let inner_rects = dock_hint_rects_with_font(inner_rect, hint_font_size_inner, false);
+    let outer_rects =
+        show_outer.then(|| dock_hint_rects_with_font(root_rect, hint_font_size_outer, true));
 
     let inactive_bg_base = theme.color_required("card");
     let inactive_border_base = theme.color_required("border");
@@ -465,13 +702,13 @@ pub(super) fn paint_drop_hints(
     let border = Edges::all(Px(2.0));
     let corner_radii = fret_core::Corners::all(Px(radius_sm.0.max(4.0)));
 
-    // Draw a plate behind the 5-way pad, closer to ImGui/Godot affordances.
+    // Draw a plate behind the inner 5-way pad, closer to common editor docking affordances.
     let pad = Px(pad_sm.0.max(6.0));
     let mut min_x: f32 = f32::INFINITY;
     let mut min_y: f32 = f32::INFINITY;
     let mut max_x: f32 = f32::NEG_INFINITY;
     let mut max_y: f32 = f32::NEG_INFINITY;
-    for &(_zone, r) in hint_rects.iter() {
+    for &(_zone, r) in inner_rects.iter() {
         min_x = min_x.min(r.origin.x.0);
         min_y = min_y.min(r.origin.y.0);
         max_x = max_x.max(r.origin.x.0 + r.size.width.0);
@@ -501,24 +738,49 @@ pub(super) fn paint_drop_hints(
         });
     }
 
-    for &(zone, hint_rect) in hint_rects.iter() {
-        let is_active = zone == target.zone;
-        let bg = if is_active { active_bg } else { inactive_bg };
-        let stroke = if is_active {
-            active_border
-        } else {
-            inactive_border
-        };
+    let mut paint_set = |hint_rects: &[(DropZone, Rect); 5],
+                         active_set: bool,
+                         skip_center: bool,
+                         inactive_alpha: f32| {
+        for &(zone, hint_rect) in hint_rects.iter() {
+            if skip_center && zone == DropZone::Center {
+                continue;
+            }
+            let is_active = active_set && active_zone.is_some_and(|z| z == zone);
+            let bg = if is_active {
+                active_bg
+            } else {
+                Color {
+                    a: inactive_bg.a * inactive_alpha,
+                    ..inactive_bg
+                }
+            };
+            let stroke = if is_active {
+                active_border
+            } else {
+                Color {
+                    a: inactive_border.a * inactive_alpha,
+                    ..inactive_border
+                }
+            };
 
-        scene.push(SceneOp::Quad {
-            order,
-            rect: hint_rect,
-            background: bg,
-            border,
-            border_color: stroke,
-            corner_radii,
-        });
-        paint_drop_hint_icon(theme, zone, hint_rect, is_active, scene, order.0 + 1);
+            scene.push(SceneOp::Quad {
+                order,
+                rect: hint_rect,
+                background: bg,
+                border,
+                border_color: stroke,
+                corner_radii,
+            });
+            paint_drop_hint_icon(theme, zone, hint_rect, is_active, scene, order.0 + 1);
+        }
+    };
+
+    // Inner and outer hint sets can coexist; the active set is determined by which family of
+    // drop rects was hit-tested.
+    paint_set(&inner_rects, inner_active_set, false, 1.0);
+    if let Some(outer_rects) = outer_rects.as_ref() {
+        paint_set(outer_rects, outer_active_set, true, 0.80);
     }
 }
 
@@ -568,7 +830,7 @@ fn paint_drop_hint_icon(
         corner_radii: fret_core::Corners::all(frame_radius),
     });
 
-    // Base fill so the highlighted region reads as "target placement" (ImGui-like).
+    // Base fill so the highlighted region reads as "target placement".
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(order + 1),
         rect: inner,

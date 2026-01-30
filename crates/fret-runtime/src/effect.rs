@@ -212,10 +212,49 @@ pub enum WindowRequest {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WindowRole {
+    Main,
+    Auxiliary,
+}
+
+impl Default for WindowRole {
+    fn default() -> Self {
+        Self::Auxiliary
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskbarVisibility {
+    Show,
+    Hide,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActivationPolicy {
+    Activates,
+    NonActivating,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WindowZLevel {
+    Normal,
+    AlwaysOnTop,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct WindowStyleRequest {
+    pub taskbar: Option<TaskbarVisibility>,
+    pub activation: Option<ActivationPolicy>,
+    pub z_level: Option<WindowZLevel>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CreateWindowRequest {
     pub kind: CreateWindowKind,
     pub anchor: Option<WindowAnchor>,
+    pub role: WindowRole,
+    pub style: WindowStyleRequest,
 }
 
 #[derive(Debug, Clone, PartialEq)]
