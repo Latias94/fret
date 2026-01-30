@@ -24,6 +24,9 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
     }
 
     let q_lower = q.to_ascii_lowercase();
+    if item.id.to_ascii_lowercase().contains(&q_lower) {
+        return true;
+    }
     if item.label.to_ascii_lowercase().contains(&q_lower) {
         return true;
     }

@@ -22,6 +22,21 @@ Before digging into code, classify the problem:
 
 Reference workflow: `docs/debugging-playbook.md`.
 
+## 1.1 Severity Rubric (Visual Impact)
+
+Severity is about **user-visible breakage** (not internal correctness). Prefer concrete, falsifiable criteria:
+
+| Severity | Definition | Typical Examples | “Done” Criteria |
+|---:|---|---|---|
+| P0 | Visually broken or blocks interaction in common window sizes. | Critical controls clipped/off-window; a panel/card overflows the window; scroll viewport can’t scroll; overlays anchor to the wrong rect; hit-test region is wrong. | Deterministic repro script + minimal fix + regression gate (script or unit test). |
+| P1 | Noticeable but not blocking; workaround exists. | Minor clipping, awkward wrapping, suboptimal spacing, rare small-window overflow. | Repro + fix (may be deferred), keep tracked. |
+| P2 | Cosmetic / polish only. | Minor alignment / color / typography nits. | Fix opportunistically; do not expand suite scope for these. |
+
+Notes:
+
+- Prefer “small window” as the default stress case (`800×600` or `960×540`) because most editor UI failures show up there first.
+- Treat “hard to repro” as a signal: spend 5–10 minutes to make the repro deterministic (add anchors / stabilize the script) before touching layout code.
+
 ## 2) Collection Workflow (Preferred)
 
 ### 2.1 Capture a deterministic diagnostics bundle (recommended)
@@ -63,6 +78,7 @@ Use `fretboard diag compare`:
 | L2 | P0 | `intro` | “Core / UI Kit / Shadcn” preview cards (and the note) can be laid out wider than the window (tab panel expands to max-content width). | `tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json` | Fixed (pending merge) | codex | Debug anchors: `label="Debug:ui-gallery:intro:preview-grid"`, `test_id="ui-gallery-intro-preview-grid"` and `label="Debug:ui-gallery:intro:preview-note"`, `test_id="ui-gallery-intro-preview-note"`. |
 | L3 | P0 | `workspace` | Workspace top bar can clip critical controls: the right-side “Command palette” button and tab-strip scroll buttons can end up off-window when tab strip overflows (missing `min-w-0`/shrink constraints on flex/scroll containers). | `tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json` | Fixed (pending merge) | codex | Evidence: `target/fret-diag/1769692404766-ui-gallery-topbar-command-palette-visible/frame.bmp`. Regression gate: `bounds_within_window(test_id=\"ui-gallery-command-palette\", eps_px=1.0)`. |
 | L4 | P1 | `gallery` | In small windows (e.g. 800×600), the content header can squeeze the title column too much (page title wraps per-character). | (manual) | Mitigated | codex | Mitigation: truncate the page title (`nowrap + ellipsis`) to avoid “vertical text” when the right-side action row is wider than the remaining space. Follow-up: make the header responsive (wrap / overflow menu). |
+| L5 | P0 | `data_grid` | DataGrid header row overlapped with body rows (rows painted under the header). | `tools/diag-scripts/ui-gallery-layout-sweep-extended.json` (data_grid step) | Fixed (pending merge) | codex | Root cause: body scroll region positioned at y=0 while header also at y=0. Fix: offset body by header height via an absolute-positioned body slot (`top=row_height`). Regression: `ecosystem/fret-ui-shadcn/tests/data_grid_layout.rs` `data_grid_header_does_not_overlap_body`. Evidence: `target/fret-diag/1769775649931-ui-gallery-layout-sweep-data-grid/frame.bmp` (after). |
 
 ### L1 Notes (Resizable Panels)
 
@@ -146,6 +162,18 @@ Implementation note:
 - `fret-ui-shadcn` `DialogContent` / `SheetContent` / `PopoverContent` now default to `min_w_0().min_h_0()` and
   use shrink-safe internal stacks to reduce “max-content blowup” and flex+scroll edge cases.
 
+### 5.2.1 Where to Fix: Component Defaults vs Helper Methods
+
+Rule of thumb:
+
+- If the issue is a **generic invariant violation** (A–D) that can affect many callsites, fix it as a **safe-by-default component behavior** (e.g. `TabsContent`, `ScrollArea`, overlay content wrappers).
+- If the issue is **policy-specific** (product look/feel, bespoke spacing rules, demo-only composition), prefer a **local helper method** or per-page wrapper to avoid baking policy into the mechanism layer.
+
+Definition of “safe-by-default” here:
+
+- The default should prevent common editor-UI failure modes without surprising explicit caller intent.
+- Callers must still be able to override the default (explicit props/layout should win).
+
 ### 5.3 TODO (Near-term)
 
 - [x] Add/maintain a “P0-first” issue queue in this doc (table in section 3 stays authoritative).
@@ -157,6 +185,10 @@ Implementation note:
 - [x] Add a lightweight “page-sweep” script that visits a few core pages and asserts `bounds_within_window` for `ui-gallery-page-*` roots:
   - `tools/diag-scripts/ui-gallery-layout-sweep-core.json`
   - Current coverage (kept intentionally small): `intro`, `layout`, `scroll_area`, `tabs`, `accordion`, `overlay`, `resizable`.
+- [ ] Add an “extended sweep” script (not in the default suite) that visits more pages to discover new layout gaps early:
+  - Target pages: `data_table`, `tree`, `virtual_list`, `code_view`, `sidebar`, `menubar` (and any newly added gallery pages).
+  - Gate style: a small number of `bounds_within_window` assertions on page roots + 1–3 critical controls per page.
+  - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-extended.json` (kept out of `ui-gallery-layout` suite by default).
 - [x] Add an overlay regression script that opens key modals/popovers and asserts bounds:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
 - [x] Extend the overlay script with a “flex + scroll” stress interaction:
