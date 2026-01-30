@@ -205,5 +205,6 @@ Exit criteria:
 - [x] TLI1-007: Add BiDi/RTL conformance strings to UI Gallery and ensure geometry queries match expectations.
   - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_text_bidi_rtl_conformance`) uses
     `TextService::{hit_test_point,caret_rect,selection_rects_clipped}` on mixed-direction sample strings.
-- [ ] TLI1-008: Add decoration rendering tests (underline/strikethrough) under non-integer scale factors.
+- [x] TLI1-008: Add decoration rendering tests (underline/strikethrough) under non-integer scale factors.
+  - Evidence: `crates/fret-render/src/text.rs` (`decorations_are_pixel_snapped_under_non_integer_scale_factor`).
 - [ ] TLI1-009: Decide trailing-whitespace selection policy and test it.

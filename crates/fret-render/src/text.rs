@@ -228,7 +228,25 @@ pub enum GlyphQuadKind {
 pub struct TextBlob {
     pub shape: Arc<TextShape>,
     pub paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
+    pub decorations: Arc<[TextDecoration]>,
     ref_count: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextDecorationKind {
+    Underline,
+    Strikethrough,
+}
+
+#[derive(Debug, Clone)]
+pub struct TextDecoration {
+    pub kind: TextDecorationKind,
+    /// Rect in the same coordinate space as `TextService::selection_rects` (y=0 at top of text box).
+    pub rect: Rect,
+    /// When present, uses `TextBlob.paint_palette[paint_span]` as the base color if no explicit override exists.
+    pub paint_span: Option<u16>,
+    /// Optional explicit decoration color override.
+    pub color: Option<fret_core::Color>,
 }
 
 #[derive(Debug, Clone)]
@@ -245,6 +263,8 @@ pub struct TextLine {
     pub end: usize,
     pub width: Px,
     pub y_top: Px,
+    /// Baseline Y for this line (y=0 at top of text box).
+    pub y_baseline: Px,
     pub height: Px,
     pub caret_stops: Vec<(usize, Px)>,
 }
@@ -967,18 +987,44 @@ fn spans_paint_fingerprint(spans: &[TextSpan]) -> u64 {
     "fret.text.spans.paint.v0".hash(&mut hasher);
     for s in spans {
         s.len.hash(&mut hasher);
-        match s.paint.fg {
+        paint_fingerprint_color(&mut hasher, s.paint.fg);
+        paint_fingerprint_color(&mut hasher, s.paint.bg);
+
+        match s.paint.underline.as_ref() {
             None => 0u8.hash(&mut hasher),
-            Some(c) => {
+            Some(u) => {
                 1u8.hash(&mut hasher);
-                c.r.to_bits().hash(&mut hasher);
-                c.g.to_bits().hash(&mut hasher);
-                c.b.to_bits().hash(&mut hasher);
-                c.a.to_bits().hash(&mut hasher);
+                paint_fingerprint_color(&mut hasher, u.color);
+                std::mem::discriminant(&u.style).hash(&mut hasher);
+            }
+        }
+
+        match s.paint.strikethrough.as_ref() {
+            None => 0u8.hash(&mut hasher),
+            Some(st) => {
+                1u8.hash(&mut hasher);
+                paint_fingerprint_color(&mut hasher, st.color);
+                std::mem::discriminant(&st.style).hash(&mut hasher);
             }
         }
     }
     hasher.finish()
+}
+
+fn paint_fingerprint_color(
+    hasher: &mut std::collections::hash_map::DefaultHasher,
+    color: Option<fret_core::Color>,
+) {
+    match color {
+        None => 0u8.hash(hasher),
+        Some(c) => {
+            1u8.hash(hasher);
+            c.r.to_bits().hash(hasher);
+            c.g.to_bits().hash(hasher);
+            c.b.to_bits().hash(hasher);
+            c.a.to_bits().hash(hasher);
+        }
+    }
 }
 
 pub struct TextSystem {
@@ -1596,6 +1642,9 @@ impl TextSystem {
         let text = key.text.clone();
         key.backend = 1;
 
+        let scale = constraints.scale_factor.max(1.0);
+        let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+
         if let Some(id) = self.blob_cache.get(&key).copied() {
             if let Some(blob) = self.blobs.get_mut(id) {
                 blob.ref_count = blob.ref_count.saturating_add(1);
@@ -1617,7 +1666,6 @@ impl TextSystem {
         let shape = if let Some(shape) = self.shape_cache.get(&shape_key) {
             shape.clone()
         } else {
-            let scale = constraints.scale_factor.max(1.0);
             let shape = {
                 let input = match spans {
                     Some(spans) => TextInputRef::Attributed {
@@ -1642,7 +1690,6 @@ impl TextSystem {
                     .first()
                     .map(|l| l.baseline.max(0.0))
                     .unwrap_or(0.0);
-                let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
                 let first_baseline_px = if snap_vertical && let Some(first) = wrapped.lines.first()
                 {
                     let top_px = 0.0_f32;
@@ -1708,6 +1755,7 @@ impl TextSystem {
                         end: range.end.min(kept_end),
                         width: Px((line.width / scale).max(0.0)),
                         y_top: Px((line_top_px / scale).max(0.0)),
+                        y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                         height: Px((line_height_px / scale).max(0.0)),
                         caret_stops,
                     });
@@ -1826,10 +1874,16 @@ impl TextSystem {
             shape
         };
 
+        let decorations: Vec<TextDecoration> = resolved_spans
+            .as_deref()
+            .map(|spans| decorations_for_lines(shape.lines.as_ref(), spans, scale, snap_vertical))
+            .unwrap_or_default();
+
         let metrics = shape.metrics;
         let id = self.blobs.insert(TextBlob {
             shape,
             paint_palette,
+            decorations: Arc::from(decorations),
             ref_count: 1,
         });
         self.blob_cache.insert(key.clone(), id);
@@ -2067,6 +2121,13 @@ struct ResolvedSpan {
     end: usize,
     slot: u16,
     fg: Option<fret_core::Color>,
+    underline: Option<ResolvedDecoration>,
+    strikethrough: Option<ResolvedDecoration>,
+}
+
+#[derive(Clone, Debug)]
+struct ResolvedDecoration {
+    color: Option<fret_core::Color>,
 }
 
 fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<ResolvedSpan>> {
@@ -2091,6 +2152,16 @@ fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Resolved
                 end,
                 slot,
                 fg: span.paint.fg,
+                underline: span
+                    .paint
+                    .underline
+                    .as_ref()
+                    .map(|u| ResolvedDecoration { color: u.color }),
+                strikethrough: span
+                    .paint
+                    .strikethrough
+                    .as_ref()
+                    .map(|s| ResolvedDecoration { color: s.color }),
             });
         }
         offset = end;
@@ -2749,16 +2820,102 @@ fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
     *rects = out;
 }
 
+fn decorations_for_lines(
+    lines: &[TextLine],
+    spans: &[ResolvedSpan],
+    scale: f32,
+    snap_vertical: bool,
+) -> Vec<TextDecoration> {
+    let thickness_px = 1.0_f32;
+    let thickness = Px(thickness_px / scale.max(1.0));
+
+    let mut out: Vec<TextDecoration> = Vec::new();
+    if lines.is_empty() || spans.is_empty() {
+        return out;
+    }
+
+    for line in lines {
+        let line_top_px = line.y_top.0 * scale;
+        let line_bottom_px = (line.y_top.0 + line.height.0).max(line.y_top.0) * scale;
+        let baseline_px = line.y_baseline.0 * scale;
+
+        // Underline: anchor to the baseline and snap in device px under fractional scaling.
+        let underline_bottom_px_raw = baseline_px + 1.0;
+        let underline_bottom_px = if snap_vertical {
+            underline_bottom_px_raw.round()
+        } else {
+            underline_bottom_px_raw
+        }
+        .clamp(line_top_px, line_bottom_px);
+        let underline_top_px =
+            (underline_bottom_px - thickness_px).clamp(line_top_px, line_bottom_px - thickness_px);
+        let underline_y = Px((underline_top_px / scale).max(0.0));
+
+        // Strikethrough: approximate as a fraction of the line height above the baseline.
+        let line_height_px = (line.height.0.max(0.0) * scale).max(0.0);
+        let strike_offset_px_raw = (line_height_px * 0.30).clamp(1.0, line_height_px);
+        let strike_bottom_px_raw = baseline_px - strike_offset_px_raw;
+        let strike_bottom_px = if snap_vertical {
+            strike_bottom_px_raw.round()
+        } else {
+            strike_bottom_px_raw
+        }
+        .clamp(line_top_px, line_bottom_px);
+        let strike_top_px =
+            (strike_bottom_px - thickness_px).clamp(line_top_px, line_bottom_px - thickness_px);
+        let strike_y = Px((strike_top_px / scale).max(0.0));
+
+        for span in spans {
+            if span.underline.is_none() && span.strikethrough.is_none() {
+                continue;
+            }
+
+            let start = span.start.max(line.start);
+            let end = span.end.min(line.end);
+            if start >= end {
+                continue;
+            }
+
+            let x0 = caret_x_from_stops(&line.caret_stops, start);
+            let x1 = caret_x_from_stops(&line.caret_stops, end);
+            let left = Px(x0.0.min(x1.0));
+            let right = Px(x0.0.max(x1.0));
+            let width = Px((right.0 - left.0).max(thickness.0));
+
+            if let Some(underline) = span.underline.as_ref() {
+                out.push(TextDecoration {
+                    kind: TextDecorationKind::Underline,
+                    rect: Rect::new(Point::new(left, underline_y), Size::new(width, thickness)),
+                    paint_span: Some(span.slot),
+                    color: underline.color,
+                });
+            }
+
+            if let Some(strikethrough) = span.strikethrough.as_ref() {
+                out.push(TextDecoration {
+                    kind: TextDecorationKind::Strikethrough,
+                    rect: Rect::new(Point::new(left, strike_y), Size::new(width, thickness)),
+                    paint_span: Some(span.slot),
+                    color: strikethrough.color,
+                });
+            }
+        }
+    }
+
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        TextBlobKey, TextShapeKey, collect_font_names, spans_paint_fingerprint,
+        TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names, spans_paint_fingerprint,
         spans_shaping_fingerprint, subpixel_mask_to_alpha,
     };
     use cosmic_text::Family;
     use fret_core::{
-        Color, FontWeight, Point, Px, Rect, Size, TextConstraints, TextInputRef, TextOverflow,
-        TextSpan, TextStyle, TextWrap,
+        AttributedText, Color, DecorationLineStyle, FontWeight, Point, Px, Rect, Size,
+        StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
+        TextWrap, UnderlineStyle,
     };
     use std::sync::Arc;
 
@@ -2854,6 +3011,7 @@ mod tests {
             end: 4,
             width: Px(40.0),
             y_top: Px(0.0),
+            y_baseline: Px(0.0),
             height: Px(10.0),
             caret_stops: stops,
         };
@@ -2879,6 +3037,7 @@ mod tests {
             end: 4,
             width: Px(40.0),
             y_top: Px(0.0),
+            y_baseline: Px(0.0),
             height: Px(10.0),
             caret_stops: stops,
         };
@@ -2914,6 +3073,7 @@ mod tests {
             end: text.len(),
             width: Px(10.0 * clusters.len() as f32),
             y_top: Px(0.0),
+            y_baseline: Px(0.0),
             height: Px(10.0),
             caret_stops: stops,
         };
@@ -2941,6 +3101,7 @@ mod tests {
                 end,
                 width: Px(100.0),
                 y_top: Px((i as f32) * 10.0),
+                y_baseline: Px(0.0),
                 height: Px(10.0),
                 caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
             });
@@ -2967,6 +3128,7 @@ mod tests {
             end: 4,
             width: Px(100.0),
             y_top: Px(0.0),
+            y_baseline: Px(0.0),
             height: Px(10.0),
             caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
         };
@@ -3115,6 +3277,7 @@ mod tests {
         for line in lines {
             let y_px = line.y_top.0 * scale_factor;
             let h_px = line.height.0 * scale_factor;
+            let baseline_px = line.y_baseline.0 * scale_factor;
             assert!(
                 (y_px - y_px.round()).abs() < 1e-3,
                 "expected y_top to be pixel-aligned, got {y_px}"
@@ -3128,6 +3291,108 @@ mod tests {
                 "expected non-decreasing y_top across lines"
             );
             prev_y_px = y_px;
+            assert!(
+                (baseline_px - baseline_px.round()).abs() < 1e-3,
+                "expected per-line baseline to be pixel-aligned, got {baseline_px}"
+            );
+        }
+    }
+
+    #[test]
+    fn decorations_are_pixel_snapped_under_non_integer_scale_factor() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = {
+            let mut out = String::new();
+            for _ in 0..60 {
+                out.push_str("The quick brown fox jumps over the lazy dog. ");
+            }
+            out
+        };
+
+        let scale_factor = 1.25_f32;
+        let constraints = TextConstraints {
+            max_width: Some(Px(180.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(13.0),
+            ..Default::default()
+        };
+
+        let mut span = TextSpan::new(content.len());
+        span.paint.underline = Some(UnderlineStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+        span.paint.strikethrough = Some(StrikethroughStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+        let rich = AttributedText::new(Arc::<str>::from(content.as_str()), Arc::from([span]));
+
+        let (blob_id, metrics) = text.prepare_attributed(&rich, &style, constraints);
+        let blob = text.blob(blob_id).expect("prepared blob");
+
+        let underlines: Vec<_> = blob
+            .decorations
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Underline)
+            .collect();
+        let strikes: Vec<_> = blob
+            .decorations
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
+            .collect();
+        assert!(
+            !underlines.is_empty(),
+            "expected underline decorations to be generated"
+        );
+        assert!(
+            !strikes.is_empty(),
+            "expected strikethrough decorations to be generated"
+        );
+
+        let is_pixel_aligned = |logical: Px| {
+            let px = logical.0 * scale_factor;
+            (px - px.round()).abs() < 1e-3
+        };
+
+        for d in underlines.iter().chain(strikes.iter()) {
+            assert!(
+                is_pixel_aligned(d.rect.origin.y),
+                "expected decoration y to be pixel-aligned"
+            );
+            assert!(
+                is_pixel_aligned(d.rect.size.height),
+                "expected decoration height to be pixel-aligned"
+            );
+
+            let h_px = d.rect.size.height.0 * scale_factor;
+            assert!(
+                (h_px - 1.0).abs() < 1e-3,
+                "expected a 1px hairline decoration thickness, got {h_px}"
+            );
+
+            assert!(
+                d.rect.origin.y.0 >= -1e-3,
+                "expected decoration to stay within the text box (top)"
+            );
+            assert!(
+                d.rect.origin.y.0 + d.rect.size.height.0 <= metrics.size.height.0 + 1e-3,
+                "expected decoration to stay within the text box (bottom)"
+            );
         }
     }
 
@@ -3258,6 +3523,16 @@ mod tests {
         assert_ne!(
             spans_paint_fingerprint(&spans_a),
             spans_paint_fingerprint(&spans_b)
+        );
+
+        let mut spans_c = spans_a.clone();
+        spans_c[0].paint.underline = Some(UnderlineStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+        assert_ne!(
+            spans_paint_fingerprint(&spans_a),
+            spans_paint_fingerprint(&spans_c)
         );
 
         let rich_a = fret_core::AttributedText::new(
