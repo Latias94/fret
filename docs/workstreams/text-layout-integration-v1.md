@@ -78,6 +78,15 @@ We need to clearly separate:
 Treating `Fill` as `percent(1.0)` is convenient, but fragile in intrinsic sizing paths and wrapper
 chains where the containing block may not be definite yet.
 
+**Policy (v1):**
+
+- `LayoutRefinement::w_full()` / `h_full()` means **percent sizing** (`100%` of the containing block).
+  Use this when you actually want “match the parent box” and you know an ancestor provides a
+  definite size.
+- For “share remaining space in a flex row/column”, prefer `LayoutRefinement::flex_1()` (Tailwind
+  `flex-1`). For text-heavy children, also apply `LayoutRefinement::min_w_0()` to allow shrinking
+  instead of overflowing (web-like `min-width: 0`).
+
 ### I4 — Selection indices must be well-defined across layers (UTF-8 / UTF-16 / graphemes)
 
 We need explicit rules for which unit each layer uses:
@@ -91,6 +100,20 @@ If we blur these, we get:
 - caret moves “into” emoji sequences
 - IME replacement ranges corrupt text
 - selection ranges can be out of bounds or not round-trip across APIs
+
+**Policy (v1):**
+
+- **Internal text indices** (UI state, renderer geometry queries, selection/caret): UTF-8 **byte
+  offsets**, clamped to valid UTF-8 char boundaries (and later: grapheme boundaries for movement).
+- **Platform-facing indices** (IME, accessibility bridges, OS input handlers): UTF-16 **code unit**
+  offsets and ranges.
+- Provide lossless conversion utilities at the platform boundary (`utf8_bytes <-> utf16_units`),
+  with explicit clamping rules for non-representable boundaries (surrogate pairs, ZWJ sequences,
+  combining marks).
+
+**Implementation sequencing (v1):**
+
+- Windows first (desktop MVP); macOS interop follows once the contract surface is stable.
 
 ### I5 — Hit-testing + geometry queries must be stable under transforms
 
@@ -111,6 +134,47 @@ These changes improve I1/I2 and should be treated as “minimum correctness cons
   `ascent + |descent|` and respects `TextStyle.line_height`. Evidence:
   `crates/fret-render/src/text_v2/parley_shaper.rs` (tests included).
 
+## Decision Snapshot (v1)
+
+This section records “hard-to-change” integration policies for v1. ADRs should be added when we
+stabilize the API surface that external code depends on.
+
+- **Platform input indexing**: UTF-16 code units (Windows-first; macOS follows once stable).
+- **Internal indexing**: UTF-8 byte offsets (clamped to char boundaries; movement can clamp further
+  to grapheme boundaries).
+- **UTF-8 ↔ UTF-16 conversions**:
+  - conversions must be lossless for representable boundaries (round-trip stability)
+  - for non-representable UTF-16 boundaries (middle of a surrogate pair), clamp:
+    - range start: to the previous representable boundary
+    - range end: to the next representable boundary
+- **IME geometry** (`bounds_for_range`):
+  - empty range: caret rect at the insertion point
+  - non-empty range: bounding rect of the visual selection rects for that range
+- **Preedit representation**:
+  - current widgets keep IME preedit text **out of the base buffer** and render it inline
+  - any future platform-facing “marked range” queries must define whether ranges are expressed in:
+    - base buffer coordinates (preedit excluded), or
+    - a composed view (base + preedit spliced at caret)
+  - Chosen (v1): platform-facing “marked range” coordinates use the **composed view** model. Widgets
+    must provide deterministic mapping between base-buffer indices and composed-view indices.
+- **Platform replace+mark** (`replace_and_mark_text_in_range`):
+  - v1 supports a single caret-anchored marked range only (no partial marking)
+  - constraints: `marked == [range.start, range.start + len(text)]` (UTF-16) and, while composing,
+    `range` must equal the current `marked_text_range`; starting composition requires an empty
+    replace range (`range.start == range.end`)
+- **Caret movement mode (editable/selectable surfaces)**: grapheme cluster boundaries by default
+  (editor-grade UX); stored indices remain UTF-8 byte offsets.
+- **Wrap policy for long tokens**: introduce an “anywhere”/grapheme-break wrap mode (break between
+  grapheme clusters) for CJK/paths/URLs/code identifiers. Keep `Word` as the default for general UI
+  labels. Implementation: `TextWrap::Grapheme` (Parley wrapper).
+- **Pixel snapping under non-integer scale factors**:
+  - snap *vertical* line advances/baselines to device pixels to avoid cumulative drift
+  - keep *horizontal* placement subpixel (text rendering quality), but ensure caret/selection x is
+    derived from the same shaped clusters as paint.
+- **Primary selection (Linux)**: supported behind a feature/setting; default off for v1.
+- **Selection visibility when unfocused**: keep selection visible with reduced alpha (editor-grade
+  expectation); exact policy remains component-layer but must not break range→rect queries.
+
 ## Open Failure Modes (Checklist)
 
 This section captures pitfalls that we should explicitly test for.
@@ -123,7 +187,8 @@ This section captures pitfalls that we should explicitly test for.
 - `snake_case` / `camelCase` / long code identifiers
 - long paths and URLs
 
-We likely need an additional wrap policy (`Anywhere`/`Grapheme`) or component-layer escape hatches.
+We now have an additional wrap policy (`TextWrap::Grapheme`), but still need component-level
+recipes and demos for code/path-heavy UI surfaces.
 
 ### F2 — “Multiline + Ellipsis” (line-clamp)
 
@@ -348,6 +413,10 @@ This is a suggested sequence that minimizes churn while improving correctness:
    - keep internal indices as UTF-8 byte offsets (clamped to boundaries), but
    - expose a platform-facing UTF-16 selection interface (Zed/GPUI-aligned), with explicit
      conversion utilities
+   - implement a data-only window snapshot seam (`WindowTextInputSnapshot`) published after paint
+     to support Windows-first IME candidate positioning and future a11y bridges (selection/marked
+     ranges in UTF-16 over the composed view). Evidence:
+     `crates/fret-runtime/src/window_text_input_snapshot.rs`, `crates/fret-ui/src/tree/paint.rs`
 3. **Harden caret/selection behavior**:
    - add grapheme-aware movement mode for emoji safety (at least left/right)
    - add multi-line Up/Down movement with preferred-x

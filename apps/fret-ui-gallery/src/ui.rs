@@ -1129,7 +1129,10 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
                     .bg(ColorRef::Color(color))
                     .rounded(Radius::Md)
                     .p(Space::N3),
-                LayoutRefinement::default().w_full(),
+                // In a horizontal flex row, we want "equal columns" semantics (`flex-1`), not
+                // `w-full` (percent sizing). Percent sizing is fragile under intrinsic sizing
+                // probes and can cause transient wrap widths (0px) to leak into final layout.
+                LayoutRefinement::default().flex_1().min_w_0(),
             ),
             |cx| [cx.text(label)],
         )
@@ -1490,7 +1493,7 @@ fn preview_virtual_list_torture(
                         .size(shadcn::ButtonSize::Sm)
                         .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
                         .on_activate(on_select_row.clone())
-                        .refine_layout(LayoutRefinement::default().flex_1())
+                        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
                         .into_element(cx);
 
                     let right = if is_editing {
@@ -1608,7 +1611,7 @@ fn preview_virtual_list_torture(
                             .size(shadcn::ButtonSize::Sm)
                             .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
                             .on_activate(on_select_row.clone())
-                            .refine_layout(LayoutRefinement::default().flex_1())
+                            .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
                             .into_element(cx);
 
                         let right = if is_editing {
@@ -5074,7 +5077,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         ])
         .into_element(cx),
     ])
-    .refine_layout(LayoutRefinement::default().flex_1())
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
     let right = shadcn::Card::new(vec![
@@ -5092,7 +5095,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         ])
         .into_element(cx),
     ])
-    .refine_layout(LayoutRefinement::default().flex_1())
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
     vec![stack::hstack(
@@ -5495,18 +5498,18 @@ fn preview_forms(
         },
     );
 
-    vec![
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N3),
-            |_cx| [input, textarea, toggles],
-        ),
-        cx.text(
-            "Tip: these are model-bound controls; values persist while you stay in the window.",
-        ),
-    ]
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |cx| {
+            let tip = cx.text(
+                "Tip: these are model-bound controls; values persist while you stay in the window.",
+            );
+            [input, textarea, toggles, tip]
+        },
+    )]
 }
 
 fn preview_select(

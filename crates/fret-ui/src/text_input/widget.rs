@@ -5,7 +5,7 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect};
 
 use super::TextInput;
-use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, Widget};
+use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, PlatformTextInputCx, Widget};
 use crate::{Invalidation, UiHost};
 
 impl<H: UiHost> Widget<H> for TextInput {
@@ -24,6 +24,398 @@ impl<H: UiHost> Widget<H> for TextInput {
     }
 
     fn is_text_input(&self) -> bool {
+        true
+    }
+
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let selection_anchor =
+            crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.selection_anchor);
+
+        let preedit_len = self.preedit.len();
+        let is_composing = self.is_ime_composing();
+
+        let (display_anchor, display_focus) = if is_composing {
+            let caret_display = crate::text_edit::ime::caret_display_index(
+                caret,
+                &self.preedit,
+                self.preedit_cursor,
+            );
+            (caret_display, caret_display)
+        } else {
+            (
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, selection_anchor),
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, caret),
+            )
+        };
+
+        let anchor_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_anchor,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        let focus_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_focus,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+
+        let marked_utf16 = is_composing.then(|| {
+            crate::text_edit::ime::composed_utf16_range_for_display_byte_range(
+                &self.text,
+                caret,
+                &self.preedit,
+                caret,
+                caret.saturating_add(preedit_len),
+            )
+        });
+
+        Some(fret_runtime::WindowTextInputSnapshot {
+            focus_is_text_input: true,
+            is_composing,
+            text_len_utf16: crate::text_edit::ime::composed_utf16_len(&self.text, &self.preedit),
+            selection_utf16: Some((anchor_u16, focus_u16)),
+            marked_utf16,
+            ime_cursor_area: self.last_sent_cursor,
+        })
+    }
+
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let selection_anchor =
+            crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.selection_anchor);
+
+        let preedit_len = self.preedit.len();
+        let is_composing = self.is_ime_composing();
+
+        let (display_anchor, display_focus) = if is_composing {
+            let caret_display = crate::text_edit::ime::caret_display_index(
+                caret,
+                &self.preedit,
+                self.preedit_cursor,
+            );
+            (caret_display, caret_display)
+        } else {
+            (
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, selection_anchor),
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, caret),
+            )
+        };
+
+        let anchor_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_anchor,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        let focus_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_focus,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+
+        Some(fret_runtime::Utf16Range::new(anchor_u16, focus_u16).normalized())
+    }
+
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let preedit_len = self.preedit.len();
+        let is_composing = self.is_ime_composing();
+        let (start, end) = is_composing.then(|| {
+            crate::text_edit::ime::composed_utf16_range_for_display_byte_range(
+                &self.text,
+                caret,
+                &self.preedit,
+                caret,
+                caret.saturating_add(preedit_len),
+            )
+        })?;
+        Some(fret_runtime::Utf16Range::new(start, end).normalized())
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+
+        let r = range.normalized();
+        let (bs, be) = fret_core::utf::utf16_range_to_utf8_byte_range(
+            composed.as_str(),
+            r.start as usize,
+            r.end as usize,
+        );
+        Some(composed.get(bs..be)?.to_string())
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+
+        let padding_left = self.chrome_style.padding.left;
+        let padding_top = self.chrome_style.padding.top;
+        let padding_bottom = self.chrome_style.padding.bottom;
+
+        let inner_width = Px((self.last_bounds.size.width.0
+            - padding_left.0
+            - self.chrome_style.padding.right.0)
+            .max(0.0));
+
+        let constraints = TextConstraints {
+            max_width: Some(inner_width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+        let (blob, metrics) =
+            cx.services
+                .text()
+                .prepare_str(composed.as_str(), &self.style, constraints);
+
+        let text_height = metrics.size.height;
+        let inner_height = Px(
+            (self.last_bounds.size.height.0 - padding_top.0 - padding_bottom.0)
+                .max(0.0)
+                .max(text_height.0),
+        );
+        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+
+        let origin = fret_core::Point::new(
+            self.last_bounds.origin.x + padding_left,
+            Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
+        );
+
+        let r = range.normalized();
+        let (bs, be) = fret_core::utf::utf16_range_to_utf8_byte_range(
+            composed.as_str(),
+            r.start as usize,
+            r.end as usize,
+        );
+
+        let out = if bs == be {
+            let caret = cx
+                .services
+                .caret_rect(blob, bs, fret_core::CaretAffinity::Downstream);
+            Some(Rect::new(
+                fret_core::Point::new(origin.x + caret.origin.x, origin.y + caret.origin.y),
+                Size::new(Px(caret.size.width.0.max(1.0)), caret.size.height),
+            ))
+        } else {
+            let mut rects: Vec<Rect> = Vec::new();
+            cx.services.selection_rects(blob, (bs, be), &mut rects);
+
+            let mut min_x = f32::INFINITY;
+            let mut min_y = f32::INFINITY;
+            let mut max_x = f32::NEG_INFINITY;
+            let mut max_y = f32::NEG_INFINITY;
+            for r in rects {
+                if r.size.width.0 <= 0.0 || r.size.height.0 <= 0.0 {
+                    continue;
+                }
+                min_x = min_x.min(r.origin.x.0);
+                min_y = min_y.min(r.origin.y.0);
+                max_x = max_x.max(r.origin.x.0 + r.size.width.0);
+                max_y = max_y.max(r.origin.y.0 + r.size.height.0);
+            }
+
+            if !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite()
+            {
+                None
+            } else {
+                Some(Rect::new(
+                    fret_core::Point::new(Px(origin.x.0 + min_x), Px(origin.y.0 + min_y)),
+                    Size::new(Px((max_x - min_x).max(1.0)), Px((max_y - min_y).max(1.0))),
+                ))
+            }
+        };
+
+        cx.services.text().release(blob);
+        out
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        point: fret_core::Point,
+    ) -> Option<u32> {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+
+        let padding_left = self.chrome_style.padding.left;
+        let padding_top = self.chrome_style.padding.top;
+        let padding_bottom = self.chrome_style.padding.bottom;
+
+        let inner_width = Px((self.last_bounds.size.width.0
+            - padding_left.0
+            - self.chrome_style.padding.right.0)
+            .max(0.0));
+        let constraints = TextConstraints {
+            max_width: Some(inner_width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+        let (blob, metrics) =
+            cx.services
+                .text()
+                .prepare_str(composed.as_str(), &self.style, constraints);
+
+        let text_height = metrics.size.height;
+        let inner_height = Px(
+            (self.last_bounds.size.height.0 - padding_top.0 - padding_bottom.0)
+                .max(0.0)
+                .max(text_height.0),
+        );
+        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+
+        let origin = fret_core::Point::new(
+            self.last_bounds.origin.x + padding_left,
+            Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
+        );
+
+        let local = fret_core::Point::new(point.x - origin.x, point.y - origin.y);
+        let hit = cx.services.hit_test_point(blob, local);
+        cx.services.text().release(blob);
+
+        let u16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+            composed.as_str(),
+            hit.index,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        Some(u16.min(u32::MAX as usize) as u32)
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+    ) -> bool {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+        let r = range.normalized();
+        let (bs, be) = fret_core::utf::utf16_range_to_utf8_byte_range(
+            composed.as_str(),
+            r.start as usize,
+            r.end as usize,
+        );
+
+        let preedit_len = self.preedit.len();
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let (start_base, end_base) = if preedit_len == 0 {
+            (bs, be)
+        } else {
+            (
+                crate::text_edit::ime::display_to_base_index(caret, preedit_len, bs),
+                crate::text_edit::ime::display_to_base_index(caret, preedit_len, be),
+            )
+        };
+
+        let insert = text.replace(['\r', '\n'], " ");
+
+        let mut edit = self.edit_state();
+        edit.set_selection_grapheme_clamped(start_base, end_base);
+        edit.replace_selection(&insert)
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+        marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        let Some(marked) = marked else {
+            return self.platform_text_input_replace_text_in_range_utf16(cx, range, text);
+        };
+
+        let insert = text.replace(['\r', '\n'], " ");
+        let insert_utf16_len = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+            insert.as_str(),
+            insert.len(),
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        let insert_utf16_len = u32::try_from(insert_utf16_len).unwrap_or(u32::MAX);
+
+        let r = range.normalized();
+        let expected_marked =
+            fret_runtime::Utf16Range::new(r.start, r.start.saturating_add(insert_utf16_len));
+        if marked.normalized() != expected_marked.normalized() {
+            // v1 preedit is always a single caret-anchored marked range.
+            return false;
+        }
+
+        if insert.is_empty() && marked.start == marked.end {
+            self.clear_ime_composition();
+            self.mark_text_blobs_dirty();
+            return true;
+        }
+
+        if self.is_ime_composing() {
+            let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+            let preedit_len = self.preedit.len();
+            let (start, end) = crate::text_edit::ime::composed_utf16_range_for_display_byte_range(
+                &self.text,
+                caret,
+                &self.preedit,
+                caret,
+                caret.saturating_add(preedit_len),
+            );
+            let current_marked = fret_runtime::Utf16Range::new(start, end).normalized();
+            if r != current_marked {
+                // v1 only supports replacing the current marked range during composition.
+                return false;
+            }
+        } else {
+            if r.start != r.end {
+                // v1 preedit is caret-anchored and cannot replace an arbitrary base range.
+                return false;
+            }
+            // Starting composition: map the requested (UTF-16) replace range into base UTF-8 bytes.
+            let (start_base, _) = fret_core::utf::utf16_range_to_utf8_byte_range(
+                self.text.as_str(),
+                r.start as usize,
+                r.end as usize,
+            );
+
+            self.caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, start_base);
+            self.selection_anchor = self.caret;
+
+            self.ime_replace_range = None;
+        }
+
+        self.preedit = insert;
+        let preedit_len = self.preedit.len();
+        self.preedit_cursor = Some((preedit_len, preedit_len));
+        self.mark_text_blobs_dirty();
         true
     }
 
@@ -78,7 +470,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
                 let mut edit = self.edit_state();
                 edit.clear_ime_composition();
-                edit.set_selection_char_clamped(*anchor as usize, *focus as usize);
+                edit.set_selection_grapheme_clamped(*anchor as usize, *focus as usize);
 
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -513,7 +905,8 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
 
-        self.edit_state().clamp_caret_and_anchor_to_char_boundary();
+        self.edit_state()
+            .clamp_caret_and_anchor_to_grapheme_boundary();
 
         let theme = cx.theme().snapshot();
         self.sync_chrome_from_theme(theme);

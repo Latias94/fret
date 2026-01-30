@@ -47,6 +47,11 @@ impl FontWeight {
 pub enum TextWrap {
     None,
     Word,
+    /// Break between grapheme clusters when needed.
+    ///
+    /// This is intended for editor surfaces (CJK, file paths/URLs, code identifiers) where long
+    /// "tokens" must still wrap without relying on whitespace or word boundaries.
+    Grapheme,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

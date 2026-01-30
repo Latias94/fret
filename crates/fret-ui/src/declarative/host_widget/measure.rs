@@ -97,7 +97,7 @@ fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap
             // Model `TextWrap::Word` as "break when needed" for min-content sizing. This keeps the
             // layout engine honest when it probes intrinsic sizes and later assigns a smaller
             // definite width (e.g. flex/grid shrink), avoiding multi-line paint overflows.
-            TextWrap::Word => Some(Px(0.0)),
+            TextWrap::Word | TextWrap::Grapheme => Some(Px(0.0)),
             TextWrap::None => None,
         },
     }

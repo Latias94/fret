@@ -875,7 +875,7 @@ fn checkable_menu_row_children<H: UiHost>(
 
             let style = text_style.clone();
             let mut text = ui::text(cx, label.clone())
-                .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                .layout(LayoutRefinement::default().min_w_0().flex_1())
                 .text_size_px(style.size)
                 .font_weight(style.weight)
                 .nowrap()
@@ -2077,7 +2077,7 @@ impl DropdownMenu {
                                                                         }
                                                                         let style = text_style.clone();
                                                                         let mut text = ui::text(cx, label.clone())
-                                                                            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                                                                            .layout(LayoutRefinement::default().min_w_0().flex_1())
                                                                             .text_size_px(style.size)
                                                                             .font_weight(style.weight)
                                                                             .nowrap()
@@ -2918,7 +2918,7 @@ impl DropdownMenu {
                                                                                     }
                                                                                     let style = text_style.clone();
                                                                                     let mut text = ui::text(cx, label.clone())
-                                                                                        .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+                                                                                        .layout(LayoutRefinement::default().min_w_0().flex_1())
                                                                                         .text_size_px(style.size)
                                                                                         .font_weight(style.weight)
                                                                                         .nowrap()

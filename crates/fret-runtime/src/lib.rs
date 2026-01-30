@@ -16,6 +16,7 @@ pub mod keymap;
 pub mod menu;
 pub mod model;
 pub mod platform_completion;
+pub mod platform_text_input;
 pub mod time;
 pub mod ui_host;
 pub mod when_expr;
@@ -28,6 +29,7 @@ pub mod window_input_context;
 pub mod window_menu_bar_focus;
 pub mod window_metrics;
 pub mod window_text_boundary_mode;
+pub mod window_text_input_snapshot;
 
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
@@ -83,6 +85,7 @@ pub use model::{
     ModelUpdateError, WeakModel,
 };
 pub use platform_completion::PlatformCompletion;
+pub use platform_text_input::{PlatformTextInputQuery, PlatformTextInputQueryResult, Utf16Range};
 pub use time::TickId;
 pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};
 pub use when_expr::WhenExpr;
@@ -102,3 +105,4 @@ pub use window_input_context::WindowInputContextService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
 pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};
+pub use window_text_input_snapshot::{WindowTextInputSnapshot, WindowTextInputSnapshotService};

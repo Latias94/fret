@@ -20,6 +20,7 @@ thiserror.workspace = true
 cosmic-text.workspace = true
 parley.workspace = true
 unicode-script.workspace = true
+unicode-segmentation.workspace = true
 etagere.workspace = true
 lyon.workspace = true
 resvg.workspace = true

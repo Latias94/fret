@@ -302,7 +302,7 @@ fn cmdk_highlighted_label<H: UiHost>(
 
     if query.is_empty() {
         return apply_text_style(ui::text(cx, label))
-            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+            .layout(LayoutRefinement::default().min_w_0().flex_1())
             .text_color(ColorRef::Color(fg))
             .into_element(cx);
     }
@@ -313,7 +313,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
         return apply_text_style(ui::text(cx, label))
-            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+            .layout(LayoutRefinement::default().min_w_0().flex_1())
             .text_color(ColorRef::Color(fg))
             .into_element(cx);
     }

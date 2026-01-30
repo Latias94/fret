@@ -144,8 +144,14 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 this.element,
                 crate::element::SelectableTextState::default,
                 |state| {
-                    state.selection_anchor = *anchor as usize;
-                    state.caret = *focus as usize;
+                    state.selection_anchor = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        *anchor as usize,
+                    );
+                    state.caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        *focus as usize,
+                    );
                     state.affinity = fret_core::CaretAffinity::Downstream;
                     state.dragging = false;
                 },
@@ -188,19 +194,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             }
 
             fn select_line(text: &str, idx: usize) -> (usize, usize) {
-                if text.is_empty() {
-                    return (0, 0);
-                }
-                let idx = crate::text_edit::utf8::clamp_to_char_boundary(text, idx).min(text.len());
-                let start = text[..idx]
-                    .rfind('\n')
-                    .map(|i| (i + 1).min(text.len()))
-                    .unwrap_or(0);
-                let end = text[idx..]
-                    .find('\n')
-                    .map(|i| (idx + i).min(text.len()))
-                    .unwrap_or(text.len());
-                (start, end)
+                crate::text_edit::utf8::select_line_range(text, idx)
             }
 
             let boundary_mode = cx.input_ctx.text_boundary_mode;
@@ -223,7 +217,10 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                         2 => select_word(&props.rich.text, idx, boundary_mode),
                         3 => select_line(&props.rich.text, idx),
                         _ => {
-                            let caret = idx;
+                            let caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                                &props.rich.text,
+                                idx,
+                            );
                             let anchor = if modifiers.shift {
                                 state.selection_anchor
                             } else {
@@ -287,7 +284,10 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                     this.element,
                     crate::element::SelectableTextState::default,
                     |state| {
-                        state.caret = hit.index;
+                        state.caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                            &props.rich.text,
+                            hit.index,
+                        );
                         state.affinity = hit.affinity;
                     },
                 );

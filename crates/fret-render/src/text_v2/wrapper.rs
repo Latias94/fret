@@ -1,6 +1,7 @@
 use super::parley_shaper::{ParleyGlyph, ParleyShaper, ShapedCluster, ShapedLineLayout};
 use fret_core::{CaretAffinity, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextWrap};
 use std::ops::Range;
+use unicode_segmentation::UnicodeSegmentation;
 
 const ELLIPSIS: &str = "\u{2026}";
 
@@ -69,6 +70,11 @@ pub(crate) fn wrap_with_constraints(
             wrap: TextWrap::Word,
             ..
         } => wrap_word(shaper, input, text_len, max_width.0 * scale, scale),
+        TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Grapheme,
+            ..
+        } => wrap_grapheme(shaper, input, text_len, max_width.0 * scale, scale),
         _ => WrappedLayout {
             text_len,
             kept_end: text_len,
@@ -201,6 +207,19 @@ fn push_paragraph(
             out_ranges.extend(ranges);
             out_lines.extend(lines);
         }
+        TextConstraints {
+            max_width: Some(_),
+            wrap: TextWrap::Grapheme,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let (ranges, lines) =
+                wrap_grapheme_range(shaper, text, base, spans, paragraph_range, max_w, scale);
+            out_ranges.extend(ranges);
+            out_lines.extend(lines);
+        }
         _ => {
             let line = shape_slice(shaper, text, base, spans, paragraph_range.clone(), scale);
             out_ranges.push(paragraph_range);
@@ -309,6 +328,94 @@ fn wrap_word(
         line_ranges,
         lines,
     }
+}
+
+fn wrap_grapheme(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> WrappedLayout {
+    let (text, base, spans) = match input {
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
+    };
+
+    let (line_ranges, lines) =
+        wrap_grapheme_range(shaper, text, base, spans, 0..text_len, max_width_px, scale);
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
+fn wrap_grapheme_range(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    max_width_px: f32,
+    scale: f32,
+) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+
+    if start >= end {
+        return (
+            vec![start..start],
+            vec![shape_slice(shaper, text, base, spans, start..start, scale)],
+        );
+    }
+
+    let mut lines: Vec<ShapedLineLayout> = Vec::new();
+    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+
+    let mut offset = start;
+    while offset < end {
+        let slice = &text[offset..end];
+        let full = shape_slice(shaper, text, base, spans, offset..end, scale);
+
+        if full.width <= max_width_px + 0.5 {
+            lines.push(full);
+            line_ranges.push(offset..end);
+            break;
+        }
+
+        let mut cut_end = wrap_grapheme_cut_end(slice, &full.clusters, max_width_px);
+        cut_end = clamp_to_grapheme_boundary_down(slice, cut_end);
+
+        if cut_end == 0 {
+            cut_end = first_cluster_end(slice, &full.clusters);
+            cut_end = clamp_to_grapheme_boundary_up(slice, cut_end);
+        }
+        if cut_end == 0 {
+            cut_end = first_grapheme_end(slice);
+        }
+
+        let mut kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
+        if kept.width > max_width_px + 0.5 && cut_end > 0 {
+            let cut2 = cut_end_for_available(&slice[..cut_end], &kept.clusters, max_width_px);
+            if cut2 > 0 && cut2 < cut_end {
+                cut_end = clamp_to_grapheme_boundary_down(slice, cut2);
+                kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
+            }
+        }
+
+        if cut_end == 0 {
+            break;
+        }
+
+        lines.push(kept);
+        line_ranges.push(offset..(offset + cut_end));
+        offset = offset.saturating_add(cut_end);
+    }
+
+    (line_ranges, lines)
 }
 
 fn wrap_word_range(
@@ -520,6 +627,20 @@ fn wrap_word_cut_end(text: &str, clusters: &[ShapedCluster], max_width_px: f32) 
     cut_end_for_available(text, clusters, max_width_px)
 }
 
+fn wrap_grapheme_cut_end(text: &str, clusters: &[ShapedCluster], max_width_px: f32) -> usize {
+    let mut cut_end = 0usize;
+    for c in clusters {
+        if c.text_range.start >= text.len() {
+            continue;
+        }
+        if c.x1 > max_width_px + 0.5 {
+            break;
+        }
+        cut_end = cut_end.max(c.text_range.end.min(text.len()));
+    }
+    cut_end
+}
+
 fn first_cluster_end(text: &str, clusters: &[ShapedCluster]) -> usize {
     for c in clusters {
         let end = c.text_range.end.min(text.len());
@@ -528,6 +649,13 @@ fn first_cluster_end(text: &str, clusters: &[ShapedCluster]) -> usize {
         }
     }
     0
+}
+
+fn first_grapheme_end(text: &str) -> usize {
+    text.grapheme_indices(true)
+        .next()
+        .map(|(start, g)| start + g.len())
+        .unwrap_or(0)
 }
 
 fn is_word_char(c: char) -> bool {
@@ -571,6 +699,44 @@ fn clamp_to_char_boundary(text: &str, mut end: usize) -> usize {
         end = end.saturating_sub(1);
     }
     end
+}
+
+fn is_grapheme_boundary(text: &str, idx: usize) -> bool {
+    let idx = idx.min(text.len());
+    if idx == 0 || idx == text.len() {
+        return true;
+    }
+    text.grapheme_indices(true).any(|(start, _)| start == idx)
+}
+
+fn clamp_to_grapheme_boundary_down(text: &str, mut idx: usize) -> usize {
+    idx = idx.min(text.len());
+    if is_grapheme_boundary(text, idx) {
+        return idx;
+    }
+
+    let mut prev = 0usize;
+    for (start, _) in text.grapheme_indices(true) {
+        if start >= idx {
+            break;
+        }
+        prev = start;
+    }
+    prev
+}
+
+fn clamp_to_grapheme_boundary_up(text: &str, idx: usize) -> usize {
+    let idx = idx.min(text.len());
+    if is_grapheme_boundary(text, idx) {
+        return idx;
+    }
+    for (start, g) in text.grapheme_indices(true) {
+        let end = start + g.len();
+        if idx < end {
+            return end;
+        }
+    }
+    text.len()
 }
 
 fn empty_range_at(idx: usize) -> Range<usize> {
@@ -811,5 +977,94 @@ mod tests {
         assert_eq!(wrapped.line_ranges.len(), 2);
         assert_eq!(wrapped.line_ranges[0], 0..0);
         assert_eq!(wrapped.line_ranges[1], 1..1);
+    }
+
+    #[test]
+    fn grapheme_wrap_breaks_long_token_without_spaces() {
+        let mut shaper = ParleyShaper::new();
+        let base = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let constraints = TextConstraints {
+            max_width: Some(Px(40.0)),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let wrapped =
+            wrap_with_constraints(&mut shaper, TextInputRef::plain(text, &base), constraints);
+        assert!(wrapped.lines.len() > 1);
+        assert_eq!(wrapped.line_ranges.first().unwrap().start, 0);
+        assert_eq!(wrapped.line_ranges.last().unwrap().end, text.len());
+        for w in wrapped.line_ranges.windows(2) {
+            assert_eq!(w[0].end, w[1].start);
+        }
+    }
+
+    #[test]
+    fn grapheme_wrap_handles_cjk_string() {
+        let mut shaper = ParleyShaper::new();
+        let base = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "你好世界你好世界你好世界你好世界你好世界";
+        let constraints = TextConstraints {
+            max_width: Some(Px(40.0)),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let wrapped =
+            wrap_with_constraints(&mut shaper, TextInputRef::plain(text, &base), constraints);
+        assert!(wrapped.lines.len() > 1);
+        assert_eq!(wrapped.line_ranges.first().unwrap().start, 0);
+        assert_eq!(wrapped.line_ranges.last().unwrap().end, text.len());
+        for w in wrapped.line_ranges.windows(2) {
+            assert_eq!(w[0].end, w[1].start);
+        }
+    }
+
+    #[test]
+    fn grapheme_wrap_does_not_split_zwj_clusters() {
+        let mut shaper = ParleyShaper::new();
+        let base = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let emoji = "👨‍👩‍👧‍👦";
+        let text = format!("{emoji}{emoji}{emoji}{emoji}{emoji}");
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let wrapped =
+            wrap_with_constraints(&mut shaper, TextInputRef::plain(&text, &base), constraints);
+        assert!(wrapped.lines.len() > 1);
+        for r in &wrapped.line_ranges {
+            assert!(
+                is_grapheme_boundary(&text, r.start),
+                "expected line start to be a grapheme boundary: {:?}",
+                r
+            );
+            assert!(
+                is_grapheme_boundary(&text, r.end),
+                "expected line end to be a grapheme boundary: {:?}",
+                r
+            );
+        }
     }
 }
