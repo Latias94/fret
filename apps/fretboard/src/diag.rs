@@ -1031,6 +1031,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
             let is_ui_gallery_inspector_torture_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture";
+            let is_ui_gallery_file_tree_torture_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture";
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
 
             let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
@@ -1268,6 +1270,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-inspector-torture-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_file_tree_torture_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-file-tree-torture-scroll.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -1801,6 +1813,32 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .or(Some("ui-gallery-inspector-row-0-label".to_string()));
                 check_stale_paint_test_id = check_stale_paint_test_id
                     .or(Some("ui-gallery-inspector-row-0-label".to_string()));
+            }
+
+            if is_ui_gallery_file_tree_torture_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                for (k, v) in [
+                    ("FRET_UI_GALLERY_VIEW_CACHE", "1"),
+                    ("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
+
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(256));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id
+                    .or(Some("ui-gallery-file-tree-node-0-label".to_string()));
+                check_stale_paint_test_id = check_stale_paint_test_id
+                    .or(Some("ui-gallery-file-tree-node-0-label".to_string()));
             }
 
             let reuse_process = launch.is_none();
