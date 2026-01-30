@@ -94,6 +94,12 @@ fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
 }
 
+fn nav_menu_trigger_space_px(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.navigation_menu.trigger.space_px")
+        .unwrap_or(Px(3.92))
+}
+
 fn nav_menu_trigger_radius(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.radius")
@@ -802,6 +808,7 @@ impl NavigationMenu {
                 &values,
             );
 
+            let md_breakpoint = cx.bounds.size.width >= Px(768.0);
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
@@ -1035,13 +1042,15 @@ impl NavigationMenu {
                                         let mut row_children = content_children;
                                         // Upstream adds a literal `" "` text node between the label
                                         // and the chevron icon, in addition to `ml-1` on the icon.
-                                        // We model that as a deterministic, non-semantic spacer.
+                                        // We model the outcome as a spacer metric so the trigger
+                                        // width matches the extracted web goldens closely.
+                                        let space_px = nav_menu_trigger_space_px(&theme_for_item);
                                         row_children.push(cx.container(
                                             ContainerProps {
                                                 layout: {
                                                     let mut layout = LayoutStyle::default();
                                                     layout.size = SizeStyle {
-                                                        width: Length::Px(Px(4.0)),
+                                                        width: Length::Px(space_px),
                                                         height: Length::Px(Px(0.0)),
                                                         ..Default::default()
                                                     };
@@ -1130,7 +1139,7 @@ impl NavigationMenu {
                 }
 
                 let fallback = measured.unwrap_or(estimated);
-                let content_size = if viewport_enabled {
+                let mut content_size = if viewport_enabled {
                     radix_navigation_menu::navigation_menu_viewport_size_for_transition(
                         cx,
                         root_id,
@@ -1275,6 +1284,13 @@ impl NavigationMenu {
                                 let children = vec![cx.container(panel_props, move |cx| {
                                     let mut clip_layout = LayoutStyle::default();
                                     clip_layout.overflow = fret_ui::element::Overflow::Clip;
+                                    if viewport_enabled_for_registry {
+                                        clip_layout.size = SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        };
+                                    }
 
                                     let clip_props = ContainerProps {
                                         layout: clip_layout,
@@ -1287,10 +1303,9 @@ impl NavigationMenu {
                                     else {
                                         let children = viewport_children.clone();
                                         let body = cx.keyed("viewport-body", |cx| {
-                                            let layout = LayoutStyle::default();
                                             cx.container(
                                                 ContainerProps {
-                                                    layout,
+                                                    layout: LayoutStyle::default(),
                                                     padding: content_padding,
                                                     ..Default::default()
                                                 },
@@ -1327,11 +1342,6 @@ impl NavigationMenu {
 
                                     let value_for_registry_for_layers = value_for_registry.clone();
 
-                                    // In shadcn/ui (Radix), `NavigationMenuContent` keeps its
-                                    // intrinsic size even during switch animations. In Fret, we
-                                    // must preserve that intrinsic sizing so overlay placement can
-                                    // converge to the same bounds and so viewport sizing can
-                                    // observe the real content size (not the previous panel size).
                                     let mut layout_for_layers = LayoutStyle::default();
                                     layout_for_layers.overflow = fret_ui::element::Overflow::Clip;
 
@@ -1412,14 +1422,7 @@ impl NavigationMenu {
                                             vec![from, to]
                                         },
                                     );
-                                    if viewport_enabled_for_registry {
-                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                            cx,
-                                            root_id_for_registry,
-                                            value_for_registry.clone(),
-                                            stack.id,
-                                        );
-                                    } else {
+                                    if !viewport_enabled_for_registry {
                                         radix_navigation_menu::navigation_menu_register_viewport_content_id(
                                             cx,
                                             root_id_for_registry,

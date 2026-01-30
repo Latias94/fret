@@ -310,8 +310,11 @@ are caught as layout/style outcomes, not just placement drift).
 Recent fixes:
 - `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshots, including hover-switch (`home-then-hover-components`).
 - `viewport=true` viewport geometry now matches shadcn-web mobile snapshots, including “click then hover” switching (`home-mobile-then-hover-components`) and the viewport/indicator chrome gates.
+- Trigger width conformance now accounts for the upstream `" "` text node between the label and the chevron (in addition to `ml-1`) via `component.navigation_menu.trigger.space_px` (defaulted to a Geist-ish `3.92px` at `text-sm`).
+- The overlay-placement text heuristic now applies a small weight multiplier for medium/bold text, reducing drift for long `font-medium` labels (notably `NavigationMenuTrigger`).
 - Geometry gates now measure the registered viewport panel element (via `navigation_menu_viewport_panel_id`) instead of relying on “largest overlay rect” heuristics. This avoids accidentally measuring motion wrappers / indicator siblings when overlays animate or when multiple popover layers exist.
 - The viewport panel keeps `overflow: visible` so drop shadows match CSS `box-shadow` footprint; radius clipping is applied by an inner `overflow: clip` container with the same corner radii so content still clips correctly.
+- Known gap: viewport content inset gates currently allow a slightly higher tolerance (`2px`) to accommodate border-box / subpixel rounding differences between the web snapshots and the integer-ish layout bounds in the Fret test harness. Track this as a future layout-model cleanup rather than a component-specific quirk.
 - Conformance gates:
   - Trigger (open vs closed surface colors): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_navigation_menu_demo_trigger_open_and_closed_surface_colors_match_web`, `web_vs_fret_navigation_menu_demo_components_trigger_open_and_closed_surface_colors_match_web`, plus dark variants).

@@ -12,8 +12,11 @@ Status:
 
 - Menus: destructive *idle* vs *focused* state matrix (ContextMenu done; replicate where applicable).
 - Menus/listboxes: constrained-viewport gates now assert **menu/listbox height** + scroll behavior for the primary demos
-  (DropdownMenu/ContextMenu/Menubar/SelectScrollable/Combobox). Next: extend the same pattern to any remaining
-  overlay families that expose viewport-dependent sizing (e.g. NavigationMenu content panels).
+  (DropdownMenu/ContextMenu/Menubar/SelectScrollable/Combobox/NavigationMenu). Next: extend the same pattern to any
+  remaining overlay families that expose viewport-dependent sizing.
+- NavigationMenu viewport content insets: current gates allow a small extra tolerance (`2px`) because the Fret test
+  harness bounds are more integer-ish than the web's subpixel `border-box` snapshots. Prefer fixing this at the layout
+  model level (border/box sizing), not by baking more per-component offsets.
 - Menubar destructive variant: **not exercised** by `menubar-demo` in upstream `new-york-v4` registry.
   Options:
   - Add a dedicated upstream example (requires upstream changes; avoid), or
