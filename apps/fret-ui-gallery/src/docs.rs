@@ -397,6 +397,28 @@ let transcript = ConversationTranscript::new(vec![
 ```
 "#;
 
+pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
+## Inspector (torture harness)
+
+This page is a baseline for **inspector-style property lists**:
+
+- long, scroll-heavy surfaces,
+- small per-row interaction chrome (hover/selection),
+- stable identity requirements (editing/focus) under view-cache reuse.
+
+It exists to validate:
+
+- retained-host window boundary updates (attach/detach deltas, no notify-driven dirtiness),
+- stale-paint safety while scrolling under cache+shell,
+- readiness for migrating future editor inspector panels (GPUI-MVP5-eco-009).
+"#;
+
+pub(crate) const USAGE_INSPECTOR_TORTURE: &str = r#"
+```rust
+// This harness uses `virtual_list_keyed_retained_with_layout` directly.
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 
