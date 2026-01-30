@@ -194,7 +194,9 @@ Exit criteria:
 
 - [x] TLI1-001: Add a debug overlay that draws measured text bounds vs container bounds in UI Gallery.
   - Evidence: `apps/fret-ui-gallery/src/ui.rs` (`preview_text_measure_overlay`).
-- [ ] TLI1-002: Audit `TextOverflow` behavior for multiline (line-clamp needs a design).
+- [x] TLI1-002: Audit `TextOverflow` behavior for multiline (line-clamp needs a design).
+  - Decision: multiline line-clamp is a separate explicit feature; `TextOverflow::Ellipsis` is
+    single-line only in v1. Evidence: `docs/adr/1160-text-overflow-ellipsis-and-line-clamp-v1.md`.
 - [x] TLI1-003: Audit caching keys: width/wrap/overflow/scale/font-stack must be included in both measure and prepare paths.
   - Evidence: `crates/fret-render/src/text.rs` (`TextBlobKey`, `TextMeasureKey`),
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (`needs_prepare` checks for width/wrap/overflow/scale/font stack),
