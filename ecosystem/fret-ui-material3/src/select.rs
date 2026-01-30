@@ -489,6 +489,11 @@ fn select_trigger_element<H: UiHost>(
     style: SelectStyle,
 ) -> SelectTriggerOutput {
     let anchor_id_out: Cell<GlobalElementId> = Cell::new(GlobalElementId(0));
+    let has_leading_icon = leading_icon.is_some();
+    let leading_icon_size = crate::foundation::context::resolved_icon_size(
+        cx,
+        select_tokens::leading_icon_size(theme, variant),
+    );
 
     let container = cx.pressable_with_id_props(|cx, st, pressable_id| {
         anchor_id_out.set(pressable_id);
@@ -581,10 +586,6 @@ fn select_trigger_element<H: UiHost>(
         let (leading_icon_color, leading_icon_opacity) =
             select_tokens::leading_icon_color(theme, variant, hovered, !enabled, error, focused);
         let leading_icon_opacity = leading_icon_opacity.clamp(0.0, 1.0);
-        let leading_icon_size = crate::foundation::context::resolved_icon_size(
-            cx,
-            select_tokens::leading_icon_size(theme, variant),
-        );
 
         let outline = select_tokens::outline(theme, variant, hovered, !enabled, error, focused)
             .map(|(w, c, opacity)| (w, with_opacity(c, opacity)));
@@ -781,8 +782,6 @@ fn select_trigger_element<H: UiHost>(
                     chevron_progress,
                 );
 
-                let has_leading_icon = leading_icon.is_some();
-
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
                 row.layout.size.height = Length::Fill;
@@ -919,7 +918,15 @@ fn select_trigger_element<H: UiHost>(
         cx.flex(props, move |cx| {
             vec![
                 container,
-                select_supporting_text(cx, theme, variant, text.clone(), !disabled, error),
+                select_supporting_text(
+                    cx,
+                    theme,
+                    variant,
+                    text.clone(),
+                    has_leading_icon.then_some(leading_icon_size),
+                    !disabled,
+                    error,
+                ),
             ]
         })
     } else {
@@ -1051,13 +1058,7 @@ fn select_trigger_label<H: UiHost>(
 
     let (x, y) = floating_label::material_floating_label_offsets(progress);
 
-    // Align with Material Web field layout:
-    // - with-leading-icon leading space: 12px
-    // - icon-content space: 16px
-    // (see `tokens/_md-comp-(outlined|filled)-text-field.scss` in `repo-ref/material-web`)
-    let x = leading_icon_size
-        .map(|icon_size| Px(12.0 + icon_size.0 + 16.0))
-        .unwrap_or(x);
+    let x = material_field_text_start_inset_x(x, leading_icon_size);
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -1100,16 +1101,30 @@ fn select_trigger_label<H: UiHost>(
     })
 }
 
+fn material_field_text_start_inset_x(default: Px, leading_icon_size: Option<Px>) -> Px {
+    // Align with Material Web field layout:
+    // - with-leading-icon leading space: 12px
+    // - icon-content space: 16px
+    // (see `tokens/_md-comp-(outlined|filled)-text-field.scss` in `repo-ref/material-web`)
+    leading_icon_size
+        .map(|icon_size| Px(12.0 + icon_size.0 + 16.0))
+        .unwrap_or(default)
+}
+
 fn select_supporting_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     variant: SelectVariant,
     text: Arc<str>,
+    leading_icon_size: Option<Px>,
     enabled: bool,
     error: bool,
 ) -> AnyElement {
     let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
+    layout.margin.left = fret_ui::element::MarginEdge::Px(material_field_text_start_inset_x(
+        Px(16.0),
+        leading_icon_size,
+    ));
     layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
 
     cx.text_props(TextProps {
