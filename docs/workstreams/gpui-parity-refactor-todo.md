@@ -1023,6 +1023,8 @@ topics (if/when we implement them):
       - Script: `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`.
       - Env (recommended): `FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`, `FRET_DIAG=1`.
       - Gate (example): `fretboard diag stats <bundle.json> --check-vlist-window-mismatch-min 1 --check-stale-paint components-gallery-file-tree-root`
+      - Builtin suite:
+        - `cargo run -p fretboard -- diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
       - Evidence bundle (view-cache, release): `target/fret-diag-components-gallery-file-tree-boundary2/1769789840519-script-step-0021-wheel/bundle.json`
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
