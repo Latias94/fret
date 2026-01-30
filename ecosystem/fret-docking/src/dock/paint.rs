@@ -698,7 +698,9 @@ pub(super) fn paint_drop_hints(
         ..active_base
     };
 
-    let order = fret_core::DrawOrder(9_500);
+    // Keep hint pads above all drop overlays and tab insert markers so the user can always see
+    // and target them (ImGui-style).
+    let order = fret_core::DrawOrder(10_100);
     let border = Edges::all(Px(2.0));
     let corner_radii = fret_core::Corners::all(Px(radius_sm.0.max(4.0)));
 
