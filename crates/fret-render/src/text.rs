@@ -2382,9 +2382,19 @@ fn caret_stops_for_slice(
         }
 
         let x = if b <= clusters[0].text_range.start {
-            0.0
+            let first = &clusters[0];
+            if first.is_rtl {
+                first.x1.max(0.0)
+            } else {
+                first.x0.max(0.0)
+            }
         } else if cluster_i >= clusters.len() {
-            line_width_px.max(0.0)
+            let last = clusters.last().unwrap_or(&clusters[0]);
+            if last.is_rtl {
+                0.0
+            } else {
+                line_width_px.max(0.0)
+            }
         } else {
             let c = &clusters[cluster_i];
             let start = c.text_range.start.min(slice.len());
@@ -2393,9 +2403,17 @@ fn caret_stops_for_slice(
             if start == end {
                 c.x0.max(0.0)
             } else if b <= start {
-                c.x0.max(0.0)
+                if c.is_rtl {
+                    c.x1.max(0.0)
+                } else {
+                    c.x0.max(0.0)
+                }
             } else if b >= end {
-                c.x1.max(0.0)
+                if c.is_rtl {
+                    c.x0.max(0.0)
+                } else {
+                    c.x1.max(0.0)
+                }
             } else {
                 let denom = (end - start) as f32;
                 let mut t = ((b - start) as f32 / denom).clamp(0.0, 1.0);
@@ -2565,20 +2583,14 @@ fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &m
             continue;
         }
 
-        let x0 = if start <= line.start {
-            Px(0.0)
-        } else {
-            caret_x_from_stops(&line.caret_stops, start)
-        };
-        let x1 = if end >= line.end {
-            line.width
-        } else {
-            caret_x_from_stops(&line.caret_stops, end)
-        };
+        let x0 = caret_x_from_stops(&line.caret_stops, start);
+        let x1 = caret_x_from_stops(&line.caret_stops, end);
+        let left = Px(x0.0.min(x1.0));
+        let right = Px(x0.0.max(x1.0));
 
         out.push(Rect::new(
-            Point::new(x0, line.y_top),
-            Size::new(Px((x1.0 - x0.0).max(0.0)), line.height),
+            Point::new(left, line.y_top),
+            Size::new(Px((right.0 - left.0).max(0.0)), line.height),
         ));
     }
 }
@@ -2636,11 +2648,132 @@ mod tests {
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
         let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
 
-        assert_eq!(x_at(0), 0.0);
+        assert_eq!(x_at(0), 40.0);
         assert_eq!(x_at(1), 30.0);
         assert_eq!(x_at(2), 20.0);
         assert_eq!(x_at(3), 10.0);
-        assert_eq!(x_at(4), 40.0);
+        assert_eq!(x_at(4), 0.0);
+    }
+
+    fn is_synthetic_rtl_char(ch: char) -> bool {
+        // A minimal heuristic for test inputs; the production shaper determines RTL runs via
+        // Unicode properties.
+        matches!(
+            ch,
+            '\u{0590}'..='\u{05FF}' // Hebrew
+                | '\u{0600}'..='\u{06FF}' // Arabic
+                | '\u{0750}'..='\u{077F}' // Arabic Supplement
+                | '\u{08A0}'..='\u{08FF}' // Arabic Extended-A
+        )
+    }
+
+    fn synthetic_clusters_for_text(
+        text: &str,
+        advance: f32,
+    ) -> Vec<crate::text_v2::parley_shaper::ShapedCluster> {
+        let mut out = Vec::new();
+        let mut x = 0.0_f32;
+        for (start, ch) in text.char_indices() {
+            let end = start + ch.len_utf8();
+            out.push(crate::text_v2::parley_shaper::ShapedCluster {
+                text_range: start..end,
+                x0: x,
+                x1: x + advance,
+                is_rtl: is_synthetic_rtl_char(ch),
+            });
+            x += advance;
+        }
+        out
+    }
+
+    #[test]
+    fn selection_rects_for_rtl_line_has_positive_width() {
+        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let line = super::TextLine {
+            start: 0,
+            end: 4,
+            width: Px(40.0),
+            y_top: Px(0.0),
+            height: Px(10.0),
+            caret_stops: stops,
+        };
+
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines(&[line], (0, 4), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
+        assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn hit_test_point_for_rtl_line_maps_left_edge_to_logical_end() {
+        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let line = super::TextLine {
+            start: 0,
+            end: 4,
+            width: Px(40.0),
+            y_top: Px(0.0),
+            height: Px(10.0),
+            caret_stops: stops,
+        };
+
+        let left = super::hit_test_point_from_lines(
+            &[line.clone()],
+            fret_core::Point::new(Px(0.0), Px(5.0)),
+        )
+        .expect("hit test");
+        assert_eq!(left.index, 4);
+
+        let right =
+            super::hit_test_point_from_lines(&[line], fret_core::Point::new(Px(40.0), Px(5.0)))
+                .expect("hit test");
+        assert_eq!(right.index, 0);
+    }
+
+    #[test]
+    fn mixed_direction_selection_rects_are_nonempty() {
+        // Mixed LTR + RTL + numbers + punctuation.
+        let text = "abc אבג (123)";
+        let clusters = synthetic_clusters_for_text(text, 10.0);
+        let stops = super::caret_stops_for_slice(
+            text,
+            0,
+            &clusters,
+            10.0 * clusters.len() as f32,
+            1.0,
+            text.len(),
+        );
+        let line = super::TextLine {
+            start: 0,
+            end: text.len(),
+            width: Px(10.0 * clusters.len() as f32),
+            y_top: Px(0.0),
+            height: Px(10.0),
+            caret_stops: stops,
+        };
+
+        let rtl_start = text.find('א').expect("hebrew start");
+        let rtl_end = text.find('ג').expect("hebrew end") + 'ג'.len_utf8();
+
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines(&[line], (rtl_start, rtl_end), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect"
+        );
     }
 
     #[test]

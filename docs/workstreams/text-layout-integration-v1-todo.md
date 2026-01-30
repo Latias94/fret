@@ -158,9 +158,13 @@ Exit criteria:
 
 Exit criteria:
 
-- [ ] Add conformance inputs with mixed-direction text (LTR+RTL, numbers, punctuation).
-- [ ] Ensure `hit_test_point` and caret rects are stable and cluster-aware in RTL runs.
-- [ ] Add unit tests for selection rect generation across direction changes.
+- [x] Add conformance inputs with mixed-direction text (LTR+RTL, numbers, punctuation).
+  - Evidence: `crates/fret-render/src/text.rs` (`mixed_direction_selection_rects_are_nonempty`).
+- [x] Ensure `hit_test_point` and caret rects are stable and cluster-aware in RTL runs.
+  - Evidence: `crates/fret-render/src/text.rs` (`hit_test_point_for_rtl_line_maps_left_edge_to_logical_end`,
+    `caret_stops_for_slice_interpolates_within_cluster_rtl`).
+- [x] Add unit tests for selection rect generation across direction changes.
+  - Evidence: `crates/fret-render/src/text.rs` (`selection_rects_for_rtl_line_has_positive_width`).
 
 ### TLI1-M3.8 — Large selection performance and rect coalescing
 
