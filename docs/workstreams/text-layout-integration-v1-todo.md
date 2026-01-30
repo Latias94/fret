@@ -151,7 +151,8 @@ Exit criteria:
     - arbitrary marked subranges are not supported until we unify in-buffer composition.
 - [x] Handle winit IME `DeleteSurrounding` requests (UTF-8 bytes, preedit excluded).
   - Evidence: `crates/fret-runner-winit/src/lib.rs` (event mapping),
-    `crates/fret-ui/src/text_edit.rs` (`ime::apply_event` + tests).
+    `crates/fret-ui/src/text_edit.rs` (`ime::apply_event` + tests),
+    `crates/fret-ui/src/text_input/tests.rs` / `crates/fret-ui/src/text_area/tests.rs` (widget integration tests).
 
 ### TLI1-M3.7 — BiDi / RTL correctness baseline
 

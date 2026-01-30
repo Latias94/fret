@@ -292,6 +292,48 @@ fn ime_commit_replaces_original_selection_after_preedit_starts() {
     assert!(!input.is_ime_composing());
 }
 
+#[test]
+fn ime_delete_surrounding_deletes_base_text_without_clearing_preedit() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.caret = 2;
+    input.selection_anchor = 2;
+    input.preedit = "X".to_string();
+    input.preedit_cursor = Some((0, 1));
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    input.event(
+        &mut cx,
+        &Event::Ime(ImeEvent::DeleteSurrounding {
+            before_bytes: 1,
+            after_bytes: 2,
+        }),
+    );
+
+    assert_eq!(input.text, "ho");
+    assert_eq!(input.caret, 1);
+    assert_eq!(input.selection_anchor, 1);
+    assert_eq!(input.preedit, "X");
+    assert_eq!(input.preedit_cursor, Some((0, 1)));
+}
+
 #[derive(Default)]
 struct ImeTextService {}
 

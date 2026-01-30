@@ -331,6 +331,50 @@ fn ime_commit_normalizes_newlines_to_lf() {
 }
 
 #[test]
+fn ime_delete_surrounding_deletes_base_text_without_clearing_preedit() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut area = TextArea::new("hello\nworld");
+    area.caret = 2;
+    area.selection_anchor = 2;
+    area.preedit = "X".to_string();
+    area.preedit_cursor = Some((0, 1));
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    area.event(
+        &mut cx,
+        &Event::Ime(fret_core::ImeEvent::DeleteSurrounding {
+            before_bytes: 1,
+            after_bytes: 2,
+        }),
+    );
+
+    assert_eq!(area.text(), "ho\nworld");
+    assert_eq!(area.caret, 1);
+    assert_eq!(area.selection_anchor, 1);
+    assert_eq!(area.preedit, "X");
+    assert_eq!(area.preedit_cursor, Some((0, 1)));
+}
+
+#[test]
 fn ime_commit_replaces_selection_and_clears_it() {
     let window = AppWindowId::default();
     let node = fret_core::NodeId::default();
