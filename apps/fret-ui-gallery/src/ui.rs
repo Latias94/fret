@@ -6780,6 +6780,38 @@ fn preview_overlay(
                                         .into_element(cx),
                                     ])
                                     .into_element(cx),
+                                    {
+                                        let body = stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N2).layout(
+                                                LayoutRefinement::default()
+                                                    .w_full()
+                                                    .min_w_0()
+                                                    .min_h_0(),
+                                            ),
+                                            |cx| {
+                                                (0..64)
+                                                    .map(|i| {
+                                                        cx.text(format!(
+                                                            "Scrollable content line {}",
+                                                            i + 1
+                                                        ))
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                            },
+                                        );
+
+                                        shadcn::ScrollArea::new([body])
+                                            .refine_layout(
+                                                LayoutRefinement::default()
+                                                    .w_full()
+                                                    .h_px(Px(240.0))
+                                                    .min_w_0()
+                                                    .min_h_0(),
+                                            )
+                                            .viewport_test_id("ui-gallery-dialog-scroll-viewport")
+                                            .into_element(cx)
+                                    },
                                     shadcn::DialogFooter::new(vec![
                                         shadcn::Button::new("Close")
                                             .variant(shadcn::ButtonVariant::Secondary)
@@ -6877,6 +6909,42 @@ fn preview_overlay(
                                                 .into_element(cx),
                                         ])
                                         .into_element(cx),
+                                        {
+                                            let body = stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default()
+                                                    .gap(Space::N2)
+                                                    .layout(
+                                                        LayoutRefinement::default()
+                                                            .w_full()
+                                                            .min_w_0()
+                                                            .min_h_0(),
+                                                    ),
+                                                |cx| {
+                                                    (0..96)
+                                                        .map(|i| {
+                                                            cx.text(format!(
+                                                                "Sheet body line {}",
+                                                                i + 1
+                                                            ))
+                                                        })
+                                                        .collect::<Vec<_>>()
+                                                },
+                                            );
+
+                                            shadcn::ScrollArea::new([body])
+                                                .refine_layout(
+                                                    LayoutRefinement::default()
+                                                        .flex_1()
+                                                        .w_full()
+                                                        .min_w_0()
+                                                        .min_h_0(),
+                                                )
+                                                .viewport_test_id(
+                                                    "ui-gallery-sheet-scroll-viewport",
+                                                )
+                                                .into_element(cx)
+                                        },
                                         shadcn::SheetFooter::new(vec![
                                             shadcn::Button::new("Close")
                                                 .variant(shadcn::ButtonVariant::Secondary)
