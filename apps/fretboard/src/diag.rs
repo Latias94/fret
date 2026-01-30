@@ -1792,6 +1792,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 {
                     launch_env.push(("FRET_UI_GALLERY_VLIST_MINIMAL".to_string(), "1".to_string()));
                 }
+                if !launch_env
+                    .iter()
+                    .any(|(k, _)| k == "FRET_UI_GALLERY_VLIST_RETAINED")
+                {
+                    // Keep this suite exercising the legacy (non-retained) VirtualList path. The
+                    // UI Gallery defaults to retained hosts for VirtualList torture, but this suite
+                    // still tracks the render-driven window behavior.
+                    launch_env.push((
+                        "FRET_UI_GALLERY_VLIST_RETAINED".to_string(),
+                        "0".to_string(),
+                    ));
+                }
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
                 check_vlist_scroll_window_dirty_max =
                     check_vlist_scroll_window_dirty_max.or(Some(4));
