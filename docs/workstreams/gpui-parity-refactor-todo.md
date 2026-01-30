@@ -621,8 +621,9 @@ topics (if/when we implement them):
     - Evidence bundle (cache+shell, release, post-range-baseline change): `target/fret-diag-perf-vlist-window-boundary-recenter/1769177486396-script-step-0027-wheel/bundle.json`
     - Notes: the current worst tick is layout-dominated when the wheel crosses the window boundary; this is the baseline we want to improve by moving window derivation toward prepaint (ADR 0190).
     - Tip: for a more stable baseline (avoid measure noise), run the harness with `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1` so the page uses `VirtualListOptions::known(...)`.
-    - Rejected (v1): “sticky window shift by minimal delta” increases window-churn under wheel scroll because v1 still requires cache-root rerender to rebuild `visible_items`.
-      Keep this idea for v2 prepaint-driven window updates (ADR 0190).
+    - Note (v1): “sticky window shift by minimal delta” is harmful for the legacy VirtualList path because v1 still requires a cache-root rerender to rebuild `visible_items`.
+    - Note (v2): the retained-host path can use “minimal shift” safely because the runtime can attach/detach rows during reconcile without rerendering the parent cache root.
+      - Anchor: `crates/fret-ui/src/tree/prepaint.rs` (`shift_virtual_list_window_minimally`).
       - Evidence bundles (cache+shell, release): `target/fret-diag-perf-vlist-window-boundary-sticky/1769176834622-script-step-0027-wheel/bundle.json`,
         `target/fret-diag-perf-vlist-window-boundary-sticky2/1769177002575-script-step-0027-wheel/bundle.json`.
     - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell/1769174146628-script-step-0027-wheel/bundle.json`
