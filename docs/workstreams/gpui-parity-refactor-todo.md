@@ -670,7 +670,7 @@ topics (if/when we implement them):
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
   - Goal: allow scroll/window membership updates to attach/detach item subtrees without rerendering the parent cache root.
-  - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Proposed).
+  - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Accepted).
   - Progress (v1 prototype; fixed/known baseline, measured variant gated):
     - Runtime host state: `crates/fret-ui/src/windowed_surface_host.rs` (`RetainedVirtualListHostMarker`, `RetainedVirtualListHostCallbacks`).
     - Scheduling: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/prepaint.rs` (`mark_retained_virtual_list_needs_reconcile`).
