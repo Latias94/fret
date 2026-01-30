@@ -11315,17 +11315,9 @@ fn web_vs_fret_context_menu_demo_menu_content_insets_match() {
     assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo");
 }
 
-fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
+fn build_context_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsSnapshot) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
-
-    let web_sub_menu = web_portal_node_by_data_slot(theme, "context-menu-sub-content");
-    let web_sub_trigger = web_portal_node_by_data_slot(theme, "context-menu-sub-trigger");
-
-    let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
-    let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
-    let expected_w = web_sub_menu.rect.w;
-    let expected_h = web_sub_menu.rect.h;
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -11342,6 +11334,17 @@ fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
     let checked_full_urls: Model<bool> = app.models_mut().insert(false);
     let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
 
+    let render = |cx: &mut ElementContext<'_, App>| {
+        let el = build_context_menu_demo(
+            cx,
+            open.clone(),
+            checked_bookmarks.clone(),
+            checked_full_urls.clone(),
+            radio_person.clone(),
+        );
+        vec![pad_root(cx, Px(0.0), el)]
+    };
+
     render_frame(
         &mut ui,
         &mut app,
@@ -11350,16 +11353,7 @@ fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
         bounds,
         FrameId(1),
         true,
-        |cx| {
-            let el = build_context_menu_demo(
-                cx,
-                open.clone(),
-                checked_bookmarks.clone(),
-                checked_full_urls.clone(),
-                radio_person.clone(),
-            );
-            vec![pad_root(cx, Px(0.0), el)]
-        },
+        render,
     );
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
@@ -11418,45 +11412,165 @@ fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
         bounds,
         FrameId(2),
         true,
-        |cx| {
-            let el = build_context_menu_demo(
-                cx,
-                open.clone(),
-                checked_bookmarks.clone(),
-                checked_full_urls.clone(),
-                radio_person.clone(),
-            );
-            vec![pad_root(cx, Px(0.0), el)]
-        },
-    );
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"));
-    let trigger = trigger.unwrap_or_else(|| {
-        let menu_items: Vec<_> = snap
-            .nodes
-            .iter()
-            .filter(|n| n.role == SemanticsRole::MenuItem)
-            .filter_map(|n| n.label.as_deref())
-            .collect();
-        panic!("fret submenu trigger semantics missing; menu_items={menu_items:?}");
-    });
-    ui.set_focus(Some(trigger.id));
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
+        render,
     );
 
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    let mut frame: u64 = 3;
+
+    if web_name.contains("submenu-kbd") {
+        // Match the web golden extraction script behavior:
+        // - `scrollIntoView({ block: "center" })` on the submenu trigger element
+        // - focus the trigger and press ArrowRight
+        let mut snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        for _ in 0..3 {
+            let root_menu = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Menu)
+                .expect("fret root menu semantics");
+            let trigger = snap
+                .nodes
+                .iter()
+                .find(|n| {
+                    n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools")
+                })
+                .expect("fret submenu trigger semantics (More Tools)");
+
+            let root_center_y = root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5;
+            let trigger_center_y = trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5;
+            let dy = trigger_center_y - root_center_y;
+            if dy.abs() <= 1.0 {
+                break;
+            }
+
+            let wheel_pos = Point::new(
+                Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
+                Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
+            );
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &Event::Pointer(PointerEvent::Wheel {
+                    pointer_id: fret_core::PointerId::default(),
+                    position: wheel_pos,
+                    delta: Point::new(Px(0.0), Px(-dy)),
+                    modifiers: Modifiers::default(),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                FrameId(frame),
+                true,
+                render,
+            );
+            frame += 1;
+            snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        }
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"))
+            .expect("fret submenu trigger semantics (More Tools, scrolled)");
+        let focus_point = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId::default(),
+                position: focus_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId::default(),
+                position: focus_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: false,
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            render,
+        );
+        frame += 1;
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let focused = fret_focused_label(&snap);
+        assert_eq!(
+            focused,
+            Some("More Tools"),
+            "{web_name}: failed to focus submenu trigger (More Tools); focused={focused:?}"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+    } else {
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let root_menu = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("fret root menu semantics");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"))
+            .expect("fret submenu trigger semantics (More Tools)");
+        assert!(
+            fret_rect_contains(root_menu.bounds, trigger.bounds),
+            "{web_name}: submenu trigger is not visible in root menu panel (expected to open submenu by hover)"
+        );
+
+        let hover_point = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId::default(),
+                position: hover_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        deliver_all_timers_from_effects(&mut ui, &mut app, &mut services);
+    }
+
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(
@@ -11465,22 +11579,27 @@ fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
             &mut services,
             window,
             bounds,
-            FrameId(3 + tick),
+            FrameId(frame + tick as u64),
             request_semantics,
-            |cx| {
-                let el = build_context_menu_demo(
-                    cx,
-                    open.clone(),
-                    checked_bookmarks.clone(),
-                    checked_full_urls.clone(),
-                    radio_person.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), el)]
-            },
+            render,
         );
     }
 
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    (web, snap)
+}
+
+fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
+    let (web, snap) = build_context_menu_demo_submenu_snapshot(web_name);
+    let theme = web_theme(&web);
+
+    let web_sub_menu = web_portal_node_by_data_slot(theme, "context-menu-sub-content");
+    let web_sub_trigger = web_portal_node_by_data_slot(theme, "context-menu-sub-trigger");
+
+    let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
+    let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
+    let expected_w = web_sub_menu.rect.w;
+    let expected_h = web_sub_menu.rect.h;
     let trigger = snap
         .nodes
         .iter()
@@ -11568,7 +11687,7 @@ fn web_vs_fret_context_menu_demo_submenu_hover_menu_content_insets_match() {
 }
 
 fn assert_context_menu_demo_submenu_constrained_menu_content_insets_match(web_name: &str) {
-    let web = read_web_golden_open(web_name);
+    let (web, snap) = build_context_menu_demo_submenu_snapshot(web_name);
     let theme = web_theme(&web);
     let expected_slots = ["context-menu-content", "context-menu-sub-content"];
     let expected = web_menu_content_insets_for_slots(&theme, &expected_slots);
@@ -11576,153 +11695,6 @@ fn assert_context_menu_demo_submenu_constrained_menu_content_insets_match(web_na
         .iter()
         .map(|slot| web_portal_node_by_data_slot(&theme, slot).rect.h)
         .collect();
-
-    let window = AppWindowId::default();
-    let mut app = App::new();
-    setup_app_with_shadcn_theme(&mut app);
-
-    let mut ui: UiTree<App> = UiTree::new();
-    ui.set_window(window);
-    let mut services = StyleAwareServices::default();
-
-    let bounds = bounds_for_web_theme(&theme);
-
-    let open: Model<bool> = app.models_mut().insert(false);
-    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
-    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
-    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
-
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(1),
-        true,
-        |cx| {
-            let el = build_context_menu_demo(
-                cx,
-                open.clone(),
-                checked_bookmarks.clone(),
-                checked_full_urls.clone(),
-                radio_person.clone(),
-            );
-            vec![pad_root(cx, Px(0.0), el)]
-        },
-    );
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger_button = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
-        .expect("fret trigger button semantics");
-    let click_point = Point::new(
-        Px(trigger_button.bounds.origin.x.0 + trigger_button.bounds.size.width.0 * 0.5),
-        Px(trigger_button.bounds.origin.y.0 + trigger_button.bounds.size.height.0 * 0.5),
-    );
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Move {
-            pointer_id: fret_core::PointerId::default(),
-            position: click_point,
-            buttons: fret_core::MouseButtons::default(),
-            modifiers: Modifiers::default(),
-            pointer_type: PointerType::Mouse,
-        }),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: click_point,
-            button: MouseButton::Right,
-            modifiers: Modifiers::default(),
-            pointer_type: PointerType::Mouse,
-            click_count: 1,
-        }),
-    );
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::Pointer(PointerEvent::Up {
-            pointer_id: fret_core::PointerId::default(),
-            position: click_point,
-            button: MouseButton::Right,
-            modifiers: Modifiers::default(),
-            is_click: true,
-            pointer_type: PointerType::Mouse,
-            click_count: 1,
-        }),
-    );
-
-    render_frame(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        FrameId(2),
-        true,
-        |cx| {
-            let el = build_context_menu_demo(
-                cx,
-                open.clone(),
-                checked_bookmarks.clone(),
-                checked_full_urls.clone(),
-                radio_person.clone(),
-            );
-            vec![pad_root(cx, Px(0.0), el)]
-        },
-    );
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-    let trigger = snap
-        .nodes
-        .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"))
-        .expect("fret submenu trigger semantics (More Tools)");
-    ui.set_focus(Some(trigger.id));
-
-    ui.dispatch_event(
-        &mut app,
-        &mut services,
-        &Event::KeyDown {
-            key: KeyCode::ArrowRight,
-            modifiers: Modifiers::default(),
-            repeat: false,
-        },
-    );
-
-    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
-    for tick in 0..settle_frames {
-        let request_semantics = tick + 1 == settle_frames;
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            FrameId(3 + tick),
-            request_semantics,
-            |cx| {
-                let el = build_context_menu_demo(
-                    cx,
-                    open.clone(),
-                    checked_bookmarks.clone(),
-                    checked_full_urls.clone(),
-                    radio_person.clone(),
-                );
-                vec![pad_root(cx, Px(0.0), el)]
-            },
-        );
-    }
-
-    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
     let actual = fret_menu_content_insets(&snap);
     assert_sorted_insets_match(web_name, &actual, &expected);
 
