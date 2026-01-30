@@ -3087,6 +3087,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     ),
                                                 ));
                                             }
+                                            if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                                && dock.hover != prev_hover
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    invert_docking = invert_docking,
+                                                    source = ?source,
+                                                    target = ?dock_drop_target_diagnostics(
+                                                        dock.hover.as_ref()
+                                                    ),
+                                                    "dock drag hover changed"
+                                                );
+                                            }
 
                                             if let Some(DockDropTarget::Dock(target)) =
                                                 dock.hover.as_mut()
