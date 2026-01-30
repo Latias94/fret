@@ -634,6 +634,9 @@ topics (if/when we implement them):
       - Evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-optin/1769349359414-script-step-0027-wheel/bundle.json`
       - Takeaway: the dominant cost is still the rerender frame that rebuilds new rows; this change removes avoidable current-frame work and keeps the contract GPUI-like ("mark dirty, rebuild next frame").
     - Progress (v1.3): keep scroll-handle invalidation HitTestOnly even when the visible range leaves the rendered overscan window; mark the nearest view-cache root dirty and request redraw instead of forcing a layout invalidation walk.
+    - Progress (v2.0 retained host): reconcile now uses `render_window_range` as a baseline and shifts the window minimally only when the visible range leaves the overscanned window (aligns retained-host reconcile with prepaint window logic).
+      - Anchors: `crates/fret-ui/src/declarative/mount.rs` (retained host reconcile window selection), `crates/fret-ui/src/virtual_list.rs` (`shift_virtual_range_minimally`), `crates/fret-ui/src/tree/prepaint.rs` (shared helper usage).
+      - Evidence bundle (suite, cache+shell, release): `target/fret-diag-virt-retained-suite-local1/1769751016873-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
       - Change: `invalidate_scroll_handle_bindings_for_changed_handles` triggers `mark_nearest_view_cache_root_needs_rerender` with `scroll_handle_window_update` while keeping the node invalidation as hit-test-only.
       - Anchors: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender`), `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_out_of_band_scroll_avoids_layout_after_overscan_window`).
     - Validated (v1.1): per-row nested cache roots inside `VirtualList`.
