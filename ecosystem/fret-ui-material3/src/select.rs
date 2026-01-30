@@ -781,6 +781,8 @@ fn select_trigger_element<H: UiHost>(
                     chevron_progress,
                 );
 
+                let has_leading_icon = leading_icon.is_some();
+
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
                 row.layout.size.height = Length::Fill;
@@ -789,7 +791,7 @@ fn select_trigger_element<H: UiHost>(
                 row.justify = MainAlign::SpaceBetween;
                 row.align = CrossAlign::Center;
                 row.padding = Edges {
-                    left: Px(16.0),
+                    left: if has_leading_icon { Px(12.0) } else { Px(16.0) },
                     right: Px(12.0),
                     top: Px(0.0),
                     bottom: Px(0.0),
@@ -860,7 +862,7 @@ fn select_trigger_element<H: UiHost>(
                             left.direction = Axis::Horizontal;
                             left.justify = MainAlign::Start;
                             left.align = CrossAlign::Center;
-                            left.gap = Px(8.0);
+                            left.gap = if has_leading_icon { Px(16.0) } else { Px(0.0) };
 
                             vec![cx.flex(left, move |_cx| {
                                 let mut out = Vec::new();
@@ -882,6 +884,7 @@ fn select_trigger_element<H: UiHost>(
                             variant,
                             label.clone(),
                             float_progress,
+                            has_leading_icon.then_some(leading_icon_size),
                             hovered,
                             !enabled,
                             error,
@@ -1035,6 +1038,7 @@ fn select_trigger_label<H: UiHost>(
     variant: SelectVariant,
     text: Arc<str>,
     progress: f32,
+    leading_icon_size: Option<Px>,
     hovered: bool,
     disabled: bool,
     error: bool,
@@ -1046,6 +1050,14 @@ fn select_trigger_label<H: UiHost>(
         .or_else(|| theme.text_style_by_key("md.sys.typescale.body-large"));
 
     let (x, y) = floating_label::material_floating_label_offsets(progress);
+
+    // Align with Material Web field layout:
+    // - with-leading-icon leading space: 12px
+    // - icon-content space: 16px
+    // (see `tokens/_md-comp-(outlined|filled)-text-field.scss` in `repo-ref/material-web`)
+    let x = leading_icon_size
+        .map(|icon_size| Px(12.0 + icon_size.0 + 16.0))
+        .unwrap_or(x);
 
     let mut layout = fret_ui::element::LayoutStyle::default();
     layout.position = fret_ui::element::PositionStyle::Absolute;

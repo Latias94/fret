@@ -3100,12 +3100,29 @@ fn material3_headless_controls_suite_goldens_v1() {
                 .unwrap_or_else(|| {
                     panic!("expected sel-empty in semantics snapshot ({label}, {scale})")
                 });
+            let select_error_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("sel-error")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected sel-error in semantics snapshot ({label}, {scale})")
+                });
             let btn_bounds = ui
                 .debug_node_visual_bounds(btn_node)
                 .unwrap_or_else(|| panic!("expected btn-filled bounds ({label}, {scale})"));
             let btn_center = Point::new(
                 Px(btn_bounds.origin.x.0 + btn_bounds.size.width.0 * 0.5),
                 Px(btn_bounds.origin.y.0 + btn_bounds.size.height.0 * 0.5),
+            );
+            let select_error_bounds = ui
+                .debug_node_visual_bounds(select_error_node)
+                .unwrap_or_else(|| panic!("expected sel-error bounds ({label}, {scale})"));
+            let select_error_center = Point::new(
+                Px(select_error_bounds.origin.x.0 + select_error_bounds.size.width.0 * 0.5),
+                Px(select_error_bounds.origin.y.0 + select_error_bounds.size.height.0 * 0.5),
             );
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
@@ -3202,6 +3219,57 @@ fn material3_headless_controls_suite_goldens_v1() {
                     24,
                     40,
                     &select_focus_visible_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), select_error_center),
+            );
+
+            let select_hover_message = format!(
+                "expected the Material3 select hover scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "hover_select_error".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_hover_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+            ui.set_focus(Some(select_error_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+            let select_error_focus_visible_message = format!(
+                "expected the Material3 select error focus-visible scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "focus_visible_select_error".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_error_focus_visible_message,
                     &render,
                 ),
             );
