@@ -153,10 +153,13 @@ where
     let state_for_row = state.clone();
     let entries_for_row = Arc::clone(&entries);
 
-    let options =
+    let mut options =
         fret_ui::element::VirtualListOptions::known(row_h, props.overscan as usize, move |_i| {
             row_h
         });
+    // VirtualList windowing should react to entry-list changes (expand/collapse + tree updates).
+    // We conservatively fold both model revisions into the virtualizer revision.
+    options.items_revision = items_revision ^ state_revision.rotate_left(1);
 
     let expanded_for_row = expanded.clone();
     let selected_for_row = selected;
