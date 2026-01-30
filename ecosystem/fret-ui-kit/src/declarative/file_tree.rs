@@ -4,7 +4,7 @@ use std::sync::Arc;
 use fret_core::{Color, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, Length, PressableA11y, PressableProps};
-use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::CachedSubtreeExt as _;
@@ -148,7 +148,11 @@ where
                 rows_state.index_by_id.clone(),
             )
         });
-    let _ = index_by_id;
+    if let Some(id) = selected
+        && let Some(idx) = index_by_id.get(&id).copied()
+    {
+        scroll.scroll_to_item(idx, ScrollStrategy::Nearest);
+    }
 
     let state_for_row = state.clone();
     let entries_for_row = Arc::clone(&entries);
