@@ -2027,7 +2027,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || is_ui_gallery_data_table_retained_suite
                     || is_ui_gallery_data_table_retained_measured_suite
                     || is_ui_gallery_table_retained_suite
-                    || is_ui_gallery_table_retained_measured_suite)
+                    || is_ui_gallery_table_retained_measured_suite
+                    || is_ui_gallery_retained_measured_suite)
                     || ui_gallery_script_requires_retained_vlist_window_boundary_gate(&src);
 
                 let retained_vlist_gate_for_script = check_retained_vlist_reconcile_no_notify_min
