@@ -2760,6 +2760,28 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn virtual_list_keyed_retained_fn(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        self.virtual_list_keyed_retained_with_layout_fn(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            row,
+        )
+    }
+
+    #[track_caller]
     pub fn virtual_list_keyed_retained_with_layout(
         &mut self,
         layout: LayoutStyle,
@@ -2779,6 +2801,31 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             scroll_handle,
             key_at,
             crate::virtual_list::default_range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_retained_with_layout_fn(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn = Arc::new(key_at);
+        let row: crate::windowed_surface_host::RetainedVirtualListRowFn<H> = Arc::new(row);
+        self.virtual_list_keyed_retained_with_layout(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
             row,
         )
     }
@@ -2832,6 +2879,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     })
                     .collect::<Vec<_>>()
             },
+        )
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub fn virtual_list_keyed_retained_with_layout_ex_fn(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        range_extractor: crate::windowed_surface_host::RetainedVirtualListRangeExtractor,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn = Arc::new(key_at);
+        let row: crate::windowed_surface_host::RetainedVirtualListRowFn<H> = Arc::new(row);
+        self.virtual_list_keyed_retained_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            range_extractor,
+            row,
         )
     }
 
