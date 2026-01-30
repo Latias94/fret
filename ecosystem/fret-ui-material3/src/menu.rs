@@ -173,8 +173,7 @@ impl Menu {
             let container_bg = menu_tokens::container_background(&theme);
             let elevation = menu_tokens::container_elevation(&theme);
             let shadow_color = menu_tokens::container_shadow_color(&theme);
-            let r = menu_tokens::container_shape_radius(&theme);
-            let corner = Corners::all(r);
+            let corner = menu_tokens::container_shape(&theme);
             let surface =
                 material_surface_style(&theme, container_bg, elevation, Some(shadow_color), corner);
             let container_bg = surface.background;

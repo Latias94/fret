@@ -711,7 +711,9 @@ impl Radio {
                         .is_some_and(|v| v.as_ref() == value.as_ref()),
                 };
 
-                let corner_radii = Corners::all(Px(9999.0));
+                let corner_radii = theme
+                    .corners_by_key("md.sys.shape.corner.full")
+                    .unwrap_or_else(|| Corners::all(Px(9999.0)));
                 let focusable = match self.focus_policy {
                     RadioFocusPolicy::Default => enabled,
                     RadioFocusPolicy::Roving { tab_stop } => enabled && (tab_stop || st.focused),
@@ -837,7 +839,7 @@ impl Radio {
                             cx,
                             pressable_id,
                             now_frame,
-                            Corners::all(Px(9999.0)),
+                            corner_radii,
                             RippleClip::Bounded,
                             state_layer_color,
                             is_pressed,
@@ -895,7 +897,7 @@ fn material_radio_chrome<H: UiHost>(
 ) -> AnyElement {
     let mut props = ContainerProps::default();
     props.layout.overflow = Overflow::Clip;
-    props.corner_radii = Corners::all(Px(9999.0));
+    props.corner_radii = Corners::all(Px(size.state_layer.0 * 0.5));
     props.layout.size.width = Length::Px(size.state_layer);
     props.layout.size.height = Length::Px(size.state_layer);
     cx.container(props, move |_cx| children)
