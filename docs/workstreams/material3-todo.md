@@ -102,7 +102,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
 
 ### Backlog extracted from the comparison
 
-- [ ] Add a `LocalTextStyle`-like scoped default helper in Material foundation (text style + icon size).
+- [x] Add a `LocalTextStyle`-like scoped default helper in Material foundation (text style + icon size).
+  - Evidence: `ecosystem/fret-ui-material3/src/foundation/context.rs` (`with_material_text_style`, `with_material_icon_size`),
+    `ecosystem/fret-ui-material3/src/select.rs` (Select trigger uses `inherited_text_style` for display text).
 - [x] Land `foundation::elevation` (shadow + tonal overlay) and migrate `Surface`-like containers.
   - Evidence: `ecosystem/fret-ui-material3/src/foundation/elevation.rs`, `ecosystem/fret-ui-material3/src/foundation/surface.rs`,
     `ecosystem/fret-ui-material3/src/dialog.rs`, `ecosystem/fret-ui-material3/src/menu.rs`, `ecosystem/fret-ui-material3/src/tooltip.rs`,
