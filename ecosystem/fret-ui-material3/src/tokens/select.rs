@@ -427,6 +427,60 @@ pub(crate) fn menu_list_item_label_text_color(theme: &Theme, variant: SelectVari
         .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface"))
 }
 
+pub(crate) fn menu_list_item_leading_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
+    let key = match variant {
+        SelectVariant::Outlined => {
+            "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.size"
+        }
+        SelectVariant::Filled => {
+            "md.comp.filled-select.menu.list-item.with-leading-icon.leading-icon.size"
+        }
+    };
+    theme.metric_by_key(key).unwrap_or(Px(24.0))
+}
+
+pub(crate) fn menu_list_item_leading_icon_color(theme: &Theme, variant: SelectVariant) -> Color {
+    let key = match variant {
+        SelectVariant::Outlined => {
+            "md.comp.outlined-select.menu.list-item.with-leading-icon.leading-icon.color"
+        }
+        SelectVariant::Filled => {
+            "md.comp.filled-select.menu.list-item.with-leading-icon.leading-icon.color"
+        }
+    };
+    theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+}
+
+pub(crate) fn menu_list_item_trailing_icon_size(theme: &Theme, variant: SelectVariant) -> Px {
+    let key = match variant {
+        SelectVariant::Outlined => {
+            "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.size"
+        }
+        SelectVariant::Filled => {
+            "md.comp.filled-select.menu.list-item.with-trailing-icon.trailing-icon.size"
+        }
+    };
+    theme.metric_by_key(key).unwrap_or(Px(24.0))
+}
+
+pub(crate) fn menu_list_item_trailing_icon_color(theme: &Theme, variant: SelectVariant) -> Color {
+    let key = match variant {
+        SelectVariant::Outlined => {
+            "md.comp.outlined-select.menu.list-item.with-trailing-icon.trailing-icon.color"
+        }
+        SelectVariant::Filled => {
+            "md.comp.filled-select.menu.list-item.with-trailing-icon.trailing-icon.color"
+        }
+    };
+    theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"))
+}
+
 pub(crate) fn menu_list_item_selected_container_color(
     theme: &Theme,
     variant: SelectVariant,

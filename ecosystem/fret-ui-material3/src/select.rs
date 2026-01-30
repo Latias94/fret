@@ -52,6 +52,8 @@ pub enum SelectVariant {
 pub struct SelectItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
+    pub leading_icon: Option<IconId>,
+    pub trailing_icon: Option<IconId>,
     pub disabled: bool,
     pub test_id: Option<Arc<str>>,
 }
@@ -61,9 +63,21 @@ impl SelectItem {
         Self {
             value: value.into(),
             label: label.into(),
+            leading_icon: None,
+            trailing_icon: None,
             disabled: false,
             test_id: None,
         }
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn trailing_icon(mut self, icon: IconId) -> Self {
+        self.trailing_icon = Some(icon);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -288,7 +302,9 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             let tab_stop_idx = selected_idx.or(first_enabled_idx).unwrap_or(0);
 
             let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
-            let target_y = Px(item_height.0 * (tab_stop_idx as f32));
+            let menu_vertical_padding = Px(8.0);
+            let target_y =
+                Px(((item_height.0 * (tab_stop_idx as f32)) - menu_vertical_padding.0).max(0.0));
             runtime
                 .scroll_handle
                 .scroll_to_offset(Point::new(Px(0.0), target_y));
@@ -329,8 +345,10 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin(cx.bounds, Px(0.0));
 
             let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
+            let menu_vertical_padding = Px(8.0);
             let desired_width = anchor.size.width;
-            let desired_height = Px(item_height.0 * (select.items.len().max(1) as f32));
+            let desired_height = Px((item_height.0 * (select.items.len().max(1) as f32))
+                + menu_vertical_padding.0 * 2.0);
             let desired = Size::new(desired_width, desired_height);
 
             let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -692,6 +710,22 @@ fn chevron_down_icon<H: UiHost>(
     cx.svg_icon_props(props)
 }
 
+fn select_menu_item_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    icon: &IconId,
+    color: Color,
+    size: Px,
+) -> AnyElement {
+    let svg = svg_source_for_icon(cx, icon);
+
+    let mut props = SvgIconProps::new(svg);
+    props.fit = SvgFit::Contain;
+    props.color = color;
+    props.layout.size.width = Length::Px(size);
+    props.layout.size.height = Length::Px(size);
+    cx.svg_icon_props(props)
+}
+
 fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId) -> SvgSource {
     let resolved = cx
         .app
@@ -808,95 +842,115 @@ fn select_listbox_panel<H: UiHost>(
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![cx.roving_flex(roving, move |cx| {
-                            cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
-                                use fret_ui::action::RovingNavigateResult;
+                        vec![cx.container(
+                            ContainerProps {
+                                padding: Edges {
+                                    top: Px(8.0),
+                                    right: Px(0.0),
+                                    bottom: Px(8.0),
+                                    left: Px(0.0),
+                                },
+                                layout: {
+                                    let mut l = fret_ui::element::LayoutStyle::default();
+                                    l.size.width = Length::Fill;
+                                    l.size.height = Length::Auto;
+                                    l.overflow = Overflow::Visible;
+                                    l
+                                },
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![cx.roving_flex(roving, move |cx| {
+                                    cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                                        use fret_ui::action::RovingNavigateResult;
 
-                                let is_disabled = |idx: usize| -> bool {
-                                    it.disabled.get(idx).copied().unwrap_or(false)
-                                };
-
-                                let forward = match it.key {
-                                    KeyCode::ArrowDown => Some(true),
-                                    KeyCode::ArrowUp => Some(false),
-                                    _ => None,
-                                };
-
-                                if it.key == KeyCode::Home {
-                                    let target = (0..it.len).find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-                                if it.key == KeyCode::End {
-                                    let target = (0..it.len).rev().find(|&i| !is_disabled(i));
-                                    return RovingNavigateResult::Handled { target };
-                                }
-
-                                let Some(forward) = forward else {
-                                    return RovingNavigateResult::NotHandled;
-                                };
-
-                                let current = it
-                                    .current
-                                    .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
-                                let Some(current) = current else {
-                                    return RovingNavigateResult::Handled { target: None };
-                                };
-
-                                let len = it.len;
-                                let mut target: Option<usize> = None;
-                                if it.wrap {
-                                    for step in 1..=len {
-                                        let idx = if forward {
-                                            (current + step) % len
-                                        } else {
-                                            (current + len - (step % len)) % len
+                                        let is_disabled = |idx: usize| -> bool {
+                                            it.disabled.get(idx).copied().unwrap_or(false)
                                         };
-                                        if !is_disabled(idx) {
-                                            target = Some(idx);
-                                            break;
+
+                                        let forward = match it.key {
+                                            KeyCode::ArrowDown => Some(true),
+                                            KeyCode::ArrowUp => Some(false),
+                                            _ => None,
+                                        };
+
+                                        if it.key == KeyCode::Home {
+                                            let target = (0..it.len).find(|&i| !is_disabled(i));
+                                            return RovingNavigateResult::Handled { target };
                                         }
+                                        if it.key == KeyCode::End {
+                                            let target = (0..it.len).rev().find(|&i| !is_disabled(i));
+                                            return RovingNavigateResult::Handled { target };
+                                        }
+
+                                        let Some(forward) = forward else {
+                                            return RovingNavigateResult::NotHandled;
+                                        };
+
+                                        let current = it
+                                            .current
+                                            .or_else(|| (0..it.len).find(|&i| !is_disabled(i)));
+                                        let Some(current) = current else {
+                                            return RovingNavigateResult::Handled { target: None };
+                                        };
+
+                                        let len = it.len;
+                                        let mut target: Option<usize> = None;
+                                        if it.wrap {
+                                            for step in 1..=len {
+                                                let idx = if forward {
+                                                    (current + step) % len
+                                                } else {
+                                                    (current + len - (step % len)) % len
+                                                };
+                                                if !is_disabled(idx) {
+                                                    target = Some(idx);
+                                                    break;
+                                                }
+                                            }
+                                        } else if forward {
+                                            target = ((current + 1)..len).find(|&i| !is_disabled(i));
+                                        } else if current > 0 {
+                                            target = (0..current).rev().find(|&i| !is_disabled(i));
+                                        }
+
+                                        RovingNavigateResult::Handled { target }
+                                    }));
+
+                                    // Prefix typeahead (best-effort): matches `Menu` / `RadioGroup` behavior.
+                                    fret_ui_kit::primitives::roving_focus_group::typeahead_prefix_arc_str_always_wrap(
+                                        cx,
+                                        Arc::from(
+                                            items
+                                                .iter()
+                                                .map(|it| it.label.clone())
+                                                .collect::<Vec<_>>(),
+                                        ),
+                                        30,
+                                    );
+
+                                    let mut out: Vec<AnyElement> = Vec::with_capacity(count);
+                                    for (idx, item) in items.iter().cloned().enumerate() {
+                                        let tab_stop = idx == tab_stop_idx;
+                                        out.push(select_list_item(
+                                            cx,
+                                            &theme,
+                                            variant,
+                                            item,
+                                            model.clone(),
+                                            open.clone(),
+                                            selected.clone(),
+                                            selected_bg,
+                                            tab_stop,
+                                            idx,
+                                            count,
+                                            initial_focus_id_out.clone(),
+                                        ));
                                     }
-                                } else if forward {
-                                    target = ((current + 1)..len).find(|&i| !is_disabled(i));
-                                } else if current > 0 {
-                                    target = (0..current).rev().find(|&i| !is_disabled(i));
-                                }
-
-                                RovingNavigateResult::Handled { target }
-                            }));
-
-                            // Prefix typeahead (best-effort): matches `Menu` / `RadioGroup` behavior.
-                            fret_ui_kit::primitives::roving_focus_group::typeahead_prefix_arc_str_always_wrap(
-                                cx,
-                                Arc::from(
-                                    items
-                                        .iter()
-                                        .map(|it| it.label.clone())
-                                        .collect::<Vec<_>>(),
-                                ),
-                                30,
-                            );
-
-                            let mut out: Vec<AnyElement> = Vec::with_capacity(count);
-                            for (idx, item) in items.iter().cloned().enumerate() {
-                                let tab_stop = idx == tab_stop_idx;
-                                out.push(select_list_item(
-                                    cx,
-                                    &theme,
-                                    variant,
-                                    item,
-                                    model.clone(),
-                                    open.clone(),
-                                    selected.clone(),
-                                    selected_bg,
-                                    tab_stop,
-                                    idx,
-                                    count,
-                                    initial_focus_id_out.clone(),
-                                ));
-                            }
-                            out
-                        })]
+                                    out
+                                })]
+                            },
+                        )]
                     },
                 )]
             },
@@ -1022,14 +1076,8 @@ fn select_list_item<H: UiHost>(
                 let label_color = select_tokens::menu_list_item_label_text_color(theme, variant);
                 let label_style = select_tokens::menu_list_item_label_text_style(theme, variant);
 
-                let label_el = {
-                    let mut props = TextProps::new(item.label.clone());
-                    props.style = label_style;
-                    props.color = Some(label_color);
-                    props.wrap = TextWrap::None;
-                    props.overflow = TextOverflow::Clip;
-                    cx.text_props(props)
-                };
+                let leading_icon = item.leading_icon.clone();
+                let trailing_icon = item.trailing_icon.clone();
 
                 let bg = if is_selected { Some(selected_bg) } else { None };
                 let mut chrome = ContainerProps::default();
@@ -1045,6 +1093,7 @@ fn select_list_item<H: UiHost>(
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
                 row.align = CrossAlign::Center;
+                row.gap = Px(8.0);
                 row.padding = Edges {
                     left: Px(12.0),
                     right: Px(12.0),
@@ -1053,7 +1102,59 @@ fn select_list_item<H: UiHost>(
                 };
 
                 vec![cx.container(chrome, move |cx| {
-                    vec![cx.flex(row, move |_cx| vec![overlay, label_el])]
+                    vec![cx.flex(row, move |cx| {
+                        let label_el = {
+                            let mut props = TextProps::new(item.label.clone());
+                            props.style = label_style;
+                            props.color = Some(label_color);
+                            props.wrap = TextWrap::None;
+                            props.overflow = TextOverflow::Clip;
+                            cx.text_props(props)
+                        };
+
+                        let label_slot = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut l = fret_ui::element::LayoutStyle::default();
+                                    l.size.width = Length::Fill;
+                                    l.flex.grow = 1.0;
+                                    l.overflow = Overflow::Clip;
+                                    l
+                                },
+                                ..Default::default()
+                            },
+                            move |_cx| vec![label_el],
+                        );
+
+                        let leading_icon_el = leading_icon.as_ref().map(|icon| {
+                            select_menu_item_icon(
+                                cx,
+                                icon,
+                                select_tokens::menu_list_item_leading_icon_color(theme, variant),
+                                select_tokens::menu_list_item_leading_icon_size(theme, variant),
+                            )
+                        });
+
+                        let trailing_icon_el = trailing_icon.as_ref().map(|icon| {
+                            select_menu_item_icon(
+                                cx,
+                                icon,
+                                select_tokens::menu_list_item_trailing_icon_color(theme, variant),
+                                select_tokens::menu_list_item_trailing_icon_size(theme, variant),
+                            )
+                        });
+
+                        let mut children = Vec::new();
+                        children.push(overlay);
+                        if let Some(icon) = leading_icon_el {
+                            children.push(icon);
+                        }
+                        children.push(label_slot);
+                        if let Some(icon) = trailing_icon_el {
+                            children.push(icon);
+                        }
+                        children
+                    })]
                 })]
             })
         });

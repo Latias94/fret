@@ -3360,10 +3360,17 @@ fn material3_headless_overlays_suite_goldens_v1() {
                     app.models_mut().insert(Some(Arc::<str>::from("beta")));
 
                 let items: Arc<[SelectItem]> = vec![
-                    SelectItem::new("alpha", "Alpha").test_id("select-item-alpha"),
-                    SelectItem::new("beta", "Beta").test_id("select-item-beta"),
+                    SelectItem::new("alpha", "Alpha")
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("select-item-alpha"),
+                    SelectItem::new("beta", "Beta")
+                        .leading_icon(fret_icons::ids::ui::SETTINGS)
+                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                        .test_id("select-item-beta"),
                     SelectItem::new("charlie", "Charlie (disabled)")
                         .disabled(true)
+                        .leading_icon(fret_icons::ids::ui::SEARCH)
                         .test_id("select-item-charlie-disabled"),
                 ]
                 .into();
