@@ -3145,6 +3145,63 @@ fn material3_headless_controls_suite_goldens_v1() {
                 ),
             );
 
+            let render_select_supporting_text_insets =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "select_insets_root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    Select::new(select_empty.clone())
+                                        .label("Select")
+                                        .supporting_text("Supporting text")
+                                        .placeholder("Pick one")
+                                        .items(select_items.clone())
+                                        .test_id("sel-inset-no-icon")
+                                        .into_element(cx),
+                                    Select::new(select_populated.clone())
+                                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                                        .label("Select")
+                                        .supporting_text("Supporting text")
+                                        .placeholder("Pick one")
+                                        .items(select_items.clone())
+                                        .test_id("sel-inset-icon")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let select_supporting_inset_message = format!(
+                "expected the Material3 select supporting text inset scenes to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle_select_supporting_text_insets".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_supporting_inset_message,
+                    &render_select_supporting_text_insets,
+                ),
+            );
+
             ui.dispatch_event(
                 &mut app,
                 &mut services,
