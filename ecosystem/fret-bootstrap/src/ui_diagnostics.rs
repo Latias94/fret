@@ -578,6 +578,7 @@ impl UiDiagnosticsService {
                     next_step: 0,
                     wait_frames_remaining: 0,
                     wait_until: None,
+                    drag_pointer: None,
                     last_reported_step: Some(0),
                 },
             );
@@ -878,64 +879,88 @@ impl UiDiagnosticsService {
                 delta_y,
                 steps,
             } => {
-                let Some(snapshot) = semantics_snapshot else {
-                    output.request_redraw = true;
-                    let label = format!("script-step-{step_index:04}-drag_pointer-no-semantics");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("no_semantics_snapshot".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
-                };
-                let Some(node) = select_semantics_node(snapshot, window, element_runtime, &target)
-                else {
-                    output.request_redraw = true;
-                    let label =
-                        format!("script-step-{step_index:04}-drag_pointer-no-semantics-match");
-                    if self.cfg.script_auto_dump {
-                        self.dump_bundle(Some(&label));
-                    }
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id: active.run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: Some(window.data().as_ffi()),
-                        stage: UiScriptStageV1::Failed,
-                        step_index: Some(step_index as u32),
-                        reason: Some("drag_pointer_no_semantics_match".to_string()),
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                    });
-                    return output;
+                // `drag_pointer` is intentionally multi-frame so diagnostics can observe and gate
+                // per-frame behaviors (prepaint outputs, paint-only invalidations, drag indicators).
+                //
+                // A single-frame drag would begin and end within one tick, making it impossible to
+                // validate "frame-driven chrome under view-cache reuse" contracts.
+                let state = active
+                    .drag_pointer
+                    .take()
+                    .filter(|s| s.step_index == step_index);
+
+                let mut state = if let Some(state) = state {
+                    state
+                } else {
+                    let Some(snapshot) = semantics_snapshot else {
+                        output.request_redraw = true;
+                        let label =
+                            format!("script-step-{step_index:04}-drag_pointer-no-semantics");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("no_semantics_snapshot".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+                    let Some(node) =
+                        select_semantics_node(snapshot, window, element_runtime, &target)
+                    else {
+                        output.request_redraw = true;
+                        let label =
+                            format!("script-step-{step_index:04}-drag_pointer-no-semantics-match");
+                        if self.cfg.script_auto_dump {
+                            self.dump_bundle(Some(&label));
+                        }
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id: active.run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: Some(window.data().as_ffi()),
+                            stage: UiScriptStageV1::Failed,
+                            step_index: Some(step_index as u32),
+                            reason: Some("drag_pointer_no_semantics_match".to_string()),
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                        });
+                        return output;
+                    };
+
+                    let start = center_of_rect(node.bounds);
+                    let end = Point::new(
+                        fret_core::Px(start.x.0 + delta_x),
+                        fret_core::Px(start.y.0 + delta_y),
+                    );
+                    DragPointerState::new(step_index, start, end, button, steps.max(1))
                 };
 
-                let start = center_of_rect(node.bounds);
-                let end = Point::new(
-                    fret_core::Px(start.x.0 + delta_x),
-                    fret_core::Px(start.y.0 + delta_y),
-                );
-                let steps = steps.max(1);
-                output.events.extend(drag_events(start, end, button, steps));
+                output.events.extend(state.emit_frame_events());
 
                 active.wait_until = None;
-                active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
-                if self.cfg.script_auto_dump {
-                    force_dump_label = Some(format!("script-step-{step_index:04}-drag_pointer"));
+
+                if state.is_done() {
+                    active.drag_pointer = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-drag_pointer"));
+                    }
+                } else {
+                    active.drag_pointer = Some(state);
                 }
             }
             UiActionStepV1::Wheel {
@@ -2603,7 +2628,135 @@ struct ActiveScript {
     next_step: usize,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
+    drag_pointer: Option<DragPointerState>,
     last_reported_step: Option<usize>,
+}
+
+#[derive(Debug, Clone)]
+struct DragPointerState {
+    step_index: usize,
+    start: Point,
+    end: Point,
+    button: UiMouseButtonV1,
+    steps: u32,
+    frame_index: u32,
+}
+
+impl DragPointerState {
+    fn new(
+        step_index: usize,
+        start: Point,
+        end: Point,
+        button: UiMouseButtonV1,
+        steps: u32,
+    ) -> Self {
+        Self {
+            step_index,
+            start,
+            end,
+            button,
+            steps: steps.max(1),
+            frame_index: 0,
+        }
+    }
+
+    fn is_done(&self) -> bool {
+        self.frame_index > self.steps.saturating_add(1)
+    }
+
+    fn emit_frame_events(&mut self) -> Vec<Event> {
+        let pointer_id = PointerId(0);
+        let modifiers = Modifiers::default();
+        let pointer_type = PointerType::Mouse;
+
+        let button = match self.button {
+            UiMouseButtonV1::Left => MouseButton::Left,
+            UiMouseButtonV1::Right => MouseButton::Right,
+            UiMouseButtonV1::Middle => MouseButton::Middle,
+        };
+
+        let mut pressed_buttons = MouseButtons::default();
+        match button {
+            MouseButton::Left => pressed_buttons.left = true,
+            MouseButton::Right => pressed_buttons.right = true,
+            MouseButton::Middle => pressed_buttons.middle = true,
+            _ => {}
+        }
+
+        let mut out = Vec::new();
+
+        // Frame 0: position cursor at start and press.
+        if self.frame_index == 0 {
+            out.push(Event::Pointer(PointerEvent::Move {
+                pointer_id,
+                position: self.start,
+                buttons: MouseButtons::default(),
+                modifiers,
+                pointer_type,
+            }));
+            out.push(Event::Pointer(PointerEvent::Down {
+                pointer_id,
+                position: self.start,
+                button,
+                modifiers,
+                click_count: 1,
+                pointer_type,
+            }));
+            self.frame_index = 1;
+            return out;
+        }
+
+        // Frames 1..=steps: move with button pressed and emit an `InternalDrag::Over` hint.
+        if (1..=self.steps).contains(&self.frame_index) {
+            let t = self.frame_index as f32 / self.steps as f32;
+            let x = self.start.x.0 + (self.end.x.0 - self.start.x.0) * t;
+            let y = self.start.y.0 + (self.end.y.0 - self.start.y.0) * t;
+            let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+
+            out.push(Event::Pointer(PointerEvent::Move {
+                pointer_id,
+                position,
+                buttons: pressed_buttons,
+                modifiers,
+                pointer_type,
+            }));
+
+            // For scripted diagnostics, also emit `InternalDrag` hints during pointer drags.
+            // These are only routed by the runtime when a cross-window drag session is active.
+            out.push(Event::InternalDrag(fret_core::InternalDragEvent {
+                pointer_id,
+                position,
+                kind: fret_core::InternalDragKind::Over,
+                modifiers,
+            }));
+
+            self.frame_index = self.frame_index.saturating_add(1);
+            return out;
+        }
+
+        // Final frame: release and emit drop.
+        if self.frame_index == self.steps.saturating_add(1) {
+            out.push(Event::Pointer(PointerEvent::Up {
+                pointer_id,
+                position: self.end,
+                button,
+                modifiers,
+                is_click: false,
+                click_count: 1,
+                pointer_type,
+            }));
+            out.push(Event::InternalDrag(fret_core::InternalDragEvent {
+                pointer_id,
+                position: self.end,
+                kind: fret_core::InternalDragKind::Drop,
+                modifiers,
+            }));
+            self.frame_index = self.frame_index.saturating_add(1);
+            return out;
+        }
+
+        out
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -6032,89 +6185,6 @@ fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
     });
 
     [move_event, down, up]
-}
-
-fn drag_events(start: Point, end: Point, button: UiMouseButtonV1, steps: u32) -> Vec<Event> {
-    let pointer_id = PointerId(0);
-    let modifiers = Modifiers::default();
-    let pointer_type = PointerType::Mouse;
-
-    let button = match button {
-        UiMouseButtonV1::Left => MouseButton::Left,
-        UiMouseButtonV1::Right => MouseButton::Right,
-        UiMouseButtonV1::Middle => MouseButton::Middle,
-    };
-
-    let mut pressed_buttons = MouseButtons::default();
-    match button {
-        MouseButton::Left => pressed_buttons.left = true,
-        MouseButton::Right => pressed_buttons.right = true,
-        MouseButton::Middle => pressed_buttons.middle = true,
-        _ => {}
-    }
-
-    let mut out = Vec::with_capacity(3 + steps as usize);
-    out.push(Event::Pointer(PointerEvent::Move {
-        pointer_id,
-        position: start,
-        buttons: MouseButtons::default(),
-        modifiers,
-        pointer_type,
-    }));
-    out.push(Event::Pointer(PointerEvent::Down {
-        pointer_id,
-        position: start,
-        button,
-        modifiers,
-        click_count: 1,
-        pointer_type,
-    }));
-
-    for i in 1..=steps {
-        let t = i as f32 / steps as f32;
-        let x = start.x.0 + (end.x.0 - start.x.0) * t;
-        let y = start.y.0 + (end.y.0 - start.y.0) * t;
-        let position = Point::new(fret_core::Px(x), fret_core::Px(y));
-        out.push(Event::Pointer(PointerEvent::Move {
-            pointer_id,
-            position,
-            buttons: pressed_buttons,
-            modifiers,
-            pointer_type,
-        }));
-
-        // For scripted diagnostics, also emit `InternalDrag` events during pointer drags. The
-        // runtime routes these to the active internal-drag anchor when a cross-window drag session
-        // is active (e.g. docking tear-off / drop indicators).
-        //
-        // This is intentionally safe for generic scripts: `UiTree` ignores `InternalDrag` events
-        // unless `app.drag(pointer_id)` exists and is marked `cross_window_hover`.
-        out.push(Event::InternalDrag(fret_core::InternalDragEvent {
-            pointer_id,
-            position,
-            kind: fret_core::InternalDragKind::Over,
-            modifiers,
-        }));
-    }
-
-    out.push(Event::Pointer(PointerEvent::Up {
-        pointer_id,
-        position: end,
-        button,
-        modifiers,
-        is_click: false,
-        click_count: 1,
-        pointer_type,
-    }));
-
-    // Mirror the runner's "mouse-up routes a drop then clears hover" behavior for internal drags.
-    out.push(Event::InternalDrag(fret_core::InternalDragEvent {
-        pointer_id,
-        position: end,
-        kind: fret_core::InternalDragKind::Drop,
-        modifiers,
-    }));
-    out
 }
 
 fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> [Event; 2] {
