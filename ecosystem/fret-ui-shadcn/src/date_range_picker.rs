@@ -168,6 +168,8 @@ impl DateRangePicker {
                             .week_start(self.week_start)
                             .show_outside_days(self.show_outside_days)
                             .disable_outside_days(self.disable_outside_days)
+                            // Upstream `date-picker-with-range` renders two months in the popover.
+                            .number_of_months(2)
                             .close_on_select(open_content.clone())
                             .initial_focus_out(initial_focus_out.clone());
 

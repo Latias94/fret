@@ -14,6 +14,9 @@ Status:
 - Menus/listboxes: constrained-viewport gates now assert **menu/listbox height** + scroll behavior for the primary demos
   (DropdownMenu/ContextMenu/Menubar/SelectScrollable/Combobox/NavigationMenu). Next: extend the same pattern to any
   remaining overlay families that expose viewport-dependent sizing.
+- DatePicker open overlays:
+  - Added popover placement gates for `date-picker-demo.open` and `date-picker-with-range.open`.
+  - Next: implement + gate `date-picker-with-presets.open` (Select + calendar composition inside the popover).
 - NavigationMenu viewport content insets: current gates allow a small extra tolerance (`2px`) because the Fret test
   harness bounds are more integer-ish than the web's subpixel `border-box` snapshots. Prefer fixing this at the layout
   model level (border/box sizing), not by baking more per-component offsets.

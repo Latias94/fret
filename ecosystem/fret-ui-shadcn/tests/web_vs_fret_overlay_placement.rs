@@ -3028,6 +3028,64 @@ fn web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_date_picker_demo_open_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "date-picker-demo",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_headless::calendar::CalendarMonth;
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use time::Month;
+
+            let month: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::January));
+            let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+
+            fret_ui_shadcn::DatePicker::new(open.clone(), month, selected)
+                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+                .into_element(cx)
+        },
+        SemanticsRole::Button,
+        Some("Pick a date"),
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
+fn web_vs_fret_date_picker_with_range_open_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "date-picker-with-range",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use time::{Date, Month};
+
+            let month: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2022, Month::January));
+            let selected: Model<DateRangeSelection> =
+                cx.app.models_mut().insert(DateRangeSelection {
+                    from: Some(
+                        Date::from_calendar_date(2022, Month::January, 20).expect("from date"),
+                    ),
+                    to: Some(Date::from_calendar_date(2022, Month::February, 9).expect("to date")),
+                });
+
+            fret_ui_shadcn::DateRangePicker::new(open.clone(), month, selected)
+                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(300.0))))
+                .into_element(cx)
+        },
+        SemanticsRole::Button,
+        Some("Jan 20, 2022 - Feb 09, 2022"),
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_calendar_22_open_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "calendar-22",
