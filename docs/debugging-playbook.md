@@ -44,6 +44,7 @@ Notes:
 - `fretboard diag inspect on` enables a GPUI/Zed-style picker overlay and writes `pick.result.json` for stable selectors.
 - `fretboard diag pack --include-all` and `diag run --pack --include-all` produce a `.zip` that the offline viewer can open (`tools/fret-bundle-viewer`).
 - `diag repro` writes `repro.zip` and `repro.summary.json` into `FRET_DIAG_DIR` (useful as a single “attach this” artifact).
+  - When running a suite, `repro.zip` includes multiple bundles under stable prefixes, plus script sources under `_root/scripts/`.
 
 Framework consistency checks (automation-friendly):
 

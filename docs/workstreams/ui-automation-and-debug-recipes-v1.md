@@ -49,10 +49,11 @@ This workstream should *not* replace those pieces; it should unify and extend th
 This section is a quick “what’s real today vs what we want in v1” checklist.
 
 - **`diag repro` is not yet the full unified runner.**
-  - `fretboard diag repro <script|suite>` exists as a convenience wrapper, but it currently packs **one**
-    selected bundle into `FRET_DIAG_DIR/repro.zip` (prefers a failing bundle when available, else the most recent).
-  - The summary is written to `FRET_DIAG_DIR/repro.summary.json`.
-  - Multi-bundle packaging with stable names is a follow-up (useful for suites).
+  - `fretboard diag repro <script|suite>` exists as a convenience wrapper.
+  - It writes `FRET_DIAG_DIR/repro.summary.json` and packs `FRET_DIAG_DIR/repro.zip`.
+  - For suites, it packs **multiple** bundles under stable zip prefixes (and includes script sources under `_root/scripts/`).
+  - It still does not orchestrate Tracy/RenderDoc capture/export yet, and it does not yet emit a standardized, cross-run
+    machine summary format intended for CI gating.
 - **Screenshot capture remains split into two modes.**
   - `FRET_DIAG_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
   - `FRET_DIAG_SCREENSHOTS=1` enables the on-demand PNG protocol used by script steps like `capture_screenshot`.
