@@ -3213,6 +3213,35 @@ fn web_vs_fret_date_picker_with_presets_open_overlay_placement_matches_mobile_ti
 }
 
 #[test]
+fn web_vs_fret_date_picker_with_presets_preset_tomorrow_open_overlay_placement_matches_mobile_tiny_viewport()
+ {
+    assert_overlay_placement_matches(
+        "date-picker-with-presets.preset-tomorrow-vp375x240",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_headless::calendar::CalendarMonth;
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use time::{Date, Month};
+
+            let month: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(2026, Month::January));
+            let selected: Model<Option<Date>> = cx.app.models_mut().insert(Some(
+                Date::from_calendar_date(2026, Month::January, 16).expect("selected date"),
+            ));
+
+            fret_ui_shadcn::DatePickerWithPresets::new(open.clone(), month, selected)
+                .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))))
+                .into_element(cx)
+        },
+        SemanticsRole::Button,
+        Some("January 16th, 2026"),
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_date_picker_with_presets_select_listbox_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "date-picker-with-presets.select-open",
