@@ -737,6 +737,7 @@ topics (if/when we implement them):
       - Gate: `fretboard diag stats <bundle> --check-layout-fast-path-min 1` (after warmup).
       - Evidence (smoke; `components_gallery` file-tree bounce): `target/fret-diag-smoke-layout-fastpath/1769855748827-components-gallery-file-tree-window-boundary-bounce/bundle.json`
       - Suite default: `fretboard diag suite components-gallery-file-tree` sets `--check-layout-fast-path-min 1`.
+      - Suite default: `fretboard diag suite components-gallery-file-tree` enables `--check-vlist-policy-key-stable` (applies only to the window-boundary scripts, not toggle-driven scripts).
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
@@ -744,6 +745,7 @@ topics (if/when we implement them):
       - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to:
         - `--warmup-frames 5`
         - `--check-view-cache-reuse-min 5`
+        - `--check-vlist-policy-key-stable`
         - `--check-vlist-scroll-window-dirty-max 2`
         - `--check-vlist-window-mismatch-min 1`
         - `--check-wheel-scroll ui-gallery-virtual-list-row-0-label`
@@ -1098,6 +1100,7 @@ topics (if/when we implement them):
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
       - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to `components-gallery-table-window-boundary-scroll.json`
         (the sort+scroll script is still gated by view-cache reuse + wheel-scroll + stale-paint, etc.).
+      - Note: the suite also enables `--check-vlist-policy-key-stable`, applied only to the window-boundary script (policy changes are expected in sort/toggle style scripts).
       - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
         - window-boundary: `C:\fret-diag-perf-components-gallery-table-boundary\1769833617760-script-step-0018-wheel/bundle.json` (2757/1989/13/755)
         - sort+scroll: `C:\fret-diag-perf-components-gallery-table-sort\1769833651344-script-step-0011-wheel/bundle.json` (6155/4682/11/1462)
