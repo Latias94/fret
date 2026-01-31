@@ -223,11 +223,12 @@ impl CardTitle {
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         ui::text(cx, self.text)
+            .w_full()
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
             .letter_spacing_em(-0.02)
-            .nowrap()
+            .wrap(TextWrap::Word)
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
     }

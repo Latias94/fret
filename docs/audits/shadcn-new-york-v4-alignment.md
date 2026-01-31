@@ -16,7 +16,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
-- shadcn-web `v4/new-york-v4`: `475/475` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-01-31
+- shadcn-web `v4/new-york-v4`: `476/476` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-01-31
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -47,6 +47,7 @@ Recent breadth wins:
   InputOtp row geometry (slot sizes + gaps).
 - **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
 - **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
+- **Block-ish text semantics**: `CardTitle` and form field label/title no longer force `nowrap`; wrapping is now driven by the parent width (matching upstream which uses `leading-*` but not `whitespace-nowrap`).
 - **Calendar root chrome**: `calendar-01` now gates the calendar root background (painted quad color matches web).
 - **Calendar nested chrome**: `calendar-22.open` now gates the calendar root background when rendered in a popover
   (matches upstream `[[data-slot=popover-content]_&]:bg-transparent`; implemented via `surface_slot` context).

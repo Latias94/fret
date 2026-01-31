@@ -427,11 +427,12 @@ impl FieldLegend {
         };
 
         let text = ui::label(cx, self.text)
+            .w_full()
             .text_size_px(size)
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
             .into_element(cx);
 
         // Upstream has `mb-3` on the legend.
@@ -606,7 +607,7 @@ impl FieldTitle {
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
             .into_element(cx)
     }
 }
@@ -655,7 +656,7 @@ impl FieldLabel {
             .line_height_px(line_height)
             .font_medium()
             .text_color(ColorRef::Color(fg))
-            .nowrap()
+            .wrap(TextWrap::Word)
             .into_element(cx)
     }
 }
