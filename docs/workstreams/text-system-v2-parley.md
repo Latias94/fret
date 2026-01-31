@@ -111,6 +111,33 @@ Exit criteria:
   - emoji sequences (ZWJ/VS16/keycaps)
   - IME preedit (Windows-first)
 
+#### WP7 — `text_v2` graduation (remove legacy + rename/flatten modules)
+
+Goal:
+
+- Retire the temporary `text_v2` module namespace once the Parley path is the only shaping backend and the
+  platform baseline (Windows + macOS) is validated, then rename/flatten modules to reduce churn.
+
+Exit criteria:
+
+- No legacy shaping backend remains (Parley-only; no runtime/feature gates).
+- The `text_v2` module namespace is removed:
+  - `crates/fret-render/src/text_v2/*` is renamed/flattened into the canonical text module surface.
+  - all imports, tests, and call sites stop referencing `text_v2`.
+- All text conformance and UI integration tests pass:
+  - `cargo nextest run -p fret-render`
+  - `cargo nextest run -p fret-ui`
+  - `cargo nextest run --workspace` (preferred before landing)
+- Documentation is updated to match the new module surface:
+  - workstreams referencing `text_v2` are updated
+  - ADR cross-references remain valid (update anchors if necessary)
+
+Evidence checklist (when completed):
+
+- `rg -n "text_v2" crates/ ecosystem/` returns no hits (or only in historical docs).
+- A focused PR/commit contains only mechanical renames + import updates + test fixes (no behavior changes).
+- This tracker no longer lists "`text_v2` naming" as an open question (Risks section).
+
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
 Exit criteria:
@@ -338,11 +365,7 @@ Legend:
 - Ellipsis glyph choice: keep current `"…"` vs legacy placeholder; ensure fallback is stable across platforms.
 - Parley cluster/index semantics: ensure we can map to UTF-8 byte offsets with correct clamping.
 - Atlas eviction determinism: ensure eviction does not cause flicker without explicit rebuild strategy.
-- `text_v2` naming: define the “graduation” criteria, then rename/flatten modules to reduce churn:
-  - ecosystem migrations done for the main text surfaces (`fret-markdown`, `fret-code-view`, …)
-  - legacy shaping backend removed (Parley-only, no feature gates)
-  - platform baseline validated on Windows + macOS (IME, selection geometry, pixel snapping)
-  - then: rename `text_v2` → `text` and remove the legacy module namespace.
+- `text_v2` naming: tracked as WP7 (graduation / rename / flattening) once the platform baseline is validated.
 - Platform defaults: decide `TextQualitySettings` defaults per platform (Windows-first; validate macOS after contract stabilization).
 
 ## Progress Log (append-only)
