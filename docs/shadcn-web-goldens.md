@@ -33,6 +33,12 @@ For each component page, the exporter writes a JSON file with:
 
 ## Run
 
+Note:
+
+- Positional arguments are **route names** (e.g. `chart-line-interactive`), not output keys.
+- Do not pass suffixes like `.hover-mid` / `.open` as part of the name. Use `--variants=...` and/or
+  `--modes=...` instead.
+
 1) Install deps:
 
 `pnpm -C repo-ref/ui install`

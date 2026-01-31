@@ -2604,6 +2604,11 @@ function printHelp() {
   console.log("  --update")
   console.log("  --all")
   console.log("")
+  console.log("Notes:")
+  console.log("  - Positional arguments are *route names* (e.g. \"chart-line-interactive\").")
+  console.log("  - Do not pass output-key suffixes like \".hover-mid\" or \".open\" as part of the name.")
+  console.log("  - Use --variants=... and/or --modes=... instead.")
+  console.log("")
   console.log("Viewport flags:")
   console.log("  --viewportW=1440 --viewportH=900 --deviceScaleFactor=2")
   console.log("")
@@ -2649,6 +2654,17 @@ try {
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
+
+  const invalidNames = finalNames.filter((name) => name.includes("."))
+  if (invalidNames.length > 0) {
+    throw new Error(
+      `invalid route names (must not contain '.', got: ${invalidNames.join(", ")}). ` +
+        `If you meant to update an output key like "chart-line-interactive.hover-mid", ` +
+        `pass the base route name and use --variants=hover-mid. ` +
+        `Example: node goldens/shadcn-web/scripts/extract-golden.mts --startServer ` +
+        `--baseUrl=http://localhost:4020 --variants=hover-mid chart-line-interactive --update`
+    )
+  }
 
   if (startServer) {
     startedServer = await startNextServer(nextDir, baseUrl)
