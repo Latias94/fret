@@ -649,7 +649,8 @@ topics (if/when we implement them):
       - Diagnostics + gates:
         - `debug.virtual_list_windows[*].window_shift_kind` (`none`/`prefetch`/`escape`) explains why a shift occurred.
         - `debug.retained_virtual_list_reconciles[*].reconcile_kind` (`prefetch`/`escape`) attributes attach/detach work to the right cause.
-        - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` exports both fields to bundles.
+        - `debug.retained_virtual_list_reconciles[*].reconcile_time_us` provides coarse wall-time attribution for the retained-host reconcile work.
+        - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` exports these fields to bundles.
         - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-min <n>` (use on `*window-boundary*` scripts).
       - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (v2 addendum; staged prefetch + budgets).
     - [~] Tune staged prefetch thresholds so steady-state overhead stays low.
