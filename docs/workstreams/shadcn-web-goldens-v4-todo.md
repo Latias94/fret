@@ -51,6 +51,7 @@ Tracking format:
 
 - [ ] SWG-cal-010 Add selection/hover/disabled state chrome gates on month grids across a constrained viewport.
 - [ ] SWG-cal-020 Add nested overlay “stacking order + clamp + scroll” gates (Select inside DatePicker popover).
+- 2026-01-31: added `date-picker-with-presets.preset-tomorrow-vp375x240` open golden + placement gate (Select interaction + deterministic date selection).
 
 ---
 
