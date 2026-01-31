@@ -1342,12 +1342,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     )
                 } else if is_components_gallery_file_tree_suite {
                     (
-                        vec![resolve_path(
-                            &workspace_root,
-                            PathBuf::from(
-                                "tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json",
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json",
+                                ),
                             ),
-                        )],
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json",
+                                ),
+                            ),
+                        ],
                         None,
                     )
                 } else if is_docking_arbitration_suite {
