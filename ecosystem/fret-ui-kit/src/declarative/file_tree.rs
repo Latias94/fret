@@ -93,6 +93,10 @@ impl Default for FileTreeViewProps {
 struct FileTreeRowsState {
     last_items_revision: Option<u64>,
     last_state_revision: Option<u64>,
+    last_scrolled_selected: Option<TreeItemId>,
+    last_scrolled_index: Option<usize>,
+    last_scrolled_items_revision: Option<u64>,
+    last_scrolled_state_revision: Option<u64>,
     entries: Vec<TreeEntry>,
     index_by_id: HashMap<TreeItemId, usize>,
 }
@@ -131,28 +135,41 @@ where
     let row_py = resolve_row_padding_y(theme.as_ref());
     let indent = resolve_indent(theme.as_ref());
 
-    let (entries, index_by_id): (Arc<Vec<TreeEntry>>, HashMap<TreeItemId, usize>) =
-        cx.with_state(FileTreeRowsState::default, |rows_state| {
-            if rows_state.last_items_revision != Some(items_revision)
-                || rows_state.last_state_revision != Some(state_revision)
-            {
-                rows_state.last_items_revision = Some(items_revision);
-                rows_state.last_state_revision = Some(state_revision);
-                let (entries, index_by_id) = rebuild_entries(items_value, &expanded);
-                rows_state.entries = entries;
-                rows_state.index_by_id = index_by_id;
-            }
+    let entries: Arc<Vec<TreeEntry>> = cx.with_state(FileTreeRowsState::default, |rows_state| {
+        if rows_state.last_items_revision != Some(items_revision)
+            || rows_state.last_state_revision != Some(state_revision)
+        {
+            rows_state.last_items_revision = Some(items_revision);
+            rows_state.last_state_revision = Some(state_revision);
+            let (entries, index_by_id) = rebuild_entries(items_value, &expanded);
+            rows_state.entries = entries;
+            rows_state.index_by_id = index_by_id;
+        }
 
-            (
-                Arc::new(rows_state.entries.clone()),
-                rows_state.index_by_id.clone(),
-            )
-        });
-    if let Some(id) = selected
-        && let Some(idx) = index_by_id.get(&id).copied()
-    {
-        scroll.scroll_to_item(idx, ScrollStrategy::Nearest);
-    }
+        let selected_idx = selected.and_then(|id| rows_state.index_by_id.get(&id).copied());
+        if let Some(selected_id) = selected
+            && let Some(idx) = selected_idx
+        {
+            let should_scroll = rows_state.last_scrolled_selected != Some(selected_id)
+                || rows_state.last_scrolled_index != Some(idx)
+                || rows_state.last_scrolled_items_revision != Some(items_revision)
+                || rows_state.last_scrolled_state_revision != Some(state_revision);
+            if should_scroll {
+                scroll.scroll_to_item(idx, ScrollStrategy::Nearest);
+                rows_state.last_scrolled_selected = Some(selected_id);
+                rows_state.last_scrolled_index = Some(idx);
+                rows_state.last_scrolled_items_revision = Some(items_revision);
+                rows_state.last_scrolled_state_revision = Some(state_revision);
+            }
+        } else {
+            rows_state.last_scrolled_selected = None;
+            rows_state.last_scrolled_index = None;
+            rows_state.last_scrolled_items_revision = Some(items_revision);
+            rows_state.last_scrolled_state_revision = Some(state_revision);
+        }
+
+        Arc::new(rows_state.entries.clone())
+    });
 
     let state_for_row = state.clone();
     let entries_for_row = Arc::clone(&entries);
