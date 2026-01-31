@@ -708,6 +708,7 @@ topics (if/when we implement them):
           `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0` (legacy path).
       - Evidence bundle (suite; cache+shell, release): `target/fret-diag-vlist-window-boundary-suite-local2/1769706605050-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; tightened gates): `target/fret-diag-vlist-window-boundary-tight/1769822459692-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - Evidence bundle (suite; cache+shell, release; dirty-max=2 default): `target/fret-diag-vlist-window-boundary-tight2/1769822968582-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
 
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
