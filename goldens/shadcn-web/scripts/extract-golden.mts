@@ -634,6 +634,9 @@ async function extractOne(page: puppeteer.Page) {
       "aria-label",
       "aria-labelledby",
       "aria-describedby",
+      "aria-live",
+      "aria-relevant",
+      "aria-atomic",
       "aria-invalid",
       "aria-checked",
       "aria-selected",
@@ -659,6 +662,12 @@ async function extractOne(page: puppeteer.Page) {
       "data-radix-scroll-area-corner",
       // Useful for overlay wrapper alignment.
       "data-radix-popper-content-wrapper",
+      // Sonner (toast) attributes.
+      "data-sonner-toaster",
+      "data-sonner-toast",
+      "data-x-position",
+      "data-y-position",
+      "data-type",
     ];
 
     const styleKeys = [
@@ -859,11 +868,18 @@ async function extractOne(page: puppeteer.Page) {
       return out;
     }
 
-    const portalCandidates = Array.from(
-      document.querySelectorAll(
-        "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
-      )
-    ).filter((el) => !root.contains(el));
+    const portalCandidates = [
+      ...Array.from(
+        document.querySelectorAll(
+          "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
+        )
+      ),
+      // Sonner does not use Radix-style data-state="open". Treat the toaster container as a
+      // portal-ish surface only when it actually contains at least one toast.
+      ...Array.from(document.querySelectorAll("[data-sonner-toaster]")).filter((el) =>
+        el.querySelector("[data-sonner-toast]")
+      ),
+    ].filter((el) => !root.contains(el));
 
     // Prefer the most specific (leaf-most) open-state nodes so we capture the actual Radix content
     // element rather than wrappers/portals.
@@ -1033,6 +1049,7 @@ async function openOverlay(
     if (outside("[role='menu']").length > 0) return true;
     if (outside("[role='listbox']").length > 0) return true;
     if (outside("[role='dialog']").length > 0) return true;
+    if (outside("[data-sonner-toast]").length > 0) return true;
     return false;
   })()`
 
@@ -1135,7 +1152,13 @@ async function openOverlay(
 async function openOverlayOutsideCounts(
   page: puppeteer.Page,
   rootSel: string
-): Promise<{ popperWrapper: number; roleMenu: number; roleDialog: number; dataStateOpen: number }> {
+): Promise<{
+  popperWrapper: number
+  roleMenu: number
+  roleDialog: number
+  dataStateOpen: number
+  dataSonnerToast: number
+}> {
   const expr = `(() => {
     const root = document.querySelector(${JSON.stringify(rootSel)}) || document.body;
     const outsideCount = (sel) =>
@@ -1146,6 +1169,7 @@ async function openOverlayOutsideCounts(
       roleMenu: outsideCount("[role='menu']"),
       roleDialog: outsideCount("[role='dialog']"),
       dataStateOpen: outsideCount("[data-state='open']"),
+      dataSonnerToast: outsideCount("[data-sonner-toast]"),
     };
   })()`
   return (await page.evaluate(expr)) as {
@@ -1153,6 +1177,7 @@ async function openOverlayOutsideCounts(
     roleMenu: number
     roleDialog: number
     dataStateOpen: number
+    dataSonnerToast: number
   }
 }
 
@@ -1523,12 +1548,14 @@ async function applyOpenSteps(
       const roleMenu = outsideCount("[role='menu']");
       const roleDialog = outsideCount("[role='dialog']");
       const dataStateOpen = outsideCount("[data-state='open']");
+      const dataSonnerToast = outsideCount("[data-sonner-toast]");
 
       return (
         popperWrapper > ${baseline.popperWrapper} ||
         roleMenu > ${baseline.roleMenu} ||
         roleDialog > ${baseline.roleDialog} ||
-        dataStateOpen > ${baseline.dataStateOpen}
+        dataStateOpen > ${baseline.dataStateOpen} ||
+        dataSonnerToast > ${baseline.dataSonnerToast}
       );
     })()`
 

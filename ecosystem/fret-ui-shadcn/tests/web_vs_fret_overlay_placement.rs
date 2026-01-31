@@ -2161,25 +2161,42 @@ struct StyleAwareServices {
 
 impl StyleAwareServices {
     fn from_web_theme(theme: &WebGoldenTheme) -> Self {
-        let font_family = theme
+        let has_ui_sans = theme
             .root
             .computed_style
             .get("fontFamily")
-            .or_else(|| {
-                find_first(&theme.root, &|n| {
-                    n.computed_style.contains_key("fontFamily")
-                })
-                .and_then(|n| n.computed_style.get("fontFamily"))
-            })
             .map(|v| v.as_str())
-            .unwrap_or("");
-        let width_profile = if font_family.contains("ui-sans-serif") {
+            .is_some_and(|v| v.contains("ui-sans-serif"))
+            || find_first(&theme.root, &|n| {
+                n.computed_style
+                    .get("fontFamily")
+                    .is_some_and(|v| v.contains("ui-sans-serif"))
+            })
+            .is_some()
+            || theme.portals.iter().any(|p| {
+                find_first(p, &|n| {
+                    n.computed_style
+                        .get("fontFamily")
+                        .is_some_and(|v| v.contains("ui-sans-serif"))
+                })
+                .is_some()
+            })
+            || theme.portal_wrappers.iter().any(|p| {
+                find_first(p, &|n| {
+                    n.computed_style
+                        .get("fontFamily")
+                        .is_some_and(|v| v.contains("ui-sans-serif"))
+                })
+                .is_some()
+            });
+
+        let width_profile = if has_ui_sans {
             TextWidthProfile::UiSans
         } else {
             TextWidthProfile::Geist
         };
         if std::env::var("FRET_DEBUG_TEXT_PROFILE").ok().as_deref() == Some("1") {
-            eprintln!("text profile: fontFamily={font_family:?} -> {width_profile:?}");
+            eprintln!("text profile: has_ui_sans={has_ui_sans} -> {width_profile:?}");
         }
         Self { width_profile }
     }
@@ -18330,6 +18347,194 @@ fn web_vs_fret_calendar_32_open_drawer_insets_match() {
                         .into_element(cx)
                 },
             )
+        },
+    );
+}
+
+fn web_first_sonner_toast_rect(theme: &WebGoldenTheme) -> WebRect {
+    let pred = |n: &WebNode| n.attrs.contains_key("data-sonner-toast");
+    let in_portal = theme.portals.iter().find_map(|p| find_first(p, &pred));
+    let in_wrapper = theme
+        .portal_wrappers
+        .iter()
+        .find_map(|p| find_first(p, &pred));
+    let in_root = find_first(&theme.root, &pred);
+
+    in_portal
+        .or(in_wrapper)
+        .or(in_root)
+        .map(|n| n.rect)
+        .expect("missing web sonner toast node ([data-sonner-toast])")
+}
+
+fn fret_first_toast_item_rect(snap: &SemanticsSnapshot) -> Rect {
+    let mut candidates: Vec<_> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Alert)
+        .filter(|n| n.test_id.as_deref() == Some("toast.item"))
+        .collect();
+
+    candidates.sort_by(|a, b| {
+        a.bounds
+            .origin
+            .y
+            .0
+            .partial_cmp(&b.bounds.origin.y.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    candidates
+        .first()
+        .map(|n| n.bounds)
+        .expect("missing fret toast semantics node (role=Alert, test_id=toast.item)")
+}
+
+fn assert_sonner_toast_rect_matches_web(
+    web_name: &str,
+    bounds: Rect,
+    dispatch_toast: impl FnOnce(
+        &fret_ui_shadcn::Sonner,
+        &mut dyn fret_ui::action::UiActionHost,
+        AppWindowId,
+    ),
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let web_toast = web_first_sonner_toast_rect(theme);
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::from_web_theme(theme);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![fret_ui_shadcn::Toaster::new().into_element(cx)],
+    );
+
+    let sonner = fret_ui_shadcn::Sonner::global(&mut app);
+    {
+        let mut host = fret_ui::action::UiActionHostAdapter { app: &mut app };
+        dispatch_toast(&sonner, &mut host, window);
+    }
+
+    // Let the toast open animation settle.
+    for frame_id in 2..=24 {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame_id),
+            frame_id == 24,
+            |cx| vec![fret_ui_shadcn::Toaster::new().into_element(cx)],
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let fret_toast = fret_first_toast_item_rect(&snap);
+
+    assert_close(
+        &format!("{web_name} toast x"),
+        fret_toast.origin.x.0,
+        web_toast.x,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} toast y"),
+        fret_toast.origin.y.0,
+        web_toast.y,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} toast w"),
+        fret_toast.size.width.0,
+        web_toast.w,
+        2.0,
+    );
+    assert_close(
+        &format!("{web_name} toast h"),
+        fret_toast.size.height.0,
+        web_toast.h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_demo_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-demo");
+    let bounds = bounds_for_web_theme(web_theme(&web));
+    assert_sonner_toast_rect_matches_web("sonner-demo", bounds, |sonner, host, window| {
+        let _ = sonner.toast_message(
+            host,
+            window,
+            "Event has been created",
+            fret_ui_shadcn::ToastMessageOptions::new()
+                .description("Sunday, December 03, 2023 at 9:00 AM")
+                .action("Undo", "sonner.toast.undo"),
+        );
+    });
+}
+
+#[test]
+fn web_vs_fret_sonner_demo_tiny_viewport_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-demo.vp1440x240");
+    let bounds = bounds_for_web_theme(web_theme(&web));
+    assert_sonner_toast_rect_matches_web(
+        "sonner-demo.vp1440x240",
+        bounds,
+        |sonner, host, window| {
+            let _ = sonner.toast_message(
+                host,
+                window,
+                "Event has been created",
+                fret_ui_shadcn::ToastMessageOptions::new()
+                    .description("Sunday, December 03, 2023 at 9:00 AM")
+                    .action("Undo", "sonner.toast.undo"),
+            );
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_types_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types");
+    let bounds = bounds_for_web_theme(web_theme(&web));
+    assert_sonner_toast_rect_matches_web("sonner-types", bounds, |sonner, host, window| {
+        let _ = sonner.toast_message(
+            host,
+            window,
+            "Event has been created",
+            fret_ui_shadcn::ToastMessageOptions::new(),
+        );
+    });
+}
+
+#[test]
+fn web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.vp1440x240");
+    let bounds = bounds_for_web_theme(web_theme(&web));
+    assert_sonner_toast_rect_matches_web(
+        "sonner-types.vp1440x240",
+        bounds,
+        |sonner, host, window| {
+            let _ = sonner.toast_message(
+                host,
+                window,
+                "Event has been created",
+                fret_ui_shadcn::ToastMessageOptions::new(),
+            );
         },
     );
 }

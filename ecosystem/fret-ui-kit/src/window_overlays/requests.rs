@@ -158,6 +158,10 @@ pub struct ToastLayerStyle {
     pub palette: ToastVariantPalette,
     /// Optional shadow for the toast container.
     pub shadow: Option<fret_ui::element::ShadowStyle>,
+    /// Whether to render a close (X) icon button on toasts.
+    ///
+    /// Note: this is distinct from per-toast "dismissible" behavior (e.g. swipe-to-dismiss).
+    pub show_close_button: bool,
     /// Motion timing for enter/exit presence.
     ///
     /// Defaults keep the existing shadcn-aligned behavior.
@@ -186,6 +190,7 @@ impl Default for ToastLayerStyle {
         Self {
             palette: ToastVariantPalette::default(),
             shadow: None,
+            show_close_button: true,
             open_ticks: 12,
             close_ticks: 12,
             easing: None,
