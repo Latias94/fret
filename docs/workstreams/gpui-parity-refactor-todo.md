@@ -732,6 +732,7 @@ topics (if/when we implement them):
       - Anchor: `crates/fret-ui/src/tree/layout.rs` (fast-path early return).
       - Perf note: the fast-path gate must be O(1). Use `UiTree.layout_invalidations_count` rather than scanning all nodes each frame.
       - Diagnostics: bundles report `debug.stats.layout_fast_path_taken` and `debug.stats.layout_invalidations_count` (helps validate the fast path is actually taking effect in scripted harnesses).
+      - Gate: `fretboard diag stats <bundle> --check-layout-fast-path-min 1` (after warmup).
       - Evidence (smoke; `components_gallery` file-tree bounce): `target/fret-diag-smoke-layout-fastpath/1769855748827-components-gallery-file-tree-window-boundary-bounce/bundle.json`
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
