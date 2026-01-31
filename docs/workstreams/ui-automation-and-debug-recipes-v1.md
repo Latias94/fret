@@ -58,6 +58,7 @@ This section is a quick “what’s real today vs what we want in v1” checklis
 - **`diag repro` is not yet the full unified runner.**
   - `fretboard diag repro <script|suite>` exists as a convenience wrapper.
   - It writes `FRET_DIAG_DIR/repro.summary.json` and packs `FRET_DIAG_DIR/repro.zip`.
+  - It writes `FRET_DIAG_DIR/evidence.index.json` as a lightweight index of the key artifacts/checks/resources for AI/CI.
   - For suites, it packs **multiple** bundles under stable zip prefixes (and includes script sources under `_root/scripts/`).
   - It can best-effort request RenderDoc autocapture (`--with renderdoc`) and attempt post-capture exports via
     `fret-renderdoc dump` into `FRET_DIAG_DIR/renderdoc/inspect/` (and includes those artifacts in `repro.zip`).
