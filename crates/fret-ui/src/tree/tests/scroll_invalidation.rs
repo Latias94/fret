@@ -61,8 +61,9 @@ fn scroll_wheel_invalidation_is_hit_test_only() {
         Px(scroll_bounds.origin.y.0 + 5.0),
     );
 
-    for (_, node) in ui.nodes.iter_mut() {
-        node.invalidation.clear();
+    let ids: Vec<NodeId> = ui.nodes.keys().collect();
+    for id in ids {
+        ui.test_clear_node_invalidations(id);
     }
 
     ui.dispatch_event(
@@ -145,8 +146,9 @@ fn virtual_list_wheel_scroll_is_hit_test_only_within_overscan_window() {
         Px(list_bounds.origin.y.0 + 5.0),
     );
 
-    for (_, node) in ui.nodes.iter_mut() {
-        node.invalidation.clear();
+    let ids: Vec<NodeId> = ui.nodes.keys().collect();
+    for id in ids {
+        ui.test_clear_node_invalidations(id);
     }
 
     ui.dispatch_event(
@@ -493,8 +495,9 @@ fn scroll_offset_changes_do_not_replay_paint_cache() {
     ui.ingest_paint_cache_source(&mut scene);
     scene.clear();
 
-    for (_, node) in ui.nodes.iter_mut() {
-        node.invalidation.clear();
+    let ids: Vec<NodeId> = ui.nodes.keys().collect();
+    for id in ids {
+        ui.test_clear_node_invalidations(id);
     }
 
     let prev_offset = scroll_handle.offset();

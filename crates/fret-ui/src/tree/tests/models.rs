@@ -24,9 +24,7 @@ fn model_change_invalidates_observers() {
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
-    if let Some(n) = ui.nodes.get_mut(node) {
-        n.invalidation.clear();
-    }
+    ui.test_clear_node_invalidations(node);
 
     let _ = model.update(&mut app, |v, _cx| {
         *v += 1;
@@ -103,7 +101,7 @@ fn model_change_invalidates_observers_across_windows() {
     ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_a = Scene::default();
     ui_a.paint_all(&mut app, &mut services, bounds, &mut scene_a, 1.0);
-    ui_a.nodes.get_mut(node_a).unwrap().invalidation.clear();
+    ui_a.test_clear_node_invalidations(node_a);
 
     let mut ui_b = UiTree::new();
     ui_b.set_window(window_b);
@@ -114,7 +112,7 @@ fn model_change_invalidates_observers_across_windows() {
     ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_b = Scene::default();
     ui_b.paint_all(&mut app, &mut services, bounds, &mut scene_b, 1.0);
-    ui_b.nodes.get_mut(node_b).unwrap().invalidation.clear();
+    ui_b.test_clear_node_invalidations(node_b);
 
     let _ = model.update(&mut app, |v, _cx| *v += 1);
     let changed = app.take_changed_models();
@@ -153,7 +151,7 @@ fn paint_observation_only_invalidates_paint() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-    ui.nodes.get_mut(node).unwrap().invalidation.clear();
+    ui.test_clear_node_invalidations(node);
 
     let _ = model.update(&mut app, |v, _cx| *v += 1);
     let changed = app.take_changed_models();
@@ -186,7 +184,7 @@ fn hit_test_observation_escalates_to_layout_and_paint() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-    ui.nodes.get_mut(node).unwrap().invalidation.clear();
+    ui.test_clear_node_invalidations(node);
 
     let _ = model.update(&mut app, |v, _cx| *v += 1);
     let changed = app.take_changed_models();
@@ -221,7 +219,7 @@ fn model_change_requests_redraw_for_each_invalidated_window() {
     ui_a.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_a = Scene::default();
     ui_a.paint_all(&mut app, &mut services, bounds, &mut scene_a, 1.0);
-    ui_a.nodes.get_mut(node_a).unwrap().invalidation.clear();
+    ui_a.test_clear_node_invalidations(node_a);
 
     let mut ui_b = UiTree::new();
     ui_b.set_window(window_b);
@@ -232,7 +230,7 @@ fn model_change_requests_redraw_for_each_invalidated_window() {
     ui_b.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene_b = Scene::default();
     ui_b.paint_all(&mut app, &mut services, bounds, &mut scene_b, 1.0);
-    ui_b.nodes.get_mut(node_b).unwrap().invalidation.clear();
+    ui_b.test_clear_node_invalidations(node_b);
 
     let _ = model.update(&mut app, |v, _cx| *v += 1);
     let changed = app.take_changed_models();

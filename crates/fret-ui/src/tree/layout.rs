@@ -458,6 +458,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.layout_engine_widget_fallback_solves = 0;
+            self.debug_stats.layout_fast_path_taken = false;
+            self.debug_stats.layout_invalidations_count = self.layout_invalidations_count;
             self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
@@ -477,8 +479,9 @@ impl<H: UiHost> UiTree<H> {
             && self.pending_barrier_relayouts.is_empty()
             && self.last_layout_bounds == Some(bounds)
             && self.last_layout_scale_factor == Some(scale_factor)
-            && !self.nodes.iter().any(|(_, n)| n.invalidation.layout)
+            && self.layout_invalidations_count == 0
         {
+            self.debug_stats.layout_fast_path_taken = true;
             if self.semantics_requested {
                 self.semantics_requested = false;
                 self.refresh_semantics_snapshot(app);
@@ -1761,6 +1764,11 @@ impl<H: UiHost> UiTree<H> {
                 .record(node, global_observations.as_slice());
             if let Some(n) = self.nodes.get_mut(node) {
                 n.measured_size = size;
+                if n.invalidation.layout {
+                    debug_assert!(self.layout_invalidations_count > 0);
+                    self.layout_invalidations_count =
+                        self.layout_invalidations_count.saturating_sub(1);
+                }
                 n.invalidation.layout = false;
             }
         }

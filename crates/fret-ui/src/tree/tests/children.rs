@@ -11,7 +11,7 @@ fn set_children_noops_when_unchanged() {
 
     ui.set_root(root);
     ui.set_children(root, vec![a, b]);
-    ui.nodes[root].invalidation.clear();
+    ui.test_clear_node_invalidations(root);
 
     ui.set_children(root, vec![a, b]);
 
@@ -35,7 +35,7 @@ fn set_children_invalidates_parent_when_changed() {
 
     ui.set_root(root);
     ui.set_children(root, vec![a, b]);
-    ui.nodes[root].invalidation.clear();
+    ui.test_clear_node_invalidations(root);
 
     ui.set_children(root, vec![b, a]);
 
