@@ -52,8 +52,10 @@ This section is a quick “what’s real today vs what we want in v1” checklis
   - `fretboard diag repro <script|suite>` exists as a convenience wrapper.
   - It writes `FRET_DIAG_DIR/repro.summary.json` and packs `FRET_DIAG_DIR/repro.zip`.
   - For suites, it packs **multiple** bundles under stable zip prefixes (and includes script sources under `_root/scripts/`).
-  - It can best-effort request RenderDoc autocapture (`--with renderdoc`) and record Tracy enablement intent (`--with tracy`),
-    but it does not yet perform post-capture exports (e.g. `fret-renderdoc dump`) or automated Tracy capture-to-file.
+  - It can best-effort request RenderDoc autocapture (`--with renderdoc`) and attempt post-capture exports via
+    `fret-renderdoc dump` into `FRET_DIAG_DIR/renderdoc/inspect/` (and includes those artifacts in `repro.zip`).
+  - Tracy support is still partial: `--with tracy` enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy`
+    for `cargo run` launches, but capture export still requires the Tracy UI (no automated `tracy-capture` integration yet).
   - The machine summary is still evolving (it is not yet a stabilized CI gate format).
 - **Screenshot capture remains split into two modes.**
   - `FRET_DIAG_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
@@ -67,7 +69,8 @@ This section is a quick “what’s real today vs what we want in v1” checklis
     paint did not” when `semantics_fingerprint` changes without a `scene_fingerprint` change, and it can emit a structured
     evidence file via `--dump-semantics-changed-repainted-json`.
 - **Tracy / RenderDoc are only partially integrated.**
-  - `--with renderdoc` wires env vars for autocapture and includes any recorded `.rdc` files in `repro.zip`.
+  - `--with renderdoc` wires env vars for autocapture, attempts `fret-renderdoc dump` post-run (best-effort, requires
+    RenderDoc installed), and includes `.rdc` + dump JSON/PNG in `repro.zip`.
   - `--with tracy` enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy` for `cargo run` launches, but
     capture export still requires the Tracy UI (no automated `tracy-capture` integration yet).
 
