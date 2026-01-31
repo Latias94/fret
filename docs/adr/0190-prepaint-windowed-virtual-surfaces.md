@@ -90,6 +90,47 @@ At minimum, a perf bundle should be able to attribute:
 - cache-root reuse reasons,
 - and virtual-surface window updates (best-effort).
 
+### 5) Addendum (v2): staged prefetch and window-shift budgets
+
+This section extends the v1 contract with a GPUI/Flutter-aligned best practice for reducing scroll-time
+worst-tick spikes when a virtual surface crosses an overscan window boundary.
+
+Definitions:
+
+- **Visible range**: the strict range required to draw the current viewport (no overscan).
+- **Required window**: the minimal range that MUST be available for correctness (often equal to the visible range; may include a small “safety” overscan).
+- **Prefetch window**: an additional range derived from overscan policy intended purely for smoothness.
+- **Escape**: a frame where the visible range leaves the currently-rendered prefetch window.
+
+Contract:
+
+- The runtime MUST treat **required-window coverage** as correctness-critical:
+  - if the visible range leaves the required window, the runtime MUST update window state such that the next frame can render correctly,
+    even if it implies attaching many new items (e.g. a large scroll jump).
+- The runtime SHOULD treat **prefetch** as budgeted work:
+  - prefetch updates may be performed incrementally across multiple frames,
+  - prefetch MUST NOT require rerendering the entire view-cache root for retained hosts,
+  - and the runtime SHOULD cap per-frame structural churn (attach/detach) caused purely by prefetch.
+
+Practical guidance (non-normative, but strongly recommended for perf stability):
+
+- Prefer **early, small window shifts** over “rare, large boundary jumps”.
+  - When the visible range approaches a prefetch boundary (but is still covered), shift the window by a small step (e.g. 1–N items)
+    and request a redraw so the new items attach gradually.
+  - This turns a single “boundary tick” spike into a bounded stream of smaller reconciles.
+- Distinguish work due to **escape** vs **prefetch** in diagnostics:
+  - Escape-driven reconcile is correctness-critical; prefetch-driven reconcile is optional and should be budgeted.
+  - A single `bundle.json` should explain which case occurred for each reconcile.
+
+Diagnostics requirements (v2):
+
+- Bundles SHOULD export, per virtual-list window update:
+  - an explicit `window_shift_kind` (e.g. `none`, `prefetch`, `escape`),
+  - and a stable `policy_key` / `inputs_key` so policy drift is catchable by scripted gates.
+- Bundles SHOULD export, per retained-host reconcile:
+  - `reconcile_kind` (`prefetch` vs `escape`),
+  - and `attached_items` / `detached_items` / keep-alive reuse counters so churn spikes are attributable.
+
 ## Consequences
 
 - VirtualList and other large surfaces can become scroll-stable (transform-only for most wheel deltas) while still
@@ -114,6 +155,10 @@ At minimum, a perf bundle should be able to attribute:
 - Zed/GPUI dirty views + view caching gates:
   - `repo-ref/zed/crates/gpui/src/window.rs`
   - `repo-ref/zed/crates/gpui/src/view.rs`
+- Flutter element lifecycle and virtualization patterns:
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`BuildOwner.finalizeTree`, `_InactiveElements`, `Element.deactivateChild`)
+  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart` (`_keepAliveBucket`)
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/scroll_view.dart` (`cacheExtent`)
 
 ## Implementation Notes (v1 Progress)
 
