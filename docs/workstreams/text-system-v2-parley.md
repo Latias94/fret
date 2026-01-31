@@ -296,7 +296,14 @@ Legend:
 ### D) Ecosystem migrations
 
 - [ ] `ecosystem/fret-markdown`: express `strikethrough`, `inline code` as spans (no fallback hacks).
+  - Exit criteria: inline styles are represented as `TextSpan` overrides end-to-end (parse → model → `TextInput`),
+    with no special-casing in the renderer for markdown widgets.
+  - Exit criteria: add at least one focused test that asserts span boundaries remain stable across wrapping.
 - [ ] `ecosystem/fret-code-view`: represent highlighting as spans and support wrapping.
+  - Exit criteria: syntax highlighting maps to span overrides (color/font/style) and can render with `TextWrap::Word`
+    or `TextWrap::Grapheme` (no "one-line blob" fallback).
+  - Exit criteria: add a deterministic smoke test (snapshot or structural assertions) for:
+    mixed-script + emoji + long-token wrapping + selection.
 
 ### E) Tests & conformance
 
@@ -308,13 +315,18 @@ Legend:
 - [x] Unit tests: wrap boundaries across span boundaries.
   - Evidence: `crates/fret-render/src/text_v2/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 - [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
-- [ ] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
+- [x] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
+  - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
+    (`snapshot_reports_composed_utf16_ranges_for_mixed_script_text_during_ime_preedit`).
 
 ## Risks / Open Questions
 
 - Ellipsis glyph choice: keep current `"…"` vs legacy placeholder; ensure fallback is stable across platforms.
 - Parley cluster/index semantics: ensure we can map to UTF-8 byte offsets with correct clamping.
 - Atlas eviction determinism: ensure eviction does not cause flicker without explicit rebuild strategy.
+- `text_v2` naming: decide the “graduation” point (remove legacy path + ecosystem migrations + macOS baseline)
+  and then rename/flatten modules to reduce churn.
+- Platform defaults: decide `TextQualitySettings` defaults per platform (Windows-first; validate macOS after contract stabilization).
 
 ## Progress Log (append-only)
 
@@ -341,3 +353,4 @@ Legend:
 - 2026-01-14: Expand emoji sequence conformance (VS16/ZWJ/flags/keycaps) in `fret-render` (commit `dbc5a89`).
 - 2026-01-14: Add cjk-lite bundle + CJK conformance demo and atlas test (commit `8c0700b`).
 - 2026-01-14: Add wasm fallback candidates for bundled fonts (commit `56b6e92`).
+- 2026-01-31: Add deterministic window snapshot smoke test for mixed-script + emoji + IME preedit.
