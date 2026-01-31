@@ -3305,6 +3305,8 @@ pub struct UiVirtualListWindowV1 {
     pub deferred_scroll_consumed: bool,
     #[serde(default)]
     pub window_mismatch: bool,
+    #[serde(default)]
+    pub window_shift_kind: UiVirtualListWindowShiftKindV1,
 }
 
 impl UiVirtualListWindowV1 {
@@ -3336,6 +3338,7 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+            window_shift_kind: UiVirtualListWindowShiftKindV1::from_kind(window.window_shift_kind),
         }
     }
 }
@@ -3344,6 +3347,8 @@ impl UiVirtualListWindowV1 {
 pub struct UiRetainedVirtualListReconcileV1 {
     pub node: u64,
     pub element: u64,
+    #[serde(default)]
+    pub reconcile_kind: UiRetainedVirtualListReconcileKindV1,
     pub prev_items: u64,
     pub next_items: u64,
     pub preserved_items: u64,
@@ -3361,6 +3366,7 @@ impl UiRetainedVirtualListReconcileV1 {
         Self {
             node: key_to_u64(record.node),
             element: record.element.0,
+            reconcile_kind: UiRetainedVirtualListReconcileKindV1::from_kind(record.reconcile_kind),
             prev_items: record.prev_items as u64,
             next_items: record.next_items as u64,
             preserved_items: record.preserved_items as u64,
@@ -3394,6 +3400,56 @@ impl UiVirtualListWindowSourceV1 {
         match source {
             fret_ui::tree::UiDebugVirtualListWindowSource::Layout => Self::Layout,
             fret_ui::tree::UiDebugVirtualListWindowSource::Prepaint => Self::Prepaint,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowShiftKindV1 {
+    None,
+    Prefetch,
+    Escape,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for UiVirtualListWindowShiftKindV1 {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl UiVirtualListWindowShiftKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugVirtualListWindowShiftKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugVirtualListWindowShiftKind::None => Self::None,
+            fret_ui::tree::UiDebugVirtualListWindowShiftKind::Prefetch => Self::Prefetch,
+            fret_ui::tree::UiDebugVirtualListWindowShiftKind::Escape => Self::Escape,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiRetainedVirtualListReconcileKindV1 {
+    Prefetch,
+    Escape,
+    #[serde(other)]
+    Unknown,
+}
+
+impl Default for UiRetainedVirtualListReconcileKindV1 {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+impl UiRetainedVirtualListReconcileKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugRetainedVirtualListReconcileKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugRetainedVirtualListReconcileKind::Prefetch => Self::Prefetch,
+            fret_ui::tree::UiDebugRetainedVirtualListReconcileKind::Escape => Self::Escape,
         }
     }
 }
