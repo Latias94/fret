@@ -14,3 +14,4 @@ publish = false
 serde_json.workspace = true
 zip.workspace = true
 image.workspace = true
+windows-sys.workspace = true

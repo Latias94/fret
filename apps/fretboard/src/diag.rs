@@ -36,6 +36,14 @@ struct ReproPackItem {
     bundle_json: PathBuf,
 }
 
+#[derive(Debug)]
+struct LaunchedDemo {
+    child: Child,
+    launched_unix_ms: u64,
+    launched_instant: Instant,
+    launch_cmd: Vec<String>,
+}
+
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
@@ -71,6 +79,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
     let mut perf_baseline_headroom_pct: u32 = 20;
+    let mut check_idle_no_paint_min: Option<u64> = None;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_stale_scene_test_id: Option<String> = None;
@@ -377,6 +386,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 perf_baseline_headroom_pct = v
                     .parse::<u32>()
                     .map_err(|_| "invalid value for --perf-baseline-headroom-pct".to_string())?;
+                i += 1;
+            }
+            "--check-idle-no-paint-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-idle-no-paint-min".to_string());
+                };
+                check_idle_no_paint_min = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --check-idle-no-paint-min".to_string())?,
+                );
                 i += 1;
             }
             "--check-stale-paint" => {
@@ -1039,6 +1059,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if result.stage.as_deref() == Some("passed") {
                 if check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
+                    || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
@@ -1067,6 +1088,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     apply_post_run_checks(
                         &bundle_path,
                         &resolved_out_dir,
+                        check_idle_no_paint_min,
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
@@ -1147,7 +1169,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
             }
 
-            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+            let _ = stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             report_result_and_exit(&result);
         }
         "repro" => {
@@ -1253,6 +1275,7 @@ See: `docs/tracy.md`.\n";
                 timeout_ms,
                 poll_ms,
             )?;
+            let mut repro_process_footprint: Option<serde_json::Value> = None;
 
             let mut run_rows: Vec<serde_json::Value> = Vec::new();
             let mut selected_bundle_path: Option<PathBuf> = None;
@@ -1340,6 +1363,7 @@ See: `docs/tracy.md`.\n";
                 if result.stage.as_deref() == Some("passed") {
                     let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                         || check_stale_scene_test_id.is_some()
+                        || check_idle_no_paint_min.is_some()
                         || check_pixels_changed_test_id.is_some()
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
@@ -1366,6 +1390,7 @@ See: `docs/tracy.md`.\n";
                         if let Err(err) = apply_post_run_checks(
                             bundle_path,
                             &resolved_out_dir,
+                            check_idle_no_paint_min,
                             check_stale_paint_test_id.as_deref(),
                             check_stale_paint_eps,
                             check_stale_scene_test_id.as_deref(),
@@ -1446,7 +1471,11 @@ See: `docs/tracy.md`.\n";
 
                 if let Some(dir) = renderdoc_capture_dir.as_ref() {
                     let captures = wait_for_files_with_extensions(dir, &["rdc"], 10_000, poll_ms);
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    repro_process_footprint = repro_process_footprint.or(stop_launched_demo(
+                        &mut child,
+                        &resolved_exit_path,
+                        poll_ms,
+                    ));
 
                     let mut capture_rows: Vec<serde_json::Value> = Vec::new();
                     for (cap_idx, capture) in captures.iter().enumerate() {
@@ -1567,10 +1596,23 @@ See: `docs/tracy.md`.\n";
                     );
                     renderdoc_capture_payload = Some(payload);
                 } else {
-                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    repro_process_footprint = repro_process_footprint.or(stop_launched_demo(
+                        &mut child,
+                        &resolved_exit_path,
+                        poll_ms,
+                    ));
                 }
             } else {
-                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                repro_process_footprint = repro_process_footprint.or(stop_launched_demo(
+                    &mut child,
+                    &resolved_exit_path,
+                    poll_ms,
+                ));
+            }
+
+            let repro_process_footprint_file = resolved_out_dir.join("resource.footprint.json");
+            if let Some(payload) = repro_process_footprint.as_ref() {
+                let _ = write_json_value(&repro_process_footprint_file, payload);
             }
 
             let captures_json = serde_json::json!({
@@ -1607,6 +1649,14 @@ See: `docs/tracy.md`.\n";
                 "packed_bundle_json": packed_bundle_json.as_ref().map(|p| p.display().to_string()),
                 "packed_bundles": packed_bundles,
                 "repro_zip": Some(zip_out.display().to_string()),
+                "resources": serde_json::json!({
+                    "process_footprint_file": if repro_process_footprint_file.is_file() {
+                        Some("resource.footprint.json")
+                    } else {
+                        None
+                    },
+                    "process_footprint": repro_process_footprint,
+                }),
                 "captures": captures_json,
                 "last_result": last_script_result.as_ref().map(|r| serde_json::json!({
                     "run_id": r.run_id,
@@ -1877,6 +1927,7 @@ See: `docs/tracy.md`.\n";
                         .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
+                    || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
@@ -1917,6 +1968,7 @@ See: `docs/tracy.md`.\n";
                     apply_post_run_checks(
                         &bundle_path,
                         &resolved_out_dir,
+                        check_idle_no_paint_min,
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
@@ -2818,6 +2870,11 @@ See: `docs/tracy.md`.\n";
             if let Some(test_id) = check_stale_scene_test_id.as_deref() {
                 check_bundle_for_stale_scene(&bundle_path, test_id, check_stale_scene_eps)?;
             }
+            if let Some(min) = check_idle_no_paint_min {
+                let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+                let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
+                check_bundle_for_idle_no_paint_min(&bundle_path, out_dir, min, warmup_frames)?;
+            }
             if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
                 let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
                 let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
@@ -3525,7 +3582,9 @@ fn zip_add_root_artifacts(
         "triage.json",
         "picked.script.json",
         "check.pixels_changed.json",
+        "check.idle_no_paint.json",
         "check.perf_thresholds.json",
+        "resource.footprint.json",
         "renderdoc.captures.json",
         "tracy.note.md",
     ];
@@ -4178,7 +4237,7 @@ fn run_script_suite_collect_bundles(
         }
         let result = result?;
         if result.stage.as_deref() != Some("passed") {
-            stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+            let _ = stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
             return Err(format!(
                 "unexpected script stage for {}: {:?}",
                 src.display(),
@@ -4234,13 +4293,14 @@ fn run_script_suite_collect_bundles(
         bundle_paths.push(bundle_path);
     }
 
-    stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+    let _ = stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
     Ok(bundle_paths)
 }
 
 fn apply_post_run_checks(
     bundle_path: &Path,
     out_dir: &Path,
+    check_idle_no_paint_min: Option<u64>,
     check_stale_paint_test_id: Option<&str>,
     check_stale_paint_eps: f32,
     check_stale_scene_test_id: Option<&str>,
@@ -4266,6 +4326,9 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_stale_scene_test_id {
         check_bundle_for_stale_scene(bundle_path, test_id, check_stale_scene_eps)?;
+    }
+    if let Some(min) = check_idle_no_paint_min {
+        check_bundle_for_idle_no_paint_min(bundle_path, out_dir, min, warmup_frames)?;
     }
     if let Some(test_id) = check_pixels_changed_test_id {
         check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
@@ -4329,6 +4392,174 @@ fn apply_post_run_checks(
         check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
     }
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct IdleNoPaintWindowReport {
+    window: u64,
+    examined_snapshots: u64,
+    idle_frames_total: u64,
+    paint_frames_total: u64,
+    idle_streak_max: u64,
+    idle_streak_tail: u64,
+    last_paint: Option<serde_json::Value>,
+}
+
+fn snapshot_is_idle_no_paint(snapshot: &serde_json::Value) -> bool {
+    let stats = snapshot.get("debug").and_then(|v| v.get("stats"));
+    let prepaint_time_us = stats
+        .and_then(|v| v.get("prepaint_time_us"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let paint_time_us = stats
+        .and_then(|v| v.get("paint_time_us"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    let paint_nodes_performed = stats
+        .and_then(|v| v.get("paint_nodes_performed"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    prepaint_time_us == 0 && paint_time_us == 0 && paint_nodes_performed == 0
+}
+
+fn check_bundle_for_idle_no_paint_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_idle_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+
+    let mut reports: Vec<IdleNoPaintWindowReport> = Vec::new();
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut examined_snapshots: u64 = 0;
+        let mut idle_frames_total: u64 = 0;
+        let mut paint_frames_total: u64 = 0;
+        let mut idle_streak: u64 = 0;
+        let mut idle_streak_max: u64 = 0;
+        let mut last_paint: Option<serde_json::Value> = None;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let is_idle = snapshot_is_idle_no_paint(s);
+            if is_idle {
+                idle_frames_total = idle_frames_total.saturating_add(1);
+                idle_streak = idle_streak.saturating_add(1);
+                idle_streak_max = idle_streak_max.max(idle_streak);
+            } else {
+                paint_frames_total = paint_frames_total.saturating_add(1);
+                idle_streak = 0;
+
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let stats = s.get("debug").and_then(|v| v.get("stats"));
+                let prepaint_time_us = stats
+                    .and_then(|v| v.get("prepaint_time_us"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let paint_time_us = stats
+                    .and_then(|v| v.get("paint_time_us"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let paint_nodes_performed = stats
+                    .and_then(|v| v.get("paint_nodes_performed"))
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                last_paint = Some(serde_json::json!({
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "prepaint_time_us": prepaint_time_us,
+                    "paint_time_us": paint_time_us,
+                    "paint_nodes_performed": paint_nodes_performed,
+                }));
+            }
+        }
+
+        reports.push(IdleNoPaintWindowReport {
+            window,
+            examined_snapshots,
+            idle_frames_total,
+            paint_frames_total,
+            idle_streak_max,
+            idle_streak_tail: idle_streak,
+            last_paint: last_paint.clone(),
+        });
+
+        let mut fail_reason: Option<&'static str> = None;
+        if min_idle_frames > 0 && examined_snapshots < min_idle_frames {
+            fail_reason = Some("insufficient_snapshots");
+        } else if min_idle_frames > 0 && idle_streak < min_idle_frames {
+            fail_reason = Some("idle_tail_streak_too_small");
+        }
+
+        if let Some(reason) = fail_reason {
+            failures.push(serde_json::json!({
+                "window": window,
+                "reason": reason,
+                "examined_snapshots": examined_snapshots,
+                "idle_streak_tail": idle_streak,
+                "idle_streak_max": idle_streak_max,
+                "idle_frames_total": idle_frames_total,
+                "paint_frames_total": paint_frames_total,
+                "last_paint": last_paint,
+            }));
+        }
+    }
+
+    let out_path = out_dir.join("check.idle_no_paint.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "idle_no_paint",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_idle_frames": min_idle_frames,
+        "windows": reports.iter().map(|r| serde_json::json!({
+            "window": r.window,
+            "examined_snapshots": r.examined_snapshots,
+            "idle_frames_total": r.idle_frames_total,
+            "paint_frames_total": r.paint_frames_total,
+            "idle_streak_max": r.idle_streak_max,
+            "idle_streak_tail": r.idle_streak_tail,
+            "last_paint": r.last_paint,
+        })).collect::<Vec<_>>(),
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    if payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|v| v.is_empty())
+        .unwrap_or(true)
+    {
+        return Ok(());
+    }
+
+    Err(format!(
+        "idle no-paint gate failed (min_idle_frames={min_idle_frames}, warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        out_path.display()
+    ))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -5226,7 +5457,7 @@ fn maybe_launch_demo(
     wants_screenshots: bool,
     timeout_ms: u64,
     poll_ms: u64,
-) -> Result<Option<Child>, String> {
+) -> Result<Option<LaunchedDemo>, String> {
     let Some(launch) = launch else {
         return Ok(None);
     };
@@ -5261,9 +5492,17 @@ fn maybe_launch_demo(
         cmd.env("CARGO_TARGET_DIR", target_dir);
     }
 
+    let launched_unix_ms = now_unix_ms();
+    let launched_instant = Instant::now();
     let child = cmd
         .spawn()
         .map_err(|e| format!("failed to spawn `{}`: {e}", launch.join(" ")))?;
+    let demo = LaunchedDemo {
+        child,
+        launched_unix_ms,
+        launched_instant,
+        launch_cmd: launch.clone(),
+    };
 
     // Avoid racing cold-start compilation by waiting for the app to signal readiness.
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.max(180_000));
@@ -5277,18 +5516,155 @@ fn maybe_launch_demo(
             _ => false,
         };
         if ready {
-            return Ok(Some(child));
+            return Ok(Some(demo));
         }
         std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
     }
 
-    Ok(Some(child))
+    Ok(Some(demo))
 }
 
-fn kill_launched_demo(child: &mut Option<Child>) {
-    let Some(mut child_proc) = child.take() else {
+fn collect_demo_footprint_json(demo: &LaunchedDemo, killed: bool) -> serde_json::Value {
+    let ended_unix_ms = now_unix_ms();
+    let ended_instant = Instant::now();
+    let wall_time_ms = ended_instant
+        .duration_since(demo.launched_instant)
+        .as_millis()
+        .min(u64::MAX as u128) as u64;
+    let logical_cores = std::thread::available_parallelism()
+        .map(|n| n.get() as u64)
+        .unwrap_or(1)
+        .max(1);
+
+    let mut out = serde_json::json!({
+        "schema_version": 1,
+        "kind": "process_footprint",
+        "pid": demo.child.id(),
+        "launch_cmd": demo.launch_cmd,
+        "launched_unix_ms": demo.launched_unix_ms,
+        "ended_unix_ms": ended_unix_ms,
+        "wall_time_ms": wall_time_ms,
+        "killed": killed,
+        "logical_cores": logical_cores,
+    });
+
+    #[cfg(windows)]
+    {
+        use std::mem::size_of;
+        use std::os::windows::io::AsRawHandle as _;
+        use windows_sys::Win32::Foundation::FILETIME;
+        use windows_sys::Win32::System::ProcessStatus::{
+            GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
+        };
+        use windows_sys::Win32::System::Threading::GetProcessTimes;
+
+        let handle = demo.child.as_raw_handle();
+        unsafe fn filetime_to_100ns(ft: FILETIME) -> u64 {
+            ((ft.dwHighDateTime as u64) << 32) | (ft.dwLowDateTime as u64)
+        }
+
+        let mut creation: FILETIME = FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
+        let mut exit: FILETIME = FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
+        let mut kernel: FILETIME = FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
+        let mut user: FILETIME = FILETIME {
+            dwLowDateTime: 0,
+            dwHighDateTime: 0,
+        };
+
+        let times_ok =
+            unsafe { GetProcessTimes(handle, &mut creation, &mut exit, &mut kernel, &mut user) }
+                != 0;
+        if times_ok {
+            let kernel_100ns = unsafe { filetime_to_100ns(kernel) };
+            let user_100ns = unsafe { filetime_to_100ns(user) };
+            let total_100ns = kernel_100ns.saturating_add(user_100ns);
+            let total_time_ms = total_100ns / 10_000;
+            let kernel_time_ms = kernel_100ns / 10_000;
+            let user_time_ms = user_100ns / 10_000;
+
+            let avg_cpu_cores = if wall_time_ms > 0 {
+                (total_time_ms as f64) / (wall_time_ms as f64)
+            } else {
+                0.0
+            };
+            let avg_cpu_percent_total = if logical_cores > 0 {
+                (avg_cpu_cores / (logical_cores as f64)) * 100.0
+            } else {
+                0.0
+            };
+
+            if let Some(obj) = out.as_object_mut() {
+                obj.insert(
+                    "cpu".to_string(),
+                    serde_json::json!({
+                        "total_time_ms": total_time_ms,
+                        "kernel_time_ms": kernel_time_ms,
+                        "user_time_ms": user_time_ms,
+                        "avg_cpu_cores": avg_cpu_cores,
+                        "avg_cpu_percent_total_cores": avg_cpu_percent_total,
+                    }),
+                );
+            }
+        } else if let Some(obj) = out.as_object_mut() {
+            obj.insert(
+                "cpu_error".to_string(),
+                serde_json::Value::String("GetProcessTimes failed".to_string()),
+            );
+        }
+
+        let mut mem: PROCESS_MEMORY_COUNTERS = unsafe { std::mem::zeroed() };
+        mem.cb = size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
+        let mem_ok = unsafe { GetProcessMemoryInfo(handle, &mut mem, mem.cb) } != 0;
+        if mem_ok {
+            if let Some(obj) = out.as_object_mut() {
+                obj.insert(
+                    "memory".to_string(),
+                    serde_json::json!({
+                        "working_set_bytes": mem.WorkingSetSize as u64,
+                        "peak_working_set_bytes": mem.PeakWorkingSetSize as u64,
+                        "pagefile_bytes": mem.PagefileUsage as u64,
+                        "peak_pagefile_bytes": mem.PeakPagefileUsage as u64,
+                    }),
+                );
+            }
+        } else if let Some(obj) = out.as_object_mut() {
+            obj.insert(
+                "memory_error".to_string(),
+                serde_json::Value::String("GetProcessMemoryInfo failed".to_string()),
+            );
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        if let Some(obj) = out.as_object_mut() {
+            obj.insert(
+                "note".to_string(),
+                serde_json::Value::String(
+                    "process footprint collection is currently only implemented on Windows"
+                        .to_string(),
+                ),
+            );
+        }
+    }
+
+    out
+}
+
+fn kill_launched_demo(child: &mut Option<LaunchedDemo>) {
+    let Some(demo) = child.take() else {
         return;
     };
+    let mut child_proc = demo.child;
 
     #[cfg(windows)]
     {
@@ -5314,28 +5690,30 @@ fn kill_launched_demo(child: &mut Option<Child>) {
     }
 }
 
-fn stop_launched_demo(child: &mut Option<Child>, exit_path: &Path, poll_ms: u64) {
-    if child.is_none() {
-        return;
-    }
+fn stop_launched_demo(
+    child: &mut Option<LaunchedDemo>,
+    exit_path: &Path,
+    poll_ms: u64,
+) -> Option<serde_json::Value> {
+    let demo = child.as_mut()?;
 
     let _ = touch(exit_path);
     let deadline = Instant::now() + Duration::from_millis(20_000);
     while Instant::now() < deadline {
-        let exited = child
-            .as_mut()
-            .and_then(|c| c.try_wait().ok().flatten())
-            .is_some();
+        let exited = demo.child.try_wait().ok().flatten().is_some();
         if exited {
-            if let Some(mut c) = child.take() {
+            let footprint = Some(collect_demo_footprint_json(demo, false));
+            if let Some(mut c) = child.take().map(|d| d.child) {
                 let _ = c.wait();
             }
-            return;
+            return footprint;
         }
         std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
     }
 
+    let footprint = Some(collect_demo_footprint_json(demo, true));
     kill_launched_demo(child);
+    footprint
 }
 
 fn touch(path: &Path) -> Result<(), String> {
@@ -11807,6 +12185,56 @@ mod tests {
 
         std::fs::write(&path, serde_json::to_vec_pretty(&bundle).unwrap())
             .expect("bundle.json write should succeed");
+    }
+
+    #[test]
+    fn idle_no_paint_check_passes_when_tail_streak_meets_min() {
+        let out_dir = tmp_out_dir("idle_no_paint_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "tick_id": 1, "frame_id": 1, "debug": { "stats": { "prepaint_time_us": 1, "paint_time_us": 1, "paint_nodes_performed": 1 } } },
+                    { "tick_id": 2, "frame_id": 2, "debug": { "stats": { "prepaint_time_us": 0, "paint_time_us": 0, "paint_nodes_performed": 0 } } },
+                    { "tick_id": 3, "frame_id": 3, "debug": { "stats": { "prepaint_time_us": 0, "paint_time_us": 0, "paint_nodes_performed": 0 } } },
+                    { "tick_id": 4, "frame_id": 4, "debug": { "stats": { "prepaint_time_us": 0, "paint_time_us": 0, "paint_nodes_performed": 0 } } }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_idle_no_paint_min(&bundle_path, &out_dir, 3, 0).unwrap();
+        assert!(out_dir.join("check.idle_no_paint.json").is_file());
+    }
+
+    #[test]
+    fn idle_no_paint_check_fails_when_tail_streak_is_too_small() {
+        let out_dir = tmp_out_dir("idle_no_paint_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "tick_id": 1, "frame_id": 1, "debug": { "stats": { "prepaint_time_us": 0, "paint_time_us": 0, "paint_nodes_performed": 0 } } },
+                    { "tick_id": 2, "frame_id": 2, "debug": { "stats": { "prepaint_time_us": 0, "paint_time_us": 0, "paint_nodes_performed": 0 } } },
+                    { "tick_id": 3, "frame_id": 3, "debug": { "stats": { "prepaint_time_us": 1, "paint_time_us": 1, "paint_nodes_performed": 1 } } }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_idle_no_paint_min(&bundle_path, &out_dir, 2, 0).unwrap_err();
+        assert!(err.contains("idle no-paint gate failed"));
+        assert!(out_dir.join("check.idle_no_paint.json").is_file());
     }
 
     #[test]
