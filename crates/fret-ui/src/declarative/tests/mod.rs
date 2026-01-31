@@ -118,6 +118,7 @@ mod element_state_gc;
 mod identity;
 mod interactions;
 mod layout;
+mod selection_indices;
 mod semantics;
 mod text_cache;
 mod view_cache;

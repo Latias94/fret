@@ -38,6 +38,16 @@ pub(crate) mod utf8 {
 
     use fret_runtime::TextBoundaryMode;
 
+    pub(crate) fn clamp_selection_to_grapheme_boundaries(
+        text: &str,
+        selection_anchor: &mut usize,
+        caret: &mut usize,
+    ) {
+        let max = text.len();
+        *selection_anchor = clamp_to_grapheme_boundary(text, (*selection_anchor).min(max));
+        *caret = clamp_to_grapheme_boundary(text, (*caret).min(max));
+    }
+
     pub(crate) fn is_grapheme_boundary(text: &str, idx: usize) -> bool {
         let idx = idx.min(text.len());
         if idx == 0 || idx == text.len() {

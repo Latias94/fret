@@ -28,6 +28,13 @@ impl ElementHostWidget {
                         crate::element::SelectableTextState::default,
                         |state| (state.selection_anchor, state.caret),
                     );
+                    let mut anchor = anchor.min(props.rich.text.len());
+                    let mut caret = caret.min(props.rich.text.len());
+                    crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                        &props.rich.text,
+                        &mut anchor,
+                        &mut caret,
+                    );
                     cx.set_text_selection(anchor as u32, caret as u32);
                 } else {
                     cx.clear_text_selection();

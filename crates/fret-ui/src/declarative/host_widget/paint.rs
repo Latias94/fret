@@ -465,6 +465,21 @@ impl ElementHostWidget {
                     return;
                 };
 
+                // Ensure any persisted selection state remains valid for this frame's text buffer.
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                            &props.rich.text,
+                            &mut state.selection_anchor,
+                            &mut state.caret,
+                        );
+                    },
+                );
+
                 let focused = cx.focus == Some(cx.node);
                 let (dragging, last_pointer_pos) = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -488,7 +503,10 @@ impl ElementHostWidget {
                         self.element,
                         crate::element::SelectableTextState::default,
                         |state| {
-                            state.caret = hit.index;
+                            state.caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                                &props.rich.text,
+                                hit.index,
+                            );
                             state.affinity = hit.affinity;
                         },
                     );
