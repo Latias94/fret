@@ -122,6 +122,9 @@ cargo run -p fretboard -- diag suite ui-gallery-layout --env FRET_DIAG_SCREENSHO
 ### 4.1 Latest Size Matrix Runs
 
 - 2026-01-31: `fretboard diag suite ui-gallery-layout` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
+- 2026-01-31: `ui-gallery-layout-sweep-extended.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
+- 2026-01-31: `ui-gallery-layout-sweep-extended-chrome.json` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
+- 2026-01-31: `ui-gallery-layout-sweep-torture.json` passes at `800x600`, `960x540` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
 
 ## 5) Work Plan (TODOs + Milestones)
 
