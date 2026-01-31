@@ -70,6 +70,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_scene_test_id: Option<String> = None;
     let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_semantics_changed_repainted: bool = false;
+    let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
@@ -345,6 +346,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-semantics-changed-repainted" => {
                 check_semantics_changed_repainted = true;
+                i += 1;
+            }
+            "--dump-semantics-changed-repainted-json" => {
+                check_semantics_changed_repainted = true;
+                dump_semantics_changed_repainted_json = true;
                 i += 1;
             }
             "--check-wheel-scroll" => {
@@ -918,6 +924,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_semantics_changed_repainted,
+                        dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -1164,6 +1171,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             check_stale_scene_test_id.as_deref(),
                             check_stale_scene_eps,
                             check_semantics_changed_repainted,
+                            dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
@@ -1543,6 +1551,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_semantics_changed_repainted,
+                        dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -2172,7 +2181,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_bundle_for_stale_scene(&bundle_path, test_id, check_stale_scene_eps)?;
             }
             if check_semantics_changed_repainted {
-                check_bundle_for_semantics_changed_repainted(&bundle_path, warmup_frames)?;
+                check_bundle_for_semantics_changed_repainted(
+                    &bundle_path,
+                    warmup_frames,
+                    dump_semantics_changed_repainted_json,
+                )?;
             }
             if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
                 check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
@@ -3465,6 +3478,7 @@ fn apply_post_run_checks(
     check_stale_scene_test_id: Option<&str>,
     check_stale_scene_eps: f32,
     check_semantics_changed_repainted: bool,
+    dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -3485,7 +3499,11 @@ fn apply_post_run_checks(
         check_bundle_for_stale_scene(bundle_path, test_id, check_stale_scene_eps)?;
     }
     if check_semantics_changed_repainted {
-        check_bundle_for_semantics_changed_repainted(bundle_path, warmup_frames)?;
+        check_bundle_for_semantics_changed_repainted(
+            bundle_path,
+            warmup_frames,
+            dump_semantics_changed_repainted_json,
+        )?;
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
@@ -5791,12 +5809,36 @@ fn check_bundle_for_stale_scene(bundle_path: &Path, test_id: &str, eps: f32) -> 
     check_bundle_for_stale_scene_json(&bundle, bundle_path, test_id, eps)
 }
 
+#[derive(Debug, Clone, Default)]
+struct SemanticsChangedRepaintedScan {
+    missing_scene_fingerprint: bool,
+    missing_semantics_fingerprint: bool,
+    suspicious_lines: Vec<String>,
+    findings: Vec<serde_json::Value>,
+}
+
 fn check_bundle_for_semantics_changed_repainted(
     bundle_path: &Path,
     warmup_frames: u64,
+    dump_json: bool,
 ) -> Result<(), String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let scan = scan_semantics_changed_repainted_json(&bundle, warmup_frames);
+    if dump_json && !scan.findings.is_empty() {
+        let out_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+        let out_path = out_dir.join("check.semantics_changed_repainted.json");
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "semantics_changed_repainted",
+            "bundle_json": bundle_path.display().to_string(),
+            "warmup_frames": warmup_frames,
+            "findings": scan.findings,
+        });
+        let _ = write_json_value(&out_path, &payload);
+    }
+
     check_bundle_for_semantics_changed_repainted_json(&bundle, bundle_path, warmup_frames)
 }
 
@@ -5805,17 +5847,52 @@ fn check_bundle_for_semantics_changed_repainted_json(
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let windows = bundle
-        .get("windows")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
-    if windows.is_empty() {
+    let scan = scan_semantics_changed_repainted_json(bundle, warmup_frames);
+
+    if scan.missing_scene_fingerprint {
+        return Err(format!(
+            "semantics repaint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if scan.missing_semantics_fingerprint {
+        return Err(format!(
+            "semantics repaint check requires `semantics_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if scan.suspicious_lines.is_empty() {
         return Ok(());
     }
 
-    let mut suspicious: Vec<String> = Vec::new();
-    let mut missing_scene_fingerprint = false;
-    let mut missing_semantics_fingerprint = false;
+    let mut msg = String::new();
+    msg.push_str(
+        "missing repaint suspected (semantics fingerprint changed but scene fingerprint did not)\n",
+    );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in scan.suspicious_lines {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+fn scan_semantics_changed_repainted_json(
+    bundle: &serde_json::Value,
+    warmup_frames: u64,
+) -> SemanticsChangedRepaintedScan {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    if windows.is_empty() {
+        return SemanticsChangedRepaintedScan::default();
+    }
+
+    let mut scan = SemanticsChangedRepaintedScan::default();
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -5839,12 +5916,12 @@ fn check_bundle_for_semantics_changed_repainted_json(
 
             let scene_fingerprint = s.get("scene_fingerprint").and_then(|v| v.as_u64());
             if scene_fingerprint.is_none() {
-                missing_scene_fingerprint = true;
+                scan.missing_scene_fingerprint = true;
             }
 
             let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
             if semantics_fingerprint.is_none() {
-                missing_semantics_fingerprint = true;
+                scan.missing_semantics_fingerprint = true;
             }
 
             let (Some(scene_fingerprint), Some(semantics_fingerprint)) =
@@ -5864,14 +5941,6 @@ fn check_bundle_for_semantics_changed_repainted_json(
                 let semantics_changed = semantics_fingerprint != prev_sem;
                 let scene_unchanged = scene_fingerprint == prev_scene;
                 if semantics_changed && scene_unchanged {
-                    let mut detail = String::new();
-                    if let Some(prev) = prev_snapshot {
-                        let diff = semantics_diff_summary(prev, s);
-                        if !diff.is_empty() {
-                            detail.push_str(" ");
-                            detail.push_str(&diff);
-                        }
-                    }
                     let paint_nodes_performed = s
                         .get("debug")
                         .and_then(|v| v.get("stats"))
@@ -5885,10 +5954,42 @@ fn check_bundle_for_semantics_changed_repainted_json(
                         .and_then(|v| v.as_u64())
                         .unwrap_or(0);
 
-                    suspicious.push(format!(
+                    let diff_detail = prev_snapshot
+                        .map(|prev| semantics_diff_detail(prev, s))
+                        .unwrap_or(serde_json::Value::Null);
+
+                    scan.findings.push(serde_json::json!({
+                        "window": window_id,
+                        "prev": {
+                            "tick_id": prev_tick_id,
+                            "frame_id": prev_frame_id,
+                            "scene_fingerprint": prev_scene,
+                            "semantics_fingerprint": prev_sem,
+                        },
+                        "now": {
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "scene_fingerprint": scene_fingerprint,
+                            "semantics_fingerprint": semantics_fingerprint,
+                        },
+                        "paint_nodes_performed": paint_nodes_performed,
+                        "paint_cache_replayed_ops": paint_cache_replayed_ops,
+                        "semantics_diff": diff_detail,
+                    }));
+
+                    let mut detail = String::new();
+                    if let Some(prev) = prev_snapshot {
+                        let diff = semantics_diff_summary(prev, s);
+                        if !diff.is_empty() {
+                            detail.push(' ');
+                            detail.push_str(&diff);
+                        }
+                    }
+
+                    scan.suspicious_lines.push(format!(
                         "window={window_id} tick={tick_id} frame={frame_id} prev_tick={prev_tick_id} prev_frame={prev_frame_id} semantics_fingerprint=0x{semantics_fingerprint:016x} prev_semantics_fingerprint=0x{prev_sem:016x} scene_fingerprint=0x{scene_fingerprint:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_cache_replayed_ops}{detail}"
                     ));
-                    if suspicious.len() >= 8 {
+                    if scan.suspicious_lines.len() >= 8 {
                         break;
                     }
                 }
@@ -5902,35 +6003,138 @@ fn check_bundle_for_semantics_changed_repainted_json(
         }
     }
 
-    if missing_scene_fingerprint {
-        return Err(format!(
-            "semantics repaint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
-            bundle_path.display()
-        ));
+    scan
+}
+
+fn semantics_diff_detail(
+    before: &serde_json::Value,
+    after: &serde_json::Value,
+) -> serde_json::Value {
+    use serde_json::json;
+    use std::collections::{HashMap, HashSet};
+
+    let before_nodes = before
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array());
+    let after_nodes = after
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array());
+
+    let (Some(before_nodes), Some(after_nodes)) = (before_nodes, after_nodes) else {
+        return serde_json::Value::Null;
+    };
+
+    let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
+    for node in before_nodes {
+        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        before_by_id.insert(id, node);
     }
 
-    if missing_semantics_fingerprint {
-        return Err(format!(
-            "semantics repaint check requires `semantics_fingerprint` in snapshots (re-run the script with a newer target build): {}",
-            bundle_path.display()
-        ));
+    let mut after_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
+    for node in after_nodes {
+        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        after_by_id.insert(id, node);
     }
 
-    if suspicious.is_empty() {
-        return Ok(());
-    }
+    let before_ids: HashSet<u64> = before_by_id.keys().copied().collect();
+    let after_ids: HashSet<u64> = after_by_id.keys().copied().collect();
 
-    let mut msg = String::new();
-    msg.push_str(
-        "missing repaint suspected (semantics fingerprint changed but scene fingerprint did not)\n",
-    );
-    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
-    for line in suspicious {
-        msg.push_str("  ");
-        msg.push_str(&line);
-        msg.push('\n');
+    let mut added: Vec<u64> = after_ids.difference(&before_ids).copied().collect();
+    let mut removed: Vec<u64> = before_ids.difference(&after_ids).copied().collect();
+    added.sort_unstable();
+    removed.sort_unstable();
+
+    let mut changed: Vec<(u64, u64)> = Vec::new(); // (score, id)
+    for id in before_ids.intersection(&after_ids).copied() {
+        let Some(a) = after_by_id.get(&id).copied() else {
+            continue;
+        };
+        let Some(b) = before_by_id.get(&id).copied() else {
+            continue;
+        };
+        let fp_a = semantics_node_fingerprint_json(a);
+        let fp_b = semantics_node_fingerprint_json(b);
+        if fp_a != fp_b {
+            let score = semantics_node_score_json(a);
+            changed.push((score, id));
+        }
     }
-    Err(msg)
+    changed.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+
+    let sample_len = 6usize;
+
+    let added_nodes = added
+        .iter()
+        .take(sample_len)
+        .map(|id| semantics_node_summary_json(*id, after_by_id.get(id).copied()))
+        .collect::<Vec<_>>();
+    let removed_nodes = removed
+        .iter()
+        .take(sample_len)
+        .map(|id| semantics_node_summary_json(*id, before_by_id.get(id).copied()))
+        .collect::<Vec<_>>();
+    let changed_nodes = changed
+        .iter()
+        .take(sample_len)
+        .map(|(_score, id)| {
+            let before = semantics_node_summary_json(*id, before_by_id.get(id).copied());
+            let after = semantics_node_summary_json(*id, after_by_id.get(id).copied());
+            json!({ "id": id, "before": before, "after": after })
+        })
+        .collect::<Vec<_>>();
+
+    json!({
+        "counts": {
+            "added": added.len(),
+            "removed": removed.len(),
+            "changed": changed.len(),
+        },
+        "samples": {
+            "added_nodes": added_nodes,
+            "removed_nodes": removed_nodes,
+            "changed_nodes": changed_nodes,
+        }
+    })
+}
+
+fn semantics_node_summary_json(id: u64, node: Option<&serde_json::Value>) -> serde_json::Value {
+    use serde_json::json;
+    let Some(node) = node else {
+        return json!({ "id": id });
+    };
+
+    let role = node.get("role").and_then(|v| v.as_str());
+    let parent = node.get("parent").and_then(|v| v.as_u64());
+    let test_id = node.get("test_id").and_then(|v| v.as_str());
+    let label = node.get("label").and_then(|v| v.as_str());
+    let value = node.get("value").and_then(|v| v.as_str());
+
+    let bounds = node.get("bounds").and_then(|b| {
+        Some(json!({
+            "x": b.get("x").and_then(|v| v.as_f64()),
+            "y": b.get("y").and_then(|v| v.as_f64()),
+            "w": b.get("w").and_then(|v| v.as_f64()),
+            "h": b.get("h").and_then(|v| v.as_f64()),
+        }))
+    });
+
+    json!({
+        "id": id,
+        "parent": parent,
+        "role": role,
+        "test_id": test_id,
+        "label": label,
+        "value": value,
+        "bounds": bounds,
+    })
 }
 
 fn semantics_diff_summary(before: &serde_json::Value, after: &serde_json::Value) -> String {
@@ -9162,6 +9366,53 @@ mod tests {
             check_bundle_for_semantics_changed_repainted_json(&bundle, Path::new("bundle.json"), 0)
                 .unwrap_err();
         assert!(err.contains("missing repaint suspected"));
+    }
+
+    #[test]
+    fn semantics_repaint_scan_includes_semantics_diff_detail_when_available() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "scene_fingerprint": 7,
+                            "semantics_fingerprint": 100,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 1, "test_id": "search", "role": "textbox", "label": "hello", "bounds": { "x": 0.0, "y": 0.0, "w": 10.0, "h": 10.0 } }
+                            ]}}
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "scene_fingerprint": 7,
+                            "semantics_fingerprint": 101,
+                            "debug": {
+                                "stats": { "paint_nodes_performed": 0, "paint_cache_replayed_ops": 0 },
+                                "semantics": { "nodes": [
+                                    { "id": 1, "test_id": "search", "role": "textbox", "label": "world", "bounds": { "x": 0.0, "y": 0.0, "w": 10.0, "h": 10.0 } }
+                                ]}
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let scan = scan_semantics_changed_repainted_json(&bundle, 0);
+        assert_eq!(scan.findings.len(), 1);
+        assert!(scan.findings[0].get("semantics_diff").is_some());
+        assert_eq!(
+            scan.findings[0]
+                .get("semantics_diff")
+                .and_then(|v| v.get("counts"))
+                .and_then(|v| v.get("changed"))
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
     }
 
     #[test]
