@@ -9273,21 +9273,38 @@ struct ViewCacheReuseStableWindowReport {
     window: u64,
     examined_snapshots: u64,
     view_cache_active_snapshots: u64,
+    non_reuse_cache_inactive_snapshots: u64,
+    non_reuse_active_no_signal_snapshots: u64,
     reuse_snapshots: u64,
     reuse_streak_max: u64,
     reuse_streak_tail: u64,
     last_non_reuse: Option<serde_json::Value>,
 }
 
-fn snapshot_has_view_cache_reuse(snapshot: &serde_json::Value) -> (bool, u64, u64) {
+#[derive(Debug, Clone, Copy)]
+struct ViewCacheReuseSignal {
+    view_cache_active: bool,
+    has_reuse_signal: bool,
+    reused_roots: u64,
+    paint_cache_replayed_ops: u64,
+    cache_roots_present: bool,
+}
+
+impl ViewCacheReuseSignal {
+    fn no_signal_reason(self) -> &'static str {
+        if !self.view_cache_active {
+            return "view_cache_inactive";
+        }
+        "active_no_signal"
+    }
+}
+
+fn snapshot_view_cache_reuse_signal(snapshot: &serde_json::Value) -> ViewCacheReuseSignal {
     let stats = snapshot.get("debug").and_then(|v| v.get("stats"));
     let view_cache_active = stats
         .and_then(|v| v.get("view_cache_active"))
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
-    if !view_cache_active {
-        return (false, 0, 0);
-    }
 
     let replayed_ops = stats
         .and_then(|v| v.get("paint_cache_replayed_ops"))
@@ -9295,11 +9312,13 @@ fn snapshot_has_view_cache_reuse(snapshot: &serde_json::Value) -> (bool, u64, u6
         .unwrap_or(0);
 
     let mut reused_roots: u64 = 0;
+    let mut cache_roots_present = false;
     if let Some(roots) = snapshot
         .get("debug")
         .and_then(|v| v.get("cache_roots"))
         .and_then(|v| v.as_array())
     {
+        cache_roots_present = true;
         for r in roots {
             if r.get("reused").and_then(|v| v.as_bool()) == Some(true) {
                 reused_roots = reused_roots.saturating_add(1);
@@ -9307,8 +9326,14 @@ fn snapshot_has_view_cache_reuse(snapshot: &serde_json::Value) -> (bool, u64, u6
         }
     }
 
-    let ok = reused_roots > 0 || replayed_ops > 0;
-    (ok, reused_roots, replayed_ops)
+    let has_signal = view_cache_active && (reused_roots > 0 || replayed_ops > 0);
+    ViewCacheReuseSignal {
+        view_cache_active,
+        has_reuse_signal: has_signal,
+        reused_roots,
+        paint_cache_replayed_ops: replayed_ops,
+        cache_roots_present,
+    }
 }
 
 fn check_bundle_for_view_cache_reuse_stable_min(
@@ -9343,6 +9368,8 @@ fn check_bundle_for_view_cache_reuse_stable_min(
 
         let mut examined_snapshots: u64 = 0;
         let mut view_cache_active_snapshots: u64 = 0;
+        let mut non_reuse_cache_inactive_snapshots: u64 = 0;
+        let mut non_reuse_active_no_signal_snapshots: u64 = 0;
         let mut reuse_snapshots: u64 = 0;
         let mut reuse_streak: u64 = 0;
         let mut reuse_streak_max: u64 = 0;
@@ -9365,20 +9392,32 @@ fn check_bundle_for_view_cache_reuse_stable_min(
                 view_cache_active_snapshots = view_cache_active_snapshots.saturating_add(1);
             }
 
-            let (has_reuse, reused_roots, replayed_ops) = snapshot_has_view_cache_reuse(s);
-            if has_reuse {
+            let signal = snapshot_view_cache_reuse_signal(s);
+            if signal.has_reuse_signal {
                 reuse_snapshots = reuse_snapshots.saturating_add(1);
                 reuse_streak = reuse_streak.saturating_add(1);
                 reuse_streak_max = reuse_streak_max.max(reuse_streak);
             } else {
                 reuse_streak = 0;
+                match signal.no_signal_reason() {
+                    "view_cache_inactive" => {
+                        non_reuse_cache_inactive_snapshots =
+                            non_reuse_cache_inactive_snapshots.saturating_add(1);
+                    }
+                    _ => {
+                        non_reuse_active_no_signal_snapshots =
+                            non_reuse_active_no_signal_snapshots.saturating_add(1);
+                    }
+                }
                 let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
                 last_non_reuse = Some(serde_json::json!({
                     "tick_id": tick_id,
                     "frame_id": frame_id,
-                    "view_cache_active": view_cache_active,
-                    "reused_roots": reused_roots,
-                    "paint_cache_replayed_ops": replayed_ops,
+                    "reason": signal.no_signal_reason(),
+                    "view_cache_active": signal.view_cache_active,
+                    "cache_roots_present": signal.cache_roots_present,
+                    "reused_roots": signal.reused_roots,
+                    "paint_cache_replayed_ops": signal.paint_cache_replayed_ops,
                 }));
             }
         }
@@ -9389,6 +9428,8 @@ fn check_bundle_for_view_cache_reuse_stable_min(
             window,
             examined_snapshots,
             view_cache_active_snapshots,
+            non_reuse_cache_inactive_snapshots,
+            non_reuse_active_no_signal_snapshots,
             reuse_snapshots,
             reuse_streak_max,
             reuse_streak_tail: reuse_streak,
@@ -9407,6 +9448,8 @@ fn check_bundle_for_view_cache_reuse_stable_min(
                 "reason": "reuse_tail_streak_too_small",
                 "examined_snapshots": examined_snapshots,
                 "view_cache_active_snapshots": view_cache_active_snapshots,
+                "non_reuse_cache_inactive_snapshots": non_reuse_cache_inactive_snapshots,
+                "non_reuse_active_no_signal_snapshots": non_reuse_active_no_signal_snapshots,
                 "reuse_streak_tail": reuse_streak,
                 "reuse_streak_max": reuse_streak_max,
                 "reuse_snapshots": reuse_snapshots,
@@ -9430,6 +9473,8 @@ fn check_bundle_for_view_cache_reuse_stable_min(
             "window": r.window,
             "examined_snapshots": r.examined_snapshots,
             "view_cache_active_snapshots": r.view_cache_active_snapshots,
+            "non_reuse_cache_inactive_snapshots": r.non_reuse_cache_inactive_snapshots,
+            "non_reuse_active_no_signal_snapshots": r.non_reuse_active_no_signal_snapshots,
             "reuse_snapshots": r.reuse_snapshots,
             "reuse_streak_max": r.reuse_streak_max,
             "reuse_streak_tail": r.reuse_streak_tail,
@@ -9444,7 +9489,7 @@ fn check_bundle_for_view_cache_reuse_stable_min(
     }
     if !any_view_cache_active {
         return Err(format!(
-            "view-cache reuse stable gate requires view_cache_active snapshots, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            "view-cache reuse stable gate requires view_cache_active snapshots, but none were observed (warmup_frames={warmup_frames})\n  hint: enable view-cache for the target demo if applicable (e.g. UI gallery: FRET_UI_GALLERY_VIEW_CACHE=1)\n  bundle: {}\n  evidence: {}",
             bundle_path.display(),
             out_path.display()
         ));
