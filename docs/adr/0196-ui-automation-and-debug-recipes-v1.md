@@ -141,8 +141,9 @@ This ADR is partially implemented in a way that preserves the intended crate bou
     - RenderDoc: requests autocapture and attempts a post-run `fret-renderdoc dump` export into `FRET_DIAG_DIR/renderdoc/inspect/`.
     - Tracy: enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy` for `cargo run` launches.
     - See `repro.summary.json` `captures` and `renderdoc.captures.json`.
-  - Process-level footprint is recorded (Windows-only, best-effort) as `resource.footprint.json` and referenced from
-    `repro.summary.json` (`resources.process_footprint_file`).
+  - Process-level footprint is recorded (best-effort) as `resource.footprint.json` and referenced from `repro.summary.json`
+    (`resources.process_footprint_file`). On Windows this uses native APIs; on non-Windows platforms it uses lightweight
+    sampling while waiting for the demo to exit.
   - Evidence: `apps/fretboard/src/diag.rs` (`diag repro`, `pack_repro_zip_multi`).
 - **Missing repaint checks (`fretboard`)**
   - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
@@ -162,6 +163,6 @@ Known gaps:
 
 - `diag repro` can request RenderDoc autocapture and record Tracy enablement intent, but it does not yet run post-capture
   exports as strict regression gates, nor auto-record Tracy captures to a `.tracy` file.
-- Process footprint collection is currently only implemented on Windows.
+- Process footprint sampling is best-effort and can be sensitive to sampling cadence (CPU usage is diff-based).
 - High-level intent actions (Script v2 or a compiler layer) are not yet implemented.
 - Range control semantics value (to enable robust `set_slider_value`) is still an open contract item.

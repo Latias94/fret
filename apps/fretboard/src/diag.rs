@@ -5524,7 +5524,148 @@ fn maybe_launch_demo(
     Ok(Some(demo))
 }
 
-fn collect_demo_footprint_json(demo: &LaunchedDemo, killed: bool) -> serde_json::Value {
+#[cfg_attr(windows, allow(dead_code))]
+#[derive(Debug, Clone)]
+struct ObservedProcessFootprint {
+    collector: String,
+    sample_interval_ms: u64,
+    samples: u64,
+    cpu_usage_percent_avg: f64,
+    cpu_usage_percent_max: f64,
+    cpu_usage_percent_last: f64,
+    working_set_bytes_last: u64,
+    working_set_bytes_peak: u64,
+    virtual_memory_bytes_last: u64,
+    virtual_memory_bytes_peak: u64,
+}
+
+#[cfg(not(windows))]
+struct SysinfoProcessFootprintSampler {
+    sys: sysinfo::System,
+    pid: sysinfo::Pid,
+    refresh_kind: sysinfo::ProcessRefreshKind,
+    refresh_count: u64,
+    last_refresh: std::time::Instant,
+    samples: u64,
+    cpu_usage_percent_sum: f64,
+    cpu_usage_percent_max: f64,
+    cpu_usage_percent_last: f64,
+    working_set_bytes_last: u64,
+    working_set_bytes_peak: u64,
+    virtual_memory_bytes_last: u64,
+    virtual_memory_bytes_peak: u64,
+}
+
+#[cfg(not(windows))]
+impl SysinfoProcessFootprintSampler {
+    fn new(pid_u32: u32) -> Self {
+        use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
+
+        let mut sys = System::new();
+        let pid = sysinfo::Pid::from_u32(pid_u32);
+        let refresh_kind = ProcessRefreshKind::nothing().with_cpu().with_memory();
+
+        let _ =
+            sys.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, refresh_kind);
+
+        let mut out = Self {
+            sys,
+            pid,
+            refresh_kind,
+            refresh_count: 1,
+            last_refresh: std::time::Instant::now(),
+            samples: 0,
+            cpu_usage_percent_sum: 0.0,
+            cpu_usage_percent_max: 0.0,
+            cpu_usage_percent_last: 0.0,
+            working_set_bytes_last: 0,
+            working_set_bytes_peak: 0,
+            virtual_memory_bytes_last: 0,
+            virtual_memory_bytes_peak: 0,
+        };
+
+        out.capture_latest();
+        out
+    }
+
+    fn refresh_force(&mut self) {
+        use sysinfo::ProcessesToUpdate;
+
+        let _ = self.sys.refresh_processes_specifics(
+            ProcessesToUpdate::Some(&[self.pid]),
+            false,
+            self.refresh_kind,
+        );
+        self.refresh_count = self.refresh_count.saturating_add(1);
+        self.last_refresh = std::time::Instant::now();
+        self.capture_latest();
+    }
+
+    fn refresh_if_due(&mut self) {
+        let since = self.last_refresh.elapsed();
+        if since < sysinfo::MINIMUM_CPU_UPDATE_INTERVAL {
+            return;
+        }
+        self.refresh_force();
+    }
+
+    fn capture_latest(&mut self) {
+        let Some(p) = self.sys.process(self.pid) else {
+            return;
+        };
+
+        let mem = p.memory();
+        let vmem = p.virtual_memory();
+        self.working_set_bytes_last = mem;
+        self.virtual_memory_bytes_last = vmem;
+        self.working_set_bytes_peak = self.working_set_bytes_peak.max(mem);
+        self.virtual_memory_bytes_peak = self.virtual_memory_bytes_peak.max(vmem);
+
+        let cpu = p.cpu_usage().max(0.0) as f64;
+        self.cpu_usage_percent_last = cpu;
+        self.cpu_usage_percent_max = self.cpu_usage_percent_max.max(cpu);
+
+        // sysinfo computes CPU usage based on a diff between two refreshes.
+        // The first refresh establishes a baseline and produces a (likely) zero usage.
+        if self.refresh_count >= 2 {
+            self.samples = self.samples.saturating_add(1);
+            self.cpu_usage_percent_sum += cpu;
+        }
+    }
+
+    fn finish(self) -> ObservedProcessFootprint {
+        let sample_interval_ms = sysinfo::MINIMUM_CPU_UPDATE_INTERVAL
+            .as_millis()
+            .min(u64::MAX as u128) as u64;
+        let avg = if self.samples > 0 {
+            self.cpu_usage_percent_sum / (self.samples as f64)
+        } else {
+            0.0
+        };
+
+        ObservedProcessFootprint {
+            collector: "sysinfo".to_string(),
+            sample_interval_ms,
+            samples: self.samples,
+            cpu_usage_percent_avg: avg,
+            cpu_usage_percent_max: self.cpu_usage_percent_max,
+            cpu_usage_percent_last: self.cpu_usage_percent_last,
+            working_set_bytes_last: self.working_set_bytes_last,
+            working_set_bytes_peak: self.working_set_bytes_peak,
+            virtual_memory_bytes_last: self.virtual_memory_bytes_last,
+            virtual_memory_bytes_peak: self.virtual_memory_bytes_peak,
+        }
+    }
+}
+
+fn collect_demo_footprint_json(
+    demo: &LaunchedDemo,
+    killed: bool,
+    observed: Option<ObservedProcessFootprint>,
+) -> serde_json::Value {
+    #[cfg(windows)]
+    let _ = observed;
+
     let ended_unix_ms = now_unix_ms();
     let ended_instant = Instant::now();
     let wall_time_ms = ended_instant
@@ -5646,13 +5787,44 @@ fn collect_demo_footprint_json(demo: &LaunchedDemo, killed: bool) -> serde_json:
 
     #[cfg(not(windows))]
     {
-        if let Some(obj) = out.as_object_mut() {
+        if let Some(observed) = observed {
+            let avg_cpu_cores = observed.cpu_usage_percent_avg / 100.0;
+            let avg_cpu_percent_total_cores = if logical_cores > 0 {
+                observed.cpu_usage_percent_avg / (logical_cores as f64)
+            } else {
+                0.0
+            };
+
+            if let Some(obj) = out.as_object_mut() {
+                obj.insert(
+                    "cpu".to_string(),
+                    serde_json::json!({
+                        "collector": observed.collector,
+                        "sample_interval_ms": observed.sample_interval_ms,
+                        "samples": observed.samples,
+                        "usage_percent_avg": observed.cpu_usage_percent_avg,
+                        "usage_percent_max": observed.cpu_usage_percent_max,
+                        "usage_percent_last": observed.cpu_usage_percent_last,
+                        "avg_cpu_cores": avg_cpu_cores,
+                        "avg_cpu_percent_total_cores": avg_cpu_percent_total_cores,
+                    }),
+                );
+                obj.insert(
+                    "memory".to_string(),
+                    serde_json::json!({
+                        // Align naming with Windows for easier tooling consumption.
+                        "working_set_bytes": observed.working_set_bytes_last,
+                        "peak_working_set_bytes": observed.working_set_bytes_peak,
+                        "virtual_memory_bytes": observed.virtual_memory_bytes_last,
+                        "peak_virtual_memory_bytes": observed.virtual_memory_bytes_peak,
+                        "collector": "sysinfo",
+                    }),
+                );
+            }
+        } else if let Some(obj) = out.as_object_mut() {
             obj.insert(
                 "note".to_string(),
-                serde_json::Value::String(
-                    "process footprint collection is currently only implemented on Windows"
-                        .to_string(),
-                ),
+                serde_json::Value::String("process footprint sampling unavailable".to_string()),
             );
         }
     }
@@ -5698,11 +5870,29 @@ fn stop_launched_demo(
     let demo = child.as_mut()?;
 
     let _ = touch(exit_path);
+    #[cfg(not(windows))]
+    let mut sampler = SysinfoProcessFootprintSampler::new(demo.child.id());
+
     let deadline = Instant::now() + Duration::from_millis(20_000);
     while Instant::now() < deadline {
+        #[cfg(not(windows))]
+        sampler.refresh_if_due();
+
         let exited = demo.child.try_wait().ok().flatten().is_some();
         if exited {
-            let footprint = Some(collect_demo_footprint_json(demo, false));
+            #[cfg(not(windows))]
+            sampler.refresh_force();
+
+            let footprint = Some(collect_demo_footprint_json(demo, false, {
+                #[cfg(not(windows))]
+                {
+                    Some(sampler.finish())
+                }
+                #[cfg(windows)]
+                {
+                    None
+                }
+            }));
             if let Some(mut c) = child.take().map(|d| d.child) {
                 let _ = c.wait();
             }
@@ -5711,7 +5901,19 @@ fn stop_launched_demo(
         std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
     }
 
-    let footprint = Some(collect_demo_footprint_json(demo, true));
+    #[cfg(not(windows))]
+    sampler.refresh_force();
+
+    let footprint = Some(collect_demo_footprint_json(demo, true, {
+        #[cfg(not(windows))]
+        {
+            Some(sampler.finish())
+        }
+        #[cfg(windows)]
+        {
+            None
+        }
+    }));
     kill_launched_demo(child);
     footprint
 }

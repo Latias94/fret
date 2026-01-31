@@ -212,8 +212,10 @@ Tooling gates (CI/automation):
 
 Gaps (still open):
 
-- **Process-level resource footprint** is captured (Windows-only, best-effort) via `resource.footprint.json` and referenced
-  from `repro.summary.json`. This matters for “framework feels heavy” reports and for table-heavy workloads.
+- **Process-level resource footprint** is captured (best-effort) via `resource.footprint.json` and referenced from
+  `repro.summary.json`. On Windows this uses native APIs; on non-Windows platforms it uses lightweight sampling (via
+  `sysinfo`) while waiting for the demo to exit. This matters for “framework feels heavy” reports and for table-heavy
+  workloads.
 - **Redraw-efficiency gates** now include an “idle should not paint” trailing-streak gate
   (`--check-idle-no-paint-min <n>`; evidence: `check.idle_no_paint.json`). A “cache reuse should be stable” gate is still
   open.
