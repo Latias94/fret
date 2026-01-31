@@ -2660,6 +2660,272 @@ fn fret_dropdown_menu_tracks_trigger_when_underlay_scrolls() {
     );
 }
 
+#[test]
+fn fret_menubar_menu_tracks_trigger_when_underlay_scrolls() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = StyleAwareServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(480.0), Px(400.0)),
+    );
+
+    let scroll_handle = ScrollHandle::default();
+    let file_test_id = "scroll-underlay-menubar-file";
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::menubar::{Menubar, MenubarEntry, MenubarItem, MenubarMenu};
+
+        let scroll_handle = scroll_handle.clone();
+
+        let mut scroll_layout = LayoutStyle::default();
+        scroll_layout.size.width = Length::Fill;
+        scroll_layout.size.height = Length::Fill;
+        scroll_layout.overflow = fret_ui::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            fret_ui::element::ScrollProps {
+                layout: scroll_layout,
+                axis: fret_ui::element::ScrollAxis::Y,
+                scroll_handle: Some(scroll_handle),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Px(Px(1200.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout.inset.left = Some(Px(16.0));
+                                    layout.inset.top = Some(Px(160.0));
+                                    layout.size.width = Length::Px(Px(320.0));
+                                    layout.size.height = Length::Px(Px(32.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![
+                                    Menubar::new(vec![
+                                        MenubarMenu::new("File").test_id(file_test_id).entries(
+                                            vec![
+                                                MenubarEntry::Item(MenubarItem::new("New")),
+                                                MenubarEntry::Item(MenubarItem::new("Open")),
+                                                MenubarEntry::Item(MenubarItem::new("Exit")),
+                                            ],
+                                        ),
+                                        MenubarMenu::new("Edit").entries(vec![MenubarEntry::Item(
+                                            MenubarItem::new("Undo"),
+                                        )]),
+                                    ])
+                                    .into_element(cx),
+                                ]
+                            },
+                        )]
+                    },
+                )]
+            },
+        )]
+    };
+
+    // Frame 1: mount closed and locate the trigger.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        render,
+    );
+
+    let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let file_trigger = find_semantics_by_test_id(&snap0, file_test_id).expect("file trigger");
+    let file_center = Point::new(
+        Px(file_trigger.bounds.origin.x.0 + file_trigger.bounds.size.width.0 * 0.5),
+        Px(file_trigger.bounds.origin.y.0 + file_trigger.bounds.size.height.0 * 0.5),
+    );
+
+    // Click the menubar trigger to open the menu.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: file_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: file_center,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    // Frame 2+: open and settle motion to avoid interpreting the open animation as scroll drift.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2),
+        false,
+        render,
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(3 + tick),
+            request_semantics,
+            render,
+        );
+    }
+    let _ = app.flush_effects();
+
+    let snap_before = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot (before scroll)")
+        .clone();
+    let trigger_before = find_semantics_by_test_id(&snap_before, file_test_id).expect("trigger");
+    let menu_before = snap_before
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Menu)
+        .expect("menu semantics (before scroll)");
+
+    let dx_before = menu_before.bounds.origin.x.0 - trigger_before.bounds.origin.x.0;
+    let dy_before = menu_before.bounds.origin.y.0 - trigger_before.bounds.origin.y.0;
+
+    // Scroll the underlay (wheel over the scroll viewport, not over the menu panel).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(10.0), Px(10.0)),
+            delta: Point::new(Px(0.0), Px(-80.0)),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected scroll handle offset to update after wheel; y={}",
+        scroll_handle.offset().y.0
+    );
+
+    // Frame N: apply the scroll and paint once so scroll transforms update visual bounds caches.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3 + settle_frames),
+        false,
+        render,
+    );
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let effects = app.flush_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Redraw(w) if *w == window)),
+        "expected a follow-up redraw after scroll to re-anchor overlays; effects={effects:?}",
+    );
+    for effect in effects {
+        match effect {
+            Effect::Redraw(_) => {}
+            other => app.push_effect(other),
+        }
+    }
+
+    // Frame N+1: expected to re-anchor the menu to the scrolled trigger.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(4 + settle_frames),
+        true,
+        render,
+    );
+
+    let snap_after = ui
+        .semantics_snapshot()
+        .expect("semantics snapshot (after scroll)")
+        .clone();
+    let trigger_after = find_semantics_by_test_id(&snap_after, file_test_id).expect("trigger");
+    let menu_after = snap_after
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Menu)
+        .expect("menu semantics (after scroll)");
+
+    assert!(
+        (trigger_after.bounds.origin.y.0 - trigger_before.bounds.origin.y.0).abs() > 1.0,
+        "expected trigger to move under scroll (before_y={} after_y={})",
+        trigger_before.bounds.origin.y.0,
+        trigger_after.bounds.origin.y.0
+    );
+
+    let dx_after = menu_after.bounds.origin.x.0 - trigger_after.bounds.origin.x.0;
+    let dy_after = menu_after.bounds.origin.y.0 - trigger_after.bounds.origin.y.0;
+
+    assert_close(
+        "menubar menu anchor dx stable under scroll",
+        dx_after,
+        dx_before,
+        1.0,
+    );
+    assert_close(
+        "menubar menu anchor dy stable under scroll",
+        dy_after,
+        dy_before,
+        1.0,
+    );
+}
+
 fn assert_overlay_placement_matches(
     web_name: &str,
     web_portal_role: Option<&str>,
