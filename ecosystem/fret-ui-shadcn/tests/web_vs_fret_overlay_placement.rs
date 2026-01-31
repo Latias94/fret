@@ -6150,6 +6150,11 @@ fn web_vs_fret_dropdown_menu_demo_tiny_viewport_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_mobile_tiny_viewport_overlay_placement_matches() {
+    assert_dropdown_menu_demo_constrained_overlay_placement_matches("dropdown-menu-demo.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
     assert_dropdown_menu_demo_constrained_menu_item_height_matches("dropdown-menu-demo.vp1440x320");
 }
@@ -6157,6 +6162,11 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches() {
 #[test]
 fn web_vs_fret_dropdown_menu_demo_tiny_viewport_menu_item_height_matches() {
     assert_dropdown_menu_demo_constrained_menu_item_height_matches("dropdown-menu-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_mobile_tiny_viewport_menu_item_height_matches() {
+    assert_dropdown_menu_demo_constrained_menu_item_height_matches("dropdown-menu-demo.vp375x240");
 }
 
 #[test]
@@ -7085,6 +7095,11 @@ fn web_vs_fret_dropdown_menu_demo_tiny_viewport_menu_content_insets_match() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_mobile_tiny_viewport_menu_content_insets_match() {
+    assert_dropdown_menu_demo_constrained_menu_content_insets_match("dropdown-menu-demo.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_small_viewport_scroll_state_matches() {
     assert_dropdown_menu_demo_constrained_scroll_state_matches("dropdown-menu-demo.vp1440x320");
 }
@@ -7092,6 +7107,11 @@ fn web_vs_fret_dropdown_menu_demo_small_viewport_scroll_state_matches() {
 #[test]
 fn web_vs_fret_dropdown_menu_demo_tiny_viewport_scroll_state_matches() {
     assert_dropdown_menu_demo_constrained_scroll_state_matches("dropdown-menu-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_mobile_tiny_viewport_scroll_state_matches() {
+    assert_dropdown_menu_demo_constrained_scroll_state_matches("dropdown-menu-demo.vp375x240");
 }
 
 #[test]
@@ -10982,6 +11002,11 @@ fn web_vs_fret_context_menu_demo_tiny_viewport_overlay_placement_matches() {
     assert_context_menu_demo_constrained_overlay_placement_matches("context-menu-demo.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_context_menu_demo_mobile_tiny_viewport_overlay_placement_matches() {
+    assert_context_menu_demo_constrained_overlay_placement_matches("context-menu-demo.vp375x240");
+}
+
 fn assert_context_menu_demo_constrained_menu_item_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -11072,6 +11097,11 @@ fn web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches() {
 #[test]
 fn web_vs_fret_context_menu_demo_tiny_viewport_menu_item_height_matches() {
     assert_context_menu_demo_constrained_menu_item_height_matches("context-menu-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_mobile_tiny_viewport_menu_item_height_matches() {
+    assert_context_menu_demo_constrained_menu_item_height_matches("context-menu-demo.vp375x240");
 }
 
 #[test]
@@ -11825,6 +11855,11 @@ fn web_vs_fret_context_menu_demo_tiny_viewport_menu_content_insets_match() {
 }
 
 #[test]
+fn web_vs_fret_context_menu_demo_mobile_tiny_viewport_menu_content_insets_match() {
+    assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_context_menu_demo_small_viewport_scroll_state_matches() {
     assert_context_menu_demo_constrained_scroll_state_matches("context-menu-demo.vp1440x320");
 }
@@ -11832,6 +11867,11 @@ fn web_vs_fret_context_menu_demo_small_viewport_scroll_state_matches() {
 #[test]
 fn web_vs_fret_context_menu_demo_tiny_viewport_scroll_state_matches() {
     assert_context_menu_demo_constrained_scroll_state_matches("context-menu-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_mobile_tiny_viewport_scroll_state_matches() {
+    assert_context_menu_demo_constrained_scroll_state_matches("context-menu-demo.vp375x240");
 }
 
 #[test]
@@ -15829,6 +15869,11 @@ fn web_vs_fret_menubar_demo_tiny_viewport_overlay_placement_matches() {
     assert_menubar_demo_constrained_overlay_placement_matches("menubar-demo.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_menubar_demo_mobile_tiny_viewport_overlay_placement_matches() {
+    assert_menubar_demo_constrained_overlay_placement_matches("menubar-demo.vp375x240");
+}
+
 fn assert_menubar_demo_constrained_menu_item_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -15961,6 +16006,11 @@ fn web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_tiny_viewport_menu_item_height_matches() {
     assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_mobile_tiny_viewport_menu_item_height_matches() {
+    assert_menubar_demo_constrained_menu_item_height_matches("menubar-demo.vp375x240");
 }
 
 #[test]
@@ -16498,6 +16548,11 @@ fn web_vs_fret_menubar_demo_tiny_viewport_menu_content_insets_match() {
 }
 
 #[test]
+fn web_vs_fret_menubar_demo_mobile_tiny_viewport_menu_content_insets_match() {
+    assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_menubar_demo_small_viewport_scroll_state_matches() {
     assert_menubar_demo_constrained_scroll_state_matches("menubar-demo.vp1440x320");
 }
@@ -16505,6 +16560,11 @@ fn web_vs_fret_menubar_demo_small_viewport_scroll_state_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_tiny_viewport_scroll_state_matches() {
     assert_menubar_demo_constrained_scroll_state_matches("menubar-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_mobile_tiny_viewport_scroll_state_matches() {
+    assert_menubar_demo_constrained_scroll_state_matches("menubar-demo.vp375x240");
 }
 
 #[test]
