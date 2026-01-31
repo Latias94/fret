@@ -3349,6 +3349,8 @@ pub struct UiRetainedVirtualListReconcileV1 {
     pub element: u64,
     #[serde(default)]
     pub reconcile_kind: UiRetainedVirtualListReconcileKindV1,
+    #[serde(default)]
+    pub reconcile_time_us: u64,
     pub prev_items: u64,
     pub next_items: u64,
     pub preserved_items: u64,
@@ -3367,6 +3369,7 @@ impl UiRetainedVirtualListReconcileV1 {
             node: key_to_u64(record.node),
             element: record.element.0,
             reconcile_kind: UiRetainedVirtualListReconcileKindV1::from_kind(record.reconcile_kind),
+            reconcile_time_us: record.reconcile_time_us as u64,
             prev_items: record.prev_items as u64,
             next_items: record.next_items as u64,
             preserved_items: record.preserved_items as u64,

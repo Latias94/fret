@@ -1473,7 +1473,10 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
+        let reconcile_start = std::time::Instant::now();
+
         let prev_items_len = props.visible_items.len();
+        let next_items_len = desired_items.len();
         let keep_alive_budget = props.keep_alive;
         let desired_keys: HashSet<crate::ItemKey> =
             desired_items.iter().map(|item| item.key).collect();
@@ -1600,13 +1603,25 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
             |st| *st = keep_alive_state,
         );
+        ui.set_children_barrier(node, next_children.clone());
+        window_frame.children.insert(node, next_children);
+
+        if let Some(record) = window_frame.instances.get_mut(&node) {
+            if let ElementInstance::VirtualList(props) = &mut record.instance {
+                props.visible_items = desired_items;
+            }
+        }
+
+        let reconcile_time_us = reconcile_start.elapsed().as_micros().min(u32::MAX as u128) as u32;
+
         ui.debug_record_retained_virtual_list_reconcile(
             crate::tree::UiDebugRetainedVirtualListReconcile {
                 node,
                 element,
                 reconcile_kind,
+                reconcile_time_us,
                 prev_items: prev_items_len.min(u32::MAX as usize) as u32,
-                next_items: desired_items.len().min(u32::MAX as usize) as u32,
+                next_items: next_items_len.min(u32::MAX as usize) as u32,
                 preserved_items: preserved,
                 attached_items: attached,
                 detached_items: detached,
@@ -1617,15 +1632,6 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 keep_alive_pool_len_after,
             },
         );
-
-        ui.set_children_barrier(node, next_children.clone());
-        window_frame.children.insert(node, next_children);
-
-        if let Some(record) = window_frame.instances.get_mut(&node) {
-            if let ElementInstance::VirtualList(props) = &mut record.instance {
-                props.visible_items = desired_items;
-            }
-        }
     }
 }
 

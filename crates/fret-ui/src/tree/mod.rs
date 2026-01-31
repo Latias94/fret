@@ -560,6 +560,8 @@ pub struct UiDebugRetainedVirtualListReconcile {
     pub node: NodeId,
     pub element: GlobalElementId,
     pub reconcile_kind: UiDebugRetainedVirtualListReconcileKind,
+    /// Wall-clock time spent reconciling this retained host (including mounting/unmounting items).
+    pub reconcile_time_us: u32,
     pub prev_items: u32,
     pub next_items: u32,
     pub preserved_items: u32,
