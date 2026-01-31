@@ -92,6 +92,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
+    let mut check_view_cache_reuse_stable_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
     let mut check_dock_drag_min: Option<u64> = None;
@@ -496,6 +497,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-view-cache-reuse-min".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-view-cache-reuse-stable-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-view-cache-reuse-stable-min".to_string());
+                };
+                check_view_cache_reuse_stable_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-view-cache-reuse-stable-min".to_string()
+                })?);
                 i += 1;
             }
             "--check-overlay-synthesis-min" => {
@@ -1067,6 +1078,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
+                    || check_view_cache_reuse_stable_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -1100,6 +1112,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
+                        check_view_cache_reuse_stable_min,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min,
@@ -1371,6 +1384,7 @@ See: `docs/tracy.md`.\n";
                         || check_hover_layout_max.is_some()
                         || check_gc_sweep_liveness
                         || check_view_cache_reuse_min.is_some()
+                        || check_view_cache_reuse_stable_min.is_some()
                         || check_overlay_synthesis_min.is_some()
                         || check_viewport_input_min.is_some()
                         || check_dock_drag_min.is_some()
@@ -1402,6 +1416,7 @@ See: `docs/tracy.md`.\n";
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
                             check_gc_sweep_liveness,
+                            check_view_cache_reuse_stable_min,
                             check_view_cache_reuse_min,
                             check_overlay_synthesis_min,
                             check_viewport_input_min,
@@ -1935,6 +1950,7 @@ See: `docs/tracy.md`.\n";
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
+                    || check_view_cache_reuse_stable_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -1980,6 +1996,7 @@ See: `docs/tracy.md`.\n";
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
+                        check_view_cache_reuse_stable_min,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
@@ -2899,6 +2916,18 @@ See: `docs/tracy.md`.\n";
             if check_gc_sweep_liveness {
                 check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
             }
+            if let Some(min) = check_view_cache_reuse_stable_min
+                && min > 0
+            {
+                let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+                let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
+                check_bundle_for_view_cache_reuse_stable_min(
+                    bundle_path.as_path(),
+                    out_dir,
+                    min,
+                    warmup_frames,
+                )?;
+            }
             if let Some(min) = check_view_cache_reuse_min
                 && min > 0
             {
@@ -2981,6 +3010,13 @@ See: `docs/tracy.md`.\n";
                 None => Some(1),
             };
 
+            // In matrix mode, treat `--check-view-cache-reuse-stable-min 0` as “disabled”.
+            let reuse_stable_gate = match check_view_cache_reuse_stable_min {
+                Some(0) => None,
+                Some(v) => Some(v),
+                None => None,
+            };
+
             // In matrix mode, treat `--check-overlay-synthesis-min 0` as “disabled”.
             //
             // Default behavior:
@@ -3031,6 +3067,7 @@ See: `docs/tracy.md`.\n";
                 None,
                 None,
                 None,
+                None,
                 viewport_input_gate,
                 viewport_input_gate
                     .map(|_| ui_gallery_script_requires_viewport_input_gate as fn(&Path) -> bool),
@@ -3046,6 +3083,7 @@ See: `docs/tracy.md`.\n";
                 timeout_ms,
                 poll_ms,
                 warmup_frames,
+                reuse_stable_gate,
                 reuse_gate,
                 overlay_synthesis_gate,
                 overlay_synthesis_gate.map(|_| {
@@ -3084,6 +3122,7 @@ See: `docs/tracy.md`.\n";
                         "ignore_bounds": compare_opts.ignore_bounds,
                         "ignore_scene_fingerprint": compare_opts.ignore_scene_fingerprint,
                         "check_view_cache_reuse_min": reuse_gate,
+                        "check_view_cache_reuse_stable_min": reuse_stable_gate,
                         "check_overlay_synthesis_min": overlay_synthesis_gate,
                         "check_viewport_input_min": viewport_input_gate,
                     },
@@ -3102,20 +3141,22 @@ See: `docs/tracy.md`.\n";
                 Ok(())
             } else if ok {
                 println!(
-                    "matrix: ok (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?}, check_viewport_input_min={:?})",
+                    "matrix: ok (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_view_cache_reuse_stable_min={:?}, check_overlay_synthesis_min={:?}, check_viewport_input_min={:?})",
                     scripts.len(),
                     warmup_frames,
                     reuse_gate,
+                    reuse_stable_gate,
                     overlay_synthesis_gate,
                     viewport_input_gate
                 );
                 Ok(())
             } else {
                 println!(
-                    "matrix: failed (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_overlay_synthesis_min={:?}, check_viewport_input_min={:?})",
+                    "matrix: failed (scripts={}, warmup_frames={}, check_view_cache_reuse_min={:?}, check_view_cache_reuse_stable_min={:?}, check_overlay_synthesis_min={:?}, check_viewport_input_min={:?})",
                     scripts.len(),
                     warmup_frames,
                     reuse_gate,
+                    reuse_stable_gate,
                     overlay_synthesis_gate,
                     viewport_input_gate
                 );
@@ -3584,6 +3625,7 @@ fn zip_add_root_artifacts(
         "check.pixels_changed.json",
         "check.idle_no_paint.json",
         "check.perf_thresholds.json",
+        "check.view_cache_reuse_stable.json",
         "resource.footprint.json",
         "renderdoc.captures.json",
         "tracy.note.md",
@@ -4188,6 +4230,7 @@ fn run_script_suite_collect_bundles(
     timeout_ms: u64,
     poll_ms: u64,
     warmup_frames: u64,
+    check_view_cache_reuse_stable_min: Option<u64>,
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     overlay_synthesis_gate_predicate: Option<fn(&Path) -> bool>,
@@ -4254,6 +4297,16 @@ fn run_script_suite_collect_bundles(
                 )
             })?;
 
+        if let Some(min) = check_view_cache_reuse_stable_min
+            && min > 0
+        {
+            check_bundle_for_view_cache_reuse_stable_min(
+                &bundle_path,
+                &paths.out_dir,
+                min,
+                warmup_frames,
+            )?;
+        }
         if let Some(min) = check_view_cache_reuse_min
             && min > 0
         {
@@ -4312,6 +4365,7 @@ fn apply_post_run_checks(
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     check_gc_sweep_liveness: bool,
+    check_view_cache_reuse_stable_min: Option<u64>,
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     check_viewport_input_min: Option<u64>,
@@ -4354,6 +4408,11 @@ fn apply_post_run_checks(
             BundleStatsOptions { warmup_frames },
         )?;
         check_report_for_hover_layout_invalidations(&report, max_allowed)?;
+    }
+    if let Some(min) = check_view_cache_reuse_stable_min
+        && min > 0
+    {
+        check_bundle_for_view_cache_reuse_stable_min(bundle_path, out_dir, min, warmup_frames)?;
     }
     if let Some(min) = check_view_cache_reuse_min
         && min > 0
@@ -9203,9 +9262,201 @@ fn check_bundle_for_view_cache_reuse_min_json(
 
     Err(format!(
         "expected at least {min_reuse_events} view-cache reuse events, got {reuse_events} \
-(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
-in bundle: {}",
+ (any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+ in bundle: {}",
         bundle_path.display()
+    ))
+}
+
+#[derive(Debug, Clone)]
+struct ViewCacheReuseStableWindowReport {
+    window: u64,
+    examined_snapshots: u64,
+    view_cache_active_snapshots: u64,
+    reuse_snapshots: u64,
+    reuse_streak_max: u64,
+    reuse_streak_tail: u64,
+    last_non_reuse: Option<serde_json::Value>,
+}
+
+fn snapshot_has_view_cache_reuse(snapshot: &serde_json::Value) -> (bool, u64, u64) {
+    let stats = snapshot.get("debug").and_then(|v| v.get("stats"));
+    let view_cache_active = stats
+        .and_then(|v| v.get("view_cache_active"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !view_cache_active {
+        return (false, 0, 0);
+    }
+
+    let replayed_ops = stats
+        .and_then(|v| v.get("paint_cache_replayed_ops"))
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    let mut reused_roots: u64 = 0;
+    if let Some(roots) = snapshot
+        .get("debug")
+        .and_then(|v| v.get("cache_roots"))
+        .and_then(|v| v.as_array())
+    {
+        for r in roots {
+            if r.get("reused").and_then(|v| v.as_bool()) == Some(true) {
+                reused_roots = reused_roots.saturating_add(1);
+            }
+        }
+    }
+
+    let ok = reused_roots > 0 || replayed_ops > 0;
+    (ok, reused_roots, replayed_ops)
+}
+
+fn check_bundle_for_view_cache_reuse_stable_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_tail_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut reports: Vec<ViewCacheReuseStableWindowReport> = Vec::new();
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+
+    let mut any_view_cache_active = false;
+    let mut best_tail: u64 = 0;
+
+    for w in windows {
+        let window = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut examined_snapshots: u64 = 0;
+        let mut view_cache_active_snapshots: u64 = 0;
+        let mut reuse_snapshots: u64 = 0;
+        let mut reuse_streak: u64 = 0;
+        let mut reuse_streak_max: u64 = 0;
+        let mut last_non_reuse: Option<serde_json::Value> = None;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let stats = s.get("debug").and_then(|v| v.get("stats"));
+            let view_cache_active = stats
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if view_cache_active {
+                view_cache_active_snapshots = view_cache_active_snapshots.saturating_add(1);
+            }
+
+            let (has_reuse, reused_roots, replayed_ops) = snapshot_has_view_cache_reuse(s);
+            if has_reuse {
+                reuse_snapshots = reuse_snapshots.saturating_add(1);
+                reuse_streak = reuse_streak.saturating_add(1);
+                reuse_streak_max = reuse_streak_max.max(reuse_streak);
+            } else {
+                reuse_streak = 0;
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                last_non_reuse = Some(serde_json::json!({
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "view_cache_active": view_cache_active,
+                    "reused_roots": reused_roots,
+                    "paint_cache_replayed_ops": replayed_ops,
+                }));
+            }
+        }
+
+        best_tail = best_tail.max(reuse_streak);
+
+        reports.push(ViewCacheReuseStableWindowReport {
+            window,
+            examined_snapshots,
+            view_cache_active_snapshots,
+            reuse_snapshots,
+            reuse_streak_max,
+            reuse_streak_tail: reuse_streak,
+            last_non_reuse: last_non_reuse.clone(),
+        });
+
+        if min_tail_frames > 0 && examined_snapshots < min_tail_frames {
+            failures.push(serde_json::json!({
+                "window": window,
+                "reason": "insufficient_snapshots",
+                "examined_snapshots": examined_snapshots,
+            }));
+        } else if min_tail_frames > 0 && reuse_streak < min_tail_frames {
+            failures.push(serde_json::json!({
+                "window": window,
+                "reason": "reuse_tail_streak_too_small",
+                "examined_snapshots": examined_snapshots,
+                "view_cache_active_snapshots": view_cache_active_snapshots,
+                "reuse_streak_tail": reuse_streak,
+                "reuse_streak_max": reuse_streak_max,
+                "reuse_snapshots": reuse_snapshots,
+                "last_non_reuse": last_non_reuse,
+            }));
+        }
+    }
+
+    let out_path = out_dir.join("check.view_cache_reuse_stable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "view_cache_reuse_stable",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_tail_frames": min_tail_frames,
+        "any_view_cache_active": any_view_cache_active,
+        "best_reuse_streak_tail": best_tail,
+        "windows": reports.iter().map(|r| serde_json::json!({
+            "window": r.window,
+            "examined_snapshots": r.examined_snapshots,
+            "view_cache_active_snapshots": r.view_cache_active_snapshots,
+            "reuse_snapshots": r.reuse_snapshots,
+            "reuse_streak_max": r.reuse_streak_max,
+            "reuse_streak_tail": r.reuse_streak_tail,
+            "last_non_reuse": r.last_non_reuse,
+        })).collect::<Vec<_>>(),
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    if min_tail_frames == 0 {
+        return Ok(());
+    }
+    if !any_view_cache_active {
+        return Err(format!(
+            "view-cache reuse stable gate requires view_cache_active snapshots, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+    if best_tail >= min_tail_frames {
+        return Ok(());
+    }
+
+    Err(format!(
+        "view-cache reuse stable gate failed (min_tail_frames={min_tail_frames}, best_tail={best_tail}, warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        out_path.display()
     ))
 }
 
@@ -11862,6 +12113,56 @@ mod tests {
                 .expect_err("expected reuse<2 due to warmup");
         assert!(err.contains("expected at least 2 view-cache reuse events"));
         assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn view_cache_reuse_stable_check_passes_when_tail_streak_meets_min() {
+        let out_dir = tmp_out_dir("view_cache_reuse_stable_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "tick_id": 1, "frame_id": 1, "debug": { "stats": { "view_cache_active": true, "paint_cache_replayed_ops": 0 }, "cache_roots": [{ "root": 1, "reused": false }] } },
+                    { "tick_id": 2, "frame_id": 2, "debug": { "stats": { "view_cache_active": true, "paint_cache_replayed_ops": 0 }, "cache_roots": [{ "root": 2, "reused": true }] } },
+                    { "tick_id": 3, "frame_id": 3, "debug": { "stats": { "view_cache_active": true, "paint_cache_replayed_ops": 5 }, "cache_roots": [] } },
+                    { "tick_id": 4, "frame_id": 4, "debug": { "stats": { "view_cache_active": true, "paint_cache_replayed_ops": 0 }, "cache_roots": [{ "root": 3, "reused": true }] } }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_view_cache_reuse_stable_min(&bundle_path, &out_dir, 3, 0).unwrap();
+        assert!(out_dir.join("check.view_cache_reuse_stable.json").is_file());
+    }
+
+    #[test]
+    fn view_cache_reuse_stable_check_fails_when_tail_streak_is_too_small() {
+        let out_dir = tmp_out_dir("view_cache_reuse_stable_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "tick_id": 1, "frame_id": 1, "debug": { "stats": { "view_cache_active": true, "paint_cache_replayed_ops": 0 }, "cache_roots": [{ "root": 1, "reused": true }] } },
+                    { "tick_id": 2, "frame_id": 2, "debug": { "stats": { "view_cache_active": true, "paint_cache_replayed_ops": 0 }, "cache_roots": [{ "root": 2, "reused": false }] } }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_view_cache_reuse_stable_min(&bundle_path, &out_dir, 2, 0).unwrap_err();
+        assert!(err.contains("view-cache reuse stable gate failed"));
+        assert!(out_dir.join("check.view_cache_reuse_stable.json").is_file());
     }
 
     #[test]
