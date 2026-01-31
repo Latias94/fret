@@ -53,8 +53,8 @@ Conventions:
 - [x] Add `semantics_fingerprint` per snapshot (core hook).
 - [x] Add `--check-semantics-changed-repainted` (semantics fingerprint changes must correlate with scene changes).
 - [x] Add `--dump-semantics-changed-repainted-json` (machine-readable evidence for AI/CI triage).
-- [ ] Add optional screenshot-backed region hashing check (`--check-pixels-changed <test_id>`).
-- [ ] Add a UI gallery repro script for the “search text disappears / no repaint” class of bug.
+- [x] Add optional screenshot-backed region hashing check (`--check-pixels-changed <test_id>`).
+- [x] Add a UI gallery repro script exercising the pixels-changed gate (e.g. `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json`).
 
 ### M4: Performance regression gates (CI/automation ready)
 

@@ -26,7 +26,7 @@ Quick workflow (recommended default paths under `.fret/`):
 $env:FRET_DIAG=1
 $env:FRET_DIAG_DIR=".fret\\diag"
 
-# Optional: enable GPU readback screenshots + completion log.
+# Optional: enable screenshot protocol (required for `capture_screenshot` if the app is started outside `fretboard --launch`).
 $env:FRET_DIAG_SCREENSHOTS=1
 
 # Run a deterministic scripted repro and auto-pack a shareable zip.
@@ -54,6 +54,8 @@ Framework consistency checks (automation-friendly):
   not change (common symptom: “search results changed but text didn’t repaint / disappeared”).
 - **Semantics repaint detection**: fails when the bundle’s `semantics_fingerprint` changes but `scene_fingerprint` does
   not (a coarse “something semantic changed but we didn’t repaint” signal).
+- **Pixels changed detection**: fails when a screenshot-backed region hash inside the target semantics bounds does not
+  change across captures (tooling: `--check-pixels-changed <test_id>`; evidence: `check.pixels_changed.json`).
 
 Example:
 
@@ -66,6 +68,14 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-
 ```powershell
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json `
   --check-stale-scene <test_id> `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Screenshot-backed example (requires `capture_screenshot` steps):
+
+```powershell
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json `
+  --check-pixels-changed ui-gallery-code-view-root `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 

@@ -68,6 +68,8 @@ This section is a quick “what’s real today vs what we want in v1” checklis
   - In addition to stale paint / stale scene checks, `--check-semantics-changed-repainted` can flag “semantics changed but
     paint did not” when `semantics_fingerprint` changes without a `scene_fingerprint` change, and it can emit a structured
     evidence file via `--dump-semantics-changed-repainted-json`.
+  - For “expected pixels must change” assertions, `--check-pixels-changed <test_id>` can hash the screenshot region inside
+    the target semantics bounds and gate on first-vs-last changes (writes `check.pixels_changed.json` to `FRET_DIAG_DIR`).
 - **Tracy / RenderDoc are only partially integrated.**
   - `--with renderdoc` wires env vars for autocapture, attempts `fret-renderdoc dump` post-run (best-effort, requires
     RenderDoc installed), and includes `.rdc` + dump JSON/PNG in `repro.zip`.
@@ -168,8 +170,10 @@ Checks to standardize (CLI gates + bundle evidence):
   - optional: `--dump-semantics-changed-repainted-json` writes `check.semantics_changed_repainted.json` next to
     `bundle.json` for machine-readable evidence (AI/CI triage).
 - **Expected-to-change region didn’t repaint** (new, screenshot-backed optional):
-  - request a screenshot at step boundaries,
-  - compute a region hash inside the target bounds and assert it changed.
+  - tooling: `--check-pixels-changed <test_id>`
+  - requires `capture_screenshot` steps (and screenshots enabled),
+  - computes a region hash inside the target semantics bounds and asserts it changed,
+  - writes `check.pixels_changed.json` to `FRET_DIAG_DIR` for AI/CI triage.
 - **Invalidation accounting** (new optional):
   - when an action should cause layout or paint, assert we saw a matching invalidation walk/source/category.
 

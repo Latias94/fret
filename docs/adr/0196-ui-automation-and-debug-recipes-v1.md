@@ -96,7 +96,8 @@ Required new runtime hook:
 
 Optional check (gated, best-effort):
 
-- screenshot-backed region hash changes for a given target bounds.
+- screenshot-backed region hash changes for a given target bounds (tooling: `--check-pixels-changed <test_id>`; evidence:
+  `FRET_DIAG_DIR/check.pixels_changed.json`).
 
 ### 4) Semantics value for range controls (enables slider automation)
 
