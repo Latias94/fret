@@ -2569,129 +2569,140 @@ fn preview_chrome_torture(
             ..Default::default()
         },
         |cx| {
-            let mut out = Vec::new();
-
-            out.extend(preview_overlay(
-                cx,
-                popover_open,
-                dialog_open,
-                alert_dialog_open,
-                sheet_open,
-                portal_geometry_popover_open,
-                dropdown_open,
-                context_menu_open,
-                context_menu_edge_open,
-                last_action,
-            ));
-
-            let controls = stack::vstack(
+            let body = stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N3),
+                    .gap(Space::N4),
                 |cx| {
-                    let mut out: Vec<AnyElement> = Vec::new();
+                    let mut out = Vec::new();
 
-                    let row = stack::hstack(
+                    out.extend(preview_overlay(
                         cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Button::new("One")
-                                    .test_id("ui-gallery-chrome-btn-1")
-                                    .into_element(cx),
-                                shadcn::Button::new("Two")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .test_id("ui-gallery-chrome-btn-2")
-                                    .into_element(cx),
-                                shadcn::Button::new("Three")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .test_id("ui-gallery-chrome-btn-3")
-                                    .into_element(cx),
-                                shadcn::Button::new("Disabled")
-                                    .disabled(true)
-                                    .test_id("ui-gallery-chrome-btn-disabled")
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-                    out.push(row);
+                        popover_open,
+                        dialog_open,
+                        alert_dialog_open,
+                        sheet_open,
+                        portal_geometry_popover_open,
+                        dropdown_open,
+                        context_menu_open,
+                        context_menu_edge_open,
+                        last_action,
+                    ));
 
-                    let fields = stack::hstack(
+                    let controls = stack::vstack(
                         cx,
-                        stack::HStackProps::default().gap(Space::N2).items_start(),
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N3),
                         |cx| {
-                            vec![
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N1),
-                                    |cx| {
-                                        let input = shadcn::Input::new(text_input.clone())
-                                            .a11y_label("Chrome torture input")
-                                            .placeholder("Type")
-                                            .into_element(cx);
-                                        let input = cx.semantics(
-                                            SemanticsProps {
-                                                role: fret_core::SemanticsRole::TextField,
-                                                test_id: Some(Arc::<str>::from(
-                                                    "ui-gallery-chrome-text-input",
-                                                )),
-                                                ..Default::default()
+                            let mut out: Vec<AnyElement> = Vec::new();
+
+                            let row = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_center(),
+                                |cx| {
+                                    vec![
+                                        shadcn::Button::new("One")
+                                            .test_id("ui-gallery-chrome-btn-1")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Two")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("ui-gallery-chrome-btn-2")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Three")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-chrome-btn-3")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Disabled")
+                                            .disabled(true)
+                                            .test_id("ui-gallery-chrome-btn-disabled")
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
+                            out.push(row);
+
+                            let fields = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_start(),
+                                |cx| {
+                                    vec![
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N1),
+                                            |cx| {
+                                                let input = shadcn::Input::new(text_input.clone())
+                                                    .a11y_label("Chrome torture input")
+                                                    .placeholder("Type")
+                                                    .into_element(cx);
+                                                let input = cx.semantics(
+                                                    SemanticsProps {
+                                                        role: fret_core::SemanticsRole::TextField,
+                                                        test_id: Some(Arc::<str>::from(
+                                                            "ui-gallery-chrome-text-input",
+                                                        )),
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| vec![input],
+                                                );
+                                                vec![cx.text("Text input"), input]
                                             },
-                                            |_cx| vec![input],
-                                        );
-                                        vec![cx.text("Text input"), input]
-                                    },
-                                ),
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N1),
-                                    |cx| {
-                                        let textarea = shadcn::Textarea::new(text_area.clone())
-                                            .a11y_label("Chrome torture textarea")
-                                            .into_element(cx);
-                                        let textarea = cx.semantics(
-                                            SemanticsProps {
-                                                role: fret_core::SemanticsRole::TextField,
-                                                test_id: Some(Arc::<str>::from(
-                                                    "ui-gallery-chrome-text-area",
-                                                )),
-                                                ..Default::default()
+                                        ),
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N1),
+                                            |cx| {
+                                                let textarea =
+                                                    shadcn::Textarea::new(text_area.clone())
+                                                        .a11y_label("Chrome torture textarea")
+                                                        .into_element(cx);
+                                                let textarea = cx.semantics(
+                                                    SemanticsProps {
+                                                        role: fret_core::SemanticsRole::TextField,
+                                                        test_id: Some(Arc::<str>::from(
+                                                            "ui-gallery-chrome-text-area",
+                                                        )),
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| vec![textarea],
+                                                );
+                                                vec![cx.text("Text area"), textarea]
                                             },
-                                            |_cx| vec![textarea],
-                                        );
-                                        vec![cx.text("Text area"), textarea]
-                                    },
-                                ),
-                            ]
-                        },
-                    );
-                    out.push(fields);
+                                        ),
+                                    ]
+                                },
+                            );
+                            out.push(fields);
 
-                    let toggles = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N3).items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Checkbox::new(checkbox.clone())
-                                    .a11y_label("Chrome torture checkbox")
-                                    .test_id("ui-gallery-chrome-checkbox")
-                                    .into_element(cx),
-                                shadcn::Switch::new(switch.clone())
-                                    .a11y_label("Chrome torture switch")
-                                    .test_id("ui-gallery-chrome-switch")
-                                    .into_element(cx),
-                            ]
+                            let toggles = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N3).items_center(),
+                                |cx| {
+                                    vec![
+                                        shadcn::Checkbox::new(checkbox.clone())
+                                            .a11y_label("Chrome torture checkbox")
+                                            .test_id("ui-gallery-chrome-checkbox")
+                                            .into_element(cx),
+                                        shadcn::Switch::new(switch.clone())
+                                            .a11y_label("Chrome torture switch")
+                                            .test_id("ui-gallery-chrome-switch")
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
+                            out.push(toggles);
+
+                            out
                         },
                     );
-                    out.push(toggles);
+                    out.push(controls);
 
                     out
                 },
             );
-            out.push(controls);
 
-            out
+            vec![body]
         },
     );
 
