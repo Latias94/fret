@@ -3656,6 +3656,44 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             &Event::ClipboardTextUnavailable { token },
                         ),
                     },
+                    Effect::PrimarySelectionSetText { text } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.clipboard.primary_text {
+                            continue;
+                        }
+                        if let Err(err) = self.clipboard.set_primary_text(&text) {
+                            tracing::debug!(?err, "failed to set primary selection text");
+                        }
+                    }
+                    Effect::PrimarySelectionGetText { window, token } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.clipboard.primary_text {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::PrimarySelectionTextUnavailable { token },
+                            );
+                            continue;
+                        }
+
+                        match self.clipboard.get_primary_text() {
+                            Ok(Some(text)) => self.deliver_window_event_now(
+                                window,
+                                &Event::PrimarySelectionText { token, text },
+                            ),
+                            Ok(None) | Err(_) => self.deliver_window_event_now(
+                                window,
+                                &Event::PrimarySelectionTextUnavailable { token },
+                            ),
+                        }
+                    }
                     Effect::ExternalDropReadAll { window, token } => {
                         let limits = fret_platform::external_drop::ExternalDropReadLimits {
                             max_total_bytes: self.config.external_drop_max_total_bytes,
