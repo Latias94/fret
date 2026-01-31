@@ -451,6 +451,95 @@ fn subpixel_bin_as_float(bin: u8) -> f32 {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextQualitySettings {
+    /// Gamma parameter for shader-side alpha correction.
+    ///
+    /// This is used to derive the `gamma_ratios` uniform (GPUI-aligned). Values are clamped to
+    /// `[1.0, 2.2]`.
+    pub gamma: f32,
+    /// Enhanced contrast factor for grayscale (mask) glyph sampling.
+    pub grayscale_enhanced_contrast: f32,
+    /// Enhanced contrast factor for subpixel (RGB coverage) glyph sampling.
+    pub subpixel_enhanced_contrast: f32,
+}
+
+impl Default for TextQualitySettings {
+    fn default() -> Self {
+        // Windows-first defaults, aligned with the Zed/GPUI baseline (see ADR 0109/0157).
+        Self {
+            gamma: 1.8,
+            grayscale_enhanced_contrast: 1.0,
+            subpixel_enhanced_contrast: 0.5,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct TextQualityState {
+    gamma: f32,
+    gamma_ratios: [f32; 4],
+    grayscale_enhanced_contrast: f32,
+    subpixel_enhanced_contrast: f32,
+    key: u64,
+}
+
+impl TextQualityState {
+    fn new(settings: TextQualitySettings) -> Self {
+        let gamma = settings.gamma.clamp(1.0, 2.2);
+        let grayscale_enhanced_contrast = settings.grayscale_enhanced_contrast.max(0.0);
+        let subpixel_enhanced_contrast = settings.subpixel_enhanced_contrast.max(0.0);
+
+        let gamma_ratios = gamma_correction_ratios(gamma);
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        gamma.to_bits().hash(&mut hasher);
+        grayscale_enhanced_contrast.to_bits().hash(&mut hasher);
+        subpixel_enhanced_contrast.to_bits().hash(&mut hasher);
+        let key = hasher.finish();
+
+        Self {
+            gamma,
+            gamma_ratios,
+            grayscale_enhanced_contrast,
+            subpixel_enhanced_contrast,
+            key,
+        }
+    }
+}
+
+// Adapted from the Microsoft Terminal alpha correction tables (via Zed/GPUI).
+// See ADR 0029 / ADR 0109 for the rationale and references.
+fn gamma_correction_ratios(gamma: f32) -> [f32; 4] {
+    const GAMMA_INCORRECT_TARGET_RATIOS: [[f32; 4]; 13] = [
+        [0.0000 / 4.0, 0.0000 / 4.0, 0.0000 / 4.0, 0.0000 / 4.0], // gamma = 1.0
+        [0.0166 / 4.0, -0.0807 / 4.0, 0.2227 / 4.0, -0.0751 / 4.0], // gamma = 1.1
+        [0.0350 / 4.0, -0.1760 / 4.0, 0.4325 / 4.0, -0.1370 / 4.0], // gamma = 1.2
+        [0.0543 / 4.0, -0.2821 / 4.0, 0.6302 / 4.0, -0.1876 / 4.0], // gamma = 1.3
+        [0.0739 / 4.0, -0.3963 / 4.0, 0.8167 / 4.0, -0.2287 / 4.0], // gamma = 1.4
+        [0.0933 / 4.0, -0.5161 / 4.0, 0.9926 / 4.0, -0.2616 / 4.0], // gamma = 1.5
+        [0.1121 / 4.0, -0.6395 / 4.0, 1.1588 / 4.0, -0.2877 / 4.0], // gamma = 1.6
+        [0.1300 / 4.0, -0.7649 / 4.0, 1.3159 / 4.0, -0.3080 / 4.0], // gamma = 1.7
+        [0.1469 / 4.0, -0.8911 / 4.0, 1.4644 / 4.0, -0.3234 / 4.0], // gamma = 1.8
+        [0.1627 / 4.0, -1.0170 / 4.0, 1.6051 / 4.0, -0.3347 / 4.0], // gamma = 1.9
+        [0.1773 / 4.0, -1.1420 / 4.0, 1.7385 / 4.0, -0.3426 / 4.0], // gamma = 2.0
+        [0.1908 / 4.0, -1.2652 / 4.0, 1.8650 / 4.0, -0.3476 / 4.0], // gamma = 2.1
+        [0.2031 / 4.0, -1.3864 / 4.0, 1.9851 / 4.0, -0.3501 / 4.0], // gamma = 2.2
+    ];
+
+    const NORM13: f32 = ((0x10000 as f64) / (255.0 * 255.0) * 4.0) as f32;
+    const NORM24: f32 = ((0x100 as f64) / (255.0) * 4.0) as f32;
+
+    let index = ((gamma * 10.0).round() as usize).clamp(10, 22) - 10;
+    let ratios = GAMMA_INCORRECT_TARGET_RATIOS[index];
+    [
+        ratios[0] * NORM13,
+        ratios[1] * NORM24,
+        ratios[2] * NORM13,
+        ratios[3] * NORM24,
+    ]
+}
+
 const SUBPIXEL_VARIANTS_X: u8 = 4;
 const SUBPIXEL_VARIANTS_Y: u8 = if cfg!(target_os = "windows") || cfg!(target_os = "linux") {
     1
@@ -1033,6 +1122,7 @@ pub struct TextSystem {
     parley_scale: parley::swash::scale::ScaleContext,
     font_stack_key: u64,
     font_db_revision: u64,
+    quality: TextQualityState,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -1106,6 +1196,27 @@ impl TextSystem {
 
     pub fn font_stack_key(&self) -> u64 {
         self.font_stack_key
+    }
+
+    pub fn text_quality_key(&self) -> u64 {
+        self.quality.key
+    }
+
+    pub fn text_quality_uniforms(&self) -> ([f32; 4], f32, f32) {
+        (
+            self.quality.gamma_ratios,
+            self.quality.grayscale_enhanced_contrast,
+            self.quality.subpixel_enhanced_contrast,
+        )
+    }
+
+    pub fn set_text_quality_settings(&mut self, settings: TextQualitySettings) -> bool {
+        let next = TextQualityState::new(settings);
+        if next == self.quality {
+            return false;
+        }
+        self.quality = next;
+        true
     }
 
     /// Adds font bytes (TTF/OTF/TTC) to the font database.
@@ -1257,6 +1368,7 @@ impl TextSystem {
             parley_scale: parley::swash::scale::ScaleContext::new(),
             font_stack_key,
             font_db_revision,
+            quality: TextQualityState::new(TextQualitySettings::default()),
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -1605,8 +1717,14 @@ impl TextSystem {
         match input {
             TextInputRef::Plain { text, style } => self.prepare(text, style, constraints),
             TextInputRef::Attributed { text, base, spans } => {
-                let rich =
-                    AttributedText::new(Arc::<str>::from(text), Arc::<[TextSpan]>::from(spans));
+                let spans = sanitize_spans_for_text(text, spans);
+                if spans.is_none() {
+                    return self.prepare(text, base, constraints);
+                }
+                let rich = AttributedText {
+                    text: Arc::<str>::from(text),
+                    spans: spans.expect("non-empty spans"),
+                };
                 self.prepare_attributed(&rich, base, constraints)
             }
         }
@@ -1628,7 +1746,15 @@ impl TextSystem {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let key = TextBlobKey::new_attributed(rich, base_style, constraints, self.font_stack_key);
+        let spans = sanitize_spans_for_text(rich.text.as_ref(), rich.spans.as_ref());
+        if spans.is_none() {
+            return self.prepare(rich.text.as_ref(), base_style, constraints);
+        }
+        let rich = AttributedText {
+            text: rich.text.clone(),
+            spans: spans.expect("non-empty spans"),
+        };
+        let key = TextBlobKey::new_attributed(&rich, base_style, constraints, self.font_stack_key);
         self.prepare_with_key(key, base_style, Some(rich.spans.as_ref()), constraints)
     }
 
@@ -1849,9 +1975,9 @@ impl TextSystem {
 
                         let text_range =
                             (range.start + g.text_range.start)..(range.start + g.text_range.end);
-                        let paint_span = resolved_spans
-                            .as_deref()
-                            .and_then(|spans| paint_span_for_text_range(spans, &text_range));
+                        let paint_span = resolved_spans.as_deref().and_then(|spans| {
+                            paint_span_for_text_range(spans, &text_range, g.is_rtl)
+                        });
 
                         glyphs.push(GlyphInstance {
                             rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
@@ -2173,6 +2299,91 @@ fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Resolved
     Some(out)
 }
 
+fn span_has_any_overrides(span: &TextSpan) -> bool {
+    span.shaping.font.is_some()
+        || span.shaping.weight.is_some()
+        || span.shaping.slant.is_some()
+        || span.shaping.letter_spacing_em.is_some()
+        || span.paint.fg.is_some()
+        || span.paint.bg.is_some()
+        || span.paint.underline.is_some()
+        || span.paint.strikethrough.is_some()
+}
+
+fn clamp_down_to_char_boundary(text: &str, idx: usize) -> usize {
+    let mut i = idx.min(text.len());
+    while i > 0 && !text.is_char_boundary(i) {
+        i = i.saturating_sub(1);
+    }
+    i
+}
+
+fn next_char_boundary(text: &str, idx: usize) -> usize {
+    if idx >= text.len() {
+        return text.len();
+    }
+    let idx = clamp_down_to_char_boundary(text, idx);
+    if idx >= text.len() {
+        return text.len();
+    }
+    let ch = text[idx..].chars().next().unwrap();
+    idx + ch.len_utf8()
+}
+
+fn clamp_span_end_to_char_boundary(text: &str, start: usize, desired_end: usize) -> usize {
+    let raw_end = desired_end.min(text.len());
+    if text.is_char_boundary(raw_end) {
+        return raw_end;
+    }
+
+    let down = clamp_down_to_char_boundary(text, raw_end);
+    if down > start {
+        return down;
+    }
+
+    let up = next_char_boundary(text, raw_end);
+    up.max(start).min(text.len())
+}
+
+fn sanitize_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Arc<[TextSpan]>> {
+    if spans.is_empty() || text.is_empty() {
+        return None;
+    }
+
+    let text_len = text.len();
+    let mut out: Vec<TextSpan> = Vec::with_capacity(spans.len().saturating_add(1));
+
+    let mut offset: usize = 0;
+    for span in spans {
+        if offset >= text_len {
+            break;
+        }
+
+        let desired_end = offset.saturating_add(span.len);
+        let mut end = clamp_span_end_to_char_boundary(text, offset, desired_end);
+
+        if end == offset && desired_end > offset {
+            end = next_char_boundary(text, offset);
+        }
+
+        let mut s = span.clone();
+        s.len = end.saturating_sub(offset);
+        out.push(s);
+        offset = end;
+    }
+
+    if offset < text_len {
+        out.push(TextSpan::new(text_len - offset));
+    }
+
+    // Avoid forcing "attributed" shaping when spans carry no effective overrides.
+    if out.len() == 1 && out[0].len == text_len && !span_has_any_overrides(&out[0]) {
+        return None;
+    }
+
+    Some(Arc::<[TextSpan]>::from(out))
+}
+
 #[cfg(any())]
 fn paint_span_for_glyph(
     spans: &[ResolvedSpan],
@@ -2192,11 +2403,15 @@ fn paint_span_for_glyph(
 fn paint_span_for_text_range(
     spans: &[ResolvedSpan],
     range: &std::ops::Range<usize>,
+    is_rtl: bool,
 ) -> Option<u16> {
-    let mut idx = range.start;
-    if range.start == range.end && idx > 0 {
-        idx = idx.saturating_sub(1);
-    }
+    let idx = if range.start == range.end {
+        range.start.saturating_sub(1)
+    } else if is_rtl {
+        range.end.saturating_sub(1)
+    } else {
+        range.start
+    };
     spans
         .iter()
         .find(|s| idx >= s.start && idx < s.end)
@@ -2926,8 +3141,9 @@ fn decorations_for_lines(
 #[cfg(test)]
 mod tests {
     use super::{
-        TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names, spans_paint_fingerprint,
-        spans_shaping_fingerprint, subpixel_mask_to_alpha,
+        ResolvedSpan, TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names,
+        paint_span_for_text_range, spans_paint_fingerprint, spans_shaping_fingerprint,
+        subpixel_mask_to_alpha,
     };
     use cosmic_text::Family;
     use fret_core::{
@@ -2944,6 +3160,37 @@ mod tests {
             1u8, 200u8, 2u8, 0u8,
         ];
         assert_eq!(subpixel_mask_to_alpha(&data), vec![10u8, 200u8]);
+    }
+
+    #[test]
+    fn paint_span_for_text_range_is_directional_across_span_boundary() {
+        let spans = vec![
+            ResolvedSpan {
+                start: 0,
+                end: 3,
+                slot: 0,
+                fg: None,
+                underline: None,
+                strikethrough: None,
+            },
+            ResolvedSpan {
+                start: 3,
+                end: 6,
+                slot: 1,
+                fg: None,
+                underline: None,
+                strikethrough: None,
+            },
+        ];
+
+        // Cluster spans the boundary (2..4). We cannot split the glyph, so we pick a deterministic
+        // representative index based on direction.
+        assert_eq!(paint_span_for_text_range(&spans, &(2..4), false), Some(0));
+        assert_eq!(paint_span_for_text_range(&spans, &(2..4), true), Some(1));
+
+        // Synthetic 0-length ranges (e.g. ellipsis mapping) should inherit the preceding style.
+        assert_eq!(paint_span_for_text_range(&spans, &(3..3), false), Some(0));
+        assert_eq!(paint_span_for_text_range(&spans, &(3..3), true), Some(0));
     }
 
     #[test]
@@ -3244,6 +3491,124 @@ mod tests {
     }
 
     #[test]
+    fn sanitize_spans_extends_missing_tail() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: 2,
+            paint: fret_core::TextPaintStyle {
+                fg: Some(fret_core::Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 2);
+        assert_eq!(sanitized[0].len, 2);
+        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+        assert_eq!(sanitized[1].len, 3);
+        assert_eq!(sanitized[1].paint.fg, None);
+    }
+
+    #[test]
+    fn sanitize_spans_truncates_overflowing_last_span() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: 999,
+            paint: fret_core::TextPaintStyle {
+                fg: Some(fret_core::Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0].len, text.len());
+        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+    }
+
+    #[test]
+    fn sanitize_spans_snaps_to_char_boundaries() {
+        let text = "aé";
+        assert_eq!(text.len(), 3);
+
+        let spans = vec![
+            TextSpan {
+                len: 2,
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            TextSpan {
+                len: 1,
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 1.0,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 2);
+        assert_eq!(sanitized[0].len, 1);
+        assert_eq!(sanitized[1].len, 2);
+        assert_eq!(sanitized[0].paint.fg, spans[0].paint.fg);
+        assert_eq!(sanitized[1].paint.fg, spans[1].paint.fg);
+    }
+
+    #[test]
+    fn sanitize_spans_returns_none_for_noop_full_span() {
+        let text = "hello";
+        let spans = vec![TextSpan::new(text.len())];
+        assert!(super::sanitize_spans_for_text(text, &spans).is_none());
+    }
+
+    #[test]
     fn multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor() {
         let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
         let mut text = super::TextSystem::new(&ctx.device);
@@ -3514,6 +3879,62 @@ mod tests {
         assert_eq!(wrapped.lines.len(), 1);
         assert!(wrapped.kept_end < text.len());
         assert!(wrapped.lines[0].width <= 80.0 + 0.5);
+    }
+
+    #[test]
+    fn ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end() {
+        let text = "This is a long line that should truncate";
+        let constraints = TextConstraints {
+            max_width: Some(Px(80.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            scale_factor: 1.0,
+        };
+
+        let mut shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let base = TextStyle::default();
+        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+
+        assert_eq!(wrapped.lines.len(), 1);
+        let kept_end = wrapped.kept_end;
+        assert!(kept_end < text.len());
+
+        let line_layout = &wrapped.lines[0];
+        assert!(
+            line_layout
+                .clusters
+                .iter()
+                .any(|c| c.text_range == (kept_end..kept_end)),
+            "expected a synthetic zero-length cluster at kept_end for ellipsis mapping"
+        );
+
+        let slice = &text[..kept_end];
+        let caret_stops = super::caret_stops_for_slice(
+            slice,
+            0,
+            &line_layout.clusters,
+            line_layout.width,
+            1.0,
+            kept_end,
+        );
+        let line = super::TextLine {
+            start: 0,
+            end: kept_end,
+            width: Px(line_layout.width),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            caret_stops,
+        };
+
+        let x = Px((line_layout.width - 1.0).max(0.0));
+        let hit =
+            super::hit_test_point_from_lines(&[line], Point::new(x, Px(5.0))).expect("hit test");
+        assert_eq!(hit.index, kept_end);
     }
 
     #[test]

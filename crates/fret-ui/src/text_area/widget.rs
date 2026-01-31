@@ -467,9 +467,16 @@ impl<H: UiHost> Widget<H> for TextArea {
                 Some((self.caret, self.caret.saturating_add(self.preedit.len()))),
             )
         } else {
+            let mut selection_anchor = self.selection_anchor;
+            let mut caret = self.caret;
+            crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                &self.text,
+                &mut selection_anchor,
+                &mut caret,
+            );
             (
                 self.text().to_string(),
-                Some((self.selection_anchor, self.caret)),
+                Some((selection_anchor, caret)),
                 None,
             )
         };

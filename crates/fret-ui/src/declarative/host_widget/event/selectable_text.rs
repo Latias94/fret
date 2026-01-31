@@ -42,6 +42,22 @@ pub(super) fn handle_selectable_text<H: UiHost>(
     props: crate::element::SelectableTextProps,
     event: &Event,
 ) {
+    // Keep the stored selection model stable even if the underlying text changes or external
+    // surfaces (a11y, platform input) publish indices that are no longer valid.
+    crate::elements::with_element_state(
+        &mut *cx.app,
+        window,
+        this.element,
+        crate::element::SelectableTextState::default,
+        |state| {
+            crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                &props.rich.text,
+                &mut state.selection_anchor,
+                &mut state.caret,
+            );
+        },
+    );
+
     match event {
         Event::KeyDown {
             key,

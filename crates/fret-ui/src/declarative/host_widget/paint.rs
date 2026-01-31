@@ -278,20 +278,9 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let theme = cx.theme().snapshot();
+                let style = props.resolved_text_style(theme);
+                let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -319,10 +308,7 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_str(props.text.as_ref(), &style, constraints);
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -359,20 +345,9 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let theme = cx.theme().snapshot();
+                let style = props.resolved_text_style(theme);
+                let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -400,11 +375,6 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let input = fret_core::TextInput::attributed(
-                        props.rich.text.clone(),
-                        style.clone(),
-                        props.rich.spans.clone(),
-                    );
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
@@ -443,20 +413,9 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let theme = cx.theme().snapshot();
+                let style = props.resolved_text_style(theme);
+                let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -484,11 +443,6 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let input = fret_core::TextInput::attributed(
-                        props.rich.text.clone(),
-                        style.clone(),
-                        props.rich.spans.clone(),
-                    );
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
@@ -508,6 +462,21 @@ impl ElementHostWidget {
                 let Some(metrics) = self.text_cache.metrics else {
                     return;
                 };
+
+                // Ensure any persisted selection state remains valid for this frame's text buffer.
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                            &props.rich.text,
+                            &mut state.selection_anchor,
+                            &mut state.caret,
+                        );
+                    },
+                );
 
                 let focused = cx.focus == Some(cx.node);
                 let (dragging, last_pointer_pos) = crate::elements::with_element_state(
@@ -532,11 +501,83 @@ impl ElementHostWidget {
                         self.element,
                         crate::element::SelectableTextState::default,
                         |state| {
-                            state.caret = hit.index;
+                            state.caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                                &props.rich.text,
+                                hit.index,
+                            );
                             state.affinity = hit.affinity;
                         },
                     );
                 }
+                let clip = fret_core::Rect::new(
+                    fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                    cx.bounds.size,
+                );
+
+                let mut bg_runs: Vec<(usize, usize, Color)> = Vec::new();
+                let mut rects: Vec<fret_core::Rect> = Vec::new();
+
+                let mut offset = 0usize;
+                let mut active_bg: Option<(usize, Color)> = None;
+
+                for span in props.rich.spans.as_ref() {
+                    let end = offset.saturating_add(span.len);
+
+                    match (active_bg, span.paint.bg) {
+                        (Some((start, bg)), Some(next)) if bg == next => {}
+                        (Some((start, bg)), Some(next)) => {
+                            if start < offset {
+                                bg_runs.push((start, offset, bg));
+                            }
+                            active_bg = Some((offset, next));
+                        }
+                        (Some((start, bg)), None) => {
+                            if start < offset {
+                                bg_runs.push((start, offset, bg));
+                            }
+                            active_bg = None;
+                        }
+                        (None, Some(next)) => {
+                            active_bg = Some((offset, next));
+                        }
+                        (None, None) => {}
+                    }
+
+                    offset = end;
+                }
+
+                if let Some((start, bg)) = active_bg
+                    && start < offset
+                {
+                    bg_runs.push((start, offset, bg));
+                }
+
+                for (start, end, bg) in bg_runs {
+                    if start >= end {
+                        continue;
+                    }
+                    rects.clear();
+                    cx.services
+                        .selection_rects_clipped(blob, (start, end), clip, &mut rects);
+                    for r in rects.iter() {
+                        let rect = fret_core::Rect::new(
+                            fret_core::Point::new(
+                                fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
+                                fret_core::Px(cx.bounds.origin.y.0 + r.origin.y.0),
+                            ),
+                            r.size,
+                        );
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(0),
+                            rect,
+                            background: bg,
+                            border: fret_core::Edges::all(fret_core::Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+                        });
+                    }
+                }
+
                 if focused {
                     let (anchor, caret) = crate::elements::with_element_state(
                         &mut *cx.app,
@@ -549,10 +590,6 @@ impl ElementHostWidget {
                     let end = anchor.max(caret);
                     if start < end {
                         let mut rects: Vec<fret_core::Rect> = Vec::new();
-                        let clip = fret_core::Rect::new(
-                            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                            cx.bounds.size,
-                        );
                         cx.services
                             .selection_rects_clipped(blob, (start, end), clip, &mut rects);
                         let sel_color = cx.theme().color_required("selection.background");

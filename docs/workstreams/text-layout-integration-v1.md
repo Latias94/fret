@@ -1,6 +1,10 @@
 # Text Integration v1 — Layout, Selection, and Platform Interop
 
-Status: Proposed (tracking UI gallery regressions; complements `docs/workstreams/text-system-v2-parley.md`).
+Status: Completed (2026-01-31) (tracking UI gallery regressions; complements `docs/workstreams/text-system-v2-parley.md`).
+
+This workstream is closed: the tracked regressions and baseline integration contracts have landed.
+Follow-up work belongs in `docs/workstreams/text-system-v2-parley.md` (text system v2) and
+future ADRs as APIs stabilize.
 
 This document focuses on **integration hazards** between:
 

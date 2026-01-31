@@ -93,6 +93,30 @@ fn event_cx<'a>(
     }
 }
 
+fn command_cx<'a>(
+    app: &'a mut TestHost,
+    services: &'a mut FakeTextService,
+    tree: &'a mut UiTree<TestHost>,
+    node: fret_core::NodeId,
+    window: fret_core::AppWindowId,
+) -> crate::widget::CommandCx<'a, TestHost> {
+    crate::widget::CommandCx {
+        app,
+        services,
+        tree,
+        node,
+        window: Some(window),
+        input_ctx: fret_runtime::InputContext {
+            caps: PlatformCapabilities::default(),
+            ..Default::default()
+        },
+        focus: Some(node),
+        invalidations: Vec::new(),
+        requested_focus: None,
+        stop_propagation: false,
+    }
+}
+
 #[test]
 fn text_input_hover_sets_text_cursor_effect() {
     let window = AppWindowId::default();
@@ -209,6 +233,39 @@ fn text_input_double_click_selection_respects_text_boundary_mode() {
         (0, 3),
         "Identifier mode should stop at the apostrophe"
     );
+}
+
+#[test]
+fn text_input_copy_clamps_out_of_range_selection_indices() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.selection_anchor = 0;
+    input.caret = 999;
+
+    let mut cx = command_cx(&mut app, &mut services, &mut ui, node, window);
+    assert!(
+        input.command(&mut cx, &fret_runtime::CommandId::from("edit.copy")),
+        "expected edit.copy to be handled"
+    );
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| matches!(e, Effect::ClipboardSetText { text } if text == "hello")),
+        "expected edit.copy to clamp indices and copy the selected text"
+    );
+    assert_eq!(input.selection_anchor, 0);
+    assert_eq!(input.caret, 5);
 }
 
 #[test]

@@ -1292,6 +1292,18 @@ impl TextProps {
             overflow: TextOverflow::Clip,
         }
     }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_plain(self.text.clone(), style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
+    }
 }
 
 impl StyledTextProps {
@@ -1305,6 +1317,18 @@ impl StyledTextProps {
             overflow: TextOverflow::Clip,
         }
     }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_attributed(&self.rich, style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
+    }
 }
 
 impl SelectableTextProps {
@@ -1317,6 +1341,18 @@ impl SelectableTextProps {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         }
+    }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_attributed(&self.rich, style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
     }
 }
 

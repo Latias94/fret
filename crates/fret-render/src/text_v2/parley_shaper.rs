@@ -28,6 +28,7 @@ pub(crate) struct ParleyGlyph {
     pub font: FontData,
     pub font_size: f32,
     pub text_range: Range<usize>,
+    pub is_rtl: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -194,6 +195,7 @@ impl ParleyShaper {
                         font: font_data.clone(),
                         font_size,
                         text_range: cluster_range.clone(),
+                        is_rtl: cluster.is_rtl(),
                     });
                 }
 

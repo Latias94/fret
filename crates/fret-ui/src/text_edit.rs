@@ -38,6 +38,16 @@ pub(crate) mod utf8 {
 
     use fret_runtime::TextBoundaryMode;
 
+    pub(crate) fn clamp_selection_to_grapheme_boundaries(
+        text: &str,
+        selection_anchor: &mut usize,
+        caret: &mut usize,
+    ) {
+        let max = text.len();
+        *selection_anchor = clamp_to_grapheme_boundary(text, (*selection_anchor).min(max));
+        *caret = clamp_to_grapheme_boundary(text, (*caret).min(max));
+    }
+
     pub(crate) fn is_grapheme_boundary(text: &str, idx: usize) -> bool {
         let idx = idx.min(text.len());
         if idx == 0 || idx == text.len() {
@@ -805,6 +815,10 @@ pub(crate) mod commands {
         command: &str,
         window_available: bool,
     ) -> ClipboardOutcome {
+        // Defensive: selection indices are stored as UTF-8 byte offsets but must always be clamped
+        // to valid boundaries before any slicing/clipboard extraction.
+        edit.clamp_caret_and_anchor_to_grapheme_boundary();
+
         match command {
             "text.copy" => ClipboardOutcome {
                 outcome: Outcome::noop_handled(),

@@ -17,7 +17,17 @@ impl Renderer {
         encoding: &mut SceneEncoding,
     ) {
         encoding.clear();
-        let mut state = EncodeState::new(encoding, scale_factor, viewport_size, output_is_srgb);
+        let (text_gamma_ratios, text_grayscale_enhanced_contrast, text_subpixel_enhanced_contrast) =
+            self.text_system.text_quality_uniforms();
+        let mut state = EncodeState::new(
+            encoding,
+            scale_factor,
+            viewport_size,
+            output_is_srgb,
+            text_gamma_ratios,
+            text_grayscale_enhanced_contrast,
+            text_subpixel_enhanced_contrast,
+        );
 
         for op in scene.ops() {
             ops::handle_op(self, &mut state, op);
