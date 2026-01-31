@@ -1372,44 +1372,32 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                         return None;
                     }
 
-                    let offset_point = props.scroll_handle.offset();
-                    let offset_axis = match props.axis {
-                        fret_core::Axis::Vertical => offset_point.y,
-                        fret_core::Axis::Horizontal => offset_point.x,
-                    };
-                    let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
-
-                    let visible_range = state.metrics.visible_range(offset_axis, viewport, 0);
-                    let ideal_window_range =
+                    // Prefer the prepaint-derived window range (ADR 0190). This lets retained
+                    // virtual surfaces update row membership on cache-hit frames without
+                    // re-deriving the window from scroll state during reconcile.
+                    let mut window_range =
                         state
-                            .metrics
-                            .visible_range(offset_axis, viewport, props.overscan);
+                            .window_range
+                            .or(state.render_window_range)
+                            .filter(|r| {
+                                r.count == props.len
+                                    && r.overscan == props.overscan
+                                    && r.start_index <= r.end_index
+                                    && r.end_index < r.count
+                            });
 
-                    let rendered_range = state.render_window_range;
-                    let window_range = match (rendered_range, visible_range) {
-                        (Some(rendered), Some(visible))
-                            if rendered.count == props.len
-                                && rendered.overscan == props.overscan
-                                && rendered.start_index <= rendered.end_index
-                                && rendered.end_index < rendered.count =>
-                        {
-                            let rendered_outer_start =
-                                rendered.start_index.saturating_sub(rendered.overscan);
-                            let rendered_outer_end = (rendered.end_index + rendered.overscan)
-                                .min(rendered.count.saturating_sub(1));
-                            let window_mismatch = visible.start_index < rendered_outer_start
-                                || visible.end_index > rendered_outer_end;
-
-                            if window_mismatch {
-                                Some(crate::virtual_list::shift_virtual_range_minimally(
-                                    rendered, visible,
-                                ))
-                            } else {
-                                Some(rendered)
-                            }
-                        }
-                        _ => ideal_window_range,
-                    };
+                    if window_range.is_none() {
+                        let offset_point = props.scroll_handle.offset();
+                        let offset_axis = match props.axis {
+                            fret_core::Axis::Vertical => offset_point.y,
+                            fret_core::Axis::Horizontal => offset_point.x,
+                        };
+                        let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+                        window_range =
+                            state
+                                .metrics
+                                .visible_range(offset_axis, viewport, props.overscan);
+                    }
 
                     state.window_range = window_range;
                     state.render_window_range = window_range;
