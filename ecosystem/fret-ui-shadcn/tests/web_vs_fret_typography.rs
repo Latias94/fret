@@ -4,7 +4,9 @@ use fret_core::{
     TextWrap,
 };
 use fret_ui::Theme;
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
+use fret_ui::element::{
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, Length, MainAlign,
+};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::ColorRef;
 use fret_ui_kit::ui;
@@ -1135,4 +1137,116 @@ fn web_vs_fret_typography_demo_vp768_wraps_paragraph_light_contract() {
         max_w.0.is_finite() && max_w.0 > 0.0,
         "invalid max_width constraint: {max_w:?}"
     );
+}
+
+#[test]
+fn web_vs_fret_typography_list_indent_and_gap_light_contract() {
+    let web = read_web_golden("typography-list");
+    let theme = web.themes.get("light").expect("missing light theme");
+
+    let web_ul = find_first(&theme.root, &|n| n.tag == "ul").expect("web ul");
+
+    let mut web_lis = Vec::new();
+    web_collect_tag(web_ul, "li", &mut web_lis);
+    web_lis.sort_by(|a, b| a.rect.y.total_cmp(&b.rect.y));
+    assert_eq!(web_lis.len(), 3, "expected 3 web li nodes");
+
+    let ul_margin_left = web_css_px(web_ul, "marginLeft");
+    let li_margin_top = web_css_px(web_lis[1], "marginTop");
+
+    // Sanity-check the upstream contract for `typography-list` (Tailwind `ml-6` and `mt-2`).
+    assert_close_px("web ul margin-left", ul_margin_left, 24.0, 0.25);
+    assert_close_px("web li margin-top", li_margin_top, 8.0, 0.25);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let li_texts: Vec<String> = web_lis
+        .iter()
+        .map(|li| li.text.clone().unwrap_or_default())
+        .collect();
+    let li_texts_for_render = li_texts.clone();
+    let li_size = web_css_px(web_lis[0], "fontSize");
+    let li_line_height = web_css_px(web_lis[0], "lineHeight");
+    let li_weight = web_css_u16(web_lis[0], "fontWeight");
+
+    let mut services = StyleAwareServices::default();
+    let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, move |cx| {
+        let ul = cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(web_ul.rect.w));
+                    layout.margin.left = fret_ui::element::MarginEdge::Px(ul_margin_left);
+                    layout
+                },
+                role: SemanticsRole::Panel,
+                test_id: Some(Arc::from("typography-list-ul")),
+                ..Default::default()
+            },
+            move |cx| {
+                let texts = li_texts_for_render.clone();
+                vec![cx.column(
+                    ColumnProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        gap: li_margin_top,
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                    },
+                    move |cx| {
+                        texts
+                            .clone()
+                            .into_iter()
+                            .enumerate()
+                            .map(|(idx, text)| {
+                                let test_id = Arc::<str>::from(format!("typography-list-li{idx}"));
+                                cx.semantics(
+                                    fret_ui::element::SemanticsProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout
+                                        },
+                                        role: SemanticsRole::Panel,
+                                        test_id: Some(test_id),
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![
+                                            ui::text(cx, text)
+                                                .text_size_px(li_size)
+                                                .line_height_px(li_line_height)
+                                                .font_weight(fret_core::FontWeight(li_weight))
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        );
+
+        vec![ul]
+    });
+
+    let ul = find_by_test_id(&snap, "typography-list-ul");
+    assert_close_px("fret ul x", ul.bounds.origin.x, ul_margin_left.0, 0.5);
+
+    let li0 = find_by_test_id(&snap, "typography-list-li0");
+    let li1 = find_by_test_id(&snap, "typography-list-li1");
+    let gap = li1.bounds.origin.y.0 - (li0.bounds.origin.y.0 + li0.bounds.size.height.0);
+    assert_close_px("fret li gap", Px(gap), li_margin_top.0, 0.5);
+
+    for text in &li_texts {
+        assert_prepared_text_style(&services, text, li_size, li_line_height, li_weight);
+    }
 }
