@@ -67,6 +67,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
+    let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_vlist_window_mismatch_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
@@ -377,6 +378,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_prepaint_actions_min =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-prepaint-actions-min".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-layout-fast-path-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-layout-fast-path-min".to_string());
+                };
+                check_layout_fast_path_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-layout-fast-path-min".to_string()
                     })?);
                 i += 1;
             }
@@ -959,6 +971,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_layout_fast_path_min.is_some()
                     || check_vlist_window_mismatch_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
@@ -995,6 +1008,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_prepaint_actions_min,
+                        check_layout_fast_path_min,
                         check_vlist_window_mismatch_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min,
@@ -2265,6 +2279,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_layout_fast_path_min.is_some()
                     || check_vlist_window_mismatch_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
@@ -2311,6 +2326,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_gc_sweep_liveness,
                         check_view_cache_reuse_min,
                         check_prepaint_actions_min,
+                        check_layout_fast_path_min,
                         check_vlist_window_mismatch_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
@@ -4148,6 +4164,7 @@ fn apply_post_run_checks(
     check_gc_sweep_liveness: bool,
     check_view_cache_reuse_min: Option<u64>,
     check_prepaint_actions_min: Option<u64>,
+    check_layout_fast_path_min: Option<u64>,
     check_vlist_window_mismatch_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     check_viewport_input_min: Option<u64>,
@@ -4189,6 +4206,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_prepaint_actions_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_layout_fast_path_min
+        && min > 0
+    {
+        check_bundle_for_layout_fast_path_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_vlist_window_mismatch_min
         && min > 0
@@ -7215,6 +7237,83 @@ fn check_bundle_for_prepaint_actions_min_json(
 
     Err(format!(
         "expected at least {min_acted_frames} snapshots with non-empty debug.prepaint_actions, got {acted_frames} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+in bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_layout_fast_path_min(
+    bundle_path: &Path,
+    min_fast_path_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_layout_fast_path_min_json(
+        &bundle,
+        bundle_path,
+        min_fast_path_frames,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_layout_fast_path_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_fast_path_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut fast_path_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+
+            let fast_path_taken = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("layout_fast_path_taken"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if fast_path_taken {
+                fast_path_frames = fast_path_frames.saturating_add(1);
+                if fast_path_frames >= min_fast_path_frames {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_fast_path_frames} snapshots with debug.stats.layout_fast_path_taken=true, got {fast_path_frames} \
 (any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
 in bundle: {}",
         bundle_path.display()
@@ -10584,6 +10683,50 @@ mod tests {
         assert!(
             err.contains("expected at least 2 snapshots with non-empty debug.prepaint_actions")
         );
+        assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn check_bundle_for_layout_fast_path_min_counts_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "frame_id": 0, "debug": { "stats": { "layout_fast_path_taken": true } } },
+                        { "frame_id": 1, "debug": { "stats": { "layout_fast_path_taken": false } } },
+                        { "frame_id": 2, "debug": { "stats": { "layout_fast_path_taken": true } } }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_layout_fast_path_min_json(&bundle, Path::new("bundle.json"), 2, 0)
+            .expect("expected layout_fast_path_taken>=2");
+    }
+
+    #[test]
+    fn check_bundle_for_layout_fast_path_min_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        { "frame_id": 0, "debug": { "stats": { "layout_fast_path_taken": true } } },
+                        { "frame_id": 1, "debug": { "stats": { "layout_fast_path_taken": true } } }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_layout_fast_path_min_json(&bundle, Path::new("bundle.json"), 2, 1)
+                .expect_err("expected fast_path_frames<2 due to warmup");
+        assert!(err.contains(
+            "expected at least 2 snapshots with debug.stats.layout_fast_path_taken=true"
+        ));
         assert!(err.contains("got 1"));
     }
 
