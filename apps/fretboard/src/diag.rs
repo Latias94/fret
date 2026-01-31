@@ -8204,8 +8204,30 @@ fn check_bundle_for_retained_vlist_scroll_window_dirty_max_json(
                         .get("source")
                         .and_then(|v| v.as_str())
                         .unwrap_or_default();
+                    let vlist_window = s
+                        .get("debug")
+                        .and_then(|v| v.get("virtual_list_windows"))
+                        .and_then(|v| v.as_array())
+                        .and_then(|arr| {
+                            arr.iter().find(|w| {
+                                w.get("window_mismatch").and_then(|v| v.as_bool()) == Some(true)
+                            })
+                        });
+                    let vlist_policy_key = vlist_window
+                        .and_then(|w| w.get("policy_key").and_then(|v| v.as_u64()))
+                        .unwrap_or(0);
+                    let vlist_inputs_key = vlist_window
+                        .and_then(|w| w.get("inputs_key").and_then(|v| v.as_u64()))
+                        .unwrap_or(0);
+                    let vlist_items_revision = vlist_window
+                        .and_then(|w| w.get("items_revision").and_then(|v| v.as_u64()))
+                        .unwrap_or(0);
+                    let vlist_prev_items_revision = vlist_window
+                        .and_then(|w| w.get("prev_items_revision").and_then(|v| v.as_u64()))
+                        .unwrap_or(0);
                     offender_lines.push(format!(
-                        "frame_id={frame_id} dirty_view_root_node={root_node} source={source} detail={detail}"
+                        "frame_id={frame_id} dirty_view_root_node={root_node} source={source} detail={detail} \
+vlist(items_revision={vlist_items_revision} prev_items_revision={vlist_prev_items_revision} policy_key={vlist_policy_key} inputs_key={vlist_inputs_key})"
                     ));
                     break;
                 }
