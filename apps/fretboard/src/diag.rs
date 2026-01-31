@@ -87,6 +87,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut compare_ignore_scene_fingerprint: bool = false;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
+    let mut with_tracy: bool = false;
+    let mut with_renderdoc: bool = false;
+    let mut renderdoc_after_frames: Option<u32> = None;
 
     // Parse global `diag` flags regardless of their position, leaving positional args intact.
     // This keeps the behavior aligned with the help text in `apps/fretboard/src/cli.rs`.
@@ -490,6 +493,46 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 stats_json = true;
                 i += 1;
             }
+            "--with" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --with (expected tracy|renderdoc)".to_string());
+                };
+                match v.as_str() {
+                    "tracy" => with_tracy = true,
+                    "renderdoc" => with_renderdoc = true,
+                    other => {
+                        return Err(format!(
+                            "invalid value for --with: {other} (expected tracy|renderdoc)"
+                        ));
+                    }
+                }
+                i += 1;
+            }
+            "--with-tracy" => {
+                with_tracy = true;
+                i += 1;
+            }
+            "--with-renderdoc" => {
+                with_renderdoc = true;
+                i += 1;
+            }
+            "--renderdoc-after-frames" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --renderdoc-after-frames".to_string());
+                };
+                let parsed = v
+                    .parse::<u32>()
+                    .map_err(|_| "invalid value for --renderdoc-after-frames".to_string())?;
+                if parsed == 0 {
+                    return Err(
+                        "invalid value for --renderdoc-after-frames (must be > 0)".to_string()
+                    );
+                }
+                renderdoc_after_frames = Some(parsed);
+                i += 1;
+            }
             "--env" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -534,6 +577,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         return Err("missing diag subcommand (try: fretboard diag poke)".to_string());
     };
     let rest: Vec<String> = positionals.into_iter().skip(1).collect();
+
+    if sub != "repro" && (with_tracy || with_renderdoc || renderdoc_after_frames.is_some()) {
+        return Err(
+            "--with tracy/renderdoc and --renderdoc-after-frames are only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
 
     let workspace_root = crate::cli::workspace_root()?;
 
@@ -759,6 +809,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 pack_include_root_artifacts,
                 pack_include_triage,
                 pack_include_screenshots,
+                false,
+                false,
                 &artifacts_root,
                 stats_top,
                 sort_override.unwrap_or(BundleStatsSort::Invalidation),
@@ -980,6 +1032,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         pack_defaults.0,
                         pack_defaults.1,
                         pack_defaults.2,
+                        false,
+                        false,
                         &artifacts_root,
                         stats_top,
                         sort_override.unwrap_or(BundleStatsSort::Invalidation),
@@ -1044,9 +1098,56 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let summary_path = resolved_out_dir.join("repro.summary.json");
 
+            let mut repro_launch = launch.clone();
+            let mut repro_launch_env = launch_env.clone();
+
+            let mut tracy_feature_injected: bool = false;
+            let mut tracy_env_enabled: bool = false;
+            if with_tracy {
+                tracy_env_enabled = ensure_env_var(&mut repro_launch_env, "FRET_TRACY", "1");
+                if let Some(cmd) = repro_launch.as_mut() {
+                    tracy_feature_injected = cargo_run_inject_feature(cmd, "fret-bootstrap/tracy");
+                }
+
+                let note = "\
+# Tracy capture (best-effort)\n\
+\n\
+This repro was run with `FRET_TRACY=1` (and may have auto-injected `--features fret-bootstrap/tracy` when the launch command was `cargo run`).\n\
+\n\
+Notes:\n\
+- Tracy requires running the target with the `fret-bootstrap/tracy` feature enabled.\n\
+- The capture file is not recorded automatically by `fretboard` yet. Use the Tracy UI to connect and save a capture.\n\
+\n\
+See: `docs/tracy.md`.\n";
+                let _ = std::fs::write(resolved_out_dir.join("tracy.note.md"), note);
+            }
+
+            let mut renderdoc_capture_dir: Option<PathBuf> = None;
+            let mut renderdoc_autocapture_after_frames: Option<u32> = None;
+            if with_renderdoc {
+                let after = renderdoc_after_frames.unwrap_or(60);
+                let capture_dir = resolved_out_dir.join("renderdoc");
+                let _ = std::fs::create_dir_all(&capture_dir);
+
+                let _ = ensure_env_var(&mut repro_launch_env, "FRET_RENDERDOC", "1");
+                let _ = ensure_env_var(
+                    &mut repro_launch_env,
+                    "FRET_RENDERDOC_CAPTURE_DIR",
+                    capture_dir.to_string_lossy().as_ref(),
+                );
+                let _ = ensure_env_var(
+                    &mut repro_launch_env,
+                    "FRET_RENDERDOC_AUTOCAPTURE_AFTER_FRAMES",
+                    &after.to_string(),
+                );
+
+                renderdoc_capture_dir = Some(capture_dir);
+                renderdoc_autocapture_after_frames = Some(after);
+            }
+
             let mut child = maybe_launch_demo(
-                &launch,
-                &launch_env,
+                &repro_launch,
+                &repro_launch_env,
                 &workspace_root,
                 &resolved_out_dir,
                 &resolved_ready_path,
@@ -1231,6 +1332,52 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 serde_json::Value::Null
             };
 
+            let mut renderdoc_captures_rel: Vec<String> = Vec::new();
+            if let Some(dir) = renderdoc_capture_dir.as_ref() {
+                let captures = list_files_with_extensions(dir, &["rdc"]);
+                for path in captures {
+                    let rel = path
+                        .strip_prefix(&resolved_out_dir)
+                        .unwrap_or(&path)
+                        .display()
+                        .to_string();
+                    renderdoc_captures_rel.push(rel);
+                }
+                renderdoc_captures_rel.sort();
+
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "generated_unix_ms": now_unix_ms(),
+                    "capture_dir": "renderdoc",
+                    "autocapture_after_frames": renderdoc_autocapture_after_frames,
+                    "captures": renderdoc_captures_rel.clone(),
+                });
+                let _ =
+                    write_json_value(&resolved_out_dir.join("renderdoc.captures.json"), &payload);
+            }
+
+            let captures_json = serde_json::json!({
+                "tracy": if with_tracy {
+                    serde_json::json!({
+                        "requested": true,
+                        "env_enabled": tracy_env_enabled,
+                        "feature_injected": tracy_feature_injected,
+                        "note": "Capture is not recorded automatically yet; use the Tracy UI to save a capture."
+                    })
+                } else {
+                    serde_json::Value::Null
+                },
+                "renderdoc": if with_renderdoc {
+                    serde_json::json!({
+                        "requested": true,
+                        "autocapture_after_frames": renderdoc_autocapture_after_frames,
+                        "captures": renderdoc_captures_rel,
+                    })
+                } else {
+                    serde_json::Value::Null
+                }
+            });
+
             let summary_json = serde_json::json!({
                 "schema_version": 1,
                 "generated_unix_ms": now_unix_ms(),
@@ -1241,6 +1388,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 "packed_bundle_json": packed_bundle_json.as_ref().map(|p| p.display().to_string()),
                 "packed_bundles": packed_bundles,
                 "repro_zip": Some(zip_out.display().to_string()),
+                "captures": captures_json,
                 "last_result": last_script_result.as_ref().map(|r| serde_json::json!({
                     "run_id": r.run_id,
                     "stage": r.stage,
@@ -1274,6 +1422,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         pack_defaults.0,
                         pack_defaults.1,
                         pack_defaults.2,
+                        with_renderdoc,
+                        with_tracy,
                         &resolved_out_dir,
                         &summary_path,
                         &bundles,
@@ -1302,6 +1452,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         pack_defaults.0,
                         pack_defaults.1,
                         pack_defaults.2,
+                        with_renderdoc,
+                        with_tracy,
                         &artifacts_root,
                         stats_top,
                         sort,
@@ -2650,6 +2802,8 @@ fn pack_bundle_dir_to_zip(
     include_root_artifacts: bool,
     include_triage: bool,
     include_screenshots: bool,
+    include_renderdoc: bool,
+    include_tracy: bool,
     artifacts_root: &Path,
     stats_top: usize,
     sort: BundleStatsSort,
@@ -2707,6 +2861,36 @@ fn pack_bundle_dir_to_zip(
     if include_root_artifacts {
         let root_prefix = format!("{bundle_name}/_root");
         zip_add_root_artifacts(&mut zip, artifacts_root, &root_prefix, options)?;
+    }
+
+    if include_renderdoc {
+        let renderdoc_dir = artifacts_root.join("renderdoc");
+        if renderdoc_dir.is_dir() {
+            let renderdoc_prefix = format!("{bundle_name}/_root/renderdoc");
+            zip_add_dir_filtered(
+                &mut zip,
+                &renderdoc_dir,
+                &renderdoc_dir,
+                &renderdoc_prefix,
+                options,
+                &["rdc", "json", "png", "txt", "md"],
+            )?;
+        }
+    }
+
+    if include_tracy {
+        let tracy_dir = artifacts_root.join("tracy");
+        if tracy_dir.is_dir() {
+            let tracy_prefix = format!("{bundle_name}/_root/tracy");
+            zip_add_dir_filtered(
+                &mut zip,
+                &tracy_dir,
+                &tracy_dir,
+                &tracy_prefix,
+                options,
+                &["tracy", "txt", "md", "json"],
+            )?;
+        }
     }
 
     if include_screenshots {
@@ -2849,6 +3033,8 @@ fn zip_add_root_artifacts(
         "screenshots.result.json",
         "triage.json",
         "picked.script.json",
+        "renderdoc.captures.json",
+        "tracy.note.md",
     ];
 
     for name in candidates {
@@ -2906,6 +3092,8 @@ fn pack_repro_zip_multi(
     include_root_artifacts: bool,
     include_triage: bool,
     include_screenshots: bool,
+    include_renderdoc: bool,
+    include_tracy: bool,
     artifacts_root: &Path,
     summary_path: &Path,
     bundles: &[ReproZipBundle],
@@ -2950,6 +3138,34 @@ fn pack_repro_zip_multi(
 
     if include_root_artifacts {
         zip_add_root_artifacts(&mut zip, artifacts_root, "_root", options)?;
+    }
+
+    if include_renderdoc {
+        let renderdoc_dir = artifacts_root.join("renderdoc");
+        if renderdoc_dir.is_dir() {
+            zip_add_dir_filtered(
+                &mut zip,
+                &renderdoc_dir,
+                &renderdoc_dir,
+                "_root/renderdoc",
+                options,
+                &["rdc", "json", "png", "txt", "md"],
+            )?;
+        }
+    }
+
+    if include_tracy {
+        let tracy_dir = artifacts_root.join("tracy");
+        if tracy_dir.is_dir() {
+            zip_add_dir_filtered(
+                &mut zip,
+                &tracy_dir,
+                &tracy_dir,
+                "_root/tracy",
+                options,
+                &["tracy", "txt", "md", "json"],
+            )?;
+        }
     }
 
     for item in bundles {
@@ -3045,6 +3261,64 @@ fn zip_add_screenshot_dir(
         // Keep this conservative to avoid exploding zip sizes accidentally.
         let should_include = matches!(ext.as_str(), "png") || name == "manifest.json";
         if !should_include {
+            continue;
+        }
+
+        let rel = path
+            .strip_prefix(base_dir)
+            .map_err(|_| "failed to compute zip relative path".to_string())?;
+
+        let dst = format!("{}/{}", zip_prefix, zip_name(rel));
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn zip_add_dir_filtered(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    dir: &Path,
+    base_dir: &Path,
+    zip_prefix: &str,
+    options: FileOptions,
+    allowed_exts: &[&str],
+) -> Result<(), String> {
+    let mut entries: Vec<std::fs::DirEntry> = std::fs::read_dir(dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .collect();
+    entries.sort_by_key(|e| e.file_name());
+
+    for entry in entries {
+        let path = entry.path();
+        let meta = std::fs::symlink_metadata(&path).map_err(|e| e.to_string())?;
+        if meta.file_type().is_symlink() {
+            continue;
+        }
+
+        if meta.is_dir() {
+            zip_add_dir_filtered(zip, &path, base_dir, zip_prefix, options, allowed_exts)?;
+            continue;
+        }
+
+        if !meta.is_file() {
+            continue;
+        }
+
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_ascii_lowercase())
+            .unwrap_or_default();
+        if ext.is_empty() {
+            continue;
+        }
+        if !allowed_exts
+            .iter()
+            .any(|allowed| allowed.eq_ignore_ascii_case(ext.as_str()))
+        {
             continue;
         }
 
@@ -4264,6 +4538,125 @@ fn now_unix_ms() -> u64 {
         .ok()
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
+}
+
+fn ensure_env_var(env: &mut Vec<(String, String)>, key: &str, value: &str) -> bool {
+    if env.iter().any(|(k, _)| k == key) {
+        return false;
+    }
+    env.push((key.to_string(), value.to_string()));
+    true
+}
+
+fn cargo_run_inject_feature(cmd: &mut Vec<String>, feature: &str) -> bool {
+    if cmd.is_empty() {
+        return false;
+    }
+
+    let exe = cmd[0].to_ascii_lowercase();
+    let is_cargo = exe == "cargo" || exe.ends_with("\\cargo.exe") || exe.ends_with("/cargo");
+    if !is_cargo {
+        return false;
+    }
+
+    let Some(run_idx) = cmd.iter().position(|a| a == "run") else {
+        return false;
+    };
+
+    // If `--features` already exists, try to extend it.
+    for i in 0..cmd.len() {
+        if cmd[i] == "--features" || cmd[i] == "-F" {
+            if let Some(value) = cmd.get_mut(i + 1) {
+                let mut features: Vec<&str> = value
+                    .split(',')
+                    .map(|s| s.trim())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                if features.iter().any(|f| *f == feature) {
+                    return false;
+                }
+                features.push(feature);
+                *value = features.join(",");
+                return true;
+            }
+        }
+        if let Some(rest) = cmd[i].strip_prefix("--features=") {
+            let mut features: Vec<&str> = rest
+                .split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if features.iter().any(|f| *f == feature) {
+                return false;
+            }
+            features.push(feature);
+            cmd[i] = format!("--features={}", features.join(","));
+            return true;
+        }
+        if let Some(rest) = cmd[i].strip_prefix("-F=") {
+            let mut features: Vec<&str> = rest
+                .split(',')
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if features.iter().any(|f| *f == feature) {
+                return false;
+            }
+            features.push(feature);
+            cmd[i] = format!("-F={}", features.join(","));
+            return true;
+        }
+    }
+
+    // Insert `--features` before the `--` sentinel (if any), otherwise append.
+    let sentinel = cmd.iter().position(|a| a == "--").unwrap_or(cmd.len());
+    let insert_at = sentinel.max(run_idx + 1);
+    cmd.insert(insert_at, "--features".to_string());
+    cmd.insert(insert_at + 1, feature.to_string());
+    true
+}
+
+fn list_files_with_extensions(dir: &Path, exts: &[&str]) -> Vec<PathBuf> {
+    fn visit(out: &mut Vec<PathBuf>, dir: &Path, exts: &[&str]) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let Ok(meta) = std::fs::symlink_metadata(&path) else {
+                continue;
+            };
+            if meta.file_type().is_symlink() {
+                continue;
+            }
+            if meta.is_dir() {
+                visit(out, &path, exts);
+                continue;
+            }
+            if !meta.is_file() {
+                continue;
+            }
+            let ext = path
+                .extension()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_ascii_lowercase())
+                .unwrap_or_default();
+            if ext.is_empty() {
+                continue;
+            }
+            if exts
+                .iter()
+                .any(|allowed| allowed.eq_ignore_ascii_case(ext.as_str()))
+            {
+                out.push(path);
+            }
+        }
+    }
+
+    let mut out = Vec::new();
+    visit(&mut out, dir, exts);
+    out.sort();
+    out
 }
 
 fn write_json_value(path: &Path, v: &serde_json::Value) -> Result<(), String> {
