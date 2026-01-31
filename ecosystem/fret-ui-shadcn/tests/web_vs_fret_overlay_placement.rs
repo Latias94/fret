@@ -8170,6 +8170,27 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
     let mut frame: u64 = 3;
 
+    // The web golden extractor disables motion before interacting with overlays. In Fret we don't
+    // globally disable motion, so wait for the open animation to settle before we emulate
+    // `scrollIntoView(...)` via wheel.
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+    frame += settle_frames;
+
     // Match the web golden extraction script behavior:
     // - `scrollIntoView({ block: "center" })` on the submenu trigger element
     // - focus the trigger and press ArrowRight
@@ -8195,6 +8216,9 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
             break;
         }
 
+        // Wheel scrolling inside the menu should update the scroll viewport without moving the
+        // menu panel itself (i.e. it should remain anchored to the trigger).
+        let prev_root_menu_bounds = root_menu.bounds;
         let wheel_pos = Point::new(
             Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
             Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
@@ -8224,7 +8248,25 @@ fn build_button_group_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
             },
         );
         frame += 1;
-        snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let next = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let next_root_menu = next
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("fret root menu semantics (after wheel)");
+        assert_close(
+            &format!("{web_name} root menu x stable under wheel"),
+            next_root_menu.bounds.origin.x.0,
+            prev_root_menu_bounds.origin.x.0,
+            1.0,
+        );
+        assert_close(
+            &format!("{web_name} root menu y stable under wheel"),
+            next_root_menu.bounds.origin.y.0,
+            prev_root_menu_bounds.origin.y.0,
+            1.0,
+        );
+        snap = next;
     }
 
     let trigger = snap
@@ -8553,6 +8595,27 @@ fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Sema
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
     let mut frame: u64 = 3;
 
+    // The web golden extractor disables motion before interacting with overlays. In Fret we don't
+    // globally disable motion, so wait for the open animation to settle before we emulate
+    // `scrollIntoView(...)` via wheel.
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick),
+            request_semantics,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+    frame += settle_frames;
+
     if web_name.contains("submenu-kbd") {
         // Match the web golden extraction script behavior:
         // - `scrollIntoView({ block: "center" })` on the submenu trigger element
@@ -8579,6 +8642,9 @@ fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Sema
                 break;
             }
 
+            // Wheel scrolling inside the menu should update the scroll viewport without moving the
+            // menu panel itself (i.e. it should remain anchored to the trigger).
+            let prev_root_menu_bounds = root_menu.bounds;
             let wheel_pos = Point::new(
                 Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
                 Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
@@ -8608,7 +8674,25 @@ fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Sema
                 },
             );
             frame += 1;
-            snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+            let next = ui.semantics_snapshot().expect("semantics snapshot").clone();
+            let next_root_menu = next
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Menu)
+                .expect("fret root menu semantics (after wheel)");
+            assert_close(
+                &format!("{web_name} root menu x stable under wheel"),
+                next_root_menu.bounds.origin.x.0,
+                prev_root_menu_bounds.origin.x.0,
+                1.0,
+            );
+            assert_close(
+                &format!("{web_name} root menu y stable under wheel"),
+                next_root_menu.bounds.origin.y.0,
+                prev_root_menu_bounds.origin.y.0,
+                1.0,
+            );
+            snap = next;
         }
 
         let trigger = snap
@@ -12393,6 +12477,24 @@ fn build_context_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
     let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
     let mut frame: u64 = 3;
 
+    // The web golden extractor disables motion before interacting with overlays. In Fret we don't
+    // globally disable motion, so wait for the open animation to settle before we emulate
+    // `scrollIntoView(...)` via wheel.
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame + tick as u64),
+            request_semantics,
+            render,
+        );
+    }
+    frame += settle_frames;
+
     if web_name.contains("submenu-kbd") {
         // Match the web golden extraction script behavior:
         // - `scrollIntoView({ block: "center" })` on the submenu trigger element
@@ -12419,6 +12521,9 @@ fn build_context_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
                 break;
             }
 
+            // Wheel scrolling inside the menu should update the scroll viewport without moving the
+            // menu panel itself (i.e. it should remain anchored to the trigger).
+            let prev_root_menu_bounds = root_menu.bounds;
             let wheel_pos = Point::new(
                 Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
                 Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
@@ -12445,7 +12550,25 @@ fn build_context_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
                 render,
             );
             frame += 1;
-            snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+            let next = ui.semantics_snapshot().expect("semantics snapshot").clone();
+            let next_root_menu = next
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Menu)
+                .expect("fret root menu semantics (after wheel)");
+            assert_close(
+                &format!("{web_name} root menu x stable under wheel"),
+                next_root_menu.bounds.origin.x.0,
+                prev_root_menu_bounds.origin.x.0,
+                1.0,
+            );
+            assert_close(
+                &format!("{web_name} root menu y stable under wheel"),
+                next_root_menu.bounds.origin.y.0,
+                prev_root_menu_bounds.origin.y.0,
+                1.0,
+            );
+            snap = next;
         }
 
         let trigger = snap
@@ -17353,6 +17476,9 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
                 break;
             }
 
+            // Wheel scrolling inside the menu should update the scroll viewport without moving the
+            // menu panel itself (i.e. it should remain anchored to the trigger).
+            let prev_root_menu_bounds = root_menu.bounds;
             let wheel_pos = Point::new(
                 Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
                 Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
@@ -17379,7 +17505,32 @@ fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsS
                 render,
             );
             frame += 1;
-            snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+            let next = ui.semantics_snapshot().expect("semantics snapshot").clone();
+            let next_trigger = next
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+                .expect("fret submenu trigger semantics (Share, after wheel)");
+            let next_root_menu = next
+                .nodes
+                .iter()
+                .filter(|n| n.role == SemanticsRole::Menu)
+                .find(|m| fret_rect_contains(m.bounds, next_trigger.bounds))
+                .or_else(|| next.nodes.iter().find(|n| n.role == SemanticsRole::Menu))
+                .expect("fret root menu semantics (after wheel)");
+            assert_close(
+                &format!("{web_name} root menu x stable under wheel"),
+                next_root_menu.bounds.origin.x.0,
+                prev_root_menu_bounds.origin.x.0,
+                1.0,
+            );
+            assert_close(
+                &format!("{web_name} root menu y stable under wheel"),
+                next_root_menu.bounds.origin.y.0,
+                prev_root_menu_bounds.origin.y.0,
+                1.0,
+            );
+            snap = next;
         }
 
         let trigger = snap

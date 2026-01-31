@@ -160,6 +160,10 @@ Notes on API mapping:
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
 - Web placement gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
+- Wheel scroll anchor stability gate: while emulating `scrollIntoView({ block: "center" })` for
+  submenu triggers (via wheel), the root menu panel origin remains stable under wheel input
+  (asserted in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` during
+  `web_vs_fret_dropdown_menu_demo_submenu_*`).
 - Web submenu panel shadow gate (`shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`,
   `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).

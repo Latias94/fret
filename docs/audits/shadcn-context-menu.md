@@ -86,6 +86,10 @@ _None tracked at this time._
 - Interaction test: `context_menu_submenu_opens_on_arrow_right_without_pointer_move`
 - Submenu openSteps parity (web-vs-fret): `context-menu-demo.submenu-kbd*` follows the extractor semantics (`scrollIntoView({ block: "center" })` + focus + ArrowRight),
   while `context-menu-demo.submenu` opens via hover after driving the submenu open-delay timer from effects.
+- Wheel scroll anchor stability gate: while emulating `scrollIntoView({ block: "center" })` for
+  submenu triggers (via wheel), the root menu panel origin remains stable under wheel input
+  (asserted in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` during
+  `web_vs_fret_context_menu_demo_submenu_*`).
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
 - Web placement gate (root): `web_vs_fret_context_menu_demo_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).

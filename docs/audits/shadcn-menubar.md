@@ -154,6 +154,10 @@ _None tracked at this time._
   (`web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x320.open.json`).
 - shadcn-web submenu placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_submenu_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd.open.json`).
+- Wheel scroll anchor stability gate: while emulating `scrollIntoView({ block: "center" })` for
+  submenu triggers (via wheel), the root menu panel origin remains stable under wheel input
+  (asserted in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` during
+  `web_vs_fret_menubar_demo_submenu_*`).
 - shadcn-web submenu shadow gate (`shadow-lg`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_demo_submenu_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_shadow_matches_web_dark`;
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd.open.json`).
