@@ -44,6 +44,36 @@ impl TextService for FakeTextService {
     fn release(&mut self, _blob: fret_core::TextBlobId) {
         self.release_calls += 1;
     }
+
+    fn selection_rects_clipped(
+        &mut self,
+        _blob: fret_core::TextBlobId,
+        range: (usize, usize),
+        clip: Rect,
+        out: &mut Vec<Rect>,
+    ) {
+        let (start, end) = range;
+        if start >= end {
+            return;
+        }
+
+        let width = Px((end.saturating_sub(start)) as f32);
+        let rect = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(width, Px(10.0)));
+
+        let ix0 = rect.origin.x.0.max(clip.origin.x.0);
+        let iy0 = rect.origin.y.0.max(clip.origin.y.0);
+        let ix1 = (rect.origin.x.0 + rect.size.width.0).min(clip.origin.x.0 + clip.size.width.0);
+        let iy1 = (rect.origin.y.0 + rect.size.height.0).min(clip.origin.y.0 + clip.size.height.0);
+
+        if ix1 <= ix0 || iy1 <= iy0 {
+            return;
+        }
+
+        out.push(Rect::new(
+            Point::new(Px(ix0), Px(iy0)),
+            Size::new(Px(ix1 - ix0), Px(iy1 - iy0)),
+        ));
+    }
 }
 
 impl fret_core::PathService for FakeTextService {

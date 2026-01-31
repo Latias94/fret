@@ -509,6 +509,75 @@ impl ElementHostWidget {
                         },
                     );
                 }
+                let clip = fret_core::Rect::new(
+                    fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                    cx.bounds.size,
+                );
+
+                let mut bg_runs: Vec<(usize, usize, Color)> = Vec::new();
+                let mut rects: Vec<fret_core::Rect> = Vec::new();
+
+                let mut offset = 0usize;
+                let mut active_bg: Option<(usize, Color)> = None;
+
+                for span in props.rich.spans.as_ref() {
+                    let end = offset.saturating_add(span.len);
+
+                    match (active_bg, span.paint.bg) {
+                        (Some((start, bg)), Some(next)) if bg == next => {}
+                        (Some((start, bg)), Some(next)) => {
+                            if start < offset {
+                                bg_runs.push((start, offset, bg));
+                            }
+                            active_bg = Some((offset, next));
+                        }
+                        (Some((start, bg)), None) => {
+                            if start < offset {
+                                bg_runs.push((start, offset, bg));
+                            }
+                            active_bg = None;
+                        }
+                        (None, Some(next)) => {
+                            active_bg = Some((offset, next));
+                        }
+                        (None, None) => {}
+                    }
+
+                    offset = end;
+                }
+
+                if let Some((start, bg)) = active_bg
+                    && start < offset
+                {
+                    bg_runs.push((start, offset, bg));
+                }
+
+                for (start, end, bg) in bg_runs {
+                    if start >= end {
+                        continue;
+                    }
+                    rects.clear();
+                    cx.services
+                        .selection_rects_clipped(blob, (start, end), clip, &mut rects);
+                    for r in rects.iter() {
+                        let rect = fret_core::Rect::new(
+                            fret_core::Point::new(
+                                fret_core::Px(cx.bounds.origin.x.0 + r.origin.x.0),
+                                fret_core::Px(cx.bounds.origin.y.0 + r.origin.y.0),
+                            ),
+                            r.size,
+                        );
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(0),
+                            rect,
+                            background: bg,
+                            border: fret_core::Edges::all(fret_core::Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+                        });
+                    }
+                }
+
                 if focused {
                     let (anchor, caret) = crate::elements::with_element_state(
                         &mut *cx.app,
@@ -521,10 +590,6 @@ impl ElementHostWidget {
                     let end = anchor.max(caret);
                     if start < end {
                         let mut rects: Vec<fret_core::Rect> = Vec::new();
-                        let clip = fret_core::Rect::new(
-                            fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
-                            cx.bounds.size,
-                        );
                         cx.services
                             .selection_rects_clipped(blob, (start, end), clip, &mut rects);
                         let sel_color = cx.theme().color_required("selection.background");
