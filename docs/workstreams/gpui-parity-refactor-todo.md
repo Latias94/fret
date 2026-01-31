@@ -635,10 +635,14 @@ topics (if/when we implement them):
       - Note: retained-host reconcile now prefers the prepaint-derived `VirtualListState.window_range` (ADR 0190) rather than re-deriving the
         window from scroll state during reconcile. This keeps “why did the window change?” explainable from one bundle and reduces duplicated work.
         - Evidence: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache`)
-    - [ ] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
+    - [x] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
       `--check-retained-vlist-reconcile-no-notify`, attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`,
       plus `--check-wheel-scroll` and `--check-stale-paint`.
-    - [ ] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
+      - Suite: `fretboard diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
+      - Scripts:
+        - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
+        - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
+    - [~] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
   - Definition of done (v2; mark `[x]` when all are true):
     - [ ] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
     - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
