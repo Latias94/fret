@@ -1906,7 +1906,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
                 check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
                 check_vlist_scroll_window_dirty_max =
-                    check_vlist_scroll_window_dirty_max.or(Some(4));
+                    check_vlist_scroll_window_dirty_max.or(Some(2));
                 check_wheel_scroll_test_id = check_wheel_scroll_test_id
                     .or(Some("ui-gallery-virtual-list-row-0-label".to_string()));
                 check_stale_paint_test_id = check_stale_paint_test_id
