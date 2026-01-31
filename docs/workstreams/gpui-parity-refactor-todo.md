@@ -1091,6 +1091,9 @@ topics (if/when we implement them):
       - Evidence bundles (suite, view-cache, release):
         - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829965598-components-gallery-file-tree-window-boundary-scroll/bundle.json`
         - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829992147-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862343305-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862370728-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862397267-components-gallery-file-tree-window-boundary-bounce/bundle.json`
       - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
         - window-boundary: `C:\fret-diag-perf-components-gallery-file-tree-boundary\1769830674611-script-step-0022-wheel/bundle.json` (2897/2216/30/717)
         - toggle+scroll: `C:\fret-diag-perf-components-gallery-file-tree-toggle\1769830707477-script-step-0021-wheel/bundle.json` (2719/2035/26/768)
