@@ -711,7 +711,7 @@ topics (if/when we implement them):
               - max.us(total/layout/prepaint/paint)=4435/3656/45/734; max `reconcile_time_us`=50
               - Evidence: `target/fret-diag-perf-vlist-retained-boundary-prefetch5/1769878053904-script-step-0048-wheel/bundle.json`
   - Definition of done (v2; mark `[x]` when all are true):
-    - [ ] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
+    - [x] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
     - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
     - [x] The same substrate can be applied to at least one more surface (reused primitives, not a one-off hack).
   - Clarification: the legacy `virtual_list_keyed` API (frame-local `FnMut` row closures) cannot support “attach/detach on cache-hit frames”
