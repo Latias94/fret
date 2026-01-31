@@ -386,17 +386,23 @@ impl<H: UiHost> UiTree<H> {
                         inv = Invalidation::Layout;
                         detail = UiDebugInvalidationDetail::ScrollHandleLayout;
                     } else if requires_window_update {
-                        let retained_host =
-                            crate::elements::with_window_state(&mut *app, window, |window_state| {
+                        let retained_host = crate::elements::with_window_state(
+                            &mut *app,
+                            window,
+                            |window_state| {
                                 let retained = window_state.has_state::<
                                     crate::windowed_surface_host::RetainedVirtualListHostMarker,
                                 >(record.element);
                                 if retained {
                                     window_state
-                                        .mark_retained_virtual_list_needs_reconcile(record.element);
+                                        .mark_retained_virtual_list_needs_reconcile(
+                                            record.element,
+                                            crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
+                                        );
                                 }
                                 retained
-                            });
+                            },
+                        );
 
                         if retained_host {
                             // Retained-host virtual surfaces can update row membership without

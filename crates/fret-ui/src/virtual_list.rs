@@ -98,6 +98,95 @@ pub(crate) fn shift_virtual_range_minimally(
     }
 }
 
+pub(crate) fn prefetch_virtual_range_step(
+    rendered: VirtualRange,
+    visible: VirtualRange,
+    prefetch_margin: usize,
+    prefetch_step: usize,
+) -> Option<VirtualRange> {
+    let overscan = rendered.overscan;
+    let count = rendered.count;
+    if count == 0 || overscan == 0 || prefetch_step == 0 {
+        return None;
+    }
+
+    let inner_len = rendered.end_index.saturating_sub(rendered.start_index);
+    let rendered_outer_start = rendered.start_index.saturating_sub(overscan);
+    let rendered_outer_end = (rendered.end_index + overscan).min(count.saturating_sub(1));
+
+    // Prefetch is only valid if the visible range is still covered by the currently-rendered
+    // prefetch window. Escapes are handled by `shift_virtual_range_minimally`.
+    if visible.start_index < rendered_outer_start || visible.end_index > rendered_outer_end {
+        return None;
+    }
+
+    let near_start = visible.start_index <= rendered_outer_start.saturating_add(prefetch_margin);
+    let near_end = visible.end_index >= rendered_outer_end.saturating_sub(prefetch_margin);
+    if !near_start && !near_end {
+        return None;
+    }
+
+    let slack_start = visible.start_index.saturating_sub(rendered_outer_start);
+    let slack_end = rendered_outer_end.saturating_sub(visible.end_index);
+    let want_forward = if near_end && !near_start {
+        true
+    } else if near_start && !near_end {
+        false
+    } else {
+        // Both sides are "near" (small windows, small overscan, or being close to the list start/end).
+        // Prefer shifting toward the tighter edge so prefetch doesn't get stuck.
+        slack_end < slack_start
+    };
+
+    let mut start = rendered.start_index;
+    let mut end = rendered.end_index;
+
+    if want_forward {
+        // Ensure the forward shift does not exclude the visible start from the new expanded window.
+        let max_delta = visible
+            .start_index
+            .saturating_add(overscan)
+            .saturating_sub(rendered.start_index);
+        let delta = prefetch_step.min(max_delta);
+        if delta == 0 {
+            return None;
+        }
+        start = start.saturating_add(delta);
+        end = end.saturating_add(delta);
+    } else {
+        // Ensure the backward shift does not exclude the visible end from the new expanded window.
+        let max_delta = rendered
+            .end_index
+            .saturating_add(overscan)
+            .saturating_sub(visible.end_index);
+        let delta = prefetch_step.min(max_delta);
+        if delta == 0 {
+            return None;
+        }
+        start = start.saturating_sub(delta);
+        end = end.saturating_sub(delta);
+    }
+
+    if end >= count {
+        end = count.saturating_sub(1);
+        start = end.saturating_sub(inner_len);
+    }
+    if start >= count {
+        start = count.saturating_sub(1);
+    }
+    if start > end {
+        end = start;
+    }
+
+    let next = VirtualRange {
+        start_index: start,
+        end_index: end,
+        overscan,
+        count,
+    };
+    (next != rendered).then_some(next)
+}
+
 pub(crate) fn visible_item_index_span(items: &[VirtualItem]) -> Option<(usize, usize)> {
     let first = items.first()?.index;
     let mut prev = first;

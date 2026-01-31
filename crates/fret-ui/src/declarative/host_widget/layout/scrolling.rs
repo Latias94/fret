@@ -431,6 +431,11 @@ impl ElementHostWidget {
                     deferred_scroll_to_item,
                     deferred_scroll_consumed,
                     window_mismatch,
+                    window_shift_kind: if window_mismatch {
+                        crate::tree::UiDebugVirtualListWindowShiftKind::Escape
+                    } else {
+                        crate::tree::UiDebugVirtualListWindowShiftKind::None
+                    },
                 });
         }
 
@@ -442,7 +447,10 @@ impl ElementHostWidget {
                         self.element,
                     );
                     if retained {
-                        window_state.mark_retained_virtual_list_needs_reconcile(self.element);
+                        window_state.mark_retained_virtual_list_needs_reconcile(
+                            self.element,
+                            crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
+                        );
                     }
                     retained
                 });

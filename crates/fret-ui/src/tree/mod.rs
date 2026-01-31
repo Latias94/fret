@@ -511,6 +511,13 @@ pub enum UiDebugVirtualListWindowSource {
     Prepaint,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugVirtualListWindowShiftKind {
+    None,
+    Prefetch,
+    Escape,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugVirtualListWindow {
     pub source: UiDebugVirtualListWindowSource,
@@ -539,12 +546,20 @@ pub struct UiDebugVirtualListWindow {
     pub deferred_scroll_to_item: bool,
     pub deferred_scroll_consumed: bool,
     pub window_mismatch: bool,
+    pub window_shift_kind: UiDebugVirtualListWindowShiftKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugRetainedVirtualListReconcileKind {
+    Prefetch,
+    Escape,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugRetainedVirtualListReconcile {
     pub node: NodeId,
     pub element: GlobalElementId,
+    pub reconcile_kind: UiDebugRetainedVirtualListReconcileKind,
     pub prev_items: u32,
     pub next_items: u32,
     pub preserved_items: u32,

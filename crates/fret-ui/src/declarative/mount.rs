@@ -1341,14 +1341,40 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
     window_frame: &mut WindowFrame,
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
-    elements: Vec<GlobalElementId>,
+    elements: Vec<(
+        GlobalElementId,
+        crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    )>,
 ) {
     if elements.is_empty() {
         return;
     }
 
-    for element in elements {
-        let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+    for (element, reconcile_kind) in elements {
+        let node = window_state
+            .node_entry(element)
+            .map(|e| e.node)
+            .or_else(|| {
+                // View-cache reuse can skip declarative re-mounting of subtrees, which means the
+                // element runtime may not have a fresh `NodeEntry` mapping for all elements that
+                // still exist in the current `WindowFrame`. Retained-host reconciles must remain
+                // viable on cache-hit frames, so fall back to scanning the frame and (if found)
+                // refresh the runtime mapping.
+                let node = window_frame
+                    .instances
+                    .iter()
+                    .find_map(|(&node, record)| (record.element == element).then_some(node))?;
+                window_state.set_node_entry(
+                    element,
+                    NodeEntry {
+                        node,
+                        last_seen_frame: frame_id,
+                        root: root_id,
+                    },
+                );
+                Some(node)
+            });
+        let Some(node) = node else {
             continue;
         };
 
@@ -1578,6 +1604,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             crate::tree::UiDebugRetainedVirtualListReconcile {
                 node,
                 element,
+                reconcile_kind,
                 prev_items: prev_items_len.min(u32::MAX as usize) as u32,
                 next_items: desired_items.len().min(u32::MAX as usize) as u32,
                 preserved_items: preserved,

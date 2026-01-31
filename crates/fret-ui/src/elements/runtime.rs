@@ -141,7 +141,8 @@ pub struct WindowElementState {
     view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
-    pub(super) pending_retained_virtual_list_reconciles: HashSet<GlobalElementId>,
+    pub(super) pending_retained_virtual_list_reconciles:
+        HashMap<GlobalElementId, crate::tree::UiDebugRetainedVirtualListReconcileKind>,
     retained_virtual_list_keep_alive_roots: HashSet<NodeId>,
     prepared_frame: FrameId,
     #[cfg(any(test, feature = "diagnostics"))]
@@ -389,12 +390,31 @@ impl WindowElementState {
         Some(out)
     }
 
-    pub(crate) fn mark_retained_virtual_list_needs_reconcile(&mut self, element: GlobalElementId) {
+    pub(crate) fn mark_retained_virtual_list_needs_reconcile(
+        &mut self,
+        element: GlobalElementId,
+        kind: crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    ) {
         self.pending_retained_virtual_list_reconciles
-            .insert(element);
+            .entry(element)
+            .and_modify(|existing| {
+                // "Escape" is correctness-critical; if both are scheduled in the same tick, keep the
+                // stronger reason so downstream diagnostics/gates remain explainable.
+                if *existing == crate::tree::UiDebugRetainedVirtualListReconcileKind::Prefetch
+                    && kind == crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape
+                {
+                    *existing = kind;
+                }
+            })
+            .or_insert(kind);
     }
 
-    pub(crate) fn take_retained_virtual_list_reconciles(&mut self) -> Vec<GlobalElementId> {
+    pub(crate) fn take_retained_virtual_list_reconciles(
+        &mut self,
+    ) -> Vec<(
+        GlobalElementId,
+        crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    )> {
         self.pending_retained_virtual_list_reconciles
             .drain()
             .collect()

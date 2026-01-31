@@ -1069,6 +1069,192 @@ fn retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying
 }
 
 #[test]
+fn retained_virtual_list_prefetches_window_before_escape_without_rerendering_cache_root() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let render_calls: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        render_calls: Arc<AtomicUsize>,
+    ) -> AnyElement {
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Fill;
+        cache.cache_key = 1;
+
+        cx.view_cache(cache, move |cx| {
+            render_calls.fetch_add(1, Ordering::SeqCst);
+
+            let list_layout = crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: crate::element::Length::Fill,
+                    height: crate::element::Length::Fill,
+                    ..Default::default()
+                },
+                overflow: crate::element::Overflow::Clip,
+                ..Default::default()
+            };
+
+            let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn =
+                Arc::new(|i| i as crate::ItemKey);
+            let row: crate::windowed_surface_host::RetainedVirtualListRowFn<TestHost> =
+                Arc::new(|cx, i| cx.text(format!("row {i}")));
+
+            // Overscan > 0 is required to test staged prefetch (shift before escape).
+            let options = crate::element::VirtualListOptions::new(Px(10.0), 4);
+            vec![cx.virtual_list_keyed_retained_with_layout(
+                list_layout,
+                100,
+                options,
+                scroll_handle,
+                key_at,
+                row,
+            )]
+        })
+    }
+
+    // Establish viewport and mount initial children.
+    for _frame in 0..3 {
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "mvp50-vlist-retained-prefetch",
+            |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        app.advance_frame();
+    }
+
+    // Prefer a cache hit before changing the scroll offset.
+    let calls_before_scroll = render_calls.load(Ordering::SeqCst);
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-retained-prefetch",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_scroll,
+        "expected a cache hit before prefetching"
+    );
+    let list_element = ui
+        .debug_virtual_list_windows()
+        .last()
+        .expect("expected at least one virtual list window debug record")
+        .element;
+
+    // Move near the overscan boundary but stay within it so this is a prefetch (not an escape).
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(30.0)));
+    app.advance_frame();
+
+    // Frame: cache hit; prepaint should request a prefetch reconcile.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-retained-prefetch",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    // Ensure prepaint still observes a lagging "render window" (the previous window) while the
+    // scroll offset and ideal window have advanced. This matches the steady-state cache-hit case
+    // we care about: prepaint should request a staged prefetch reconcile without forcing the
+    // cache-root subtree to rerender.
+    crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element,
+        crate::element::VirtualListState::default,
+        |state| {
+            state.render_window_range = Some(crate::virtual_list::VirtualRange {
+                start_index: 0,
+                end_index: 4,
+                overscan: 4,
+                count: 100,
+            });
+        },
+    );
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_scroll,
+        "expected staged prefetch to avoid rerendering the view-cache root"
+    );
+    let last_window = ui
+        .debug_virtual_list_windows()
+        .iter()
+        .rev()
+        .find(|w| {
+            matches!(
+                w.source,
+                crate::tree::UiDebugVirtualListWindowSource::Prepaint
+            )
+        })
+        .expect("expected a prepaint virtual list window debug record");
+    assert!(
+        !last_window.window_mismatch,
+        "expected prefetch to occur while still within the rendered prefetch window"
+    );
+    assert_eq!(
+        last_window.window_shift_kind,
+        crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch,
+        "expected prepaint to stage a prefetch window shift (record={last_window:?})"
+    );
+
+    // Next frame: reconcile executes (still cache-hit) and is attributed as a prefetch.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-retained-prefetch",
+        |cx| vec![build_tree(cx, &scroll_handle, Arc::clone(&render_calls))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        render_calls.load(Ordering::SeqCst),
+        calls_before_scroll,
+        "expected staged prefetch reconcile to avoid rerendering the view-cache root"
+    );
+    assert!(
+        ui.debug_retained_virtual_list_reconciles()
+            .iter()
+            .any(|r| r.reconcile_kind
+                == crate::tree::UiDebugRetainedVirtualListReconcileKind::Prefetch),
+        "expected at least one prefetch-attributed retained virtual-list reconcile"
+    );
+}
+
+#[test]
 fn retained_virtual_list_keep_alive_reuses_detached_items_when_scrolling_back() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
