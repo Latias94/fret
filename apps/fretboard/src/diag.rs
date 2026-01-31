@@ -68,6 +68,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_layout_fast_path_min: Option<u64> = None;
+    let mut check_vlist_policy_key_stable: bool = false;
     let mut check_vlist_window_mismatch_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
@@ -390,6 +391,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-layout-fast-path-min".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-vlist-policy-key-stable" => {
+                check_vlist_policy_key_stable = true;
                 i += 1;
             }
             "--check-vlist-prepaint-window-mismatch-min" | "--check-vlist-window-mismatch-min" => {
@@ -972,6 +977,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_view_cache_reuse_min.is_some()
                     || check_prepaint_actions_min.is_some()
                     || check_layout_fast_path_min.is_some()
+                    || check_vlist_policy_key_stable
                     || check_vlist_window_mismatch_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
@@ -1009,6 +1015,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_view_cache_reuse_min,
                         check_prepaint_actions_min,
                         check_layout_fast_path_min,
+                        check_vlist_policy_key_stable,
                         check_vlist_window_mismatch_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min,
@@ -1818,6 +1825,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 // - and stale-paint checks remain green.
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
                 check_layout_fast_path_min = check_layout_fast_path_min.or(Some(1));
+                check_vlist_policy_key_stable = true;
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_reconcile_cache_reuse_min =
@@ -1858,6 +1866,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
                 check_layout_fast_path_min = check_layout_fast_path_min.or(Some(1));
+                check_vlist_policy_key_stable = true;
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_reconcile_cache_reuse_min =
@@ -2049,6 +2058,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     ));
                 }
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
+                check_vlist_policy_key_stable = true;
                 check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
                 check_vlist_scroll_window_dirty_max =
                     check_vlist_scroll_window_dirty_max.or(Some(2));
@@ -2274,6 +2284,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         .filter(|_| should_gate_retained_vlist_for_script);
                 let vlist_scroll_window_dirty_max_for_script = check_vlist_scroll_window_dirty_max
                     .filter(|_| ui_gallery_script_requires_vlist_window_boundary_gate(&src));
+                let vlist_policy_key_stable_for_script = check_vlist_policy_key_stable
+                    && script_requires_vlist_policy_key_stability_gate(&src);
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
@@ -2282,6 +2294,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_view_cache_reuse_min.is_some()
                     || check_prepaint_actions_min.is_some()
                     || check_layout_fast_path_min.is_some()
+                    || vlist_policy_key_stable_for_script
                     || check_vlist_window_mismatch_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
@@ -2329,6 +2342,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_view_cache_reuse_min,
                         check_prepaint_actions_min,
                         check_layout_fast_path_min,
+                        vlist_policy_key_stable_for_script,
                         check_vlist_window_mismatch_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
@@ -2975,6 +2989,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 && min > 0
             {
                 check_bundle_for_view_cache_reuse_min(bundle_path.as_path(), min, warmup_frames)?;
+            }
+            if check_vlist_policy_key_stable {
+                check_bundle_for_vlist_policy_key_stable(bundle_path.as_path(), warmup_frames)?;
             }
             if let Some(min) = check_overlay_synthesis_min
                 && min > 0
@@ -3930,6 +3947,12 @@ fn ui_gallery_script_requires_vlist_window_boundary_gate(script: &Path) -> bool 
     matches!(name, "ui-gallery-virtual-list-window-boundary-scroll.json")
 }
 
+fn script_requires_vlist_policy_key_stability_gate(script: &Path) -> bool {
+    ui_gallery_script_requires_vlist_window_boundary_gate(script)
+        || script_requires_retained_vlist_window_boundary_gate(script)
+        || script_requires_retained_vlist_keep_alive_reuse_gate(script)
+}
+
 fn script_requires_retained_vlist_window_boundary_gate(script: &Path) -> bool {
     let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
         return false;
@@ -4167,6 +4190,7 @@ fn apply_post_run_checks(
     check_view_cache_reuse_min: Option<u64>,
     check_prepaint_actions_min: Option<u64>,
     check_layout_fast_path_min: Option<u64>,
+    check_vlist_policy_key_stable: bool,
     check_vlist_window_mismatch_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     check_viewport_input_min: Option<u64>,
@@ -4213,6 +4237,9 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_layout_fast_path_min(bundle_path, min, warmup_frames)?;
+    }
+    if check_vlist_policy_key_stable {
+        check_bundle_for_vlist_policy_key_stable(bundle_path, warmup_frames)?;
     }
     if let Some(min) = check_vlist_window_mismatch_min
         && min > 0
@@ -7405,6 +7432,132 @@ fn check_bundle_for_vlist_window_mismatch_min_json(
         "expected at least {min_mismatch_frames} snapshots with at least one virtual-list window mismatch, got {mismatch_frames} \
 (any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
 in bundle: {}",
+        bundle_path.display()
+    ))
+}
+
+fn check_bundle_for_vlist_policy_key_stable(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_policy_key_stable_json(&bundle, bundle_path, warmup_frames)
+}
+
+fn check_bundle_for_vlist_policy_key_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut expected_by_element: std::collections::HashMap<u64, u64> =
+        std::collections::HashMap::new();
+    let mut offenders: Vec<String> = Vec::new();
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+    let mut observed_vlist_entries: u64 = 0;
+
+    for (window_idx, w) in windows.iter().enumerate() {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+
+            let vlist_windows = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            for entry in vlist_windows {
+                let is_probe_layout = entry
+                    .get("is_probe_layout")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                if is_probe_layout {
+                    continue;
+                }
+
+                let Some(element) = entry.get("element").and_then(|v| v.as_u64()) else {
+                    continue;
+                };
+                observed_vlist_entries = observed_vlist_entries.saturating_add(1);
+
+                let policy_key = entry
+                    .get("policy_key")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let inputs_key = entry
+                    .get("inputs_key")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let items_revision = entry
+                    .get("items_revision")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let source = entry
+                    .get("source")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+
+                let expected = expected_by_element.entry(element).or_insert(policy_key);
+                if *expected != policy_key {
+                    if offenders.len() < 10 {
+                        offenders.push(format!(
+                            "window={window_idx} frame={frame_id} element={element} expected_policy_key={expected} got_policy_key={policy_key} source={source} items_revision={items_revision} inputs_key={inputs_key}"
+                        ));
+                    }
+                }
+                if policy_key == 0 && offenders.len() < 10 {
+                    offenders.push(format!(
+                        "window={window_idx} frame={frame_id} element={element} expected_policy_key={expected} got_policy_key=0 source={source} items_revision={items_revision} inputs_key={inputs_key}"
+                    ));
+                }
+            }
+        }
+    }
+
+    if observed_vlist_entries == 0 {
+        return Err(format!(
+            "expected at least one debug.virtual_list_windows entry after warmup_frames={warmup_frames}, found none \
+(any_view_cache_active={any_view_cache_active}, examined_snapshots={examined_snapshots}) in bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if offenders.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "virtual-list policy_key should be stable across snapshots (offenders={}, unique_elements={}, warmup_frames={warmup_frames}, any_view_cache_active={any_view_cache_active}, examined_snapshots={examined_snapshots}). \
+examples=[{}] bundle: {}",
+        offenders.len(),
+        expected_by_element.len(),
+        offenders.join(", "),
         bundle_path.display()
     ))
 }
@@ -10752,6 +10905,109 @@ mod tests {
             "expected at least 2 snapshots with debug.stats.layout_fast_path_taken=true"
         ));
         assert!(err.contains("got 1"));
+    }
+
+    #[test]
+    fn check_bundle_for_vlist_policy_key_stable_passes_when_constant() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "stats": { "view_cache_active": true },
+                            "virtual_list_windows": [
+                                { "element": 10, "policy_key": 123, "inputs_key": 1, "items_revision": 0, "source": "layout", "is_probe_layout": false }
+                            ]
+                        }
+                    },
+                    {
+                        "frame_id": 1,
+                        "debug": {
+                            "stats": { "view_cache_active": true },
+                            "virtual_list_windows": [
+                                { "element": 10, "policy_key": 123, "inputs_key": 2, "items_revision": 0, "source": "prepaint", "is_probe_layout": false }
+                            ]
+                        }
+                    }
+                ]
+            }]
+        });
+
+        check_bundle_for_vlist_policy_key_stable_json(&bundle, Path::new("bundle.json"), 0)
+            .expect("expected stable policy_key");
+    }
+
+    #[test]
+    fn check_bundle_for_vlist_policy_key_stable_fails_on_drift() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "stats": { "view_cache_active": true },
+                            "virtual_list_windows": [
+                                { "element": 10, "policy_key": 123, "inputs_key": 1, "items_revision": 0, "source": "layout", "is_probe_layout": false }
+                            ]
+                        }
+                    },
+                    {
+                        "frame_id": 1,
+                        "debug": {
+                            "stats": { "view_cache_active": true },
+                            "virtual_list_windows": [
+                                { "element": 10, "policy_key": 999, "inputs_key": 2, "items_revision": 0, "source": "layout", "is_probe_layout": false }
+                            ]
+                        }
+                    }
+                ]
+            }]
+        });
+
+        let err =
+            check_bundle_for_vlist_policy_key_stable_json(&bundle, Path::new("bundle.json"), 0)
+                .expect_err("expected drift to fail");
+        assert!(err.contains("policy_key should be stable"));
+        assert!(err.contains("element=10"));
+        assert!(err.contains("got_policy_key=999"));
+    }
+
+    #[test]
+    fn check_bundle_for_vlist_policy_key_stable_respects_warmup_frames() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "stats": { "view_cache_active": true },
+                            "virtual_list_windows": [
+                                { "element": 10, "policy_key": 123, "inputs_key": 1, "items_revision": 0, "source": "layout", "is_probe_layout": false }
+                            ]
+                        }
+                    },
+                    {
+                        "frame_id": 1,
+                        "debug": {
+                            "stats": { "view_cache_active": true },
+                            "virtual_list_windows": [
+                                { "element": 10, "policy_key": 999, "inputs_key": 2, "items_revision": 0, "source": "layout", "is_probe_layout": false }
+                            ]
+                        }
+                    }
+                ]
+            }]
+        });
+
+        check_bundle_for_vlist_policy_key_stable_json(&bundle, Path::new("bundle.json"), 1)
+            .expect("expected warmup to skip drift frame");
     }
 
     #[test]
