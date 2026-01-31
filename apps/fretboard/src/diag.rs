@@ -65,6 +65,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
     let mut perf_repeat: u64 = 1;
+    let mut max_top_total_us: Option<u64> = None;
+    let mut max_top_layout_us: Option<u64> = None;
+    let mut max_top_solve_us: Option<u64> = None;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_stale_scene_test_id: Option<String> = None;
@@ -312,6 +315,39 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --repeat".to_string())?
                     .max(1);
+                i += 1;
+            }
+            "--max-top-total-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-top-total-us".to_string());
+                };
+                max_top_total_us = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-top-total-us".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-top-layout-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-top-layout-us".to_string());
+                };
+                max_top_layout_us = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-top-layout-us".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-top-solve-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-top-solve-us".to_string());
+                };
+                max_top_solve_us = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-top-solve-us".to_string())?,
+                );
                 i += 1;
             }
             "--check-stale-paint" => {
@@ -1914,6 +1950,9 @@ See: `docs/tracy.md`.\n";
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
             let reuse_process = launch.is_none();
+            let wants_perf_thresholds = max_top_total_us.is_some()
+                || max_top_layout_us.is_some()
+                || max_top_solve_us.is_some();
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
@@ -1931,6 +1970,8 @@ See: `docs/tracy.md`.\n";
             };
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
+            let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
+            let mut perf_threshold_failures: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
             let stats_opts = BundleStatsOptions { warmup_frames };
 
@@ -2041,6 +2082,8 @@ See: `docs/tracy.md`.\n";
                         let top = report.top.first();
                         let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
                         let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                        let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
+                        let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
                         let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                         let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
@@ -2068,6 +2111,8 @@ See: `docs/tracy.md`.\n";
                                 "sort": sort.as_str(),
                                 "top_total_time_us": top_total,
                                 "top_layout_time_us": top_layout,
+                                "top_layout_engine_solve_time_us": top_solve,
+                                "top_layout_engine_solves": top_solves,
                                 "top_prepaint_time_us": top_prepaint,
                                 "top_paint_time_us": top_paint,
                                 "top_tick_id": top_tick,
@@ -2083,17 +2128,62 @@ See: `docs/tracy.md`.\n";
                             }));
                         } else {
                             println!(
-                                "PERF {} sort={} top.us(total/layout/prepaint/paint)={}/{}/{}/{} top.tick={} top.frame={} bundle={}",
+                                "PERF {} sort={} top.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
                                 src.display(),
                                 sort.as_str(),
                                 top_total,
                                 top_layout,
+                                top_solve,
                                 top_prepaint,
                                 top_paint,
                                 top_tick,
                                 top_frame,
                                 bundle_path.display(),
                             );
+                        }
+
+                        if wants_perf_thresholds {
+                            let worst_run = serde_json::json!({
+                                "run_index": 0,
+                                "top_total_time_us": top_total,
+                                "top_layout_time_us": top_layout,
+                                "top_layout_engine_solve_time_us": top_solve,
+                                "top_tick_id": top_tick,
+                                "top_frame_id": top_frame,
+                                "bundle": bundle_path.display().to_string(),
+                            });
+                            let row = serde_json::json!({
+                                "script": src.display().to_string(),
+                                "sort": sort.as_str(),
+                                "repeat": 1,
+                                "runs": [worst_run.clone()],
+                                "max": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                },
+                                "thresholds": {
+                                    "max_top_total_us": max_top_total_us,
+                                    "max_top_layout_us": max_top_layout_us,
+                                    "max_top_solve_us": max_top_solve_us,
+                                },
+                                "worst": {
+                                    "total": worst_run,
+                                    "layout": null,
+                                    "solve": null,
+                                }
+                            });
+                            perf_threshold_rows.push(row);
+                            perf_threshold_failures.extend(scan_perf_threshold_failures(
+                                &src.display().to_string(),
+                                sort,
+                                max_top_total_us,
+                                max_top_layout_us,
+                                max_top_solve_us,
+                                top_total,
+                                top_layout,
+                                top_solve,
+                            ));
                         }
 
                         match &overall_worst {
@@ -2124,6 +2214,7 @@ See: `docs/tracy.md`.\n";
 
                 let mut runs_total: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_layout: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_solve: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_prepaint: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
@@ -2252,6 +2343,8 @@ See: `docs/tracy.md`.\n";
                     let top = report.top.first();
                     let top_total = top.map(|r| r.total_time_us).unwrap_or(0);
                     let top_layout = top.map(|r| r.layout_time_us).unwrap_or(0);
+                    let top_solve = top.map(|r| r.layout_engine_solve_time_us).unwrap_or(0);
+                    let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
                     let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
@@ -2275,12 +2368,15 @@ See: `docs/tracy.md`.\n";
 
                     runs_total.push(top_total);
                     runs_layout.push(top_layout);
+                    runs_solve.push(top_solve);
                     runs_prepaint.push(top_prepaint);
                     runs_paint.push(top_paint);
                     runs_json.push(serde_json::json!({
                         "run_index": run_index,
                         "top_total_time_us": top_total,
                         "top_layout_time_us": top_layout,
+                        "top_layout_engine_solve_time_us": top_solve,
+                        "top_layout_engine_solves": top_solves,
                         "top_prepaint_time_us": top_prepaint,
                         "top_paint_time_us": top_paint,
                         "top_tick_id": top_tick,
@@ -2371,6 +2467,7 @@ See: `docs/tracy.md`.\n";
                             "stats": {
                                 "total_time_us": summarize_times_us(&runs_total),
                                 "layout_time_us": summarize_times_us(&runs_layout),
+                                "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
                                 "prepaint_time_us": summarize_times_us(&runs_prepaint),
                                 "paint_time_us": summarize_times_us(&runs_paint),
                                 "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
@@ -2389,26 +2486,63 @@ See: `docs/tracy.md`.\n";
                     } else {
                         let total = summarize_times_us(&runs_total);
                         let layout = summarize_times_us(&runs_layout);
+                        let solve = summarize_times_us(&runs_solve);
                         let prepaint = summarize_times_us(&runs_prepaint);
                         let paint = summarize_times_us(&runs_paint);
                         println!(
-                            "PERF {} sort={} repeat={} p50.us(total/layout/prepaint/paint)={}/{}/{}/{} p95.us(total/layout/prepaint/paint)={}/{}/{}/{} max.us(total/layout/prepaint/paint)={}/{}/{}/{}",
+                            "PERF {} sort={} repeat={} p50.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} p95.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} max.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{}",
                             src.display(),
                             sort.as_str(),
                             repeat,
                             total.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             layout.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            solve.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             total.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             layout.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            solve.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             total.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             layout.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            solve.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                         );
+                    }
+
+                    if wants_perf_thresholds {
+                        let max_total = *runs_total.iter().max().unwrap_or(&0);
+                        let max_layout = *runs_layout.iter().max().unwrap_or(&0);
+                        let max_solve = *runs_solve.iter().max().unwrap_or(&0);
+                        let row = serde_json::json!({
+                            "script": src.display().to_string(),
+                            "sort": sort.as_str(),
+                            "repeat": repeat,
+                            "runs": runs_json,
+                            "max": {
+                                "top_total_time_us": max_total,
+                                "top_layout_time_us": max_layout,
+                                "top_layout_engine_solve_time_us": max_solve,
+                            },
+                            "thresholds": {
+                                "max_top_total_us": max_top_total_us,
+                                "max_top_layout_us": max_top_layout_us,
+                                "max_top_solve_us": max_top_solve_us,
+                            },
+                        });
+                        perf_threshold_rows.push(row);
+                        perf_threshold_failures.extend(scan_perf_threshold_failures(
+                            &src.display().to_string(),
+                            sort,
+                            max_top_total_us,
+                            max_top_layout_us,
+                            max_top_solve_us,
+                            max_total,
+                            max_layout,
+                            max_solve,
+                        ));
                     }
                 }
             }
@@ -2417,6 +2551,33 @@ See: `docs/tracy.md`.\n";
 
             if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
                 check_out_dir_for_pixels_changed(&resolved_out_dir, test_id, warmup_frames)?;
+            }
+
+            if wants_perf_thresholds {
+                let out_path = resolved_out_dir.join("check.perf_thresholds.json");
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "generated_unix_ms": now_unix_ms(),
+                    "kind": "perf_thresholds",
+                    "out_dir": resolved_out_dir.display().to_string(),
+                    "warmup_frames": warmup_frames,
+                    "thresholds": {
+                        "max_top_total_us": max_top_total_us,
+                        "max_top_layout_us": max_top_layout_us,
+                        "max_top_solve_us": max_top_solve_us,
+                    },
+                    "rows": perf_threshold_rows,
+                    "failures": perf_threshold_failures,
+                });
+                let _ = write_json_value(&out_path, &payload);
+                if !perf_threshold_failures.is_empty() {
+                    eprintln!(
+                        "PERF threshold gate failed (failures={}, evidence={})",
+                        perf_threshold_failures.len(),
+                        out_path.display()
+                    );
+                    std::process::exit(1);
+                }
             }
 
             if stats_json {
@@ -3198,6 +3359,7 @@ fn zip_add_root_artifacts(
         "triage.json",
         "picked.script.json",
         "check.pixels_changed.json",
+        "check.perf_thresholds.json",
         "renderdoc.captures.json",
         "tracy.note.md",
     ];
@@ -5285,6 +5447,53 @@ fn write_json_value(path: &Path, v: &serde_json::Value) -> Result<(), String> {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     std::fs::write(path, bytes).map_err(|e| e.to_string())
+}
+
+fn scan_perf_threshold_failures(
+    script: &str,
+    sort: BundleStatsSort,
+    max_top_total_us: Option<u64>,
+    max_top_layout_us: Option<u64>,
+    max_top_solve_us: Option<u64>,
+    max_total_time_us: u64,
+    max_layout_time_us: u64,
+    max_layout_engine_solve_time_us: u64,
+) -> Vec<serde_json::Value> {
+    let mut out: Vec<serde_json::Value> = Vec::new();
+    if let Some(threshold_us) = max_top_total_us
+        && max_total_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "top_total_time_us",
+            "threshold_us": threshold_us,
+            "actual_us": max_total_time_us,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    if let Some(threshold_us) = max_top_layout_us
+        && max_layout_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "top_layout_time_us",
+            "threshold_us": threshold_us,
+            "actual_us": max_layout_time_us,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    if let Some(threshold_us) = max_top_solve_us
+        && max_layout_engine_solve_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "top_layout_engine_solve_time_us",
+            "threshold_us": threshold_us,
+            "actual_us": max_layout_engine_solve_time_us,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    out
 }
 
 fn read_script_result(path: &Path) -> Option<serde_json::Value> {
@@ -11392,5 +11601,46 @@ mod tests {
         let err = check_out_dir_for_pixels_changed(&out_dir, test_id, 0).unwrap_err();
         assert!(err.contains("pixels unchanged suspected"));
         assert!(out_dir.join("check.pixels_changed.json").is_file());
+    }
+
+    #[test]
+    fn perf_threshold_scan_passes_when_under_limits() {
+        let failures = scan_perf_threshold_failures(
+            "script.json",
+            BundleStatsSort::Time,
+            Some(100),
+            Some(80),
+            Some(50),
+            99,
+            79,
+            49,
+        );
+        assert!(failures.is_empty());
+    }
+
+    #[test]
+    fn perf_threshold_scan_reports_each_exceeded_metric() {
+        let failures = scan_perf_threshold_failures(
+            "script.json",
+            BundleStatsSort::Time,
+            Some(100),
+            Some(80),
+            Some(50),
+            101,
+            81,
+            51,
+        );
+        assert_eq!(failures.len(), 3);
+        let metrics: Vec<String> = failures
+            .iter()
+            .filter_map(|v| {
+                v.get("metric")
+                    .and_then(|m| m.as_str())
+                    .map(|s| s.to_string())
+            })
+            .collect();
+        assert!(metrics.contains(&"top_total_time_us".to_string()));
+        assert!(metrics.contains(&"top_layout_time_us".to_string()));
+        assert!(metrics.contains(&"top_layout_engine_solve_time_us".to_string()));
     }
 }
