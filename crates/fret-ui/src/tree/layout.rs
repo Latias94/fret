@@ -89,6 +89,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut visited = HashMap::<NodeId, u8>::new();
+        let mut request_followup_redraw = false;
         for change in changed {
             let handle_key = change.handle_key;
             let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
@@ -96,6 +97,15 @@ impl<H: UiHost> UiTree<H> {
             );
             if bound.is_empty() {
                 continue;
+            }
+
+            // Scroll offset/viewport/content updates are classified as "HitTestOnly" by design to
+            // avoid re-solving the whole layout engine for transform-only changes. However, many
+            // higher-level behaviors (anchored overlays, poppers, etc.) rely on last-frame bounds
+            // caches. To keep these overlays in sync after a scroll, schedule exactly one
+            // follow-up redraw when scroll geometry changes.
+            if change.offset_changed || change.viewport_changed || change.content_changed {
+                request_followup_redraw = true;
             }
 
             let mut change_kind = change.kind;
@@ -403,6 +413,10 @@ impl<H: UiHost> UiTree<H> {
                     detail,
                 );
             }
+        }
+
+        if request_followup_redraw {
+            self.request_redraw_coalesced(app);
         }
     }
 
