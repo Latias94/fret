@@ -1108,6 +1108,8 @@ topics (if/when we implement them):
       - Evidence bundles (suite, view-cache, release):
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833380478-components-gallery-table-window-boundary-scroll/bundle.json`
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862641667-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862668739-components-gallery-table-sort-and-scroll/bundle.json`
       - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to `components-gallery-table-window-boundary-scroll.json`
         (the sort+scroll script is still gated by view-cache reuse + wheel-scroll + stale-paint, etc.).
       - Note: the suite also enables `--check-vlist-policy-key-stable`, applied only to the window-boundary script (policy changes are expected in sort/toggle style scripts).
