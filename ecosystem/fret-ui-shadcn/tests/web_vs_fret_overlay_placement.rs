@@ -18392,15 +18392,15 @@ fn fret_first_toast_item_rect(snap: &SemanticsSnapshot) -> Rect {
 
 fn assert_sonner_toast_rect_matches_web(
     web_name: &str,
-    bounds: Rect,
+    web: &WebGolden,
     dispatch_toast: impl FnOnce(
         &fret_ui_shadcn::Sonner,
         &mut dyn fret_ui::action::UiActionHost,
         AppWindowId,
     ),
 ) {
-    let web = read_web_golden_open(web_name);
-    let theme = web_theme(&web);
+    let theme = web_theme(web);
+    let bounds = bounds_for_web_theme(theme);
     let web_toast = web_first_sonner_toast_rect(theme);
 
     let window = AppWindowId::default();
@@ -18474,8 +18474,7 @@ fn assert_sonner_toast_rect_matches_web(
 #[test]
 fn web_vs_fret_sonner_demo_open_toast_rect_matches_web() {
     let web = read_web_golden_open("sonner-demo");
-    let bounds = bounds_for_web_theme(web_theme(&web));
-    assert_sonner_toast_rect_matches_web("sonner-demo", bounds, |sonner, host, window| {
+    assert_sonner_toast_rect_matches_web("sonner-demo", &web, |sonner, host, window| {
         let _ = sonner.toast_message(
             host,
             window,
@@ -18490,28 +18489,22 @@ fn web_vs_fret_sonner_demo_open_toast_rect_matches_web() {
 #[test]
 fn web_vs_fret_sonner_demo_tiny_viewport_open_toast_rect_matches_web() {
     let web = read_web_golden_open("sonner-demo.vp1440x240");
-    let bounds = bounds_for_web_theme(web_theme(&web));
-    assert_sonner_toast_rect_matches_web(
-        "sonner-demo.vp1440x240",
-        bounds,
-        |sonner, host, window| {
-            let _ = sonner.toast_message(
-                host,
-                window,
-                "Event has been created",
-                fret_ui_shadcn::ToastMessageOptions::new()
-                    .description("Sunday, December 03, 2023 at 9:00 AM")
-                    .action("Undo", "sonner.toast.undo"),
-            );
-        },
-    );
+    assert_sonner_toast_rect_matches_web("sonner-demo.vp1440x240", &web, |sonner, host, window| {
+        let _ = sonner.toast_message(
+            host,
+            window,
+            "Event has been created",
+            fret_ui_shadcn::ToastMessageOptions::new()
+                .description("Sunday, December 03, 2023 at 9:00 AM")
+                .action("Undo", "sonner.toast.undo"),
+        );
+    });
 }
 
 #[test]
 fn web_vs_fret_sonner_types_open_toast_rect_matches_web() {
     let web = read_web_golden_open("sonner-types");
-    let bounds = bounds_for_web_theme(web_theme(&web));
-    assert_sonner_toast_rect_matches_web("sonner-types", bounds, |sonner, host, window| {
+    assert_sonner_toast_rect_matches_web("sonner-types", &web, |sonner, host, window| {
         let _ = sonner.toast_message(
             host,
             window,
@@ -18524,15 +18517,176 @@ fn web_vs_fret_sonner_types_open_toast_rect_matches_web() {
 #[test]
 fn web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web() {
     let web = read_web_golden_open("sonner-types.vp1440x240");
-    let bounds = bounds_for_web_theme(web_theme(&web));
     assert_sonner_toast_rect_matches_web(
         "sonner-types.vp1440x240",
-        bounds,
+        &web,
         |sonner, host, window| {
             let _ = sonner.toast_message(
                 host,
                 window,
                 "Event has been created",
+                fret_ui_shadcn::ToastMessageOptions::new(),
+            );
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_types_default_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.default");
+    assert_sonner_toast_rect_matches_web("sonner-types.default", &web, |sonner, host, window| {
+        let _ = sonner.toast_message(
+            host,
+            window,
+            "Event has been created",
+            fret_ui_shadcn::ToastMessageOptions::new(),
+        );
+    });
+}
+
+#[test]
+fn web_vs_fret_sonner_types_success_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.success");
+    assert_sonner_toast_rect_matches_web("sonner-types.success", &web, |sonner, host, window| {
+        let _ = sonner.toast_success_message(
+            host,
+            window,
+            "Event has been created",
+            fret_ui_shadcn::ToastMessageOptions::new(),
+        );
+    });
+}
+
+#[test]
+fn web_vs_fret_sonner_types_info_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.info");
+    assert_sonner_toast_rect_matches_web("sonner-types.info", &web, |sonner, host, window| {
+        let _ = sonner.toast_info_message(
+            host,
+            window,
+            "Be at the area 10 minutes before the event time",
+            fret_ui_shadcn::ToastMessageOptions::new(),
+        );
+    });
+}
+
+#[test]
+fn web_vs_fret_sonner_types_warning_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.warning");
+    assert_sonner_toast_rect_matches_web("sonner-types.warning", &web, |sonner, host, window| {
+        let _ = sonner.toast_warning_message(
+            host,
+            window,
+            "Event start time cannot be earlier than 8am",
+            fret_ui_shadcn::ToastMessageOptions::new(),
+        );
+    });
+}
+
+#[test]
+fn web_vs_fret_sonner_types_error_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.error");
+    assert_sonner_toast_rect_matches_web("sonner-types.error", &web, |sonner, host, window| {
+        let _ = sonner.toast_error_message(
+            host,
+            window,
+            "Event has not been created",
+            fret_ui_shadcn::ToastMessageOptions::new(),
+        );
+    });
+}
+
+#[test]
+fn web_vs_fret_sonner_types_promise_loading_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.promise-loading");
+    assert_sonner_toast_rect_matches_web(
+        "sonner-types.promise-loading",
+        &web,
+        |sonner, host, window| {
+            let _promise = sonner.toast_promise(host, window, "Loading...");
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_types_tiny_viewport_default_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.vp1440x240-default");
+    assert_sonner_toast_rect_matches_web(
+        "sonner-types.vp1440x240-default",
+        &web,
+        |sonner, host, window| {
+            let _ = sonner.toast_message(
+                host,
+                window,
+                "Event has been created",
+                fret_ui_shadcn::ToastMessageOptions::new(),
+            );
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_types_tiny_viewport_success_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.vp1440x240-success");
+    assert_sonner_toast_rect_matches_web(
+        "sonner-types.vp1440x240-success",
+        &web,
+        |sonner, host, window| {
+            let _ = sonner.toast_success_message(
+                host,
+                window,
+                "Event has been created",
+                fret_ui_shadcn::ToastMessageOptions::new(),
+            );
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_types_tiny_viewport_info_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.vp1440x240-info");
+    assert_sonner_toast_rect_matches_web(
+        "sonner-types.vp1440x240-info",
+        &web,
+        |sonner, host, window| {
+            let _ = sonner.toast_info_message(
+                host,
+                window,
+                "Be at the area 10 minutes before the event time",
+                fret_ui_shadcn::ToastMessageOptions::new(),
+            );
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_types_tiny_viewport_warning_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.vp1440x240-warning");
+    assert_sonner_toast_rect_matches_web(
+        "sonner-types.vp1440x240-warning",
+        &web,
+        |sonner, host, window| {
+            let _ = sonner.toast_warning_message(
+                host,
+                window,
+                "Event start time cannot be earlier than 8am",
+                fret_ui_shadcn::ToastMessageOptions::new(),
+            );
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sonner_types_tiny_viewport_error_open_toast_rect_matches_web() {
+    let web = read_web_golden_open("sonner-types.vp1440x240-error");
+    assert_sonner_toast_rect_matches_web(
+        "sonner-types.vp1440x240-error",
+        &web,
+        |sonner, host, window| {
+            let _ = sonner.toast_error_message(
+                host,
+                window,
+                "Event has not been created",
                 fret_ui_shadcn::ToastMessageOptions::new(),
             );
         },

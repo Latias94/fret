@@ -16,7 +16,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
-- shadcn-web `v4/new-york-v4`: `497/497` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-01-31
+- shadcn-web `v4/new-york-v4`: `508/508` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-01-31
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -56,7 +56,7 @@ Recent breadth wins:
 - **DatePicker open popover placement**: new shadcn-web `.open` goldens are now gated for
   `date-picker-demo.open`, `date-picker-with-presets.open`, and `date-picker-with-range.open` (portal rect + insets via the shared overlay placement harness).
 - **DatePicker nested overlay placement**: `date-picker-with-presets.select-open.open` now gates the Select listbox popper placement while the popover is open (ComboBox -> ListBox portal).
-- **Sonner (toast) depth gates**: `sonner-demo*` / `sonner-types*` now have open-mode goldens and a deterministic geometry gate for the toast item rect (including `vp1440x240` constrained viewport).
+- **Sonner (toast) depth gates**: `sonner-demo*` / `sonner-types*` have open-mode goldens and a deterministic geometry gate for the toast item rect, including the `sonner-types` variant matrix (`default/success/info/warning/error/promise-loading`) and `vp1440x240` constrained viewport variants.
 - **DatePicker presets behavior (Tomorrow)**: `date-picker-with-presets.preset-tomorrow.open` now gates the selected-day ARIA label and the trigger’s `format(date, "PPP")` output (`January 16th, 2026` when extracted with `--freezeDate=2026-01-15`).
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
 - **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).

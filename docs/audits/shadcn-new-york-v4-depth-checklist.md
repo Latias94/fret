@@ -194,15 +194,24 @@ Notes:
 Evidence anchors:
 
 - Goldens:
-  - `goldens/shadcn-web/v4/new-york-v4/sonner-demo.open.json`
-  - `goldens/shadcn-web/v4/new-york-v4/sonner-demo.vp1440x240.open.json`
-  - `goldens/shadcn-web/v4/new-york-v4/sonner-types.open.json`
-  - `goldens/shadcn-web/v4/new-york-v4/sonner-types.vp1440x240.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-demo*.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-types*.open.json` (variant matrix + constrained viewport variants)
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
   (`web_vs_fret_sonner_demo_open_toast_rect_matches_web`,
   `web_vs_fret_sonner_demo_tiny_viewport_open_toast_rect_matches_web`,
   `web_vs_fret_sonner_types_open_toast_rect_matches_web`,
-  `web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web`)
+  `web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_error_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_promise_loading_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_error_open_toast_rect_matches_web`)
 
 ## Controls: pressed / disabled states
 
