@@ -30,6 +30,12 @@ impl BundleStatsSort {
     }
 }
 
+#[derive(Debug, Clone)]
+struct ReproPackItem {
+    script_path: PathBuf,
+    bundle_json: PathBuf,
+}
+
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
@@ -1047,6 +1053,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut selected_bundle_path: Option<PathBuf> = None;
             let mut last_script_result: Option<ScriptResultSummary> = None;
             let mut overall_error: Option<String> = None;
+            let mut pack_items: Vec<ReproPackItem> = Vec::new();
 
             for src in scripts {
                 let mut result = run_script_and_wait(
@@ -1099,6 +1106,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         timeout_ms,
                         poll_ms,
                     );
+                }
+
+                if let Some(bundle_path) = bundle_path.as_ref() {
+                    pack_items.push(ReproPackItem {
+                        script_path: src.clone(),
+                        bundle_json: bundle_path.clone(),
+                    });
                 }
 
                 if result.stage.as_deref() == Some("failed") && bundle_path.is_some() {
@@ -1187,37 +1201,27 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut packed_bundle_json: Option<PathBuf> = None;
             if let Some(bundle_path) = selected_bundle_path.as_ref() {
                 let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
-                let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
-                    resolved_out_dir.clone()
-                } else {
-                    bundle_dir
-                        .parent()
-                        .unwrap_or(&resolved_out_dir)
-                        .to_path_buf()
-                };
-
-                if let Err(err) = pack_bundle_dir_to_zip(
-                    &bundle_dir,
-                    &zip_out,
-                    pack_defaults.0,
-                    pack_defaults.1,
-                    pack_defaults.2,
-                    &artifacts_root,
-                    stats_top,
-                    sort_override.unwrap_or(BundleStatsSort::Invalidation),
-                    warmup_frames,
-                ) {
-                    overall_error = Some(format!("failed to pack repro zip: {err}"));
-                } else {
-                    packed_zip = Some(zip_out.clone());
-                    packed_bundle_json = Some(bundle_dir.join("bundle.json"));
-                }
-            } else {
-                overall_error = Some(
-                    "no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
-                        .to_string(),
-                );
+                packed_bundle_json = Some(bundle_dir.join("bundle.json"));
             }
+
+            let multi_pack = pack_items.len() > 1;
+            let packed_bundles = if multi_pack {
+                serde_json::Value::Array(
+                    pack_items
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, item)| {
+                            serde_json::json!({
+                                "zip_prefix": repro_zip_prefix_for_script(item, idx),
+                                "script_path": item.script_path.display().to_string(),
+                                "bundle_json": item.bundle_json.display().to_string(),
+                            })
+                        })
+                        .collect(),
+                )
+            } else {
+                serde_json::Value::Null
+            };
 
             let summary_json = serde_json::json!({
                 "schema_version": 1,
@@ -1227,7 +1231,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 "scripts": run_rows,
                 "selected_bundle_json": selected_bundle_path.as_ref().map(|p| p.display().to_string()),
                 "packed_bundle_json": packed_bundle_json.as_ref().map(|p| p.display().to_string()),
-                "repro_zip": packed_zip.as_ref().map(|p| p.display().to_string()),
+                "packed_bundles": packed_bundles,
+                "repro_zip": Some(zip_out.display().to_string()),
                 "last_result": last_script_result.as_ref().map(|r| serde_json::json!({
                     "run_id": r.run_id,
                     "stage": r.stage,
@@ -1242,6 +1247,89 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let _ = std::fs::create_dir_all(parent);
             }
             let _ = write_json_value(&summary_path, &summary_json);
+
+            if overall_error.is_none() {
+                let sort = sort_override.unwrap_or(BundleStatsSort::Invalidation);
+                if multi_pack {
+                    let bundles: Vec<ReproZipBundle> = pack_items
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, item)| ReproZipBundle {
+                            prefix: repro_zip_prefix_for_script(item, idx),
+                            bundle_json: item.bundle_json.clone(),
+                            source_script: item.script_path.clone(),
+                        })
+                        .collect();
+
+                    if let Err(err) = pack_repro_zip_multi(
+                        &zip_out,
+                        pack_defaults.0,
+                        pack_defaults.1,
+                        pack_defaults.2,
+                        &resolved_out_dir,
+                        &summary_path,
+                        &bundles,
+                        stats_top,
+                        sort,
+                        warmup_frames,
+                    ) {
+                        overall_error = Some(format!("failed to pack repro zip: {err}"));
+                    } else {
+                        packed_zip = Some(zip_out.clone());
+                    }
+                } else if let Some(bundle_path) = selected_bundle_path.as_ref() {
+                    let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
+                    let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                        resolved_out_dir.clone()
+                    } else {
+                        bundle_dir
+                            .parent()
+                            .unwrap_or(&resolved_out_dir)
+                            .to_path_buf()
+                    };
+
+                    if let Err(err) = pack_bundle_dir_to_zip(
+                        &bundle_dir,
+                        &zip_out,
+                        pack_defaults.0,
+                        pack_defaults.1,
+                        pack_defaults.2,
+                        &artifacts_root,
+                        stats_top,
+                        sort,
+                        warmup_frames,
+                    ) {
+                        overall_error = Some(format!("failed to pack repro zip: {err}"));
+                    } else {
+                        packed_zip = Some(zip_out.clone());
+                    }
+                } else {
+                    overall_error = Some(
+                        "no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
+                            .to_string(),
+                    );
+                }
+
+                if overall_error.is_some() {
+                    // Keep the summary coherent even when packing fails.
+                    let _ = write_json_value(
+                        &summary_path,
+                        &summary_json
+                            .as_object()
+                            .cloned()
+                            .map(|mut obj| {
+                                obj.insert(
+                                    "error".to_string(),
+                                    serde_json::Value::String(
+                                        overall_error.clone().unwrap_or_default(),
+                                    ),
+                                );
+                                serde_json::Value::Object(obj)
+                            })
+                            .unwrap_or(summary_json.clone()),
+                    );
+                }
+            }
 
             if let Some(path) = packed_bundle_json.as_ref() {
                 println!("BUNDLE {}", path.display());
@@ -2594,6 +2682,15 @@ fn pack_bundle_dir_to_zip(
         options,
     )?;
 
+    // Repro workflow helper: if a repro summary exists next to the bundle output root, include it.
+    let repro_summary = artifacts_root.join("repro.summary.json");
+    if repro_summary.is_file() {
+        let dst = format!("{bundle_name}/_root/repro.summary.json");
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::open(&repro_summary).map_err(|e| e.to_string())?;
+        std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
+    }
+
     if include_root_artifacts {
         let root_prefix = format!("{bundle_name}/_root");
         zip_add_root_artifacts(&mut zip, artifacts_root, &root_prefix, options)?;
@@ -2752,6 +2849,135 @@ fn zip_add_root_artifacts(
         std::io::copy(&mut f, zip).map_err(|e| e.to_string())?;
     }
 
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct ReproZipBundle {
+    prefix: String,
+    bundle_json: PathBuf,
+    source_script: PathBuf,
+}
+
+fn repro_zip_prefix_for_script(item: &ReproPackItem, idx: usize) -> String {
+    let stem = item
+        .script_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("script");
+    let safe = zip_safe_component(stem);
+    format!("{:02}-{safe}", idx.saturating_add(1))
+}
+
+fn zip_safe_component(s: &str) -> String {
+    let mut out = String::new();
+    for ch in s.chars() {
+        let keep = ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.');
+        if keep {
+            out.push(ch);
+        } else {
+            out.push('-');
+        }
+    }
+    let trimmed = out.trim_matches('-');
+    if trimmed.is_empty() {
+        "bundle".to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+fn pack_repro_zip_multi(
+    out_path: &Path,
+    include_root_artifacts: bool,
+    include_triage: bool,
+    include_screenshots: bool,
+    artifacts_root: &Path,
+    summary_path: &Path,
+    bundles: &[ReproZipBundle],
+    stats_top: usize,
+    sort: BundleStatsSort,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    use std::io::Write;
+
+    if let Some(parent) = out_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let file = std::fs::File::create(out_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+
+    // Always include a machine-readable repro summary.
+    if summary_path.is_file() {
+        let bytes = std::fs::read(summary_path).map_err(|e| e.to_string())?;
+        zip.start_file("_root/repro.summary.json", options)
+            .map_err(|e| e.to_string())?;
+        zip.write_all(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    // Include script sources for offline triage.
+    for (idx, item) in bundles.iter().enumerate() {
+        let bytes = std::fs::read(&item.source_script).map_err(|e| e.to_string())?;
+        let name = item
+            .source_script
+            .file_name()
+            .and_then(|s| s.to_str())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("script.json");
+        let safe = zip_safe_component(name);
+        let dst = format!("_root/scripts/{:02}-{safe}", idx.saturating_add(1));
+        zip.start_file(dst, options).map_err(|e| e.to_string())?;
+        zip.write_all(&bytes).map_err(|e| e.to_string())?;
+    }
+
+    if include_root_artifacts {
+        zip_add_root_artifacts(&mut zip, artifacts_root, "_root", options)?;
+    }
+
+    for item in bundles {
+        let bundle_dir = resolve_bundle_root_dir(&item.bundle_json)?;
+        zip_add_dir(
+            &mut zip,
+            &bundle_dir,
+            &bundle_dir,
+            &item.prefix,
+            out_path,
+            options,
+        )?;
+
+        if include_screenshots {
+            let bundle_name = bundle_dir
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
+            let screenshots_dir = artifacts_root.join("screenshots").join(bundle_name);
+            if screenshots_dir.is_dir() {
+                let screenshots_prefix = format!("{}/_root/screenshots", item.prefix);
+                zip_add_screenshots(&mut zip, &screenshots_dir, &screenshots_prefix, options)?;
+            }
+        }
+
+        if include_triage {
+            let report = bundle_stats_from_path(
+                &item.bundle_json,
+                stats_top,
+                sort,
+                BundleStatsOptions { warmup_frames },
+            )?;
+            let payload = triage_json_from_stats(&item.bundle_json, &report, sort, warmup_frames);
+            let bytes = serde_json::to_vec_pretty(&payload).map_err(|e| e.to_string())?;
+            let dst = format!("{}/_root/triage.json", item.prefix);
+            zip.start_file(dst, options).map_err(|e| e.to_string())?;
+            zip.write_all(&bytes).map_err(|e| e.to_string())?;
+        }
+    }
+
+    zip.finish().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -5602,6 +5828,7 @@ fn check_bundle_for_semantics_changed_repainted_json(
         let mut prev_semantics_fingerprint: Option<u64> = None;
         let mut prev_tick_id: u64 = 0;
         let mut prev_frame_id: u64 = 0;
+        let mut prev_snapshot: Option<&serde_json::Value> = None;
 
         for s in snaps {
             let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -5627,6 +5854,7 @@ fn check_bundle_for_semantics_changed_repainted_json(
                 prev_semantics_fingerprint = None;
                 prev_tick_id = tick_id;
                 prev_frame_id = frame_id;
+                prev_snapshot = Some(s);
                 continue;
             };
 
@@ -5636,6 +5864,14 @@ fn check_bundle_for_semantics_changed_repainted_json(
                 let semantics_changed = semantics_fingerprint != prev_sem;
                 let scene_unchanged = scene_fingerprint == prev_scene;
                 if semantics_changed && scene_unchanged {
+                    let mut detail = String::new();
+                    if let Some(prev) = prev_snapshot {
+                        let diff = semantics_diff_summary(prev, s);
+                        if !diff.is_empty() {
+                            detail.push_str(" ");
+                            detail.push_str(&diff);
+                        }
+                    }
                     let paint_nodes_performed = s
                         .get("debug")
                         .and_then(|v| v.get("stats"))
@@ -5650,7 +5886,7 @@ fn check_bundle_for_semantics_changed_repainted_json(
                         .unwrap_or(0);
 
                     suspicious.push(format!(
-                        "window={window_id} tick={tick_id} frame={frame_id} prev_tick={prev_tick_id} prev_frame={prev_frame_id} semantics_fingerprint=0x{semantics_fingerprint:016x} prev_semantics_fingerprint=0x{prev_sem:016x} scene_fingerprint=0x{scene_fingerprint:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_cache_replayed_ops}"
+                        "window={window_id} tick={tick_id} frame={frame_id} prev_tick={prev_tick_id} prev_frame={prev_frame_id} semantics_fingerprint=0x{semantics_fingerprint:016x} prev_semantics_fingerprint=0x{prev_sem:016x} scene_fingerprint=0x{scene_fingerprint:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_cache_replayed_ops}{detail}"
                     ));
                     if suspicious.len() >= 8 {
                         break;
@@ -5662,6 +5898,7 @@ fn check_bundle_for_semantics_changed_repainted_json(
             prev_semantics_fingerprint = Some(semantics_fingerprint);
             prev_tick_id = tick_id;
             prev_frame_id = frame_id;
+            prev_snapshot = Some(s);
         }
     }
 
@@ -5694,6 +5931,273 @@ fn check_bundle_for_semantics_changed_repainted_json(
         msg.push('\n');
     }
     Err(msg)
+}
+
+fn semantics_diff_summary(before: &serde_json::Value, after: &serde_json::Value) -> String {
+    let before_nodes = before
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array());
+    let after_nodes = after
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array());
+
+    let (Some(before_nodes), Some(after_nodes)) = (before_nodes, after_nodes) else {
+        return String::new();
+    };
+
+    use std::collections::{HashMap, HashSet};
+
+    let mut before_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
+    for node in before_nodes {
+        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        before_by_id.insert(id, node);
+    }
+
+    let mut after_by_id: HashMap<u64, &serde_json::Value> = HashMap::new();
+    for node in after_nodes {
+        let Some(id) = node.get("id").and_then(|v| v.as_u64()) else {
+            continue;
+        };
+        after_by_id.insert(id, node);
+    }
+
+    let before_ids: HashSet<u64> = before_by_id.keys().copied().collect();
+    let after_ids: HashSet<u64> = after_by_id.keys().copied().collect();
+
+    let mut added: Vec<u64> = after_ids.difference(&before_ids).copied().collect();
+    let mut removed: Vec<u64> = before_ids.difference(&after_ids).copied().collect();
+    added.sort_unstable();
+    removed.sort_unstable();
+
+    let mut changed: Vec<(u64, u64, u64)> = Vec::new(); // (score, id, fp_after)
+    for id in before_ids.intersection(&after_ids).copied() {
+        let Some(a) = after_by_id.get(&id).copied() else {
+            continue;
+        };
+        let Some(b) = before_by_id.get(&id).copied() else {
+            continue;
+        };
+        let fp_a = semantics_node_fingerprint_json(a);
+        let fp_b = semantics_node_fingerprint_json(b);
+        if fp_a != fp_b {
+            // Score heuristic: test_id changes are the most useful to report.
+            let score = semantics_node_score_json(a);
+            changed.push((score, id, fp_a));
+        }
+    }
+
+    if added.is_empty() && removed.is_empty() && changed.is_empty() {
+        return String::new();
+    }
+
+    changed.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+
+    let mut out = String::new();
+    out.push_str("semantics_diff={");
+    out.push_str(&format!(
+        "added={} removed={} changed={}",
+        added.len(),
+        removed.len(),
+        changed.len()
+    ));
+
+    let sample_len = 6usize;
+    if !changed.is_empty() {
+        out.push_str(" changed_nodes=[");
+        for (i, (_score, id, _fp)) in changed.iter().take(sample_len).enumerate() {
+            if i > 0 {
+                out.push_str(", ");
+            }
+            let node = after_by_id.get(id).copied();
+            out.push_str(&semantics_node_label_json(*id, node));
+        }
+        if changed.len() > sample_len {
+            out.push_str(", ...");
+        }
+        out.push(']');
+    }
+
+    if !added.is_empty() {
+        out.push_str(" added_nodes=[");
+        for (i, id) in added.iter().take(sample_len).enumerate() {
+            if i > 0 {
+                out.push_str(", ");
+            }
+            let node = after_by_id.get(id).copied();
+            out.push_str(&semantics_node_label_json(*id, node));
+        }
+        if added.len() > sample_len {
+            out.push_str(", ...");
+        }
+        out.push(']');
+    }
+
+    if !removed.is_empty() {
+        out.push_str(" removed_nodes=[");
+        for (i, id) in removed.iter().take(sample_len).enumerate() {
+            if i > 0 {
+                out.push_str(", ");
+            }
+            let node = before_by_id.get(id).copied();
+            out.push_str(&semantics_node_label_json(*id, node));
+        }
+        if removed.len() > sample_len {
+            out.push_str(", ...");
+        }
+        out.push(']');
+    }
+
+    out.push('}');
+    out
+}
+
+fn semantics_node_score_json(node: &serde_json::Value) -> u64 {
+    // Higher is “more useful for debugging”.
+    let mut score: u64 = 0;
+    if node.get("test_id").and_then(|v| v.as_str()).is_some() {
+        score += 10_000;
+    }
+    if node.get("label").and_then(|v| v.as_str()).is_some() {
+        score += 1_000;
+    }
+    if node.get("value").and_then(|v| v.as_str()).is_some() {
+        score += 500;
+    }
+    score
+}
+
+fn semantics_node_label_json(id: u64, node: Option<&serde_json::Value>) -> String {
+    let Some(node) = node else {
+        return format!("id={id}");
+    };
+    let role = node
+        .get("role")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
+    let test_id = node
+        .get("test_id")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty());
+    let label = node
+        .get("label")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty());
+    let value = node
+        .get("value")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty());
+
+    let mut out = format!("id={id} role={role}");
+    if let Some(v) = test_id {
+        out.push_str(" test_id=");
+        out.push_str(v);
+    }
+    if let Some(v) = label {
+        out.push_str(" label=");
+        out.push_str(v);
+    }
+    if let Some(v) = value {
+        out.push_str(" value=");
+        out.push_str(v);
+    }
+    out
+}
+
+fn semantics_node_fingerprint_json(node: &serde_json::Value) -> u64 {
+    use std::hash::{Hash, Hasher};
+
+    // Use a stable hash for a curated subset of fields.
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+
+    node.get("id").and_then(|v| v.as_u64()).hash(&mut hasher);
+    node.get("parent")
+        .and_then(|v| v.as_u64())
+        .hash(&mut hasher);
+    node.get("role").and_then(|v| v.as_str()).hash(&mut hasher);
+
+    if let Some(bounds) = node.get("bounds") {
+        if let Some(v) = bounds.get("x").and_then(|v| v.as_f64()) {
+            v.to_bits().hash(&mut hasher);
+        }
+        if let Some(v) = bounds.get("y").and_then(|v| v.as_f64()) {
+            v.to_bits().hash(&mut hasher);
+        }
+        if let Some(v) = bounds.get("w").and_then(|v| v.as_f64()) {
+            v.to_bits().hash(&mut hasher);
+        }
+        if let Some(v) = bounds.get("h").and_then(|v| v.as_f64()) {
+            v.to_bits().hash(&mut hasher);
+        }
+    }
+
+    if let Some(flags) = node.get("flags") {
+        flags
+            .get("focused")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        flags
+            .get("captured")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        flags
+            .get("disabled")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        flags
+            .get("selected")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        flags
+            .get("expanded")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        flags
+            .get("checked")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+    }
+
+    node.get("test_id")
+        .and_then(|v| v.as_str())
+        .hash(&mut hasher);
+    node.get("active_descendant")
+        .and_then(|v| v.as_u64())
+        .hash(&mut hasher);
+    node.get("pos_in_set")
+        .and_then(|v| v.as_u64())
+        .hash(&mut hasher);
+    node.get("set_size")
+        .and_then(|v| v.as_u64())
+        .hash(&mut hasher);
+    node.get("label").and_then(|v| v.as_str()).hash(&mut hasher);
+    node.get("value").and_then(|v| v.as_str()).hash(&mut hasher);
+
+    if let Some(actions) = node.get("actions") {
+        actions
+            .get("focus")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        actions
+            .get("invoke")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        actions
+            .get("set_value")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+        actions
+            .get("set_text_selection")
+            .and_then(|v| v.as_bool())
+            .hash(&mut hasher);
+    }
+
+    hasher.finish()
 }
 
 fn check_bundle_for_stale_scene_json(
