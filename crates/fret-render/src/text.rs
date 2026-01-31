@@ -1717,8 +1717,14 @@ impl TextSystem {
         match input {
             TextInputRef::Plain { text, style } => self.prepare(text, style, constraints),
             TextInputRef::Attributed { text, base, spans } => {
-                let rich =
-                    AttributedText::new(Arc::<str>::from(text), Arc::<[TextSpan]>::from(spans));
+                let spans = sanitize_spans_for_text(text, spans);
+                if spans.is_none() {
+                    return self.prepare(text, base, constraints);
+                }
+                let rich = AttributedText {
+                    text: Arc::<str>::from(text),
+                    spans: spans.expect("non-empty spans"),
+                };
                 self.prepare_attributed(&rich, base, constraints)
             }
         }
@@ -1740,7 +1746,15 @@ impl TextSystem {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let key = TextBlobKey::new_attributed(rich, base_style, constraints, self.font_stack_key);
+        let spans = sanitize_spans_for_text(rich.text.as_ref(), rich.spans.as_ref());
+        if spans.is_none() {
+            return self.prepare(rich.text.as_ref(), base_style, constraints);
+        }
+        let rich = AttributedText {
+            text: rich.text.clone(),
+            spans: spans.expect("non-empty spans"),
+        };
+        let key = TextBlobKey::new_attributed(&rich, base_style, constraints, self.font_stack_key);
         self.prepare_with_key(key, base_style, Some(rich.spans.as_ref()), constraints)
     }
 
@@ -2283,6 +2297,91 @@ fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Resolved
     }
 
     Some(out)
+}
+
+fn span_has_any_overrides(span: &TextSpan) -> bool {
+    span.shaping.font.is_some()
+        || span.shaping.weight.is_some()
+        || span.shaping.slant.is_some()
+        || span.shaping.letter_spacing_em.is_some()
+        || span.paint.fg.is_some()
+        || span.paint.bg.is_some()
+        || span.paint.underline.is_some()
+        || span.paint.strikethrough.is_some()
+}
+
+fn clamp_down_to_char_boundary(text: &str, idx: usize) -> usize {
+    let mut i = idx.min(text.len());
+    while i > 0 && !text.is_char_boundary(i) {
+        i = i.saturating_sub(1);
+    }
+    i
+}
+
+fn next_char_boundary(text: &str, idx: usize) -> usize {
+    if idx >= text.len() {
+        return text.len();
+    }
+    let idx = clamp_down_to_char_boundary(text, idx);
+    if idx >= text.len() {
+        return text.len();
+    }
+    let ch = text[idx..].chars().next().unwrap();
+    idx + ch.len_utf8()
+}
+
+fn clamp_span_end_to_char_boundary(text: &str, start: usize, desired_end: usize) -> usize {
+    let raw_end = desired_end.min(text.len());
+    if text.is_char_boundary(raw_end) {
+        return raw_end;
+    }
+
+    let down = clamp_down_to_char_boundary(text, raw_end);
+    if down > start {
+        return down;
+    }
+
+    let up = next_char_boundary(text, raw_end);
+    up.max(start).min(text.len())
+}
+
+fn sanitize_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Arc<[TextSpan]>> {
+    if spans.is_empty() || text.is_empty() {
+        return None;
+    }
+
+    let text_len = text.len();
+    let mut out: Vec<TextSpan> = Vec::with_capacity(spans.len().saturating_add(1));
+
+    let mut offset: usize = 0;
+    for span in spans {
+        if offset >= text_len {
+            break;
+        }
+
+        let desired_end = offset.saturating_add(span.len);
+        let mut end = clamp_span_end_to_char_boundary(text, offset, desired_end);
+
+        if end == offset && desired_end > offset {
+            end = next_char_boundary(text, offset);
+        }
+
+        let mut s = span.clone();
+        s.len = end.saturating_sub(offset);
+        out.push(s);
+        offset = end;
+    }
+
+    if offset < text_len {
+        out.push(TextSpan::new(text_len - offset));
+    }
+
+    // Avoid forcing "attributed" shaping when spans carry no effective overrides.
+    if out.len() == 1 && out[0].len == text_len && !span_has_any_overrides(&out[0]) {
+        return None;
+    }
+
+    Some(Arc::<[TextSpan]>::from(out))
 }
 
 #[cfg(any())]
@@ -3389,6 +3488,124 @@ mod tests {
         let k0 = TextBlobKey::new("hello", &base, constraints, 1);
         let k1 = TextBlobKey::new("hello", &base, constraints, 2);
         assert_ne!(k0, k1);
+    }
+
+    #[test]
+    fn sanitize_spans_extends_missing_tail() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: 2,
+            paint: fret_core::TextPaintStyle {
+                fg: Some(fret_core::Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 2);
+        assert_eq!(sanitized[0].len, 2);
+        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+        assert_eq!(sanitized[1].len, 3);
+        assert_eq!(sanitized[1].paint.fg, None);
+    }
+
+    #[test]
+    fn sanitize_spans_truncates_overflowing_last_span() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: 999,
+            paint: fret_core::TextPaintStyle {
+                fg: Some(fret_core::Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0].len, text.len());
+        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+    }
+
+    #[test]
+    fn sanitize_spans_snaps_to_char_boundaries() {
+        let text = "aé";
+        assert_eq!(text.len(), 3);
+
+        let spans = vec![
+            TextSpan {
+                len: 2,
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            TextSpan {
+                len: 1,
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 1.0,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 2);
+        assert_eq!(sanitized[0].len, 1);
+        assert_eq!(sanitized[1].len, 2);
+        assert_eq!(sanitized[0].paint.fg, spans[0].paint.fg);
+        assert_eq!(sanitized[1].paint.fg, spans[1].paint.fg);
+    }
+
+    #[test]
+    fn sanitize_spans_returns_none_for_noop_full_span() {
+        let text = "hello";
+        let spans = vec![TextSpan::new(text.len())];
+        assert!(super::sanitize_spans_for_text(text, &spans).is_none());
     }
 
     #[test]

@@ -300,7 +300,8 @@ Legend:
 
 ### E) Tests & conformance
 
-- [ ] Unit tests: span invariant validation and clamping behavior.
+- [x] Unit tests: span invariant validation and clamping behavior.
+  - Evidence: `crates/fret-render/src/text.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
 - [x] Unit tests: ellipsis truncation caret/hit-test mapping.
   - Evidence: `crates/fret-render/src/text.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
     `crates/fret-render/src/text_v2/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
