@@ -14,6 +14,8 @@ use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 use time::Date;
 
@@ -268,6 +270,8 @@ pub(crate) fn content_view(
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -425,6 +429,8 @@ pub(crate) fn content_view(
         virtual_list_torture_edit_row,
         virtual_list_torture_edit_text,
         virtual_list_torture_scroll,
+        code_editor_syntax_rust,
+        code_editor_boundary_identifier,
     );
     let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
         cx.text(docs_md)
@@ -566,6 +572,8 @@ fn page_preview(
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -590,8 +598,18 @@ fn page_preview(
             virtual_list_torture_scroll,
         ),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
-        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(cx, theme),
-        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(cx, theme),
+        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(
+            cx,
+            theme,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+        ),
+        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(
+            cx,
+            theme,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+        ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
         PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
@@ -1907,16 +1925,59 @@ fn code_editor_torture_source() -> String {
         .clone()
 }
 
-fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+fn preview_code_editor_mvp(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    syntax_rust: Model<bool>,
+    boundary_identifier: Model<bool>,
+) -> Vec<AnyElement> {
+    let syntax_enabled = cx
+        .get_model_copied(&syntax_rust, Invalidation::Layout)
+        .unwrap_or(false);
+    let boundary_identifier_enabled = cx
+        .get_model_copied(&boundary_identifier, Invalidation::Layout)
+        .unwrap_or(true);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
-        |cx| {
+        move |cx| {
             vec![
                 cx.text("Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME)."),
                 cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(syntax_rust.clone())
+                                .a11y_label("Toggle Rust syntax highlighting")
+                                .into_element(cx),
+                            cx.text(if syntax_enabled {
+                                "Syntax: Rust (tree-sitter)"
+                            } else {
+                                "Syntax: disabled"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(boundary_identifier.clone())
+                                .a11y_label("Toggle identifier word boundaries")
+                                .into_element(cx),
+                            cx.text(if boundary_identifier_enabled {
+                                "Word boundaries: Identifier"
+                            } else {
+                                "Word boundaries: UnicodeWord"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -1925,6 +1986,20 @@ fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> V
         || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
         |h| h.clone(),
     );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(32)
@@ -1956,16 +2031,59 @@ fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> V
     vec![header, panel]
 }
 
-fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+fn preview_code_editor_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    syntax_rust: Model<bool>,
+    boundary_identifier: Model<bool>,
+) -> Vec<AnyElement> {
+    let syntax_enabled = cx
+        .get_model_copied(&syntax_rust, Invalidation::Layout)
+        .unwrap_or(false);
+    let boundary_identifier_enabled = cx
+        .get_model_copied(&boundary_identifier, Invalidation::Layout)
+        .unwrap_or(true);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
-        |cx| {
+        move |cx| {
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(syntax_rust.clone())
+                                .a11y_label("Toggle Rust syntax highlighting")
+                                .into_element(cx),
+                            cx.text(if syntax_enabled {
+                                "Syntax: Rust (tree-sitter)"
+                            } else {
+                                "Syntax: disabled"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(boundary_identifier.clone())
+                                .a11y_label("Toggle identifier word boundaries")
+                                .into_element(cx),
+                            cx.text(if boundary_identifier_enabled {
+                                "Word boundaries: Identifier"
+                            } else {
+                                "Word boundaries: UnicodeWord"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -1974,6 +2092,20 @@ fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
         || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
         |h| h.clone(),
     );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
@@ -2980,7 +3112,7 @@ fn preview_web_ime_harness(
                         .layout(LayoutRefinement::default().w_full().h_full())
                         .gap(Space::N2),
                     |cx| {
-                        vec![
+                        let mut lines = vec![
                             cx.text(format!("ime_enabled={ime_enabled}")),
                             cx.text(format!("preedit={preedit:?}")),
                             cx.text(format!("committed_tail={committed_tail:?}")),
@@ -2994,7 +3126,51 @@ fn preview_web_ime_harness(
                                 st.ime_enabled_count,
                                 st.ime_disabled_count
                             )),
-                        ]
+                        ];
+
+                        let snapshot = cx
+                            .app
+                            .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
+                            .cloned();
+                        if let Some(snapshot) = snapshot {
+                            lines.push(cx.text("bridge_debug_snapshot (wasm textarea):"));
+                            lines.push(cx.text(format!(
+                                "  enabled={} composing={} suppress_next_input={}",
+                                snapshot.enabled as u8,
+                                snapshot.composing as u8,
+                                snapshot.suppress_next_input as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_input_type={:?}",
+                                snapshot.last_input_type.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_beforeinput_data={:?}",
+                                snapshot.last_beforeinput_data.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_input_data={:?}",
+                                snapshot.last_input_data.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_key_code={:?} last_cursor_area={:?}",
+                                snapshot.last_key_code, snapshot.last_cursor_area
+                            )));
+                            lines.push(cx.text(format!(
+                                "  counts: beforeinput={} input={} suppressed={} comp_start={} comp_update={} comp_end={} cursor_area_set={}",
+                                snapshot.beforeinput_seen,
+                                snapshot.input_seen,
+                                snapshot.suppressed_input_seen,
+                                snapshot.composition_start_seen,
+                                snapshot.composition_update_seen,
+                                snapshot.composition_end_seen,
+                                snapshot.cursor_area_set_seen,
+                            )));
+                        } else {
+                            lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
+                        }
+
+                        lines
                     },
                 );
                 vec![body]

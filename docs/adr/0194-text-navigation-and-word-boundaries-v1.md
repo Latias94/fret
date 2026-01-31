@@ -120,9 +120,7 @@ When a text surface receives pointer activation with a click count (ADR 0151):
 - Click count = 3 (“triple click”) selects the **logical line** containing the pointer position.
   - Logical line is delimited by newline characters in the underlying text model, not by soft-wrapped
     visual rows.
-  - The selection MAY include the trailing newline by policy, but the choice MUST be consistent
-    within a surface and documented (recommended: include newline when present, matching common
-    editor behavior).
+  - The selection MUST include the trailing newline when present, matching common editor behavior.
 
 ### 5) Interaction with IME preedit (composing)
 
@@ -148,9 +146,6 @@ At minimum, conformance harnesses SHOULD cover:
 1) Subword navigation (camelCase / snake_case segments):
    - Keep out of v1 baseline; decide whether it belongs under `TextBoundaryMode::Identifier` as an additional
      command family (e.g. `text.move_subword_*`) vs editor-only `editor.*` commands.
-
-2) “Select line” inclusion policy:
-   - Whether triple-click includes the trailing newline when present should be standardized across surfaces.
 
 ## Consequences
 

@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-01-27
+Last updated: 2026-01-30
 
 This is the checkbox tracker companion to:
 
@@ -27,11 +27,11 @@ Legend:
 - [ ] Review ADR 0193 and confirm crate split and v1 baseline (windowed surface first).
 - [ ] Review ADR 0194 and confirm the preferred seam:
   - window-scoped `InputContext.text_boundary_mode` + override stack.
-- [ ] Review ADR 0195 and confirm web strategy:
+- [x] Review ADR 0195 and confirm web strategy:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation,
   - proxy mode (no full document mirroring).
-- [ ] Add 1–3 evidence anchors per ADR (file paths / tests) once implementation starts.
+- [~] Add 1–3 evidence anchors per ADR (file paths / tests) once implementation starts.
 
 ---
 
@@ -57,8 +57,8 @@ Legend:
 
 ### Observability (debug-only)
 
-- [ ] Counters: last `inputType`, whether suppressed, last composing state.
-- [ ] Counters: last caret-rect anchor and whether positioning was attempted.
+- [x] Counters: last `inputType`, whether suppressed, last composing state.
+- [x] Counters: last caret-rect anchor and whether positioning was attempted.
 
 ### Harness
 
@@ -67,6 +67,7 @@ Legend:
   - commit,
   - backspace/arrows,
   - no double-insert on `compositionend`.
+- [ ] Add a validation note for glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
 
 ---
 
@@ -78,12 +79,13 @@ Legend:
 - [x] Implement override stack service (push/pop token) for focused surfaces/overlays.
 - [x] Default mode is `UnicodeWord` unless overridden.
 - [x] Allow focused text input regions to override the mode (mechanism-only).
+- [x] Allow code-editor-grade surfaces to select the mode explicitly (policy input), and expose a UI Gallery toggle.
 
 ### Command semantics
 
 - [x] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
-- [x] Ensure double-click selects word and triple-click selects logical line (ADR 0151 + ADR 0194).
-- [ ] Ensure composing selection operates on display text (ADR 0071).
+- [x] Ensure double-click selects word and triple-click selects logical line (including trailing newline) (ADR 0151 + ADR 0194).
+- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor).
 
 ### Tests
 
@@ -100,6 +102,8 @@ Evidence anchors:
 - `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
 ---
 
@@ -116,11 +120,11 @@ Evidence anchors:
 
 - [x] Prepare text per visible display row only (no monolithic document blob).
 - [x] Define row cache keys and budgets (viewport-bounded, LRU-ish).
-- [ ] Ensure theme-only changes remain paint-only (no reshaping).
+- [x] Ensure theme-only changes remain paint-only (no reshaping).
 
 ### Input/IME integration
 
-- [x] Inline preedit rendering (best-effort overlay for v1).
+- [x] Inline preedit rendering (best-effort; underline + optional range highlight for v1).
 - [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
 - [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
 
@@ -155,15 +159,18 @@ Evidence anchors:
 - `ecosystem/fret-code-editor-buffer/src/lib.rs` (`DocId`, `DocUri`, `TextBuffer::uri`, `TextBuffer::set_uri`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`UndoGroupKind`, `UndoGroup`, `apply_and_record_edit`, `UndoHistory::record_or_coalesce`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::replace_buffer`, `CodeEditorHandle::set_text`)
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_language`, `cached_row_syntax_spans`, `materialize_row_rich_text`)
+- `ecosystem/fret-code-editor/Cargo.toml` (`syntax` / `syntax-rust` / `syntax-all`)
 
 ---
 
 ## M5 — Syntax Highlighting (incremental + visible-window materialization)
 
-- [ ] Define semantic token schema (highlight ids independent of theme colors).
-- [ ] Incremental update strategy (best-effort; visible window prioritized).
-- [ ] Materialize spans only for visible rows.
-- [ ] Theme changes update paint-only styles without reshaping.
+- [x] Define semantic token schema (highlight ids independent of theme colors).
+- [~] Incremental update strategy (best-effort; visible window prioritized) (partial: line-based cache invalidation via `BufferDelta`).
+- [x] Materialize spans only for visible rows.
+- [x] Expose a UI Gallery toggle for manual validation.
+- [x] Theme changes update paint-only styles without reshaping.
 
 ---
 

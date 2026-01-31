@@ -113,6 +113,31 @@ pub enum ImeEvent {
     },
 }
 
+/// Debug snapshot for the wasm textarea IME bridge (ADR 0195).
+///
+/// This is intended for diagnostics/harness views and is not a normative contract surface.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct WebImeBridgeDebugSnapshot {
+    pub enabled: bool,
+    pub composing: bool,
+    pub suppress_next_input: bool,
+
+    pub last_input_type: Option<String>,
+    pub last_beforeinput_data: Option<String>,
+    pub last_input_data: Option<String>,
+
+    pub last_key_code: Option<KeyCode>,
+    pub last_cursor_area: Option<Rect>,
+
+    pub beforeinput_seen: u64,
+    pub input_seen: u64,
+    pub suppressed_input_seen: u64,
+    pub composition_start_seen: u64,
+    pub composition_update_seen: u64,
+    pub composition_end_seen: u64,
+    pub cursor_area_set_seen: u64,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum PointerEvent {
     Move {

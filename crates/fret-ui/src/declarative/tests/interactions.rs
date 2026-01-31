@@ -877,7 +877,11 @@ fn selectable_text_double_and_triple_click_select() {
         crate::element::SelectableTextState::default,
         |state| (state.selection_anchor, state.caret),
     );
-    assert_eq!((a, b), (0, 11), "triple click should select first line");
+    assert_eq!(
+        (a, b),
+        (0, 12),
+        "triple click should select first line (including trailing newline)"
+    );
 }
 
 #[test]

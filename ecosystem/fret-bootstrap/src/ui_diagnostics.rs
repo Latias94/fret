@@ -5591,8 +5591,8 @@ fn event_debug_string(event: &Event, redact_text: bool) -> String {
 }
 
 fn unix_ms_now() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+    fret_core::time::SystemTime::now()
+        .duration_since(fret_core::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or_default()
 }
@@ -6877,8 +6877,8 @@ mod tests {
         svc.inspect_enabled = false;
         svc.pick_armed_run_id = None;
         svc.pending_pick = None;
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let unique = fret_core::time::SystemTime::now()
+            .duration_since(fret_core::time::UNIX_EPOCH)
             .expect("system clock should be >= UNIX_EPOCH")
             .as_nanos();
         let dir = std::env::temp_dir().join(format!("fret-diag-test-{}", unique));
@@ -6914,8 +6914,8 @@ mod tests {
         svc.cfg.enabled = true;
         svc.pick_armed_run_id = None;
 
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let unique = fret_core::time::SystemTime::now()
+            .duration_since(fret_core::time::UNIX_EPOCH)
             .expect("system clock should be >= UNIX_EPOCH")
             .as_nanos();
         let dir = std::env::temp_dir().join(format!("fret-diag-test-{}", unique));
@@ -6939,8 +6939,8 @@ mod tests {
         svc.cfg.enabled = true;
         svc.inspect_enabled = false;
 
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let unique = fret_core::time::SystemTime::now()
+            .duration_since(fret_core::time::UNIX_EPOCH)
             .expect("system clock should be >= UNIX_EPOCH")
             .as_nanos();
         let dir = std::env::temp_dir().join(format!("fret-diag-test-{}", unique));
@@ -7479,8 +7479,8 @@ mod tests {
         svc.cfg.enabled = true;
         svc.cfg.script_auto_dump = false;
 
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
+        let unique = fret_core::time::SystemTime::now()
+            .duration_since(fret_core::time::UNIX_EPOCH)
             .expect("system clock should be >= UNIX_EPOCH")
             .as_nanos();
         let dir = std::env::temp_dir().join(format!("fret-diag-test-script-{}", unique));

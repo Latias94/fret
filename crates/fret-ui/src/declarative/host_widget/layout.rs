@@ -771,7 +771,11 @@ impl ElementHostWidget {
 
                 let scale_bits = cx.scale_factor.to_bits();
                 let can_reuse_metrics = self.text_cache.metrics.is_some()
-                    && self.text_cache.last_rich.as_ref() == Some(&props.rich)
+                    && self
+                        .text_cache
+                        .last_rich
+                        .as_ref()
+                        .is_some_and(|rich| rich.shaping_eq(&props.rich))
                     && self.text_cache.last_style.as_ref() == Some(&style)
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
@@ -840,7 +844,11 @@ impl ElementHostWidget {
 
                 let scale_bits = cx.scale_factor.to_bits();
                 let can_reuse_metrics = self.text_cache.metrics.is_some()
-                    && self.text_cache.last_rich.as_ref() == Some(&props.rich)
+                    && self
+                        .text_cache
+                        .last_rich
+                        .as_ref()
+                        .is_some_and(|rich| rich.shaping_eq(&props.rich))
                     && self.text_cache.last_style.as_ref() == Some(&style)
                     && self.text_cache.last_wrap == Some(props.wrap)
                     && self.text_cache.last_overflow == Some(props.overflow)
