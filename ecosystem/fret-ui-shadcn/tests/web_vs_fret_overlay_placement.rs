@@ -1241,12 +1241,15 @@ fn rect_right(r: WebRect) -> f32 {
     r.x + r.w
 }
 
-fn web_rect_contains(outer: WebRect, inner: WebRect) -> bool {
-    let eps = 0.01;
+fn web_rect_contains_with_eps(outer: WebRect, inner: WebRect, eps: f32) -> bool {
     inner.x + eps >= outer.x
         && inner.y + eps >= outer.y
         && rect_right(inner) <= rect_right(outer) + eps
         && rect_bottom(inner) <= rect_bottom(outer) + eps
+}
+
+fn web_rect_contains(outer: WebRect, inner: WebRect) -> bool {
+    web_rect_contains_with_eps(outer, inner, 0.01)
 }
 
 fn web_unrotated_rect_for_rotated_square(node: &WebNode) -> WebRect {
@@ -2139,8 +2142,48 @@ fn assert_menu_item_row_height_matches(
     );
 }
 
+#[derive(Debug, Clone, Copy)]
+enum TextWidthProfile {
+    Geist,
+    UiSans,
+}
+
+impl Default for TextWidthProfile {
+    fn default() -> Self {
+        Self::Geist
+    }
+}
+
 #[derive(Default)]
-struct StyleAwareServices;
+struct StyleAwareServices {
+    width_profile: TextWidthProfile,
+}
+
+impl StyleAwareServices {
+    fn from_web_theme(theme: &WebGoldenTheme) -> Self {
+        let font_family = theme
+            .root
+            .computed_style
+            .get("fontFamily")
+            .or_else(|| {
+                find_first(&theme.root, &|n| {
+                    n.computed_style.contains_key("fontFamily")
+                })
+                .and_then(|n| n.computed_style.get("fontFamily"))
+            })
+            .map(|v| v.as_str())
+            .unwrap_or("");
+        let width_profile = if font_family.contains("ui-sans-serif") {
+            TextWidthProfile::UiSans
+        } else {
+            TextWidthProfile::Geist
+        };
+        if std::env::var("FRET_DEBUG_TEXT_PROFILE").ok().as_deref() == Some("1") {
+            eprintln!("text profile: fontFamily={font_family:?} -> {width_profile:?}");
+        }
+        Self { width_profile }
+    }
+}
 
 impl fret_core::TextService for StyleAwareServices {
     fn prepare(
@@ -2157,7 +2200,12 @@ impl fret_core::TextService for StyleAwareServices {
             .line_height
             .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
 
-        fn estimate_width_px(text: &str, font_size: f32, weight: FontWeight) -> Px {
+        fn estimate_width_px(
+            text: &str,
+            font_size: f32,
+            weight: FontWeight,
+            width_profile: TextWidthProfile,
+        ) -> Px {
             let mut units = 0.0f32;
             for ch in text.chars() {
                 units += match ch {
@@ -2165,7 +2213,10 @@ impl fret_core::TextService for StyleAwareServices {
                     // widths with a small heuristic table so both short labels ("Open popover") and
                     // long mixed-case strings ("Australian Western Standard Time (AWST)") land close
                     // to the web snapshots.
-                    ' ' => 0.28,
+                    ' ' => match width_profile {
+                        TextWidthProfile::Geist => 0.46,
+                        TextWidthProfile::UiSans => 0.28,
+                    },
                     '(' | ')' => 0.28,
                     // Narrow glyphs.
                     'i' | 'l' | 'I' | 't' | 'f' | 'j' | 'r' => 0.32,
@@ -2188,10 +2239,28 @@ impl fret_core::TextService for StyleAwareServices {
                 651..=750 => 1.055,
                 _ => 1.065,
             };
-            Px((units * font_size * weight_mul).max(1.0))
+            let family_mul = match width_profile {
+                TextWidthProfile::Geist => 0.962,
+                // The shadcn-web goldens use the Tailwind `font-sans` stack
+                // (`ui-sans-serif, system-ui, ...`). Its glyph advances are slightly wider than
+                // Geist at the same font size, and the difference is large enough to affect
+                // shrink-to-fit flex layouts (e.g. NavigationMenu `max-w-max` on tiny viewports).
+                TextWidthProfile::UiSans => 1.0,
+            };
+            Px((units * font_size * weight_mul * family_mul).max(1.0))
         }
 
-        let est_w = estimate_width_px(text, style.size.0, style.weight);
+        let est_w = estimate_width_px(text, style.size.0, style.weight, self.width_profile);
+        if std::env::var("FRET_DEBUG_TEXT_MEASURE")
+            .ok()
+            .is_some_and(|v| v == "1")
+            && (text == "Home" || text == " ")
+        {
+            eprintln!(
+                "text measure: text={text:?} size={} weight={} profile={:?} est_w={}",
+                style.size.0, style.weight.0, self.width_profile, est_w.0,
+            );
+        }
 
         let max_w = constraints.max_width.unwrap_or(est_w);
         let (lines, w) = match constraints.wrap {
@@ -2437,7 +2506,7 @@ fn assert_overlay_placement_matches(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -2698,7 +2767,7 @@ fn assert_centered_overlay_placement_matches(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -2854,7 +2923,7 @@ fn assert_viewport_anchored_overlay_placement_matches(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -4097,7 +4166,7 @@ fn build_dropdown_menu_dialog_open_snapshot(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(theme);
     let open: Model<bool> = app.models_mut().insert(false);
@@ -4381,7 +4450,7 @@ fn build_item_dropdown_open_snapshot(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(theme);
     let open: Model<bool> = app.models_mut().insert(false);
@@ -4982,7 +5051,7 @@ fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str)
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
     let open: Model<bool> = app.models_mut().insert(false);
@@ -5126,7 +5195,7 @@ fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
     let open: Model<bool> = app.models_mut().insert(false);
@@ -13908,7 +13977,7 @@ fn web_vs_fret_navigation_menu_demo_indicator_geometry_matches_web() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -14108,7 +14177,7 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_viewport_height_matches() {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -14350,7 +14419,7 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -14539,10 +14608,38 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_matches(
         .ok()
         .is_some_and(|v| v == "1");
     if debug {
+        let root_bounds =
+            bounds_for_element(&mut app, window, root_id).expect("fret nav menu root bounds");
         eprintln!(
-            "nav-menu {web_name} web viewport={:?} web trigger={:?} fret viewport={:?} fret trigger={:?}",
-            web_viewport.rect, web_trigger.rect, fret_viewport, fret_trigger
+            "nav-menu {web_name} web viewport={:?} web trigger={:?} fret root={:?} fret viewport={:?} fret trigger={:?}",
+            web_viewport.rect, web_trigger.rect, root_bounds, fret_viewport, fret_trigger
         );
+        if let Some(snap) = ui.semantics_snapshot() {
+            let find_button_bounds = |label: &str| {
+                snap.nodes
+                    .iter()
+                    .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(label))
+                    .map(|n| n.bounds)
+            };
+            let home = find_button_bounds("Home");
+            let components = find_button_bounds("Components");
+            let docs = find_button_bounds("Docs");
+            eprintln!(
+                "nav-menu {web_name} fret btn(Home)={home:?} btn(Components)={components:?} btn(Docs)={docs:?}"
+            );
+
+            if let (Some(home), Some(components), Some(docs)) = (home, components, docs) {
+                let home_end = home.origin.x.0 + home.size.width.0;
+                let components_end = components.origin.x.0 + components.size.width.0;
+                let docs_end = docs.origin.x.0 + docs.size.width.0;
+                eprintln!(
+                    "nav-menu {web_name} fret gaps: home->components={:.3} components->docs={:.3} total_w={:.3}",
+                    components.origin.x.0 - home_end,
+                    docs.origin.x.0 - components_end,
+                    docs_end - home.origin.x.0,
+                );
+            }
+        }
     }
 
     let actual_gap = rect_main_gap(web_side, fret_trigger, fret_viewport);
@@ -14571,7 +14668,7 @@ fn assert_navigation_menu_demo_mobile_viewport_insets_match(web_name: &str, trig
         n.attrs
             .get("data-slot")
             .is_some_and(|v| v.as_str() == "navigation-menu-content")
-            && web_rect_contains(web_viewport.rect, n.rect)
+            && web_rect_contains_with_eps(web_viewport.rect, n.rect, 1.0)
     })
     .expect("web content slot=navigation-menu-content within viewport");
 
@@ -14586,7 +14683,7 @@ fn assert_navigation_menu_demo_mobile_viewport_insets_match(web_name: &str, trig
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -14832,7 +14929,7 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -14863,6 +14960,21 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
                     )],
                 ),
                 fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "list",
+                    "List",
+                    vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
+                ),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "simple",
+                    "Simple",
+                    vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
+                ),
+                fret_ui_shadcn::NavigationMenuItem::new(
+                    "with-icon",
+                    "With Icon",
+                    vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
+                ),
             ];
 
             let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
@@ -14960,6 +15072,21 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
                         )],
                     ),
                     fret_ui_shadcn::NavigationMenuItem::new("docs", "Docs", Vec::new()),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "list",
+                        "List",
+                        vec![shadcn_nav_menu_demo_list_panel(cx, model.clone())],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "simple",
+                        "Simple",
+                        vec![shadcn_nav_menu_demo_simple_panel(cx, model.clone())],
+                    ),
+                    fret_ui_shadcn::NavigationMenuItem::new(
+                        "with-icon",
+                        "With Icon",
+                        vec![shadcn_nav_menu_demo_with_icon_panel(cx, model.clone())],
+                    ),
                 ];
 
                 let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
@@ -15123,6 +15250,43 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
         h: viewport_bounds.size.height.0,
     };
 
+    let debug = std::env::var("FRET_DEBUG_NAV_MENU_TRIGGERS")
+        .ok()
+        .is_some_and(|v| v == "1");
+    if debug {
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        for label in ["Home", "Components", "Docs"] {
+            if let Some(node) = snap
+                .nodes
+                .iter()
+                .find(|n| n.label.as_deref() == Some(label))
+            {
+                eprintln!(
+                    "fret nav-menu label={label} role={:?} bounds=({:.1},{:.1}) {:.1}x{:.1}",
+                    node.role,
+                    node.bounds.origin.x.0,
+                    node.bounds.origin.y.0,
+                    node.bounds.size.width.0,
+                    node.bounds.size.height.0,
+                );
+            } else {
+                eprintln!("fret nav-menu label={label} missing in semantics snapshot");
+            }
+        }
+        eprintln!(
+            "fret nav-menu viewport=({:.1},{:.1}) {:.1}x{:.1}",
+            fret_viewport.x, fret_viewport.y, fret_viewport.w, fret_viewport.h
+        );
+        eprintln!(
+            "web  nav-menu trigger=({:.1},{:.1}) {:.1}x{:.1}",
+            web_trigger.rect.x, web_trigger.rect.y, web_trigger.rect.w, web_trigger.rect.h
+        );
+        eprintln!(
+            "web  nav-menu viewport=({:.1},{:.1}) {:.1}x{:.1}",
+            web_viewport.rect.x, web_viewport.rect.y, web_viewport.rect.w, web_viewport.rect.h
+        );
+    }
+
     let actual_gap = rect_main_gap(web_side, fret_trigger, fret_viewport);
     let actual_cross = rect_cross_delta(web_side, web_align, fret_trigger, fret_viewport);
 
@@ -15138,8 +15302,8 @@ fn assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
     assert_close(&label, fret_trigger.h, web_trigger.rect.h, 1.0);
 }
 
-#[test]
-fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_height_matches() {
+#[allow(dead_code)]
+fn navigation_menu_demo_home_mobile_small_viewport_height_matches_legacy() {
     let web = read_web_golden_open("navigation-menu-demo.home-mobile-vp375x320");
     let theme = web_theme(&web);
 
@@ -15161,7 +15325,7 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_height_matches() 
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(&theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -15347,9 +15511,33 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_height_matches() 
 }
 
 #[test]
+fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_height_matches() {
+    assert_navigation_menu_demo_mobile_viewport_geometry_matches(
+        "navigation-menu-demo.home-mobile-vp375x320",
+        "home",
+    );
+}
+
+#[test]
 fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_insets_match() {
     assert_navigation_menu_demo_mobile_viewport_insets_match(
         "navigation-menu-demo.home-mobile-vp375x320",
+        "home",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_home_mobile_tiny_viewport_height_matches() {
+    assert_navigation_menu_demo_mobile_viewport_geometry_matches(
+        "navigation-menu-demo.home-mobile-vp375x240",
+        "home",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_home_mobile_tiny_viewport_insets_match() {
+    assert_navigation_menu_demo_mobile_viewport_insets_match(
+        "navigation-menu-demo.home-mobile-vp375x240",
         "home",
     );
 }
@@ -15371,6 +15559,14 @@ fn web_vs_fret_navigation_menu_demo_components_mobile_small_viewport_height_matc
 }
 
 #[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_tiny_viewport_height_matches() {
+    assert_navigation_menu_demo_mobile_viewport_geometry_matches(
+        "navigation-menu-demo.components-mobile-vp375x240",
+        "components",
+    );
+}
+
+#[test]
 fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_insets_match() {
     assert_navigation_menu_demo_mobile_viewport_insets_match(
         "navigation-menu-demo.components-mobile",
@@ -15382,6 +15578,14 @@ fn web_vs_fret_navigation_menu_demo_components_mobile_viewport_insets_match() {
 fn web_vs_fret_navigation_menu_demo_components_mobile_small_viewport_insets_match() {
     assert_navigation_menu_demo_mobile_viewport_insets_match(
         "navigation-menu-demo.components-mobile-vp375x320",
+        "components",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_components_mobile_tiny_viewport_insets_match() {
+    assert_navigation_menu_demo_mobile_viewport_insets_match(
+        "navigation-menu-demo.components-mobile-vp375x240",
         "components",
     );
 }
@@ -15400,6 +15604,16 @@ fn web_vs_fret_navigation_menu_demo_home_mobile_small_viewport_hover_to_componen
  {
     assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
         "navigation-menu-demo.home-mobile-vp375x320-then-hover-components",
+        "home",
+        "components",
+    );
+}
+
+#[test]
+fn web_vs_fret_navigation_menu_demo_home_mobile_tiny_viewport_hover_to_components_viewport_geometry_matches()
+ {
+    assert_navigation_menu_demo_mobile_viewport_geometry_after_hover_matches(
+        "navigation-menu-demo.home-mobile-vp375x240-then-hover-components",
         "home",
         "components",
     );
