@@ -726,6 +726,10 @@ topics (if/when we implement them):
       - Perf: avoid cloning `VirtualListProps` (which includes `visible_items`) in scroll-handle invalidation paths by adding a borrowed lookup helper (`with_element_record_for_node`) and using it for the fixed-mode scroll-to-item fast path.
       - Evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-prepaint-v2/1769442109178-script-step-0027-wheel/bundle.json`
       - Evidence: `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape`), `crates/fret-ui/src/declarative/frame.rs` (`with_element_record_for_node`), `crates/fret-ui/src/tree/layout.rs` (borrowed vlist fast path).
+    - Progress (v2.2): skip full layout engine work on layout-clean frames (prepaint-only fast path).
+      - Change: `UiTree::layout_all_with_pass_kind` now early-exits when there are no layout invalidations and no pending barrier relayouts, while still refreshing semantics (if requested) and running prepaint.
+      - Intent: keep scroll-only and cache-hit frames cheap without requiring every driver to grow a “layout_if_needed” wrapper.
+      - Anchor: `crates/fret-ui/src/tree/layout.rs` (fast-path early return).
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
