@@ -197,17 +197,20 @@ Definition of “safe-by-default” here:
 - [x] Keep P0 regressions in the default layout suite:
   - `tools/diag-scripts/ui-gallery-menubar-text-overlap-command.json`
   - `tools/diag-scripts/ui-gallery-chrome-torture-layout.json`
-- [ ] Add an “extended sweep” script (not in the default suite) that visits more pages to discover new layout gaps early:
+- [x] Add an “extended sweep” script (not in the default suite) that visits more pages to discover new layout gaps early:
   - Target pages: `data_table`, `tree`, `virtual_list`, `code_view`, `sidebar`, `menus`, `command`, `toast`, `material3_menu` (and any newly added gallery pages).
   - Gate style: a small number of `bounds_within_window` assertions on page roots + 1–3 critical controls per page.
   - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-extended.json` (kept out of `ui-gallery-layout` suite by default).
 - [x] Harden `ui-gallery-menubar-text-overlap-command` to cover all adjacent triggers (not just `Window`/`Gallery`).
-- [ ] Add a dedicated “torture sweep” script (not in the default suite) that visits high-risk torture pages to discover layout gaps in tight windows:
+- [x] Add a dedicated “torture sweep” script (not in the default suite) that visits high-risk torture pages to discover layout gaps in tight windows:
   - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-torture.json` (kept out of `ui-gallery-layout` suite by default).
-- [ ] Add a dedicated “chrome” sweep that targets non-page UI surfaces (top bar / in-window menubar / toast), since they are not addressable as gallery pages:
+- [x] Add a dedicated “chrome” sweep that targets non-page UI surfaces (top bar / in-window menubar / toast), since they are not addressable as gallery pages:
   - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-extended-chrome.json` (kept out of the default suite by default).
 - [x] Add a toast overlay bounds gate in the chrome sweep:
   - `tools/diag-scripts/ui-gallery-layout-sweep-extended-chrome.json` (clicks `ui-gallery-toast-default` and asserts `toast-entry-1` is within the window).
+- [x] Turn capture-only P0 repro scripts into layout gates:
+  - `tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json`: assert `bounds_within_window` for `ui-gallery-intro-preview-grid` and `ui-gallery-intro-preview-note`.
+  - `tools/diag-scripts/ui-gallery-resizable-initial-bundle.json`: assert `bounds_within_window` for `ui-gallery-resizable-panels`.
 - [x] Add an overlay regression script that opens key modals/popovers and asserts bounds:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
 - [x] Extend the overlay script with a “flex + scroll” stress interaction:

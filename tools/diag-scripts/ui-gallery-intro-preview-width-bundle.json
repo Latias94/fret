@@ -45,7 +45,28 @@
       "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-page-intro" },
-        "padding_px": 0.0
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-intro-preview-grid" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-intro-preview-note" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
       },
       "timeout_frames": 240
     },
