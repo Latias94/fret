@@ -1032,12 +1032,17 @@ topics (if/when we implement them):
       concrete outline/file-tree/property-list UI surfaces (not just protocols).
     - [x] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
       - Target (v0): `apps/fret-examples/src/components_gallery.rs` (file-tree panel).
-      - Script: `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`.
+      - Scripts:
+        - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
+        - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
       - Env (recommended): `FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`, `FRET_DIAG=1`.
+      - Note: the torture surface includes an expandable `folder_1` at `TreeItemId=1` so the toggle harness can drive expand/collapse while keeping a large list.
       - Gate (example): `fretboard diag stats <bundle.json> --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-stale-paint components-gallery-file-tree-root`
       - Builtin suite:
         - `cargo run -p fretboard -- diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
-      - Evidence bundle (view-cache, release): `target/fret-diag-components-gallery-file-tree-boundary2/1769789840519-script-step-0021-wheel/bundle.json`
+      - Evidence bundles (suite, view-cache, release):
+        - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829965598-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829992147-components-gallery-file-tree-toggle-and-scroll/bundle.json`
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
