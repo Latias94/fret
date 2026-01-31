@@ -881,6 +881,88 @@ fn selectable_text_double_and_triple_click_select() {
 }
 
 #[test]
+fn selectable_text_double_click_sets_primary_selection_when_enabled() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::TextInteractionSettings {
+        linux_primary_selection: true,
+    });
+    let mut caps = fret_runtime::PlatformCapabilities::default();
+    caps.clipboard.primary_text = true;
+    app.set_global(caps);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root_name = "selectable-text-primary-selection-double-click";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let selectable_bounds = ui
+        .debug_node_bounds(selectable_node)
+        .expect("selectable bounds");
+    let pos = Point::new(
+        Px(selectable_bounds.origin.x.0 + 5.0),
+        Px(selectable_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        app.take_effects().iter().any(|e| {
+            matches!(
+                e,
+                fret_runtime::Effect::PrimarySelectionSetText { text }
+                if text == "hello"
+            )
+        }),
+        "expected selectable text selection to set primary selection when enabled"
+    );
+}
+
+#[test]
 fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
     #[derive(Default)]
     struct LineTextService {
@@ -1263,6 +1345,7 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
         clipboard: fret_runtime::capabilities::ClipboardCapabilities {
             text: false,
             files: false,
+            primary_text: false,
         },
         ..fret_runtime::PlatformCapabilities::default()
     });
@@ -1489,6 +1572,88 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
             .iter()
             .any(|e| matches!(e, fret_runtime::Effect::ClipboardGetText { .. })),
         "expected text.paste to request ClipboardGetText"
+    );
+}
+
+#[test]
+fn text_input_middle_click_pastes_primary_selection_when_enabled() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::TextInteractionSettings {
+        linux_primary_selection: true,
+    });
+    let mut caps = fret_runtime::PlatformCapabilities::default();
+    caps.clipboard.text = true;
+    caps.clipboard.primary_text = true;
+    app.set_global(caps);
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-primary-selection-middle-click",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let input_bounds = ui.debug_node_bounds(input_node).expect("input bounds");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 10.0),
+        Px(input_bounds.origin.y.0 + 10.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Middle,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = app.take_effects();
+    let Some(token) = effects.iter().find_map(|e| match e {
+        fret_runtime::Effect::PrimarySelectionGetText { token, .. } => Some(*token),
+        _ => None,
+    }) else {
+        panic!("expected middle click to request PrimarySelectionGetText");
+    };
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::PrimarySelectionText {
+            token,
+            text: "hello".to_string(),
+        },
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some("hello"),
+        "expected primary selection paste to insert text into the bound model"
     );
 }
 

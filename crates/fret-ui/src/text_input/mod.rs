@@ -40,6 +40,7 @@ pub struct TextInput {
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
     pending_clipboard_token: Option<fret_runtime::ClipboardToken>,
+    pending_primary_selection_token: Option<fret_runtime::ClipboardToken>,
 
     chrome_style: TextInputStyle,
     chrome_override: bool,

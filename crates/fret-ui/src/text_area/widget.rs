@@ -520,10 +520,57 @@ impl<H: UiHost> Widget<H> for TextArea {
                 position,
                 click_count,
                 modifiers,
+                pointer_type,
                 ..
             }) => {
-                if *button != MouseButton::Left {
-                    return;
+                match *button {
+                    MouseButton::Left => {}
+                    MouseButton::Middle => {
+                        if *pointer_type != fret_core::PointerType::Mouse {
+                            return;
+                        }
+                        let settings = cx
+                            .app
+                            .global::<fret_runtime::TextInteractionSettings>()
+                            .copied()
+                            .unwrap_or_default();
+                        if !settings.linux_primary_selection
+                            || !cx.input_ctx.caps.clipboard.primary_text
+                        {
+                            return;
+                        }
+                        if self.is_ime_composing() {
+                            return;
+                        }
+                        let Some(window) = cx.window else {
+                            return;
+                        };
+
+                        // Middle-click paste should use the caret under the pointer (editor-grade UX).
+                        cx.request_focus(cx.node);
+                        self.dragging_thumb = false;
+
+                        let inner = self.content_bounds();
+                        let local = fret_core::Point::new(
+                            position.x - inner.origin.x,
+                            position.y - inner.origin.y,
+                        );
+                        let local = fret_core::Point::new(local.x, Px(local.y.0 + self.offset_y.0));
+                        self.set_caret_from_point(cx, local);
+                        self.selection_anchor = self.caret;
+                        self.clear_preedit();
+                        self.ensure_caret_visible = true;
+                        cx.invalidate_self(Invalidation::Layout);
+                        cx.request_redraw();
+
+                        let token = cx.app.next_clipboard_token();
+                        self.pending_primary_selection_token = Some(token);
+                        cx.app
+                            .push_effect(Effect::PrimarySelectionGetText { window, token });
+                        cx.stop_propagation();
+                        return;
+                    }
+                    _ => return,
                 }
 
                 if let Some((track, thumb)) = self.scrollbar_geometry(self.last_bounds)
@@ -651,8 +698,33 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
             Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 if *button == MouseButton::Left && cx.captured == Some(cx.node) {
+                    let was_dragging_thumb = self.dragging_thumb;
                     self.dragging_thumb = false;
                     cx.release_pointer_capture();
+
+                    let settings = cx
+                        .app
+                        .global::<fret_runtime::TextInteractionSettings>()
+                        .copied()
+                        .unwrap_or_default();
+                    if !was_dragging_thumb
+                        && settings.linux_primary_selection
+                        && cx.input_ctx.caps.clipboard.primary_text
+                        && !self.is_ime_composing()
+                    {
+                        let (start, end) = crate::text_edit::buffer::selection_range(
+                            self.selection_anchor,
+                            self.caret,
+                        );
+                        if start != end
+                            && end <= self.text.len()
+                            && let Some(sel) = self.text.get(start..end)
+                        {
+                            cx.app.push_effect(Effect::PrimarySelectionSetText {
+                                text: sel.to_string(),
+                            });
+                        }
+                    }
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
@@ -776,6 +848,42 @@ impl<H: UiHost> Widget<H> for TextArea {
             Event::ClipboardTextUnavailable { token } => {
                 if self.pending_clipboard_token == Some(*token) {
                     self.pending_clipboard_token = None;
+                }
+            }
+            Event::PrimarySelectionText { token, text } => {
+                if cx.focus != Some(cx.node) {
+                    return;
+                }
+                if self.is_ime_composing() {
+                    return;
+                }
+                if self.pending_primary_selection_token != Some(*token) {
+                    return;
+                }
+                self.pending_primary_selection_token = None;
+
+                let had_preedit = self.is_ime_composing();
+                let outcome = crate::text_edit::commands::apply_clipboard_text(
+                    &mut self.edit_state(),
+                    crate::text_edit::commands::ClipboardTextPolicy::Multiline,
+                    text.as_str(),
+                );
+                let mut delta = crate::text_edit::commands::multiline_ui_delta(
+                    "text.primary_selection_text",
+                    outcome,
+                );
+                if had_preedit {
+                    delta.invalidate_layout = true;
+                    delta.clear_preedit = true;
+                    delta.text_dirty = true;
+                    delta.reset_affinity = true;
+                    delta.ensure_caret_visible = true;
+                }
+                self.apply_multiline_ui_delta(cx, delta);
+            }
+            Event::PrimarySelectionTextUnavailable { token } => {
+                if self.pending_primary_selection_token == Some(*token) {
+                    self.pending_primary_selection_token = None;
                 }
             }
             Event::Ime(ime) => {

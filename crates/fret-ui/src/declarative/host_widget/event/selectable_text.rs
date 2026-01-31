@@ -450,6 +450,31 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             if cx.captured == Some(cx.node) {
                 cx.release_pointer_capture();
             }
+
+            let settings = cx
+                .app
+                .global::<fret_runtime::TextInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            if settings.linux_primary_selection && cx.input_ctx.caps.clipboard.primary_text {
+                let (anchor, caret) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::SelectableTextState::default,
+                    |state| (state.selection_anchor, state.caret),
+                );
+                let (start, end) = crate::text_edit::buffer::selection_range(anchor, caret);
+                if start != end
+                    && end <= props.rich.text.len()
+                    && let Some(sel) = props.rich.text.get(start..end)
+                {
+                    cx.app.push_effect(Effect::PrimarySelectionSetText {
+                        text: sel.to_string(),
+                    });
+                }
+            }
+
             crate::elements::with_element_state(
                 &mut *cx.app,
                 window,

@@ -487,49 +487,95 @@ impl<H: UiHost> Widget<H> for TextInput {
                 position,
                 click_count,
                 modifiers,
+                pointer_type,
                 ..
-            }) => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                cx.request_focus(cx.node);
-                cx.capture_pointer(cx.node);
-                self.last_sent_cursor = None;
-                let padding = self.chrome_style.padding.left;
-                let local_x =
-                    Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
-                let caret = self
-                    .text_blob
-                    .map(|blob| cx.services.hit_test_x(blob, local_x))
-                    .unwrap_or_else(|| self.caret_from_x(local_x));
+            }) => match *button {
+                MouseButton::Left => {
+                    cx.request_focus(cx.node);
+                    cx.capture_pointer(cx.node);
+                    self.last_sent_cursor = None;
+                    let padding = self.chrome_style.padding.left;
+                    let local_x =
+                        Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
+                    let caret = self
+                        .text_blob
+                        .map(|blob| cx.services.hit_test_x(blob, local_x))
+                        .unwrap_or_else(|| self.caret_from_x(local_x));
 
-                self.caret = caret;
-                match *click_count {
-                    2 => {
-                        let (anchor, caret) = crate::text_edit::utf8::select_word_range(
-                            self.text.as_str(),
-                            caret,
-                            cx.input_ctx.text_boundary_mode,
-                        );
-                        self.selection_anchor = anchor;
-                        self.caret = caret;
-                    }
-                    3 => {
-                        let (anchor, caret) =
-                            crate::text_edit::utf8::select_line_range(self.text.as_str(), caret);
-                        self.selection_anchor = anchor;
-                        self.caret = caret;
-                    }
-                    _ => {
-                        if !modifiers.shift {
-                            self.selection_anchor = self.caret;
+                    self.caret = caret;
+                    match *click_count {
+                        2 => {
+                            let (anchor, caret) = crate::text_edit::utf8::select_word_range(
+                                self.text.as_str(),
+                                caret,
+                                cx.input_ctx.text_boundary_mode,
+                            );
+                            self.selection_anchor = anchor;
+                            self.caret = caret;
+                        }
+                        3 => {
+                            let (anchor, caret) = crate::text_edit::utf8::select_line_range(
+                                self.text.as_str(),
+                                caret,
+                            );
+                            self.selection_anchor = anchor;
+                            self.caret = caret;
+                        }
+                        _ => {
+                            if !modifiers.shift {
+                                self.selection_anchor = self.caret;
+                            }
                         }
                     }
+                    self.clear_ime_composition();
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
                 }
-                self.clear_ime_composition();
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
-            }
+                MouseButton::Middle => {
+                    if *pointer_type != fret_core::PointerType::Mouse {
+                        return;
+                    }
+                    let settings = cx
+                        .app
+                        .global::<fret_runtime::TextInteractionSettings>()
+                        .copied()
+                        .unwrap_or_default();
+                    if !settings.linux_primary_selection
+                        || !cx.input_ctx.caps.clipboard.primary_text
+                    {
+                        return;
+                    }
+                    if self.is_ime_composing() {
+                        return;
+                    }
+                    let Some(window) = cx.window else {
+                        return;
+                    };
+
+                    cx.request_focus(cx.node);
+                    self.last_sent_cursor = None;
+
+                    let padding = self.chrome_style.padding.left;
+                    let local_x =
+                        Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
+                    let caret = self
+                        .text_blob
+                        .map(|blob| cx.services.hit_test_x(blob, local_x))
+                        .unwrap_or_else(|| self.caret_from_x(local_x));
+                    self.caret = caret;
+                    self.selection_anchor = caret;
+                    self.clear_ime_composition();
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+
+                    let token = cx.app.next_clipboard_token();
+                    self.pending_primary_selection_token = Some(token);
+                    cx.app
+                        .push_effect(Effect::PrimarySelectionGetText { window, token });
+                    cx.stop_propagation();
+                }
+                _ => {}
+            },
             Event::Pointer(fret_core::PointerEvent::Move {
                 position, buttons, ..
             }) => {
@@ -554,6 +600,29 @@ impl<H: UiHost> Widget<H> for TextInput {
             Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 if cx.captured == Some(cx.node) && *button == MouseButton::Left {
                     cx.release_pointer_capture();
+
+                    let settings = cx
+                        .app
+                        .global::<fret_runtime::TextInteractionSettings>()
+                        .copied()
+                        .unwrap_or_default();
+                    if settings.linux_primary_selection
+                        && cx.input_ctx.caps.clipboard.primary_text
+                        && !self.is_ime_composing()
+                    {
+                        let (start, end) = crate::text_edit::buffer::selection_range(
+                            self.selection_anchor,
+                            self.caret,
+                        );
+                        if start != end
+                            && end <= self.text.len()
+                            && let Some(sel) = self.text.get(start..end)
+                        {
+                            cx.app.push_effect(Effect::PrimarySelectionSetText {
+                                text: sel.to_string(),
+                            });
+                        }
+                    }
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
@@ -739,6 +808,34 @@ impl<H: UiHost> Widget<H> for TextInput {
             Event::ClipboardTextUnavailable { token } => {
                 if self.pending_clipboard_token == Some(*token) {
                     self.pending_clipboard_token = None;
+                }
+            }
+            Event::PrimarySelectionText { token, text } => {
+                if !focused {
+                    return;
+                }
+                if self.is_ime_composing() {
+                    return;
+                }
+                if self.pending_primary_selection_token != Some(*token) {
+                    return;
+                }
+                self.pending_primary_selection_token = None;
+
+                let outcome = crate::text_edit::commands::apply_clipboard_text(
+                    &mut self.edit_state(),
+                    crate::text_edit::commands::ClipboardTextPolicy::SingleLine,
+                    text.as_str(),
+                );
+                if outcome.invalidate_layout {
+                    self.mark_text_blobs_dirty();
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                }
+            }
+            Event::PrimarySelectionTextUnavailable { token } => {
+                if self.pending_primary_selection_token == Some(*token) {
+                    self.pending_primary_selection_token = None;
                 }
             }
             Event::Ime(ime) => {
