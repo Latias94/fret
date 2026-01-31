@@ -488,6 +488,7 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
                         measure_mode: crate::element::VirtualListMeasureMode::Fixed,
                         key_cache: crate::element::VirtualListKeyCacheMode::AllKeys,
                         overscan,
+                        keep_alive: 0,
                         scroll_margin: fret_core::Px(0.0),
                         gap: fret_core::Px(0.0),
                         scroll_handle: scroll_handle.clone(),

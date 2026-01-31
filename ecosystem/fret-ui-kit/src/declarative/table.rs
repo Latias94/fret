@@ -822,6 +822,7 @@ where
 
     let mut options = VirtualListOptions::new(row_h, props.overscan);
     options.items_revision = items_revision;
+    options.keep_alive = props.overscan.saturating_mul(2);
     match props.row_measure_mode {
         TableRowMeasureMode::Fixed => {
             options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
@@ -1835,6 +1836,7 @@ where
 
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
+    list_options.keep_alive = props.overscan.saturating_mul(2);
     match props.row_measure_mode {
         TableRowMeasureMode::Fixed => {
             list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;

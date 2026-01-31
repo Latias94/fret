@@ -74,6 +74,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_viewport_capture_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_cache_reuse_min: Option<u64> = None;
+    let mut check_retained_vlist_keep_alive_reuse_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
     let mut check_retained_vlist_scroll_window_dirty_max: Option<u64> = None;
@@ -457,6 +458,19 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_retained_vlist_reconcile_cache_reuse_min =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-retained-vlist-reconcile-cache-reuse".to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-retained-vlist-keep-alive-reuse-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-retained-vlist-keep-alive-reuse-min".to_string(),
+                    );
+                };
+                check_retained_vlist_keep_alive_reuse_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-retained-vlist-keep-alive-reuse-min".to_string()
                     })?);
                 i += 1;
             }
@@ -919,6 +933,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms,
                 poll_ms,
             );
+            if let Err(err) = &result {
+                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                return Err(err.clone());
+            }
             if let Ok(summary) = &result
                 && summary.stage.as_deref() == Some("failed")
             {
@@ -948,23 +966,26 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_viewport_capture_min.is_some()
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
                     || check_retained_vlist_reconcile_cache_reuse_min.is_some()
+                    || check_retained_vlist_keep_alive_reuse_min.is_some()
                     || check_retained_vlist_attach_detach_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
                     || check_retained_vlist_scroll_window_dirty_max.is_some()
                     || check_vlist_scroll_window_dirty_max.is_some()
                 {
-                    let bundle_path = wait_for_bundle_json_from_script_result(
+                    let Some(bundle_path) = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
                         &result,
                         timeout_ms,
                         poll_ms,
-                    )
-                    .ok_or_else(|| {
-                        "script passed but no bundle.json was found (required for post-run checks)"
-                            .to_string()
-                    })?;
+                    ) else {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        return Err(
+                            "script passed but no bundle.json was found (required for post-run checks)"
+                                .to_string(),
+                        );
+                    };
 
-                    apply_post_run_checks(
+                    if let Err(err) = apply_post_run_checks(
                         &bundle_path,
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
@@ -981,12 +1002,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_viewport_capture_min,
                         check_retained_vlist_reconcile_no_notify_min,
                         check_retained_vlist_reconcile_cache_reuse_min,
+                        check_retained_vlist_keep_alive_reuse_min,
                         check_retained_vlist_attach_detach_min,
                         check_retained_vlist_attach_detach_max,
                         check_retained_vlist_scroll_window_dirty_max,
                         check_vlist_scroll_window_dirty_max,
                         warmup_frames,
-                    )?;
+                    ) {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                        return Err(err);
+                    }
                 }
             }
 
@@ -2205,6 +2230,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 let retained_vlist_reconcile_cache_reuse_min_for_script =
                     check_retained_vlist_reconcile_cache_reuse_min
                         .filter(|_| should_gate_retained_vlist_for_script);
+                let retained_vlist_keep_alive_reuse_min_for_script =
+                    check_retained_vlist_keep_alive_reuse_min.filter(|_| {
+                        should_gate_retained_vlist_for_script
+                            && script_requires_retained_vlist_keep_alive_reuse_gate(&src)
+                    });
                 let retained_vlist_attach_detach_min_for_script =
                     check_retained_vlist_attach_detach_min
                         .filter(|_| should_gate_retained_vlist_for_script);
@@ -2230,6 +2260,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_viewport_capture_min.is_some()
                     || retained_vlist_gate_for_script.is_some()
                     || retained_vlist_reconcile_cache_reuse_min_for_script.is_some()
+                    || retained_vlist_keep_alive_reuse_min_for_script.is_some()
                     || retained_vlist_attach_detach_min_for_script.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some()
                     || retained_vlist_scroll_window_dirty_max_for_script.is_some()
@@ -2275,6 +2306,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script,
                         retained_vlist_reconcile_cache_reuse_min_for_script,
+                        retained_vlist_keep_alive_reuse_min_for_script,
                         retained_vlist_attach_detach_min_for_script,
                         retained_vlist_attach_detach_max_for_script,
                         retained_vlist_scroll_window_dirty_max_for_script,
@@ -3796,13 +3828,17 @@ fn wait_for_bundle_json_from_script_result(
 ) -> Option<PathBuf> {
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.min(5_000).max(250));
     while Instant::now() < deadline {
-        let dir = result
-            .last_bundle_dir
-            .as_deref()
-            .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()))
-            .map(PathBuf::from)
-            .map(|p| if p.is_absolute() { p } else { out_dir.join(p) })
-            .or_else(|| read_latest_pointer(out_dir))
+        // Prefer the app-maintained "latest bundle pointer" since it tracks the final dump
+        // (`capture_bundle`) even when script auto-dumps are enabled.
+        let dir = read_latest_pointer(out_dir)
+            .or_else(|| {
+                result
+                    .last_bundle_dir
+                    .as_deref()
+                    .and_then(|s| (!s.trim().is_empty()).then_some(s.trim()))
+                    .map(PathBuf::from)
+                    .map(|p| if p.is_absolute() { p } else { out_dir.join(p) })
+            })
             .or_else(|| find_latest_export_dir(out_dir));
         if let Some(dir) = dir {
             let bundle_path = resolve_bundle_json_path(&dir);
@@ -3877,6 +3913,17 @@ fn script_requires_retained_vlist_window_boundary_gate(script: &Path) -> bool {
             | "ui-gallery-table-retained-window-boundary-scroll.json"
             | "components-gallery-file-tree-window-boundary-scroll.json"
             | "components-gallery-table-window-boundary-scroll.json"
+    )
+}
+
+fn script_requires_retained_vlist_keep_alive_reuse_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "components-gallery-file-tree-window-boundary-bounce.json"
     )
 }
 
@@ -4096,6 +4143,7 @@ fn apply_post_run_checks(
     check_viewport_capture_min: Option<u64>,
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
     check_retained_vlist_reconcile_cache_reuse_min: Option<u64>,
+    check_retained_vlist_keep_alive_reuse_min: Option<u64>,
     check_retained_vlist_attach_detach_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
     check_retained_vlist_scroll_window_dirty_max: Option<u64>,
@@ -4164,6 +4212,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_retained_vlist_reconcile_cache_reuse_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_retained_vlist_keep_alive_reuse_min
+        && min > 0
+    {
+        check_bundle_for_retained_vlist_keep_alive_reuse_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_retained_vlist_attach_detach_min
         && min > 0
@@ -4765,6 +4818,20 @@ fn maybe_launch_demo(
     cmd.env("FRET_DIAG_DIR", out_dir);
     cmd.env("FRET_DIAG_READY_PATH", ready_path);
     cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
+    // Keep bundles reasonably sized by default so post-run gates stay fast; callers can override
+    // via `--env FRET_DIAG_MAX_*`.
+    if std::env::var_os("FRET_DIAG_MAX_SNAPSHOTS").is_none()
+        && !launch_env
+            .iter()
+            .any(|(k, _)| k == "FRET_DIAG_MAX_SNAPSHOTS")
+    {
+        cmd.env("FRET_DIAG_MAX_SNAPSHOTS", "120");
+    }
+    if std::env::var_os("FRET_DIAG_MAX_EVENTS").is_none()
+        && !launch_env.iter().any(|(k, _)| k == "FRET_DIAG_MAX_EVENTS")
+    {
+        cmd.env("FRET_DIAG_MAX_EVENTS", "2000");
+    }
     if wants_screenshots {
         cmd.env("FRET_DIAG_SCREENSHOTS", "1");
     }
@@ -7558,6 +7625,106 @@ fn check_bundle_for_retained_vlist_reconcile_cache_reuse_min_json(
         msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
         msg.push_str(&format!(
             "min_reconcile_reuse_frames={min_reconcile_reuse_frames} reconcile_reuse_frames={reconcile_reuse_frames} reconcile_frames={reconcile_frames} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
+        ));
+        for line in offenders.into_iter().take(10) {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    Ok(())
+}
+
+fn check_bundle_for_retained_vlist_keep_alive_reuse_min(
+    bundle_path: &Path,
+    min_keep_alive_reuse_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
+        &bundle,
+        bundle_path,
+        min_keep_alive_reuse_frames,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_keep_alive_reuse_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut keep_alive_reuse_frames: u64 = 0;
+    let mut offenders: Vec<String> = Vec::new();
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let reconciles = s
+                .get("debug")
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            if reconciles.is_empty() {
+                continue;
+            }
+
+            let any_keep_alive_reuse = reconciles.iter().any(|r| {
+                r.get("reused_from_keep_alive_items")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0)
+                    > 0
+            });
+
+            if any_keep_alive_reuse {
+                keep_alive_reuse_frames = keep_alive_reuse_frames.saturating_add(1);
+            } else {
+                let kept_alive_sum = reconciles
+                    .iter()
+                    .map(|r| {
+                        r.get("kept_alive_items")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                    })
+                    .sum::<u64>();
+                offenders.push(format!(
+                    "frame_id={frame_id} reconciles={count} kept_alive_sum={kept_alive_sum}",
+                    count = reconciles.len()
+                ));
+            }
+        }
+    }
+
+    if keep_alive_reuse_frames < min_keep_alive_reuse_frames {
+        let mut msg = String::new();
+        msg.push_str("expected retained virtual-list to reuse keep-alive items\n");
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        msg.push_str(&format!(
+            "min_keep_alive_reuse_frames={min_keep_alive_reuse_frames} keep_alive_reuse_frames={keep_alive_reuse_frames} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
         ));
         for line in offenders.into_iter().take(10) {
             msg.push_str("  ");
@@ -10617,6 +10784,83 @@ mod tests {
         assert!(err.contains("reconcile_reuse_frames=0"));
         assert!(err.contains("frame_id=1"));
         assert!(err.contains("first_reuse_reason=cache_key_mismatch"));
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_keep_alive_reuse_min_passes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "retained_virtual_list_reconciles": [
+                            {
+                                "node": 10,
+                                "element": 20,
+                                "prev_items": 10,
+                                "next_items": 10,
+                                "preserved_items": 8,
+                                "attached_items": 2,
+                                "detached_items": 2,
+                                "reused_from_keep_alive_items": 1,
+                                "kept_alive_items": 1,
+                                "evicted_keep_alive_items": 0
+                            }
+                        ]
+                    }
+                }]
+            }]
+        });
+
+        check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            0,
+        )
+        .expect("expected keep-alive reuse>=1");
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_keep_alive_reuse_min_fails_when_missing_reuse() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "retained_virtual_list_reconciles": [
+                            {
+                                "node": 10,
+                                "element": 20,
+                                "prev_items": 10,
+                                "next_items": 10,
+                                "preserved_items": 8,
+                                "attached_items": 2,
+                                "detached_items": 2,
+                                "reused_from_keep_alive_items": 0,
+                                "kept_alive_items": 2,
+                                "evicted_keep_alive_items": 0
+                            }
+                        ]
+                    }
+                }]
+            }]
+        });
+
+        let err = check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
+            &bundle,
+            Path::new("bundle.json"),
+            1,
+            0,
+        )
+        .expect_err("expected keep-alive reuse to fail");
+        assert!(err.contains("expected retained virtual-list to reuse keep-alive items"));
+        assert!(err.contains("keep_alive_reuse_frames=0"));
+        assert!(err.contains("frame_id=10"));
     }
 
     #[test]

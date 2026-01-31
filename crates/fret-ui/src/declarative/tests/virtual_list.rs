@@ -1069,6 +1069,129 @@ fn retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying
 }
 
 #[test]
+fn retained_virtual_list_keep_alive_reuses_detached_items_when_scrolling_back() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_tree(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> AnyElement {
+        let mut cache = crate::element::ViewCacheProps::default();
+        cache.layout.size.width = crate::element::Length::Fill;
+        cache.layout.size.height = crate::element::Length::Fill;
+        cache.cache_key = 1;
+
+        cx.view_cache(cache, move |cx| {
+            let list_layout = crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: crate::element::Length::Fill,
+                    height: crate::element::Length::Fill,
+                    ..Default::default()
+                },
+                overflow: crate::element::Overflow::Clip,
+                ..Default::default()
+            };
+
+            let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn =
+                Arc::new(|i| i as crate::ItemKey);
+            let row: crate::windowed_surface_host::RetainedVirtualListRowFn<TestHost> =
+                Arc::new(|cx, i| cx.text(format!("row {i}")));
+
+            let options = crate::element::VirtualListOptions::new(Px(10.0), 0).keep_alive(32);
+            vec![cx.virtual_list_keyed_retained_with_layout(
+                list_layout,
+                100,
+                options,
+                scroll_handle,
+                key_at,
+                row,
+            )]
+        })
+    }
+
+    // Establish viewport and mount initial children.
+    for _frame in 0..3 {
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "retained-virt-keep-alive",
+            |cx| vec![build_tree(cx, &scroll_handle)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        app.advance_frame();
+    }
+
+    // Scroll down across the window boundary (forces reconcile + detach).
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(60.0)));
+    let mut kept_alive_any = false;
+    for _frame in 0..2 {
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "retained-virt-keep-alive",
+            |cx| vec![build_tree(cx, &scroll_handle)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        kept_alive_any |= ui
+            .debug_retained_virtual_list_reconciles()
+            .iter()
+            .any(|r| r.kept_alive_items > 0);
+        app.advance_frame();
+    }
+    assert!(
+        kept_alive_any,
+        "expected reconcile to retain some keep-alive items"
+    );
+
+    // Scroll back to the top; the host should reuse some kept-alive items instead of mounting them
+    // again from scratch.
+    scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(0.0)));
+    let mut reused_any = false;
+    for _frame in 0..2 {
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "retained-virt-keep-alive",
+            |cx| vec![build_tree(cx, &scroll_handle)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        reused_any |= ui
+            .debug_retained_virtual_list_reconciles()
+            .iter()
+            .any(|r| r.reused_from_keep_alive_items > 0);
+        app.advance_frame();
+    }
+    assert!(
+        reused_any,
+        "expected reconcile to reuse items from the keep-alive bucket when scrolling back"
+    );
+}
+
+#[test]
 fn virtual_list_triggers_visible_range_rerender_on_scrollbar_wheel_when_cached() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

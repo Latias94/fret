@@ -1366,6 +1366,12 @@ pub struct VirtualListProps {
     pub measure_mode: VirtualListMeasureMode,
     pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
+    /// Number of off-window items that a retained virtual-list host may keep alive for reuse.
+    ///
+    /// This is primarily consumed by retained/windowed host implementations (ADR 0192) so window
+    /// shifts can reuse previously-mounted item subtrees without forcing the parent cache root to
+    /// rerender.
+    pub keep_alive: usize,
     pub scroll_margin: Px,
     pub gap: Px,
     pub scroll_handle: crate::scroll::VirtualListScrollHandle,
@@ -1412,6 +1418,7 @@ pub struct VirtualListOptions {
     pub measure_mode: VirtualListMeasureMode,
     pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
+    pub keep_alive: usize,
     pub scroll_margin: Px,
     pub gap: Px,
     pub known_row_height_at: Option<Arc<dyn Fn(usize) -> Px + Send + Sync>>,
@@ -1426,10 +1433,16 @@ impl VirtualListOptions {
             measure_mode: VirtualListMeasureMode::Measured,
             key_cache: VirtualListKeyCacheMode::AllKeys,
             overscan,
+            keep_alive: 0,
             scroll_margin: Px(0.0),
             gap: Px(0.0),
             known_row_height_at: None,
         }
+    }
+
+    pub fn keep_alive(mut self, keep_alive: usize) -> Self {
+        self.keep_alive = keep_alive;
+        self
     }
 
     pub fn fixed(estimate_row_height: Px, overscan: usize) -> Self {
@@ -1460,6 +1473,7 @@ impl std::fmt::Debug for VirtualListOptions {
             .field("measure_mode", &self.measure_mode)
             .field("key_cache", &self.key_cache)
             .field("overscan", &self.overscan)
+            .field("keep_alive", &self.keep_alive)
             .field("scroll_margin", &self.scroll_margin)
             .field("gap", &self.gap)
             .field("known_row_height_at", &self.known_row_height_at.is_some())

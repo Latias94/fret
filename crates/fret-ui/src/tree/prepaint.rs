@@ -584,6 +584,7 @@ mod tests {
                             measure_mode: crate::element::VirtualListMeasureMode::Fixed,
                             key_cache: crate::element::VirtualListKeyCacheMode::VisibleOnly,
                             overscan: 10,
+                            keep_alive: 0,
                             scroll_margin: Px(0.0),
                             gap: Px(0.0),
                             scroll_handle: scroll_handle.clone(),

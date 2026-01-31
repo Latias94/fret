@@ -181,6 +181,7 @@ where
     // VirtualList windowing should react to entry-list changes (expand/collapse + tree updates).
     // We conservatively fold both model revisions into the virtualizer revision.
     options.items_revision = items_revision ^ state_revision.rotate_left(1);
+    options.keep_alive = (props.overscan as usize).saturating_mul(2);
 
     let expanded_for_row = expanded.clone();
     let selected_for_row = selected;

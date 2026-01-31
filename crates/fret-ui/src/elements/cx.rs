@@ -2656,6 +2656,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     measure_mode: options.measure_mode,
                     key_cache,
                     overscan: options.overscan,
+                    keep_alive: options.keep_alive,
                     scroll_margin: options.scroll_margin,
                     gap: options.gap,
                     scroll_handle,

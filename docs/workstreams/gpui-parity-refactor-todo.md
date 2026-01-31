@@ -693,6 +693,19 @@ topics (if/when we implement them):
       - Evidence bundle (suite, cache+shell, release): `target/fret-diag-virt-retained-suite-local1/1769751016873-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
       - Change: `invalidate_scroll_handle_bindings_for_changed_handles` triggers `mark_nearest_view_cache_root_needs_rerender` with `scroll_handle_window_update` while keeping the node invalidation as hit-test-only.
       - Anchors: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender`), `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_out_of_band_scroll_avoids_layout_after_overscan_window`).
+    - Progress (v2.1 retained host): add a bounded keep-alive bucket for detached item subtrees (Flutter sliver-style).
+      - Mechanism: when items detach due to a window shift, keep up to `VirtualListOptions::keep_alive` item roots keyed by `ItemKey` for later reuse (no remount).
+      - Liveness: keep-alive roots are included in the window's GC liveness roots (ADR 0191) so cache-hit frames cannot sweep kept-alive subtrees as “islands”.
+      - Diagnostics: bundles report `reused_from_keep_alive_items` / `kept_alive_items` / `evicted_keep_alive_items`.
+      - Anchors:
+        - `crates/fret-ui/src/element.rs` (`VirtualListOptions::keep_alive`, `VirtualListProps.keep_alive`)
+        - `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts` keep-alive bucket)
+        - `crates/fret-ui/src/elements/runtime.rs` (keep-alive roots in window liveness bookkeeping)
+        - `crates/fret-ui/src/windowed_surface_host.rs` (keep-alive state storage)
+        - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export)
+      - Evidence (monotonic scroll; expect `kept_alive_items > 0`, `reused_from_keep_alive_items == 0`):
+        - `C:\fret-diag-perf-components-gallery-file-tree-boundary-keepalive\1769839663570-script-step-0022-wheel\bundle.json`
+      - Note: keep-alive does not reduce the “first time we see new items” cost during one-direction boundary scroll; it targets oscillation/backtracking stability.
     - Validated (v1.1): per-row nested cache roots inside `VirtualList`.
       - Attempt: wrap each row in a nested `ViewCache` boundary (`FRET_UI_GALLERY_VLIST_ROW_CACHE=1`) to reuse row layout/paint across window rebuilds.
       - Fix: `ViewCacheProps::default().contained_layout` is now `false` (contained relayout is opt-in), so barrier-placed roots (VirtualList row placement) keep parent-provided bounds and do not get clobbered by out-of-band contained relayout.

@@ -142,6 +142,7 @@ pub struct WindowElementState {
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
     pub(super) pending_retained_virtual_list_reconciles: HashSet<GlobalElementId>,
+    retained_virtual_list_keep_alive_roots: HashSet<NodeId>,
     prepared_frame: FrameId,
     #[cfg(any(test, feature = "diagnostics"))]
     strict_ownership: bool,
@@ -274,6 +275,20 @@ impl WindowElementState {
             self.debug_node_entry_root_overwrites
                 .retain(|r| r.frame_id.0 >= cutoff);
         }
+    }
+
+    pub(crate) fn retained_virtual_list_keep_alive_roots(
+        &self,
+    ) -> impl Iterator<Item = NodeId> + '_ {
+        self.retained_virtual_list_keep_alive_roots.iter().copied()
+    }
+
+    pub(crate) fn add_retained_virtual_list_keep_alive_root(&mut self, node: NodeId) {
+        self.retained_virtual_list_keep_alive_roots.insert(node);
+    }
+
+    pub(crate) fn remove_retained_virtual_list_keep_alive_root(&mut self, node: NodeId) {
+        self.retained_virtual_list_keep_alive_roots.remove(&node);
     }
 
     fn advance_element_state_buffers(&mut self, lag_frames: u64) {

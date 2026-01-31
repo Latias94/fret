@@ -47,6 +47,25 @@ A retained windowed surface host MUST:
 - keep hit-testing and semantics coherent under scroll transforms,
 - provide bounded caching / retention policy for off-window items (keep-alive extent).
 
+#### Keep-alive bucket (Flutter-aligned)
+
+To minimize churn during scroll oscillation / backtracking, the host SHOULD maintain a bounded “keep-alive bucket” of
+recently-detached item subtrees:
+
+- Keys: stable per-item identity (Fret: `ItemKey`).
+- Values: the detached item root `NodeId` (entire subtree).
+- Budget: `keep_alive` item count (a hard upper bound).
+- Reuse: when an item re-enters the desired window, reuse the keep-alive subtree without re-mounting.
+- Eviction: when the budget is exceeded, evict arbitrary items (v1); future iterations may use LRU to better match user
+  scroll patterns.
+
+Correctness constraints:
+
+- A kept-alive subtree is **not** reachable from the window/layer roots, so it must be included in the window's explicit
+  GC liveness roots (ADR 0191); otherwise cache-hit frames can sweep the subtree as a stale “island”.
+- Keep-alive reuse MUST preserve the item's stable identity boundaries (no cross-key reuse), and MUST clear any per-item
+  ephemeral prepaint outputs when the host's prepaint key changes.
+
 ### 2) Authoring surface
 
 The host exposes an authoring API that separates:
@@ -116,4 +135,4 @@ Scripted harnesses (fretboard diag bundles) SHOULD include:
   - `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
 - Flutter slivers / retained element lifecycle:
   - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`_InactiveElements`, `finalizeTree`)
-  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`
+  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart` (`_keepAliveBucket`)

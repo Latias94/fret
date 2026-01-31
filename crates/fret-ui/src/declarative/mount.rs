@@ -359,6 +359,7 @@ where
         // roots:
         // - layer roots (base + overlays),
         // - view-cache reuse roots, and
+        // - retained windowed-surface keep-alive roots (ADR 0192),
         // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
         //   edges on cache-hit frames).
         //
@@ -367,6 +368,9 @@ where
         // must never be treated as a sufficient signal for liveness. Reachability from the
         // liveness roots is the authoritative predicate for GC.
         let liveness_roots = ui.all_layer_roots();
+        let keep_alive_roots: Vec<NodeId> = window_state
+            .retained_virtual_list_keep_alive_roots()
+            .collect();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
@@ -430,12 +434,19 @@ where
             let reachable = reachable_from_layers.get_or_insert_with(|| {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc(ui, window_frame, std::iter::once(root_node))
+                        collect_reachable_nodes_for_gc(
+                            ui,
+                            window_frame,
+                            std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
+                        )
                     } else {
                         collect_reachable_nodes_for_gc(
                             ui,
                             window_frame,
-                            liveness_roots.iter().copied(),
+                            liveness_roots
+                                .iter()
+                                .copied()
+                                .chain(keep_alive_roots.iter().copied()),
                         )
                     }
                 })
@@ -752,6 +763,9 @@ where
         // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
         // only detached nodes that have been stale beyond the configured lag window.
         let liveness_roots = ui.all_layer_roots();
+        let keep_alive_roots: Vec<NodeId> = window_state
+            .retained_virtual_list_keep_alive_roots()
+            .collect();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
@@ -814,12 +828,19 @@ where
             let reachable = reachable_from_layers.get_or_insert_with(|| {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc(ui, window_frame, std::iter::once(root_node))
+                        collect_reachable_nodes_for_gc(
+                            ui,
+                            window_frame,
+                            std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
+                        )
                     } else {
                         collect_reachable_nodes_for_gc(
                             ui,
                             window_frame,
-                            liveness_roots.iter().copied(),
+                            liveness_roots
+                                .iter()
+                                .copied()
+                                .chain(keep_alive_roots.iter().copied()),
                         )
                     }
                 })
@@ -1427,22 +1448,54 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         };
 
         let prev_items_len = props.visible_items.len();
+        let keep_alive_budget = props.keep_alive;
+        let desired_keys: HashSet<crate::ItemKey> =
+            desired_items.iter().map(|item| item.key).collect();
 
         let mut existing_by_key: HashMap<crate::ItemKey, NodeId> = HashMap::new();
+        let mut detached_by_key: Vec<(crate::ItemKey, NodeId)> = Vec::new();
         {
             let current_children = ui.children(node);
             for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
                 existing_by_key.insert(item.key, child);
             }
+
+            if keep_alive_budget > 0 {
+                for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
+                    if !desired_keys.contains(&item.key) {
+                        detached_by_key.push((item.key, child));
+                    }
+                }
+            }
         }
+
+        let mut keep_alive_state = window_state.with_state_mut(
+            element,
+            crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
+            |st| std::mem::take(st),
+        );
+        let mut keep_alive_by_key: HashMap<crate::ItemKey, NodeId> = keep_alive_state.by_key;
+        let mut keep_alive_order = keep_alive_state.order;
 
         let mut preserved: u32 = 0;
         let mut attached: u32 = 0;
+        let mut reused_from_keep_alive: u32 = 0;
+        let mut kept_alive: u32 = 0;
+        let mut evicted_keep_alive: u32 = 0;
         let mut next_children: Vec<NodeId> = Vec::with_capacity(desired_items.len());
         for item in &desired_items {
             if let Some(existing) = existing_by_key.get(&item.key).copied() {
                 next_children.push(existing);
                 preserved = preserved.saturating_add(1);
+                continue;
+            }
+
+            if let Some(existing) = keep_alive_by_key.remove(&item.key) {
+                window_state.remove_retained_virtual_list_keep_alive_root(existing);
+                keep_alive_order.retain(|k| *k != item.key);
+                next_children.push(existing);
+                preserved = preserved.saturating_add(1);
+                reused_from_keep_alive = reused_from_keep_alive.saturating_add(1);
                 continue;
             }
 
@@ -1478,6 +1531,47 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
 
         let detached =
             (prev_items_len.saturating_sub(preserved as usize)).min(u32::MAX as usize) as u32;
+
+        if keep_alive_budget == 0 {
+            if !keep_alive_by_key.is_empty() {
+                for node in keep_alive_by_key.values().copied() {
+                    window_state.remove_retained_virtual_list_keep_alive_root(node);
+                }
+                keep_alive_by_key.clear();
+            }
+            keep_alive_order.clear();
+        } else {
+            for (key, child) in detached_by_key {
+                if let Some(prev) = keep_alive_by_key.remove(&key) {
+                    window_state.remove_retained_virtual_list_keep_alive_root(prev);
+                }
+                keep_alive_order.retain(|k| *k != key);
+                keep_alive_by_key.insert(key, child);
+                keep_alive_order.push_back(key);
+                window_state.add_retained_virtual_list_keep_alive_root(child);
+                kept_alive = kept_alive.saturating_add(1);
+                while keep_alive_by_key.len() > keep_alive_budget {
+                    let Some(evict_key) = keep_alive_order.pop_front() else {
+                        break;
+                    };
+                    let Some(evicted) = keep_alive_by_key.remove(&evict_key) else {
+                        continue;
+                    };
+                    window_state.remove_retained_virtual_list_keep_alive_root(evicted);
+                    evicted_keep_alive = evicted_keep_alive.saturating_add(1);
+                }
+            }
+            keep_alive_order.retain(|k| keep_alive_by_key.contains_key(k));
+        }
+
+        keep_alive_state.by_key = keep_alive_by_key;
+        keep_alive_state.order = keep_alive_order;
+        window_state.with_state_mut(
+            element,
+            crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
+            |st| *st = keep_alive_state,
+        );
+
         ui.debug_record_retained_virtual_list_reconcile(
             crate::tree::UiDebugRetainedVirtualListReconcile {
                 node,
@@ -1487,6 +1581,9 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 preserved_items: preserved,
                 attached_items: attached,
                 detached_items: detached,
+                reused_from_keep_alive_items: reused_from_keep_alive,
+                kept_alive_items: kept_alive,
+                evicted_keep_alive_items: evicted_keep_alive,
             },
         );
 
