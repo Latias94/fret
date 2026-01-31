@@ -6508,17 +6508,21 @@ fn preview_toast(
         |cx| {
             vec![
                 shadcn::Button::new("Default")
+                    .test_id("ui-gallery-toast-default")
                     .on_click(CMD_TOAST_DEFAULT)
                     .into_element(cx),
                 shadcn::Button::new("Success")
+                    .test_id("ui-gallery-toast-success")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_SUCCESS)
                     .into_element(cx),
                 shadcn::Button::new("Error")
+                    .test_id("ui-gallery-toast-error")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_ERROR)
                     .into_element(cx),
                 shadcn::Button::new("Action + Cancel")
+                    .test_id("ui-gallery-toast-action-cancel")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_SHOW_ACTION_CANCEL)
                     .into_element(cx),

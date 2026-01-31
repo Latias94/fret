@@ -2649,11 +2649,12 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_DEFAULT => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Default toast",
-                    shadcn::ToastMessageOptions::new().description("Hello from fret-ui-gallery."),
+                    shadcn::ToastRequest::new("Default toast")
+                        .id(shadcn::ToastId(100))
+                        .description("Hello from fret-ui-gallery."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.default");
@@ -2662,11 +2663,13 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_SUCCESS => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_success_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Success",
-                    shadcn::ToastMessageOptions::new().description("Everything worked."),
+                    shadcn::ToastRequest::new("Success")
+                        .id(shadcn::ToastId(101))
+                        .variant(shadcn::ToastVariant::Success)
+                        .description("Everything worked."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.success");
@@ -2675,11 +2678,13 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_ERROR => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_error_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Error",
-                    shadcn::ToastMessageOptions::new().description("Something failed."),
+                    shadcn::ToastRequest::new("Error")
+                        .id(shadcn::ToastId(102))
+                        .variant(shadcn::ToastVariant::Error)
+                        .description("Something failed."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.error");
@@ -2688,15 +2693,21 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_SHOW_ACTION_CANCEL => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Action toast",
-                    shadcn::ToastMessageOptions::new()
+                    shadcn::ToastRequest::new("Action toast")
+                        .id(shadcn::ToastId(103))
                         .description("Try the action/cancel buttons.")
-                        .action("Undo", CMD_TOAST_ACTION)
-                        .cancel("Cancel", CMD_TOAST_CANCEL)
-                        .duration(Duration::from_secs(6)),
+                        .action(shadcn::ToastAction {
+                            label: Arc::from("Undo"),
+                            command: CommandId::new(CMD_TOAST_ACTION),
+                        })
+                        .cancel(shadcn::ToastAction {
+                            label: Arc::from("Cancel"),
+                            command: CommandId::new(CMD_TOAST_CANCEL),
+                        })
+                        .duration(Some(Duration::from_secs(6))),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.action_cancel");
@@ -2844,7 +2855,15 @@ impl WinitAppDriver for UiGalleryDriver {
                         match effect {
                             Effect::Command { window: w, command } => {
                                 if w.is_none() || w == Some(window) {
-                                    let _ = state.ui.dispatch_command(app, services, &command);
+                                    self.handle_command(
+                                        WinitCommandContext {
+                                            app,
+                                            services,
+                                            window,
+                                            state,
+                                        },
+                                        command,
+                                    );
                                     applied_any_command = true;
                                 } else {
                                     deferred_effects.push(Effect::Command { window: w, command });
