@@ -637,6 +637,17 @@ topics (if/when we implement them):
           - Worst layout frame: `frame_id=24` (`tick_id=25`) `layout_time_us=2560` with `retained_virtual_list_attached_items=9`, `detached_items=3` (delta=12) and `barrier_relayouts_performed=1`.
           - Worst attach/detach frame: `frame_id=28` (`tick_id=29`) `attached_items=10`, `detached_items=10` (delta=20) with `layout_time_us=1557`.
         - Takeaway: to reduce worst-tick layout time further, we either need to (a) reduce per-frame attach/detach delta (more frequent smaller shifts / staged prefetch), or (b) reduce the cost of attaching new rows (row recycling, cheaper row layout, or more effective keep-alive reuse).
+    - [ ] Add staged prefetch (ADR 0190 v2 addendum): shift retained-host windows *before* `window_mismatch` and reconcile incrementally.
+      - Idea: when the visible range approaches the prefetch boundary (but is still covered), shift the window by a small bounded step and request redraw.
+      - Goal: turn “one big boundary tick” into a bounded stream of small reconciles, reducing worst-tick spikes.
+      - Anchors (expected):
+        - `crates/fret-ui/src/tree/prepaint.rs` (compute `window_shift_kind` and mark retained hosts for reconcile even when `window_mismatch == false`)
+        - `crates/fret-ui/src/virtual_list.rs` (helper for bounded prefetch window shifting)
+      - Diagnostics + gates (required for merging):
+        - Add `debug.virtual_list_windows[*].window_shift_kind` (`none`/`prefetch`/`escape`) so bundles explain why a shift occurred.
+        - Add `debug.retained_virtual_list_reconciles[*].reconcile_kind` (`prefetch`/`escape`) so attach/detach spikes are attributable.
+        - Add a `fretboard diag stats` gate that enforces “escape reconciles are rare and bounded; prefetch reconciles obey per-frame budgets” on `*window-boundary*` scripts.
+      - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (v2 addendum).
     - [x] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
       - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (marks retained hosts for reconcile),
         `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
