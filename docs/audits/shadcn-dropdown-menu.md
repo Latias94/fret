@@ -164,6 +164,10 @@ Notes on API mapping:
   submenu triggers (via wheel), the root menu panel origin remains stable under wheel input
   (asserted in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` during
   `web_vs_fret_dropdown_menu_demo_submenu_*`).
+- Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
+  menu panel tracks the trigger after wheel-driven scroll updates (validated in
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
+  `fret_dropdown_menu_tracks_trigger_when_underlay_scrolls`).
 - Web submenu panel shadow gate (`shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`,
   `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
