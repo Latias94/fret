@@ -278,12 +278,18 @@ Legend:
   - Evidence: make theme access paint-invalidating (not layout-invalidating) and validate that paint-only theme changes
     do not trigger text reprepare: `crates/fret-ui/src/widget.rs` (`PaintCx::theme`),
     `crates/fret-ui/src/declarative/tests/text_cache.rs` (`theme_color_change_does_not_reprepare_text_in_paint`).
-- [~] Keep selection state stable and based on byte indices (ADR 0044/0045/0046).
+- [x] Keep selection state stable and based on byte indices (ADR 0044/0045/0046).
   - Evidence: clamp persisted `selection_anchor`/`caret` to valid boundaries on both the event and paint paths:
     `crates/fret-ui/src/text_edit.rs` (`clamp_selection_to_grapheme_boundaries`),
     `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs`,
     `crates/fret-ui/src/declarative/host_widget/paint.rs`,
     test `crates/fret-ui/src/declarative/tests/selection_indices.rs`.
+  - Evidence: clipboard extraction clamps selection indices defensively:
+    `crates/fret-ui/src/text_edit.rs` (`commands::apply_clipboard`),
+    tests `crates/fret-ui/src/text_input/tests.rs` (`text_input_copy_clamps_out_of_range_selection_indices`) and
+    `crates/fret-ui/src/text_area/tests.rs` (`text_area_copy_clamps_out_of_range_selection_indices`).
+  - Evidence: a11y selection publishing clamps selection indices:
+    `crates/fret-ui/src/text_input/widget.rs` (`semantics`) and `crates/fret-ui/src/text_area/widget.rs` (`semantics`).
 
 ### D) Ecosystem migrations
 

@@ -443,9 +443,16 @@ impl<H: UiHost> Widget<H> for TextInput {
                 Some((self.caret as u32, (self.caret + self.preedit.len()) as u32)),
             )
         } else {
+            let mut selection_anchor = self.selection_anchor;
+            let mut caret = self.caret;
+            crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                &self.text,
+                &mut selection_anchor,
+                &mut caret,
+            );
             (
                 self.text().to_string(),
-                Some((self.selection_anchor as u32, self.caret as u32)),
+                Some((selection_anchor as u32, caret as u32)),
                 None,
             )
         };

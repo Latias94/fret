@@ -815,6 +815,10 @@ pub(crate) mod commands {
         command: &str,
         window_available: bool,
     ) -> ClipboardOutcome {
+        // Defensive: selection indices are stored as UTF-8 byte offsets but must always be clamped
+        // to valid boundaries before any slicing/clipboard extraction.
+        edit.clamp_caret_and_anchor_to_grapheme_boundary();
+
         match command {
             "text.copy" => ClipboardOutcome {
                 outcome: Outcome::noop_handled(),
