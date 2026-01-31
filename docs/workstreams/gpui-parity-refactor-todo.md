@@ -636,12 +636,14 @@ topics (if/when we implement them):
         window from scroll state during reconcile. This keeps “why did the window change?” explainable from one bundle and reduces duplicated work.
         - Evidence: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache`)
     - [x] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
-      `--check-retained-vlist-reconcile-no-notify`, attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`,
-      plus `--check-wheel-scroll` and `--check-stale-paint`.
+      `--check-retained-vlist-reconcile-no-notify`, `--check-retained-vlist-reconcile-cache-reuse` (recommended: reconcile occurs on cache-hit),
+      attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`, plus `--check-wheel-scroll` and `--check-stale-paint`.
       - Suite: `fretboard diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
       - Scripts:
         - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
         - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
+      - Note: retained-vlist *window-boundary* gates are applied only to scripts named `*window-boundary*` when running multi-script suites
+        (toggle/sort scripts still run, but are gated by stale-paint / wheel-scroll / view-cache reuse, etc.).
     - [~] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
       - Baseline recorded (warmup=5; cache-root reused on worst tick in both harnesses):
         - window-boundary: max.us(total/layout/prepaint/paint)=2897/2216/30/717 (`tick_id=37`)
@@ -1044,7 +1046,7 @@ topics (if/when we implement them):
         - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
       - Env (recommended): `FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`, `FRET_DIAG=1`.
       - Note: the torture surface includes an expandable `folder_1` at `TreeItemId=1` so the toggle harness can drive expand/collapse while keeping a large list.
-      - Gate (example): `fretboard diag stats <bundle.json> --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-stale-paint components-gallery-file-tree-root`
+      - Gate (example): `fretboard diag stats <bundle.json> --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-reconcile-cache-reuse 1 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-stale-paint components-gallery-file-tree-root`
       - Builtin suite:
         - `cargo run -p fretboard -- diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
       - Evidence bundles (suite, view-cache, release):
@@ -1064,6 +1066,8 @@ topics (if/when we implement them):
       - Evidence bundles (suite, view-cache, release):
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833380478-components-gallery-table-window-boundary-scroll/bundle.json`
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
+      - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to `components-gallery-table-window-boundary-scroll.json`
+        (the sort+scroll script is still gated by view-cache reuse + wheel-scroll + stale-paint, etc.).
       - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
         - window-boundary: `C:\fret-diag-perf-components-gallery-table-boundary\1769833617760-script-step-0018-wheel/bundle.json` (2757/1989/13/755)
         - sort+scroll: `C:\fret-diag-perf-components-gallery-table-sort\1769833651344-script-step-0011-wheel/bundle.json` (6155/4682/11/1462)
