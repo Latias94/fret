@@ -844,6 +844,7 @@ impl UiDiagnosticsService {
                             active.screenshot_wait = None;
                             output.request_redraw = true;
                         }
+                    }
                 }
             }
             UiActionStepV1::PressKey {
