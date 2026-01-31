@@ -11,6 +11,7 @@ This document tracks parity work for shadcn/ui **Chart** surfaces (and related l
 Evidence anchors:
 
 - Tooltip + legend geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_tooltip.rs`
+- Hover-mid (interactive) tooltip + cursor gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_hover_mid.rs`
 - Baseline chart DOM invariants (web-only): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart.rs`
 
 ## What “1:1 parity” means here
