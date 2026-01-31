@@ -200,6 +200,7 @@ Definition of “safe-by-default” here:
   - Target pages: `data_table`, `tree`, `virtual_list`, `code_view`, `sidebar`, `menus`, `command`, `toast`, `material3_menu` (and any newly added gallery pages).
   - Gate style: a small number of `bounds_within_window` assertions on page roots + 1–3 critical controls per page.
   - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-extended.json` (kept out of `ui-gallery-layout` suite by default).
+- [x] Harden `ui-gallery-menubar-text-overlap-command` to cover all adjacent triggers (not just `Window`/`Gallery`).
 - [ ] Add a dedicated “torture sweep” script (not in the default suite) that visits high-risk torture pages to discover layout gaps in tight windows:
   - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-torture.json` (kept out of `ui-gallery-layout` suite by default).
 - [ ] Add a dedicated “chrome” sweep that targets non-page UI surfaces (top bar / in-window menubar / toast), since they are not addressable as gallery pages:

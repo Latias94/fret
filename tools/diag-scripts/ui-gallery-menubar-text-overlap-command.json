@@ -50,6 +50,36 @@
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "menubar-trigger-file" },
+        "b": { "kind": "test_id", "id": "menubar-trigger-edit" },
+        "eps_px": 0.1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "menubar-trigger-edit" },
+        "b": { "kind": "test_id", "id": "menubar-trigger-view" },
+        "eps_px": 0.1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "menubar-trigger-view" },
+        "b": { "kind": "test_id", "id": "menubar-trigger-window" },
+        "eps_px": 0.1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
         "a": { "kind": "test_id", "id": "menubar-trigger-window" },
         "b": { "kind": "test_id", "id": "menubar-trigger-gallery" },
         "eps_px": 0.1
