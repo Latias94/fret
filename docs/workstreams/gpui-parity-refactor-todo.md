@@ -702,6 +702,14 @@ topics (if/when we implement them):
           - Use `debug.retained_virtual_list_reconciles[*].reconcile_time_us` to identify whether time is dominated by row subtree mounting,
             keep-alive churn, or general layout/paint work.
           - Re-run a harness with known large spikes (e.g. ui-gallery vlist boundary) to confirm staged prefetch reduces peak tail latency.
+          - Retained vlist harness (ui-gallery; minimal + known heights; cache+shell):
+            - Baseline (no staged prefetch):
+              - max.us(total/layout/prepaint/paint)=5181/4171/125/885
+              - Evidence: `target/fret-diag-perf-vlist-retained-boundary-baseline/1769765204218-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+            - After tuned staged prefetch:
+              - Prefetch reconciles observed: 23 (warmup excluded); shift_kinds: `none=111`, `prefetch=25`, `escape=3`
+              - max.us(total/layout/prepaint/paint)=4435/3656/45/734; max `reconcile_time_us`=50
+              - Evidence: `target/fret-diag-perf-vlist-retained-boundary-prefetch5/1769878053904-script-step-0048-wheel/bundle.json`
   - Definition of done (v2; mark `[x]` when all are true):
     - [ ] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
     - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
