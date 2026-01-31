@@ -3277,10 +3277,22 @@ pub struct UiVirtualListWindowV1 {
     pub prev_items_revision: u64,
     pub measure_mode: UiVirtualListMeasureModeV1,
     pub overscan: u64,
+    #[serde(default)]
+    pub estimate_row_height: f32,
+    #[serde(default)]
+    pub gap: f32,
+    #[serde(default)]
+    pub scroll_margin: f32,
     pub viewport: f32,
     pub prev_viewport: f32,
     pub offset: f32,
     pub prev_offset: f32,
+    #[serde(default)]
+    pub content_extent: f32,
+    #[serde(default)]
+    pub policy_key: u64,
+    #[serde(default)]
+    pub inputs_key: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub window_range: Option<UiVirtualRangeV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3308,10 +3320,16 @@ impl UiVirtualListWindowV1 {
             prev_items_revision: window.prev_items_revision,
             measure_mode: UiVirtualListMeasureModeV1::from_mode(window.measure_mode),
             overscan: window.overscan as u64,
+            estimate_row_height: window.estimate_row_height.0,
+            gap: window.gap.0,
+            scroll_margin: window.scroll_margin.0,
             viewport: window.viewport.0,
             prev_viewport: window.prev_viewport.0,
             offset: window.offset.0,
             prev_offset: window.prev_offset.0,
+            content_extent: window.content_extent.0,
+            policy_key: window.policy_key,
+            inputs_key: window.inputs_key,
             window_range: window.window_range.map(UiVirtualRangeV1::from_range),
             prev_window_range: window.prev_window_range.map(UiVirtualRangeV1::from_range),
             render_window_range: window.render_window_range.map(UiVirtualRangeV1::from_range),
