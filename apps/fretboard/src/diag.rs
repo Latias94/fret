@@ -1399,6 +1399,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                     "tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json",
                                 ),
                             ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json",
+                                ),
+                            ),
                         ],
                         None,
                     )
@@ -1783,6 +1789,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     ("FRET_EXAMPLES_VIEW_CACHE", "1"),
                     ("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE", "1"),
                     ("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N", "50000"),
+                    // Enable a larger retained keep-alive budget so bounce scripts can verify
+                    // subtree reuse across window shifts.
+                    ("FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE", "256"),
                 ] {
                     if !launch_env.iter().any(|(k, _)| k == key) {
                         launch_env.push((key.to_string(), value.to_string()));
@@ -1804,6 +1813,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_max.or(Some(256));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                // Applied only to scripts that opt into the keep-alive gate.
+                check_retained_vlist_keep_alive_reuse_min =
+                    check_retained_vlist_keep_alive_reuse_min.or(Some(1));
                 check_stale_paint_test_id = check_stale_paint_test_id
                     .or(Some("components-gallery-file-tree-root".to_string()));
 
