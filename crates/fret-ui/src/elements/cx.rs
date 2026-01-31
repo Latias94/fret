@@ -2859,6 +2859,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     crate::windowed_surface_host::RetainedVirtualListHostMarker::default,
                     |_| {},
                 );
+                // Keep the retained keep-alive bucket's element-local state alive across frames
+                // (including view-cache hits) so window shifts can actually reuse previously
+                // mounted item subtrees. The actual budget is controlled by `VirtualListProps`.
+                cx.with_state(
+                    crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
+                    |_| {},
+                );
                 cx.with_state(
                     || crate::windowed_surface_host::RetainedVirtualListHostCallbacks::<H> {
                         key_at: Arc::clone(&key_at),
