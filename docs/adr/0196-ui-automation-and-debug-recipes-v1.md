@@ -154,7 +154,9 @@ This ADR is partially implemented in a way that preserves the intended crate bou
 - **Redraw-efficiency gates (`fretboard`)**
   - Tooling provides an “idle should not paint” gate (`--check-idle-no-paint-min <n>`) that asserts a trailing streak of
     snapshots with no paint work, and writes `check.idle_no_paint.json` as evidence.
-  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_idle_no_paint_min`).
+  - Tooling provides a “view cache reuse should be stable” gate (`--check-view-cache-reuse-stable-min <n>`) that asserts a
+    trailing streak of snapshots with view-cache reuse signals, and writes `check.view_cache_reuse_stable.json` as evidence.
+  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_idle_no_paint_min`, `check_bundle_for_view_cache_reuse_stable_min`).
 - **Semantics fingerprint export (`fret-bootstrap`)**
   - Diagnostics snapshots export `semantics_fingerprint` as a best-effort hash derived from the semantics snapshot.
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`semantics_fingerprint` field and computation).

@@ -217,8 +217,8 @@ Gaps (still open):
   `sysinfo`) while waiting for the demo to exit. This matters for “framework feels heavy” reports and for table-heavy
   workloads.
 - **Redraw-efficiency gates** now include an “idle should not paint” trailing-streak gate
-  (`--check-idle-no-paint-min <n>`; evidence: `check.idle_no_paint.json`). A “cache reuse should be stable” gate is still
-  open.
+  (`--check-idle-no-paint-min <n>`; evidence: `check.idle_no_paint.json`) and a “view cache reuse should be stable”
+  trailing-streak gate (`--check-view-cache-reuse-stable-min <n>`; evidence: `check.view_cache_reuse_stable.json`).
 
 Future (optional, gated):
 

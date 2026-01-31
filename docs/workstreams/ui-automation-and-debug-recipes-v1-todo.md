@@ -65,7 +65,7 @@ Conventions:
 - [x] Add a stable “perf baseline” file format for selected scripts (JSON).
 - [x] Add process-level resource footprint evidence (best-effort) and reference it from `repro.summary.json`.
 - [x] Add an “idle should not paint” redraw-efficiency gate (`--check-idle-no-paint-min <n>`).
-- [ ] Add a redraw-efficiency gate for “cache reuse should be stable” regressions.
+- [x] Add a redraw-efficiency gate for “cache reuse should be stable” regressions (`--check-view-cache-reuse-stable-min <n>`).
 - [ ] Add a nightly job candidate plan (not necessarily wired in CI yet).
 
 ### M5: GPU profiling (optional, gated)
