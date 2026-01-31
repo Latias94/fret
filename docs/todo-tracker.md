@@ -51,7 +51,7 @@ It complements (but does not replace) ADRs:
   - Current: `fret-fonts` bundles a UI sans + monospace baseline for wasm (`Inter` + `JetBrains Mono` subsets).
   - Current: optional `emoji` font bundle is available (`Noto Color Emoji`), gated behind `fret-fonts/emoji`.
   - Current: optional `cjk-lite` font bundle is available (`Noto Sans CJK SC`), gated behind `fret-fonts/cjk-lite`.
-  - Current: web runner seeds `TextFontFamilyConfig` from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
+  - Current: web runner seeds `TextFontFamilyConfig` (generic family picks + `common_fallback`) from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.

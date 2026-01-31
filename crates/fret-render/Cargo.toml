@@ -31,4 +31,4 @@ serde_json.workspace = true
 [dev-dependencies]
 naga.workspace = true
 pollster.workspace = true
-fret-fonts = { path = "../fret-fonts", features = ["emoji"] }
+fret-fonts = { path = "../fret-fonts", features = ["bootstrap-subset", "emoji", "cjk-lite"] }
