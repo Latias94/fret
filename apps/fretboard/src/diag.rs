@@ -90,6 +90,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut with_tracy: bool = false;
     let mut with_renderdoc: bool = false;
     let mut renderdoc_after_frames: Option<u32> = None;
+    let mut renderdoc_markers: Vec<String> = Vec::new();
+    let mut renderdoc_no_outputs_png: bool = false;
 
     // Parse global `diag` flags regardless of their position, leaving positional args intact.
     // This keeps the behavior aligned with the help text in `apps/fretboard/src/cli.rs`.
@@ -533,6 +535,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_after_frames = Some(parsed);
                 i += 1;
             }
+            "--renderdoc-marker" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --renderdoc-marker".to_string());
+                };
+                renderdoc_markers.push(v);
+                i += 1;
+            }
+            "--renderdoc-no-outputs-png" => {
+                renderdoc_no_outputs_png = true;
+                i += 1;
+            }
             "--env" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -581,6 +595,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     if sub != "repro" && (with_tracy || with_renderdoc || renderdoc_after_frames.is_some()) {
         return Err(
             "--with tracy/renderdoc and --renderdoc-after-frames are only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
+    if sub != "repro" && (!renderdoc_markers.is_empty() || renderdoc_no_outputs_png) {
+        return Err(
+            "--renderdoc-marker and --renderdoc-no-outputs-png are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -1332,28 +1352,145 @@ See: `docs/tracy.md`.\n";
                 serde_json::Value::Null
             };
 
-            let mut renderdoc_captures_rel: Vec<String> = Vec::new();
-            if let Some(dir) = renderdoc_capture_dir.as_ref() {
-                let captures = list_files_with_extensions(dir, &["rdc"]);
-                for path in captures {
-                    let rel = path
-                        .strip_prefix(&resolved_out_dir)
-                        .unwrap_or(&path)
-                        .display()
-                        .to_string();
-                    renderdoc_captures_rel.push(rel);
-                }
-                renderdoc_captures_rel.sort();
+            let mut renderdoc_capture_payload: Option<serde_json::Value> = None;
+            if with_renderdoc {
+                let markers: Vec<String> = if renderdoc_markers.is_empty() {
+                    vec![
+                        "fret clip mask pass".to_string(),
+                        "fret downsample-nearest pass".to_string(),
+                        "fret upscale-nearest pass".to_string(),
+                    ]
+                } else {
+                    renderdoc_markers.clone()
+                };
 
-                let payload = serde_json::json!({
-                    "schema_version": 1,
-                    "generated_unix_ms": now_unix_ms(),
-                    "capture_dir": "renderdoc",
-                    "autocapture_after_frames": renderdoc_autocapture_after_frames,
-                    "captures": renderdoc_captures_rel.clone(),
-                });
-                let _ =
-                    write_json_value(&resolved_out_dir.join("renderdoc.captures.json"), &payload);
+                if let Some(dir) = renderdoc_capture_dir.as_ref() {
+                    let captures = wait_for_files_with_extensions(dir, &["rdc"], 10_000, poll_ms);
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+
+                    let mut capture_rows: Vec<serde_json::Value> = Vec::new();
+                    for (cap_idx, capture) in captures.iter().enumerate() {
+                        let stem = capture
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .filter(|s| !s.trim().is_empty())
+                            .unwrap_or("capture");
+                        let safe_stem = format!(
+                            "{:02}-{}",
+                            cap_idx.saturating_add(1),
+                            zip_safe_component(stem)
+                        );
+                        let inspect_root = dir.join("inspect").join(&safe_stem);
+
+                        let summary_dir = inspect_root.join("summary");
+                        let summary_attempt = run_fret_renderdoc_dump(
+                            &workspace_root,
+                            capture,
+                            &summary_dir,
+                            "summary",
+                            "",
+                            Some(200_000),
+                            true,
+                            true,
+                            Some(30),
+                        );
+
+                        let mut attempts: Vec<RenderdocDumpAttempt> = Vec::new();
+                        attempts.push(summary_attempt);
+
+                        for (idx, marker) in markers.iter().enumerate() {
+                            let safe_marker = zip_safe_component(marker);
+                            let out_dir = inspect_root
+                                .join(format!("marker_{:02}_{safe_marker}", idx.saturating_add(1)));
+                            let attempt = run_fret_renderdoc_dump(
+                                &workspace_root,
+                                capture,
+                                &out_dir,
+                                "dump",
+                                marker,
+                                Some(2_000),
+                                true,
+                                renderdoc_no_outputs_png,
+                                None,
+                            );
+                            attempts.push(attempt);
+                        }
+
+                        let attempt_rows = attempts
+                            .into_iter()
+                            .map(|a| {
+                                let out_dir = a
+                                    .out_dir
+                                    .strip_prefix(&resolved_out_dir)
+                                    .unwrap_or(&a.out_dir)
+                                    .display()
+                                    .to_string();
+                                let stdout_file = a.stdout_file.as_ref().map(|p| {
+                                    p.strip_prefix(&resolved_out_dir)
+                                        .unwrap_or(p)
+                                        .display()
+                                        .to_string()
+                                });
+                                let stderr_file = a.stderr_file.as_ref().map(|p| {
+                                    p.strip_prefix(&resolved_out_dir)
+                                        .unwrap_or(p)
+                                        .display()
+                                        .to_string()
+                                });
+                                let response_json = a.response_json.as_ref().map(|p| {
+                                    p.strip_prefix(&resolved_out_dir)
+                                        .unwrap_or(p)
+                                        .display()
+                                        .to_string()
+                                });
+
+                                serde_json::json!({
+                                    "marker": a.marker,
+                                    "out_dir": out_dir,
+                                    "exit_code": a.exit_code,
+                                    "response_json": response_json,
+                                    "stdout_file": stdout_file,
+                                    "stderr_file": stderr_file,
+                                    "error": a.error,
+                                })
+                            })
+                            .collect::<Vec<_>>();
+
+                        let capture_rel = capture
+                            .strip_prefix(&resolved_out_dir)
+                            .unwrap_or(capture)
+                            .display()
+                            .to_string();
+                        let inspect_rel = inspect_root
+                            .strip_prefix(&resolved_out_dir)
+                            .unwrap_or(&inspect_root)
+                            .display()
+                            .to_string();
+
+                        capture_rows.push(serde_json::json!({
+                            "capture": capture_rel,
+                            "inspect_dir": inspect_rel,
+                            "dumps": attempt_rows,
+                        }));
+                    }
+
+                    let payload = serde_json::json!({
+                        "schema_version": 2,
+                        "generated_unix_ms": now_unix_ms(),
+                        "capture_dir": "renderdoc",
+                        "autocapture_after_frames": renderdoc_autocapture_after_frames,
+                        "captures": capture_rows,
+                    });
+                    let _ = write_json_value(
+                        &resolved_out_dir.join("renderdoc.captures.json"),
+                        &payload,
+                    );
+                    renderdoc_capture_payload = Some(payload);
+                } else {
+                    stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                }
+            } else {
+                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             }
 
             let captures_json = serde_json::json!({
@@ -1368,11 +1505,13 @@ See: `docs/tracy.md`.\n";
                     serde_json::Value::Null
                 },
                 "renderdoc": if with_renderdoc {
-                    serde_json::json!({
-                        "requested": true,
+                    renderdoc_capture_payload.clone().unwrap_or_else(|| serde_json::json!({
+                        "schema_version": 2,
+                        "generated_unix_ms": now_unix_ms(),
+                        "capture_dir": "renderdoc",
                         "autocapture_after_frames": renderdoc_autocapture_after_frames,
-                        "captures": renderdoc_captures_rel,
-                    })
+                        "captures": [],
+                    }))
                 } else {
                     serde_json::Value::Null
                 }
@@ -1498,8 +1637,6 @@ See: `docs/tracy.md`.\n";
                 println!("PACK {}", path.display());
             }
             println!("SUMMARY {}", summary_path.display());
-
-            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
 
             if let Some(err) = overall_error {
                 eprintln!("REPRO-FAIL {err}");
@@ -2873,7 +3010,7 @@ fn pack_bundle_dir_to_zip(
                 &renderdoc_dir,
                 &renderdoc_prefix,
                 options,
-                &["rdc", "json", "png", "txt", "md"],
+                &["rdc", "json", "png", "txt", "md", "csv"],
             )?;
         }
     }
@@ -3149,7 +3286,7 @@ fn pack_repro_zip_multi(
                 &renderdoc_dir,
                 "_root/renderdoc",
                 options,
-                &["rdc", "json", "png", "txt", "md"],
+                &["rdc", "json", "png", "txt", "md", "csv"],
             )?;
         }
     }
@@ -4657,6 +4794,121 @@ fn list_files_with_extensions(dir: &Path, exts: &[&str]) -> Vec<PathBuf> {
     visit(&mut out, dir, exts);
     out.sort();
     out
+}
+
+fn wait_for_files_with_extensions(
+    dir: &Path,
+    exts: &[&str],
+    timeout_ms: u64,
+    poll_ms: u64,
+) -> Vec<PathBuf> {
+    let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+    loop {
+        let files = list_files_with_extensions(dir, exts);
+        if !files.is_empty() {
+            return files;
+        }
+        if Instant::now() >= deadline {
+            return files;
+        }
+        std::thread::sleep(Duration::from_millis(poll_ms.max(10)));
+    }
+}
+
+#[derive(Debug, Clone)]
+struct RenderdocDumpAttempt {
+    marker: String,
+    out_dir: PathBuf,
+    exit_code: Option<i32>,
+    response_json: Option<PathBuf>,
+    stdout_file: Option<PathBuf>,
+    stderr_file: Option<PathBuf>,
+    error: Option<String>,
+}
+
+fn run_fret_renderdoc_dump(
+    workspace_root: &Path,
+    capture: &Path,
+    out_dir: &Path,
+    basename: &str,
+    marker: &str,
+    max_results: Option<u32>,
+    no_uniform_bytes: bool,
+    no_outputs_png: bool,
+    print_summary_md_top: Option<u32>,
+) -> RenderdocDumpAttempt {
+    let _ = std::fs::create_dir_all(out_dir);
+
+    let stdout_path = out_dir.join("stdout.txt");
+    let stderr_path = out_dir.join("stderr.txt");
+
+    let mut cmd = Command::new("cargo");
+    cmd.current_dir(workspace_root);
+    cmd.args(["run", "-p", "fret-renderdoc", "--", "dump"]);
+    cmd.args(["--capture", &capture.display().to_string()]);
+    cmd.args(["--marker", marker]);
+    cmd.args(["--out", &out_dir.display().to_string()]);
+    cmd.args(["--basename", basename]);
+    if let Some(n) = max_results {
+        cmd.args(["--max-results", &n.to_string()]);
+    }
+    if no_uniform_bytes {
+        cmd.arg("--no-uniform-bytes");
+    }
+    if no_outputs_png {
+        cmd.arg("--no-outputs-png");
+    }
+    if let Some(top) = print_summary_md_top {
+        cmd.args(["--print-summary", "md", &top.to_string()]);
+    }
+    if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR").filter(|v| !v.is_empty()) {
+        cmd.env("CARGO_TARGET_DIR", target_dir);
+    }
+
+    let output = match cmd.output() {
+        Ok(o) => o,
+        Err(e) => {
+            return RenderdocDumpAttempt {
+                marker: marker.to_string(),
+                out_dir: out_dir.to_path_buf(),
+                exit_code: None,
+                response_json: None,
+                stdout_file: None,
+                stderr_file: None,
+                error: Some(format!("failed to run fret-renderdoc: {e}")),
+            };
+        }
+    };
+
+    let _ = std::fs::write(&stdout_path, &output.stdout);
+    let _ = std::fs::write(&stderr_path, &output.stderr);
+
+    let exit_code = output.status.code();
+
+    let stdout_str = String::from_utf8_lossy(&output.stdout);
+    let response_json = stdout_str
+        .lines()
+        .rev()
+        .map(|l| l.trim())
+        .find(|l| !l.is_empty() && l.ends_with(".response.json"))
+        .map(|l| {
+            let p = PathBuf::from(l);
+            if p.is_absolute() {
+                p
+            } else {
+                workspace_root.join(p)
+            }
+        });
+
+    RenderdocDumpAttempt {
+        marker: marker.to_string(),
+        out_dir: out_dir.to_path_buf(),
+        exit_code,
+        response_json,
+        stdout_file: Some(stdout_path),
+        stderr_file: Some(stderr_path),
+        error: None,
+    }
 }
 
 fn write_json_value(path: &Path, v: &serde_json::Value) -> Result<(), String> {
