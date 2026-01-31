@@ -278,20 +278,8 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let theme = cx.theme().snapshot();
+                let style = super::resolve_text_style(theme, props.style);
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -359,20 +347,8 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let theme = cx.theme().snapshot();
+                let style = super::resolve_text_style(theme, props.style);
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -400,11 +376,7 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let input = fret_core::TextInput::attributed(
-                        props.rich.text.clone(),
-                        style.clone(),
-                        props.rich.spans.clone(),
-                    );
+                    let input = super::build_text_input_from_attributed(&props.rich, style.clone());
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
@@ -443,20 +415,8 @@ impl ElementHostWidget {
                     .global::<fret_runtime::TextFontStackKey>()
                     .map(|k| k.0)
                     .unwrap_or(0);
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = props.style.unwrap_or(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    line_height: Some(
-                        cx.theme()
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(cx.theme().metrics.font_line_height),
-                    ),
-                    ..Default::default()
-                });
+                let theme = cx.theme().snapshot();
+                let style = super::resolve_text_style(theme, props.style);
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -484,11 +444,7 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let input = fret_core::TextInput::attributed(
-                        props.rich.text.clone(),
-                        style.clone(),
-                        props.rich.spans.clone(),
-                    );
+                    let input = super::build_text_input_from_attributed(&props.rich, style.clone());
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);

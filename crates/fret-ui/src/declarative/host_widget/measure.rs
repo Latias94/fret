@@ -3,15 +3,7 @@ use super::super::prelude::*;
 use super::ElementHostWidget;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::widget::MeasureCx;
-use fret_core::{FrameId, TextStyle, TextWrap};
-
-fn default_text_style(theme: crate::ThemeSnapshot) -> TextStyle {
-    TextStyle {
-        size: theme.metrics.font_size,
-        line_height: Some(theme.metrics.font_line_height),
-        ..Default::default()
-    }
-}
+use fret_core::{FrameId, TextWrap};
 
 fn available_px_or_zero(constraints: LayoutConstraints) -> Size {
     let w = constraints
@@ -345,7 +337,7 @@ impl ElementHostWidget {
 
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| default_text_style(theme));
+        let style = super::resolve_text_style(theme, props.style);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -368,7 +360,7 @@ impl ElementHostWidget {
         props: crate::element::StyledTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| default_text_style(theme));
+        let style = super::resolve_text_style(theme, props.style);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -378,11 +370,7 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
-        let input = fret_core::TextInput::attributed(
-            props.rich.text.clone(),
-            style.clone(),
-            props.rich.spans.clone(),
-        );
+        let input = super::build_text_input_from_attributed(&props.rich, style.clone());
         let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
@@ -393,7 +381,7 @@ impl ElementHostWidget {
         props: crate::element::SelectableTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| default_text_style(theme));
+        let style = super::resolve_text_style(theme, props.style);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -403,11 +391,7 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
-        let input = fret_core::TextInput::attributed(
-            props.rich.text.clone(),
-            style.clone(),
-            props.rich.spans.clone(),
-        );
+        let input = super::build_text_input_from_attributed(&props.rich, style.clone());
         let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }

@@ -614,7 +614,7 @@ pub struct PaintCx<'a, H: UiHost> {
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
     pub fn theme(&mut self) -> &Theme {
-        self.observe_global::<Theme>(Invalidation::Layout);
+        self.observe_global::<Theme>(Invalidation::Paint);
         Theme::global(&*self.app)
     }
 

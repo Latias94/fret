@@ -270,8 +270,14 @@ Legend:
 
 ### C) `fret-ui` integration surface
 
-- [ ] Update `TextProps` / `StyledTextProps` / `SelectableTextProps` to carry `TextInput` (or to build it deterministically).
-- [ ] Ensure UI caches do not depend on theme revision for shaping (paint-only updates).
+- [~] Update `TextProps` / `StyledTextProps` / `SelectableTextProps` to carry `TextInput` (or to build it deterministically).
+  - Evidence: deterministic `TextInput` building shared across measure/paint in
+    `crates/fret-ui/src/declarative/host_widget.rs` (`build_text_input_from_attributed`) and its use in
+    `crates/fret-ui/src/declarative/host_widget/{measure,paint}.rs`.
+- [~] Ensure UI caches do not depend on theme revision for shaping (paint-only updates).
+  - Evidence: make theme access paint-invalidating (not layout-invalidating) and validate that paint-only theme changes
+    do not trigger text reprepare: `crates/fret-ui/src/widget.rs` (`PaintCx::theme`),
+    `crates/fret-ui/src/declarative/tests/text_cache.rs` (`theme_color_change_does_not_reprepare_text_in_paint`).
 - [ ] Keep selection state stable and based on byte indices (ADR 0044/0045/0046).
 
 ### D) Ecosystem migrations

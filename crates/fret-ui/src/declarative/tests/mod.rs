@@ -119,5 +119,6 @@ mod identity;
 mod interactions;
 mod layout;
 mod semantics;
+mod text_cache;
 mod view_cache;
 mod virtual_list;
