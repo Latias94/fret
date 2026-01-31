@@ -14,11 +14,14 @@ use fret_markdown as markdown;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, TextProps,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    SemanticsProps, TextProps,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui_kit::declarative::cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
+use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
 use fret_ui_shadcn as shadcn;
@@ -258,6 +261,157 @@ impl ComponentsGalleryDriver {
 
         let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("components-gallery", |cx| {
+                if std::env::var_os("FRET_COMPONENTS_GALLERY_TABLE_TORTURE").is_some() {
+                    #[derive(Default)]
+                    struct TableTortureModels {
+                        data: Option<Arc<[u64]>>,
+                        columns: Option<Arc<[ColumnDef<u64>]>>,
+                        state: Option<Model<TableState>>,
+                    }
+
+                    let (data, columns, table_state) =
+                        cx.with_state(TableTortureModels::default, |st| {
+                            (st.data.clone(), st.columns.clone(), st.state.clone())
+                        });
+
+                    let (data, columns, table_state) = match (data, columns, table_state) {
+                        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+                        _ => {
+                            let n: u64 =
+                                std::env::var("FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N")
+                                    .ok()
+                                    .and_then(|v| v.parse().ok())
+                                    .unwrap_or(50_000);
+
+                            let data: Arc<[u64]> = Arc::from((0..n).collect::<Vec<u64>>());
+
+                            let cols: Vec<ColumnDef<u64>> = vec![
+                                ColumnDef::new("id").sort_by(|a: &u64, b: &u64| a.cmp(b)),
+                                ColumnDef::new("status").sort_by(|a: &u64, b: &u64| {
+                                    (a % 3).cmp(&(b % 3))
+                                }),
+                                ColumnDef::new("cpu").sort_by(|a: &u64, b: &u64| {
+                                    (((a * 7) % 100) as u32)
+                                        .cmp(&(((b * 7) % 100) as u32))
+                                }),
+                                ColumnDef::new("mem_mb").sort_by(|a: &u64, b: &u64| {
+                                    ((128 + (a % 4096)) as u32)
+                                        .cmp(&((128 + (b % 4096)) as u32))
+                                }),
+                            ];
+                            let columns: Arc<[ColumnDef<u64>]> = Arc::from(cols);
+
+                            let state = cx.app.models_mut().insert(TableState::default());
+
+                            cx.with_state(TableTortureModels::default, |st| {
+                                st.data = Some(data.clone());
+                                st.columns = Some(columns.clone());
+                                st.state = Some(state.clone());
+                            });
+
+                            (data, columns, state)
+                        }
+                    };
+
+                    let theme = Theme::global(&*cx.app).clone();
+                    let padding = theme.metric_required("metric.padding.md");
+
+                    let mut root_layout = LayoutStyle::default();
+                    root_layout.size.width = Length::Fill;
+                    root_layout.size.height = Length::Fill;
+
+                    let header: Arc<str> = Arc::from(
+                        "Table torture (retained host): click headers to sort; wheel scroll crosses overscan boundaries.",
+                    );
+
+                    let header = cx.text(header);
+
+                    let table = cx.cached_subtree_with(
+                        CachedSubtreeProps::default().contained_layout(true),
+                        |cx| {
+                            vec![cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::List,
+                                    test_id: Some(Arc::<str>::from("components-gallery-table-root")),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    let scroll_handle =
+                                        cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+                                    let state_revision =
+                                        cx.app.models().revision(&table_state).unwrap_or(0);
+                                    let items_revision = 1 ^ state_revision.rotate_left(17);
+
+                                    let mut props =
+                                        fret_ui_kit::declarative::table::TableViewProps::default();
+                                    props.overscan = 10;
+                                    props.row_height = Some(Px(28.0));
+                                    props.row_measure_mode =
+                                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed;
+                                    props.enable_column_grouping = false;
+                                    props.enable_column_resizing = false;
+
+                                    let header_label = Arc::new(|col: &ColumnDef<u64>| {
+                                        Arc::<str>::from(col.id.as_ref())
+                                    });
+                                    let row_key_at =
+                                        Arc::new(|row: &u64, _index: usize| RowKey(*row));
+                                    let cell_at = Arc::new(
+                                        move |cx: &mut ElementContext<'_, App>,
+                                              col: &ColumnDef<u64>,
+                                              row: &u64| {
+                                            match col.id.as_ref() {
+                                                "id" => cx.text(row.to_string()),
+                                                "status" => cx.text(if row % 3 == 0 {
+                                                    "idle"
+                                                } else if row % 3 == 1 {
+                                                    "busy"
+                                                } else {
+                                                    "offline"
+                                                }),
+                                                "cpu" => cx.text(format!("{}%", (row * 7) % 100)),
+                                                "mem_mb" => cx.text(format!(
+                                                    "{} MB",
+                                                    128 + (row % 4096)
+                                                )),
+                                                _ => cx.text("?"),
+                                            }
+                                        },
+                                    );
+
+                                    vec![fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                                        cx,
+                                        data.clone(),
+                                        columns.clone(),
+                                        table_state.clone(),
+                                        &scroll_handle,
+                                        items_revision,
+                                        row_key_at,
+                                        Some(Arc::new(|row: &u64, _index: usize| {
+                                            Arc::from(row.to_string())
+                                        })),
+                                        props,
+                                        header_label,
+                                        cell_at,
+                                        Some(Arc::<str>::from(
+                                            "components-gallery-table-header-",
+                                        )),
+                                        Some(Arc::<str>::from("components-gallery-table-row-")),
+                                    )]
+                                },
+                            )]
+                        },
+                    );
+
+                    let mut props = ContainerProps::default();
+                    props.layout = root_layout;
+                    props.padding = Edges::all(padding);
+                    props.background = Some(theme.color_required("background"));
+
+                    return vec![cx.container(props, |_cx| vec![header, table])];
+                }
+
                 cx.observe_model(&tree_state, Invalidation::Layout);
                 let theme = Theme::global(&*cx.app).clone();
                 let selected = cx
