@@ -3268,6 +3268,62 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_overlay_placement_matches
 }
 
 #[test]
+fn web_vs_fret_date_picker_with_presets_select_listbox_overlay_placement_matches_mobile_tiny_viewport()
+ {
+    assert_overlay_placement_matches(
+        "date-picker-with-presets.select-open-vp375x240",
+        Some("listbox"),
+        |cx, open| {
+            use fret_ui_kit::{ChromeRefinement, LengthRefinement, MetricRef};
+            use fret_ui_shadcn::select::SelectPosition;
+
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+
+            fret_ui_shadcn::Popover::new(open.clone())
+                .align(fret_ui_shadcn::PopoverAlign::Start)
+                .side(fret_ui_shadcn::PopoverSide::Bottom)
+                .into_element(
+                    cx,
+                    |cx| {
+                        fret_ui_shadcn::Button::new("Pick a date")
+                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))),
+                            )
+                            .into_element(cx)
+                    },
+                    move |cx| {
+                        let select = fret_ui_shadcn::Select::new(value.clone(), open.clone())
+                            .placeholder("Select")
+                            .position(SelectPosition::Popper)
+                            .items([
+                                fret_ui_shadcn::SelectItem::new("0", "Today"),
+                                fret_ui_shadcn::SelectItem::new("1", "Tomorrow"),
+                                fret_ui_shadcn::SelectItem::new("3", "In 3 days"),
+                                fret_ui_shadcn::SelectItem::new("7", "In a week"),
+                            ])
+                            .into_element(cx);
+
+                        let body = stack::vstack(
+                            cx,
+                            stack::VStackProps::default().gap(Space::N2).items_stretch(),
+                            move |_cx| vec![select],
+                        );
+
+                        fret_ui_shadcn::PopoverContent::new([body])
+                            .refine_style(ChromeRefinement::default().p(Space::N2))
+                            .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+                            .into_element(cx)
+                    },
+                )
+        },
+        SemanticsRole::ComboBox,
+        None,
+        SemanticsRole::ListBox,
+    );
+}
+
+#[test]
 fn web_vs_fret_date_picker_with_range_open_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "date-picker-with-range",
