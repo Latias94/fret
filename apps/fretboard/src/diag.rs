@@ -1721,10 +1721,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                 // This suite exists to catch regressions in a *real* surface, so require:
                 // - view-cache reuse actually happens,
-                // - at least one window mismatch is observed (so we exercised the boundary),
+                // - the retained virtual-list host reconciles row membership under cache-hit reuse,
                 // - and stale-paint checks remain green.
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
-                check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(256));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_stale_paint_test_id = check_stale_paint_test_id
                     .or(Some("components-gallery-file-tree-root".to_string()));
 
