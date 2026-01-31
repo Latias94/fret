@@ -45,6 +45,7 @@ type GoldenOptions = {
   viewportW: number
   viewportH: number
   deviceScaleFactor: number
+  freezeDate?: string
   openSelector?: string
   openAction?: OpenAction
   openKeys?: KeyChord
@@ -1852,6 +1853,74 @@ async function setThemeBeforeLoad(page: puppeteer.Page, theme: Theme) {
   }, theme)
 }
 
+function parseFreezeDate(iso: string): { year: number; month: number; day: number } {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim())
+  if (!m) {
+    throw new Error(
+      `invalid --freezeDate=${iso} (expected YYYY-MM-DD)`
+    )
+  }
+
+  const year = Number(m[1])
+  const month = Number(m[2])
+  const day = Number(m[3])
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    throw new Error(
+      `invalid --freezeDate=${iso} (expected YYYY-MM-DD)`
+    )
+  }
+
+  return { year, month, day }
+}
+
+async function freezeDateBeforeLoad(page: puppeteer.Page, freezeDate: string) {
+  const { year, month, day } = parseFreezeDate(freezeDate)
+
+  // Keep date/time formatting deterministic across machines.
+  // Puppeteer throws if the timezone ID is unknown, so keep it best-effort.
+  try {
+    await (page as any).emulateTimezone?.("UTC")
+  } catch {
+    // ignore
+  }
+
+  // Use noon UTC to avoid DST / midnight edge cases.
+  const ts = Date.UTC(year, month - 1, day, 12, 0, 0)
+
+  await page.evaluateOnNewDocument((ts) => {
+    const OriginalDate = Date
+    class FrozenDate extends OriginalDate {
+      constructor(...args: any[]) {
+        if (args.length === 0) {
+          super(ts)
+          return
+        }
+        // @ts-ignore - Date constructor overloads are not represented precisely.
+        super(...args)
+      }
+      static now() {
+        return ts
+      }
+    }
+
+    // Preserve static helpers.
+    ;(FrozenDate as any).UTC = (OriginalDate as any).UTC
+    ;(FrozenDate as any).parse = (OriginalDate as any).parse
+    ;(FrozenDate as any).prototype = (OriginalDate as any).prototype
+
+    // @ts-ignore - we intentionally override the global Date constructor.
+    globalThis.Date = FrozenDate
+  }, ts)
+}
+
 function repoRootFromScript(): string {
   const envRoot = process.env.REPO_ROOT
   if (envRoot) {
@@ -2080,6 +2149,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
+      if (options.freezeDate) {
+        await freezeDateBeforeLoad(page, options.freezeDate)
+      }
       await setThemeBeforeLoad(page, options.themes[0] ?? "light")
       const url = `${options.baseUrl}/view/${options.style}/button-default`
       await page.goto(url, { waitUntil: "networkidle2", timeout: options.timeoutMs })
@@ -2112,6 +2184,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
+      if (options.freezeDate) {
+        await freezeDateBeforeLoad(page, options.freezeDate)
+      }
       await setThemeBeforeLoad(page, theme)
       pagesByTheme[theme] = page
     }
@@ -2446,6 +2521,11 @@ const stepsRaw =
 
 const steps = stepsRaw ? parseOpenSteps(stepsRaw, openKeys) : undefined
 
+const freezeDate =
+  (typeof flags.freezeDate === "string" ? flags.freezeDate : undefined) ??
+  process.env.FREEZE_DATE ??
+  undefined
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -2492,6 +2572,7 @@ function printHelp() {
   console.log("  --style=new-york-v4")
   console.log("  --themes=light,dark")
   console.log("  --modes=closed,open  (or --open)")
+  console.log("  --freezeDate=YYYY-MM-DD  (optional; makes time-dependent examples deterministic)")
   console.log("  --outDir=...")
   console.log("  --update")
   console.log("  --all")
@@ -2537,6 +2618,7 @@ try {
   console.log(`- openKeys: ${openKeys ? `${openKeys.modifiers.join("+")}+${openKeys.key}` : ""}`)
   console.log(`- steps: ${steps?.length ?? 0}`)
   console.log(`- openSteps: ${openSteps?.length ?? 0}`)
+  console.log(`- freezeDate: ${freezeDate ?? ""}`)
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
@@ -2562,6 +2644,7 @@ try {
     viewportW,
     viewportH,
     deviceScaleFactor,
+    freezeDate,
     openSelector,
     openAction,
     openKeys,

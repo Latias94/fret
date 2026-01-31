@@ -70,6 +70,15 @@ Extract both closed + open overlay states (writes `*.open.json` alongside the ba
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo dropdown-menu-dialog item-dropdown select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
 
+Freeze time (optional):
+
+Some pages depend on `new Date()` (notably DatePicker presets). To keep goldens deterministic across days,
+pass `--freezeDate=YYYY-MM-DD`.
+
+Example (pick “Tomorrow” with a fixed baseline date):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 --freezeDate=2026-01-15 --style=new-york-v4 --modes=open --variants=preset-tomorrow --openAction=click --openSelector=\"[data-fret-golden-target] button[aria-controls]\" --openSteps=\"click=[data-slot=select-trigger];waitFor=[data-slot=select-content]\" --steps=\"click=[data-radix-select-viewport] [data-slot=select-item]:nth-of-type(2);wait=50\" date-picker-with-presets --update`
+
 Extract open overlay states that require non-click input (the script infers the right open action per page):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo command-dialog --modes=open --update --baseUrl=http://localhost:4020`
