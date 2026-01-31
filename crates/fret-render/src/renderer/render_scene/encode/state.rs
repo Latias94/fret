@@ -10,6 +10,9 @@ pub(super) struct EncodeState<'a> {
     pub(super) scale_factor: f32,
     pub(super) viewport_size: (u32, u32),
     pub(super) output_is_srgb: u32,
+    pub(super) text_gamma_ratios: [f32; 4],
+    pub(super) text_grayscale_enhanced_contrast: f32,
+    pub(super) text_subpixel_enhanced_contrast: f32,
 
     pub(super) instances: &'a mut Vec<QuadInstance>,
     pub(super) viewport_vertices: &'a mut Vec<ViewportVertex>,
@@ -43,6 +46,9 @@ impl<'a> EncodeState<'a> {
         scale_factor: f32,
         viewport_size: (u32, u32),
         output_is_srgb: bool,
+        text_gamma_ratios: [f32; 4],
+        text_grayscale_enhanced_contrast: f32,
+        text_subpixel_enhanced_contrast: f32,
     ) -> Self {
         let instances = &mut encoding.instances;
         let viewport_vertices = &mut encoding.viewport_vertices;
@@ -58,6 +64,9 @@ impl<'a> EncodeState<'a> {
             scale_factor,
             viewport_size,
             output_is_srgb: u32::from(output_is_srgb),
+            text_gamma_ratios,
+            text_grayscale_enhanced_contrast,
+            text_subpixel_enhanced_contrast,
             instances,
             viewport_vertices,
             text_vertices,
@@ -134,6 +143,10 @@ impl<'a> EncodeState<'a> {
             _pad: [0; 3],
             mask_viewport_origin: [0.0, 0.0],
             mask_viewport_size: [self.viewport_size.0 as f32, self.viewport_size.1 as f32],
+            text_gamma_ratios: self.text_gamma_ratios,
+            text_grayscale_enhanced_contrast: self.text_grayscale_enhanced_contrast,
+            text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
+            _pad_text_quality: [0; 2],
         });
         uniform_index
     }
@@ -150,6 +163,10 @@ impl<'a> EncodeState<'a> {
             _pad: [0; 3],
             mask_viewport_origin: [mask_viewport.x as f32, mask_viewport.y as f32],
             mask_viewport_size: [w, h],
+            text_gamma_ratios: self.text_gamma_ratios,
+            text_grayscale_enhanced_contrast: self.text_grayscale_enhanced_contrast,
+            text_subpixel_enhanced_contrast: self.text_subpixel_enhanced_contrast,
+            _pad_text_quality: [0; 2],
         });
         uniform_index
     }

@@ -247,10 +247,14 @@ Legend:
 **B5 — Quality baseline**
 - [x] Implement `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy).
   - Evidence: `crates/fret-render/src/text.rs` (`SUBPIXEL_VARIANTS_X`, `SUBPIXEL_VARIANTS_Y`).
-- [ ] Add shader gamma/contrast correction uniforms (GPUI-aligned).
-- [~] Ensure quality knobs participate in cache keys (layout/raster).
-  - Current: subpixel binning participates in `GlyphKey` (`x_bin`, `y_bin`) and atlas residency.
-  - TODO: audit/extend to cover gamma/contrast and any remaining quality toggles.
+- [x] Add shader gamma/contrast correction uniforms (GPUI-aligned).
+  - Evidence: `crates/fret-render/src/text.rs` (`TextQualitySettings`),
+    `crates/fret-render/src/renderer/shaders.rs` (`TEXT_SHADER`, `TEXT_SUBPIXEL_SHADER`).
+- [x] Ensure quality knobs participate in cache keys (layout/raster).
+  - Evidence: subpixel binning participates in `GlyphKey` (`x_bin`, `y_bin`) and atlas residency.
+  - Evidence: gamma/contrast participates in scene encoding cache keys:
+    `crates/fret-render/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey.text_quality_key`),
+    test `crates/fret-render/src/renderer/tests.rs` (`scene_encoding_cache_is_busted_by_text_quality_changes`).
 
 **B6 — Cache boundary refactor (ADR 0158)**
 - [x] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
