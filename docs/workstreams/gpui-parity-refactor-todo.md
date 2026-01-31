@@ -216,6 +216,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Export the sever-parent mapping (parent node -> element id/path + cache-root flags) so the detach callsite can be tied back to the authoring UI structure.
     - Add debug-only diagnostics for `NodeEntry.root` overwrites (element + old_root + new_root + debug paths) to validate or falsify the “cross-root ownership overwrite” hypothesis.
     - Re-run the overlay torture with the stopgap disabled and use the new fields to decide whether the fix is:
+      - Note: in stopgap-disabled failing bundles we expect to see whether a swept subtree is a true island (both `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false`), which points to liveness-root selection or attach/ownership bookkeeping drift (not just a “parent pointer broke” story).
       - missing liveness roots (root selection / visibility semantics),
       - root ownership / attachment bookkeeping drift (the subtree becomes an island even though the app still expects it to be interactive), or
       - a true structural detach (authoring/runtime edge drop) that must be attributed to a callsite.
