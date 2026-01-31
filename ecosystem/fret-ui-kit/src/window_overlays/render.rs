@@ -8,7 +8,7 @@ use fret_ui::action::{
     UiActionHostAdapter, UiActionHostExt, UiFocusActionHost,
 };
 use fret_ui::declarative;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
@@ -1898,6 +1898,16 @@ pub fn render<H: UiHost + 'static>(
                                         corner_radii: fret_core::Corners::all(radius),
                                     },
                                     move |_cx| toast_children,
+                                );
+                                let toast_el = cx.semantics(
+                                    SemanticsProps {
+                                        test_id: Some(Arc::<str>::from(format!(
+                                            "toast-entry-{}",
+                                            toast_id.0
+                                        ))),
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![toast_el],
                                 );
 
                                 let store_for_hooks = store.clone();

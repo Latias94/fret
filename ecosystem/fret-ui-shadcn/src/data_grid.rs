@@ -14,7 +14,7 @@ use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, MainAlign, Overflow,
     PositionStyle, PressableProps, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
-    ScrollbarStyle, SizeStyle, StackProps, WheelRegionProps,
+    ScrollbarStyle, SemanticsProps, SizeStyle, StackProps, WheelRegionProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -291,9 +291,19 @@ impl DataGrid {
                             )
                         });
 
-                    let body = {
+                    let (body, body_id) = {
                         let mut body_layout = list_layout_style();
                         body_layout.overflow = Overflow::Clip;
+
+                        let mut body_slot_layout = LayoutStyle::default();
+                        body_slot_layout.position = PositionStyle::Absolute;
+                        body_slot_layout.inset.top = Some(row_height);
+                        body_slot_layout.inset.left = Some(Px(0.0));
+                        body_slot_layout.inset.right = Some(Px(0.0));
+                        body_slot_layout.inset.bottom = Some(Px(0.0));
+                        body_slot_layout.size.width = Length::Fill;
+                        body_slot_layout.size.height = Length::Fill;
+                        body_slot_layout.overflow = Overflow::Clip;
 
                         let mut content_layout = LayoutStyle::default();
                         content_layout.size.width = Length::Px(total_w);
@@ -304,7 +314,7 @@ impl DataGrid {
                         let cols_visible = cols_visible.clone();
                         let rows_visible = rows_visible.clone();
 
-                        cx.scroll(
+                        let body = cx.scroll(
                             ScrollProps {
                                 layout: body_layout,
                                 axis: ScrollAxis::Both,
@@ -454,9 +464,20 @@ impl DataGrid {
                                     },
                                 )]
                             },
-                        )
+                        );
+
+                        let body_id = body.id;
+                        let body = cx.semantics(
+                            SemanticsProps {
+                                layout: body_slot_layout,
+                                test_id: Some(Arc::<str>::from("shadcn-data-grid-body")),
+                                ..Default::default()
+                            },
+                            move |_cx| [body],
+                        );
+
+                        (body, body_id)
                     };
-                    let body_id = body.id;
 
                     let header = {
                         let header_chrome = ChromeRefinement::default()
@@ -520,6 +541,13 @@ impl DataGrid {
                             move |_cx| vec![header_inner],
                         )
                     };
+                    let header = cx.semantics(
+                        SemanticsProps {
+                            test_id: Some(Arc::<str>::from("shadcn-data-grid-header")),
+                            ..Default::default()
+                        },
+                        move |_cx| [header],
+                    );
 
                     let show_scrollbar_x = scroll_handle.max_offset().x.0 > 0.01;
                     let show_scrollbar_y = scroll_handle.max_offset().y.0 > 0.01;
