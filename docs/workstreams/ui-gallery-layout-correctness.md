@@ -79,6 +79,7 @@ Use `fretboard diag compare`:
 | L3 | P0 | `workspace` | Workspace top bar can clip critical controls: the right-side “Command palette” button and tab-strip scroll buttons can end up off-window when tab strip overflows (missing `min-w-0`/shrink constraints on flex/scroll containers). | `tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json` | Fixed (pending merge) | codex | Evidence: `target/fret-diag/1769692404766-ui-gallery-topbar-command-palette-visible/frame.bmp`. Regression gate: `bounds_within_window(test_id=\"ui-gallery-command-palette\", eps_px=1.0)`. |
 | L4 | P1 | `gallery` | In small windows (e.g. 800×600), the content header can squeeze the title column too much (page title wraps per-character). | (manual) | Mitigated | codex | Mitigation: truncate the page title (`nowrap + ellipsis`) to avoid “vertical text” when the right-side action row is wider than the remaining space. Follow-up: make the header responsive (wrap / overflow menu). |
 | L5 | P0 | `data_grid` | DataGrid header row overlapped with body rows (rows painted under the header). | `tools/diag-scripts/ui-gallery-layout-sweep-extended.json` (data_grid step) | Fixed (pending merge) | codex | Root cause: body scroll region positioned at y=0 while header also at y=0. Fix: offset body by header height via an absolute-positioned body slot (`top=row_height`). Regression: `ecosystem/fret-ui-shadcn/tests/data_grid_layout.rs` `data_grid_header_does_not_overlap_body`. Evidence: `target/fret-diag/1769775649931-ui-gallery-layout-sweep-data-grid/frame.bmp` (after). |
+| L6 | P0 | `workspace` | In-window menubar trigger bounds can overlap at non-1.0 DPI, causing top-bar labels (e.g. `Window` / `Gallery`) to visually collide. | `tools/diag-scripts/ui-gallery-menubar-text-overlap-command.json` | Fixed (pending merge) | codex | Root cause: subpixel rounding in a trigger row with `gap=0` can produce a small overlap between adjacent triggers. Fix: add a tiny horizontal gap (`gap=Px(1.0)`) for the trigger row. Regression gate: script asserts `bounds_non_overlapping(menubar-trigger-window, menubar-trigger-gallery, eps_px=0.1)`. Evidence: `target/fret-diag/1769790859739-ui-gallery-menubar-text-overlap-command/frame.bmp` (before) vs `target/fret-diag/1769822475774-ui-gallery-menubar-text-overlap-command/frame.bmp` (after). |
 
 ### L1 Notes (Resizable Panels)
 
@@ -186,9 +187,11 @@ Definition of “safe-by-default” here:
   - `tools/diag-scripts/ui-gallery-layout-sweep-core.json`
   - Current coverage (kept intentionally small): `intro`, `layout`, `scroll_area`, `tabs`, `accordion`, `overlay`, `resizable`.
 - [ ] Add an “extended sweep” script (not in the default suite) that visits more pages to discover new layout gaps early:
-  - Target pages: `data_table`, `tree`, `virtual_list`, `code_view`, `sidebar`, `menubar` (and any newly added gallery pages).
+  - Target pages: `data_table`, `tree`, `virtual_list`, `code_view`, `sidebar`, `menus`, `command`, `toast`, `material3_menu` (and any newly added gallery pages).
   - Gate style: a small number of `bounds_within_window` assertions on page roots + 1–3 critical controls per page.
   - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-extended.json` (kept out of `ui-gallery-layout` suite by default).
+- [ ] Add a dedicated “chrome” sweep that targets non-page UI surfaces (top bar / in-window menubar / toast), since they are not addressable as gallery pages:
+  - Current script: `tools/diag-scripts/ui-gallery-layout-sweep-extended-chrome.json` (kept out of the default suite by default).
 - [x] Add an overlay regression script that opens key modals/popovers and asserts bounds:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
 - [x] Extend the overlay script with a “flex + scroll” stress interaction:
