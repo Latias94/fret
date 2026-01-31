@@ -1,6 +1,6 @@
 # Text Integration v1 (TODO)
 
-Status: Proposed
+Status: Completed (2026-01-31)
 
 Narrative plan: `docs/workstreams/text-layout-integration-v1.md`
 

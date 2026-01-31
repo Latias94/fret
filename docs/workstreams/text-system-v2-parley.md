@@ -1,6 +1,6 @@
 # Text System v2 (Parley) — Workstream Roadmap & TODO Tracker
 
-Status: Active (design proposed in ADR 0157; implementation TBD)
+Status: Active (design proposed in ADR 0157; implementation in progress)
 
 This document is a living, implementation-focused tracker. It is intentionally non-authoritative;
 the normative contract is `docs/adr/0157-text-system-v2-parley-attributed-spans-and-quality-baseline.md`.
@@ -34,7 +34,82 @@ Exit criteria:
 
 Status:
 
-- Not started on `main` (work will continue in a dedicated worktree branch).
+- Landed on `main` (follow-up work continues via the work packages below).
+
+### Current Focus (recommended order)
+
+This tracker spans multiple layers and can easily become too coarse-grained. The recommended
+sequence below keeps milestones small enough to ship and validate incrementally.
+
+P0 (cache correctness + font config):
+
+- B1: font stack revision key + family overrides (cache invalidation contract).
+- C1: make UI build `TextInput` deterministically (no "shaping leaks").
+
+P1 (geometry correctness across spans):
+
+- B2: cluster mapping sufficient for caret stops + hit-testing + span-aware paint.
+- E: unit tests for span boundaries + ellipsis mapping.
+
+P2 (quality & ecosystem):
+
+- B5: gamma/contrast correction + quality knobs in cache keys.
+- D: migrate markdown/code-view to spans (no fallback hacks).
+
+### Work Packages (granular, shippable)
+
+The boxes below are the suggested "bite-sized" milestones for the remaining `[ ]` items.
+
+#### WP1 — Font stack revision + family overrides (B1)
+
+Exit criteria:
+
+- A stable `font_stack_key` (or revision) invalidates both layout and raster caches when:
+  - any font bytes are added/removed
+  - family mapping changes (defaults or overrides)
+- `TextFontFamilyConfig` overrides participate in the effective font stack deterministically.
+- Evidence: `TextSystem` cache keys include `font_stack_key` (layout + raster).
+
+#### WP2 — Cluster mapping for geometry queries (B2)
+
+Exit criteria:
+
+- Shaping outputs expose enough mapping to support:
+  - caret stops (monotonic x mapping)
+  - `hit_test_point` and `hit_test_x`
+  - span-aware paint assignment (no "color drift" across span boundaries)
+- Add focused tests for:
+  - caret/hit-test around span boundary
+  - wrap boundary across span boundary
+
+#### WP3 — Quality knobs are cache-keyed (B5)
+
+Exit criteria:
+
+- Gamma/contrast correction uniforms are plumbed end-to-end and gated by a settings struct.
+- The chosen quality knobs participate in:
+  - glyph raster cache keys
+  - atlas residency keys where applicable
+
+#### WP4 — `fret-ui` integration (C)
+
+Exit criteria:
+
+- `TextProps` / `StyledTextProps` / `SelectableTextProps` either:
+  - carry `TextInput`, or
+  - build it deterministically without observing theme revision for shaping.
+- Theme-only (paint) changes do not trigger reshaping/re-wrapping (validated by a focused test).
+
+#### WP5 — Ecosystem migrations + smoke demo (D/E)
+
+Exit criteria:
+
+- `ecosystem/fret-markdown`: strikethrough + inline code are represented as spans.
+- `ecosystem/fret-code-view`: syntax highlighting is represented as spans and supports wrapping.
+- Add an integration demo (or deterministic snapshot) covering:
+  - mixed scripts (LTR + RTL)
+  - emoji sequences (ZWJ/VS16/keycaps)
+  - IME preedit (Windows-first)
 
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
@@ -133,8 +208,14 @@ Legend:
 - [x] Keep per-span paint as a palette (no paint baked into glyph quads / shaping outputs).
 
 **B1 — Font + fallback + stable keys**
-- [ ] Define a “font stack key” / revision model that invalidates caches on font DB changes.
-- [ ] Implement family overrides (`TextFontFamilyConfig`) in the new system.
+- [x] Define a “font stack key” / revision model that invalidates caches on font DB changes.
+  - Evidence: `crates/fret-render/src/text.rs` (`font_stack_key`, `font_db_revision`, `add_fonts`,
+    `set_font_families`), `crates/fret-runtime/src/font_catalog.rs` (`TextFontStackKey`),
+    `crates/fret-ui/src/declarative/host_widget/paint.rs` (observes `TextFontStackKey`).
+- [x] Implement family overrides (`TextFontFamilyConfig`) in the new system.
+  - Evidence: `crates/fret-render/src/text.rs` (`TextSystem::set_font_families`),
+    `crates/fret-launch/src/runner/desktop/mod.rs` + `crates/fret-launch/src/runner/web.rs`
+    (applies config + publishes `TextFontStackKey`).
 
 **B2 — Shaper (Parley)**
 - [x] Integrate Parley shaping for a single line/chunk with attributed spans.
@@ -159,9 +240,12 @@ Legend:
 - [x] Add eviction policy + explicit rebuild knob for debugging.
 
 **B5 — Quality baseline**
-- [ ] Implement `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy).
+- [x] Implement `SUBPIXEL_VARIANTS_X = 4`, `Y = 1/4` (platform policy).
+  - Evidence: `crates/fret-render/src/text.rs` (`SUBPIXEL_VARIANTS_X`, `SUBPIXEL_VARIANTS_Y`).
 - [ ] Add shader gamma/contrast correction uniforms (GPUI-aligned).
-- [ ] Ensure quality knobs participate in cache keys (layout/raster).
+- [~] Ensure quality knobs participate in cache keys (layout/raster).
+  - Current: subpixel binning participates in `GlyphKey` (`x_bin`, `y_bin`) and atlas residency.
+  - TODO: audit/extend to cover gamma/contrast and any remaining quality toggles.
 
 **B6 — Cache boundary refactor (ADR 0158)**
 - [x] Split “layout cache” from “glyph residency cache” (no UVs embedded in `TextShape`).
