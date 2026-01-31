@@ -53,10 +53,11 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_within_window",
+        "kind": "bounds_min_size",
         "target": { "kind": "test_id", "id": "ui-gallery-resizable-panels" },
-        "padding_px": 0.0,
-        "eps_px": 2.0
+        "min_w_px": 200.0,
+        "min_h_px": 240.0,
+        "eps_px": 1.0
       },
       "timeout_frames": 240
     },

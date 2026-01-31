@@ -119,6 +119,10 @@ $env:FRET_UI_GALLERY_MAIN_WINDOW_SIZE="800x600"
 cargo run -p fretboard -- diag suite ui-gallery-layout --env FRET_DIAG_SCREENSHOT=1 --launch -- cargo run -p fret-ui-gallery --release
 ```
 
+### 4.1 Latest Size Matrix Runs
+
+- 2026-01-31: `fretboard diag suite ui-gallery-layout` passes at `800x600`, `960x540`, `1024x768`, `1280x720` (with `--timeout-ms 240000` and `FRET_DIAG_SCREENSHOT=1`).
+
 ## 5) Work Plan (TODOs + Milestones)
 
 This workstream is intentionally **demo-driven** and **contract-aware**:
@@ -210,7 +214,7 @@ Definition of “safe-by-default” here:
   - `tools/diag-scripts/ui-gallery-layout-sweep-extended-chrome.json` (clicks `ui-gallery-toast-default` and asserts `toast-entry-1` is within the window).
 - [x] Turn capture-only P0 repro scripts into layout gates:
   - `tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json`: assert `bounds_within_window` for `ui-gallery-intro-preview-grid` and `ui-gallery-intro-preview-note`.
-  - `tools/diag-scripts/ui-gallery-resizable-initial-bundle.json`: assert `bounds_within_window` for `ui-gallery-resizable-panels`.
+  - `tools/diag-scripts/ui-gallery-resizable-initial-bundle.json`: assert `bounds_min_size` for `ui-gallery-resizable-panels` (prevents collapse regressions without requiring it to fit within the window).
 - [x] Add an overlay regression script that opens key modals/popovers and asserts bounds:
   - `tools/diag-scripts/ui-gallery-overlay-modals-visible.json`
 - [x] Extend the overlay script with a “flex + scroll” stress interaction:

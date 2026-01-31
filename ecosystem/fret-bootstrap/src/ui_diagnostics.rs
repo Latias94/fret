@@ -2494,6 +2494,20 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when the target exists and its semantics bounds are at least the specified size.
+    ///
+    /// This is useful for demos where the content can legitimately be taller than the window
+    /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
+    BoundsMinSize {
+        target: UiSelectorV1,
+        #[serde(default)]
+        min_w_px: f32,
+        #[serde(default)]
+        min_h_px: f32,
+        /// A small tolerance to account for rounding / fractional layout units.
+        #[serde(default)]
+        eps_px: f32,
+    },
     /// True when both targets exist and their semantics bounds do not overlap.
     ///
     /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
@@ -5803,6 +5817,26 @@ fn eval_predicate(
                 && node_right <= window_right + eps
                 && node_bottom <= window_bottom + eps
         }
+        UiPredicateV1::BoundsMinSize {
+            target,
+            min_w_px,
+            min_h_px,
+            eps_px,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+
+            let w = node.bounds.size.width.0.max(0.0);
+            let h = node.bounds.size.height.0.max(0.0);
+
+            let min_w = min_w_px.max(0.0);
+            let min_h = min_h_px.max(0.0);
+            let eps = eps_px.max(0.0);
+
+            w + eps >= min_w && h + eps >= min_h
+        }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
             let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
                 return false;
@@ -6726,6 +6760,88 @@ mod tests {
         assert!(
             !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
             "expected padding to shrink the allowed window rect"
+        );
+    }
+
+    #[test]
+    fn bounds_min_size_predicate_accepts_large_enough_nodes() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node_with_test_id(
+                1,
+                None,
+                SemanticsRole::Panel,
+                rect(10.0, 10.0, 320.0, 240.0),
+                "resizable",
+                "ui-gallery-resizable-panels",
+            )],
+        };
+
+        let pred = UiPredicateV1::BoundsMinSize {
+            target: UiSelectorV1::TestId {
+                id: "ui-gallery-resizable-panels".to_string(),
+            },
+            min_w_px: 200.0,
+            min_h_px: 200.0,
+            eps_px: 0.0,
+        };
+
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected node to satisfy the min-size gate"
+        );
+    }
+
+    #[test]
+    fn bounds_min_size_predicate_rejects_collapsed_nodes() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node_with_test_id(
+                1,
+                None,
+                SemanticsRole::Panel,
+                rect(10.0, 10.0, 320.0, 0.1),
+                "resizable",
+                "ui-gallery-resizable-panels",
+            )],
+        };
+
+        let pred = UiPredicateV1::BoundsMinSize {
+            target: UiSelectorV1::TestId {
+                id: "ui-gallery-resizable-panels".to_string(),
+            },
+            min_w_px: 200.0,
+            min_h_px: 200.0,
+            eps_px: 0.0,
+        };
+
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "collapsed node should fail the min-size gate"
         );
     }
 
