@@ -208,8 +208,14 @@ Exit criteria:
     `crates/fret-ui/src/declarative/tests/layout.rs` (`text_measurement_and_paint_agree_on_overflow_and_scale_factor`).
 - [x] TLI1-004: Decide whether `SelectableText` selection should remain visible when not focused (UX parity vs simplicity).
   - Chosen: keep visible with reduced alpha; must not break range→rect queries.
-- [ ] TLI1-005: Add Linux primary selection policy (copy-on-select) behind a feature/setting.
-  - Decision (v1): behind a feature/setting; default off.
+- [x] TLI1-005: Add Linux primary selection policy (copy-on-select) behind a feature/setting.
+  - Decision (v1): behind `TextInteractionSettings.linux_primary_selection`; default off.
+  - Evidence: `crates/fret-runtime/src/text_interaction_settings.rs` (setting),
+    `crates/fret-runtime/src/effect.rs` (`PrimarySelection*`),
+    `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (copy-on-select),
+    `crates/fret-ui/src/text_input/widget.rs` + `crates/fret-ui/src/text_area/widget.rs` (middle-click paste),
+    `crates/fret-launch/src/runner/desktop/mod.rs` + `crates/fret-platform-native/src/clipboard.rs` (native backend),
+    `crates/fret-ui/src/declarative/tests/interactions.rs` (tests).
 - [x] TLI1-006: Add multi-line Up/Down caret movement with “preferred x” behavior.
   - Evidence: `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (ArrowUp/ArrowDown),
     `crates/fret-ui/src/declarative/tests/interactions.rs` (`selectable_text_arrow_up_down_uses_preferred_x_across_lines`).

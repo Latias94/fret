@@ -291,6 +291,17 @@ Editor-grade UX typically supports:
 
 This requires a policy decision and a platform capability surface.
 
+Implementation (v1):
+
+- Opt-in setting: `TextInteractionSettings.linux_primary_selection` (default off).
+- Capability: `PlatformCapabilities.clipboard.primary_text`.
+- Effects/events:
+  - `Effect::{PrimarySelectionSetText, PrimarySelectionGetText}`
+  - `Event::{PrimarySelectionText, PrimarySelectionTextUnavailable}`
+- Behavior:
+  - mouse selection updates primary selection on pointer-up
+  - middle-click paste reads primary selection into focused text widgets
+
 ### F8 — Multi-line navigation semantics
 
 Up/Down movement typically needs:
