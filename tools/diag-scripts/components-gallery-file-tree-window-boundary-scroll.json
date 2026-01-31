@@ -10,13 +10,13 @@
       "timeout_frames": 240
     },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "components-gallery-file-tree-node-0" }
+        "type": "wait_until",
+        "predicate": {
+          "kind": "exists",
+          "target": { "kind": "test_id", "id": "components-gallery-file-tree-node-1" }
+        },
+        "timeout_frames": 240
       },
-      "timeout_frames": 240
-    },
     {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "components-gallery-file-tree-root" }
