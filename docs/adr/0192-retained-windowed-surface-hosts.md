@@ -63,6 +63,10 @@ Correctness constraints:
 
 - A kept-alive subtree is **not** reachable from the window/layer roots, so it must be included in the window's explicit
   GC liveness roots (ADR 0191); otherwise cache-hit frames can sweep the subtree as a stale “island”.
+- The keep-alive bucket itself is stored in element-local state. If it is only accessed during reconcile, it can be
+  dropped by the element-state buffer advance before the next reconcile frame. Retained hosts SHOULD touch the keep-alive
+  state key during normal render (and under view-cache scope) so cache-hit frames can keep it alive via recorded
+  view-cache state keys.
 - Keep-alive reuse MUST preserve the item's stable identity boundaries (no cross-key reuse), and MUST clear any per-item
   ephemeral prepaint outputs when the host's prepaint key changes.
 

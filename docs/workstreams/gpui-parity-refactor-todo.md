@@ -696,15 +696,20 @@ topics (if/when we implement them):
     - Progress (v2.1 retained host): add a bounded keep-alive bucket for detached item subtrees (Flutter sliver-style).
       - Mechanism: when items detach due to a window shift, keep up to `VirtualListOptions::keep_alive` item roots keyed by `ItemKey` for later reuse (no remount).
       - Liveness: keep-alive roots are included in the window's GC liveness roots (ADR 0191) so cache-hit frames cannot sweep kept-alive subtrees as “islands”.
-      - Diagnostics: bundles report `reused_from_keep_alive_items` / `kept_alive_items` / `evicted_keep_alive_items`.
+      - State persistence: the keep-alive bucket is stored in element-local state; retained hosts must touch that state key during normal render so it survives between reconcile frames (and on view-cache hits).
+      - Diagnostics: bundles report `reused_from_keep_alive_items` / `kept_alive_items` / `evicted_keep_alive_items` and the keep-alive bucket size (`keep_alive_pool_len_before` / `keep_alive_pool_len_after`).
       - Anchors:
         - `crates/fret-ui/src/element.rs` (`VirtualListOptions::keep_alive`, `VirtualListProps.keep_alive`)
         - `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts` keep-alive bucket)
+        - `crates/fret-ui/src/elements/cx.rs` (touch keep-alive state key under retained hosts)
         - `crates/fret-ui/src/elements/runtime.rs` (keep-alive roots in window liveness bookkeeping)
         - `crates/fret-ui/src/windowed_surface_host.rs` (keep-alive state storage)
         - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export)
       - Evidence (monotonic scroll; expect `kept_alive_items > 0`, `reused_from_keep_alive_items == 0`):
         - `C:\fret-diag-perf-components-gallery-file-tree-boundary-keepalive\1769839663570-script-step-0022-wheel\bundle.json`
+      - Evidence (bounce; expect `reused_from_keep_alive_items > 0`):
+        - `target/fret-diag/1769851029699-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+        - Command: `cargo run -p fretboard -- diag run tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1 --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N=50000 --env FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE=256 --env FRET_EXAMPLES_VIEW_CACHE=1 --env FRET_EXAMPLES_VIEW_CACHE_SHELL=1 --warmup-frames 5 --check-retained-vlist-keep-alive-reuse-min 1 --launch -- cargo run -p fret-demo --bin components_gallery --release`
       - Note: keep-alive does not reduce the “first time we see new items” cost during one-direction boundary scroll; it targets oscillation/backtracking stability.
     - Validated (v1.1): per-row nested cache roots inside `VirtualList`.
       - Attempt: wrap each row in a nested `ViewCache` boundary (`FRET_UI_GALLERY_VLIST_ROW_CACHE=1`) to reuse row layout/paint across window rebuilds.
