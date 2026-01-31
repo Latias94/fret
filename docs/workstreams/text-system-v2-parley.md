@@ -305,17 +305,19 @@ Legend:
   - Evidence: `TextSpan.paint.bg` is painted as quads behind the text for `SelectableText`:
     `crates/fret-ui/src/declarative/host_widget/paint.rs` (selectable text paint path) + test
     `crates/fret-ui/src/declarative/tests/selection_indices.rs` (`selectable_text_paints_span_background_quads`).
-- [~] `ecosystem/fret-code-view`: represent highlighting as spans and support wrapping.
+- [x] `ecosystem/fret-code-view`: represent highlighting as spans and support wrapping.
   - Exit criteria: syntax highlighting maps to span overrides (color/font/style) and can render with `TextWrap::Word`
     or `TextWrap::Grapheme` (no "one-line blob" fallback).
   - Exit criteria: add a deterministic smoke test (snapshot or structural assertions) for:
-    mixed-script + emoji + long-token wrapping + selection.
+     mixed-script + emoji + long-token wrapping + selection.
   - Evidence: code blocks build `AttributedText` with per-segment `TextSpan` colors and render as a single selectable
-    text surface (wrap configurable):
-    `ecosystem/fret-code-view/src/code_block.rs` (`build_code_block_rich`, `render_code_block_text`).
+     text surface (wrap configurable):
+     `ecosystem/fret-code-view/src/code_block.rs` (`build_code_block_rich`, `render_code_block_text`).
   - Evidence: add `CodeBlockWrap::Grapheme` and map it to `TextWrap::Grapheme`:
-    `ecosystem/fret-code-view/src/code_block.rs` (`text_wrap_for_code_block_wrap`) + test
-    `ecosystem/fret-code-view/src/code_block.rs` (`code_block_wrap_maps_to_text_wrap`).
+     `ecosystem/fret-code-view/src/code_block.rs` (`text_wrap_for_code_block_wrap`) + test
+     `ecosystem/fret-code-view/src/code_block.rs` (`code_block_wrap_maps_to_text_wrap`).
+  - Evidence: deterministic wrap+selection smoke test:
+    `ecosystem/fret-code-view/tests/wrap_and_selection_smoke.rs` (`code_block_wrap_grapheme_and_selection_smoke`).
 
 ### E) Tests & conformance
 
@@ -336,8 +338,11 @@ Legend:
 - Ellipsis glyph choice: keep current `"…"` vs legacy placeholder; ensure fallback is stable across platforms.
 - Parley cluster/index semantics: ensure we can map to UTF-8 byte offsets with correct clamping.
 - Atlas eviction determinism: ensure eviction does not cause flicker without explicit rebuild strategy.
-- `text_v2` naming: decide the “graduation” point (remove legacy path + ecosystem migrations + macOS baseline)
-  and then rename/flatten modules to reduce churn.
+- `text_v2` naming: define the “graduation” criteria, then rename/flatten modules to reduce churn:
+  - ecosystem migrations done for the main text surfaces (`fret-markdown`, `fret-code-view`, …)
+  - legacy shaping backend removed (Parley-only, no feature gates)
+  - platform baseline validated on Windows + macOS (IME, selection geometry, pixel snapping)
+  - then: rename `text_v2` → `text` and remove the legacy module namespace.
 - Platform defaults: decide `TextQualitySettings` defaults per platform (Windows-first; validate macOS after contract stabilization).
 
 ## Progress Log (append-only)
