@@ -64,6 +64,9 @@ examples in `repo-ref/ui`.
 ## Validation
 
 - `cargo check -p fret-ui-shadcn`
+- Highlighted option chrome gates (hover/highlight background + text color): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web`, `web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_dark`).
+- Highlight-state golden: `goldens/shadcn-web/v4/new-york-v4/combobox-demo.highlight-first.open.json`
 
 ## Follow-ups (recommended)
 

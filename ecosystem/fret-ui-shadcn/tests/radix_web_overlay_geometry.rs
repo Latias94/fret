@@ -1049,15 +1049,32 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
                     |_cx| trigger,
                     |_cx| {
                         vec![
-                            fret_ui_shadcn::DropdownMenuEntry::Item(
-                                fret_ui_shadcn::DropdownMenuItem::new("Undo"),
-                            ),
-                            fret_ui_shadcn::DropdownMenuEntry::Item(
-                                fret_ui_shadcn::DropdownMenuItem::new("Redo"),
+                            fret_ui_shadcn::DropdownMenuEntry::Group(
+                                fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                    fret_ui_shadcn::DropdownMenuEntry::Item(
+                                        fret_ui_shadcn::DropdownMenuItem::new("Profile"),
+                                    ),
+                                    fret_ui_shadcn::DropdownMenuEntry::Item(
+                                        fret_ui_shadcn::DropdownMenuItem::new("Billing"),
+                                    ),
+                                    fret_ui_shadcn::DropdownMenuEntry::Item(
+                                        fret_ui_shadcn::DropdownMenuItem::new("Settings"),
+                                    ),
+                                ]),
                             ),
                             fret_ui_shadcn::DropdownMenuEntry::Separator,
-                            fret_ui_shadcn::DropdownMenuEntry::Item(
-                                fret_ui_shadcn::DropdownMenuItem::new("Cut"),
+                            fret_ui_shadcn::DropdownMenuEntry::Group(
+                                fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                    fret_ui_shadcn::DropdownMenuEntry::Item(
+                                        fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                    ),
+                                    fret_ui_shadcn::DropdownMenuEntry::Item(
+                                        fret_ui_shadcn::DropdownMenuItem::new("Support"),
+                                    ),
+                                    fret_ui_shadcn::DropdownMenuEntry::Item(
+                                        fret_ui_shadcn::DropdownMenuItem::new("API"),
+                                    ),
+                                ]),
                             ),
                         ]
                     },
@@ -1099,15 +1116,32 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
                         |_cx| trigger,
                         |_cx| {
                             vec![
-                                fret_ui_shadcn::DropdownMenuEntry::Item(
-                                    fret_ui_shadcn::DropdownMenuItem::new("Undo"),
-                                ),
-                                fret_ui_shadcn::DropdownMenuEntry::Item(
-                                    fret_ui_shadcn::DropdownMenuItem::new("Redo"),
+                                fret_ui_shadcn::DropdownMenuEntry::Group(
+                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Profile"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Billing"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Settings"),
+                                        ),
+                                    ]),
                                 ),
                                 fret_ui_shadcn::DropdownMenuEntry::Separator,
-                                fret_ui_shadcn::DropdownMenuEntry::Item(
-                                    fret_ui_shadcn::DropdownMenuItem::new("Cut"),
+                                fret_ui_shadcn::DropdownMenuEntry::Group(
+                                    fret_ui_shadcn::DropdownMenuGroup::new(vec![
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("GitHub"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("Support"),
+                                        ),
+                                        fret_ui_shadcn::DropdownMenuEntry::Item(
+                                            fret_ui_shadcn::DropdownMenuItem::new("API"),
+                                        ),
+                                    ]),
                                 ),
                             ]
                         },
@@ -1517,11 +1551,17 @@ fn radix_web_tooltip_hover_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-        &mut app,
-        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
-        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
-    );
+    {
+        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_v4_config(
+            fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+            fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        cfg.metrics.insert(
+            "component.menubar.min_width".to_string(),
+            web_content_rect.w,
+        );
+        fret_ui::Theme::with_global_mut(&mut app, |theme| theme.apply_config(&cfg));
+    }
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
     let mut services = FakeServices;
@@ -1915,23 +1955,33 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                     |cx, _st| vec![fixed_size_container(cx, trigger_w, trigger_h)],
                                 );
 
-                                let menu = fret_ui_shadcn::ContextMenu::new(open).into_element(
-                                    cx,
-                                    |_cx| trigger,
-                                    |_cx| {
-                                        vec![
-                                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                                fret_ui_shadcn::ContextMenuItem::new("Back"),
-                                            ),
-                                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                                fret_ui_shadcn::ContextMenuItem::new("Forward"),
-                                            ),
-                                            fret_ui_shadcn::ContextMenuEntry::Item(
-                                                fret_ui_shadcn::ContextMenuItem::new("Reload"),
-                                            ),
-                                        ]
-                                    },
-                                );
+                                let menu = fret_ui_shadcn::ContextMenu::new(open)
+                                    .min_width(Px(web_content_rect.w))
+                                    .into_element(
+                                        cx,
+                                        |_cx| trigger,
+                                        |_cx| {
+                                            vec![fret_ui_shadcn::ContextMenuEntry::Group(
+                                                fret_ui_shadcn::ContextMenuGroup::new(vec![
+                                                    fret_ui_shadcn::ContextMenuEntry::Item(
+                                                        fret_ui_shadcn::ContextMenuItem::new(
+                                                            "Back",
+                                                        ),
+                                                    ),
+                                                    fret_ui_shadcn::ContextMenuEntry::Item(
+                                                        fret_ui_shadcn::ContextMenuItem::new(
+                                                            "Forward",
+                                                        ),
+                                                    ),
+                                                    fret_ui_shadcn::ContextMenuEntry::Item(
+                                                        fret_ui_shadcn::ContextMenuItem::new(
+                                                            "Reload",
+                                                        ),
+                                                    ),
+                                                ]),
+                                            )]
+                                        },
+                                    );
 
                                 vec![
                                     spacer(
@@ -2047,23 +2097,33 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
                                         },
                                     );
 
-                                    let menu = fret_ui_shadcn::ContextMenu::new(open).into_element(
-                                        cx,
-                                        |_cx| trigger,
-                                        |_cx| {
-                                            vec![
-                                                fret_ui_shadcn::ContextMenuEntry::Item(
-                                                    fret_ui_shadcn::ContextMenuItem::new("Back"),
-                                                ),
-                                                fret_ui_shadcn::ContextMenuEntry::Item(
-                                                    fret_ui_shadcn::ContextMenuItem::new("Forward"),
-                                                ),
-                                                fret_ui_shadcn::ContextMenuEntry::Item(
-                                                    fret_ui_shadcn::ContextMenuItem::new("Reload"),
-                                                ),
-                                            ]
-                                        },
-                                    );
+                                    let menu = fret_ui_shadcn::ContextMenu::new(open)
+                                        .min_width(Px(web_content_rect.w))
+                                        .into_element(
+                                            cx,
+                                            |_cx| trigger,
+                                            |_cx| {
+                                                vec![fret_ui_shadcn::ContextMenuEntry::Group(
+                                                    fret_ui_shadcn::ContextMenuGroup::new(vec![
+                                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                                            fret_ui_shadcn::ContextMenuItem::new(
+                                                                "Back",
+                                                            ),
+                                                        ),
+                                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                                            fret_ui_shadcn::ContextMenuItem::new(
+                                                                "Forward",
+                                                            ),
+                                                        ),
+                                                        fret_ui_shadcn::ContextMenuEntry::Item(
+                                                            fret_ui_shadcn::ContextMenuItem::new(
+                                                                "Reload",
+                                                            ),
+                                                        ),
+                                                    ]),
+                                                )]
+                                            },
+                                        );
 
                                     vec![
                                         spacer(
@@ -2452,12 +2512,23 @@ fn radix_web_menubar_open_geometry_matches_fret() {
         vec![
             fret_ui_shadcn::Menubar::new(vec![
                 fret_ui_shadcn::MenubarMenu::new("File").entries(vec![
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("New Tab")),
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
-                        "New Window",
-                    )),
+                    fret_ui_shadcn::MenubarEntry::Group(fret_ui_shadcn::MenubarGroup::new(vec![
+                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                            "New Tab ⌘T",
+                        )),
+                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                            "New Window ⌘N",
+                        )),
+                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                            "New Incognito Window",
+                        )),
+                    ])),
                     fret_ui_shadcn::MenubarEntry::Separator,
-                    fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("Share")),
+                    fret_ui_shadcn::MenubarEntry::Group(fret_ui_shadcn::MenubarGroup::new(vec![
+                        fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new(
+                            "Print... ⌘P",
+                        )),
+                    ])),
                 ]),
                 fret_ui_shadcn::MenubarMenu::new("Edit").entries(vec![
                     fret_ui_shadcn::MenubarEntry::Item(fret_ui_shadcn::MenubarItem::new("Undo")),
@@ -2558,7 +2629,7 @@ fn radix_web_menubar_open_geometry_matches_fret() {
     let new_tab_item = snap
         .nodes
         .iter()
-        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Tab"))
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Tab ⌘T"))
         .unwrap_or_else(|| {
             dump_semantics(&snap);
             panic!("fret New Tab menu item semantics");

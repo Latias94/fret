@@ -18,6 +18,7 @@ pub struct Textarea {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
+    disabled: bool,
     min_height: Px,
     size: ComponentSize,
     chrome: ChromeRefinement,
@@ -43,6 +44,7 @@ impl Textarea {
             model,
             a11y_label: None,
             aria_invalid: false,
+            disabled: false,
             min_height: Px(64.0),
             size: ComponentSize::default(),
             chrome: ChromeRefinement::default(),
@@ -57,6 +59,11 @@ impl Textarea {
 
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -86,6 +93,7 @@ impl Textarea {
             self.model,
             self.a11y_label,
             self.aria_invalid,
+            self.disabled,
             self.min_height,
             self.size,
             self.chrome,
@@ -99,6 +107,7 @@ pub fn textarea<H: UiHost>(
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
+    disabled: bool,
     min_height: Px,
     size: ComponentSize,
     chrome: ChromeRefinement,
@@ -152,6 +161,8 @@ pub fn textarea<H: UiHost>(
     let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
 
     let mut props = TextAreaProps::new(model);
+    props.enabled = !disabled;
+    props.focusable = !disabled;
     props.a11y_label = a11y_label;
     props.chrome = chrome;
     props.text_style = text_style;
@@ -164,5 +175,9 @@ pub fn textarea<H: UiHost>(
         ..Default::default()
     };
 
-    cx.text_area(props)
+    if disabled {
+        cx.opacity(0.5, move |cx| vec![cx.text_area(props)])
+    } else {
+        cx.text_area(props)
+    }
 }

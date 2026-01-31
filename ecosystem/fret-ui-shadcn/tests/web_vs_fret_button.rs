@@ -34,6 +34,8 @@ struct WebNode {
     tag: String,
     #[serde(default)]
     attrs: BTreeMap<String, String>,
+    #[serde(default)]
+    active: bool,
     rect: WebRect,
     #[serde(rename = "computedStyle", default)]
     computed_style: BTreeMap<String, String>,

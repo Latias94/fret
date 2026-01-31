@@ -1751,6 +1751,31 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).and_then(|n| n.element)
     }
 
+    pub(crate) fn sync_interactivity_gate_widget(
+        &mut self,
+        node: NodeId,
+        present: bool,
+        interactive: bool,
+    ) {
+        if self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_INTERACTIVITY_GATE_SYNC").is_some() {
+            eprintln!(
+                "sync_interactivity_gate_widget: node={node:?} present={present} interactive={interactive}"
+            );
+        }
+        self.with_widget_mut(node, |w, _ui| {
+            w.sync_interactivity_gate(present, interactive);
+        });
+    }
+
     pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
         if !self.view_cache_active() {
             return false;
@@ -3658,6 +3683,13 @@ impl<H: UiHost> UiTree<H> {
                 return PointerDownOutsideOutcome::default();
             }
 
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_DOWN_OUTSIDE").is_some() {
+                eprintln!(
+                    "pointer_down_outside: layer={layer_id:?} root={root:?} consume={consume} focus_before={:?} hit={hit:?} hit_root={hit_root:?}",
+                    self.focus(),
+                );
+            }
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
@@ -3666,6 +3698,17 @@ impl<H: UiHost> UiTree<H> {
                 params.event,
                 invalidation_visited,
             );
+            // Match Radix/web outcomes: clicking outside a dismissible overlay should clear focus
+            // from the overlay subtree. If the event is click-through, the subsequent hit-tested
+            // dispatch can still assign focus to the underlay target.
+            self.set_focus(None);
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_DOWN_OUTSIDE").is_some() {
+                eprintln!(
+                    "pointer_down_outside: focus_after={:?} (suppress_hit_test_dispatch={consume})",
+                    self.focus(),
+                );
+            }
             return PointerDownOutsideOutcome {
                 dispatched: true,
                 suppress_hit_test_dispatch: consume,
@@ -5001,6 +5044,26 @@ impl<H: UiHost> UiTree<H> {
                     let Some(node) = self.nodes.get(id) else {
                         continue;
                     };
+
+                    // Declarative `InteractivityGate(present=false)` subtrees behave like
+                    // `display: none`: they should not be exposed to the semantics snapshot even if
+                    // the underlying nodes remain mounted (e.g. during close animations / force-mount).
+                    //
+                    // We cannot rely solely on the widget-level `semantics_present()` cache here
+                    // because the layout engine may skip visiting display-none nodes in a frame,
+                    // leaving stale derived flags until the next layout pass.
+                    if node.element.is_some()
+                        && crate::declarative::frame::element_record_for_node(app, window, id)
+                            .is_some_and(|record| {
+                                matches!(
+                                    record.instance,
+                                    crate::declarative::frame::ElementInstance::InteractivityGate(p)
+                                        if !p.present
+                                )
+                            })
+                    {
+                        continue;
+                    }
                     let widget = node.widget.as_ref();
                     if widget.is_some_and(|w| !w.semantics_present()) {
                         continue;

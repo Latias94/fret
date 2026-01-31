@@ -124,6 +124,8 @@ impl Default for TextAreaStyle {
 
 #[derive(Debug)]
 pub struct TextArea {
+    enabled: bool,
+    focusable: bool,
     text: String,
     text_style: TextStyle,
     wrap: TextWrap,
@@ -169,6 +171,8 @@ pub struct TextArea {
 impl Default for TextArea {
     fn default() -> Self {
         Self {
+            enabled: true,
+            focusable: true,
             text: String::new(),
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -216,6 +220,14 @@ impl Default for TextArea {
 impl TextArea {
     pub fn new(text: impl Into<String>) -> Self {
         Self::default().with_text(text)
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+
+    pub fn set_focusable(&mut self, focusable: bool) {
+        self.focusable = focusable;
     }
 
     pub fn text(&self) -> &str {

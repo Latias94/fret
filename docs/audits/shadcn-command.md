@@ -49,6 +49,7 @@ Key upstream semantics:
 - Pass: `CommandDemo` matches the upstream split sizing: input wrapper uses `h-9` while the input uses `h-10`
   (the input overflows the wrapper slightly in the web golden).
 - Pass: `CommandDialog` matches the upstream overrides (`h-12` wrapper + `h-12` input, and `pt-0` for sibling groups).
+- Pass: `CommandPalette` defaults to a `w-full` root layout to avoid cmdk listbox width collapse when embedded in recipes (e.g. `Combobox`).
 
 ### Visual/content conventions (shadcn)
 

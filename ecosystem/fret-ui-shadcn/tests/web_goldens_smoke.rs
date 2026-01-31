@@ -43,6 +43,8 @@ struct WebNode {
     #[serde(rename = "className")]
     class_name: Option<String>,
     #[serde(default)]
+    active: bool,
+    #[serde(default)]
     attrs: BTreeMap<String, String>,
     rect: WebRect,
     #[serde(rename = "computedStyle", default)]

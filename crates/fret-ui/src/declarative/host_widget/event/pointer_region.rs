@@ -249,6 +249,13 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             pointer_id,
             ..
         }) => {
+            // PointerRegion hooks are bubble-phase interactions. Suppress them during preview-phase
+            // observer dispatch (used for hover bookkeeping) so underlay hooks do not fire while
+            // occluded (e.g. Radix `disableOutsidePointerEvents` outcomes).
+            if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -270,6 +277,21 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 modifiers: *modifiers,
                 pointer_type: *pointer_type,
             };
+
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_HOOK").is_some() {
+                eprintln!(
+                    "pointer_region_move_hook: element={:?} node={:?} phase={:?} pos={:?} buttons={:?}",
+                    this.element, cx.node, cx.input_ctx.dispatch_phase, position, buttons
+                );
+            }
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_BACKTRACE").is_some() {
+                eprintln!(
+                    "pointer_region_move_hook backtrace:\n{}",
+                    std::backtrace::Backtrace::force_capture()
+                );
+            }
 
             let mut host = PointerHookHost {
                 app: &mut *cx.app,

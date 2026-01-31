@@ -641,6 +641,16 @@ fn macos_window_log(_args: fmt::Arguments<'_>) {
     }
 }
 
+#[cfg(target_os = "macos")]
+fn macos_dockfloating_parenting_enabled() -> bool {
+    use std::sync::OnceLock;
+
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("FRET_MACOS_DOCKFLOAT_PARENT").is_some_and(|v| !v.is_empty())
+    })
+}
+
 fn dock_tearoff_log(_args: fmt::Arguments<'_>) {
     #[cfg(target_os = "macos")]
     {
@@ -3324,13 +3334,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(target_os = "macos")]
         let parent_window = {
             use winit::raw_window_handle::HasWindowHandle as _;
-            match request.kind {
-                CreateWindowKind::DockFloating { source_window, .. } => self
-                    .windows
-                    .get(source_window)
-                    .and_then(|w| w.window.window_handle().ok())
-                    .map(|h| h.as_raw()),
-                _ => None,
+            if !macos_dockfloating_parenting_enabled() {
+                None
+            } else {
+                match request.kind {
+                    CreateWindowKind::DockFloating { source_window, .. } => self
+                        .windows
+                        .get(source_window)
+                        .and_then(|w| w.window.window_handle().ok())
+                        .map(|h| h.as_raw()),
+                    _ => None,
+                }
             }
         };
         #[cfg(not(target_os = "macos"))]

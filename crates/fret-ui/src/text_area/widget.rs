@@ -9,7 +9,7 @@ use fret_runtime::Effect;
 
 impl<H: UiHost> Widget<H> for TextArea {
     fn is_focusable(&self) -> bool {
-        true
+        self.enabled && self.focusable
     }
 
     fn is_text_input(&self) -> bool {
@@ -450,9 +450,12 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
         cx.set_role(SemanticsRole::TextField);
-        cx.set_focusable(true);
-        cx.set_value_editable(true);
-        cx.set_text_selection_supported(true);
+        cx.set_focusable(self.enabled && self.focusable);
+        if !self.enabled {
+            cx.set_disabled(true);
+        }
+        cx.set_value_editable(self.enabled);
+        cx.set_text_selection_supported(self.enabled);
 
         let (value, text_selection, text_composition) = if self.is_ime_composing()
             && let Some(layout_text) = self.layout_text()
@@ -486,6 +489,9 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         self.sync_style_from_theme(cx.theme());
+        if !self.enabled {
+            return;
+        }
         let focused = cx.focus == Some(cx.node);
         match event {
             Event::SetTextSelection { anchor, focus } => {

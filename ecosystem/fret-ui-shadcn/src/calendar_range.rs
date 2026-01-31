@@ -19,6 +19,7 @@ use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
 use crate::calendar::CalendarLocale;
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
     CalendarMonth, DateRangeSelection, month_grid_compact, week_number,
@@ -286,8 +287,18 @@ impl CalendarRange {
             day_grid_width
         };
 
-        let chrome = ChromeRefinement::default().p(Space::N3).merge(self.chrome);
-        let root = LayoutRefinement::default().w_full().merge(self.layout);
+        let bg = theme.color_required("background");
+        let mut chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(bg))
+            .p(Space::N3);
+        if matches!(
+            surface_slot_in_scope(cx),
+            Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+        ) {
+            chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+        }
+        let chrome = chrome.merge(self.chrome);
+        let root = LayoutRefinement::default().merge(self.layout);
         let container_props = decl_style::container_props(&theme, chrome, root);
 
         cx.container(container_props, move |cx| {

@@ -98,7 +98,7 @@ fn ui_builder_overlay_roots_compile<H: UiHost>(
         .into_element(
             cx,
             |cx, _is_open| Button::new("trigger").into_element(cx),
-            |cx| Empty::new("content").into_element(cx),
+            |cx| Empty::new(vec![cx.text("content")]).into_element(cx),
         );
 
     let grid_keys = Arc::new(vec![0u64]);
@@ -247,7 +247,7 @@ fn ui_builder_smoke_applies_supported_patches() {
     let _ = Kbd::new("x").ui().px_2().build();
     let _ = AvatarImage::maybe(None).ui().px_2().build();
     let _ = Breadcrumb::new().ui().px_2().build();
-    let _ = Empty::new("Empty").ui().p_4().border_1().build();
+    let _ = Empty::new(Vec::new()).ui().p_4().border_1().build();
     let _ = Card::new(Vec::new())
         .ui()
         .p_4()

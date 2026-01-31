@@ -91,6 +91,8 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_enabled(props.enabled);
+                input.set_focusable(props.focusable);
                 input.set_a11y_role(props.a11y_role.unwrap_or(SemanticsRole::TextField));
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
@@ -119,6 +121,8 @@ impl ElementHostWidget {
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
+                area.set_enabled(props.enabled);
+                area.set_focusable(props.focusable);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
