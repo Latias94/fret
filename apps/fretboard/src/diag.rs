@@ -1903,7 +1903,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "0".to_string(),
                     ));
                 }
-                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
+                check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
                 check_vlist_scroll_window_dirty_max =
                     check_vlist_scroll_window_dirty_max.or(Some(4));
                 check_wheel_scroll_test_id = check_wheel_scroll_test_id
