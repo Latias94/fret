@@ -295,15 +295,27 @@ Legend:
 
 ### D) Ecosystem migrations
 
-- [ ] `ecosystem/fret-markdown`: express `strikethrough`, `inline code` as spans (no fallback hacks).
+- [x] `ecosystem/fret-markdown`: express `strikethrough`, `inline code` as spans (no fallback hacks).
   - Exit criteria: inline styles are represented as `TextSpan` overrides end-to-end (parse → model → `TextInput`),
     with no special-casing in the renderer for markdown widgets.
   - Exit criteria: add at least one focused test that asserts span boundaries remain stable across wrapping.
-- [ ] `ecosystem/fret-code-view`: represent highlighting as spans and support wrapping.
+  - Evidence: Markdown rich inline path builds span overrides:
+    `ecosystem/fret-markdown/src/lib.rs` (`build_rich_attributed_text`) + test
+    `ecosystem/fret-markdown/src/tests.rs` (`rich_inline_builds_spans_for_inline_code_and_strikethrough`).
+  - Evidence: `TextSpan.paint.bg` is painted as quads behind the text for `SelectableText`:
+    `crates/fret-ui/src/declarative/host_widget/paint.rs` (selectable text paint path) + test
+    `crates/fret-ui/src/declarative/tests/selection_indices.rs` (`selectable_text_paints_span_background_quads`).
+- [~] `ecosystem/fret-code-view`: represent highlighting as spans and support wrapping.
   - Exit criteria: syntax highlighting maps to span overrides (color/font/style) and can render with `TextWrap::Word`
     or `TextWrap::Grapheme` (no "one-line blob" fallback).
   - Exit criteria: add a deterministic smoke test (snapshot or structural assertions) for:
     mixed-script + emoji + long-token wrapping + selection.
+  - Evidence: code blocks build `AttributedText` with per-segment `TextSpan` colors and render as a single selectable
+    text surface (wrap configurable):
+    `ecosystem/fret-code-view/src/code_block.rs` (`build_code_block_rich`, `render_code_block_text`).
+  - Evidence: add `CodeBlockWrap::Grapheme` and map it to `TextWrap::Grapheme`:
+    `ecosystem/fret-code-view/src/code_block.rs` (`text_wrap_for_code_block_wrap`) + test
+    `ecosystem/fret-code-view/src/code_block.rs` (`code_block_wrap_maps_to_text_wrap`).
 
 ### E) Tests & conformance
 
