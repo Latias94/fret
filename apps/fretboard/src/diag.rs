@@ -63,6 +63,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_stale_scene_test_id: Option<String> = None;
     let mut check_stale_scene_eps: f32 = 0.5;
+    let mut check_semantics_changed_repainted: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
@@ -334,6 +335,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_stale_scene_eps = v
                     .parse::<f32>()
                     .map_err(|_| "invalid value for --check-stale-scene-eps".to_string())?;
+                i += 1;
+            }
+            "--check-semantics-changed-repainted" => {
+                check_semantics_changed_repainted = true;
                 i += 1;
             }
             "--check-wheel-scroll" => {
@@ -876,6 +881,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             if result.stage.as_deref() == Some("passed") {
                 if check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
+                    || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -905,6 +911,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
+                        check_semantics_changed_repainted,
                         check_wheel_scroll_test_id.as_deref(),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -978,6 +985,281 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             report_result_and_exit(&result);
+        }
+        "repro" => {
+            if rest.is_empty() {
+                return Err(
+                    "missing script path or suite name (try: fretboard diag repro ui-gallery | fretboard diag repro ./script.json)"
+                        .to_string(),
+                );
+            }
+
+            let mut pack_defaults = (
+                pack_include_root_artifacts,
+                pack_include_triage,
+                pack_include_screenshots,
+            );
+            if !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
+                pack_defaults = (true, true, true);
+            }
+
+            let (scripts, suite_name): (Vec<PathBuf>, Option<String>) =
+                if rest.len() == 1 && rest[0] == "ui-gallery" {
+                    (
+                        ui_gallery_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some("ui-gallery".to_string()),
+                    )
+                } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
+                    (
+                        docking_arbitration_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some("docking-arbitration".to_string()),
+                    )
+                } else {
+                    (
+                        rest.into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        None,
+                    )
+                };
+
+            let summary_path = resolved_out_dir.join("repro.summary.json");
+
+            let mut child = maybe_launch_demo(
+                &launch,
+                &launch_env,
+                &workspace_root,
+                &resolved_out_dir,
+                &resolved_ready_path,
+                &resolved_exit_path,
+                pack_defaults.2,
+                timeout_ms,
+                poll_ms,
+            )?;
+
+            let mut run_rows: Vec<serde_json::Value> = Vec::new();
+            let mut selected_bundle_path: Option<PathBuf> = None;
+            let mut last_script_result: Option<ScriptResultSummary> = None;
+            let mut overall_error: Option<String> = None;
+
+            for src in scripts {
+                let mut result = run_script_and_wait(
+                    &src,
+                    &resolved_script_path,
+                    &resolved_script_trigger_path,
+                    &resolved_script_result_path,
+                    &resolved_script_result_trigger_path,
+                    timeout_ms,
+                    poll_ms,
+                );
+
+                if let Ok(summary) = &result
+                    && summary.stage.as_deref() == Some("failed")
+                {
+                    if let Some(dir) = wait_for_failure_dump_bundle(
+                        &resolved_out_dir,
+                        summary,
+                        timeout_ms,
+                        poll_ms,
+                    ) {
+                        if let Some(name) = dir.file_name().and_then(|s| s.to_str()) {
+                            if let Ok(summary) = result.as_mut() {
+                                summary.last_bundle_dir = Some(name.to_string());
+                            }
+                        }
+                    }
+                }
+
+                let result = match result {
+                    Ok(r) => r,
+                    Err(err) => {
+                        overall_error = Some(err);
+                        break;
+                    }
+                };
+                last_script_result = Some(result.clone());
+
+                let mut bundle_path = wait_for_bundle_json_from_script_result(
+                    &resolved_out_dir,
+                    &result,
+                    timeout_ms,
+                    poll_ms,
+                );
+                if bundle_path.is_none() {
+                    let _ = touch(&resolved_trigger_path);
+                    bundle_path = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    );
+                }
+
+                if result.stage.as_deref() == Some("failed") && bundle_path.is_some() {
+                    selected_bundle_path = bundle_path.clone();
+                }
+                if selected_bundle_path.is_none() {
+                    selected_bundle_path = bundle_path.clone();
+                }
+
+                run_rows.push(serde_json::json!({
+                    "script_path": src.display().to_string(),
+                    "run_id": result.run_id,
+                    "stage": result.stage,
+                    "step_index": result.step_index,
+                    "reason": result.reason,
+                    "last_bundle_dir": result.last_bundle_dir,
+                    "bundle_json": bundle_path.as_ref().map(|p| p.display().to_string()),
+                }));
+
+                if result.stage.as_deref() == Some("passed") {
+                    let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
+                        || check_stale_scene_test_id.is_some()
+                        || check_semantics_changed_repainted
+                        || check_wheel_scroll_test_id.is_some()
+                        || check_drag_cache_root_paint_only_test_id.is_some()
+                        || check_hover_layout_max.is_some()
+                        || check_gc_sweep_liveness
+                        || check_view_cache_reuse_min.is_some()
+                        || check_overlay_synthesis_min.is_some()
+                        || check_viewport_input_min.is_some()
+                        || check_dock_drag_min.is_some()
+                        || check_viewport_capture_min.is_some()
+                        || check_retained_vlist_reconcile_no_notify_min.is_some()
+                        || check_retained_vlist_attach_detach_max.is_some();
+
+                    if wants_post_run_checks_for_script {
+                        let Some(bundle_path) = bundle_path.as_ref() else {
+                            overall_error = Some(
+                                "script passed but no bundle.json was found (required for post-run checks)"
+                                    .to_string(),
+                            );
+                            break;
+                        };
+
+                        if let Err(err) = apply_post_run_checks(
+                            bundle_path,
+                            check_stale_paint_test_id.as_deref(),
+                            check_stale_paint_eps,
+                            check_stale_scene_test_id.as_deref(),
+                            check_stale_scene_eps,
+                            check_semantics_changed_repainted,
+                            check_wheel_scroll_test_id.as_deref(),
+                            check_drag_cache_root_paint_only_test_id.as_deref(),
+                            check_hover_layout_max,
+                            check_gc_sweep_liveness,
+                            check_view_cache_reuse_min,
+                            check_overlay_synthesis_min,
+                            check_viewport_input_min,
+                            check_dock_drag_min,
+                            check_viewport_capture_min,
+                            check_retained_vlist_reconcile_no_notify_min,
+                            check_retained_vlist_attach_detach_max,
+                            warmup_frames,
+                        ) {
+                            overall_error = Some(err);
+                            break;
+                        }
+                    }
+                } else {
+                    overall_error = Some(format!(
+                        "script failed: {} (run_id={}, step={:?}, reason={:?})",
+                        src.display(),
+                        result.run_id,
+                        result.step_index,
+                        result.reason
+                    ));
+                    break;
+                }
+            }
+
+            let zip_out = pack_out
+                .map(|p| resolve_path(&workspace_root, p))
+                .unwrap_or_else(|| resolved_out_dir.join("repro.zip"));
+
+            let mut packed_zip: Option<PathBuf> = None;
+            let mut packed_bundle_json: Option<PathBuf> = None;
+            if let Some(bundle_path) = selected_bundle_path.as_ref() {
+                let bundle_dir = resolve_bundle_root_dir(bundle_path)?;
+                let artifacts_root = if bundle_dir.starts_with(&resolved_out_dir) {
+                    resolved_out_dir.clone()
+                } else {
+                    bundle_dir
+                        .parent()
+                        .unwrap_or(&resolved_out_dir)
+                        .to_path_buf()
+                };
+
+                if let Err(err) = pack_bundle_dir_to_zip(
+                    &bundle_dir,
+                    &zip_out,
+                    pack_defaults.0,
+                    pack_defaults.1,
+                    pack_defaults.2,
+                    &artifacts_root,
+                    stats_top,
+                    sort_override.unwrap_or(BundleStatsSort::Invalidation),
+                    warmup_frames,
+                ) {
+                    overall_error = Some(format!("failed to pack repro zip: {err}"));
+                } else {
+                    packed_zip = Some(zip_out.clone());
+                    packed_bundle_json = Some(bundle_dir.join("bundle.json"));
+                }
+            } else {
+                overall_error = Some(
+                    "no bundle.json found (add `capture_bundle` or enable script auto-dumps)"
+                        .to_string(),
+                );
+            }
+
+            let summary_json = serde_json::json!({
+                "schema_version": 1,
+                "generated_unix_ms": now_unix_ms(),
+                "out_dir": resolved_out_dir.display().to_string(),
+                "suite": suite_name,
+                "scripts": run_rows,
+                "selected_bundle_json": selected_bundle_path.as_ref().map(|p| p.display().to_string()),
+                "packed_bundle_json": packed_bundle_json.as_ref().map(|p| p.display().to_string()),
+                "repro_zip": packed_zip.as_ref().map(|p| p.display().to_string()),
+                "last_result": last_script_result.as_ref().map(|r| serde_json::json!({
+                    "run_id": r.run_id,
+                    "stage": r.stage,
+                    "step_index": r.step_index,
+                    "reason": r.reason,
+                    "last_bundle_dir": r.last_bundle_dir,
+                })),
+                "error": overall_error,
+            });
+
+            if let Some(parent) = summary_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = write_json_value(&summary_path, &summary_json);
+
+            if let Some(path) = packed_bundle_json.as_ref() {
+                println!("BUNDLE {}", path.display());
+            }
+            if let Some(path) = packed_zip.as_ref() {
+                println!("PACK {}", path.display());
+            }
+            println!("SUMMARY {}", summary_path.display());
+
+            stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+
+            if let Some(err) = overall_error {
+                eprintln!("REPRO-FAIL {err}");
+                std::process::exit(1);
+            }
+
+            println!("REPRO-OK");
+            std::process::exit(0);
         }
         "suite" => {
             if pack_after_run {
@@ -1129,6 +1411,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_max
                         .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
+                    || check_stale_scene_test_id.is_some()
+                    || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -1170,6 +1454,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
+                        check_semantics_changed_repainted,
                         check_wheel_scroll_test_id.as_deref(),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -1794,6 +2079,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             if let Some(test_id) = check_stale_paint_test_id.as_deref() {
                 check_bundle_for_stale_paint(&bundle_path, test_id, check_stale_paint_eps)?;
+            }
+            if let Some(test_id) = check_stale_scene_test_id.as_deref() {
+                check_bundle_for_stale_scene(&bundle_path, test_id, check_stale_scene_eps)?;
+            }
+            if check_semantics_changed_repainted {
+                check_bundle_for_semantics_changed_repainted(&bundle_path, warmup_frames)?;
             }
             if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
                 check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
@@ -2947,6 +3238,7 @@ fn apply_post_run_checks(
     check_stale_paint_eps: f32,
     check_stale_scene_test_id: Option<&str>,
     check_stale_scene_eps: f32,
+    check_semantics_changed_repainted: bool,
     check_wheel_scroll_test_id: Option<&str>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -2965,6 +3257,9 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_stale_scene_test_id {
         check_bundle_for_stale_scene(bundle_path, test_id, check_stale_scene_eps)?;
+    }
+    if check_semantics_changed_repainted {
+        check_bundle_for_semantics_changed_repainted(bundle_path, warmup_frames)?;
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
@@ -3717,6 +4012,22 @@ fn write_script(src: &Path, dst: &Path) -> Result<(), String> {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     std::fs::write(dst, bytes).map_err(|e| e.to_string())
+}
+
+fn now_unix_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+fn write_json_value(path: &Path, v: &serde_json::Value) -> Result<(), String> {
+    let bytes = serde_json::to_vec_pretty(v).map_err(|e| e.to_string())?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
 fn read_script_result(path: &Path) -> Option<serde_json::Value> {
@@ -5252,6 +5563,137 @@ fn check_bundle_for_stale_scene(bundle_path: &Path, test_id: &str, eps: f32) -> 
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     check_bundle_for_stale_scene_json(&bundle, bundle_path, test_id, eps)
+}
+
+fn check_bundle_for_semantics_changed_repainted(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_semantics_changed_repainted_json(&bundle, bundle_path, warmup_frames)
+}
+
+fn check_bundle_for_semantics_changed_repainted_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut suspicious: Vec<String> = Vec::new();
+    let mut missing_scene_fingerprint = false;
+    let mut missing_semantics_fingerprint = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut prev_scene_fingerprint: Option<u64> = None;
+        let mut prev_semantics_fingerprint: Option<u64> = None;
+        let mut prev_tick_id: u64 = 0;
+        let mut prev_frame_id: u64 = 0;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let scene_fingerprint = s.get("scene_fingerprint").and_then(|v| v.as_u64());
+            if scene_fingerprint.is_none() {
+                missing_scene_fingerprint = true;
+            }
+
+            let semantics_fingerprint = s.get("semantics_fingerprint").and_then(|v| v.as_u64());
+            if semantics_fingerprint.is_none() {
+                missing_semantics_fingerprint = true;
+            }
+
+            let (Some(scene_fingerprint), Some(semantics_fingerprint)) =
+                (scene_fingerprint, semantics_fingerprint)
+            else {
+                prev_scene_fingerprint = None;
+                prev_semantics_fingerprint = None;
+                prev_tick_id = tick_id;
+                prev_frame_id = frame_id;
+                continue;
+            };
+
+            if let (Some(prev_scene), Some(prev_sem)) =
+                (prev_scene_fingerprint, prev_semantics_fingerprint)
+            {
+                let semantics_changed = semantics_fingerprint != prev_sem;
+                let scene_unchanged = scene_fingerprint == prev_scene;
+                if semantics_changed && scene_unchanged {
+                    let paint_nodes_performed = s
+                        .get("debug")
+                        .and_then(|v| v.get("stats"))
+                        .and_then(|v| v.get("paint_nodes_performed"))
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let paint_cache_replayed_ops = s
+                        .get("debug")
+                        .and_then(|v| v.get("stats"))
+                        .and_then(|v| v.get("paint_cache_replayed_ops"))
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+
+                    suspicious.push(format!(
+                        "window={window_id} tick={tick_id} frame={frame_id} prev_tick={prev_tick_id} prev_frame={prev_frame_id} semantics_fingerprint=0x{semantics_fingerprint:016x} prev_semantics_fingerprint=0x{prev_sem:016x} scene_fingerprint=0x{scene_fingerprint:016x} paint_nodes_performed={paint_nodes_performed} paint_cache_replayed_ops={paint_cache_replayed_ops}"
+                    ));
+                    if suspicious.len() >= 8 {
+                        break;
+                    }
+                }
+            }
+
+            prev_scene_fingerprint = Some(scene_fingerprint);
+            prev_semantics_fingerprint = Some(semantics_fingerprint);
+            prev_tick_id = tick_id;
+            prev_frame_id = frame_id;
+        }
+    }
+
+    if missing_scene_fingerprint {
+        return Err(format!(
+            "semantics repaint check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if missing_semantics_fingerprint {
+        return Err(format!(
+            "semantics repaint check requires `semantics_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if suspicious.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str(
+        "missing repaint suspected (semantics fingerprint changed but scene fingerprint did not)\n",
+    );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in suspicious {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
 }
 
 fn check_bundle_for_stale_scene_json(
@@ -8183,6 +8625,68 @@ mod tests {
             check_bundle_for_stale_scene_json(&bundle, Path::new("bundle.json"), "search", 0.5)
                 .unwrap_err();
         assert!(err.contains("stale scene suspected"));
+    }
+
+    #[test]
+    fn semantics_repaint_check_fails_when_semantics_fingerprint_changes_without_scene_change() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "scene_fingerprint": 7,
+                            "semantics_fingerprint": 100,
+                            "debug": { "stats": { "paint_nodes_performed": 0, "paint_cache_replayed_ops": 0 } }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "scene_fingerprint": 7,
+                            "semantics_fingerprint": 101,
+                            "debug": { "stats": { "paint_nodes_performed": 0, "paint_cache_replayed_ops": 0 } }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_semantics_changed_repainted_json(&bundle, Path::new("bundle.json"), 0)
+                .unwrap_err();
+        assert!(err.contains("missing repaint suspected"));
+    }
+
+    #[test]
+    fn semantics_repaint_check_passes_when_scene_fingerprint_changes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "scene_fingerprint": 7,
+                            "semantics_fingerprint": 100
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "scene_fingerprint": 8,
+                            "semantics_fingerprint": 101
+                        }
+                    ]
+                }
+            ]
+        });
+
+        check_bundle_for_semantics_changed_repainted_json(&bundle, Path::new("bundle.json"), 0)
+            .unwrap();
     }
 
     #[test]
