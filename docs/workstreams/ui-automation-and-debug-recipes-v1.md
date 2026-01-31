@@ -155,8 +155,10 @@ The goal is: when a repaint bug happens, we can answer “why didn’t we repain
 Checks to standardize (CLI gates + bundle evidence):
 
 - **Semantics moved but scene fingerprint didn’t** (already: `--check-stale-paint`).
-- **Semantics changed but scene fingerprint didn’t** (new):
+- **Semantics changed but scene fingerprint didn’t** (tooling: `--check-semantics-changed-repainted`):
   - requires a `semantics_fingerprint` per snapshot (core hook).
+  - optional: `--dump-semantics-changed-repainted-json` writes `check.semantics_changed_repainted.json` next to
+    `bundle.json` for machine-readable evidence (AI/CI triage).
 - **Expected-to-change region didn’t repaint** (new, screenshot-backed optional):
   - request a screenshot at step boundaries,
   - compute a region hash inside the target bounds and assert it changed.

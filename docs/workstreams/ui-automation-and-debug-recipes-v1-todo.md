@@ -18,21 +18,21 @@ Conventions:
 
 ### M0: Workstream scaffolding (docs + gaps audit)
 
-- [ ] Add/confirm an ADR for v1 recipes + automation surface (candidate: ADR 0196).
-- [ ] Audit and reconcile screenshot capture paths:
+- [x] Add/confirm an ADR for v1 recipes + automation surface (candidate: ADR 0196).
+- [x] Audit and reconcile screenshot capture paths:
   - `FRET_DIAG_SCREENSHOT=1` (bundle `frame.bmp`) vs
   - `FRET_DIAG_SCREENSHOTS=1` (PNG + manifest + request/result protocol).
-- [ ] Add a “known gaps” section listing current mismatches (doc vs implementation).
+- [x] Add a “known gaps” section listing current mismatches (doc vs implementation).
 
 ### M1: One-command repro packaging (`fretboard diag repro`)
 
-- [ ] Add `fretboard diag repro <script|suite>` that:
+- [x] Add `fretboard diag repro <script|suite>` that:
   - runs the script/suite,
   - runs post-checks,
   - emits `repro.summary.json`,
   - packs `repro.zip` with `--include-all` defaults.
 - [ ] Add `--with tracy` and `--with renderdoc` flags (best-effort at first).
-- [ ] Add an example invocation to `docs/debugging-playbook.md`.
+- [x] Add an example invocation to `docs/debugging-playbook.md`.
 
 ### M2: High-level action library (Script v2 or compiler layer)
 
@@ -50,8 +50,9 @@ Conventions:
 
 ### M3: Missing repaint checks (actionable failures)
 
-- [ ] Add `semantics_fingerprint` per snapshot (core hook).
-- [ ] Add `--check-semantics-changed-repainted` (semantics fingerprint changes must correlate with scene changes).
+- [x] Add `semantics_fingerprint` per snapshot (core hook).
+- [x] Add `--check-semantics-changed-repainted` (semantics fingerprint changes must correlate with scene changes).
+- [x] Add `--dump-semantics-changed-repainted-json` (machine-readable evidence for AI/CI triage).
 - [ ] Add optional screenshot-backed region hashing check (`--check-pixels-changed <test_id>`).
 - [ ] Add a UI gallery repro script for the “search text disappears / no repaint” class of bug.
 
@@ -74,4 +75,3 @@ Conventions:
 - [ ] Ensure new exports keep `bundle.json` forward-compatible (unknown fields ignored by viewer).
 - [ ] Keep `fret-ui` surface policy-free (ADR 0066).
 - [ ] Prefer `test_id` authoring in demos for stable automation selectors.
-

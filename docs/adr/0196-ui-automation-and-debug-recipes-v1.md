@@ -127,3 +127,26 @@ Tooling MAY provide regression gates based on these fields.
 - `apps/fretboard`:
   - orchestration, packaging, triage, compare/matrix, gating thresholds.
 
+## Implementation notes (as of 2026-01-31)
+
+This ADR is partially implemented in a way that preserves the intended crate boundaries:
+
+- **Repro orchestration + packaging (`fretboard`)**
+  - `fretboard diag repro` runs a script or a suite, applies post-run checks, writes a machine summary, and packs a zip.
+  - Suite repros are packed as multi-bundle zips with stable prefixes and script sources included under `_root/scripts/`.
+  - Evidence: `apps/fretboard/src/diag.rs` (`diag repro`, `pack_repro_zip_multi`).
+- **Missing repaint checks (`fretboard`)**
+  - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
+    changes but `scene_fingerprint` does not (`--check-semantics-changed-repainted`), and includes a small semantics diff
+    summary to aid triage. When `--dump-semantics-changed-repainted-json` is set, it also writes a structured
+    `check.semantics_changed_repainted.json` next to `bundle.json` for machine consumption.
+  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_semantics_changed_repainted*`).
+- **Semantics fingerprint export (`fret-bootstrap`)**
+  - Diagnostics snapshots export `semantics_fingerprint` as a best-effort hash derived from the semantics snapshot.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`semantics_fingerprint` field and computation).
+
+Known gaps:
+
+- `diag repro` does not yet orchestrate Tracy / RenderDoc capture/export as part of a single artifact pack.
+- High-level intent actions (Script v2 or a compiler layer) are not yet implemented.
+- Range control semantics value (to enable robust `set_slider_value`) is still an open contract item.
