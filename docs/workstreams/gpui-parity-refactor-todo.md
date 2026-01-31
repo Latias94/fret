@@ -634,6 +634,7 @@ topics (if/when we implement them):
         `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
       - Note: retained-host reconcile now prefers the prepaint-derived `VirtualListState.window_range` (ADR 0190) rather than re-deriving the
         window from scroll state during reconcile. This keeps “why did the window change?” explainable from one bundle and reduces duplicated work.
+        - Evidence: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache`)
     - [ ] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
       `--check-retained-vlist-reconcile-no-notify`, attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`,
       plus `--check-wheel-scroll` and `--check-stale-paint`.
