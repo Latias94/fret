@@ -881,6 +881,59 @@ fn selectable_text_double_and_triple_click_select() {
 }
 
 #[test]
+fn selectable_text_pointer_down_requests_focus() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-pointer-down-focus",
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let selectable_bounds = ui
+        .debug_node_bounds(selectable_node)
+        .expect("selectable bounds");
+    let pos = Point::new(
+        Px(selectable_bounds.origin.x.0 + 5.0),
+        Px(selectable_bounds.origin.y.0 + 5.0),
+    );
+
+    assert_eq!(ui.focus(), None, "expected no focus before click");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(selectable_node),
+        "expected selectable text to request focus on pointer down"
+    );
+}
+
+#[test]
 fn selectable_text_double_click_sets_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
