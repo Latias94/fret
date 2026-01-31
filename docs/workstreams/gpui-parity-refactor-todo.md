@@ -652,6 +652,9 @@ topics (if/when we implement them):
         - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` exports both fields to bundles.
         - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-min <n>` (use on `*window-boundary*` scripts).
       - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (v2 addendum; staged prefetch + budgets).
+    - [~] Tune staged prefetch thresholds so steady-state overhead stays low.
+      - Goal: avoid prefetching too early/often; prefetch should trigger mainly when approaching escape (or when predicted escape deltas would be large).
+      - Evidence should show: fewer `window_shift_kind=prefetch` frames under slow scroll, while still bounding `attached_items+detached_items` deltas on boundary ticks.
     - [x] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
       - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (marks retained hosts for reconcile),
         `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
