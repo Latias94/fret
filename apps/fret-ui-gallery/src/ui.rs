@@ -11,6 +11,7 @@ use fret_ui::element::{CanvasProps, StackProps};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
+use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
@@ -792,11 +793,15 @@ fn material3_variant_toggle_row(
                 shadcn::Switch::new(material3_expressive.clone())
                     .a11y_label("Enable Material 3 Expressive variant")
                     .into_element(cx),
-                cx.text(if enabled {
-                    "Variant: Expressive"
-                } else {
-                    "Variant: Standard"
-                }),
+                ui::label(
+                    cx,
+                    if enabled {
+                        "Variant: Expressive"
+                    } else {
+                        "Variant: Standard"
+                    },
+                )
+                .into_element(cx),
             ]
         },
     )
@@ -807,7 +812,8 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
         shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
                 .into_element(cx),
-            shadcn::CardContent::new(vec![cx.text(desc)]).into_element(cx),
+            shadcn::CardContent::new(vec![ui::text_block(cx, desc).into_element(cx)])
+                .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .into_element(cx)
@@ -850,7 +856,7 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             LayoutRefinement::default().w_full().min_w_0(),
         );
         cx.container(props, |cx| {
-            vec![cx.text("Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.")]
+            vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.").into_element(cx)]
         })
     };
 
@@ -1126,11 +1132,6 @@ fn preview_view_cache(
 
 fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
     let boxy = |cx: &mut ElementContext<'_, App>, label: &str, color: fret_core::Color| {
-        // Ensure short labels don't accidentally get "min-content" sized under intrinsic probes.
-        // We want the text to wrap against the available inner width of the card, not a
-        // shrink-wrapped leaf width.
-        let mut label_props = TextProps::new(label);
-        label_props.layout.size.width = fret_ui::element::Length::Fill;
         cx.container(
             decl_style::container_props(
                 theme,
@@ -1143,7 +1144,7 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
                 // probes and can cause transient wrap widths (0px) to leak into final layout.
                 LayoutRefinement::default().flex_1().min_w_0(),
             ),
-            |cx| [cx.text_props(label_props)],
+            |cx| [ui::label(cx, label).w_full().into_element(cx)],
         )
     };
 
@@ -1163,7 +1164,11 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
     );
 
     vec![
-        cx.text("Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing)."),
+        ui::text_block(
+            cx,
+            "Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing).",
+        )
+        .into_element(cx),
         row,
     ]
 }
@@ -6564,7 +6569,7 @@ fn preview_forms(
                             shadcn::Checkbox::new(checkbox)
                                 .a11y_label("Accept terms")
                                 .into_element(cx),
-                            cx.text("Accept terms"),
+                            ui::label(cx, "Accept terms").into_element(cx),
                         ]
                     },
                 ),
@@ -6576,7 +6581,7 @@ fn preview_forms(
                             shadcn::Switch::new(switch)
                                 .a11y_label("Enable feature")
                                 .into_element(cx),
-                            cx.text("Enable feature"),
+                            ui::label(cx, "Enable feature").into_element(cx),
                         ]
                     },
                 ),
@@ -6590,9 +6595,11 @@ fn preview_forms(
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N3),
         |cx| {
-            let tip = cx.text(
+            let tip = ui::text_block(
+                cx,
                 "Tip: these are model-bound controls; values persist while you stay in the window.",
-            );
+            )
+            .into_element(cx);
             [input, textarea, toggles, tip]
         },
     )]

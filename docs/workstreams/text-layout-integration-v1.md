@@ -24,6 +24,10 @@ UI Gallery currently exhibits several issues that are typical for a text+layout 
 These are not “component bugs”; they are usually caused by **measurement vs paint divergence** or
 **ambiguous `Fill` semantics under flex/grid/intrinsic sizing**.
 
+Note (v1): UI Gallery pages should use component/kit defaults for typical app text (e.g.
+`fret_ui_kit::ui::text_block`) so the repro surface reflects intended authoring patterns. Use
+`cx.text(...)` only for mechanism-level harnesses and debugging.
+
 ## Repro Cases (UI Gallery)
 
 ## Repro Steps (UI Gallery)
