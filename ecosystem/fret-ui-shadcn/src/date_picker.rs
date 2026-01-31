@@ -2,7 +2,6 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -10,7 +9,7 @@ use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
@@ -114,7 +113,7 @@ impl DatePicker {
 
     /// Overrides how the selected date is shown on the trigger button.
     ///
-    /// Default: `Jan 15, 2026` (English, shadcn-aligned).
+    /// Default: `January 15th, 2026` (English, shadcn-aligned).
     pub fn format_selected_by(
         mut self,
         f: impl Fn(Date) -> Arc<str> + Send + Sync + 'static,
@@ -234,21 +233,37 @@ fn format_selected_ppp_en(date: Date) -> Arc<str> {
     use time::Month;
 
     let month = match date.month() {
-        Month::January => "Jan",
-        Month::February => "Feb",
-        Month::March => "Mar",
-        Month::April => "Apr",
+        Month::January => "January",
+        Month::February => "February",
+        Month::March => "March",
+        Month::April => "April",
         Month::May => "May",
-        Month::June => "Jun",
-        Month::July => "Jul",
-        Month::August => "Aug",
-        Month::September => "Sep",
-        Month::October => "Oct",
-        Month::November => "Nov",
-        Month::December => "Dec",
+        Month::June => "June",
+        Month::July => "July",
+        Month::August => "August",
+        Month::September => "September",
+        Month::October => "October",
+        Month::November => "November",
+        Month::December => "December",
     };
 
-    Arc::<str>::from(format!("{month} {}, {}", date.day(), date.year()))
+    fn ordinal_suffix(day: u8) -> &'static str {
+        let mod_100 = day % 100;
+        if mod_100 >= 11 && mod_100 <= 13 {
+            return "th";
+        }
+        match day % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        }
+    }
+
+    let day = date.day();
+    let suffix = ordinal_suffix(day);
+
+    Arc::<str>::from(format!("{month} {day}{suffix}, {}", date.year()))
 }
 
 #[cfg(test)]

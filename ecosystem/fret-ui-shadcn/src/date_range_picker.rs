@@ -2,12 +2,11 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::Color;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
 use time::{Date, Weekday};
 
 use crate::button::{Button, ButtonVariant};

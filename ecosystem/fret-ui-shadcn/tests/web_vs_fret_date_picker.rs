@@ -10,6 +10,10 @@ struct WebGolden {
 #[derive(Debug, Clone, Deserialize)]
 struct WebGoldenTheme {
     root: WebNode,
+    #[serde(default)]
+    portals: Vec<WebNode>,
+    #[serde(default, rename = "portalWrappers")]
+    portal_wrappers: Vec<WebNode>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -18,6 +22,10 @@ struct WebNode {
     #[serde(default)]
     #[serde(rename = "className")]
     class_name: Option<String>,
+    #[serde(default)]
+    attrs: BTreeMap<String, String>,
+    #[serde(default)]
+    text: Option<String>,
     #[serde(default)]
     children: Vec<WebNode>,
 }
@@ -32,12 +40,21 @@ fn repo_root() -> PathBuf {
 }
 
 fn web_golden_path(name: &str) -> PathBuf {
-    repo_root()
+    let base = repo_root()
         .join("goldens")
         .join("shadcn-web")
         .join("v4")
         .join("new-york-v4")
-        .join(format!("{name}.json"))
+        .join(format!("{name}.json"));
+
+    if base.exists() {
+        return base;
+    }
+
+    // Open-mode goldens use an `.open` suffix, but coverage keys normalize it away.
+    // Fall back so tests can reference normalized keys (e.g. `foo.bar`) while still loading
+    // `foo.bar.open.json`.
+    base.with_file_name(format!("{name}.open.json"))
 }
 
 fn read_web_golden(name: &str) -> WebGolden {
@@ -74,9 +91,31 @@ fn class_contains(node: &WebNode, needle: &str) -> bool {
         .is_some_and(|class| class.contains(needle))
 }
 
+fn contains_text(node: &WebNode, needle: &str) -> bool {
+    if node.text.as_deref().is_some_and(|t| t.contains(needle)) {
+        return true;
+    }
+    node.children.iter().any(|c| contains_text(c, needle))
+}
+
+fn theme_find_first<'a>(
+    theme: &'a WebGoldenTheme,
+    pred: &impl Fn(&'a WebNode) -> bool,
+) -> Option<&'a WebNode> {
+    find_first(&theme.root, pred)
+        .or_else(|| theme.portals.iter().find_map(|n| find_first(n, pred)))
+        .or_else(|| {
+            theme
+                .portal_wrappers
+                .iter()
+                .find_map(|n| find_first(n, pred))
+        })
+}
+
 const DATE_PICKER_KEYS: &[&str] = &[
     "date-picker-demo",
     "date-picker-with-presets",
+    "date-picker-with-presets.preset-tomorrow",
     "date-picker-with-range",
 ];
 
@@ -93,4 +132,22 @@ fn shadcn_date_picker_goldens_are_targeted_gates() {
         })
         .expect("missing date picker trigger button recipe markers");
     }
+}
+
+#[test]
+fn shadcn_date_picker_with_presets_preset_tomorrow_has_selected_day_and_trigger_text() {
+    let web = read_web_golden("date-picker-with-presets.preset-tomorrow");
+    let theme = web.themes.get("light").expect("missing light theme");
+
+    theme_find_first(theme, &|n| {
+        n.tag == "button" && contains_text(n, "January 16th, 2026")
+    })
+    .expect("missing updated trigger button text");
+
+    theme_find_first(theme, &|n| {
+        n.attrs
+            .get("aria-label")
+            .is_some_and(|v| v.contains("January 16th, 2026") && v.contains("selected"))
+    })
+    .expect("missing selected day aria-label marker");
 }

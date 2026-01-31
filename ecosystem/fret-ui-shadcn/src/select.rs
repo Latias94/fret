@@ -585,6 +585,8 @@ impl SelectStyle {
 pub struct Select {
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
+    on_value_change:
+        Option<Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static>>,
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
     disabled: bool,
@@ -613,6 +615,7 @@ impl Select {
         Self {
             model,
             open,
+            on_value_change: None,
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
             disabled: false,
@@ -662,6 +665,18 @@ impl Select {
             .open_model(cx);
 
         Self::new(model, open)
+    }
+
+    /// Called when the user selects a value (Radix `onValueChange`).
+    ///
+    /// Note: this only fires for user-driven selection events (click/keyboard selection on an
+    /// item). Programmatic model updates do not trigger this callback.
+    pub fn on_value_change(
+        mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static,
+    ) -> Self {
+        self.on_value_change = Some(Arc::new(f));
+        self
     }
 
     pub fn item(mut self, item: SelectItem) -> Self {
@@ -821,6 +836,7 @@ impl Select {
             cx,
             self.model,
             self.open,
+            self.on_value_change,
             &self.entries,
             self.placeholder,
             self.disabled,
@@ -861,6 +877,7 @@ pub fn select<H: UiHost>(
         cx,
         model,
         open,
+        None,
         &entries,
         placeholder,
         disabled,
@@ -889,6 +906,9 @@ fn select_impl<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
+    on_value_change: Option<
+        Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static>,
+    >,
     entries: &[SelectEntry],
     placeholder: Arc<str>,
     disabled: bool,
@@ -1678,6 +1698,7 @@ fn select_impl<H: UiHost>(
                     let popper_layout_for_children = popper_layout;
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
                     let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
+                    let on_value_change_for_overlay_children = on_value_change.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
@@ -1686,6 +1707,7 @@ fn select_impl<H: UiHost>(
                         let mouse_open_guard_for_barrier_children = mouse_open_guard_for_overlay.clone();
 
                         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+                        let on_value_change = on_value_change_for_overlay_children.clone();
 
                         #[derive(Clone)]
                         enum SelectRow {
@@ -2073,6 +2095,8 @@ fn select_impl<H: UiHost>(
                                                                             let model = model.clone();
                                                                             let open = open_for_content.clone();
                                                                             let text_style = text_style_for_overlay.clone();
+                                                                            let on_value_change_for_item =
+                                                                                on_value_change.clone();
 
                                                                             let pos = item_ordinal;
                                                                             item_ordinal = item_ordinal.saturating_add(1);
@@ -2127,6 +2151,24 @@ fn select_impl<H: UiHost>(
                                                                                          item_value.clone(),
                                                                                      );
                                                                                     cx.pressable_set_bool(&open, false);
+
+                                                                                    if !item_disabled
+                                                                                        && let Some(
+                                                                                            on_value_change,
+                                                                                        ) = on_value_change_for_item.clone()
+                                                                                    {
+                                                                                        let item_value_for_activate =
+                                                                                            item_value.clone();
+                                                                                        cx.pressable_add_on_activate(
+                                                                                            Arc::new(move |host, action_cx, _reason| {
+                                                                                                on_value_change(
+                                                                                                    host,
+                                                                                                    action_cx,
+                                                                                                    item_value_for_activate.clone(),
+                                                                                                );
+                                                                                            }),
+                                                                                        );
+                                                                                    }
 
                                                                                     if !item_disabled {
                                                                                         cx.pressable_add_on_hover_change(Arc::new(
