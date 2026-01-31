@@ -276,6 +276,7 @@ fn wrap_none_ellipsis(
     glyphs.extend(ellipsis.glyphs.into_iter().map(|mut g| {
         g.x += ellipsis_start_x;
         g.text_range = empty_range_at(cut_end);
+        g.is_rtl = false;
         g
     }));
 
@@ -873,11 +874,24 @@ mod tests {
         };
 
         let text = "hello world hello world hello world";
-        let spans = [TextSpan {
-            len: text.len(),
-            shaping: TextShapingStyle::default(),
-            paint: TextPaintStyle::default(),
-        }];
+        // Multiple spans to ensure wrapping remains correct across span boundaries.
+        let spans = [
+            TextSpan {
+                len: 6, // "hello "
+                shaping: TextShapingStyle::default(),
+                paint: TextPaintStyle::default(),
+            },
+            TextSpan {
+                len: 5, // "world"
+                shaping: TextShapingStyle::default(),
+                paint: TextPaintStyle::default(),
+            },
+            TextSpan {
+                len: text.len().saturating_sub(11),
+                shaping: TextShapingStyle::default(),
+                paint: TextPaintStyle::default(),
+            },
+        ];
 
         let constraints = TextConstraints {
             max_width: Some(Px(60.0)),

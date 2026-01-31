@@ -48,7 +48,7 @@ P0 (cache correctness + font config):
 
 P1 (geometry correctness across spans):
 
-- B2: cluster mapping sufficient for caret stops + hit-testing + span-aware paint.
+- B2: cluster mapping sufficient for caret stops + hit-testing + span-aware paint. (done)
 - E: unit tests for span boundaries + ellipsis mapping.
 
 P2 (quality & ecosystem):
@@ -219,10 +219,15 @@ Legend:
 
 **B2 — Shaper (Parley)**
 - [x] Integrate Parley shaping for a single line/chunk with attributed spans.
-- [ ] Produce glyph/cluster mapping sufficient for:
+- [x] Produce glyph/cluster mapping sufficient for:
   - caret stops
   - hit-testing
   - span-aware paint assignment
+  - Evidence: `crates/fret-render/src/text_v2/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
+    `crates/fret-render/src/text_v2/wrapper.rs` (`hit_test_x`), `crates/fret-render/src/text.rs`
+    (`caret_stops_for_slice`, `paint_span_for_text_range`).
+  - Tests: `crates/fret-render/src/text.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
+    `crates/fret-render/src/text_v2/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 
 **B3 — Wrapper (wrap + truncation)**
 - [x] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
@@ -273,8 +278,11 @@ Legend:
 ### E) Tests & conformance
 
 - [ ] Unit tests: span invariant validation and clamping behavior.
-- [ ] Unit tests: ellipsis truncation caret/hit-test mapping.
-- [ ] Unit tests: wrap boundaries across span boundaries.
+- [x] Unit tests: ellipsis truncation caret/hit-test mapping.
+  - Evidence: `crates/fret-render/src/text.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
+    `crates/fret-render/src/text_v2/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
+- [x] Unit tests: wrap boundaries across span boundaries.
+  - Evidence: `crates/fret-render/src/text_v2/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 - [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
 - [ ] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
 

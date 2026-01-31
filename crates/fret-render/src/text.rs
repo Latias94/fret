@@ -1849,9 +1849,9 @@ impl TextSystem {
 
                         let text_range =
                             (range.start + g.text_range.start)..(range.start + g.text_range.end);
-                        let paint_span = resolved_spans
-                            .as_deref()
-                            .and_then(|spans| paint_span_for_text_range(spans, &text_range));
+                        let paint_span = resolved_spans.as_deref().and_then(|spans| {
+                            paint_span_for_text_range(spans, &text_range, g.is_rtl)
+                        });
 
                         glyphs.push(GlyphInstance {
                             rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
@@ -2192,11 +2192,15 @@ fn paint_span_for_glyph(
 fn paint_span_for_text_range(
     spans: &[ResolvedSpan],
     range: &std::ops::Range<usize>,
+    is_rtl: bool,
 ) -> Option<u16> {
-    let mut idx = range.start;
-    if range.start == range.end && idx > 0 {
-        idx = idx.saturating_sub(1);
-    }
+    let idx = if range.start == range.end {
+        range.start.saturating_sub(1)
+    } else if is_rtl {
+        range.end.saturating_sub(1)
+    } else {
+        range.start
+    };
     spans
         .iter()
         .find(|s| idx >= s.start && idx < s.end)
@@ -2926,8 +2930,9 @@ fn decorations_for_lines(
 #[cfg(test)]
 mod tests {
     use super::{
-        TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names, spans_paint_fingerprint,
-        spans_shaping_fingerprint, subpixel_mask_to_alpha,
+        ResolvedSpan, TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names,
+        paint_span_for_text_range, spans_paint_fingerprint, spans_shaping_fingerprint,
+        subpixel_mask_to_alpha,
     };
     use cosmic_text::Family;
     use fret_core::{
@@ -2944,6 +2949,37 @@ mod tests {
             1u8, 200u8, 2u8, 0u8,
         ];
         assert_eq!(subpixel_mask_to_alpha(&data), vec![10u8, 200u8]);
+    }
+
+    #[test]
+    fn paint_span_for_text_range_is_directional_across_span_boundary() {
+        let spans = vec![
+            ResolvedSpan {
+                start: 0,
+                end: 3,
+                slot: 0,
+                fg: None,
+                underline: None,
+                strikethrough: None,
+            },
+            ResolvedSpan {
+                start: 3,
+                end: 6,
+                slot: 1,
+                fg: None,
+                underline: None,
+                strikethrough: None,
+            },
+        ];
+
+        // Cluster spans the boundary (2..4). We cannot split the glyph, so we pick a deterministic
+        // representative index based on direction.
+        assert_eq!(paint_span_for_text_range(&spans, &(2..4), false), Some(0));
+        assert_eq!(paint_span_for_text_range(&spans, &(2..4), true), Some(1));
+
+        // Synthetic 0-length ranges (e.g. ellipsis mapping) should inherit the preceding style.
+        assert_eq!(paint_span_for_text_range(&spans, &(3..3), false), Some(0));
+        assert_eq!(paint_span_for_text_range(&spans, &(3..3), true), Some(0));
     }
 
     #[test]
@@ -3514,6 +3550,62 @@ mod tests {
         assert_eq!(wrapped.lines.len(), 1);
         assert!(wrapped.kept_end < text.len());
         assert!(wrapped.lines[0].width <= 80.0 + 0.5);
+    }
+
+    #[test]
+    fn ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end() {
+        let text = "This is a long line that should truncate";
+        let constraints = TextConstraints {
+            max_width: Some(Px(80.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            scale_factor: 1.0,
+        };
+
+        let mut shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let base = TextStyle::default();
+        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+
+        assert_eq!(wrapped.lines.len(), 1);
+        let kept_end = wrapped.kept_end;
+        assert!(kept_end < text.len());
+
+        let line_layout = &wrapped.lines[0];
+        assert!(
+            line_layout
+                .clusters
+                .iter()
+                .any(|c| c.text_range == (kept_end..kept_end)),
+            "expected a synthetic zero-length cluster at kept_end for ellipsis mapping"
+        );
+
+        let slice = &text[..kept_end];
+        let caret_stops = super::caret_stops_for_slice(
+            slice,
+            0,
+            &line_layout.clusters,
+            line_layout.width,
+            1.0,
+            kept_end,
+        );
+        let line = super::TextLine {
+            start: 0,
+            end: kept_end,
+            width: Px(line_layout.width),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            caret_stops,
+        };
+
+        let x = Px((line_layout.width - 1.0).max(0.0));
+        let hit =
+            super::hit_test_point_from_lines(&[line], Point::new(x, Px(5.0))).expect("hit test");
+        assert_eq!(hit.index, kept_end);
     }
 
     #[test]
