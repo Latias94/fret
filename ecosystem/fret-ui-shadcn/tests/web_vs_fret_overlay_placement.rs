@@ -8057,6 +8057,13 @@ fn web_vs_fret_dropdown_menu_demo_submenu_tiny_viewport_overlay_placement_matche
     );
 }
 
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_mobile_tiny_viewport_overlay_placement_matches() {
+    assert_dropdown_menu_demo_submenu_overlay_placement_matches(
+        "dropdown-menu-demo.submenu-kbd-vp375x240",
+    );
+}
+
 fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsSnapshot) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -8430,6 +8437,13 @@ fn web_vs_fret_dropdown_menu_demo_submenu_tiny_viewport_menu_content_insets_matc
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_mobile_tiny_viewport_menu_content_insets_match() {
+    assert_dropdown_menu_demo_submenu_constrained_menu_content_insets_match(
+        "dropdown-menu-demo.submenu-kbd-vp375x240",
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_submenu_menu_content_insets_match() {
     assert_dropdown_menu_demo_submenu_constrained_menu_content_insets_match(
         "dropdown-menu-demo.submenu-kbd",
@@ -8522,6 +8536,13 @@ fn web_vs_fret_dropdown_menu_demo_submenu_small_viewport_first_visible_matches()
 fn web_vs_fret_dropdown_menu_demo_submenu_tiny_viewport_first_visible_matches() {
     assert_dropdown_menu_demo_submenu_first_visible_matches(
         "dropdown-menu-demo.submenu-kbd-vp1440x240",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_submenu_mobile_tiny_viewport_first_visible_matches() {
+    assert_dropdown_menu_demo_submenu_first_visible_matches(
+        "dropdown-menu-demo.submenu-kbd-vp375x240",
     );
 }
 
@@ -11926,10 +11947,37 @@ fn build_context_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Seman
         .iter()
         .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
         .expect("fret trigger button semantics");
-    let click_point = Point::new(
-        Px(trigger_button.bounds.origin.x.0 + trigger_button.bounds.size.width.0 * 0.5),
-        Px(trigger_button.bounds.origin.y.0 + trigger_button.bounds.size.height.0 * 0.5),
-    );
+    let click_point = if let Some(open) = theme.open.as_ref() {
+        // The web golden records an absolute viewport point. For Fret, map that point into the
+        // trigger element's local space, so the context menu is anchored at the same relative
+        // position inside the trigger.
+        let web_trigger = web_find_by_data_slot(&theme.root, "context-menu-trigger");
+        if let Some(web_trigger) = web_trigger {
+            let dx = open.point.x - web_trigger.rect.x;
+            let dy = open.point.y - web_trigger.rect.y;
+            let min_x = trigger_button.bounds.origin.x.0 + 1.0;
+            let max_x = (trigger_button.bounds.origin.x.0 + trigger_button.bounds.size.width.0
+                - 1.0)
+                .max(min_x);
+            let min_y = trigger_button.bounds.origin.y.0 + 1.0;
+            let max_y = (trigger_button.bounds.origin.y.0 + trigger_button.bounds.size.height.0
+                - 1.0)
+                .max(min_y);
+            let x = (trigger_button.bounds.origin.x.0 + dx).clamp(min_x, max_x);
+            let y = (trigger_button.bounds.origin.y.0 + dy).clamp(min_y, max_y);
+            Point::new(Px(x), Px(y))
+        } else {
+            Point::new(
+                Px(trigger_button.bounds.origin.x.0 + trigger_button.bounds.size.width.0 * 0.5),
+                Px(trigger_button.bounds.origin.y.0 + trigger_button.bounds.size.height.0 * 0.5),
+            )
+        }
+    } else {
+        Point::new(
+            Px(trigger_button.bounds.origin.x.0 + trigger_button.bounds.size.width.0 * 0.5),
+            Px(trigger_button.bounds.origin.y.0 + trigger_button.bounds.size.height.0 * 0.5),
+        )
+    };
 
     ui.dispatch_event(
         &mut app,
@@ -12159,7 +12207,6 @@ fn assert_context_menu_demo_submenu_overlay_placement_matches(web_name: &str) {
 
     let web_sub_menu = web_portal_node_by_data_slot(theme, "context-menu-sub-content");
     let web_sub_trigger = web_portal_node_by_data_slot(theme, "context-menu-sub-trigger");
-
     let expected_dx = web_sub_menu.rect.x - rect_right(web_sub_trigger.rect);
     let expected_dy = web_sub_menu.rect.y - web_sub_trigger.rect.y;
     let expected_w = web_sub_menu.rect.w;
@@ -12237,6 +12284,13 @@ fn web_vs_fret_context_menu_demo_submenu_tiny_viewport_overlay_placement_matches
 }
 
 #[test]
+fn web_vs_fret_context_menu_demo_submenu_mobile_tiny_viewport_overlay_placement_matches() {
+    assert_context_menu_demo_submenu_overlay_placement_matches(
+        "context-menu-demo.submenu-kbd-vp375x240",
+    );
+}
+
+#[test]
 fn web_vs_fret_context_menu_demo_submenu_menu_content_insets_match() {
     assert_context_menu_demo_submenu_constrained_menu_content_insets_match(
         "context-menu-demo.submenu-kbd",
@@ -12288,6 +12342,13 @@ fn web_vs_fret_context_menu_demo_submenu_small_viewport_menu_content_insets_matc
 fn web_vs_fret_context_menu_demo_submenu_tiny_viewport_menu_content_insets_match() {
     assert_context_menu_demo_submenu_constrained_menu_content_insets_match(
         "context-menu-demo.submenu-kbd-vp1440x240",
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_mobile_tiny_viewport_menu_content_insets_match() {
+    assert_context_menu_demo_submenu_constrained_menu_content_insets_match(
+        "context-menu-demo.submenu-kbd-vp375x240",
     );
 }
 
@@ -16663,6 +16724,11 @@ fn web_vs_fret_menubar_demo_submenu_tiny_viewport_overlay_placement_matches() {
     assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu-kbd-vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_menubar_demo_submenu_mobile_tiny_viewport_overlay_placement_matches() {
+    assert_menubar_demo_submenu_overlay_placement_matches("menubar-demo.submenu-kbd-vp375x240");
+}
+
 fn build_menubar_demo_submenu_snapshot(web_name: &str) -> (WebGolden, SemanticsSnapshot) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -16940,6 +17006,13 @@ fn web_vs_fret_menubar_demo_submenu_tiny_viewport_menu_content_insets_match() {
 }
 
 #[test]
+fn web_vs_fret_menubar_demo_submenu_mobile_tiny_viewport_menu_content_insets_match() {
+    assert_menubar_demo_submenu_constrained_menu_content_insets_match(
+        "menubar-demo.submenu-kbd-vp375x240",
+    );
+}
+
+#[test]
 fn web_vs_fret_menubar_demo_submenu_menu_content_insets_match() {
     assert_menubar_demo_submenu_constrained_menu_content_insets_match("menubar-demo.submenu-kbd");
 }
@@ -17020,6 +17093,11 @@ fn web_vs_fret_menubar_demo_submenu_small_viewport_first_visible_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_submenu_tiny_viewport_first_visible_matches() {
     assert_menubar_demo_submenu_first_visible_matches("menubar-demo.submenu-kbd-vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_mobile_tiny_viewport_first_visible_matches() {
+    assert_menubar_demo_submenu_first_visible_matches("menubar-demo.submenu-kbd-vp375x240");
 }
 
 #[test]
