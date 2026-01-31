@@ -36,3 +36,8 @@ Recommended P0 depth extensions:
   - cursor rect geometry (e.g. `recharts-tooltip-cursor`)
   - active marker geometry (e.g. `recharts-active-dot`)
 - Add a constrained viewport variant for at least one tooltip-heavy page to validate overflow behavior.
+
+Constrained viewport coverage (current):
+
+- `chart-tooltip-default.vp375x320` / `chart-tooltip-advanced.vp375x320` are gated (panel size + row geometry).
+- `chart-*-legend.vp375x320` are gated to validate wrapping height outcomes under narrow widths.

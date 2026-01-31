@@ -620,3 +620,47 @@ fn web_vs_fret_chart_radar_legend_geometry_matches_web() {
 fn web_vs_fret_chart_pie_legend_geometry_matches_web() {
     assert_chart_pie_legend_rect_matches_web("chart-pie-legend");
 }
+
+#[test]
+fn web_vs_fret_chart_tooltip_default_small_viewport_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-default.vp375x320",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        false,
+        fret_ui_shadcn::ChartTooltipContentKind::Default,
+        None,
+    );
+}
+
+#[test]
+fn web_vs_fret_chart_tooltip_advanced_small_viewport_geometry_matches_web() {
+    assert_chart_tooltip_rect_matches_web(
+        "chart-tooltip-advanced.vp375x320",
+        fret_ui_shadcn::ChartTooltipIndicator::Dot,
+        false,
+        true,
+        fret_ui_shadcn::ChartTooltipContentKind::AdvancedKcalTotal,
+        Some(Px(180.0)),
+    );
+}
+
+#[test]
+fn web_vs_fret_chart_area_legend_small_viewport_geometry_matches_web() {
+    assert_chart_legend_rect_matches_web("chart-area-legend.vp375x320");
+}
+
+#[test]
+fn web_vs_fret_chart_bar_demo_legend_small_viewport_geometry_matches_web() {
+    assert_chart_legend_rect_matches_web("chart-bar-demo-legend.vp375x320");
+}
+
+#[test]
+fn web_vs_fret_chart_radar_legend_small_viewport_geometry_matches_web() {
+    assert_chart_legend_rect_matches_web("chart-radar-legend.vp375x320");
+}
+
+#[test]
+fn web_vs_fret_chart_pie_legend_small_viewport_geometry_matches_web() {
+    assert_chart_pie_legend_rect_matches_web("chart-pie-legend.vp375x320");
+}
