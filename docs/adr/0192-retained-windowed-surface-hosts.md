@@ -116,6 +116,28 @@ Scripted harnesses (fretboard diag bundles) SHOULD include:
 - attach/detach counts,
 - stale-paint checks for scroll and drag interactions.
 
+### 6) Implementation checklist (copy/paste)
+
+Retained windowed surface implementers SHOULD verify:
+
+- Identity
+  - Stable item identity is truly stable (`ItemKey` does not change across reorder/expand/collapse).
+  - `items_revision` bumps on data changes that should affect membership or row content.
+- State persistence
+  - Host callbacks are stored in element-local state (`'static` closures), not only in frame-local props.
+  - Any long-lived host state that is only accessed during reconcile (e.g. keep-alive bucket) is also touched during
+    normal render so it survives state-buffer advancement and participates in view-cache state-key recording.
+- Liveness / GC
+  - Detached-but-retained subtrees are included in explicit liveness roots (ADR 0191); do not rely on parent pointers.
+  - When running under view-cache reuse, liveness is explainable from one bundle (layer roots + reuse roots + membership
+    lists + keep-alive roots).
+- Scheduling / coalescing
+  - Scroll/window changes schedule reconcile without forcing a parent cache-root rerender.
+  - Reconcile work is coalesced to the next frame (do not do heavy attach/detach directly in event handlers).
+- Correctness gates
+  - `--check-retained-vlist-reconcile-cache-reuse-min` (reconcile on cache-hit frames),
+    `--check-retained-vlist-attach-detach-min/max`, `--check-stale-paint`, and (if enabled) keep-alive reuse gates.
+
 ## Consequences
 
 - Composable virtualized surfaces (tables, trees, code views with rich rows) can become scroll-stable without forcing
