@@ -294,6 +294,8 @@ Core:
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
+  - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
+    (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
 - `FRET_DIAG_MAX_EVENTS=...`: ring size for events.
 - `FRET_DIAG_MAX_SNAPSHOTS=...`: ring size for snapshots.
 

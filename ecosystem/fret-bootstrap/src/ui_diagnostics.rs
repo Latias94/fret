@@ -177,7 +177,7 @@ impl Default for UiDiagnosticsConfig {
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
     per_window: HashMap<AppWindowId, WindowRing>,
-    last_trigger_mtime: Option<std::time::SystemTime>,
+    last_trigger_stamp: Option<u64>,
     last_script_trigger_stamp: Option<u64>,
     last_pick_trigger_mtime: Option<std::time::SystemTime>,
     last_inspect_trigger_mtime: Option<std::time::SystemTime>,
@@ -2360,29 +2360,27 @@ impl UiDiagnosticsService {
             return self.dump_bundle(Some(&label));
         }
 
-        let modified = match std::fs::metadata(&self.cfg.trigger_path).and_then(|m| m.modified()) {
-            Ok(modified) => modified,
-            Err(_) => {
-                if let Some(dir) = self.cfg.trigger_path.parent() {
-                    let _ = std::fs::create_dir_all(dir);
-                }
-                if std::fs::OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .open(&self.cfg.trigger_path)
-                    .is_ok()
-                    && let Ok(modified) =
-                        std::fs::metadata(&self.cfg.trigger_path).and_then(|m| m.modified())
-                {
-                    self.last_trigger_mtime = Some(modified);
-                }
-                return None;
+        let Some(stamp) = read_touch_stamp(&self.cfg.trigger_path) else {
+            if let Some(dir) = self.cfg.trigger_path.parent() {
+                let _ = std::fs::create_dir_all(dir);
             }
+            // Prime the trigger file with a baseline stamp so external drivers can reliably
+            // advance it (Windows mtime resolution is not always sufficient for edge detection).
+            let _ = std::fs::write(&self.cfg.trigger_path, b"0\n");
+            self.last_trigger_stamp = Some(0);
+            return None;
         };
-        if self.last_trigger_mtime.is_some_and(|prev| prev >= modified) {
+
+        // Treat the first observed value as a baseline, not a trigger (avoids dumping stale runs
+        // when the diagnostics directory is reused between launches).
+        let Some(prev) = self.last_trigger_stamp else {
+            self.last_trigger_stamp = Some(stamp);
+            return None;
+        };
+        if prev == stamp {
             return None;
         }
-        self.last_trigger_mtime = Some(modified);
+        self.last_trigger_stamp = Some(stamp);
 
         self.dump_bundle(None)
     }
