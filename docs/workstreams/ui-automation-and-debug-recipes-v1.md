@@ -44,6 +44,27 @@ Fret already has most of the primitives needed for a “test-engine-like” work
 
 This workstream should *not* replace those pieces; it should unify and extend them.
 
+## Known gaps (as of 2026-01-30)
+
+This section is a quick “what’s real today vs what we want in v1” checklist.
+
+- **`diag repro` is not yet the full unified runner.**
+  - `fretboard diag repro <script|suite>` exists as a convenience wrapper, but it currently packs **one**
+    selected bundle into `FRET_DIAG_DIR/repro.zip` (prefers a failing bundle when available, else the most recent).
+  - The summary is written to `FRET_DIAG_DIR/repro.summary.json`.
+  - Multi-bundle packaging with stable names is a follow-up (useful for suites).
+- **Screenshot capture remains split into two modes.**
+  - `FRET_DIAG_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
+  - `FRET_DIAG_SCREENSHOTS=1` enables the on-demand PNG protocol used by script steps like `capture_screenshot`.
+  - These are intentionally separate today, but the UX and documentation should keep them unambiguous.
+- **High-level intent actions are still missing.**
+  - Scripts mostly use low-level v1 steps (`click`, `drag_pointer`, `wheel`, `wait_until`, ...).
+  - `set_slider_value`, `menu_select`, and `scroll_into_view` are not first-class yet.
+- **Repaint checks are still “best-effort and manual by target”.**
+  - We have stale paint / stale scene checks, but we still lack a default, strongly actionable “semantics changed but paint didn’t” gate that consistently produces evidence without extra authoring.
+- **`--with tracy` / `--with renderdoc` are not integrated into `diag repro` yet.**
+  - Tracy and RenderDoc workflows exist, but `diag repro` does not yet orchestrate capture/exports as a unified artifact pack.
+
 ## Goals (v1)
 
 1. **One-command repro packaging**
@@ -192,4 +213,3 @@ These must remain feature-gated and must not turn `fret-ui` into a policy layer.
 - Bundles + scripts details: `docs/ui-diagnostics-and-scripted-tests.md`
 - Tracy correlation: `docs/tracy.md`
 - RenderDoc inspection: `docs/renderdoc-inspection.md`
-

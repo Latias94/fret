@@ -30,6 +30,10 @@ $env:FRET_DIAG_DIR=".fret\\diag"
 $env:FRET_DIAG_SCREENSHOTS=1
 
 # Run a deterministic scripted repro and auto-pack a shareable zip.
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
+  --launch -- cargo run -p fret-ui-gallery --release
+
+# Equivalent (lower-level) form:
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
   --pack --include-all `
   --launch -- cargo run -p fret-ui-gallery --release
@@ -39,6 +43,7 @@ Notes:
 
 - `fretboard diag inspect on` enables a GPUI/Zed-style picker overlay and writes `pick.result.json` for stable selectors.
 - `fretboard diag pack --include-all` and `diag run --pack --include-all` produce a `.zip` that the offline viewer can open (`tools/fret-bundle-viewer`).
+- `diag repro` writes `repro.zip` and `repro.summary.json` into `FRET_DIAG_DIR` (useful as a single “attach this” artifact).
 
 Framework consistency checks (automation-friendly):
 
@@ -46,6 +51,8 @@ Framework consistency checks (automation-friendly):
   “UI updated but pixels didn’t repaint”).
 - **Stale scene detection**: fails when a semantics node’s label/value changes (or moves) but the scene fingerprint does
   not change (common symptom: “search results changed but text didn’t repaint / disappeared”).
+- **Semantics repaint detection**: fails when the bundle’s `semantics_fingerprint` changes but `scene_fingerprint` does
+  not (a coarse “something semantic changed but we didn’t repaint” signal).
 
 Example:
 

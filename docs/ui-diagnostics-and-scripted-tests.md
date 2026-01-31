@@ -57,6 +57,14 @@ enable bundle screenshots:
 When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
 `bundle.json`).
 
+Notes:
+
+- This is **bundle-scoped** and **dump-triggered**:
+  - The runtime writes a `screenshot.request` file into the bundle directory when dumping `bundle.json`.
+  - The desktop runner detects that request and writes `frame.bmp` (and `screenshot.done`) as best-effort.
+- This is intentionally separate from the on-demand PNG screenshot protocol used by scripted steps
+  like `capture_screenshot` (see below).
+
 ## Offline bundle viewer (optional)
 
 This repo includes an offline web viewer for `bundle.json` at `tools/fret-bundle-viewer`.
@@ -123,6 +131,12 @@ Workflow tip:
 
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
+
+Screenshot note:
+
+- `capture_screenshot` requires the **on-demand PNG screenshot protocol**:
+  - Enable via `FRET_DIAG_SCREENSHOTS=1` (default disabled).
+  - This is distinct from `FRET_DIAG_SCREENSHOT=1`, which only writes `frame.bmp` during bundle dumps.
 
 ## Quick Start (scripted perf triage)
 
