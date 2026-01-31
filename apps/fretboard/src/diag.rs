@@ -1832,8 +1832,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_reconcile_cache_reuse_min.or(Some(1));
                 check_retained_vlist_attach_detach_min =
                     check_retained_vlist_attach_detach_min.or(Some(1));
+                // Keep window-boundary shifts bounded so a single wheel tick can't trigger a
+                // massive subtree rebuild (virt-001 perf gate).
+                //
+                // This is intentionally conservative: real surfaces may attach/detach multiple
+                // items on a boundary tick, but deltas in the hundreds indicate a regression in
+                // window shifting or range extraction.
                 check_retained_vlist_attach_detach_max =
-                    check_retained_vlist_attach_detach_max.or(Some(256));
+                    check_retained_vlist_attach_detach_max.or(Some(64));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 // Applied only to scripts that opt into the keep-alive gate.
@@ -1874,7 +1880,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_retained_vlist_attach_detach_min =
                     check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
-                    check_retained_vlist_attach_detach_max.or(Some(256));
+                    check_retained_vlist_attach_detach_max.or(Some(64));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_wheel_scroll_test_id = check_wheel_scroll_test_id
