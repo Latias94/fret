@@ -2698,7 +2698,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
     ]
 }
 
-fn ui_gallery_layout_suite_scripts() -> [&'static str; 9] {
+fn ui_gallery_layout_suite_scripts() -> [&'static str; 11] {
     [
         "tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json",
         "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
@@ -2707,6 +2707,8 @@ fn ui_gallery_layout_suite_scripts() -> [&'static str; 9] {
         "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
         "tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json",
         "tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json",
+        "tools/diag-scripts/ui-gallery-menubar-text-overlap-command.json",
+        "tools/diag-scripts/ui-gallery-chrome-torture-layout.json",
         "tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json",
         "tools/diag-scripts/ui-gallery-resizable-initial-bundle.json",
     ]
