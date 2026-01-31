@@ -235,6 +235,9 @@ and best-aligned choice for long-term extensibility.
 - **Inactive limbo exists.** Flutter explicitly models a subtree that is detached but not yet
   disposed (`_InactiveElements`), then finalizes at the end of the frame (`BuildOwner.finalizeTree`).
 - **Visibility does not define lifetime.** A subtree can be offstage/invisible and still owned.
+- **Virtualization keeps explicit ownership buckets.** Sliver lists can keep offscreen children alive
+  via a dedicated keep-alive bucket (`RenderSliverMultiBoxAdaptor`’s `_keepAliveBucket`), which makes
+  “not currently built/laid out” orthogonal to lifetime.
 - **Implication for Fret**: our GC-lag window is analogous to "inactive limbo", but it must be
   driven by explicit detach + reachability, not by "not visited due to caching".
 
@@ -349,6 +352,9 @@ Success criteria:
     - `_InactiveElements` (~`framework.dart:2099`)
     - `BuildOwner.finalizeTree` (~`framework.dart:3339`)
     - `Element.deactivateChild` (~`framework.dart:4632`)
+- Flutter keep-alive bucket reference: `packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`.
+  - Anchors (pinned `repo-ref/flutter`, may drift upstream):
+    - `RenderSliverMultiBoxAdaptor._keepAliveBucket` (~`sliver_multi_box_adaptor.dart:233`)
 - GPUI view caching reference: `crates/gpui/src/view.rs`, `crates/gpui/src/window.rs` (Zed upstream).
   - Anchors (pinned `repo-ref/zed`, may drift upstream):
     - `AnyView::cached` (~`view.rs:103`)
