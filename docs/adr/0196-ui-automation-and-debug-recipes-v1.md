@@ -141,6 +141,8 @@ This ADR is partially implemented in a way that preserves the intended crate bou
     - RenderDoc: requests autocapture and attempts a post-run `fret-renderdoc dump` export into `FRET_DIAG_DIR/renderdoc/inspect/`.
     - Tracy: enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy` for `cargo run` launches.
     - See `repro.summary.json` `captures` and `renderdoc.captures.json`.
+  - Process-level footprint is recorded (Windows-only, best-effort) as `resource.footprint.json` and referenced from
+    `repro.summary.json` (`resources.process_footprint_file`).
   - Evidence: `apps/fretboard/src/diag.rs` (`diag repro`, `pack_repro_zip_multi`).
 - **Missing repaint checks (`fretboard`)**
   - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
@@ -148,6 +150,10 @@ This ADR is partially implemented in a way that preserves the intended crate bou
     summary to aid triage. When `--dump-semantics-changed-repainted-json` is set, it also writes a structured
     `check.semantics_changed_repainted.json` next to `bundle.json` for machine consumption.
   - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_semantics_changed_repainted*`).
+- **Redraw-efficiency gates (`fretboard`)**
+  - Tooling provides an “idle should not paint” gate (`--check-idle-no-paint-min <n>`) that asserts a trailing streak of
+    snapshots with no paint work, and writes `check.idle_no_paint.json` as evidence.
+  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_idle_no_paint_min`).
 - **Semantics fingerprint export (`fret-bootstrap`)**
   - Diagnostics snapshots export `semantics_fingerprint` as a best-effort hash derived from the semantics snapshot.
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`semantics_fingerprint` field and computation).
@@ -156,5 +162,6 @@ Known gaps:
 
 - `diag repro` can request RenderDoc autocapture and record Tracy enablement intent, but it does not yet run post-capture
   exports as strict regression gates, nor auto-record Tracy captures to a `.tracy` file.
+- Process footprint collection is currently only implemented on Windows.
 - High-level intent actions (Script v2 or a compiler layer) are not yet implemented.
 - Range control semantics value (to enable robust `set_slider_value`) is still an open contract item.

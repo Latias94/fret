@@ -63,8 +63,10 @@ Conventions:
   - [x] `--max-top-layout-us <n>`
   - [x] `--max-top-solve-us <n>`
 - [x] Add a stable “perf baseline” file format for selected scripts (JSON).
-- [ ] Add process-level resource footprint evidence (peak RSS/working-set + CPU time/%), ideally in `repro.summary.json`.
-- [ ] Add redraw-efficiency gates for “idle should not paint” and “cache reuse should be stable” classes of regressions.
+- [x] Add process-level resource footprint evidence (Windows-only, best-effort) and reference it from `repro.summary.json`.
+- [ ] Add process-level resource footprint evidence for non-Windows platforms (Linux/macOS).
+- [x] Add an “idle should not paint” redraw-efficiency gate (`--check-idle-no-paint-min <n>`).
+- [ ] Add a redraw-efficiency gate for “cache reuse should be stable” regressions.
 - [ ] Add a nightly job candidate plan (not necessarily wired in CI yet).
 
 ### M5: GPU profiling (optional, gated)
