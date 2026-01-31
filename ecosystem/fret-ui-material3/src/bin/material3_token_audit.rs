@@ -84,6 +84,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .cloned()
         .collect::<BTreeSet<_>>();
 
+    let mut check_failures: Vec<String> = Vec::new();
+    if args.check {
+        if !unexpanded_templates.is_empty() {
+            check_failures.push(format!(
+                "unexpanded key templates: {}",
+                unexpanded_templates.len()
+            ));
+        }
+        if !missing_injection.is_empty() {
+            check_failures.push(format!(
+                "missing injected keys: {}",
+                missing_injection.len()
+            ));
+        }
+    }
+
     println!("Counts");
     println!("- used keys (exact): {}", used.exact.len());
     println!("- used keys (templates): {}", used.templates.len());
@@ -124,6 +140,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!();
     }
 
+    let mut unknown_vs_material_web: BTreeSet<String> = BTreeSet::new();
     if let Some(material_web_dir) = resolve_material_web_dir(&workspace_root, args.material_web_dir)
     {
         let sassvars_dir = material_web_dir
@@ -140,7 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!();
 
             let allowlisted = allowlisted_non_material_web_tokens();
-            let unknown_vs_material_web = used_expanded
+            unknown_vs_material_web = used_expanded
                 .difference(&material_web)
                 .filter(|k| !allowlisted.contains(k.as_str()))
                 .cloned()
@@ -193,12 +210,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "warn: material-web sassvars dir not found: {}",
                 sassvars_dir.display()
             );
+            if args.check {
+                check_failures.push("material-web sassvars dir not found".to_string());
+            }
         }
     } else {
         eprintln!(
             "note: material-web checkout not found. Set --material-web-dir <path> or MATERIAL_WEB_DIR.\n\
                   Expected default: <repo-root>/repo-ref/material-web (or <workspace>/repo-ref/material-web when present)"
         );
+        if args.check {
+            check_failures.push("material-web checkout not found".to_string());
+        }
+    }
+
+    if args.check && !unknown_vs_material_web.is_empty() {
+        check_failures.push(format!(
+            "unknown keys vs material-web: {}",
+            unknown_vs_material_web.len()
+        ));
+    }
+
+    if args.check && !check_failures.is_empty() {
+        eprintln!("check failed:");
+        for f in &check_failures {
+            eprintln!("- {f}");
+        }
+        std::process::exit(1);
     }
 
     Ok(())
@@ -211,6 +249,7 @@ struct Args {
     show_unused: bool,
     show_material_missing: bool,
     debug: bool,
+    check: bool,
 }
 
 impl Args {
@@ -221,6 +260,7 @@ impl Args {
             show_unused: false,
             show_material_missing: true,
             debug: false,
+            check: false,
         };
 
         let mut it = args.into_iter();
@@ -244,6 +284,7 @@ impl Args {
                 "--show-unused" => out.show_unused = true,
                 "--no-material-missing" => out.show_material_missing = false,
                 "--debug" => out.debug = true,
+                "--check" => out.check = true,
                 "--help" | "-h" => {
                     print_help();
                     std::process::exit(0);
@@ -267,6 +308,7 @@ fn print_help() {
                                       (or set MATERIAL_WEB_DIR)\n\
            --limit <n>                 Max items per section (default: 50)\n\
            --show-unused               Print injected-but-unused keys\n\
+           --check                     Exit non-zero when coverage is not clean\n\
            --no-material-missing       Skip material-web missing-by-prefix report\n\
            --debug                     Print progress to stderr\n\
            --help                      Show this help\n"
