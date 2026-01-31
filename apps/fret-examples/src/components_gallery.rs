@@ -1348,6 +1348,11 @@ impl ComponentsGalleryDriver {
                                         layout: tree_slot_layout,
                                         row_height: Px(26.0),
                                         overscan: 12,
+                                        keep_alive: std::env::var(
+                                            "FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE",
+                                        )
+                                        .ok()
+                                        .and_then(|v| v.parse().ok()),
                                         debug_root_test_id: Some(Arc::<str>::from(
                                             "components-gallery-file-tree-root",
                                         )),
