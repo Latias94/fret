@@ -82,9 +82,23 @@ impl ComponentsGalleryDriver {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(50_000);
 
-            let children: Vec<TreeItem> = (1..=n)
-                .map(|i| TreeItem::new(i, format!("file_{i}.rs")))
+            // Keep a large, mostly-flat surface for window-boundary perf/regression suites, but
+            // also include at least one expandable folder near the top so scripted harnesses can
+            // exercise expand/collapse (items_revision + entry-list churn) without collapsing the
+            // entire surface.
+            let nested_count: u64 = 128;
+            let mut children: Vec<TreeItem> =
+                Vec::with_capacity((n as usize).saturating_add(nested_count as usize));
+
+            let folder_id: TreeItemId = 1;
+            let folder_children: Vec<TreeItem> = (0..nested_count)
+                .map(|i| TreeItem::new(n + 1 + i, format!("nested_{i}.rs")))
                 .collect();
+            children.push(TreeItem::new(folder_id, "folder_1").children(folder_children));
+
+            for i in 2..=n {
+                children.push(TreeItem::new(i, format!("file_{i}.rs")));
+            }
 
             let root_id: TreeItemId = 0;
             let items = vec![TreeItem::new(root_id, "root").children(children)];
