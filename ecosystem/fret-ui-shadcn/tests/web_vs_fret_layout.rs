@@ -32,6 +32,8 @@ use std::sync::Arc;
 
 mod css_color;
 use css_color::{Rgba, color_to_rgba, parse_css_color};
+mod chart_test_data;
+use chart_test_data::{CHART_INTERACTIVE_DESKTOP, CHART_INTERACTIVE_MOBILE};
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -24985,61 +24987,6 @@ fn web_find_chart_svg<'a>(root: &'a WebNode) -> &'a WebNode {
     .expect("web chart svg")
 }
 
-fn web_find_chart_tooltip_panel<'a>(root: &'a WebNode) -> &'a WebNode {
-    find_first(root, &|n| {
-        n.tag == "div"
-            && class_has_token(n, "border-border/50")
-            && class_has_token(n, "bg-background")
-            && class_has_token(n, "shadow-xl")
-            && class_has_token(n, "min-w-[8rem]")
-            && class_has_token(n, "w-[150px]")
-    })
-    .expect("web chart tooltip panel")
-}
-
-fn web_find_chart_tooltip_cursor<'a>(root: &'a WebNode) -> &'a WebNode {
-    find_first(root, &|n| {
-        n.tag == "path"
-            && n.class_name
-                .as_deref()
-                .is_some_and(|c| c.contains("recharts-tooltip-cursor"))
-    })
-    .expect("web chart tooltip cursor")
-}
-
-fn web_find_chart_active_dot_circle<'a>(root: &'a WebNode) -> &'a WebNode {
-    fn walk<'a>(node: &'a WebNode, active_dot_layer: bool, out: &mut Option<&'a WebNode>) {
-        if out.is_some() {
-            return;
-        }
-
-        let active_dot_layer = active_dot_layer
-            || node
-                .class_name
-                .as_deref()
-                .is_some_and(|c| c.contains("recharts-active-dot"));
-
-        if active_dot_layer
-            && node.tag == "circle"
-            && node.class_name.as_deref() == Some("recharts-dot")
-        {
-            *out = Some(node);
-            return;
-        }
-
-        for child in &node.children {
-            walk(child, active_dot_layer, out);
-            if out.is_some() {
-                return;
-            }
-        }
-    }
-
-    let mut out = None;
-    walk(root, false, &mut out);
-    out.expect("web chart active dot circle")
-}
-
 fn web_find_pie_svg<'a>(root: &'a WebNode) -> &'a WebNode {
     find_first(root, &|n| {
         n.tag == "svg" && n.class_name.as_deref() == Some("recharts-surface")
@@ -25618,57 +25565,6 @@ fn web_vs_fret_layout_chart_bar_interactive_mobile_bar_rects_match_web() {
         rects,
         &bars.iter().map(|n| n.rect).collect::<Vec<_>>(),
     );
-}
-
-#[test]
-fn web_vs_fret_layout_chart_line_interactive_hover_mid_active_dot_rect_matches_web() {
-    let web_name = "chart-line-interactive.hover-mid";
-    let web = read_web_golden(web_name);
-    let theme = web_theme(&web);
-
-    let chart = web_find_chart_container(&theme.root);
-    let plot = web_find_chart_grid(chart).rect;
-    let svg = web_find_chart_svg(&theme.root).rect;
-    let dot = web_find_chart_active_dot_circle(chart);
-
-    let plot = Rect::new(
-        Point::new(Px(plot.x), Px(plot.y)),
-        CoreSize::new(Px(plot.w), Px(plot.h)),
-    );
-
-    let hover_x = svg.x + svg.w * 0.5;
-    let n = CHART_INTERACTIVE_DESKTOP.len();
-    let step_x = if n > 1 {
-        plot.size.width.0 / (n as f32 - 1.0)
-    } else {
-        0.0
-    };
-    let idx = if step_x > 0.0 {
-        ((hover_x - plot.origin.x.0) / step_x).round()
-    } else {
-        0.0
-    };
-    let idx = idx.clamp(0.0, (n.saturating_sub(1)) as f32).round() as usize;
-
-    assert_eq!(
-        CHART_INTERACTIVE_DESKTOP[idx], 338.0,
-        "{web_name}: expected the hover-mid point to match the tooltip value"
-    );
-
-    let domain_max = fret_ui_shadcn::recharts_geometry::nice_domain_max_for_values(
-        &CHART_INTERACTIVE_DESKTOP,
-        5,
-    );
-    let expected = fret_ui_shadcn::recharts_geometry::line_dot_rect(
-        plot,
-        &CHART_INTERACTIVE_DESKTOP,
-        domain_max,
-        idx,
-        4.0,
-    )
-    .expect("expected dot rect");
-
-    assert_rect_close_px(&format!("{web_name} active-dot"), expected, dot.rect, 1.0);
 }
 
 fn assert_chart_bar_rects_match_web(
@@ -27099,36 +26995,6 @@ fn web_vs_fret_layout_chart_line_multiple_curve_bounds_match_web() {
         None,
     );
 }
-
-const CHART_INTERACTIVE_DESKTOP: [f32; 91] = [
-    222.0_f32, 97.0_f32, 167.0_f32, 242.0_f32, 373.0_f32, 301.0_f32, 245.0_f32, 409.0_f32,
-    59.0_f32, 261.0_f32, 327.0_f32, 292.0_f32, 342.0_f32, 137.0_f32, 120.0_f32, 138.0_f32,
-    446.0_f32, 364.0_f32, 243.0_f32, 89.0_f32, 137.0_f32, 224.0_f32, 138.0_f32, 387.0_f32,
-    215.0_f32, 75.0_f32, 383.0_f32, 122.0_f32, 315.0_f32, 454.0_f32, 165.0_f32, 293.0_f32,
-    247.0_f32, 385.0_f32, 481.0_f32, 498.0_f32, 388.0_f32, 149.0_f32, 227.0_f32, 293.0_f32,
-    335.0_f32, 197.0_f32, 197.0_f32, 448.0_f32, 473.0_f32, 338.0_f32, 499.0_f32, 315.0_f32,
-    235.0_f32, 177.0_f32, 82.0_f32, 81.0_f32, 252.0_f32, 294.0_f32, 201.0_f32, 213.0_f32,
-    420.0_f32, 233.0_f32, 78.0_f32, 340.0_f32, 178.0_f32, 178.0_f32, 470.0_f32, 103.0_f32,
-    439.0_f32, 88.0_f32, 294.0_f32, 323.0_f32, 385.0_f32, 438.0_f32, 155.0_f32, 92.0_f32,
-    492.0_f32, 81.0_f32, 426.0_f32, 307.0_f32, 371.0_f32, 475.0_f32, 107.0_f32, 341.0_f32,
-    408.0_f32, 169.0_f32, 317.0_f32, 480.0_f32, 132.0_f32, 141.0_f32, 434.0_f32, 448.0_f32,
-    149.0_f32, 103.0_f32, 446.0_f32,
-];
-
-const CHART_INTERACTIVE_MOBILE: [f32; 91] = [
-    150.0_f32, 180.0_f32, 120.0_f32, 260.0_f32, 290.0_f32, 340.0_f32, 180.0_f32, 320.0_f32,
-    110.0_f32, 190.0_f32, 350.0_f32, 210.0_f32, 380.0_f32, 220.0_f32, 170.0_f32, 190.0_f32,
-    360.0_f32, 410.0_f32, 180.0_f32, 150.0_f32, 200.0_f32, 170.0_f32, 230.0_f32, 290.0_f32,
-    250.0_f32, 130.0_f32, 420.0_f32, 180.0_f32, 240.0_f32, 380.0_f32, 220.0_f32, 310.0_f32,
-    190.0_f32, 420.0_f32, 390.0_f32, 520.0_f32, 300.0_f32, 210.0_f32, 180.0_f32, 330.0_f32,
-    270.0_f32, 240.0_f32, 160.0_f32, 490.0_f32, 380.0_f32, 400.0_f32, 420.0_f32, 350.0_f32,
-    180.0_f32, 230.0_f32, 140.0_f32, 120.0_f32, 290.0_f32, 220.0_f32, 250.0_f32, 170.0_f32,
-    460.0_f32, 190.0_f32, 130.0_f32, 280.0_f32, 230.0_f32, 200.0_f32, 410.0_f32, 160.0_f32,
-    380.0_f32, 140.0_f32, 250.0_f32, 370.0_f32, 320.0_f32, 480.0_f32, 200.0_f32, 150.0_f32,
-    420.0_f32, 130.0_f32, 380.0_f32, 350.0_f32, 310.0_f32, 520.0_f32, 170.0_f32, 290.0_f32,
-    450.0_f32, 210.0_f32, 270.0_f32, 530.0_f32, 180.0_f32, 190.0_f32, 380.0_f32, 490.0_f32,
-    200.0_f32, 160.0_f32, 400.0_f32,
-];
 
 #[test]
 fn web_vs_fret_layout_chart_line_interactive_curve_bounds_match_web() {
