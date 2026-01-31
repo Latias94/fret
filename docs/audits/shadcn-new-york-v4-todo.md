@@ -8,6 +8,19 @@ Status:
 - Tracked shadcn-web `v4/new-york-v4` keys are now **100% gated** and **100% targeted-gated** (excluding `web_vs_fret_layout.rs` / `snapshots.rs`).
   The remaining work is to raise signal: migrate deeper geometry/paint assertions out of broad files and add viewport variants for behavior-shaping components.
 
+## Plan adjustments (recommended)
+
+To keep the effort “goldens-driven” without exploding scope, the plan should be explicitly staged:
+
+1. **Breadth + determinism first** (one baseline viewport, deterministic data like frozen dates/timezones).
+2. **Depth by family** (overlays/typography/calendar first, because they are viewport-sensitive).
+3. **Only then add a small DPI/resolution matrix**, scoped to the families that actually drift with font metrics.
+
+Important guardrail:
+
+- Do **not** globally change “all text is `Fill`/block-level”. Treat block-vs-inline as a **recipe/component semantic**
+  (e.g. `CardTitle` behaves like a `div`, while many labels are `w-fit` upstream).
+
 ## P0 (Overlays)
 
 - Menus: destructive *idle* vs *focused* state matrix (ContextMenu done; replicate where applicable).
@@ -37,6 +50,8 @@ Status:
 ## P1 (Typography)
 
 - Typography gates exist; add multi-width coverage (line wrapping, margins, list markers).
+  - Done (v1): add `typography-demo.vp375x900` golden + a wrap/max-width contract gate (ensures prose paragraphs wrap under narrow widths).
+  - Next: add one more width variant (e.g. `vp768x900`) and explicitly gate list marker/indent outcomes.
 
 ## P1 (Calendar)
 
@@ -54,3 +69,12 @@ Status:
   - **Targeted** (excluding broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`)
   - **Smoke-parse** (dynamic traversal, low-signal sanity)
   Avoid docs claiming “100% covered” unless both dimensions are stated.
+
+## P3 (DPI / Resolution)
+
+Do this only after the overlay + typography geometry is stable at the baseline viewport.
+
+- Pick a tiny matrix and keep it high-signal:
+  - 2 viewports (e.g. “default” + “constrained height”)
+  - 2 scale factors (1.0 + 1.25 or 1.5)
+  - Families: typography + menus/listboxes + calendar

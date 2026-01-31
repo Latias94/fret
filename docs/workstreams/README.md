@@ -13,6 +13,8 @@ Active workstreams:
 - `docs/workstreams/text-system-v2-parley.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
+- `docs/workstreams/shadcn-web-goldens-v4.md`
+- `docs/workstreams/shadcn-web-goldens-v4-todo.md`
 - `docs/workstreams/state-driven-style-resolution-v1.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`

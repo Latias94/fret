@@ -994,3 +994,74 @@ fn web_vs_fret_typography_demo_targeted_gate_light_contract() {
     let _ = find_first(&theme.root, &|n| n.tag == "blockquote").expect("web blockquote");
     let _ = find_first(&theme.root, &|n| n.tag == "ul").expect("web ul");
 }
+
+#[test]
+fn web_vs_fret_typography_demo_vp375_wraps_paragraph_light_contract() {
+    let web = read_web_golden("typography-demo.vp375x900");
+    let theme = web.themes.get("light").expect("missing light theme");
+
+    let web_p = find_first(&theme.root, &|n| n.tag == "p").expect("web p");
+    let text = web_p.text.clone().unwrap_or_default();
+    let size = web_css_px(web_p, "fontSize");
+    let line_height = web_css_px(web_p, "lineHeight");
+    let weight = web_css_u16(web_p, "fontWeight");
+
+    // Sanity-check the golden: at this viewport width, the prose paragraph should wrap to multiple lines.
+    assert!(
+        web_p.rect.h > line_height.0 * 2.0,
+        "expected web paragraph to wrap at vp375; h={} line_height={}",
+        web_p.rect.h,
+        line_height.0
+    );
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let mut services = StyleAwareServices::default();
+    let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
+        let text_for_render = text.clone();
+        vec![cx.semantics(
+            fret_ui::element::SemanticsProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                role: SemanticsRole::Panel,
+                test_id: Some(Arc::from("typography-demo-vp375-p")),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    ui::text(cx, text_for_render)
+                        .w_full()
+                        .text_size_px(size)
+                        .line_height_px(line_height)
+                        .font_weight(fret_core::FontWeight(weight))
+                        .into_element(cx),
+                ]
+            },
+        )]
+    });
+
+    let p = find_by_test_id(&snap, "typography-demo-vp375-p");
+    assert!(
+        p.bounds.size.height.0 > line_height.0 * 2.0,
+        "expected fret paragraph to wrap at vp375; h={} line_height={}",
+        p.bounds.size.height.0,
+        line_height.0
+    );
+
+    let record = assert_prepared_text_style(&services, &text, size, line_height, weight);
+    assert_eq!(record.constraints.wrap, TextWrap::Word);
+    let max_w = record
+        .constraints
+        .max_width
+        .expect("expected fret text max_width constraint for wrapped prose");
+    assert!(
+        max_w.0.is_finite() && max_w.0 > 0.0,
+        "invalid max_width constraint: {max_w:?}"
+    );
+}
