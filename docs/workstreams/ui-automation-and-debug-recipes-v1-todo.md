@@ -36,17 +36,16 @@ Conventions:
 
 ### M2: High-level action library (Script v2 or compiler layer)
 
-- [ ] Add intent-level actions:
-  - [ ] `ensure_visible`
-  - [ ] `scroll_into_view`
-  - [ ] `type_text_into`
-  - [ ] `menu_select`
-  - [ ] `drag_to`
-  - [ ] `set_slider_value`
-- [ ] Decide location:
-  - [ ] v2 schema in runtime (`fret-bootstrap`) vs
-  - [ ] v2 compiler in tooling (`fretboard`).
-- [ ] Add at least one “slider drag” demo script that is robust to DPI and window size.
+- [x] Add intent-level actions:
+  - [x] `ensure_visible`
+  - [x] `scroll_into_view`
+  - [x] `type_text_into`
+  - [x] `menu_select`
+  - [x] `drag_to`
+  - [x] `set_slider_value`
+- [x] Decide location:
+  - [x] v2 schema in runtime (`fret-bootstrap`).
+- [x] Add at least one “slider drag” demo script that is robust to DPI and window size (`tools/diag-scripts/ui-gallery-slider-set-value.json`).
 
 ### M3: Missing repaint checks (actionable failures)
 

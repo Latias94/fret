@@ -370,6 +370,23 @@ Notes:
 - `capture_bundle` always writes a new `bundle.json` directory. If you need a screenshot for that bundle, follow it with a `capture_screenshot` step.
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 
+## Script schema v2 (intent-level steps)
+
+Schema v2 keeps the same `steps` array shape, but adds higher-level intent steps that are still semantics-first
+(selectors + window-bounds predicates), and can internally perform multi-frame behavior (wait/retry loops) without forcing
+authors to hand-write brittle `wait_frames` chains.
+
+Supported intent steps (v2):
+
+- `ensure_visible` (wait until visible/within window bounds)
+- `scroll_into_view` (wheel a container until a target becomes visible)
+- `type_text_into` (wait + click + type)
+- `menu_select` (wait + open menu + click item)
+- `drag_to` (drag between two semantics targets)
+- `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
+
+Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
+
 Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
 diagnostics runs, and is ignored unless a matching cross-window drag session is active.

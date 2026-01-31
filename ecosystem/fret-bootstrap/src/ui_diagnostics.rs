@@ -186,7 +186,7 @@ pub struct UiDiagnosticsService {
     ready_written: bool,
     inspect_enabled: bool,
     inspect_consume_clicks: bool,
-    pending_script: Option<UiActionScriptV1>,
+    pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
     pending_force_dump_label: Option<String>,
@@ -602,12 +602,13 @@ impl UiDiagnosticsService {
             self.active_scripts.insert(
                 window,
                 ActiveScript {
-                    script,
+                    steps: script.steps,
                     run_id,
                     next_step: 0,
                     wait_frames_remaining: 0,
                     wait_until: None,
                     screenshot_wait: None,
+                    v2_step_state: None,
                     last_reported_step: Some(0),
                 },
             );
@@ -630,7 +631,7 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         };
 
-        if active.next_step >= active.script.steps.len() {
+        if active.next_step >= active.steps.len() {
             return UiScriptFrameOutput::default();
         }
 
@@ -661,7 +662,7 @@ impl UiDiagnosticsService {
         }
 
         let step_index = active.next_step;
-        let step = active.script.steps.get(step_index).cloned();
+        let step = active.steps.get(step_index).cloned();
         let Some(step) = step else {
             return UiScriptFrameOutput::default();
         };
@@ -671,22 +672,35 @@ impl UiDiagnosticsService {
         let mut stop_script = false;
         let mut failure_reason: Option<String> = None;
 
+        let is_v2_intent_step = matches!(
+            &step,
+            UiActionStepV2::EnsureVisible { .. }
+                | UiActionStepV2::ScrollIntoView { .. }
+                | UiActionStepV2::TypeTextInto { .. }
+                | UiActionStepV2::MenuSelect { .. }
+                | UiActionStepV2::DragTo { .. }
+                | UiActionStepV2::SetSliderValue { .. }
+        );
+        if !is_v2_intent_step {
+            active.v2_step_state = None;
+        }
+
         match step {
-            UiActionStepV1::WaitFrames { n } => {
+            UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
-            UiActionStepV1::ResetDiagnostics => {
+            UiActionStepV2::ResetDiagnostics => {
                 self.reset_diagnostics_ring_for_window(window);
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
-            UiActionStepV1::CaptureBundle { label } => {
+            UiActionStepV2::CaptureBundle { label } => {
                 force_dump_label =
                     Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
                 active.wait_until = None;
@@ -694,7 +708,7 @@ impl UiDiagnosticsService {
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
-            UiActionStepV1::CaptureScreenshot {
+            UiActionStepV2::CaptureScreenshot {
                 label,
                 timeout_frames,
             } => {
@@ -847,7 +861,7 @@ impl UiDiagnosticsService {
                     }
                 }
             }
-            UiActionStepV1::PressKey {
+            UiActionStepV2::PressKey {
                 key,
                 modifiers,
                 repeat,
@@ -871,7 +885,7 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
-            UiActionStepV1::TypeText { text } => {
+            UiActionStepV2::TypeText { text } => {
                 output.events.push(Event::TextInput(text));
                 active.wait_until = None;
                 active.screenshot_wait = None;
@@ -881,7 +895,7 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-type_text"));
                 }
             }
-            UiActionStepV1::WaitUntil {
+            UiActionStepV2::WaitUntil {
                 predicate,
                 timeout_frames,
             } => {
@@ -928,7 +942,7 @@ impl UiDiagnosticsService {
                     active.screenshot_wait = None;
                 }
             }
-            UiActionStepV1::Assert { predicate } => {
+            UiActionStepV2::Assert { predicate } => {
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 if let Some(snapshot) = semantics_snapshot {
@@ -951,7 +965,7 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
-            UiActionStepV1::Click { target, button } => {
+            UiActionStepV2::Click { target, button } => {
                 let Some(snapshot) = semantics_snapshot else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-click-no-semantics");
@@ -1007,7 +1021,7 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-click"));
                 }
             }
-            UiActionStepV1::MovePointer { target } => {
+            UiActionStepV2::MovePointer { target } => {
                 let Some(snapshot) = semantics_snapshot else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-move_pointer-no-semantics");
@@ -1064,7 +1078,7 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-move_pointer"));
                 }
             }
-            UiActionStepV1::DragPointer {
+            UiActionStepV2::DragPointer {
                 target,
                 button,
                 delta_x,
@@ -1132,7 +1146,7 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-drag_pointer"));
                 }
             }
-            UiActionStepV1::Wheel {
+            UiActionStepV2::Wheel {
                 target,
                 delta_x,
                 delta_y,
@@ -1192,6 +1206,561 @@ impl UiDiagnosticsService {
                     force_dump_label = Some(format!("script-step-{step_index:04}-wheel"));
                 }
             }
+            UiActionStepV2::EnsureVisible {
+                target,
+                within_window,
+                padding_px,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::EnsureVisible(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2EnsureVisibleState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                        },
+                    };
+
+                    let predicate = if within_window {
+                        UiPredicateV1::BoundsWithinWindow { target, padding_px }
+                    } else {
+                        UiPredicateV1::VisibleInWindow { target }
+                    };
+
+                    if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
+                    {
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-ensure_visible"));
+                        }
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-ensure_visible-timeout"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("ensure_visible_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else {
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        active.v2_step_state = Some(V2StepState::EnsureVisible(state));
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-ensure_visible-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::ScrollIntoView {
+                container,
+                target,
+                delta_x,
+                delta_y,
+                require_fully_within_window,
+                padding_px,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::ScrollIntoView(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2ScrollIntoViewState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                        },
+                    };
+
+                    let target_predicate = if require_fully_within_window {
+                        UiPredicateV1::BoundsWithinWindow {
+                            target: target.clone(),
+                            padding_px,
+                        }
+                    } else {
+                        UiPredicateV1::VisibleInWindow {
+                            target: target.clone(),
+                        }
+                    };
+                    if eval_predicate(
+                        snapshot,
+                        window_bounds,
+                        window,
+                        element_runtime,
+                        &target_predicate,
+                    ) {
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-scroll_into_view"));
+                        }
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-scroll_into_view-timeout"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("scroll_into_view_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else {
+                        let container_node =
+                            select_semantics_node(snapshot, window, element_runtime, &container);
+                        if let Some(container_node) = container_node {
+                            let pos = center_of_rect(container_node.bounds);
+                            output.events.push(wheel_event(pos, delta_x, delta_y));
+                        }
+
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        active.v2_step_state = Some(V2StepState::ScrollIntoView(state));
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-scroll_into_view-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::TypeTextInto {
+                target,
+                text,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::TypeTextInto(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2TypeTextIntoState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            phase: 0,
+                        },
+                    };
+
+                    match state.phase {
+                        0 => {
+                            if select_semantics_node(snapshot, window, element_runtime, &target)
+                                .is_some()
+                            {
+                                state.phase = 1;
+                                active.v2_step_state = Some(V2StepState::TypeTextInto(state));
+                                output.request_redraw = true;
+                            } else if state.remaining_frames == 0 {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-type_text_into-timeout"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("type_text_into_timeout".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::TypeTextInto(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                        1 => {
+                            if let Some(node) =
+                                select_semantics_node(snapshot, window, element_runtime, &target)
+                            {
+                                let pos = center_of_rect(node.bounds);
+                                output
+                                    .events
+                                    .extend(click_events(pos, UiMouseButtonV1::Left));
+                                state.phase = 2;
+                                active.v2_step_state = Some(V2StepState::TypeTextInto(state));
+                                output.request_redraw = true;
+                            } else {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-type_text_into-no-semantics-match"
+                                ));
+                                stop_script = true;
+                                failure_reason =
+                                    Some("type_text_into_no_semantics_match".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            }
+                        }
+                        _ => {
+                            output.events.push(Event::TextInput(text));
+                            active.v2_step_state = None;
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                            if self.cfg.script_auto_dump {
+                                force_dump_label =
+                                    Some(format!("script-step-{step_index:04}-type_text_into"));
+                            }
+                        }
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-type_text_into-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::MenuSelect {
+                menu,
+                item,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::MenuSelect(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2MenuSelectState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            phase: 0,
+                        },
+                    };
+
+                    match state.phase {
+                        0 => {
+                            if select_semantics_node(snapshot, window, element_runtime, &menu)
+                                .is_some()
+                            {
+                                state.phase = 1;
+                                active.v2_step_state = Some(V2StepState::MenuSelect(state));
+                                output.request_redraw = true;
+                            } else if state.remaining_frames == 0 {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-menu_select-timeout"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("menu_select_timeout".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::MenuSelect(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                        1 => {
+                            if let Some(node) =
+                                select_semantics_node(snapshot, window, element_runtime, &menu)
+                            {
+                                let pos = center_of_rect(node.bounds);
+                                output
+                                    .events
+                                    .extend(click_events(pos, UiMouseButtonV1::Left));
+                                state.phase = 2;
+                                active.v2_step_state = Some(V2StepState::MenuSelect(state));
+                                output.request_redraw = true;
+                            } else {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-menu_select-menu-no-match"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("menu_select_menu_no_match".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            }
+                        }
+                        2 => {
+                            if select_semantics_node(snapshot, window, element_runtime, &item)
+                                .is_some()
+                            {
+                                state.phase = 3;
+                                active.v2_step_state = Some(V2StepState::MenuSelect(state));
+                                output.request_redraw = true;
+                            } else if state.remaining_frames == 0 {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-menu_select-timeout"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("menu_select_timeout".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            } else {
+                                state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                                active.v2_step_state = Some(V2StepState::MenuSelect(state));
+                                output.request_redraw = true;
+                            }
+                        }
+                        _ => {
+                            if let Some(node) =
+                                select_semantics_node(snapshot, window, element_runtime, &item)
+                            {
+                                let pos = center_of_rect(node.bounds);
+                                output
+                                    .events
+                                    .extend(click_events(pos, UiMouseButtonV1::Left));
+                                active.v2_step_state = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label =
+                                        Some(format!("script-step-{step_index:04}-menu_select"));
+                                }
+                            } else {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-menu_select-item-no-match"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("menu_select_item_no_match".to_string());
+                                active.v2_step_state = None;
+                                output.request_redraw = true;
+                            }
+                        }
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-menu_select-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::DragTo {
+                from,
+                to,
+                button,
+                steps,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::DragTo(mut state)) if state.step_index == step_index => {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2DragToState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                        },
+                    };
+
+                    let from_node = select_semantics_node(snapshot, window, element_runtime, &from);
+                    let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
+                    if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
+                        let start = center_of_rect(from_node.bounds);
+                        let end = center_of_rect(to_node.bounds);
+                        output
+                            .events
+                            .extend(drag_events(start, end, button, steps.max(1)));
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label = Some(format!("script-step-{step_index:04}-drag_to"));
+                        }
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-drag_to-timeout"));
+                        stop_script = true;
+                        failure_reason = Some("drag_to_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else {
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        active.v2_step_state = Some(V2StepState::DragTo(state));
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label =
+                        Some(format!("script-step-{step_index:04}-drag_to-no-semantics"));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
+            UiActionStepV2::SetSliderValue {
+                target,
+                value,
+                min,
+                max,
+                epsilon,
+                timeout_frames,
+                drag_steps,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::SetSliderValue(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2SetSliderValueState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            phase: 0,
+                            last_drag_x: None,
+                        },
+                    };
+
+                    let node = select_semantics_node(snapshot, window, element_runtime, &target);
+                    if let Some(node) = node {
+                        if node.flags.disabled {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-set_slider_value-disabled"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("set_slider_value_disabled".to_string());
+                            active.v2_step_state = None;
+                            output.request_redraw = true;
+                        } else {
+                            let bounds = node.bounds;
+                            let left = bounds.origin.x.0;
+                            let width = bounds.size.width.0.max(0.0);
+                            let right = left + width;
+                            let span = (max - min).abs().max(0.0001);
+
+                            let clamp_x = |x: f32| {
+                                let pad = 2.0_f32;
+                                x.clamp(left + pad, right - pad)
+                            };
+                            let target_t = ((value - min) / span).clamp(0.0, 1.0);
+
+                            if state.phase == 0 {
+                                let x = clamp_x(left + width * target_t);
+                                let start = center_of_rect(bounds);
+                                let start_x = state.last_drag_x.unwrap_or(start.x.0);
+                                let start = Point::new(fret_core::Px(start_x), start.y);
+                                let end = Point::new(fret_core::Px(x), start.y);
+                                output.events.extend(drag_events(
+                                    start,
+                                    end,
+                                    UiMouseButtonV1::Left,
+                                    drag_steps.max(1),
+                                ));
+                                state.phase = 1;
+                                state.last_drag_x = Some(x);
+                                active.v2_step_state = Some(V2StepState::SetSliderValue(state));
+                                output.request_redraw = true;
+                            } else {
+                                let observed = node
+                                    .value
+                                    .as_deref()
+                                    .and_then(parse_semantics_numeric_value);
+                                if let Some(observed) = observed {
+                                    if (observed - value).abs() <= epsilon.max(0.0) {
+                                        active.v2_step_state = None;
+                                        active.next_step = active.next_step.saturating_add(1);
+                                        output.request_redraw = true;
+                                        if self.cfg.script_auto_dump {
+                                            force_dump_label = Some(format!(
+                                                "script-step-{step_index:04}-set_slider_value"
+                                            ));
+                                        }
+                                    } else if state.remaining_frames == 0 {
+                                        force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-set_slider_value-timeout"
+                                        ));
+                                        stop_script = true;
+                                        failure_reason =
+                                            Some("set_slider_value_timeout".to_string());
+                                        active.v2_step_state = None;
+                                        output.request_redraw = true;
+                                    } else {
+                                        let error = value - observed;
+                                        let dx = (error / span) * width;
+                                        let start = center_of_rect(bounds);
+                                        let start_x = state.last_drag_x.unwrap_or(start.x.0);
+                                        let end_x = clamp_x(start_x + dx);
+                                        let start = Point::new(fret_core::Px(start_x), start.y);
+                                        let end = Point::new(fret_core::Px(end_x), start.y);
+                                        output.events.extend(drag_events(
+                                            start,
+                                            end,
+                                            UiMouseButtonV1::Left,
+                                            drag_steps.max(1),
+                                        ));
+                                        state.last_drag_x = Some(end_x);
+                                        state.remaining_frames =
+                                            state.remaining_frames.saturating_sub(1);
+                                        active.v2_step_state =
+                                            Some(V2StepState::SetSliderValue(state));
+                                        output.request_redraw = true;
+                                    }
+                                } else {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-set_slider_value-unparseable"
+                                    ));
+                                    stop_script = true;
+                                    failure_reason =
+                                        Some("set_slider_value_unparseable".to_string());
+                                    active.v2_step_state = None;
+                                    output.request_redraw = true;
+                                }
+                            }
+                        }
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-set_slider_value-timeout"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("set_slider_value_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else {
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        active.v2_step_state = Some(V2StepState::SetSliderValue(state));
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-set_slider_value-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
         }
 
         if !output.events.is_empty() {
@@ -1227,7 +1796,7 @@ impl UiDiagnosticsService {
                 self.request_force_dump(label);
             }
 
-            if active.next_step >= active.script.steps.len() {
+            if active.next_step >= active.steps.len() {
                 self.write_script_result(UiScriptResultV1 {
                     schema_version: 1,
                     run_id: active.run_id,
@@ -1241,7 +1810,7 @@ impl UiDiagnosticsService {
                         .as_ref()
                         .map(|p| display_path(&self.cfg.out_dir, p)),
                 });
-            } else if active.next_step < active.script.steps.len() {
+            } else if active.next_step < active.steps.len() {
                 self.active_scripts.insert(window, active);
             }
         }
@@ -1849,13 +2418,33 @@ impl UiDiagnosticsService {
         let Some(bytes) = bytes else {
             return;
         };
-        let script: UiActionScriptV1 = match serde_json::from_slice(&bytes) {
-            Ok(s) => s,
-            Err(_) => return,
+        let schema_version: u32 = serde_json::from_slice::<serde_json::Value>(&bytes)
+            .ok()
+            .and_then(|v| v.get("schema_version").and_then(|v| v.as_u64()))
+            .unwrap_or(0)
+            .min(u32::MAX as u64) as u32;
+
+        let script = match schema_version {
+            1 => {
+                let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
+                    return;
+                };
+                let Some(script) = PendingScript::from_v1(script) else {
+                    return;
+                };
+                script
+            }
+            2 => {
+                let Ok(script) = serde_json::from_slice::<UiActionScriptV2>(&bytes) else {
+                    return;
+                };
+                let Some(script) = PendingScript::from_v2(script) else {
+                    return;
+                };
+                script
+            }
+            _ => return,
         };
-        if script.schema_version != 1 {
-            return;
-        }
         let run_id = self.next_script_run_id();
         self.pending_script = Some(script);
         self.pending_script_run_id = Some(run_id);
@@ -2580,12 +3169,217 @@ pub enum UiActionStepV1 {
     },
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiActionScriptV2 {
+    pub schema_version: u32,
+    pub steps: Vec<UiActionStepV2>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum UiActionStepV2 {
+    // v1-compatible steps
+    Click {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+    },
+    ResetDiagnostics,
+    MovePointer {
+        target: UiSelectorV1,
+    },
+    DragPointer {
+        target: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+    },
+    Wheel {
+        target: UiSelectorV1,
+        #[serde(default)]
+        delta_x: f32,
+        #[serde(default)]
+        delta_y: f32,
+    },
+    PressKey {
+        key: String,
+        #[serde(default)]
+        modifiers: UiKeyModifiersV1,
+        #[serde(default)]
+        repeat: bool,
+    },
+    TypeText {
+        text: String,
+    },
+    WaitFrames {
+        n: u32,
+    },
+    WaitUntil {
+        predicate: UiPredicateV1,
+        timeout_frames: u32,
+    },
+    Assert {
+        predicate: UiPredicateV1,
+    },
+    CaptureBundle {
+        label: Option<String>,
+    },
+    CaptureScreenshot {
+        label: Option<String>,
+        #[serde(default = "default_capture_screenshot_timeout_frames")]
+        timeout_frames: u32,
+    },
+
+    // v2 intent-level steps
+    EnsureVisible {
+        target: UiSelectorV1,
+        #[serde(default)]
+        within_window: bool,
+        #[serde(default)]
+        padding_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    ScrollIntoView {
+        container: UiSelectorV1,
+        target: UiSelectorV1,
+        #[serde(default)]
+        delta_x: f32,
+        #[serde(default = "default_scroll_delta_y")]
+        delta_y: f32,
+        #[serde(default)]
+        require_fully_within_window: bool,
+        #[serde(default)]
+        padding_px: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    TypeTextInto {
+        target: UiSelectorV1,
+        text: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    MenuSelect {
+        menu: UiSelectorV1,
+        item: UiSelectorV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    DragTo {
+        from: UiSelectorV1,
+        to: UiSelectorV1,
+        #[serde(default)]
+        button: UiMouseButtonV1,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    SetSliderValue {
+        target: UiSelectorV1,
+        value: f32,
+        #[serde(default = "default_slider_min")]
+        min: f32,
+        #[serde(default = "default_slider_max")]
+        max: f32,
+        #[serde(default = "default_slider_epsilon")]
+        epsilon: f32,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+        #[serde(default = "default_drag_steps")]
+        drag_steps: u32,
+    },
+}
+
+impl From<UiActionStepV1> for UiActionStepV2 {
+    fn from(value: UiActionStepV1) -> Self {
+        match value {
+            UiActionStepV1::Click { target, button } => Self::Click { target, button },
+            UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
+            UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
+            UiActionStepV1::DragPointer {
+                target,
+                button,
+                delta_x,
+                delta_y,
+                steps,
+            } => Self::DragPointer {
+                target,
+                button,
+                delta_x,
+                delta_y,
+                steps,
+            },
+            UiActionStepV1::Wheel {
+                target,
+                delta_x,
+                delta_y,
+            } => Self::Wheel {
+                target,
+                delta_x,
+                delta_y,
+            },
+            UiActionStepV1::PressKey {
+                key,
+                modifiers,
+                repeat,
+            } => Self::PressKey {
+                key,
+                modifiers,
+                repeat,
+            },
+            UiActionStepV1::TypeText { text } => Self::TypeText { text },
+            UiActionStepV1::WaitFrames { n } => Self::WaitFrames { n },
+            UiActionStepV1::WaitUntil {
+                predicate,
+                timeout_frames,
+            } => Self::WaitUntil {
+                predicate,
+                timeout_frames,
+            },
+            UiActionStepV1::Assert { predicate } => Self::Assert { predicate },
+            UiActionStepV1::CaptureBundle { label } => Self::CaptureBundle { label },
+            UiActionStepV1::CaptureScreenshot {
+                label,
+                timeout_frames,
+            } => Self::CaptureScreenshot {
+                label,
+                timeout_frames,
+            },
+        }
+    }
+}
+
 fn default_drag_steps() -> u32 {
     8
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
     300
+}
+
+fn default_action_timeout_frames() -> u32 {
+    180
+}
+
+fn default_scroll_delta_y() -> f32 {
+    -120.0
+}
+
+fn default_slider_min() -> f32 {
+    0.0
+}
+
+fn default_slider_max() -> f32 {
+    100.0
+}
+
+fn default_slider_epsilon() -> f32 {
+    0.5
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -2812,13 +3606,89 @@ impl UiPickSelectionV1 {
 
 #[derive(Debug, Clone)]
 struct ActiveScript {
-    script: UiActionScriptV1,
+    steps: Vec<UiActionStepV2>,
     run_id: u64,
     next_step: usize,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
     screenshot_wait: Option<ScreenshotWaitState>,
+    v2_step_state: Option<V2StepState>,
     last_reported_step: Option<usize>,
+}
+
+#[derive(Debug, Clone)]
+struct PendingScript {
+    steps: Vec<UiActionStepV2>,
+}
+
+impl PendingScript {
+    fn from_v1(script: UiActionScriptV1) -> Option<Self> {
+        if script.schema_version != 1 {
+            return None;
+        }
+        Some(Self {
+            steps: script.steps.into_iter().map(UiActionStepV2::from).collect(),
+        })
+    }
+
+    fn from_v2(script: UiActionScriptV2) -> Option<Self> {
+        if script.schema_version != 2 {
+            return None;
+        }
+        Some(Self {
+            steps: script.steps,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+enum V2StepState {
+    EnsureVisible(V2EnsureVisibleState),
+    ScrollIntoView(V2ScrollIntoViewState),
+    TypeTextInto(V2TypeTextIntoState),
+    MenuSelect(V2MenuSelectState),
+    DragTo(V2DragToState),
+    SetSliderValue(V2SetSliderValueState),
+}
+
+#[derive(Debug, Clone)]
+struct V2EnsureVisibleState {
+    step_index: usize,
+    remaining_frames: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2ScrollIntoViewState {
+    step_index: usize,
+    remaining_frames: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2TypeTextIntoState {
+    step_index: usize,
+    remaining_frames: u32,
+    phase: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2MenuSelectState {
+    step_index: usize,
+    remaining_frames: u32,
+    phase: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2DragToState {
+    step_index: usize,
+    remaining_frames: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2SetSliderValueState {
+    step_index: usize,
+    remaining_frames: u32,
+    phase: u32,
+    last_drag_x: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
@@ -6369,6 +7239,36 @@ fn is_redacted_string(s: &str) -> bool {
     s.trim_start().starts_with("<redacted")
 }
 
+fn parse_semantics_numeric_value(value: &str) -> Option<f32> {
+    let s = value.trim();
+    if s.is_empty() {
+        return None;
+    }
+    if let Some(raw) = s.strip_suffix('%') {
+        return raw.trim().parse::<f32>().ok();
+    }
+    if let Ok(v) = s.parse::<f32>() {
+        return Some(v);
+    }
+
+    // Best-effort: extract the first float-ish token from the string.
+    let mut token = String::new();
+    let mut started = false;
+    for ch in s.chars() {
+        let keep = ch.is_ascii_digit() || matches!(ch, '.' | '-' | '+');
+        if keep {
+            token.push(ch);
+            started = true;
+        } else if started {
+            break;
+        }
+    }
+    if token.is_empty() {
+        return None;
+    }
+    token.parse::<f32>().ok()
+}
+
 fn move_pointer_event(position: Point) -> Event {
     let pointer_id = PointerId(0);
     let modifiers = Modifiers::default();
@@ -6761,10 +7661,7 @@ mod tests {
         svc.cfg.pick_trigger_path = dir.join("pick.touch");
         svc.cfg.inspect_trigger_path = dir.join("inspect.touch");
         svc.cfg.inspect_path = dir.join("inspect.json");
-        svc.pending_script = Some(UiActionScriptV1 {
-            schema_version: 1,
-            steps: Vec::new(),
-        });
+        svc.pending_script = Some(PendingScript { steps: Vec::new() });
 
         assert!(
             !svc.wants_inspection_active(AppWindowId::default()),
@@ -6781,6 +7678,22 @@ mod tests {
         assert!(
             matches!(parsed.steps.as_slice(), [UiActionStepV1::ResetDiagnostics]),
             "expected reset_diagnostics step"
+        );
+    }
+
+    #[test]
+    fn scripts_support_schema_v2_intent_steps() {
+        let parsed: UiActionScriptV2 = serde_json::from_str(
+            r#"{"schema_version":2,"steps":[{"type":"ensure_visible","target":{"kind":"test_id","id":"x"}}]}"#,
+        )
+        .expect("parse schema v2 script");
+        assert_eq!(parsed.schema_version, 2);
+        assert!(
+            matches!(
+                parsed.steps.as_slice(),
+                [UiActionStepV2::EnsureVisible { .. }]
+            ),
+            "expected ensure_visible step"
         );
     }
 

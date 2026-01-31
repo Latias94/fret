@@ -69,9 +69,10 @@ This section is a quick “what’s real today vs what we want in v1” checklis
   - `FRET_DIAG_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
   - `FRET_DIAG_SCREENSHOTS=1` enables the on-demand PNG protocol used by script steps like `capture_screenshot`.
   - These are intentionally separate today, but the UX and documentation should keep them unambiguous.
-- **High-level intent actions are still missing.**
-  - Scripts mostly use low-level v1 steps (`click`, `drag_pointer`, `wheel`, `wait_until`, ...).
-  - `set_slider_value`, `menu_select`, and `scroll_into_view` are not first-class yet.
+- **High-level intent actions exist (Script schema v2), but are still early.**
+  - In addition to the low-level v1 steps (`click`, `drag_pointer`, `wheel`, `wait_until`, ...), schema v2 adds intent steps:
+    `ensure_visible`, `scroll_into_view`, `type_text_into`, `menu_select`, `drag_to`, `set_slider_value`.
+  - Example script: `tools/diag-scripts/ui-gallery-slider-set-value.json` (requires the UI gallery slider test ids).
 - **Repaint checks remain best-effort, but are now automation-friendly.**
   - In addition to stale paint / stale scene checks, `--check-semantics-changed-repainted` can flag “semantics changed but
     paint did not” when `semantics_fingerprint` changes without a `scene_fingerprint` change, and it can emit a structured

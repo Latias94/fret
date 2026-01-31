@@ -5292,15 +5292,21 @@ fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     cx.keyed("ui_gallery.slider_page", |cx| {
         let single = shadcn::Slider::new_controllable(cx, None, || vec![35.0])
             .range(0.0, 100.0)
+            .test_id("ui-gallery-slider-single")
+            .a11y_label("Single value slider")
             .into_element(cx);
 
         let range = shadcn::Slider::new_controllable(cx, None, || vec![20.0, 80.0])
             .range(0.0, 100.0)
             .min_steps_between_thumbs(5)
+            .test_id("ui-gallery-slider-range")
+            .a11y_label("Range slider")
             .into_element(cx);
 
         let disabled = shadcn::Slider::new_controllable(cx, None, || vec![60.0])
             .disabled(true)
+            .test_id("ui-gallery-slider-disabled")
+            .a11y_label("Disabled slider")
             .into_element(cx);
 
         let items: Vec<AnyElement> = vec![

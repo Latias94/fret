@@ -169,5 +169,6 @@ Known gaps:
 - `diag repro` can request RenderDoc autocapture and record Tracy enablement intent, but it does not yet run post-capture
   exports as strict regression gates, nor auto-record Tracy captures to a `.tracy` file.
 - Process footprint sampling is best-effort and can be sensitive to sampling cadence (CPU usage is diff-based).
-- High-level intent actions (Script v2 or a compiler layer) are not yet implemented.
+- High-level intent actions (Script schema v2 steps) exist, but are still early and will evolve (selectors/predicates and
+  range-control semantics are still being refined).
 - Range control semantics value (to enable robust `set_slider_value`) is still an open contract item.
