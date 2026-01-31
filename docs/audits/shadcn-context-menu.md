@@ -90,6 +90,10 @@ _None tracked at this time._
   submenu triggers (via wheel), the root menu panel origin remains stable under wheel input
   (asserted in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` during
   `web_vs_fret_context_menu_demo_submenu_*`).
+- Underlay scroll anchor stability gate: when the context menu is opened via a pointer location,
+  the menu panel stays anchored to the original pointer position even if the underlay scrolls
+  (validated in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
+  `fret_context_menu_does_not_move_when_underlay_scrolls`).
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
 - Web placement gate (root): `web_vs_fret_context_menu_demo_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.open.json`).
