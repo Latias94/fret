@@ -1476,6 +1476,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         );
         let mut keep_alive_by_key: HashMap<crate::ItemKey, NodeId> = keep_alive_state.by_key;
         let mut keep_alive_order = keep_alive_state.order;
+        let keep_alive_pool_len_before = keep_alive_by_key.len().min(u32::MAX as usize) as u32;
 
         let mut preserved: u32 = 0;
         let mut attached: u32 = 0;
@@ -1564,6 +1565,8 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             keep_alive_order.retain(|k| keep_alive_by_key.contains_key(k));
         }
 
+        let keep_alive_pool_len_after = keep_alive_by_key.len().min(u32::MAX as usize) as u32;
+
         keep_alive_state.by_key = keep_alive_by_key;
         keep_alive_state.order = keep_alive_order;
         window_state.with_state_mut(
@@ -1571,7 +1574,6 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
             |st| *st = keep_alive_state,
         );
-
         ui.debug_record_retained_virtual_list_reconcile(
             crate::tree::UiDebugRetainedVirtualListReconcile {
                 node,
@@ -1581,9 +1583,11 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 preserved_items: preserved,
                 attached_items: attached,
                 detached_items: detached,
+                keep_alive_pool_len_before,
                 reused_from_keep_alive_items: reused_from_keep_alive,
                 kept_alive_items: kept_alive,
                 evicted_keep_alive_items: evicted_keep_alive,
+                keep_alive_pool_len_after,
             },
         );
 

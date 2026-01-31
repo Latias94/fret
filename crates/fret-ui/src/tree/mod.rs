@@ -530,6 +530,8 @@ pub struct UiDebugRetainedVirtualListReconcile {
     pub preserved_items: u32,
     pub attached_items: u32,
     pub detached_items: u32,
+    /// Keep-alive bucket size before this reconcile (after loading element-local state).
+    pub keep_alive_pool_len_before: u32,
     /// Number of items that were re-attached from the retained keep-alive bucket instead of being
     /// mounted from scratch.
     pub reused_from_keep_alive_items: u32,
@@ -537,6 +539,8 @@ pub struct UiDebugRetainedVirtualListReconcile {
     pub kept_alive_items: u32,
     /// Number of items evicted from the keep-alive bucket due to budget.
     pub evicted_keep_alive_items: u32,
+    /// Keep-alive bucket size after this reconcile (after applying detach/evict updates).
+    pub keep_alive_pool_len_after: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
