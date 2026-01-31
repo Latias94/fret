@@ -37,6 +37,13 @@ User-facing performance concerns this workstream should explicitly answer:
 - **Redraw efficiency**: settle “immediate-mode overdraw” debates with measurable signals (paint/cache reuse/invalidation),
   not philosophy.
 
+Practical perf triage recipe we should keep tightening (especially for “resize feels laggy” reports):
+
+- First, enable redraw hitch logging to split the frame into `prepare` / `render` / `record` / `present` and determine
+  whether the hitch is CPU-side UI work or GPU/present/surface behavior (see `docs/debugging-playbook.md`).
+- If `render_ms` dominates, capture a bundle during the problematic interaction and use `fretboard diag stats --sort time`
+  to attribute the slowest snapshots to `layout` vs `paint` (and to `layout_engine_solve_time_us` when relevant).
+
 ## Existing foundation (what we should build on)
 
 Fret already has most of the primitives needed for a “test-engine-like” workflow:

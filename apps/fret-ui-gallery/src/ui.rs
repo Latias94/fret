@@ -890,6 +890,7 @@ fn preview_view_cache(
                         vec![
                             shadcn::Switch::new(view_cache_enabled.clone())
                                 .a11y_label("Enable view-cache mode")
+                                .test_id("ui-gallery-view-cache-enabled")
                                 .into_element(cx),
                             cx.text("Enable view-cache mode (global UiTree flag)"),
                         ]
@@ -902,6 +903,7 @@ fn preview_view_cache(
                         vec![
                             shadcn::Switch::new(view_cache_cache_shell.clone())
                                 .a11y_label("Cache the gallery shell")
+                                .test_id("ui-gallery-view-cache-cache-shell")
                                 .into_element(cx),
                             cx.text("Cache shell (sidebar/content wrappers)"),
                         ]
@@ -914,6 +916,7 @@ fn preview_view_cache(
                         vec![
                             shadcn::Switch::new(view_cache_inner_enabled.clone())
                                 .a11y_label("Enable inner ViewCache boundary")
+                                .test_id("ui-gallery-view-cache-inner-cache")
                                 .into_element(cx),
                             cx.text("Enable inner ViewCache boundary (torture subtree)"),
                         ]
@@ -926,6 +929,7 @@ fn preview_view_cache(
                         vec![
                             shadcn::Switch::new(view_cache_continuous.clone())
                                 .a11y_label("Request continuous frames")
+                                .test_id("ui-gallery-view-cache-continuous")
                                 .into_element(cx),
                             cx.text("Continuous frames (cache-hit should still keep state alive)"),
                         ]
@@ -943,11 +947,13 @@ fn preview_view_cache(
                 shadcn::Button::new("Bump counter")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-view-cache-bump-counter")
                     .on_click(CMD_VIEW_CACHE_BUMP)
                     .into_element(cx),
                 shadcn::Button::new("Reset counter")
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-view-cache-reset-counter")
                     .on_click(CMD_VIEW_CACHE_RESET)
                     .into_element(cx),
             ]
@@ -1023,6 +1029,7 @@ fn preview_view_cache(
                 |cx| {
                     shadcn::Button::new("Popover (cached trigger)")
                         .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-view-cache-popover-trigger")
                         .toggle_model(view_cache_popover_open.clone())
                         .into_element(cx)
                 },
@@ -1031,6 +1038,7 @@ fn preview_view_cache(
                         cx.text("Popover content"),
                         shadcn::Button::new("Close")
                             .variant(shadcn::ButtonVariant::Secondary)
+                            .test_id("ui-gallery-view-cache-popover-close")
                             .toggle_model(view_cache_popover_open.clone())
                             .into_element(cx),
                     ])
@@ -1092,32 +1100,41 @@ fn preview_view_cache(
         .into_element(cx)
     };
 
-    vec![
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("View Cache Torture").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Compare cached vs uncached subtree execution and state retention.",
-                )
+    vec![cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Generic,
+            test_id: Some(Arc::<str>::from("ui-gallery-view-cache-root")),
+            ..Default::default()
+        },
+        move |cx| {
+            vec![
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("View Cache Torture").into_element(cx),
+                        shadcn::CardDescription::new(
+                            "Compare cached vs uncached subtree execution and state retention.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new(vec![header]).into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full())
                 .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![header]).into_element(cx),
-        ])
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element(cx),
-        subtree,
-        cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::from(
-                "Tip: keep 'Cache shell' off while iterating so the status bar updates every frame.",
-            ),
-            style: None,
-            color: Some(theme.color_required("muted-foreground")),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        }),
-    ]
+                subtree,
+                cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: Arc::from(
+                        "Tip: keep 'Cache shell' off while iterating so the status bar updates every frame.",
+                    ),
+                    style: None,
+                    color: Some(theme.color_required("muted-foreground")),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                }),
+            ]
+        },
+    )]
 }
 
 fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
