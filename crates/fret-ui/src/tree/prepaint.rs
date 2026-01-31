@@ -241,8 +241,8 @@ impl<H: UiHost> UiTree<H> {
                                 && rendered.start_index <= rendered.end_index
                                 && rendered.end_index < rendered.count =>
                         {
-                            let prefetch_margin = (inputs.overscan / 2).max(1);
-                            let prefetch_step = 1usize;
+                            let prefetch_margin = (inputs.overscan / 4).max(1);
+                            let prefetch_step = prefetch_margin;
                             if let Some(prefetch) = crate::virtual_list::prefetch_virtual_range_step(
                                 rendered,
                                 visible,
