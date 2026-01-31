@@ -1058,6 +1058,8 @@ pub struct UiTree<H: UiHost> {
     measure_stack: Vec<MeasureStackKey>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
+    last_layout_bounds: Option<Rect>,
+    last_layout_scale_factor: Option<f32>,
     viewport_roots: Vec<(NodeId, Rect)>,
     pending_barrier_relayouts: Vec<NodeId>,
 
@@ -1154,6 +1156,8 @@ impl<H: UiHost> Default for UiTree<H> {
             measure_stack: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
+            last_layout_bounds: None,
+            last_layout_scale_factor: None,
             viewport_roots: Vec::new(),
             pending_barrier_relayouts: Vec::new(),
             debug_enabled: false,

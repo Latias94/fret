@@ -470,6 +470,32 @@ impl<H: UiHost> UiTree<H> {
 
         self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind);
 
+        // Fast path (ADR 0190): if nothing requires layout this frame, skip the layout engine and
+        // only run prepaint/semantics. This keeps scroll-only and cache-hit frames cheap while
+        // still allowing prepaint-windowed surfaces to update their ephemeral outputs.
+        if pass_kind == LayoutPassKind::Final
+            && self.pending_barrier_relayouts.is_empty()
+            && self.last_layout_bounds == Some(bounds)
+            && self.last_layout_scale_factor == Some(scale_factor)
+            && !self.nodes.iter().any(|(_, n)| n.invalidation.layout)
+        {
+            if self.semantics_requested {
+                self.semantics_requested = false;
+                self.refresh_semantics_snapshot(app);
+            }
+
+            self.prepaint_after_layout(app, scale_factor);
+            self.flush_deferred_cleanup(services);
+
+            self.last_layout_bounds = Some(bounds);
+            self.last_layout_scale_factor = Some(scale_factor);
+
+            if let Some(started) = started {
+                self.debug_stats.layout_time = started.elapsed();
+            }
+            return;
+        }
+
         let (layout_engine_solves_start, layout_engine_solve_time_start) = {
             self.begin_layout_engine_frame(app);
             if self.debug_enabled {
@@ -554,6 +580,11 @@ impl<H: UiHost> UiTree<H> {
 
         if pass_kind == LayoutPassKind::Final {
             self.layout_engine.end_frame();
+        }
+
+        if pass_kind == LayoutPassKind::Final {
+            self.last_layout_bounds = Some(bounds);
+            self.last_layout_scale_factor = Some(scale_factor);
         }
 
         if self.debug_enabled {
