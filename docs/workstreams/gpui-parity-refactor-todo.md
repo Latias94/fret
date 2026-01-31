@@ -1163,6 +1163,8 @@ topics (if/when we implement them):
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
         - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862641667-components-gallery-table-window-boundary-scroll/bundle.json`
         - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862668739-components-gallery-table-sort-and-scroll/bundle.json`
+        - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json`
       - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to `components-gallery-table-window-boundary-scroll.json`
         (the sort+scroll script is still gated by view-cache reuse + wheel-scroll + stale-paint, etc.).
       - Note: the suite also enables `--check-vlist-policy-key-stable`, applied only to the window-boundary script (policy changes are expected in sort/toggle style scripts).
@@ -1170,6 +1172,9 @@ topics (if/when we implement them):
       - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
         - window-boundary: `C:\fret-diag-perf-components-gallery-table-boundary\1769833617760-script-step-0018-wheel/bundle.json` (2757/1989/13/755)
         - sort+scroll: `C:\fret-diag-perf-components-gallery-table-sort\1769833651344-script-step-0011-wheel/bundle.json` (6155/4682/11/1462)
+      - After tuned staged prefetch (warmup=5; `--check-retained-vlist-prefetch-reconciles-min 1`):
+        - window-boundary: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json` (2201/1732/21/448)
+        - sort+scroll: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json` (4413/3249/11/1153)
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
