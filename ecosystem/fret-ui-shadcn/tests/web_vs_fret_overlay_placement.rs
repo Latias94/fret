@@ -3079,6 +3079,36 @@ fn web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_popover_demo_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "popover-demo.vp375x240",
+        Some("dialog"),
+        |cx, open| {
+            fret_ui_shadcn::Popover::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    fret_ui_shadcn::Button::new("Open popover")
+                        .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    fret_ui_shadcn::PopoverContent::new(Vec::new())
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .w_px(Px(320.0))
+                                .h_px(Px(245.33334)),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+        SemanticsRole::Button,
+        Some("Open popover"),
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_date_picker_demo_open_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "date-picker-demo",
@@ -12229,6 +12259,11 @@ fn web_vs_fret_tooltip_demo_overlay_placement_matches() {
 #[test]
 fn web_vs_fret_tooltip_demo_overlay_placement_matches_tiny_viewport() {
     assert_tooltip_demo_overlay_placement_matches("tooltip-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_tooltip_demo_overlay_placement_matches("tooltip-demo.vp375x240");
 }
 
 fn assert_tooltip_demo_overlay_placement_matches(web_name: &str) {

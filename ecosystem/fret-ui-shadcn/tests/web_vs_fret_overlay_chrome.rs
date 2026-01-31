@@ -4236,6 +4236,61 @@ fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
     ) -> AnyElement
     + Clone,
 ) {
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
+        web_name,
+        web_portal_slot,
+        web_theme_name,
+        scheme,
+        fret_role,
+        fret_trigger_label,
+        settle_frames,
+        true,
+        build,
+    );
+}
+
+fn assert_hover_overlay_panel_height_matches_by_portal_slot_theme(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_role: SemanticsRole,
+    fret_trigger_label: &str,
+    settle_frames: u64,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
+    assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
+        web_name,
+        web_portal_slot,
+        web_theme_name,
+        scheme,
+        fret_role,
+        fret_trigger_label,
+        settle_frames,
+        false,
+        build,
+    );
+}
+
+fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme_ex(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_role: SemanticsRole,
+    fret_trigger_label: &str,
+    settle_frames: u64,
+    check_width: bool,
+    build: impl Fn(
+        &mut ElementContext<'_, App>,
+        &std::rc::Rc<std::cell::Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> AnyElement
+    + Clone,
+) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
 
@@ -4332,12 +4387,14 @@ fn assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
         .or_else(|| find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border))
         .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
 
-    assert_close(
-        &format!("{web_name} {web_theme_name} panel.w"),
-        quad.rect.size.width.0,
-        web_w,
-        1.0,
-    );
+    if check_width {
+        assert_close(
+            &format!("{web_name} {web_theme_name} panel.w"),
+            quad.rect.size.width.0,
+            web_w,
+            1.0,
+        );
+    }
     assert_close(
         &format!("{web_name} {web_theme_name} panel.h"),
         quad.rect.size.height.0,
@@ -8742,6 +8799,32 @@ fn web_vs_fret_popover_demo_tiny_viewport_panel_size_matches_web_dark() {
 }
 
 #[test]
+fn web_vs_fret_popover_demo_mobile_tiny_viewport_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "popover-demo.vp375x240",
+        "popover-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_popover_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_popover_demo_mobile_tiny_viewport_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "popover-demo.vp375x240",
+        "popover-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Dialog,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_popover_demo_page,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_panel_chrome_matches() {
     assert_overlay_chrome_matches(
         "dropdown-menu-demo",
@@ -9679,6 +9762,68 @@ fn web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web() {
 fn web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web_dark() {
     assert_hover_overlay_panel_size_matches_by_portal_slot_theme(
         "tooltip-demo.vp1440x240",
+        "tooltip-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Tooltip,
+        "Hover",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, trigger| {
+            let trigger_el = fret_ui_shadcn::Button::new("Hover")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx);
+            trigger.set(Some(trigger_el.id));
+
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
+                .into_element(cx);
+
+            fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_mobile_tiny_viewport_panel_height_matches_web() {
+    assert_hover_overlay_panel_height_matches_by_portal_slot_theme(
+        "tooltip-demo.vp375x240",
+        "tooltip-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Tooltip,
+        "Hover",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        |cx, trigger| {
+            let trigger_el = fret_ui_shadcn::Button::new("Hover")
+                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                .into_element(cx);
+            trigger.set(Some(trigger_el.id));
+
+            let content_el =
+                fret_ui_shadcn::TooltipContent::new(vec![fret_ui_shadcn::TooltipContent::text(
+                    cx,
+                    "Add to library",
+                )])
+                .into_element(cx);
+
+            fret_ui_shadcn::Tooltip::new(trigger_el, content_el)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx)
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_tooltip_demo_mobile_tiny_viewport_panel_height_matches_web_dark() {
+    assert_hover_overlay_panel_height_matches_by_portal_slot_theme(
+        "tooltip-demo.vp375x240",
         "tooltip-content",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
