@@ -68,6 +68,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
+    let mut perf_baseline_path: Option<PathBuf> = None;
+    let mut perf_baseline_out: Option<PathBuf> = None;
+    let mut perf_baseline_headroom_pct: u32 = 20;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_stale_scene_test_id: Option<String> = None;
@@ -348,6 +351,32 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --max-top-solve-us".to_string())?,
                 );
+                i += 1;
+            }
+            "--perf-baseline" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline".to_string());
+                };
+                perf_baseline_path = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--perf-baseline-out" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-out".to_string());
+                };
+                perf_baseline_out = Some(PathBuf::from(v));
+                i += 1;
+            }
+            "--perf-baseline-headroom-pct" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-headroom-pct".to_string());
+                };
+                perf_baseline_headroom_pct = v
+                    .parse::<u32>()
+                    .map_err(|_| "invalid value for --perf-baseline-headroom-pct".to_string())?;
                 i += 1;
             }
             "--check-stale-paint" => {
@@ -1950,9 +1979,20 @@ See: `docs/tracy.md`.\n";
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
             let reuse_process = launch.is_none();
-            let wants_perf_thresholds = max_top_total_us.is_some()
-                || max_top_layout_us.is_some()
-                || max_top_solve_us.is_some();
+            let cli_thresholds = PerfThresholds {
+                max_top_total_us,
+                max_top_layout_us,
+                max_top_solve_us,
+            };
+            let perf_baseline = perf_baseline_path
+                .clone()
+                .map(|p| resolve_path(&workspace_root, p))
+                .map(|p| read_perf_baseline_file(&workspace_root, &p))
+                .transpose()?;
+            let perf_baseline_out = perf_baseline_out
+                .clone()
+                .map(|p| resolve_path(&workspace_root, p));
+            let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
@@ -1972,8 +2012,21 @@ See: `docs/tracy.md`.\n";
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_failures: Vec<serde_json::Value> = Vec::new();
+            let mut perf_baseline_rows: Vec<serde_json::Value> = Vec::new();
             let mut overall_worst: Option<(u64, PathBuf, PathBuf)> = None;
             let stats_opts = BundleStatsOptions { warmup_frames };
+
+            if let Some(baseline) = perf_baseline.as_ref() {
+                for src in &scripts {
+                    let key = normalize_repo_relative_path(&workspace_root, src);
+                    if !baseline.thresholds_by_script.contains_key(&key) {
+                        return Err(format!(
+                            "perf baseline missing entry for script: {key} (baseline={})",
+                            baseline.path.display()
+                        ));
+                    }
+                }
+            }
 
             for src in scripts {
                 if repeat == 1 {
@@ -2062,6 +2115,8 @@ See: `docs/tracy.md`.\n";
                         .filter(|s| !s.trim().is_empty())
                         .map(PathBuf::from);
 
+                    let script_key = normalize_repo_relative_path(&workspace_root, &src);
+
                     if let Some(bundle_dir) = bundle_dir {
                         let bundle_path =
                             resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
@@ -2107,7 +2162,7 @@ See: `docs/tracy.md`.\n";
 
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
-                                "script": src.display().to_string(),
+                                "script": script_key.clone(),
                                 "sort": sort.as_str(),
                                 "top_total_time_us": top_total,
                                 "top_layout_time_us": top_layout,
@@ -2142,44 +2197,70 @@ See: `docs/tracy.md`.\n";
                             );
                         }
 
+                        if perf_baseline_out.is_some() {
+                            perf_baseline_rows.push(serde_json::json!({
+                                "script": script_key.clone(),
+                                "max": {
+                                    "top_total_time_us": top_total,
+                                    "top_layout_time_us": top_layout,
+                                    "top_layout_engine_solve_time_us": top_solve,
+                                },
+                            }));
+                        }
                         if wants_perf_thresholds {
-                            let worst_run = serde_json::json!({
+                            let baseline_thresholds = perf_baseline
+                                .as_ref()
+                                .and_then(|b| b.thresholds_by_script.get(&script_key).copied())
+                                .unwrap_or_default();
+                            let (thr_total, src_total) = resolve_threshold(
+                                cli_thresholds.max_top_total_us,
+                                baseline_thresholds.max_top_total_us,
+                            );
+                            let (thr_layout, src_layout) = resolve_threshold(
+                                cli_thresholds.max_top_layout_us,
+                                baseline_thresholds.max_top_layout_us,
+                            );
+                            let (thr_solve, src_solve) = resolve_threshold(
+                                cli_thresholds.max_top_solve_us,
+                                baseline_thresholds.max_top_solve_us,
+                            );
+                            let run = serde_json::json!({
                                 "run_index": 0,
                                 "top_total_time_us": top_total,
                                 "top_layout_time_us": top_layout,
                                 "top_layout_engine_solve_time_us": top_solve,
+                                "top_layout_engine_solves": top_solves,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "bundle": bundle_path.display().to_string(),
                             });
                             let row = serde_json::json!({
-                                "script": src.display().to_string(),
+                                "script": script_key.clone(),
                                 "sort": sort.as_str(),
                                 "repeat": 1,
-                                "runs": [worst_run.clone()],
+                                "runs": [run],
                                 "max": {
                                     "top_total_time_us": top_total,
                                     "top_layout_time_us": top_layout,
                                     "top_layout_engine_solve_time_us": top_solve,
                                 },
                                 "thresholds": {
-                                    "max_top_total_us": max_top_total_us,
-                                    "max_top_layout_us": max_top_layout_us,
-                                    "max_top_solve_us": max_top_solve_us,
+                                    "max_top_total_us": thr_total,
+                                    "max_top_layout_us": thr_layout,
+                                    "max_top_solve_us": thr_solve,
                                 },
-                                "worst": {
-                                    "total": worst_run,
-                                    "layout": null,
-                                    "solve": null,
-                                }
+                                "threshold_sources": {
+                                    "max_top_total_us": src_total,
+                                    "max_top_layout_us": src_layout,
+                                    "max_top_solve_us": src_solve,
+                                },
                             });
                             perf_threshold_rows.push(row);
                             perf_threshold_failures.extend(scan_perf_threshold_failures(
-                                &src.display().to_string(),
+                                script_key.as_str(),
                                 sort,
-                                max_top_total_us,
-                                max_top_layout_us,
-                                max_top_solve_us,
+                                cli_thresholds,
+                                baseline_thresholds,
                                 top_total,
                                 top_layout,
                                 top_solve,
@@ -2193,7 +2274,7 @@ See: `docs/tracy.md`.\n";
                     } else {
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
-                                "script": src.display().to_string(),
+                                "script": script_key.clone(),
                                 "sort": sort.as_str(),
                                 "error": "no_last_bundle_dir",
                             }));
@@ -2512,12 +2593,41 @@ See: `docs/tracy.md`.\n";
                         );
                     }
 
+                    let max_total = *runs_total.iter().max().unwrap_or(&0);
+                    let max_layout = *runs_layout.iter().max().unwrap_or(&0);
+                    let max_solve = *runs_solve.iter().max().unwrap_or(&0);
+                    let script_key = normalize_repo_relative_path(&workspace_root, &src);
+
+                    if perf_baseline_out.is_some() {
+                        perf_baseline_rows.push(serde_json::json!({
+                            "script": script_key.clone(),
+                            "max": {
+                                "top_total_time_us": max_total,
+                                "top_layout_time_us": max_layout,
+                                "top_layout_engine_solve_time_us": max_solve,
+                            },
+                        }));
+                    }
+
                     if wants_perf_thresholds {
-                        let max_total = *runs_total.iter().max().unwrap_or(&0);
-                        let max_layout = *runs_layout.iter().max().unwrap_or(&0);
-                        let max_solve = *runs_solve.iter().max().unwrap_or(&0);
+                        let baseline_thresholds = perf_baseline
+                            .as_ref()
+                            .and_then(|b| b.thresholds_by_script.get(&script_key).copied())
+                            .unwrap_or_default();
+                        let (thr_total, src_total) = resolve_threshold(
+                            cli_thresholds.max_top_total_us,
+                            baseline_thresholds.max_top_total_us,
+                        );
+                        let (thr_layout, src_layout) = resolve_threshold(
+                            cli_thresholds.max_top_layout_us,
+                            baseline_thresholds.max_top_layout_us,
+                        );
+                        let (thr_solve, src_solve) = resolve_threshold(
+                            cli_thresholds.max_top_solve_us,
+                            baseline_thresholds.max_top_solve_us,
+                        );
                         let row = serde_json::json!({
-                            "script": src.display().to_string(),
+                            "script": script_key.clone(),
                             "sort": sort.as_str(),
                             "repeat": repeat,
                             "runs": runs_json,
@@ -2527,18 +2637,22 @@ See: `docs/tracy.md`.\n";
                                 "top_layout_engine_solve_time_us": max_solve,
                             },
                             "thresholds": {
-                                "max_top_total_us": max_top_total_us,
-                                "max_top_layout_us": max_top_layout_us,
-                                "max_top_solve_us": max_top_solve_us,
+                                "max_top_total_us": thr_total,
+                                "max_top_layout_us": thr_layout,
+                                "max_top_solve_us": thr_solve,
+                            },
+                            "threshold_sources": {
+                                "max_top_total_us": src_total,
+                                "max_top_layout_us": src_layout,
+                                "max_top_solve_us": src_solve,
                             },
                         });
                         perf_threshold_rows.push(row);
                         perf_threshold_failures.extend(scan_perf_threshold_failures(
-                            &src.display().to_string(),
+                            script_key.as_str(),
                             sort,
-                            max_top_total_us,
-                            max_top_layout_us,
-                            max_top_solve_us,
+                            cli_thresholds,
+                            baseline_thresholds,
                             max_total,
                             max_layout,
                             max_solve,
@@ -2553,6 +2667,54 @@ See: `docs/tracy.md`.\n";
                 check_out_dir_for_pixels_changed(&resolved_out_dir, test_id, warmup_frames)?;
             }
 
+            if let Some(path) = perf_baseline_out.as_ref() {
+                let out_path = path;
+                let rows = perf_baseline_rows
+                    .iter()
+                    .filter_map(|row| {
+                        let script = row.get("script")?.as_str()?.to_string();
+                        let max = row.get("max")?;
+                        let max_total = max.get("top_total_time_us")?.as_u64()?;
+                        let max_layout = max.get("top_layout_time_us")?.as_u64()?;
+                        let max_solve = max.get("top_layout_engine_solve_time_us")?.as_u64()?;
+                        let thr_total =
+                            apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
+                        let thr_layout =
+                            apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
+                        let thr_solve =
+                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
+                        Some(serde_json::json!({
+                            "script": script,
+                            "thresholds": {
+                                "max_top_total_us": thr_total,
+                                "max_top_layout_us": thr_layout,
+                                "max_top_solve_us": thr_solve,
+                            },
+                            "measured_max": {
+                                "top_total_time_us": max_total,
+                                "top_layout_time_us": max_layout,
+                                "top_layout_engine_solve_time_us": max_solve,
+                            },
+                        }))
+                    })
+                    .collect::<Vec<_>>();
+                let payload = serde_json::json!({
+                    "schema_version": 1,
+                    "generated_unix_ms": now_unix_ms(),
+                    "kind": "perf_baseline",
+                    "out_path": out_path.display().to_string(),
+                    "warmup_frames": warmup_frames,
+                    "sort": sort.as_str(),
+                    "repeat": repeat,
+                    "headroom_pct": perf_baseline_headroom_pct,
+                    "rows": rows,
+                });
+                write_json_value(out_path, &payload)?;
+                if !stats_json {
+                    println!("wrote perf baseline: {}", out_path.display());
+                }
+            }
+
             if wants_perf_thresholds {
                 let out_path = resolved_out_dir.join("check.perf_thresholds.json");
                 let payload = serde_json::json!({
@@ -2562,10 +2724,14 @@ See: `docs/tracy.md`.\n";
                     "out_dir": resolved_out_dir.display().to_string(),
                     "warmup_frames": warmup_frames,
                     "thresholds": {
-                        "max_top_total_us": max_top_total_us,
-                        "max_top_layout_us": max_top_layout_us,
-                        "max_top_solve_us": max_top_solve_us,
+                        "max_top_total_us": cli_thresholds.max_top_total_us,
+                        "max_top_layout_us": cli_thresholds.max_top_layout_us,
+                        "max_top_solve_us": cli_thresholds.max_top_solve_us,
                     },
+                    "baseline": perf_baseline.as_ref().map(|b| serde_json::json!({
+                        "path": b.path.display().to_string(),
+                        "scripts": b.thresholds_by_script.len(),
+                    })),
                     "rows": perf_threshold_rows,
                     "failures": perf_threshold_failures,
                 });
@@ -5449,45 +5615,180 @@ fn write_json_value(path: &Path, v: &serde_json::Value) -> Result<(), String> {
     std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
-fn scan_perf_threshold_failures(
-    script: &str,
-    sort: BundleStatsSort,
+#[derive(Debug, Clone, Copy, Default)]
+struct PerfThresholds {
     max_top_total_us: Option<u64>,
     max_top_layout_us: Option<u64>,
     max_top_solve_us: Option<u64>,
+}
+
+impl PerfThresholds {
+    fn any(self) -> bool {
+        self.max_top_total_us.is_some()
+            || self.max_top_layout_us.is_some()
+            || self.max_top_solve_us.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PerfBaselineFile {
+    path: PathBuf,
+    thresholds_by_script: std::collections::HashMap<String, PerfThresholds>,
+}
+
+fn normalize_repo_relative_path(workspace_root: &Path, p: &Path) -> String {
+    let rel = p.strip_prefix(workspace_root).unwrap_or(p);
+    let mut out = String::new();
+    for (idx, part) in rel.components().enumerate() {
+        let s = part.as_os_str().to_string_lossy();
+        if idx > 0 {
+            out.push('/');
+        }
+        out.push_str(&s);
+    }
+    out
+}
+
+fn read_perf_baseline_file(workspace_root: &Path, path: &Path) -> Result<PerfBaselineFile, String> {
+    use std::collections::HashMap;
+
+    let resolved = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        workspace_root.join(path)
+    };
+
+    let bytes = std::fs::read(&resolved).map_err(|e| {
+        format!(
+            "failed to read perf baseline file {}: {e}",
+            resolved.display()
+        )
+    })?;
+    let root: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| {
+        format!(
+            "failed to parse perf baseline JSON {}: {e}",
+            resolved.display()
+        )
+    })?;
+
+    let schema_version = root
+        .get("schema_version")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+    if schema_version != 1 {
+        return Err(format!(
+            "unsupported perf baseline schema_version={schema_version} (expected 1): {}",
+            resolved.display()
+        ));
+    }
+    let kind = root.get("kind").and_then(|v| v.as_str()).unwrap_or("");
+    if kind != "perf_baseline" {
+        return Err(format!(
+            "invalid perf baseline kind={kind:?} (expected \"perf_baseline\"): {}",
+            resolved.display()
+        ));
+    }
+
+    let rows = root.get("rows").and_then(|v| v.as_array()).ok_or_else(|| {
+        format!(
+            "invalid perf baseline: missing rows array: {}",
+            resolved.display()
+        )
+    })?;
+
+    let mut thresholds_by_script: HashMap<String, PerfThresholds> = HashMap::new();
+    for row in rows {
+        let Some(script) = row.get("script").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        let t = row.get("thresholds").and_then(|v| v.as_object());
+        let thresholds = PerfThresholds {
+            max_top_total_us: t
+                .and_then(|m| m.get("max_top_total_us"))
+                .and_then(|v| v.as_u64()),
+            max_top_layout_us: t
+                .and_then(|m| m.get("max_top_layout_us"))
+                .and_then(|v| v.as_u64()),
+            max_top_solve_us: t
+                .and_then(|m| m.get("max_top_solve_us"))
+                .and_then(|v| v.as_u64()),
+        };
+
+        thresholds_by_script.insert(script.to_string(), thresholds);
+    }
+
+    Ok(PerfBaselineFile {
+        path: resolved,
+        thresholds_by_script,
+    })
+}
+
+fn apply_perf_baseline_headroom(value_us: u64, headroom_pct: u32) -> u64 {
+    let pct = (headroom_pct as u64).min(10_000);
+    value_us.saturating_mul(100 + pct).saturating_add(99) / 100
+}
+
+fn resolve_threshold(
+    cli: Option<u64>,
+    baseline: Option<u64>,
+) -> (Option<u64>, Option<&'static str>) {
+    if let Some(v) = cli {
+        return (Some(v), Some("cli"));
+    }
+    if let Some(v) = baseline {
+        return (Some(v), Some("baseline"));
+    }
+    (None, None)
+}
+
+fn scan_perf_threshold_failures(
+    script: &str,
+    sort: BundleStatsSort,
+    cli: PerfThresholds,
+    baseline: PerfThresholds,
     max_total_time_us: u64,
     max_layout_time_us: u64,
     max_layout_engine_solve_time_us: u64,
 ) -> Vec<serde_json::Value> {
     let mut out: Vec<serde_json::Value> = Vec::new();
-    if let Some(threshold_us) = max_top_total_us
+    let (threshold_total, source_total) =
+        resolve_threshold(cli.max_top_total_us, baseline.max_top_total_us);
+    let (threshold_layout, source_layout) =
+        resolve_threshold(cli.max_top_layout_us, baseline.max_top_layout_us);
+    let (threshold_solve, source_solve) =
+        resolve_threshold(cli.max_top_solve_us, baseline.max_top_solve_us);
+
+    if let Some(threshold_us) = threshold_total
         && max_total_time_us > threshold_us
     {
         out.push(serde_json::json!({
             "metric": "top_total_time_us",
             "threshold_us": threshold_us,
+            "threshold_source": source_total,
             "actual_us": max_total_time_us,
             "script": script,
             "sort": sort.as_str(),
         }));
     }
-    if let Some(threshold_us) = max_top_layout_us
+    if let Some(threshold_us) = threshold_layout
         && max_layout_time_us > threshold_us
     {
         out.push(serde_json::json!({
             "metric": "top_layout_time_us",
             "threshold_us": threshold_us,
+            "threshold_source": source_layout,
             "actual_us": max_layout_time_us,
             "script": script,
             "sort": sort.as_str(),
         }));
     }
-    if let Some(threshold_us) = max_top_solve_us
+    if let Some(threshold_us) = threshold_solve
         && max_layout_engine_solve_time_us > threshold_us
     {
         out.push(serde_json::json!({
             "metric": "top_layout_engine_solve_time_us",
             "threshold_us": threshold_us,
+            "threshold_source": source_solve,
             "actual_us": max_layout_engine_solve_time_us,
             "script": script,
             "sort": sort.as_str(),
@@ -11608,9 +11909,12 @@ mod tests {
         let failures = scan_perf_threshold_failures(
             "script.json",
             BundleStatsSort::Time,
-            Some(100),
-            Some(80),
-            Some(50),
+            PerfThresholds {
+                max_top_total_us: Some(100),
+                max_top_layout_us: Some(80),
+                max_top_solve_us: Some(50),
+            },
+            PerfThresholds::default(),
             99,
             79,
             49,
@@ -11623,9 +11927,12 @@ mod tests {
         let failures = scan_perf_threshold_failures(
             "script.json",
             BundleStatsSort::Time,
-            Some(100),
-            Some(80),
-            Some(50),
+            PerfThresholds {
+                max_top_total_us: Some(100),
+                max_top_layout_us: Some(80),
+                max_top_solve_us: Some(50),
+            },
+            PerfThresholds::default(),
             101,
             81,
             51,
@@ -11642,5 +11949,44 @@ mod tests {
         assert!(metrics.contains(&"top_total_time_us".to_string()));
         assert!(metrics.contains(&"top_layout_time_us".to_string()));
         assert!(metrics.contains(&"top_layout_engine_solve_time_us".to_string()));
+    }
+
+    #[test]
+    fn perf_baseline_headroom_rounds_up() {
+        assert_eq!(apply_perf_baseline_headroom(100, 20), 120);
+        assert_eq!(apply_perf_baseline_headroom(101, 20), 122);
+        assert_eq!(apply_perf_baseline_headroom(0, 20), 0);
+    }
+
+    #[test]
+    fn perf_baseline_parse_reads_script_thresholds() {
+        let out_dir = tmp_out_dir("perf_baseline_parse");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let path = out_dir.join("perf.baseline.json");
+
+        let v = json!({
+            "schema_version": 1,
+            "kind": "perf_baseline",
+            "rows": [{
+                "script": "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                "thresholds": {
+                    "max_top_total_us": 25000,
+                    "max_top_layout_us": 15000,
+                    "max_top_solve_us": 8000
+                }
+            }]
+        });
+        std::fs::write(&path, serde_json::to_vec_pretty(&v).unwrap())
+            .expect("baseline write should succeed");
+
+        let baseline = read_perf_baseline_file(Path::new("."), &path).unwrap();
+        let t = baseline
+            .thresholds_by_script
+            .get("tools/diag-scripts/ui-gallery-overlay-torture.json")
+            .copied()
+            .unwrap();
+        assert_eq!(t.max_top_total_us, Some(25_000));
+        assert_eq!(t.max_top_layout_us, Some(15_000));
+        assert_eq!(t.max_top_solve_us, Some(8_000));
     }
 }
