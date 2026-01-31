@@ -669,9 +669,35 @@ topics (if/when we implement them):
       - Note: retained-vlist *window-boundary* gates are applied only to scripts named `*window-boundary*` when running multi-script suites
         (toggle/sort scripts still run, but are gated by stale-paint / wheel-scroll / view-cache reuse, etc.).
     - [~] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
-      - Baseline recorded (warmup=5; cache-root reused on worst tick in both harnesses):
-        - window-boundary: max.us(total/layout/prepaint/paint)=2897/2216/30/717 (`tick_id=37`)
-        - toggle+scroll: max.us(total/layout/prepaint/paint)=2719/2035/26/768 (`tick_id=51`)
+      - Note: the window-boundary scripts use `wait_until` to assert a row is mounted; the stable test id is
+        `components-gallery-file-tree-node-<TreeItemId>` (e.g. `...-node-1`), not `...-node-0`.
+      - Baseline recorded (warmup=5; prefetch not implemented / not enabled; attach/detach deltas are larger per shift):
+        - window-boundary-scroll: max.us(total/layout/prepaint/paint)=2812/2119/15/678
+          - Evidence: `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862343305-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - toggle+scroll: max.us(total/layout/prepaint/paint)=3339/2685/15/639
+          - Evidence: `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862370728-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - window-boundary-bounce: max.us(total/layout/prepaint/paint)=2823/2142/19/662
+          - Evidence: `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862397267-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - After staged prefetch (warmup=5; explicit gate: `--check-retained-vlist-prefetch-reconciles-min 1`):
+        - window-boundary-scroll:
+          - Prefetch reconciles observed: 34 (warmup excluded); max attach/detach delta bounded to 14 (down from 20 baseline).
+          - max.us(total/layout/prepaint/paint)=5285/3838/58/1389
+          - Evidence: `target/fret-diag-perf-components-gallery-file-tree-suite-prefetch3/1769875293390-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - toggle+scroll:
+          - Prefetch reconciles observed: 28 (warmup excluded).
+          - max.us(total/layout/prepaint/paint)=4247/3146/34/1067
+          - Evidence: `target/fret-diag-perf-components-gallery-file-tree-suite-prefetch3/1769875325696-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - window-boundary-bounce:
+          - Prefetch reconciles observed: 53 (warmup excluded); max attach/detach delta bounded to 14 (down from 20 baseline).
+          - max.us(total/layout/prepaint/paint)=5158/3953/38/1167
+          - Evidence: `target/fret-diag-perf-components-gallery-file-tree-suite-prefetch3/1769875355331-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - Current assessment:
+        - Correctness + explainability improved (prefetch is visible in bundles; deltas are bounded), but “worst tick” time is not yet improved
+          in this surface (max.us increased in this run). Treat this as “mechanism landed, tuning required”, not “virt-001 solved”.
+        - Next steps:
+          - Tighten the prefetch threshold/budget so prefetch does less steady-state work (run only near escape).
+          - Add lightweight attribution for reconcile cost (row layout vs bookkeeping) so we can prove where the overhead moved.
+          - Re-run a harness with known large spikes (e.g. ui-gallery vlist boundary) to confirm staged prefetch reduces peak tail latency.
   - Definition of done (v2; mark `[x]` when all are true):
     - [ ] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
     - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
