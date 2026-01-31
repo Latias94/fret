@@ -65,6 +65,12 @@ pub struct FileTreeViewProps {
     pub layout: LayoutStyle,
     pub row_height: Px,
     pub overscan: u32,
+    /// Optional retained-subtree budget for `VirtualList` window shifts.
+    ///
+    /// When set, this overrides the default heuristic (`overscan * 2`). Larger values reduce
+    /// remount/layout churn at window boundaries, at the cost of retaining more offscreen
+    /// subtrees.
+    pub keep_alive: Option<usize>,
     pub debug_root_test_id: Option<Arc<str>>,
     pub debug_row_test_id_prefix: Option<Arc<str>>,
 }
@@ -83,6 +89,7 @@ impl Default for FileTreeViewProps {
             },
             row_height: Px(26.0),
             overscan: 12,
+            keep_alive: None,
             debug_root_test_id: None,
             debug_row_test_id_prefix: None,
         }
@@ -181,7 +188,9 @@ where
     // VirtualList windowing should react to entry-list changes (expand/collapse + tree updates).
     // We conservatively fold both model revisions into the virtualizer revision.
     options.items_revision = items_revision ^ state_revision.rotate_left(1);
-    options.keep_alive = (props.overscan as usize).saturating_mul(2);
+    options.keep_alive = props
+        .keep_alive
+        .unwrap_or_else(|| (props.overscan as usize).saturating_mul(2));
 
     let expanded_for_row = expanded.clone();
     let selected_for_row = selected;
