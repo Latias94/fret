@@ -19,7 +19,7 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `476/476` (`100%`, tracked-only, normalized `.open`)
+- Keys referenced by tests: `477/477` (`100%`, tracked-only, normalized `.open`)
   - Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
   viewports, DPIs, fonts, and interaction state machines.
 

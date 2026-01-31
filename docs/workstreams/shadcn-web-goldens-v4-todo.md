@@ -41,6 +41,7 @@ Tracking format:
 - [~] SWG-typo-010 Add at least two width variants for `typography-*` pages and gate wrap/margins/list markers.
   - Suggested widths: ~375 (mobile) + ~768 (tablet) or a tight fixed content width.
 - 2026-01-31: added `typography-demo.vp375x900` + a wrap/max-width contract gate in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_typography.rs`.
+- 2026-01-31: added `typography-demo.vp768x900` + a wrap/max-width contract gate in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_typography.rs`.
 - [ ] SWG-typo-020 Add a minimal font-metrics drift gate once wrap behavior is stable (defer DPI matrix to P3).
 
 ---
