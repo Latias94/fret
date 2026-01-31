@@ -173,6 +173,11 @@ Notes:
 - When view caching is active, bundles include cache-root stats (replay ops, reuse reasons) to help
   identify "cache misses" vs "we are repainting anyway".
 - For a CPU timeline view of these same frames, see: `docs/tracy.md`.
+- For overall process resource footprint (especially "idle CPU" and memory regressions), use `fretboard diag repro`
+  to run a script and capture a `resource.footprint.json` summary (CPU + working set / pagefile on Windows).
+  This is designed for CI/automation gates:
+  - `cargo run -p fretboard -- diag repro <script.json> --max-cpu-avg-percent-total-cores 2.0 --max-peak-working-set-bytes 800000000 --launch -- <cmd...>`
+  - `avg_cpu_percent_total_cores` is normalized to *all* logical cores (e.g. ~3% on a 32-core machine is ~1 full core).
 
 ## Quick Start (picking / "inspect target")
 
