@@ -41,3 +41,4 @@ Constrained viewport coverage (current):
 
 - `chart-tooltip-default.vp375x320` / `chart-tooltip-advanced.vp375x320` are gated (panel size + row geometry).
 - `chart-*-legend.vp375x320` are gated to validate wrapping height outcomes under narrow widths.
+- `chart-*-interactive.hover-mid-vp1440x240` are gated to validate tooltip/cursor/active-marker geometry under tight height.
