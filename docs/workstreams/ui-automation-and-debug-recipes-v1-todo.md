@@ -31,7 +31,7 @@ Conventions:
   - runs post-checks,
   - emits `repro.summary.json`,
   - packs `repro.zip` with `--include-all` defaults.
-- [ ] Add `--with tracy` and `--with renderdoc` flags (best-effort at first).
+- [x] Add `--with tracy` and `--with renderdoc` flags (best-effort at first).
 - [x] Add an example invocation to `docs/debugging-playbook.md`.
 
 ### M2: High-level action library (Script v2 or compiler layer)

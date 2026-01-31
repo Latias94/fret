@@ -52,8 +52,9 @@ This section is a quick “what’s real today vs what we want in v1” checklis
   - `fretboard diag repro <script|suite>` exists as a convenience wrapper.
   - It writes `FRET_DIAG_DIR/repro.summary.json` and packs `FRET_DIAG_DIR/repro.zip`.
   - For suites, it packs **multiple** bundles under stable zip prefixes (and includes script sources under `_root/scripts/`).
-  - It still does not orchestrate Tracy/RenderDoc capture/export yet, and it does not yet emit a standardized, cross-run
-    machine summary format intended for CI gating.
+  - It can best-effort request RenderDoc autocapture (`--with renderdoc`) and record Tracy enablement intent (`--with tracy`),
+    but it does not yet perform post-capture exports (e.g. `fret-renderdoc dump`) or automated Tracy capture-to-file.
+  - The machine summary is still evolving (it is not yet a stabilized CI gate format).
 - **Screenshot capture remains split into two modes.**
   - `FRET_DIAG_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
   - `FRET_DIAG_SCREENSHOTS=1` enables the on-demand PNG protocol used by script steps like `capture_screenshot`.
@@ -61,10 +62,14 @@ This section is a quick “what’s real today vs what we want in v1” checklis
 - **High-level intent actions are still missing.**
   - Scripts mostly use low-level v1 steps (`click`, `drag_pointer`, `wheel`, `wait_until`, ...).
   - `set_slider_value`, `menu_select`, and `scroll_into_view` are not first-class yet.
-- **Repaint checks are still “best-effort and manual by target”.**
-  - We have stale paint / stale scene checks, but we still lack a default, strongly actionable “semantics changed but paint didn’t” gate that consistently produces evidence without extra authoring.
-- **`--with tracy` / `--with renderdoc` are not integrated into `diag repro` yet.**
-  - Tracy and RenderDoc workflows exist, but `diag repro` does not yet orchestrate capture/exports as a unified artifact pack.
+- **Repaint checks remain best-effort, but are now automation-friendly.**
+  - In addition to stale paint / stale scene checks, `--check-semantics-changed-repainted` can flag “semantics changed but
+    paint did not” when `semantics_fingerprint` changes without a `scene_fingerprint` change, and it can emit a structured
+    evidence file via `--dump-semantics-changed-repainted-json`.
+- **Tracy / RenderDoc are only partially integrated.**
+  - `--with renderdoc` wires env vars for autocapture and includes any recorded `.rdc` files in `repro.zip`.
+  - `--with tracy` enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy` for `cargo run` launches, but
+    capture export still requires the Tracy UI (no automated `tracy-capture` integration yet).
 
 ## Goals (v1)
 

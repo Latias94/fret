@@ -134,6 +134,7 @@ This ADR is partially implemented in a way that preserves the intended crate bou
 - **Repro orchestration + packaging (`fretboard`)**
   - `fretboard diag repro` runs a script or a suite, applies post-run checks, writes a machine summary, and packs a zip.
   - Suite repros are packed as multi-bundle zips with stable prefixes and script sources included under `_root/scripts/`.
+  - Best-effort capture wiring is available via `--with renderdoc` and `--with tracy` (see `repro.summary.json` `captures`).
   - Evidence: `apps/fretboard/src/diag.rs` (`diag repro`, `pack_repro_zip_multi`).
 - **Missing repaint checks (`fretboard`)**
   - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
@@ -147,6 +148,7 @@ This ADR is partially implemented in a way that preserves the intended crate bou
 
 Known gaps:
 
-- `diag repro` does not yet orchestrate Tracy / RenderDoc capture/export as part of a single artifact pack.
+- `diag repro` can request RenderDoc autocapture and record Tracy enablement intent, but it does not yet run post-capture
+  exports (e.g. `fret-renderdoc dump`) nor auto-record Tracy captures to a `.tracy` file.
 - High-level intent actions (Script v2 or a compiler layer) are not yet implemented.
 - Range control semantics value (to enable robust `set_slider_value`) is still an open contract item.
