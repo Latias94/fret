@@ -1,4 +1,5 @@
 use super::*;
+use crate::cache_key::CacheKeyBuilder;
 
 #[derive(Clone)]
 struct VirtualListPrepaintInputs {
@@ -271,6 +272,26 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if self.debug_enabled {
+            let policy_key = {
+                let mut b = CacheKeyBuilder::new();
+                b.write_u32(inputs.axis as u32);
+                b.write_u32(inputs.measure_mode as u32);
+                b.write_u64(inputs.overscan as u64);
+                b.write_px(inputs.estimate_row_height);
+                b.write_px(inputs.gap);
+                b.write_px(inputs.scroll_margin);
+                b.finish()
+            };
+            let inputs_key = {
+                let mut b = CacheKeyBuilder::new();
+                b.write_u64(policy_key);
+                b.write_u64(inputs.len as u64);
+                b.write_u64(inputs.items_revision);
+                b.write_px(update.viewport);
+                b.write_px(update.offset);
+                b.write_px(update.content_extent);
+                b.finish()
+            };
             self.debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
                 source: crate::tree::UiDebugVirtualListWindowSource::Prepaint,
                 node: record.node,
@@ -282,10 +303,16 @@ impl<H: UiHost> UiTree<H> {
                 prev_items_revision: update.prev_items_revision,
                 measure_mode: inputs.measure_mode,
                 overscan: inputs.overscan,
+                estimate_row_height: inputs.estimate_row_height,
+                gap: inputs.gap,
+                scroll_margin: inputs.scroll_margin,
                 viewport: update.viewport,
                 prev_viewport: update.prev_viewport,
                 offset: update.offset,
                 prev_offset: update.prev_offset,
+                content_extent: update.content_extent,
+                policy_key,
+                inputs_key,
                 window_range: update.window_range,
                 prev_window_range: update.prev_window_range,
                 render_window_range: update.render_window_range,

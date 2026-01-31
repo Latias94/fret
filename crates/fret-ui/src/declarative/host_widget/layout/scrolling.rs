@@ -2,6 +2,7 @@ use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 
+use crate::cache_key::CacheKeyBuilder;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
@@ -373,6 +374,26 @@ impl ElementHostWidget {
         };
 
         if cx.tree.debug_enabled() {
+            let policy_key = {
+                let mut b = CacheKeyBuilder::new();
+                b.write_u32(axis as u32);
+                b.write_u32(props.measure_mode as u32);
+                b.write_u64(props.overscan as u64);
+                b.write_px(props.estimate_row_height);
+                b.write_px(props.gap);
+                b.write_px(props.scroll_margin);
+                b.finish()
+            };
+            let inputs_key = {
+                let mut b = CacheKeyBuilder::new();
+                b.write_u64(policy_key);
+                b.write_u64(props.len as u64);
+                b.write_u64(props.items_revision);
+                b.write_px(viewport);
+                b.write_px(offset);
+                b.write_px(content_extent);
+                b.finish()
+            };
             let prev_offset_state = match axis {
                 fret_core::Axis::Vertical => prev_offset_y,
                 fret_core::Axis::Horizontal => prev_offset_x,
@@ -394,10 +415,16 @@ impl ElementHostWidget {
                     prev_items_revision,
                     measure_mode: props.measure_mode,
                     overscan: props.overscan,
+                    estimate_row_height: props.estimate_row_height,
+                    gap: props.gap,
+                    scroll_margin: props.scroll_margin,
                     viewport,
                     prev_viewport: prev_viewport_state,
                     offset,
                     prev_offset: prev_offset_state,
+                    content_extent,
+                    policy_key,
+                    inputs_key,
                     window_range,
                     prev_window_range,
                     render_window_range,
