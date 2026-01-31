@@ -632,6 +632,11 @@ topics (if/when we implement them):
       - Next: lift/standardize the derived window into explicit prepaint outputs where needed, and keep the “why did the window change?” story fully explainable from one bundle.
       - Diagnostics: `debug.virtual_list_windows[*]` now include `policy_key` / `inputs_key` and the policy inputs (`estimate_row_height`, `gap`, `scroll_margin`, `content_extent`) so “policy changed vs. scroll changed” is distinguishable.
         - Evidence: `target/fret-diag-vlist-window-keys/1769858602068-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - Perf story (baseline): window-boundary frames are still layout-dominated mainly because retained-host reconcile can attach/detach multiple row subtrees in one tick.
+        - Evidence (same bundle; warmup=5):
+          - Worst layout frame: `frame_id=24` (`tick_id=25`) `layout_time_us=2560` with `retained_virtual_list_attached_items=9`, `detached_items=3` (delta=12) and `barrier_relayouts_performed=1`.
+          - Worst attach/detach frame: `frame_id=28` (`tick_id=29`) `attached_items=10`, `detached_items=10` (delta=20) with `layout_time_us=1557`.
+        - Takeaway: to reduce worst-tick layout time further, we either need to (a) reduce per-frame attach/detach delta (more frequent smaller shifts / staged prefetch), or (b) reduce the cost of attaching new rows (row recycling, cheaper row layout, or more effective keep-alive reuse).
     - [x] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
       - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (marks retained hosts for reconcile),
         `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
