@@ -91,6 +91,25 @@ cargo run -p fretboard -- diag perf ui-gallery `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
+Baseline workflow (write once, then gate from the baseline file):
+
+```powershell
+# Write a baseline (adds headroom to measured maxima).
+cargo run -p fretboard -- diag perf ui-gallery `
+  --repeat 5 `
+  --warmup-frames 5 `
+  --perf-baseline-out .fret/perf.baseline.json `
+  --perf-baseline-headroom-pct 20 `
+  --launch -- cargo run -p fret-ui-gallery --release
+
+# Gate against the baseline.
+cargo run -p fretboard -- diag perf ui-gallery `
+  --repeat 5 `
+  --warmup-frames 5 `
+  --perf-baseline .fret/perf.baseline.json `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 ## 1) GPU / renderer: debug specific passes
 
 ### 1.1 Capture a frame (RenderDoc)

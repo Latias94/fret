@@ -199,6 +199,9 @@ Tooling gates (CI/automation):
   - `--max-top-layout-us <n>`
   - `--max-top-solve-us <n>` (layout-engine solve time)
 - When any threshold is set, it writes `check.perf_thresholds.json` to `FRET_DIAG_DIR` and exits non-zero on failure.
+- For maintainable CI configs, tooling can also read/write a small baseline file:
+  - `--perf-baseline-out <path> --perf-baseline-headroom-pct <n>` writes a `kind=perf_baseline` JSON file,
+  - `--perf-baseline <path>` loads thresholds per script and gates accordingly.
 
 Future (optional, gated):
 

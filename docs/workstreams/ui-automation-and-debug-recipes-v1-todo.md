@@ -62,7 +62,7 @@ Conventions:
   - [x] `--max-top-total-us <n>`
   - [x] `--max-top-layout-us <n>`
   - [x] `--max-top-solve-us <n>`
-- [ ] Add a stable “perf baseline” file format for selected scripts (JSON).
+- [x] Add a stable “perf baseline” file format for selected scripts (JSON).
 - [ ] Add a nightly job candidate plan (not necessarily wired in CI yet).
 
 ### M5: GPU profiling (optional, gated)
