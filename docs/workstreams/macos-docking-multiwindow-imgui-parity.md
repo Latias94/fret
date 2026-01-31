@@ -210,8 +210,11 @@ Goal:
 
 Status (2026-01-29):
 
-- Implemented as a best-effort parent/child relationship for `CreateWindowKind::DockFloating` on macOS by
+- The runner supports an optional parent/child relationship for `CreateWindowKind::DockFloating` on macOS by
   passing the source window handle to winit `WindowAttributes::with_parent_window(...)`.
+- This is **disabled by default** to match Dear ImGui's multi-viewport behavior (independent top-level windows),
+  and to avoid unintended coupled window motion. It can be enabled for experimentation via the env var:
+  `FRET_MACOS_DOCKFLOAT_PARENT=1`.
 
 Non-normative guidance:
 

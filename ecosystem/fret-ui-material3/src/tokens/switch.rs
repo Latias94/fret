@@ -3,7 +3,7 @@
 //! This module centralizes token key mapping and fallback chains so switch visuals remain stable
 //! and drift-resistant during refactors.
 
-use fret_core::Color;
+use fret_core::{Color, Corners, Px};
 use fret_ui::Theme;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,6 +19,25 @@ pub(crate) struct SwitchChrome {
     pub(crate) track_color: Color,
     pub(crate) outline_color: Option<Color>,
     pub(crate) handle_color: Color,
+}
+
+fn shape_or_full(theme: &Theme, key: &str) -> Corners {
+    theme
+        .corners_by_key(key)
+        .or_else(|| theme.corners_by_key("md.sys.shape.corner.full"))
+        .unwrap_or_else(|| Corners::all(Px(9999.0)))
+}
+
+pub(crate) fn track_shape(theme: &Theme) -> Corners {
+    shape_or_full(theme, "md.comp.switch.track.shape")
+}
+
+pub(crate) fn handle_shape(theme: &Theme) -> Corners {
+    shape_or_full(theme, "md.comp.switch.handle.shape")
+}
+
+pub(crate) fn state_layer_shape(theme: &Theme) -> Corners {
+    shape_or_full(theme, "md.comp.switch.state-layer.shape")
 }
 
 pub(crate) fn state_layer_target_opacity(

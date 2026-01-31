@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -31,6 +32,8 @@ struct WebRect {
 struct WebNode {
     tag: String,
     rect: WebRect,
+    #[serde(default)]
+    active: bool,
     #[serde(default)]
     children: Vec<WebNode>,
 }
@@ -95,18 +98,19 @@ fn shadcn_web_goldens_smoke_parse_and_rects_valid() {
             .and_then(|s| s.to_str())
             .unwrap_or("<unknown>");
 
-        let text = std::fs::read_to_string(&path).unwrap_or_else(|err| {
+        let file = std::fs::File::open(&path).unwrap_or_else(|err| {
             panic!(
                 "failed to read shadcn web golden: {}\nerror: {err}",
                 path.display()
             )
         });
-        let golden: WebGolden = serde_json::from_str(&text).unwrap_or_else(|err| {
-            panic!(
-                "failed to parse shadcn web golden: {}\nerror: {err}",
-                path.display()
-            )
-        });
+        let golden: WebGolden =
+            serde_json::from_reader(BufReader::new(file)).unwrap_or_else(|err| {
+                panic!(
+                    "failed to parse shadcn web golden: {}\nerror: {err}",
+                    path.display()
+                )
+            });
 
         assert!(!golden.themes.is_empty(), "missing themes in {name}");
         let theme = golden

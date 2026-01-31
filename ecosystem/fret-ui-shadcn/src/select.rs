@@ -585,6 +585,8 @@ impl SelectStyle {
 pub struct Select {
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
+    on_value_change:
+        Option<Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static>>,
     entries: Vec<SelectEntry>,
     placeholder: Arc<str>,
     disabled: bool,
@@ -613,6 +615,7 @@ impl Select {
         Self {
             model,
             open,
+            on_value_change: None,
             entries: Vec::new(),
             placeholder: Arc::from("Select..."),
             disabled: false,
@@ -662,6 +665,18 @@ impl Select {
             .open_model(cx);
 
         Self::new(model, open)
+    }
+
+    /// Called when the user selects a value (Radix `onValueChange`).
+    ///
+    /// Note: this only fires for user-driven selection events (click/keyboard selection on an
+    /// item). Programmatic model updates do not trigger this callback.
+    pub fn on_value_change(
+        mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static,
+    ) -> Self {
+        self.on_value_change = Some(Arc::new(f));
+        self
     }
 
     pub fn item(mut self, item: SelectItem) -> Self {
@@ -821,6 +836,7 @@ impl Select {
             cx,
             self.model,
             self.open,
+            self.on_value_change,
             &self.entries,
             self.placeholder,
             self.disabled,
@@ -861,6 +877,7 @@ pub fn select<H: UiHost>(
         cx,
         model,
         open,
+        None,
         &entries,
         placeholder,
         disabled,
@@ -889,6 +906,9 @@ fn select_impl<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
+    on_value_change: Option<
+        Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static>,
+    >,
     entries: &[SelectEntry],
     placeholder: Arc<str>,
     disabled: bool,
@@ -1467,9 +1487,18 @@ fn select_impl<H: UiHost>(
                     };
 
                     let side_offset = side_offset_override.unwrap_or_else(|| {
-                        theme
-                            .metric_by_key("component.select.popover_offset")
-                            .unwrap_or(Px(6.0))
+                        if position == SelectPosition::Popper {
+                            // shadcn/ui v4 uses a CSS `translate-*` recipe on the content element
+                            // when `position="popper"` instead of a Popper `sideOffset`.
+                            //
+                            // Keep the Popper wrapper flush to the trigger so placement checks
+                            // match upstream `data-radix-popper-content-wrapper` rects.
+                            Px(0.0)
+                        } else {
+                            theme
+                                .metric_by_key("component.select.popover_offset")
+                                .unwrap_or(Px(6.0))
+                        }
                     });
                     let (arrow_options, arrow_protrusion) =
                         popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
@@ -1481,6 +1510,16 @@ fn select_impl<H: UiHost>(
                     )
                     .with_align_offset(align_offset)
                     .with_arrow(arrow_options, arrow_protrusion);
+                    let popper_placement = if position == SelectPosition::Popper {
+                        // Radix Select uses a default collision padding of 10px for popper-positioned
+                        // content. This keeps the wrapper from touching the window edges when the
+                        // trigger is near the boundary.
+                        popper_placement
+                            .with_shift_cross_axis(true)
+                            .with_collision_padding(Edges::all(Px(10.0)))
+                    } else {
+                        popper_placement
+                    };
 
                     let width_probe_w = {
                         let probe = trigger_state
@@ -1538,8 +1577,26 @@ fn select_impl<H: UiHost>(
                         .metric_by_key("component.select.max_list_height")
                         .map(|h| Px(h.0.min(available_h.0)))
                         .unwrap_or(available_h);
-                    let desired_h =
-                        select_list_desired_height(item_h, item_len, max_h, outer.size.height);
+
+                    // shadcn/ui v4 Select content wrapper includes:
+                    // - `p-1` viewport padding
+                    // - `border` width
+                    //
+                    // Compute the desired height in terms of the scrollable content and then add
+                    // the wrapper chrome so placement/size checks match the upstream popper wrapper.
+                    let content_padding_y = Px(4.0 * 2.0);
+                    let border_y = Px(border_width.0 * 2.0);
+                    let chrome_extra_y = Px(content_padding_y.0 + border_y.0);
+
+                    let max_content_h = Px((max_h.0 - chrome_extra_y.0).max(0.0));
+                    let outer_content_h = Px((outer.size.height.0 - chrome_extra_y.0).max(0.0));
+                    let desired_content_h = select_list_desired_height(
+                        item_h,
+                        item_len,
+                        max_content_h,
+                        outer_content_h,
+                    );
+                    let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let resolved = radix_select::select_resolve_content_placement_from_elements(
@@ -1643,6 +1700,7 @@ fn select_impl<H: UiHost>(
                     let popper_layout_for_children = popper_layout;
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
                     let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
+                    let on_value_change_for_overlay_children = on_value_change.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
@@ -1651,6 +1709,7 @@ fn select_impl<H: UiHost>(
                         let mouse_open_guard_for_barrier_children = mouse_open_guard_for_overlay.clone();
 
                         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+                        let on_value_change = on_value_change_for_overlay_children.clone();
 
                         #[derive(Clone)]
                         enum SelectRow {
@@ -2038,6 +2097,8 @@ fn select_impl<H: UiHost>(
                                                                             let model = model.clone();
                                                                             let open = open_for_content.clone();
                                                                             let text_style = text_style_for_overlay.clone();
+                                                                            let on_value_change_for_item =
+                                                                                on_value_change.clone();
 
                                                                             let pos = item_ordinal;
                                                                             item_ordinal = item_ordinal.saturating_add(1);
@@ -2093,6 +2154,24 @@ fn select_impl<H: UiHost>(
                                                                                          item_value.clone(),
                                                                                      );
                                                                                     cx.pressable_set_bool(&open, false);
+
+                                                                                    if !item_disabled
+                                                                                        && let Some(
+                                                                                            on_value_change,
+                                                                                        ) = on_value_change_for_item.clone()
+                                                                                    {
+                                                                                        let item_value_for_activate =
+                                                                                            item_value.clone();
+                                                                                        cx.pressable_add_on_activate(
+                                                                                            Arc::new(move |host, action_cx, _reason| {
+                                                                                                on_value_change(
+                                                                                                    host,
+                                                                                                    action_cx,
+                                                                                                    item_value_for_activate.clone(),
+                                                                                                );
+                                                                                            }),
+                                                                                        );
+                                                                                    }
 
                                                                                     if !item_disabled {
                                                                                         cx.pressable_add_on_hover_change(Arc::new(

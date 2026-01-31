@@ -36,6 +36,7 @@ pub mod data_table;
 mod data_table_controls;
 mod data_table_recipes;
 pub mod date_picker;
+pub mod date_picker_with_presets;
 pub mod date_range_picker;
 pub mod dialog;
 pub mod drawer;
@@ -86,6 +87,7 @@ pub mod tooltip;
 #[cfg(feature = "app-integration")]
 pub mod app_integration;
 
+mod surface_slot;
 mod ui_builder_ext;
 mod ui_ext;
 
@@ -152,6 +154,7 @@ pub use data_table_controls::{
 };
 pub use data_table_recipes::{DataTablePagination, DataTableToolbar};
 pub use date_picker::DatePicker;
+pub use date_picker_with_presets::DatePickerWithPresets;
 pub use date_range_picker::DateRangePicker;
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,

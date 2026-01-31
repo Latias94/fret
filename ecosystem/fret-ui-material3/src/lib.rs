@@ -216,6 +216,7 @@ mod tests {
             include_str!("navigation_drawer.rs"),
             include_str!("navigation_rail.rs"),
             include_str!("radio.rs"),
+            include_str!("select.rs"),
             include_str!("snackbar.rs"),
             include_str!("switch.rs"),
             include_str!("tabs.rs"),
@@ -237,6 +238,7 @@ mod tests {
             include_str!("tokens/text_field.rs"),
             include_str!("tokens/list.rs"),
             include_str!("tokens/dropdown_menu.rs"),
+            include_str!("tokens/select.rs"),
             include_str!("tokens/tooltip.rs"),
         ];
 

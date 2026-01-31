@@ -1397,6 +1397,7 @@ pub fn open_on_arrow_right(
     host: &mut dyn UiActionHost,
     acx: ActionCx,
     models: &MenuSubmenuModels,
+    trigger_id: GlobalElementId,
     value: Arc<str>,
     focus_delay: Duration,
 ) {
@@ -1419,7 +1420,7 @@ pub fn open_on_arrow_right(
         .update(&models.open_value, |v| *v = Some(value));
     let _ = host
         .models_mut()
-        .update(&models.trigger, |v| *v = Some(acx.target));
+        .update(&models.trigger, |v| *v = Some(trigger_id));
 
     let token = host.next_timer_token();
     host.push_effect(Effect::SetTimer {

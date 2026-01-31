@@ -20,6 +20,11 @@ pub struct UiDiagnosticsConfig {
     pub max_events: usize,
     pub max_snapshots: usize,
     pub capture_semantics: bool,
+    pub screenshots_enabled: bool,
+    pub screenshot_request_path: PathBuf,
+    pub screenshot_trigger_path: PathBuf,
+    pub screenshot_result_path: PathBuf,
+    pub screenshot_result_trigger_path: PathBuf,
     pub script_path: PathBuf,
     pub script_trigger_path: PathBuf,
     pub script_result_path: PathBuf,
@@ -67,6 +72,24 @@ impl Default for UiDiagnosticsConfig {
             .and_then(|v| v.parse().ok())
             .unwrap_or(300);
         let capture_semantics = env_flag_default_true("FRET_DIAG_SEMANTICS");
+        let screenshots_enabled = env_flag_default_false("FRET_DIAG_SCREENSHOTS");
+        let screenshot_request_path = std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("screenshots.request.json"));
+        let screenshot_trigger_path = std::env::var_os("FRET_DIAG_SCREENSHOT_TRIGGER_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("screenshots.touch"));
+        let screenshot_result_path = std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_PATH")
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| out_dir.join("screenshots.result.json"));
+        let screenshot_result_trigger_path =
+            std::env::var_os("FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH")
+                .filter(|v| !v.is_empty())
+                .map(PathBuf::from)
+                .unwrap_or_else(|| out_dir.join("screenshots.result.touch"));
         let script_path = std::env::var_os("FRET_DIAG_SCRIPT_PATH")
             .filter(|v| !v.is_empty())
             .map(PathBuf::from)
@@ -126,6 +149,11 @@ impl Default for UiDiagnosticsConfig {
             max_events,
             max_snapshots,
             capture_semantics,
+            screenshots_enabled,
+            screenshot_request_path,
+            screenshot_trigger_path,
+            screenshot_result_path,
+            screenshot_result_trigger_path,
             script_path,
             script_trigger_path,
             script_result_path,
@@ -555,6 +583,7 @@ impl UiDiagnosticsService {
         app: &App,
         window: AppWindowId,
         window_bounds: Rect,
+        scale_factor: f32,
         semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
         element_runtime: Option<&ElementRuntime>,
     ) -> UiScriptFrameOutput {
@@ -578,6 +607,7 @@ impl UiDiagnosticsService {
                     next_step: 0,
                     wait_frames_remaining: 0,
                     wait_until: None,
+                    screenshot_wait: None,
                     last_reported_step: Some(0),
                 },
             );
@@ -645,12 +675,14 @@ impl UiDiagnosticsService {
             UiActionStepV1::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
             UiActionStepV1::ResetDiagnostics => {
                 self.reset_diagnostics_ring_for_window(window);
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
             }
@@ -658,8 +690,161 @@ impl UiDiagnosticsService {
                 force_dump_label =
                     Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
+            }
+            UiActionStepV1::CaptureScreenshot {
+                label,
+                timeout_frames,
+            } => {
+                let window_ffi = window.data().as_ffi();
+                active.wait_until = None;
+                if !self.cfg.screenshots_enabled {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-capture_screenshot-disabled"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("screenshots_disabled".to_string());
+                    active.screenshot_wait = None;
+                    output.request_redraw = true;
+                } else {
+                    let mut state = match active.screenshot_wait.take() {
+                        Some(mut state) if state.step_index == step_index => {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            Some(state)
+                        }
+                        _ => None,
+                    };
+
+                    if state.is_none() {
+                        if self.last_dump_dir.is_none() {
+                            let dump_label =
+                                label.as_deref().map(sanitize_label).unwrap_or_else(|| {
+                                    format!("script-step-{step_index:04}-capture_screenshot")
+                                });
+                            self.dump_bundle(Some(&dump_label));
+                        }
+
+                        let bundle_dir_name = self
+                            .last_dump_dir
+                            .as_ref()
+                            .and_then(|p| p.file_name())
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("")
+                            .to_string();
+
+                        if bundle_dir_name.is_empty() {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-capture_screenshot-no-last-dump"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("no_last_dump_dir".to_string());
+                            active.screenshot_wait = None;
+                            output.request_redraw = true;
+                        } else {
+                            let request_id = format!(
+                                "script-run-{run_id}-window-{window_ffi}-step-{step_index:04}",
+                                run_id = active.run_id
+                            );
+
+                            let req = serde_json::json!({
+                                "schema_version": 1,
+                                "out_dir": self.cfg.out_dir.to_string_lossy(),
+                                "bundle_dir_name": bundle_dir_name,
+                                "request_id": request_id,
+                                "windows": [{
+                                    "window": window_ffi,
+                                    "tick_id": app.tick_id().0,
+                                    "frame_id": app.frame_id().0,
+                                    "scale_factor": scale_factor as f64,
+                                }]
+                            });
+
+                            let bytes = serde_json::to_vec_pretty(&req).ok();
+                            if let Some(bytes) = bytes {
+                                if let Some(parent) = self.cfg.screenshot_request_path.parent() {
+                                    let _ = std::fs::create_dir_all(parent);
+                                }
+                                let write_ok =
+                                    std::fs::write(&self.cfg.screenshot_request_path, bytes)
+                                        .is_ok()
+                                        && touch_file(&self.cfg.screenshot_trigger_path).is_ok();
+                                if write_ok {
+                                    state = Some(ScreenshotWaitState {
+                                        step_index,
+                                        remaining_frames: timeout_frames,
+                                        request_id,
+                                        window_ffi,
+                                        last_result_trigger_stamp: None,
+                                    });
+                                } else {
+                                    force_dump_label = Some(format!(
+                                        "script-step-{step_index:04}-capture_screenshot-write-failed"
+                                    ));
+                                    stop_script = true;
+                                    failure_reason =
+                                        Some("screenshot_request_write_failed".to_string());
+                                    active.screenshot_wait = None;
+                                    output.request_redraw = true;
+                                }
+                            } else {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-capture_screenshot-serialize-failed"
+                                ));
+                                stop_script = true;
+                                failure_reason =
+                                    Some("screenshot_request_serialize_failed".to_string());
+                                active.screenshot_wait = None;
+                                output.request_redraw = true;
+                            }
+                        }
+                    }
+
+                    if !stop_script {
+                        if let Some(state) = state {
+                            let trigger_stamp =
+                                read_touch_stamp(&self.cfg.screenshot_result_trigger_path);
+                            let completed = trigger_stamp.is_some()
+                                && trigger_stamp != state.last_result_trigger_stamp
+                                && screenshot_request_completed(
+                                    &self.cfg.screenshot_result_path,
+                                    &state.request_id,
+                                    state.window_ffi,
+                                );
+
+                            if completed {
+                                active.screenshot_wait = None;
+                                active.next_step = active.next_step.saturating_add(1);
+                                output.request_redraw = true;
+                            } else if state.remaining_frames == 0 {
+                                force_dump_label = Some(format!(
+                                    "script-step-{step_index:04}-capture_screenshot-timeout"
+                                ));
+                                stop_script = true;
+                                failure_reason = Some("capture_screenshot_timeout".to_string());
+                                active.screenshot_wait = None;
+                                output.request_redraw = true;
+                            } else {
+                                active.screenshot_wait = Some(ScreenshotWaitState {
+                                    step_index: state.step_index,
+                                    remaining_frames: state.remaining_frames.saturating_sub(1),
+                                    request_id: state.request_id,
+                                    window_ffi: state.window_ffi,
+                                    last_result_trigger_stamp: trigger_stamp,
+                                });
+                                output.request_redraw = true;
+                            }
+                        } else {
+                            force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-capture_screenshot-no-state"
+                            ));
+                            stop_script = true;
+                            failure_reason = Some("capture_screenshot_state_missing".to_string());
+                            active.screenshot_wait = None;
+                            output.request_redraw = true;
+                        }
+                }
             }
             UiActionStepV1::PressKey {
                 key,
@@ -671,6 +856,7 @@ impl UiDiagnosticsService {
                         .events
                         .extend(press_key_events(key, modifiers, repeat));
                     active.wait_until = None;
+                    active.screenshot_wait = None;
                     active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
                     if self.cfg.script_auto_dump {
@@ -687,6 +873,7 @@ impl UiDiagnosticsService {
             UiActionStepV1::TypeText { text } => {
                 output.events.push(Event::TextInput(text));
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
@@ -698,6 +885,7 @@ impl UiDiagnosticsService {
                 timeout_frames,
             } => {
                 if let Some(snapshot) = semantics_snapshot {
+                    active.screenshot_wait = None;
                     let state = match active.wait_until.take() {
                         Some(mut state) if state.step_index == step_index => {
                             state.remaining_frames = state.remaining_frames.min(timeout_frames);
@@ -736,10 +924,12 @@ impl UiDiagnosticsService {
                     failure_reason = Some("no_semantics_snapshot".to_string());
                     output.request_redraw = true;
                     active.wait_until = None;
+                    active.screenshot_wait = None;
                 }
             }
             UiActionStepV1::Assert { predicate } => {
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 if let Some(snapshot) = semantics_snapshot {
                     if eval_predicate(snapshot, window_bounds, window, element_runtime, &predicate)
                     {
@@ -809,6 +999,7 @@ impl UiDiagnosticsService {
                 output.events.extend(click_events(pos, button));
 
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
@@ -865,6 +1056,7 @@ impl UiDiagnosticsService {
                 output.events.push(move_pointer_event(pos));
 
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
@@ -932,6 +1124,7 @@ impl UiDiagnosticsService {
                 output.events.extend(drag_events(start, end, button, steps));
 
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
@@ -991,6 +1184,7 @@ impl UiDiagnosticsService {
                 output.events.push(wheel_event(pos, delta_x, delta_y));
 
                 active.wait_until = None;
+                active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
@@ -1461,6 +1655,13 @@ impl UiDiagnosticsService {
         });
 
         let raw_semantics = ui.semantics_snapshot();
+        let semantics_fingerprint = raw_semantics.map(|snapshot| {
+            semantics_fingerprint_v1(
+                snapshot,
+                self.cfg.redact_text,
+                self.cfg.max_debug_string_bytes,
+            )
+        });
 
         if self.inspect_enabled {
             let hovered = last_pointer_position.and_then(|pos| {
@@ -1557,6 +1758,7 @@ impl UiDiagnosticsService {
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
             scene_fingerprint: scene.fingerprint(),
+            semantics_fingerprint,
             debug,
             changed_models,
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
@@ -2061,6 +2263,8 @@ pub struct UiDiagnosticsSnapshotV1 {
     pub scene_ops: u64,
     #[serde(default)]
     pub scene_fingerprint: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantics_fingerprint: Option<u64>,
 
     pub changed_models: Vec<u64>,
     pub changed_globals: Vec<String>,
@@ -2368,10 +2572,19 @@ pub enum UiActionStepV1 {
     CaptureBundle {
         label: Option<String>,
     },
+    CaptureScreenshot {
+        label: Option<String>,
+        #[serde(default = "default_capture_screenshot_timeout_frames")]
+        timeout_frames: u32,
+    },
 }
 
 fn default_drag_steps() -> u32 {
     8
+}
+
+fn default_capture_screenshot_timeout_frames() -> u32 {
+    300
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -2464,6 +2677,35 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         #[serde(default)]
         padding_px: f32,
+        /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
+        ///
+        /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
+        /// strict edge containment checks by `eps_px`.
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the target exists and its semantics bounds are at least the specified size.
+    ///
+    /// This is useful for demos where the content can legitimately be taller than the window
+    /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
+    BoundsMinSize {
+        target: UiSelectorV1,
+        #[serde(default)]
+        min_w_px: f32,
+        #[serde(default)]
+        min_h_px: f32,
+        /// A small tolerance to account for rounding / fractional layout units.
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when both targets exist and their semantics bounds do not overlap.
+    ///
+    /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
+    BoundsNonOverlapping {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
     },
 }
 
@@ -2603,6 +2845,7 @@ struct ActiveScript {
     next_step: usize,
     wait_frames_remaining: u32,
     wait_until: Option<WaitUntilState>,
+    screenshot_wait: Option<ScreenshotWaitState>,
     last_reported_step: Option<usize>,
 }
 
@@ -2610,6 +2853,15 @@ struct ActiveScript {
 struct WaitUntilState {
     step_index: usize,
     remaining_frames: u32,
+}
+
+#[derive(Debug, Clone)]
+struct ScreenshotWaitState {
+    step_index: usize,
+    remaining_frames: u32,
+    request_id: String,
+    window_ffi: u64,
+    last_result_trigger_stamp: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -5366,6 +5618,183 @@ fn env_flag_default_true(name: &str) -> bool {
     !matches!(v.as_str(), "0" | "false" | "no" | "off")
 }
 
+fn semantics_fingerprint_v1(
+    snapshot: &fret_core::SemanticsSnapshot,
+    redact_text: bool,
+    max_string_bytes: usize,
+) -> u64 {
+    let mut hasher = Fnv1a64::new();
+    hasher.write_u64(snapshot.window.data().as_ffi());
+
+    for root in &snapshot.roots {
+        hasher.write_u64(key_to_u64(root.root));
+        hasher.write_bool(root.visible);
+        hasher.write_bool(root.blocks_underlay_input);
+        hasher.write_bool(root.hit_testable);
+        hasher.write_u32(root.z_index);
+    }
+
+    hasher.write_opt_u64(snapshot.barrier_root.map(key_to_u64));
+    hasher.write_opt_u64(snapshot.focus_barrier_root.map(key_to_u64));
+    hasher.write_opt_u64(snapshot.focus.map(key_to_u64));
+    hasher.write_opt_u64(snapshot.captured.map(key_to_u64));
+
+    for node in &snapshot.nodes {
+        hasher.write_u64(key_to_u64(node.id));
+        hasher.write_opt_u64(node.parent.map(key_to_u64));
+        hasher.write_str_bytes(semantics_role_label(node.role).as_bytes());
+
+        hasher.write_f32(node.bounds.origin.x.0);
+        hasher.write_f32(node.bounds.origin.y.0);
+        hasher.write_f32(node.bounds.size.width.0);
+        hasher.write_f32(node.bounds.size.height.0);
+
+        hasher.write_bool(node.flags.focused);
+        hasher.write_bool(node.flags.captured);
+        hasher.write_bool(node.flags.disabled);
+        hasher.write_bool(node.flags.selected);
+        hasher.write_bool(node.flags.expanded);
+        hasher.write_opt_bool(node.flags.checked);
+
+        hasher.write_opt_str(node.test_id.as_deref(), redact_text, max_string_bytes);
+        hasher.write_opt_u64(node.active_descendant.map(key_to_u64));
+        hasher.write_opt_u32(node.pos_in_set);
+        hasher.write_opt_u32(node.set_size);
+        hasher.write_opt_str(node.label.as_deref(), redact_text, max_string_bytes);
+        hasher.write_opt_str(node.value.as_deref(), redact_text, max_string_bytes);
+        hasher.write_opt_pair_u32(node.text_selection);
+        hasher.write_opt_pair_u32(node.text_composition);
+
+        hasher.write_bool(node.actions.focus);
+        hasher.write_bool(node.actions.invoke);
+        hasher.write_bool(node.actions.set_value);
+        hasher.write_bool(node.actions.set_text_selection);
+
+        hasher.write_u32(node.labelled_by.len() as u32);
+        for id in &node.labelled_by {
+            hasher.write_u64(key_to_u64(*id));
+        }
+        hasher.write_u32(node.described_by.len() as u32);
+        for id in &node.described_by {
+            hasher.write_u64(key_to_u64(*id));
+        }
+        hasher.write_u32(node.controls.len() as u32);
+        for id in &node.controls {
+            hasher.write_u64(key_to_u64(*id));
+        }
+    }
+
+    hasher.finish()
+}
+
+struct Fnv1a64 {
+    state: u64,
+}
+
+impl Fnv1a64 {
+    const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x100000001b3;
+
+    fn new() -> Self {
+        Self {
+            state: Self::OFFSET_BASIS,
+        }
+    }
+
+    fn write_u8(&mut self, v: u8) {
+        self.state ^= v as u64;
+        self.state = self.state.wrapping_mul(Self::PRIME);
+    }
+
+    fn write_bytes(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.write_u8(b);
+        }
+    }
+
+    fn write_u32(&mut self, v: u32) {
+        self.write_bytes(&v.to_le_bytes());
+    }
+
+    fn write_u64(&mut self, v: u64) {
+        self.write_bytes(&v.to_le_bytes());
+    }
+
+    fn write_f32(&mut self, v: f32) {
+        self.write_u32(v.to_bits());
+    }
+
+    fn write_bool(&mut self, v: bool) {
+        self.write_u8(if v { 1 } else { 0 });
+    }
+
+    fn write_opt_u64(&mut self, v: Option<u64>) {
+        match v {
+            Some(v) => {
+                self.write_u8(1);
+                self.write_u64(v);
+            }
+            None => self.write_u8(0),
+        }
+    }
+
+    fn write_opt_u32(&mut self, v: Option<u32>) {
+        match v {
+            Some(v) => {
+                self.write_u8(1);
+                self.write_u32(v);
+            }
+            None => self.write_u8(0),
+        }
+    }
+
+    fn write_opt_bool(&mut self, v: Option<bool>) {
+        match v {
+            Some(v) => {
+                self.write_u8(1);
+                self.write_bool(v);
+            }
+            None => self.write_u8(0),
+        }
+    }
+
+    fn write_opt_pair_u32(&mut self, v: Option<(u32, u32)>) {
+        match v {
+            Some((a, b)) => {
+                self.write_u8(1);
+                self.write_u32(a);
+                self.write_u32(b);
+            }
+            None => self.write_u8(0),
+        }
+    }
+
+    fn write_str_bytes(&mut self, bytes: &[u8]) {
+        self.write_u32(bytes.len() as u32);
+        self.write_bytes(bytes);
+    }
+
+    fn write_opt_str(&mut self, s: Option<&str>, redact_text: bool, max_string_bytes: usize) {
+        match s {
+            Some(s) => {
+                self.write_u8(1);
+                if redact_text {
+                    self.write_u32(s.len().min(u32::MAX as usize) as u32);
+                } else {
+                    let bytes = s.as_bytes();
+                    self.write_u32(bytes.len().min(max_string_bytes) as u32);
+                    self.write_bytes(&bytes[..bytes.len().min(max_string_bytes)]);
+                }
+            }
+            None => self.write_u8(0),
+        }
+    }
+
+    fn finish(self) -> u64 {
+        self.state
+    }
+}
+
 pub(crate) fn semantics_role_label(role: SemanticsRole) -> &'static str {
     match role {
         SemanticsRole::Generic => "generic",
@@ -5737,13 +6166,18 @@ fn eval_predicate(
             };
             rects_intersect(node.bounds, window_bounds)
         }
-        UiPredicateV1::BoundsWithinWindow { target, padding_px } => {
+        UiPredicateV1::BoundsWithinWindow {
+            target,
+            padding_px,
+            eps_px,
+        } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
                 return false;
             };
             let bounds = node.bounds;
             let pad = padding_px.max(0.0);
+            let eps = eps_px.max(0.0);
 
             let window_left = window_bounds.origin.x.0 + pad;
             let window_top = window_bounds.origin.y.0 + pad;
@@ -5755,10 +6189,55 @@ fn eval_predicate(
             let node_right = bounds.origin.x.0 + bounds.size.width.0;
             let node_bottom = bounds.origin.y.0 + bounds.size.height.0;
 
-            node_left >= window_left
-                && node_top >= window_top
-                && node_right <= window_right
-                && node_bottom <= window_bottom
+            node_left >= window_left - eps
+                && node_top >= window_top - eps
+                && node_right <= window_right + eps
+                && node_bottom <= window_bottom + eps
+        }
+        UiPredicateV1::BoundsMinSize {
+            target,
+            min_w_px,
+            min_h_px,
+            eps_px,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+
+            let w = node.bounds.size.width.0.max(0.0);
+            let h = node.bounds.size.height.0.max(0.0);
+
+            let min_w = min_w_px.max(0.0);
+            let min_h = min_h_px.max(0.0);
+            let eps = eps_px.max(0.0);
+
+            w + eps >= min_w && h + eps >= min_h
+        }
+        UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax0 = a.bounds.origin.x.0;
+            let ay0 = a.bounds.origin.y.0;
+            let ax1 = ax0 + a.bounds.size.width.0.max(0.0);
+            let ay1 = ay0 + a.bounds.size.height.0.max(0.0);
+
+            let bx0 = b.bounds.origin.x.0;
+            let by0 = b.bounds.origin.y.0;
+            let bx1 = bx0 + b.bounds.size.width.0.max(0.0);
+            let by1 = by0 + b.bounds.size.height.0.max(0.0);
+
+            let overlap_w = (ax1.min(bx1) - ax0.max(bx0)).max(0.0);
+            let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
+
+            !(overlap_w > eps && overlap_h > eps)
         }
     }
 }
@@ -6141,6 +6620,8 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         "enter" | "return" => Some(KeyCode::Enter),
         "tab" => Some(KeyCode::Tab),
         "space" => Some(KeyCode::Space),
+        "backspace" => Some(KeyCode::Backspace),
+        "delete" | "del" => Some(KeyCode::Delete),
         "f1" => Some(KeyCode::F1),
         "f2" => Some(KeyCode::F2),
         "f3" => Some(KeyCode::F3),
@@ -6161,7 +6642,50 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         "end" => Some(KeyCode::End),
         "page_up" => Some(KeyCode::PageUp),
         "page_down" => Some(KeyCode::PageDown),
-        _ => None,
+        _ => {
+            if key.len() == 1 {
+                return Some(match key.as_bytes()[0] {
+                    b'a' => KeyCode::KeyA,
+                    b'b' => KeyCode::KeyB,
+                    b'c' => KeyCode::KeyC,
+                    b'd' => KeyCode::KeyD,
+                    b'e' => KeyCode::KeyE,
+                    b'f' => KeyCode::KeyF,
+                    b'g' => KeyCode::KeyG,
+                    b'h' => KeyCode::KeyH,
+                    b'i' => KeyCode::KeyI,
+                    b'j' => KeyCode::KeyJ,
+                    b'k' => KeyCode::KeyK,
+                    b'l' => KeyCode::KeyL,
+                    b'm' => KeyCode::KeyM,
+                    b'n' => KeyCode::KeyN,
+                    b'o' => KeyCode::KeyO,
+                    b'p' => KeyCode::KeyP,
+                    b'q' => KeyCode::KeyQ,
+                    b'r' => KeyCode::KeyR,
+                    b's' => KeyCode::KeyS,
+                    b't' => KeyCode::KeyT,
+                    b'u' => KeyCode::KeyU,
+                    b'v' => KeyCode::KeyV,
+                    b'w' => KeyCode::KeyW,
+                    b'x' => KeyCode::KeyX,
+                    b'y' => KeyCode::KeyY,
+                    b'z' => KeyCode::KeyZ,
+                    b'0' => KeyCode::Digit0,
+                    b'1' => KeyCode::Digit1,
+                    b'2' => KeyCode::Digit2,
+                    b'3' => KeyCode::Digit3,
+                    b'4' => KeyCode::Digit4,
+                    b'5' => KeyCode::Digit5,
+                    b'6' => KeyCode::Digit6,
+                    b'7' => KeyCode::Digit7,
+                    b'8' => KeyCode::Digit8,
+                    b'9' => KeyCode::Digit9,
+                    _ => return None,
+                });
+            }
+            None
+        }
     }
 }
 
@@ -6228,6 +6752,22 @@ fn touch_file(path: &Path) -> Result<(), std::io::Error> {
     writeln!(f, "{}", unix_ms_now())?;
     let _ = f.flush();
     Ok(())
+}
+
+fn screenshot_request_completed(path: &Path, request_id: &str, window_ffi: u64) -> bool {
+    let Ok(bytes) = std::fs::read(path) else {
+        return false;
+    };
+    let Ok(root) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+        return false;
+    };
+    let Some(completed) = root.get("completed").and_then(|v| v.as_array()) else {
+        return false;
+    };
+    completed.iter().any(|entry| {
+        entry.get("request_id").and_then(|v| v.as_str()) == Some(request_id)
+            && entry.get("window").and_then(|v| v.as_u64()) == Some(window_ffi)
+    })
 }
 
 fn display_path(base_dir: &Path, path: &Path) -> String {
@@ -6593,6 +7133,7 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 0.0,
+            eps_px: 0.0,
         };
         assert!(eval_predicate(
             &snapshot,
@@ -6607,10 +7148,165 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 12.0,
+            eps_px: 0.0,
         };
         assert!(
             !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
             "expected padding to shrink the allowed window rect"
+        );
+    }
+
+    #[test]
+    fn bounds_min_size_predicate_accepts_large_enough_nodes() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node_with_test_id(
+                1,
+                None,
+                SemanticsRole::Panel,
+                rect(10.0, 10.0, 320.0, 240.0),
+                "resizable",
+                "ui-gallery-resizable-panels",
+            )],
+        };
+
+        let pred = UiPredicateV1::BoundsMinSize {
+            target: UiSelectorV1::TestId {
+                id: "ui-gallery-resizable-panels".to_string(),
+            },
+            min_w_px: 200.0,
+            min_h_px: 200.0,
+            eps_px: 0.0,
+        };
+
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected node to satisfy the min-size gate"
+        );
+    }
+
+    #[test]
+    fn bounds_min_size_predicate_rejects_collapsed_nodes() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node_with_test_id(
+                1,
+                None,
+                SemanticsRole::Panel,
+                rect(10.0, 10.0, 320.0, 0.1),
+                "resizable",
+                "ui-gallery-resizable-panels",
+            )],
+        };
+
+        let pred = UiPredicateV1::BoundsMinSize {
+            target: UiSelectorV1::TestId {
+                id: "ui-gallery-resizable-panels".to_string(),
+            },
+            min_w_px: 200.0,
+            min_h_px: 200.0,
+            eps_px: 0.0,
+        };
+
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "collapsed node should fail the min-size gate"
+        );
+    }
+
+    #[test]
+    fn bounds_non_overlapping_predicate_rejects_intersection() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "a",
+                    "a",
+                ),
+                semantics_node_with_test_id(
+                    3,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(25.0, 10.0, 20.0, 20.0),
+                    "b",
+                    "b",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsNonOverlapping {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 0.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected overlap (a right edge > b left edge) to fail"
+        );
+
+        let pred = UiPredicateV1::BoundsNonOverlapping {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 16.0,
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected eps_px to tolerate a small overlap"
         );
     }
 
@@ -6840,7 +7536,8 @@ mod tests {
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();
-        let _ = svc.drive_script_for_window(&app, window, window_bounds, Some(&snapshot), None);
+        let _ =
+            svc.drive_script_for_window(&app, window, window_bounds, 1.0, Some(&snapshot), None);
 
         let bytes =
             std::fs::read(&svc.cfg.script_result_path).expect("read script result json file");

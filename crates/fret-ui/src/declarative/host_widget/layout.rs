@@ -108,6 +108,7 @@ impl ElementHostWidget {
             ElementInstance::TextInput(_)
             | ElementInstance::TextArea(_)
             | ElementInstance::TextInputRegion(_) => true,
+            ElementInstance::SelectableText(_) => true,
             ElementInstance::Pressable(p) => p.enabled && p.focusable,
             _ => false,
         };

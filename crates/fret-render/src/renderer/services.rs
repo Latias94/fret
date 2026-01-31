@@ -71,6 +71,18 @@ impl fret_core::TextService for Renderer {
         let _ = self.text_system.selection_rects(blob, range, out);
     }
 
+    fn selection_rects_clipped(
+        &mut self,
+        blob: fret_core::TextBlobId,
+        range: (usize, usize),
+        clip: fret_core::Rect,
+        out: &mut Vec<fret_core::Rect>,
+    ) {
+        let _ = self
+            .text_system
+            .selection_rects_clipped(blob, range, clip, out);
+    }
+
     fn caret_stops(&mut self, blob: fret_core::TextBlobId, out: &mut Vec<(usize, fret_core::Px)>) {
         out.clear();
         if let Some(stops) = self.text_system.caret_stops(blob) {

@@ -102,6 +102,15 @@ pub enum ImeEvent {
         text: String,
         cursor: Option<(usize, usize)>,
     },
+    /// Delete text surrounding the cursor or selection.
+    ///
+    /// This event does not affect the preedit string. See winit's `Ime::DeleteSurrounding` docs.
+    ///
+    /// Offsets are expressed in UTF-8 bytes.
+    DeleteSurrounding {
+        before_bytes: usize,
+        after_bytes: usize,
+    },
 }
 
 /// Debug snapshot for the wasm textarea IME bridge (ADR 0195).
@@ -318,6 +327,17 @@ pub enum Event {
     },
     /// Clipboard read completed without a text payload (clipboard empty/unavailable/error).
     ClipboardTextUnavailable {
+        token: ClipboardToken,
+    },
+    /// Linux primary selection text payload delivered to the focused widget.
+    ///
+    /// This typically originates from middle-click paste when primary selection is enabled.
+    PrimarySelectionText {
+        token: ClipboardToken,
+        text: String,
+    },
+    /// Primary selection read completed without a text payload (unavailable/empty/error).
+    PrimarySelectionTextUnavailable {
         token: ClipboardToken,
     },
     /// File dialog selection metadata (token + names). Bytes must be requested via effects.

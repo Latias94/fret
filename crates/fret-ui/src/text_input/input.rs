@@ -11,6 +11,8 @@ impl TextInput {
     pub fn new() -> Self {
         Self {
             a11y_role: SemanticsRole::TextField,
+            enabled: true,
+            focusable: true,
             text: String::new(),
             caret: 0,
             selection_anchor: 0,
@@ -41,6 +43,7 @@ impl TextInput {
             last_bounds: Rect::default(),
             last_sent_cursor: None,
             pending_clipboard_token: None,
+            pending_primary_selection_token: None,
 
             chrome_style: TextInputStyle::default(),
             chrome_override: false,
@@ -56,6 +59,14 @@ impl TextInput {
             return;
         }
         self.a11y_role = role;
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+
+    pub fn set_focusable(&mut self, focusable: bool) {
+        self.focusable = focusable;
     }
 
     pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {

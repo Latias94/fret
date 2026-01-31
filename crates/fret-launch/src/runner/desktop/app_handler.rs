@@ -635,7 +635,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             ref ev @ WindowEvent::PointerButton { .. } => {
-                let (mapped, scale_factor) = {
+                let (mapped, _scale_factor) = {
                     let Some(runtime) = self.windows.get_mut(app_window) else {
                         return;
                     };
@@ -651,7 +651,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 if let Some(p) = self.cursor_screen_pos_fallback_for_window(app_window) {
                     self.cursor_screen_pos = Some(p);
                     #[cfg(target_os = "macos")]
-                    self.macos_calibrate_cursor_transform_from_window_sample(p, scale_factor);
+                    self.macos_calibrate_cursor_transform_from_window_sample(p, _scale_factor);
                 }
 
                 let mut saw_left_down = false;
@@ -800,6 +800,38 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     });
                     if let Some(started) = render_started {
                         hitch_render_ms = Some(started.elapsed().as_millis() as u64);
+                    }
+
+                    // Consume the window-scoped text-input snapshot after render so the runner can
+                    // position the IME candidate window based on the final painted caret rect.
+                    //
+                    // Note: v1 still emits `Effect::ImeSetCursorArea` from widgets; this snapshot
+                    // path is a runner-level fallback and an integration seam for future macOS
+                    // (NSTextInputClient) interop.
+                    if let Some(snapshot) = self
+                        .app
+                        .global::<fret_runtime::WindowTextInputSnapshotService>()
+                        .and_then(|svc| svc.snapshot(app_window))
+                    {
+                        let mut dirty = false;
+                        dirty |= state.platform.set_ime_allowed(snapshot.focus_is_text_input);
+                        if snapshot.focus_is_text_input
+                            && let Some(rect) = snapshot.ime_cursor_area
+                        {
+                            dirty |= state.platform.set_ime_cursor_area(rect);
+                        }
+
+                        if dirty {
+                            if std::env::var_os("FRET_IME_DEBUG").is_some_and(|v| !v.is_empty()) {
+                                tracing::info!(
+                                    "IME_DEBUG snapshot: window={:?} focus={} cursor_area={:?}",
+                                    app_window,
+                                    snapshot.focus_is_text_input,
+                                    snapshot.ime_cursor_area
+                                );
+                            }
+                            state.platform.prepare_frame(state.window.as_ref());
+                        }
                     }
 
                     validate_scene_if_enabled(&state.scene);

@@ -315,6 +315,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                 }
                 let input = self.text_input.as_mut().expect("text input");
+                input.set_enabled(props.enabled);
+                input.set_focusable(props.focusable);
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
@@ -336,6 +338,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                 }
                 let area = self.text_area.as_mut().expect("text area");
+                area.set_enabled(props.enabled);
+                area.set_focusable(props.focusable);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
@@ -524,6 +528,18 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn semantics_children(&self) -> bool {
         self.semantics_children
+    }
+
+    fn sync_interactivity_gate(&mut self, present: bool, interactive: bool) {
+        // Keep gate-derived traversal flags in sync even if layout is skipped for display-none
+        // subtrees.
+        self.hit_testable = false;
+        self.hit_test_children = present && interactive;
+        self.focus_traversal_children = present && interactive;
+        self.semantics_present = present;
+        self.semantics_children = present;
+        self.is_focusable = false;
+        self.is_text_input = false;
     }
 
     fn is_focusable(&self) -> bool {

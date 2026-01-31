@@ -2,10 +2,10 @@ use super::shaders::{
     BLIT_SHADER, BLUR_H_MASK_SHADER, BLUR_H_SHADER, BLUR_V_MASK_SHADER, BLUR_V_SHADER,
     COLOR_ADJUST_MASK_SHADER, COLOR_ADJUST_SHADER, COMPOSITE_PREMUL_MASK_SHADER,
     COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, MASK_SHADER, PATH_SHADER,
-    TEXT_COLOR_SHADER, TEXT_SHADER, UPSCALE_NEAREST_MASK_SHADER, UPSCALE_NEAREST_SHADER,
-    VIEWPORT_SHADER, blur_h_masked_shader_source, blur_v_masked_shader_source,
-    clip_mask_shader_source, color_adjust_masked_shader_source, quad_shader_source,
-    upscale_nearest_masked_shader_source,
+    TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER, UPSCALE_NEAREST_MASK_SHADER,
+    UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER, blur_h_masked_shader_source,
+    blur_v_masked_shader_source, clip_mask_shader_source, color_adjust_masked_shader_source,
+    quad_shader_source, upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::geometry::{Point, Px, Transform2D};
@@ -41,6 +41,7 @@ fn shaders_parse_as_wgsl() {
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
         ("text_color", TEXT_COLOR_SHADER),
+        ("text_subpixel", TEXT_SUBPIXEL_SHADER),
         ("mask", MASK_SHADER),
     ] {
         naga::front::wgsl::parse_str(src)
@@ -81,6 +82,7 @@ fn shaders_validate_for_webgpu() {
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
         ("text_color", TEXT_COLOR_SHADER),
+        ("text_subpixel", TEXT_SUBPIXEL_SHADER),
         ("mask", MASK_SHADER),
     ] {
         let module = naga::front::wgsl::parse_str(src)
@@ -176,4 +178,66 @@ fn svg_draw_rect_width_can_overflow_height() {
         fret_core::SvgFit::Width,
     );
     assert_eq!((x0, y0, x1, y1), (0.0, -25.0, 50.0, 75.0));
+}
+
+#[test]
+fn scene_encoding_cache_is_busted_by_text_quality_changes() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_perf_enabled(true);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (32, 32);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("scene encoding cache test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let scene = fret_core::scene::Scene::default();
+    let make_params = || super::RenderSceneParams {
+        format,
+        target_view: &target_view,
+        scene: &scene,
+        clear: super::ClearColor::default(),
+        scale_factor: 1.0,
+        viewport_size,
+    };
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
+    let key0 = renderer
+        .scene_encoding_cache_key
+        .expect("scene encoding key");
+    assert_eq!(renderer.perf.scene_encoding_cache_hits, 0);
+    assert_eq!(renderer.perf.scene_encoding_cache_misses, 1);
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
+    let key1 = renderer
+        .scene_encoding_cache_key
+        .expect("scene encoding key");
+    assert_eq!(key1, key0);
+    assert_eq!(renderer.perf.scene_encoding_cache_hits, 1);
+
+    let changed = renderer.set_text_quality_settings(crate::text::TextQualitySettings {
+        gamma: 1.7,
+        ..Default::default()
+    });
+    assert!(changed);
+
+    let _ = renderer.render_scene(&ctx.device, &ctx.queue, make_params());
+    let key2 = renderer
+        .scene_encoding_cache_key
+        .expect("scene encoding key");
+    assert_ne!(key2, key0);
+    assert_eq!(renderer.perf.scene_encoding_cache_misses, 2);
 }

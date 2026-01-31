@@ -42,6 +42,22 @@ pub(super) fn handle_selectable_text<H: UiHost>(
     props: crate::element::SelectableTextProps,
     event: &Event,
 ) {
+    // Keep the stored selection model stable even if the underlying text changes or external
+    // surfaces (a11y, platform input) publish indices that are no longer valid.
+    crate::elements::with_element_state(
+        &mut *cx.app,
+        window,
+        this.element,
+        crate::element::SelectableTextState::default,
+        |state| {
+            crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                &props.rich.text,
+                &mut state.selection_anchor,
+                &mut state.caret,
+            );
+        },
+    );
+
     match event {
         Event::KeyDown {
             key,
@@ -50,6 +66,147 @@ pub(super) fn handle_selectable_text<H: UiHost>(
         } => {
             if cx.focus != Some(cx.node) {
                 return;
+            }
+
+            let handle_visual_line_home_end =
+                |this: &mut ElementHostWidget,
+                 cx: &mut EventCx<'_, H>,
+                 extend: bool,
+                 at_line_end: bool| {
+                    let Some(blob) = this.text_cache.blob else {
+                        return;
+                    };
+
+                    let (caret, affinity) = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::element::SelectableTextState::default,
+                        |state| (state.caret, state.affinity),
+                    );
+
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_grapheme_boundary(&props.rich.text, caret);
+                    let caret_rect = cx.services.caret_rect(blob, caret, affinity);
+                    let y = fret_core::Px(caret_rect.origin.y.0 + caret_rect.size.height.0 * 0.5);
+                    let x = if at_line_end {
+                        fret_core::Px(1.0e6)
+                    } else {
+                        fret_core::Px(-1.0e6)
+                    };
+
+                    let hit = cx
+                        .services
+                        .hit_test_point(blob, fret_core::Point::new(x, y));
+                    let next = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        hit.index.min(props.rich.text.len()),
+                    );
+
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::element::SelectableTextState::default,
+                        |state| {
+                            state.caret = next;
+                            if !extend {
+                                state.selection_anchor = next;
+                            }
+                            state.affinity = hit.affinity;
+                            state.dragging = false;
+                            state.preferred_x = None;
+                        },
+                    );
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    sync_active_text_selection(&mut *cx.app, window, this.element);
+                    cx.stop_propagation();
+                };
+
+            let handle_visual_move_vertical =
+                |this: &mut ElementHostWidget,
+                 cx: &mut EventCx<'_, H>,
+                 extend: bool,
+                 down: bool| {
+                    let Some(blob) = this.text_cache.blob else {
+                        return;
+                    };
+
+                    let (caret, anchor, affinity, preferred_x) =
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            this.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                (
+                                    state.caret,
+                                    state.selection_anchor,
+                                    state.affinity,
+                                    state.preferred_x,
+                                )
+                            },
+                        );
+
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_grapheme_boundary(&props.rich.text, caret);
+                    let caret_rect = cx.services.caret_rect(blob, caret, affinity);
+                    let x = preferred_x.unwrap_or(caret_rect.origin.x);
+                    let y = if down {
+                        fret_core::Px(caret_rect.origin.y.0 + caret_rect.size.height.0 + 1.0)
+                    } else {
+                        fret_core::Px(caret_rect.origin.y.0 - 1.0)
+                    };
+
+                    let hit = cx
+                        .services
+                        .hit_test_point(blob, fret_core::Point::new(x, y));
+                    let next = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        hit.index.min(props.rich.text.len()),
+                    );
+                    let next_anchor = if extend { anchor } else { next };
+
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        this.element,
+                        crate::element::SelectableTextState::default,
+                        |state| {
+                            state.selection_anchor = next_anchor;
+                            state.caret = next;
+                            state.affinity = hit.affinity;
+                            state.dragging = false;
+                            state.preferred_x = Some(x);
+                        },
+                    );
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    sync_active_text_selection(&mut *cx.app, window, this.element);
+                    cx.stop_propagation();
+                };
+
+            match *key {
+                fret_core::KeyCode::ArrowUp => {
+                    handle_visual_move_vertical(this, cx, modifiers.shift, false);
+                    return;
+                }
+                fret_core::KeyCode::ArrowDown => {
+                    handle_visual_move_vertical(this, cx, modifiers.shift, true);
+                    return;
+                }
+                fret_core::KeyCode::Home => {
+                    handle_visual_line_home_end(this, cx, modifiers.shift, false);
+                    return;
+                }
+                fret_core::KeyCode::End => {
+                    handle_visual_line_home_end(this, cx, modifiers.shift, true);
+                    return;
+                }
+                _ => {}
             }
 
             let command: Option<&'static str> = match *key {
@@ -75,22 +232,24 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                         (false, false) => "text.move_right",
                     })
                 }
-                fret_core::KeyCode::Home => Some(if modifiers.shift {
-                    "text.select_home"
-                } else {
-                    "text.move_home"
-                }),
-                fret_core::KeyCode::End => Some(if modifiers.shift {
-                    "text.select_end"
-                } else {
-                    "text.move_end"
-                }),
                 _ => None,
             };
 
             let Some(command) = command else {
                 return;
             };
+
+            if command != "edit.copy" {
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        state.preferred_x = None;
+                    },
+                );
+            }
 
             let (handled, copy_range, needs_repaint) = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -144,10 +303,17 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 this.element,
                 crate::element::SelectableTextState::default,
                 |state| {
-                    state.selection_anchor = *anchor as usize;
-                    state.caret = *focus as usize;
+                    state.selection_anchor = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        *anchor as usize,
+                    );
+                    state.caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                        &props.rich.text,
+                        *focus as usize,
+                    );
                     state.affinity = fret_core::CaretAffinity::Downstream;
                     state.dragging = false;
+                    state.preferred_x = None;
                 },
             );
             cx.invalidate_self(Invalidation::Paint);
@@ -200,6 +366,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 |state| {
                     state.dragging = true;
                     state.last_pointer_pos = Some(*position);
+                    state.preferred_x = None;
 
                     let hit = hit.unwrap_or(fret_core::HitTestResult {
                         index: 0,
@@ -211,7 +378,10 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                         2 => select_word(&props.rich.text, idx, boundary_mode),
                         3 => select_line(&props.rich.text, idx),
                         _ => {
-                            let caret = idx;
+                            let caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                                &props.rich.text,
+                                idx,
+                            );
                             let anchor = if modifiers.shift {
                                 state.selection_anchor
                             } else {
@@ -275,7 +445,10 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                     this.element,
                     crate::element::SelectableTextState::default,
                     |state| {
-                        state.caret = hit.index;
+                        state.caret = crate::text_edit::utf8::clamp_to_grapheme_boundary(
+                            &props.rich.text,
+                            hit.index,
+                        );
                         state.affinity = hit.affinity;
                     },
                 );
@@ -293,6 +466,31 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             if cx.captured == Some(cx.node) {
                 cx.release_pointer_capture();
             }
+
+            let settings = cx
+                .app
+                .global::<fret_runtime::TextInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            if settings.linux_primary_selection && cx.input_ctx.caps.clipboard.primary_text {
+                let (anchor, caret) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::SelectableTextState::default,
+                    |state| (state.selection_anchor, state.caret),
+                );
+                let (start, end) = crate::text_edit::buffer::selection_range(anchor, caret);
+                if start != end
+                    && end <= props.rich.text.len()
+                    && let Some(sel) = props.rich.text.get(start..end)
+                {
+                    cx.app.push_effect(Effect::PrimarySelectionSetText {
+                        text: sel.to_string(),
+                    });
+                }
+            }
+
             crate::elements::with_element_state(
                 &mut *cx.app,
                 window,

@@ -767,6 +767,44 @@ impl CodeEditor {
                                     });
                                 }
                             }
+                            fret_core::ImeEvent::DeleteSurrounding {
+                                before_bytes,
+                                after_bytes,
+                            } => {
+                                let range = st.selection.normalized();
+                                let caret = st.selection.caret().min(st.buffer.len_bytes());
+                                let start = if range.is_empty() {
+                                    caret.saturating_sub(*before_bytes)
+                                } else {
+                                    range.start
+                                }
+                                .min(st.buffer.len_bytes());
+                                let end = if range.is_empty() {
+                                    caret.saturating_add(*after_bytes)
+                                } else {
+                                    range.end
+                                }
+                                .min(st.buffer.len_bytes());
+
+                                let start = prev_char_boundary(st.buffer.text(), start);
+                                let end = next_char_boundary(st.buffer.text(), end);
+                                if start < end {
+                                    let kind = if *before_bytes > 0 {
+                                        UndoGroupKind::Backspace
+                                    } else {
+                                        UndoGroupKind::DeleteForward
+                                    };
+                                    let _ = apply_and_record_edit(
+                                        &mut st,
+                                        kind,
+                                        Edit::Delete { range: start..end },
+                                        Selection {
+                                            anchor: start,
+                                            focus: start,
+                                        },
+                                    );
+                                }
+                            }
                         }
 
                         push_caret_rect_effect(

@@ -255,6 +255,11 @@ fn theme_with_metrics(metrics: &[(&str, f32)]) -> Theme {
     Theme::global(&host).clone()
 }
 
+fn default_theme() -> Theme {
+    let host = ThemeTestHost::default();
+    Theme::global(&host).clone()
+}
+
 fn count_top_level_list_items(events: &[pulldown_cmark::Event<'static>]) -> usize {
     use pulldown_cmark::{Event, Tag, TagEnd};
 
@@ -477,6 +482,32 @@ fn pulldown_parses_image_and_collects_alt_text() {
     assert_eq!(imgs[0].alt.as_ref(), "alt bold code");
     assert_eq!(imgs[0].title.as_deref(), Some("t"));
     assert!(!imgs[0].is_svg);
+}
+
+#[test]
+fn rich_inline_builds_spans_for_inline_code_and_strikethrough() {
+    let theme = default_theme();
+    let markdown_theme = MarkdownTheme::resolve(&theme);
+
+    let events = parse_events("a `code` ~~gone~~\n");
+    let pieces = inline_pieces_from_events_unwrapped(&events);
+
+    let rich = build_rich_attributed_text(markdown_theme, &pieces).expect("expected rich text");
+    assert!(rich.is_valid());
+    assert_eq!(rich.text.as_ref(), "a code gone");
+
+    assert_eq!(rich.spans.len(), 4);
+    assert_eq!(rich.spans[0].len, "a ".len());
+
+    assert_eq!(rich.spans[1].len, "code".len());
+    assert_eq!(rich.spans[1].shaping.font, Some(FontId::monospace()));
+    assert_eq!(rich.spans[1].paint.fg, Some(markdown_theme.inline_code_fg));
+    assert_eq!(rich.spans[1].paint.bg, Some(markdown_theme.inline_code_bg));
+
+    assert_eq!(rich.spans[2].len, " ".len());
+
+    assert_eq!(rich.spans[3].len, "gone".len());
+    assert!(rich.spans[3].paint.strikethrough.is_some());
 }
 
 #[test]

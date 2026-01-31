@@ -446,12 +446,12 @@ impl ModelStore {
         #[cfg(debug_assertions)]
         {
             let (type_name, at) = self.debug_created_info(id)?;
-            return Some(ModelCreatedDebugInfo {
+            Some(ModelCreatedDebugInfo {
                 type_name,
                 file: at.file(),
                 line: at.line(),
                 column: at.column(),
-            });
+            })
         }
 
         #[cfg(not(debug_assertions))]
@@ -468,12 +468,12 @@ impl ModelStore {
             let entry = state.storage.get(id)?;
             let at = entry.last_changed_at?;
             let type_name = entry.last_changed_type.unwrap_or("<unknown>");
-            return Some(ModelChangedDebugInfo {
+            Some(ModelChangedDebugInfo {
                 type_name,
                 file: at.file(),
                 line: at.line(),
                 column: at.column(),
-            });
+            })
         }
 
         #[cfg(not(debug_assertions))]

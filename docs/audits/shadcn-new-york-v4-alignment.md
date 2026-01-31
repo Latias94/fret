@@ -14,9 +14,9 @@ For coverage status (what is gated vs only has goldens), see:
 - Chart-specific audit: `docs/audits/shadcn-chart.md`
 - Depth checklist (interaction + constrained viewport targets): `docs/audits/shadcn-new-york-v4-depth-checklist.md`
 
-Coverage snapshot (time of writing):
+Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
-- shadcn-web `v4/new-york-v4`: `471/471` keys referenced (`100%`)
+- shadcn-web `v4/new-york-v4`: `476/476` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-01-31
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -47,16 +47,26 @@ Recent breadth wins:
   InputOtp row geometry (slot sizes + gaps).
 - **Recurring layout families**: `textarea-*`, `empty-*`, `resizable-*`, `native-select-*` now have baseline layout gates.
 - **Field + date + skeleton edges**: `field-responsive`, `button-as-child`, `date-picker-with-range`, `skeleton-*` now have web-vs-fret layout gates.
+- **Block-ish text semantics**: `CardTitle` and form field label/title no longer force `nowrap`; wrapping is now driven by the parent width (matching upstream which uses `leading-*` but not `whitespace-nowrap`).
+- **Calendar root chrome**: `calendar-01` now gates the calendar root background (painted quad color matches web).
+- **Calendar nested chrome**: `calendar-22.open` now gates the calendar root background when rendered in a popover
+  (matches upstream `[[data-slot=popover-content]_&]:bg-transparent`; implemented via `surface_slot` context).
+- **DatePicker popover surface**: `DatePicker` / `DateRangePicker` now wrap the calendar in `PopoverContent` (matches upstream `w-auto p-0`),
+  ensuring the popover panel provides the background/border/shadow instead of rendering as a transparent overlay.
+- **DatePicker open popover placement**: new shadcn-web `.open` goldens are now gated for
+  `date-picker-demo.open`, `date-picker-with-presets.open`, and `date-picker-with-range.open` (portal rect + insets via the shared overlay placement harness).
+- **DatePicker nested overlay placement**: `date-picker-with-presets.select-open.open` now gates the Select listbox popper placement while the popover is open (ComboBox -> ListBox portal).
+- **DatePicker presets behavior (Tomorrow)**: `date-picker-with-presets.preset-tomorrow.open` now gates the selected-day ARIA label and the trigger’s `format(date, "PPP")` output (`January 16th, 2026` when extracted with `--freezeDate=2026-01-15`).
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
 - **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
   - Tooltip variants now include `chart-tooltip-label-none`, `chart-tooltip-label-custom`, `chart-tooltip-label-formatter`, `chart-tooltip-icons`,
-    `chart-tooltip-formatter`, `chart-tooltip-advanced`.
+    `chart-tooltip-formatter`, `chart-tooltip-advanced` (including internal item rows + “Total” row bounds).
   - Pie legend variant includes `chart-pie-legend` (recharts wrapper + shadcn `*:basis-1/4` layout).
   - Hover-mid scripted snapshots now gate tooltip panel size and cursor rect geometry for the interactive line/bar pages.
 
 ### Largest remaining gaps (by golden family)
 
-All golden keys are referenced by tests (breadth coverage is complete). Remaining work is primarily
+All golden keys are at least smoke-covered (parse + theme extraction). Remaining work is primarily
 **depth**: making sure each family has high-signal gates (not just “exists / within bounds”) across
 the viewports and interaction states that shape behavior.
 
@@ -158,14 +168,26 @@ Recent fixes:
 
 - Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
 - Menu panel width now grows beyond the `8rem` floor when labels are longer (using a longest-label estimate for popper sizing).
+- Button trigger height is now pinned to the Tailwind `h-*` border-box height across variants (including `outline`), so constrained-viewport max-height clamps match shadcn-web when the menu is bottom-clamped.
 
 Conformance gates:
 
 - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_dropdown_menu_panel_chrome_matches`).
+- Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_panel_size_matches_web`, `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web_dark`).
 - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`).
+- Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_dark`).
+- Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_dark`).
+- SubTrigger open-state chrome (`data-state=open` bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_subtrigger_open_chrome_matches_web`, `web_vs_fret_dropdown_menu_demo_subtrigger_open_chrome_matches_web_dark`).
 - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
   (`web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`).
+- SubContent size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_dropdown_menu_demo_submenu_panel_size_matches_web`, `web_vs_fret_dropdown_menu_demo_submenu_panel_size_matches_web_dark`).
 - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_overlay_placement_matches`, `web_vs_fret_dropdown_menu_checkboxes_overlay_placement_matches`, `web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_overlay_placement_matches`).
 - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_dropdown_menu_demo_small_viewport_menu_item_height_matches`).
 - Item row padding + shortcut alignment: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
@@ -206,10 +228,25 @@ Recent fixes:
 - Panel chrome now matches upstream `rounded-md` (radius token) and `shadow-md` / `shadow-lg` split.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_context_menu_panel_chrome_matches`).
+  - Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_panel_size_matches_web`, `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`,
+    `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web_dark`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_shadow_matches_web`, `web_vs_fret_context_menu_demo_shadow_matches_web_dark`).
+  - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark`).
+  - Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark`).
+  - Submenu destructive item idle fg (no highlight): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_submenu_destructive_item_idle_fg_matches_web`, `web_vs_fret_context_menu_demo_submenu_destructive_item_idle_fg_matches_web_dark`).
+  - Submenu destructive item focus tint (bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web`, `web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web_dark`).
+  - SubTrigger open-state chrome (`data-state=open` bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_subtrigger_open_chrome_matches_web`, `web_vs_fret_context_menu_demo_subtrigger_open_chrome_matches_web_dark`).
   - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_context_menu_demo_submenu_shadow_matches_web`, `web_vs_fret_context_menu_demo_submenu_shadow_matches_web_dark`).
+  - SubContent size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_context_menu_demo_submenu_panel_size_matches_web`, `web_vs_fret_context_menu_demo_submenu_panel_size_matches_web_dark`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_overlay_placement_matches`, `web_vs_fret_context_menu_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_overlay_placement_matches`, `web_vs_fret_context_menu_demo_submenu_small_viewport_overlay_placement_matches`).
   - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_context_menu_demo_small_viewport_menu_item_height_matches`).
   - Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
@@ -238,12 +275,23 @@ Recent fixes:
   real glyph metrics instead of a character-count estimate.
 - Conformance gates:
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_menubar_panel_chrome_matches`).
+  - Panel size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_panel_size_matches_web`, `web_vs_fret_menubar_demo_panel_size_matches_web_dark`,
+    `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web_dark`).
   - Root shadow (`shadow-xs`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_root_shadow_matches_web`, `web_vs_fret_menubar_root_shadow_matches_web_dark`).
   - Shadow (`shadow-md`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_demo_shadow_matches_web`, `web_vs_fret_menubar_demo_shadow_matches_web_dark`).
   - SubContent shadow (`shadow-lg`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
     (`web_vs_fret_menubar_demo_submenu_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_shadow_matches_web_dark`).
+  - SubContent size (portal `w/h`): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_submenu_panel_size_matches_web`, `web_vs_fret_menubar_demo_submenu_panel_size_matches_web_dark`).
+  - SubTrigger open-state chrome (`data-state=open` bg/fg): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_subtrigger_open_chrome_matches_web`, `web_vs_fret_menubar_demo_subtrigger_open_chrome_matches_web_dark`).
+  - Item state chrome (highlighted): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`, `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark`).
+  - Item state chrome (focused / roving focus): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_menubar_demo_focused_item_chrome_matches_web`, `web_vs_fret_menubar_demo_focused_item_chrome_matches_web_dark`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_overlay_placement_matches`, `web_vs_fret_menubar_demo_view_overlay_placement_matches`, `web_vs_fret_menubar_demo_profiles_overlay_placement_matches`, `web_vs_fret_menubar_demo_small_viewport_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_overlay_placement_matches`, `web_vs_fret_menubar_demo_submenu_small_viewport_overlay_placement_matches`).
   - Menu row height: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_menubar_demo_menu_item_height_matches`, `web_vs_fret_menubar_demo_view_menu_item_height_matches`, `web_vs_fret_menubar_demo_profiles_menu_item_height_matches`, `web_vs_fret_menubar_demo_small_viewport_menu_item_height_matches`).
   - Checkbox/radio indicator slot inset: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
@@ -267,10 +315,21 @@ are caught as layout/style outcomes, not just placement drift).
 Recent fixes:
 - `viewport=false` chrome/placement now match shadcn-web `navigation-menu-demo` open snapshots, including hover-switch (`home-then-hover-components`).
 - `viewport=true` viewport geometry now matches shadcn-web mobile snapshots, including “click then hover” switching (`home-mobile-then-hover-components`) and the viewport/indicator chrome gates.
+- Trigger width conformance now accounts for the upstream `" "` text node between the label and the chevron (in addition to `ml-1`) via `component.navigation_menu.trigger.space_px` (defaulted to a Geist-ish `3.92px` at `text-sm`).
+- The overlay-placement text heuristic now applies a small weight multiplier for medium/bold text, reducing drift for long `font-medium` labels (notably `NavigationMenuTrigger`).
 - Geometry gates now measure the registered viewport panel element (via `navigation_menu_viewport_panel_id`) instead of relying on “largest overlay rect” heuristics. This avoids accidentally measuring motion wrappers / indicator siblings when overlays animate or when multiple popover layers exist.
 - The viewport panel keeps `overflow: visible` so drop shadows match CSS `box-shadow` footprint; radius clipping is applied by an inner `overflow: clip` container with the same corner radii so content still clips correctly.
+- Known gap: viewport content inset gates currently allow a slightly higher tolerance (`2px`) to accommodate border-box / subpixel rounding differences between the web snapshots and the integer-ish layout bounds in the Fret test harness. Track this as a future layout-model cleanup rather than a component-specific quirk.
 - Conformance gates:
+  - Trigger (open vs closed surface colors): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_navigation_menu_demo_trigger_open_and_closed_surface_colors_match_web`, `web_vs_fret_navigation_menu_demo_components_trigger_open_and_closed_surface_colors_match_web`, plus dark variants).
   - Chrome: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (`web_vs_fret_navigation_menu_demo_panel_chrome_matches`).
+  - Chrome (viewport surface colors): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web`, `web_vs_fret_navigation_menu_demo_viewport_surface_colors_match_web_dark`).
+  - Chrome (viewport shadow insets): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_navigation_menu_demo_viewport_shadow_insets_match_web`, `web_vs_fret_navigation_menu_demo_viewport_shadow_insets_match_web_dark`).
+  - Chrome (indicator shadow insets): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+    (`web_vs_fret_navigation_menu_demo_indicator_shadow_insets_match_web`, `web_vs_fret_navigation_menu_demo_indicator_shadow_insets_match_web_dark`).
   - Placement: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (`web_vs_fret_navigation_menu_demo_overlay_placement_matches`).
 
 ### `Input`
@@ -460,6 +519,10 @@ Conformance gates:
 - Gaps to check:
   - Content chrome: `bg-foreground text-background`, `rounded-md`, `px-3 py-1.5`, `text-xs`.
   - Arrow: diamond rotated 45deg, size `2.5`, minor translate.
+- Policy notes:
+  - The deterministic "reopen suppression" gates (pointermove-open requirement + suppress hover/focus reopen after dismissal)
+    are implemented in headless as `ecosystem/fret-ui-headless/src/tooltip_intent.rs` and consumed by the shadcn recipe.
+    This keeps overlay recipes wiring-only while still matching Radix-like intent edge cases (and is unit-tested at the headless layer).
 
 ### `Dialog`
 

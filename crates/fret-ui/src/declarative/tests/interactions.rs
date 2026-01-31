@@ -885,6 +885,393 @@ fn selectable_text_double_and_triple_click_select() {
 }
 
 #[test]
+fn selectable_text_pointer_down_requests_focus() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-pointer-down-focus",
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let selectable_bounds = ui
+        .debug_node_bounds(selectable_node)
+        .expect("selectable bounds");
+    let pos = Point::new(
+        Px(selectable_bounds.origin.x.0 + 5.0),
+        Px(selectable_bounds.origin.y.0 + 5.0),
+    );
+
+    assert_eq!(ui.focus(), None, "expected no focus before click");
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(selectable_node),
+        "expected selectable text to request focus on pointer down"
+    );
+}
+
+#[test]
+fn selectable_text_double_click_sets_primary_selection_when_enabled() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::TextInteractionSettings {
+        linux_primary_selection: true,
+    });
+    let mut caps = fret_runtime::PlatformCapabilities::default();
+    caps.clipboard.primary_text = true;
+    app.set_global(caps);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let rich = attributed_plain("hello world");
+    let root_name = "selectable-text-primary-selection-double-click";
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        root_name,
+        |cx| vec![cx.selectable_text(rich.clone())],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let selectable_bounds = ui
+        .debug_node_bounds(selectable_node)
+        .expect("selectable bounds");
+    let pos = Point::new(
+        Px(selectable_bounds.origin.x.0 + 5.0),
+        Px(selectable_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        app.take_effects().iter().any(|e| {
+            matches!(
+                e,
+                fret_runtime::Effect::PrimarySelectionSetText { text }
+                if text == "hello"
+            )
+        }),
+        "expected selectable text selection to set primary selection when enabled"
+    );
+}
+
+#[test]
+fn selectable_text_arrow_up_down_uses_preferred_x_across_lines() {
+    #[derive(Default)]
+    struct LineTextService {
+        text: String,
+    }
+
+    impl LineTextService {
+        fn line_range(&self, line: usize) -> Option<(usize, usize)> {
+            if line == 0 && self.text.is_empty() {
+                return Some((0, 0));
+            }
+
+            let mut start = 0usize;
+            let mut line_idx = 0usize;
+            for (i, ch) in self.text.char_indices() {
+                if ch != '\n' {
+                    continue;
+                }
+                if line_idx == line {
+                    return Some((start, i));
+                }
+                start = i + 1;
+                line_idx += 1;
+            }
+
+            if line_idx == line {
+                return Some((start, self.text.len()));
+            }
+            None
+        }
+
+        fn line_count(&self) -> usize {
+            if self.text.is_empty() {
+                return 1;
+            }
+            self.text.chars().filter(|c| *c == '\n').count() + 1
+        }
+
+        fn index_to_line_col(&self, index: usize) -> (usize, usize) {
+            let index = index.min(self.text.len());
+            let mut line = 0usize;
+            let mut col = 0usize;
+            for (i, ch) in self.text.char_indices() {
+                if i >= index {
+                    break;
+                }
+                if ch == '\n' {
+                    line += 1;
+                    col = 0;
+                } else {
+                    col += 1;
+                }
+            }
+            (line, col)
+        }
+    }
+
+    impl fret_core::TextService for LineTextService {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            self.text = input.text().to_string();
+
+            let line_h = Px(10.0);
+            let lines = self.line_count().max(1) as f32;
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(200.0), Px(line_h.0 * lines)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn caret_rect(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            index: usize,
+            _affinity: fret_core::CaretAffinity,
+        ) -> Rect {
+            let line_h = Px(10.0);
+            let char_w = Px(10.0);
+
+            let (line, col) = self.index_to_line_col(index);
+            Rect::new(
+                Point::new(Px(char_w.0 * (col as f32)), Px(line_h.0 * (line as f32))),
+                Size::new(Px(1.0), line_h),
+            )
+        }
+
+        fn hit_test_point(
+            &mut self,
+            _blob: fret_core::TextBlobId,
+            point: Point,
+        ) -> fret_core::HitTestResult {
+            let line_h = 10.0_f32;
+            let char_w = 10.0_f32;
+
+            let mut line = (point.y.0 / line_h).floor() as i32;
+            line = line.clamp(0, self.line_count().saturating_sub(1) as i32);
+            let line = line as usize;
+
+            let (start, end) = self.line_range(line).unwrap_or((0, 0));
+            let len = end.saturating_sub(start);
+
+            let mut col = (point.x.0 / char_w).round() as i32;
+            col = col.clamp(0, len as i32);
+            let col = col as usize;
+
+            fret_core::HitTestResult {
+                index: (start + col).min(self.text.len()),
+                affinity: fret_core::CaretAffinity::Downstream,
+            }
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for LineTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for LineTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(60.0)));
+    let mut services = LineTextService::default();
+
+    let text = "0123456789\nabc\n0123456789";
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-preferred-x",
+        |cx| {
+            vec![
+                cx.selectable_text_props(crate::element::SelectableTextProps {
+                    layout: Default::default(),
+                    rich: attributed_plain(text),
+                    style: None,
+                    color: None,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
+                }),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let selectable_node = ui.children(root)[0];
+    let record =
+        crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+            .expect("selectable record");
+    let element = record.element;
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(80.0), Px(5.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let (caret, preferred_x) = crate::elements::with_element_state(
+        &mut app,
+        window,
+        element,
+        crate::element::SelectableTextState::default,
+        |state| (state.caret, state.preferred_x),
+    );
+    assert_eq!(
+        caret, 14,
+        "expected down to clamp into the short middle line"
+    );
+    assert_eq!(
+        preferred_x,
+        Some(Px(80.0)),
+        "expected preferred_x to preserve the original column"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let caret = crate::elements::with_element_state(
+        &mut app,
+        window,
+        element,
+        crate::element::SelectableTextState::default,
+        |state| state.caret,
+    );
+    assert_eq!(
+        caret, 23,
+        "expected preferred_x to restore the original column on the next long line"
+    );
+}
+
+#[test]
 fn selectable_text_sets_active_text_selection() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -1015,6 +1402,7 @@ fn selectable_text_copy_availability_respects_clipboard_capabilities() {
         clipboard: fret_runtime::capabilities::ClipboardCapabilities {
             text: false,
             files: false,
+            primary_text: false,
         },
         ..fret_runtime::PlatformCapabilities::default()
     });
@@ -1241,6 +1629,88 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
             .iter()
             .any(|e| matches!(e, fret_runtime::Effect::ClipboardGetText { .. })),
         "expected text.paste to request ClipboardGetText"
+    );
+}
+
+#[test]
+fn text_input_middle_click_pastes_primary_selection_when_enabled() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::TextInteractionSettings {
+        linux_primary_selection: true,
+    });
+    let mut caps = fret_runtime::PlatformCapabilities::default();
+    caps.clipboard.text = true;
+    caps.clipboard.primary_text = true;
+    app.set_global(caps);
+
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-primary-selection-middle-click",
+        |cx| vec![cx.text_input(crate::element::TextInputProps::new(model.clone()))],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    let input_bounds = ui.debug_node_bounds(input_node).expect("input bounds");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 10.0),
+        Px(input_bounds.origin.y.0 + 10.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Middle,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = app.take_effects();
+    let Some(token) = effects.iter().find_map(|e| match e {
+        fret_runtime::Effect::PrimarySelectionGetText { token, .. } => Some(*token),
+        _ => None,
+    }) else {
+        panic!("expected middle click to request PrimarySelectionGetText");
+    };
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::PrimarySelectionText {
+            token,
+            text: "hello".to_string(),
+        },
+    );
+
+    assert_eq!(
+        app.models().get_cloned(&model).as_deref(),
+        Some("hello"),
+        "expected primary selection paste to insert text into the bound model"
     );
 }
 

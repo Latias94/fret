@@ -106,13 +106,48 @@ Notes on API mapping:
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web checkbox indicator slot inset gate (root): `web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_web`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web menu content inset gate (checkboxes): `web_vs_fret_dropdown_menu_checkboxes_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web menu row height gate (checkboxes): `web_vs_fret_dropdown_menu_checkboxes_menu_item_height_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
 - Web radio indicator slot inset gate (root): `web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
+- Web menu content inset gate (radio group): `web_vs_fret_dropdown_menu_radio_group_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
+- Web menu row height gate (radio group): `web_vs_fret_dropdown_menu_radio_group_menu_item_height_matches`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
 - Web menu content inset gate (root): `web_vs_fret_dropdown_menu_demo_menu_content_insets_match`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
+- Web surface colors gate (root): `web_vs_fret_dropdown_menu_demo_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_surface_colors_match_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
 - Web panel shadow gate (root, `shadow-md`): `web_vs_fret_dropdown_menu_demo_shadow_matches_web`,
   `web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.open.json`).
+- Web panel shadow gate (root, constrained viewport, `shadow-md`): `web_vs_fret_dropdown_menu_demo_small_viewport_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_small_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
+- Web surface colors gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_small_viewport_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
+- Web panel shadow gate (root, tiny viewport, `shadow-md`): `web_vs_fret_dropdown_menu_demo_tiny_viewport_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x240.open.json`).
+- Web surface colors gate (root, tiny viewport): `web_vs_fret_dropdown_menu_demo_tiny_viewport_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x240.open.json`).
+- Web surface colors gate (checkboxes): `web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_checkboxes_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web panel shadow gate (checkboxes, `shadow-md`): `web_vs_fret_dropdown_menu_checkboxes_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_checkboxes_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-checkboxes.open.json`).
+- Web surface colors gate (radio group): `web_vs_fret_dropdown_menu_radio_group_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_radio_group_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
+- Web panel shadow gate (radio group, `shadow-md`): `web_vs_fret_dropdown_menu_radio_group_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_radio_group_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json`).
 - Web placement gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_overlay_placement_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json`).
 - Web scroll state gate (root, constrained viewport): `web_vs_fret_dropdown_menu_demo_small_viewport_scroll_state_matches`
@@ -128,6 +163,24 @@ Notes on API mapping:
 - Web submenu panel shadow gate (`shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web`,
   `web_vs_fret_dropdown_menu_demo_submenu_shadow_matches_web_dark`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
+- Web submenu surface colors gate: `web_vs_fret_dropdown_menu_demo_submenu_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu.open.json`).
+- Web submenu surface colors gate (kbd): `web_vs_fret_dropdown_menu_demo_submenu_kbd_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
+- Web submenu surface colors gate (kbd, tiny viewport): `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x240.open.json`).
+- Web submenu panel shadow gate (kbd, constrained viewport, `shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x320.open.json`).
+- Web submenu surface colors gate (kbd, constrained viewport): `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_surface_colors_match_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_small_viewport_surface_colors_match_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x320.open.json`).
+- Web submenu panel shadow gate (kbd, tiny viewport, `shadow-lg`): `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_shadow_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_shadow_matches_web_dark`
+  (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x240.open.json`).
 - Web first visible item gate (submenu): `web_vs_fret_dropdown_menu_demo_submenu_first_visible_matches`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd.open.json`).
 - Web first visible item gate (submenu, constrained viewport): `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_first_visible_matches`
@@ -144,6 +197,26 @@ Notes on API mapping:
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x320.open.json`).
 - Web menu content inset gate (submenu, constrained viewport): `web_vs_fret_dropdown_menu_demo_submenu_small_viewport_menu_content_insets_match`
   (consumes `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu-kbd-vp1440x320.open.json`; note: this variant captures a scrolled menu state driven by the golden extraction openSteps).
+
+Notes on scripted openSteps alignment:
+
+- The web golden extractor scrolls the submenu trigger into view via `scrollIntoView({ block: "center" })` before focusing it and pressing ArrowRight.
+- The Fret regression tests emulate this by (a) scrolling the menu via a deterministic wheel delta to center the trigger and (b) establishing focus via a pointer down/up with `is_click=false` (rather than relying on `UiTree::set_focus`, which is not equivalent under scroll/roving focus).
+- Hover-driven submenus use delayed open timers; the test harness explicitly delivers timer events (because these tests do not run through the desktop runner's timer scheduling).
+
+- Web overlay chrome gates (composition demos that use `DropdownMenu`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  - `web_vs_fret_button_group_demo_surface_colors_match_web`
+  - `web_vs_fret_button_group_demo_surface_colors_match_web_dark`
+  - `web_vs_fret_button_group_demo_shadow_matches_web`
+  - `web_vs_fret_button_group_demo_shadow_matches_web_dark`
+  - `web_vs_fret_button_group_demo_submenu_kbd_surface_colors_match_web`
+  - `web_vs_fret_button_group_demo_submenu_kbd_surface_colors_match_web_dark`
+  - `web_vs_fret_button_group_demo_submenu_kbd_shadow_matches_web`
+  - `web_vs_fret_button_group_demo_submenu_kbd_shadow_matches_web_dark`
+  - `web_vs_fret_combobox_dropdown_menu_surface_colors_match_web`
+  - `web_vs_fret_combobox_dropdown_menu_surface_colors_match_web_dark`
+  - `web_vs_fret_combobox_dropdown_menu_shadow_matches_web`
+  - `web_vs_fret_combobox_dropdown_menu_shadow_matches_web_dark`
 
 ## Follow-ups (recommended)
 

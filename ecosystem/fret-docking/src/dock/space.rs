@@ -2052,6 +2052,24 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         let wants_dock_previews = docking_interaction_settings
                                             .drag_inversion
                                             .wants_dock_previews(*modifiers);
+                                        if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
+                                            .is_some_and(|v| !v.is_empty())
+                                        {
+                                            tracing::info!(
+                                                window = ?self.window,
+                                                pointer_id = ?pointer_id,
+                                                modifiers = ?modifiers,
+                                                wants_dock_previews = wants_dock_previews,
+                                                tab_drag_threshold = docking_interaction_settings
+                                                    .tab_drag_threshold
+                                                    .0,
+                                                dock_hint_scale_inner =
+                                                    docking_interaction_settings.dock_hint_scale_inner,
+                                                dock_hint_scale_outer =
+                                                    docking_interaction_settings.dock_hint_scale_outer,
+                                                "dock drag activated"
+                                            );
+                                        }
                                         start_dock_drag = Some((
                                             pending.start,
                                             DockPanelDragPayload {
@@ -3068,6 +3086,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                         candidates,
                                                     ),
                                                 ));
+                                            }
+                                            if std::env::var_os("FRET_DOCK_DRAG_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                                && dock.hover != prev_hover
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    invert_docking = invert_docking,
+                                                    source = ?source,
+                                                    target = ?dock_drop_target_diagnostics(
+                                                        dock.hover.as_ref()
+                                                    ),
+                                                    "dock drag hover changed"
+                                                );
                                             }
 
                                             if let Some(DockDropTarget::Dock(target)) =

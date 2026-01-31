@@ -27,6 +27,15 @@ pub(super) struct ViewportUniform {
     pub(super) mask_viewport_origin: [f32; 2],
     /// The viewport-space size of the rect that mask textures are scoped to (in pixels).
     pub(super) mask_viewport_size: [f32; 2],
+
+    /// Text gamma correction ratios (GPUI-aligned). Applied to grayscale coverage masks and
+    /// subpixel RGB coverage in the text sampling shaders.
+    pub(super) text_gamma_ratios: [f32; 4],
+    /// Enhanced contrast factor for grayscale text (mask glyphs).
+    pub(super) text_grayscale_enhanced_contrast: f32,
+    /// Enhanced contrast factor for subpixel text (RGB coverage glyphs).
+    pub(super) text_subpixel_enhanced_contrast: f32,
+    pub(super) _pad_text_quality: [u32; 2],
 }
 
 #[repr(C)]
@@ -448,4 +457,5 @@ pub(super) struct SceneEncodingCacheKey {
     pub(super) render_targets_generation: u64,
     pub(super) images_generation: u64,
     pub(super) text_atlas_revision: u64,
+    pub(super) text_quality_key: u64,
 }

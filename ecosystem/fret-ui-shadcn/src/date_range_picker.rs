@@ -4,15 +4,14 @@ use std::sync::Arc;
 
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
 use time::{Date, Weekday};
 
 use crate::button::{Button, ButtonVariant};
 use crate::calendar_range::CalendarRange;
-use crate::popover::{Popover, PopoverAlign, PopoverSide};
+use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
 
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 
@@ -64,7 +63,7 @@ impl DateRangePicker {
             disable_outside_days: true,
             disabled_predicate: None,
             disabled: false,
-            format_selected: Arc::new(format_selected_iso),
+            format_selected: Arc::new(format_selected_lll_dd_y_range),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -125,8 +124,6 @@ impl DateRangePicker {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let theme = Theme::global(&*cx.app).clone();
-
             let open = self.open.clone();
             let month = self.month.clone();
             let selected = self.selected.clone();
@@ -166,25 +163,25 @@ impl DateRangePicker {
                             .into_element(cx)
                     },
                     move |cx| {
-                        let props = decl_style::container_props(
-                            &theme,
-                            ChromeRefinement::default().p(Space::N2),
-                            LayoutRefinement::default(),
-                        );
-                        cx.container(props, move |cx| {
-                            let mut calendar = CalendarRange::new(month.clone(), selected.clone())
-                                .week_start(self.week_start)
-                                .show_outside_days(self.show_outside_days)
-                                .disable_outside_days(self.disable_outside_days)
-                                .close_on_select(open_content.clone())
-                                .initial_focus_out(initial_focus_out.clone());
+                        let mut calendar = CalendarRange::new(month.clone(), selected.clone())
+                            .week_start(self.week_start)
+                            .show_outside_days(self.show_outside_days)
+                            .disable_outside_days(self.disable_outside_days)
+                            // Upstream `date-picker-with-range` renders two months in the popover.
+                            .number_of_months(2)
+                            .close_on_select(open_content.clone())
+                            .initial_focus_out(initial_focus_out.clone());
 
-                            if let Some(pred) = disabled_predicate.clone() {
-                                calendar = calendar.disabled_by(move |d| pred(d));
-                            }
+                        if let Some(pred) = disabled_predicate.clone() {
+                            calendar = calendar.disabled_by(move |d| pred(d));
+                        }
 
-                            vec![calendar.into_element(cx)]
-                        })
+                        let calendar = calendar.into_element(cx);
+                        PopoverContent::new([calendar])
+                            // shadcn/ui DatePickerWithRange demo uses `PopoverContent` with `w-auto p-0`.
+                            .refine_style(ChromeRefinement::default().p(Space::N0))
+                            .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+                            .into_element(cx)
                     },
                 )
         })
@@ -196,6 +193,41 @@ fn format_selected_iso(sel: DateRangeSelection) -> Arc<str> {
         (Some(from), Some(to)) => Arc::<str>::from(format!("{from} – {to}")),
         (Some(from), None) => Arc::<str>::from(from.to_string()),
         (None, Some(to)) => Arc::<str>::from(to.to_string()),
+        (None, None) => Arc::<str>::from(""),
+    }
+}
+
+fn format_date_lll_dd_y_en(date: Date) -> String {
+    use time::Month;
+
+    let month = match date.month() {
+        Month::January => "Jan",
+        Month::February => "Feb",
+        Month::March => "Mar",
+        Month::April => "Apr",
+        Month::May => "May",
+        Month::June => "Jun",
+        Month::July => "Jul",
+        Month::August => "Aug",
+        Month::September => "Sep",
+        Month::October => "Oct",
+        Month::November => "Nov",
+        Month::December => "Dec",
+    };
+
+    let day = format!("{:02}", date.day());
+    format!("{month} {day}, {}", date.year())
+}
+
+fn format_selected_lll_dd_y_range(sel: DateRangeSelection) -> Arc<str> {
+    match (sel.from, sel.to) {
+        (Some(from), Some(to)) => Arc::<str>::from(format!(
+            "{} - {}",
+            format_date_lll_dd_y_en(from),
+            format_date_lll_dd_y_en(to)
+        )),
+        (Some(from), None) => Arc::<str>::from(format_date_lll_dd_y_en(from)),
+        (None, Some(to)) => Arc::<str>::from(format_date_lll_dd_y_en(to)),
         (None, None) => Arc::<str>::from(""),
     }
 }

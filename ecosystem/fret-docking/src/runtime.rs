@@ -381,6 +381,13 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 && should_auto_close
                 && let Some(window) = maybe_close_window
             {
+                if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+                    tracing::info!(
+                        window = ?window,
+                        op = ?op,
+                        "dock tear-off: auto-close empty DockFloating window"
+                    );
+                }
                 app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
                     reg.remove(window);
                 });
@@ -405,6 +412,13 @@ pub fn handle_dock_window_created<H: UiHost>(
         machine.complete_for_create_request(request, now)
     });
     if matches!(completion, DockTearOffCompletion::CancelAndCloseWindow) {
+        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+            tracing::info!(
+                new_window = ?new_window,
+                request_kind = ?request.kind,
+                "dock tear-off: cancel and close newly created window"
+            );
+        }
         app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
         return true;
     }
@@ -418,6 +432,13 @@ pub fn handle_dock_window_created<H: UiHost>(
     };
 
     if app.global::<DockManager>().is_none() {
+        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+            tracing::info!(
+                new_window = ?new_window,
+                request_kind = ?request.kind,
+                "dock tear-off: missing DockManager; closing newly created window"
+            );
+        }
         app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
         return true;
     }

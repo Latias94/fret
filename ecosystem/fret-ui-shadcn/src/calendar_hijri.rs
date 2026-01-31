@@ -17,6 +17,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 use time::{Date, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 fn persian_digit(c: char) -> char {
     match c {
@@ -425,8 +426,18 @@ impl CalendarHijri {
             let day_grid_width = Px(day_size.0 * 7.0);
             let month_width = day_grid_width;
 
-            let chrome = ChromeRefinement::default().p(Space::N3).merge(self.chrome);
-            let root = LayoutRefinement::default().w_full().merge(self.layout);
+            let bg = theme.color_required("background");
+            let mut chrome = ChromeRefinement::default()
+                .bg(ColorRef::Color(bg))
+                .p(Space::N3);
+            if matches!(
+                surface_slot_in_scope(cx),
+                Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+            ) {
+                chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+            }
+            let chrome = chrome.merge(self.chrome);
+            let root = LayoutRefinement::default().merge(self.layout);
             let container_props = decl_style::container_props(&theme, chrome, root);
 
             cx.container(container_props, move |cx| {

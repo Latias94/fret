@@ -20,7 +20,9 @@ fn row_layout(height: Px) -> LayoutStyle {
 fn flex_grow_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
+    layout.size.min_width = Some(Px(0.0));
     layout.flex.grow = 1.0;
+    layout.flex.shrink = 1.0;
     layout
 }
 

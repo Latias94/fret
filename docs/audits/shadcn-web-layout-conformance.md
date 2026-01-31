@@ -97,17 +97,36 @@ patterns:
 - `accordion-demo` (measured-height content + spacing; open-state geometry in light/dark)
 - `switch-demo`
 - `input-demo`
+- `input-disabled`
+- `input-file`
 - `label-demo`
 - `input-with-label`
+- `input-with-button`
+- `input-with-text`
 - `input-group-dropdown` (root height)
 - `input-group-icon` (inline-start icon addon + input box geometry)
 - `input-group-spinner` (inline-end spinner addon + input box geometry)
 - `input-group-button` (inline-end button addon negative margin + icon centering)
+- `input-group-label`
+- `input-group-button-group` (button-group border/radius merge across input-group)
 - `input-group-tooltip` (inline-start and inline-end button addons + stack gap)
 - `empty-input-group` (inline-start icon + inline-end kbd addon geometry)
 - `kbd-input-group` (inline-end multi-kbd addon geometry)
 - `input-group-textarea` (block-start/bottom + block-end/top addons with dividers)
 - `input-group-text` (inline-start/inline-end text addons)
+- `input-otp-demo` (slot sizing + group gaps + separator icon size)
+- `input-otp-separator` (multi-separator spacing)
+- `input-otp-pattern`
+- `input-otp-controlled`
+- `spinner-basic`
+- `spinner-custom`
+- `spinner-size`
+- `spinner-color`
+- `spinner-button` (disabled size/row height)
+- `spinner-badge` (badge row height)
+- `spinner-demo` (max-w wrapper + item row geometry)
+- `spinner-item` (multi-row item layout)
+- `spinner-empty` (icon container geometry + background)
 - `spinner-input-group` (textarea + block-end addon + `ml-auto` send button)
 - `field-input`
 - `field-checkbox`

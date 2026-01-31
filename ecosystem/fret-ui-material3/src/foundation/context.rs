@@ -7,7 +7,7 @@
 
 #![allow(dead_code)]
 
-use fret_core::Color;
+use fret_core::{Color, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::elements::ElementContext;
@@ -61,12 +61,30 @@ pub enum MaterialDesignVariantOverride {
     Custom(MaterialDesignVariant),
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum MaterialTextStyleOverride {
+    /// Mask any inherited style and fall back to component defaults.
+    UseDefault,
+    /// Override the default text style for the subtree (Compose `ProvideTextStyle`-like).
+    Custom(TextStyle),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MaterialIconSizeOverride {
+    /// Mask any inherited size and fall back to component defaults.
+    UseDefault,
+    /// Override the default icon size for the subtree.
+    Custom(Px),
+}
+
+#[derive(Debug, Default, Clone)]
 struct MaterialContextState {
     content_color: Option<MaterialContentColor>,
     ripple: Option<MaterialRippleConfiguration>,
     motion_scheme: Option<MaterialMotionSchemeOverride>,
     design_variant: Option<MaterialDesignVariantOverride>,
+    text_style: Option<MaterialTextStyleOverride>,
+    icon_size: Option<MaterialIconSizeOverride>,
 }
 
 pub fn inherited_content_color_policy<H: UiHost>(
@@ -104,6 +122,34 @@ pub fn inherited_design_variant_override<H: UiHost>(
         .and_then(|st| st.design_variant)
 }
 
+pub fn inherited_text_style_override<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<MaterialTextStyleOverride> {
+    cx.inherited_state_where::<MaterialContextState>(|st| st.text_style.is_some())
+        .and_then(|st| st.text_style.clone())
+}
+
+pub fn inherited_text_style<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TextStyle> {
+    match inherited_text_style_override(cx)? {
+        MaterialTextStyleOverride::UseDefault => None,
+        MaterialTextStyleOverride::Custom(style) => Some(style),
+    }
+}
+
+pub fn inherited_icon_size_override<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<MaterialIconSizeOverride> {
+    cx.inherited_state_where::<MaterialContextState>(|st| st.icon_size.is_some())
+        .and_then(|st| st.icon_size)
+}
+
+pub fn inherited_icon_size<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Px> {
+    match inherited_icon_size_override(cx)? {
+        MaterialIconSizeOverride::UseDefault => None,
+        MaterialIconSizeOverride::Custom(size) => Some(size),
+    }
+}
+
 pub fn resolved_motion_scheme<H: UiHost>(
     cx: &ElementContext<'_, H>,
     fallback: MaterialMotionScheme,
@@ -138,6 +184,17 @@ pub fn resolved_design_variant<H: UiHost>(
         Some(MaterialDesignVariantOverride::Custom(variant)) => variant,
         Some(MaterialDesignVariantOverride::UseDefault) | None => fallback,
     }
+}
+
+pub fn resolved_text_style<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    fallback: Option<TextStyle>,
+) -> Option<TextStyle> {
+    inherited_text_style(cx).or(fallback)
+}
+
+pub fn resolved_icon_size<H: UiHost>(cx: &ElementContext<'_, H>, fallback: Px) -> Px {
+    inherited_icon_size(cx).unwrap_or(fallback)
 }
 
 #[track_caller]
@@ -263,12 +320,82 @@ pub fn with_material_design_variant_override<H: UiHost, R>(
     out
 }
 
+#[track_caller]
+pub fn with_material_text_style<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    style: TextStyle,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_text_style_override(cx, MaterialTextStyleOverride::Custom(style), f)
+}
+
+#[track_caller]
+pub fn with_default_material_text_style<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_text_style_override(cx, MaterialTextStyleOverride::UseDefault, f)
+}
+
+#[track_caller]
+pub fn with_material_text_style_override<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    override_policy: MaterialTextStyleOverride,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MaterialContextState::default, |st| {
+        let prev = st.text_style.clone();
+        st.text_style = Some(override_policy);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MaterialContextState::default, |st| {
+        st.text_style = prev;
+    });
+    out
+}
+
+#[track_caller]
+pub fn with_material_icon_size<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    size: Px,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_icon_size_override(cx, MaterialIconSizeOverride::Custom(size), f)
+}
+
+#[track_caller]
+pub fn with_default_material_icon_size<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_icon_size_override(cx, MaterialIconSizeOverride::UseDefault, f)
+}
+
+#[track_caller]
+pub fn with_material_icon_size_override<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    override_policy: MaterialIconSizeOverride,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MaterialContextState::default, |st| {
+        let prev = st.icon_size;
+        st.icon_size = Some(override_policy);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MaterialContextState::default, |st| {
+        st.icon_size = prev;
+    });
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextStyle};
     use fret_ui::elements::with_element_cx;
 
     fn bounds() -> Rect {
@@ -469,5 +596,100 @@ mod tests {
                 );
             },
         );
+    }
+
+    #[test]
+    fn text_style_inherits_masks_and_restores() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let large = TextStyle {
+            size: Px(42.0),
+            ..TextStyle::default()
+        };
+        let small = TextStyle {
+            size: Px(10.0),
+            ..TextStyle::default()
+        };
+
+        with_element_cx(&mut app, window, bounds(), "m3-context-text-style", |cx| {
+            assert_eq!(inherited_text_style_override(cx), None);
+            assert_eq!(inherited_text_style(cx), None);
+            assert_eq!(resolved_text_style(cx, None), None);
+            assert_eq!(
+                resolved_text_style(cx, Some(small.clone())),
+                Some(small.clone())
+            );
+
+            with_material_text_style(cx, large.clone(), |cx| {
+                assert_eq!(
+                    inherited_text_style_override(cx),
+                    Some(MaterialTextStyleOverride::Custom(large.clone()))
+                );
+                assert_eq!(inherited_text_style(cx), Some(large.clone()));
+                assert_eq!(resolved_text_style(cx, None), Some(large.clone()));
+
+                with_default_material_text_style(cx, |cx| {
+                    assert_eq!(
+                        inherited_text_style_override(cx),
+                        Some(MaterialTextStyleOverride::UseDefault)
+                    );
+                    assert_eq!(inherited_text_style(cx), None);
+                    assert_eq!(
+                        resolved_text_style(cx, Some(small.clone())),
+                        Some(small.clone())
+                    );
+                });
+
+                assert_eq!(inherited_text_style(cx), Some(large.clone()));
+
+                with_material_text_style(cx, small.clone(), |cx| {
+                    assert_eq!(inherited_text_style(cx), Some(small.clone()));
+                });
+
+                assert_eq!(inherited_text_style(cx), Some(large.clone()));
+            });
+
+            assert_eq!(inherited_text_style(cx), None);
+        });
+    }
+
+    #[test]
+    fn icon_size_inherits_masks_and_restores() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(&mut app, window, bounds(), "m3-context-icon-size", |cx| {
+            assert_eq!(inherited_icon_size_override(cx), None);
+            assert_eq!(inherited_icon_size(cx), None);
+            assert_eq!(resolved_icon_size(cx, Px(24.0)), Px(24.0));
+
+            with_material_icon_size(cx, Px(20.0), |cx| {
+                assert_eq!(
+                    inherited_icon_size_override(cx),
+                    Some(MaterialIconSizeOverride::Custom(Px(20.0)))
+                );
+                assert_eq!(inherited_icon_size(cx), Some(Px(20.0)));
+                assert_eq!(resolved_icon_size(cx, Px(24.0)), Px(20.0));
+
+                with_default_material_icon_size(cx, |cx| {
+                    assert_eq!(
+                        inherited_icon_size_override(cx),
+                        Some(MaterialIconSizeOverride::UseDefault)
+                    );
+                    assert_eq!(inherited_icon_size(cx), None);
+                    assert_eq!(resolved_icon_size(cx, Px(24.0)), Px(24.0));
+                });
+
+                assert_eq!(inherited_icon_size(cx), Some(Px(20.0)));
+
+                with_material_icon_size(cx, Px(16.0), |cx| {
+                    assert_eq!(inherited_icon_size(cx), Some(Px(16.0)));
+                });
+
+                assert_eq!(inherited_icon_size(cx), Some(Px(20.0)));
+            });
+
+            assert_eq!(inherited_icon_size(cx), None);
+        });
     }
 }

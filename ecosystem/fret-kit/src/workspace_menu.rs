@@ -403,7 +403,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
                             flex: FlexProps {
                                 layout: LayoutStyle::default(),
                                 direction: fret_core::Axis::Horizontal,
-                                gap: Px(0.0),
+                                gap: Px(1.0),
                                 padding: Edges::all(Px(0.0)),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,

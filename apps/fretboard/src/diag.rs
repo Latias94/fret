@@ -53,6 +53,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut inspect_trigger_path: Option<PathBuf> = None;
     let mut inspect_consume_clicks: Option<bool> = None;
     let mut timeout_ms: u64 = 30_000;
+    let mut timeout_ms_overridden: bool = false;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
@@ -61,6 +62,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_repeat: u64 = 1;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
+    let mut check_stale_scene_test_id: Option<String> = None;
+    let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
@@ -247,6 +250,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --timeout-ms".to_string())?;
+                timeout_ms_overridden = true;
                 i += 1;
             }
             "--poll-ms" => {
@@ -314,6 +318,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_stale_paint_eps = v
                     .parse::<f32>()
                     .map_err(|_| "invalid value for --check-stale-paint-eps".to_string())?;
+                i += 1;
+            }
+            "--check-stale-scene" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-stale-scene".to_string());
+                };
+                check_stale_scene_test_id = Some(v);
+                i += 1;
+            }
+            "--check-stale-scene-eps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-stale-scene-eps".to_string());
+                };
+                check_stale_scene_eps = v
+                    .parse::<f32>()
+                    .map_err(|_| "invalid value for --check-stale-scene-eps".to_string())?;
                 i += 1;
             }
             "--check-wheel-scroll" => {
@@ -855,6 +877,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let result = result?;
             if result.stage.as_deref() == Some("passed") {
                 if check_stale_paint_test_id.is_some()
+                    || check_stale_scene_test_id.is_some()
                     || check_wheel_scroll_test_id.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -882,6 +905,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &bundle_path,
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
+                        check_stale_scene_test_id.as_deref(),
+                        check_stale_scene_eps,
                         check_wheel_scroll_test_id.as_deref(),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -970,6 +995,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             enum BuiltinSuite {
                 UiGallery,
+                UiGalleryLayout,
                 DockingArbitration,
             }
 
@@ -982,6 +1008,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                         .collect(),
                     Some(BuiltinSuite::UiGallery),
+                )
+            } else if rest.len() == 1 && rest[0] == "ui-gallery-layout" {
+                (
+                    ui_gallery_layout_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    Some(BuiltinSuite::UiGalleryLayout),
                 )
             } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
                 (
@@ -1009,6 +1043,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     None,
                 )
             };
+
+            if !timeout_ms_overridden && let Some(BuiltinSuite::UiGalleryLayout) = builtin_suite {
+                timeout_ms = timeout_ms.max(180_000);
+            }
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -1145,6 +1183,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         &bundle_path,
                         check_stale_paint_test_id.as_deref(),
                         check_stale_paint_eps,
+                        check_stale_scene_test_id.as_deref(),
+                        check_stale_scene_eps,
                         check_wheel_scroll_test_id.as_deref(),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -2683,6 +2723,22 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
     ]
 }
 
+fn ui_gallery_layout_suite_scripts() -> [&'static str; 11] {
+    [
+        "tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json",
+        "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
+        "tools/diag-scripts/ui-gallery-overlay-modals-visible.json",
+        "tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json",
+        "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
+        "tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json",
+        "tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json",
+        "tools/diag-scripts/ui-gallery-menubar-text-overlap-command.json",
+        "tools/diag-scripts/ui-gallery-chrome-torture-layout.json",
+        "tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json",
+        "tools/diag-scripts/ui-gallery-resizable-initial-bundle.json",
+    ]
+}
+
 fn docking_arbitration_suite_scripts() -> [&'static str; 2] {
     [
         "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
@@ -2920,6 +2976,8 @@ fn apply_post_run_checks(
     bundle_path: &Path,
     check_stale_paint_test_id: Option<&str>,
     check_stale_paint_eps: f32,
+    check_stale_scene_test_id: Option<&str>,
+    check_stale_scene_eps: f32,
     check_wheel_scroll_test_id: Option<&str>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -2935,6 +2993,9 @@ fn apply_post_run_checks(
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
         check_bundle_for_stale_paint(bundle_path, test_id, check_stale_paint_eps)?;
+    }
+    if let Some(test_id) = check_stale_scene_test_id {
+        check_bundle_for_stale_scene(bundle_path, test_id, check_stale_scene_eps)?;
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
@@ -5218,6 +5279,115 @@ fn check_bundle_for_stale_paint_json(
     Err(msg)
 }
 
+fn check_bundle_for_stale_scene(bundle_path: &Path, test_id: &str, eps: f32) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_stale_scene_json(&bundle, bundle_path, test_id, eps)
+}
+
+fn check_bundle_for_stale_scene_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    eps: f32,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut suspicious: Vec<String> = Vec::new();
+    let mut missing_scene_fingerprint = false;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut prev_y: Option<f64> = None;
+        let mut prev_label: Option<String> = None;
+        let mut prev_value: Option<String> = None;
+        let mut prev_fp: Option<u64> = None;
+
+        for s in snaps {
+            let (y, label, value) = semantics_node_fields_for_test_id(s, test_id);
+            let fp = s.get("scene_fingerprint").and_then(|v| v.as_u64());
+            if fp.is_none() {
+                missing_scene_fingerprint = true;
+            }
+
+            let Some(fp) = fp else {
+                prev_y = y;
+                prev_label = label;
+                prev_value = value;
+                prev_fp = None;
+                continue;
+            };
+
+            if let (Some(prev_fp), Some(prev_y)) = (prev_fp, prev_y) {
+                let moved = y
+                    .zip(Some(prev_y))
+                    .is_some_and(|(y, prev_y)| (y - prev_y).abs() >= eps as f64);
+                let label_changed = label.as_deref() != prev_label.as_deref();
+                let value_changed = value.as_deref() != prev_value.as_deref();
+                let changed = moved || label_changed || value_changed;
+
+                if changed && fp == prev_fp {
+                    let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let label_len_prev = prev_label.as_deref().map(|s| s.len()).unwrap_or(0);
+                    let label_len_now = label.as_deref().map(|s| s.len()).unwrap_or(0);
+                    let value_len_prev = prev_value.as_deref().map(|s| s.len()).unwrap_or(0);
+                    let value_len_now = value.as_deref().map(|s| s.len()).unwrap_or(0);
+                    let delta_y = y
+                        .zip(Some(prev_y))
+                        .map(|(y, prev_y)| y - prev_y)
+                        .unwrap_or(0.0);
+                    suspicious.push(format!(
+                        "window={window_id} tick={tick_id} frame={frame_id} test_id={test_id} changed={{moved={moved} label={label_changed} value={value_changed}}} delta_y={delta_y:.2} label_len={label_len_prev}->{label_len_now} value_len={value_len_prev}->{value_len_now} scene_fingerprint=0x{fp:016x}",
+                    ));
+                    if suspicious.len() >= 8 {
+                        break;
+                    }
+                }
+            }
+
+            prev_y = y;
+            prev_label = label;
+            prev_value = value;
+            prev_fp = Some(fp);
+        }
+    }
+
+    if missing_scene_fingerprint {
+        return Err(format!(
+            "stale scene check requires `scene_fingerprint` in snapshots (re-run the script with a newer target build): {}",
+            bundle_path.display()
+        ));
+    }
+
+    if suspicious.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str(
+        "stale scene suspected (semantics changed but scene fingerprint did not change)\n",
+    );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in suspicious {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
 fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> Option<f64> {
     let nodes = snapshot
         .get("debug")
@@ -5232,6 +5402,41 @@ fn semantics_node_y_for_test_id(snapshot: &serde_json::Value, test_id: &str) -> 
     node.get("bounds")
         .and_then(|v| v.get("y"))
         .and_then(|v| v.as_f64())
+}
+
+fn semantics_node_fields_for_test_id(
+    snapshot: &serde_json::Value,
+    test_id: &str,
+) -> (Option<f64>, Option<String>, Option<String>) {
+    let nodes = snapshot
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array());
+    let Some(nodes) = nodes else {
+        return (None, None, None);
+    };
+    let node = nodes.iter().find(|n| {
+        n.get("test_id")
+            .and_then(|v| v.as_str())
+            .is_some_and(|id| id == test_id)
+    });
+    let Some(node) = node else {
+        return (None, None, None);
+    };
+    let y = node
+        .get("bounds")
+        .and_then(|v| v.get("y"))
+        .and_then(|v| v.as_f64());
+    let label = node
+        .get("label")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let value = node
+        .get("value")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    (y, label, value)
 }
 
 fn first_wheel_frame_id_for_window(window: &serde_json::Value) -> Option<u64> {
@@ -7975,6 +8180,41 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::path::Path;
+
+    #[test]
+    fn stale_scene_check_fails_when_label_changes_without_scene_change() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "scene_fingerprint": 7,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 1, "test_id": "search", "bounds": { "y": 0.0 }, "label": "hello" }
+                            ]}}
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "scene_fingerprint": 7,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 1, "test_id": "search", "bounds": { "y": 0.0 }, "label": "world" }
+                            ]}}
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let err =
+            check_bundle_for_stale_scene_json(&bundle, Path::new("bundle.json"), "search", 0.5)
+                .unwrap_err();
+        assert!(err.contains("stale scene suspected"));
+    }
 
     #[test]
     fn bundle_stats_sums_and_sorts_top_by_invalidation_nodes() {

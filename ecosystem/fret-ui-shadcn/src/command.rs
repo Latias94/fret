@@ -302,7 +302,7 @@ fn cmdk_highlighted_label<H: UiHost>(
 
     if query.is_empty() {
         return apply_text_style(ui::text(cx, label))
-            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+            .layout(LayoutRefinement::default().min_w_0().flex_1())
             .text_color(ColorRef::Color(fg))
             .into_element(cx);
     }
@@ -313,7 +313,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
         return apply_text_style(ui::text(cx, label))
-            .layout(LayoutRefinement::default().w_full().min_w_0().flex_1())
+            .layout(LayoutRefinement::default().min_w_0().flex_1())
             .text_color(ColorRef::Color(fg))
             .into_element(cx);
     }
@@ -1096,7 +1096,7 @@ impl CommandList {
                 LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
             );
 
-            let scroll = self.scroll;
+            let scroll = self.scroll.w_full().min_w_0();
 
             cx.semantics(
                 fret_ui::element::SemanticsProps {
@@ -1471,7 +1471,7 @@ impl CommandPalette {
             group_pad_y: MetricRef::space(Space::N1),
             group_next_top_pad_zero: false,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default(),
+            layout: LayoutRefinement::default().w_full().min_w_0(),
             scroll: LayoutRefinement::default()
                 .max_h(Px(300.0))
                 .w_full()
@@ -2267,6 +2267,7 @@ impl CommandPalette {
                 );
             }
 
+            let scroll_layout = self.scroll.w_full().min_w_0();
             let list = cx.semantics(
                 fret_ui::element::SemanticsProps {
                     role: SemanticsRole::ListBox,
@@ -2279,7 +2280,6 @@ impl CommandPalette {
                         return vec![CommandEmpty::new(empty).into_element(cx)];
                     }
 
-                    let scroll = self.scroll;
                     let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
                     let scroll_area = ScrollArea::new(vec![cx.flex(
                         FlexProps {
@@ -2305,7 +2305,7 @@ impl CommandPalette {
                         move |_cx| rows,
                     )])
                     .scroll_handle(scroll_handle.clone())
-                    .refine_layout(scroll)
+                    .refine_layout(scroll_layout.clone())
                     .into_element(cx);
 
                     if let Some(active_row_element) = active_row_element {
