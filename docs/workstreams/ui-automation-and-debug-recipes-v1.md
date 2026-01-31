@@ -30,6 +30,13 @@ Examples of target bugs:
 - overlay barriers that block underlay input unexpectedly,
 - heavy layout hot spots (e.g. Taffy measure/solve dominated frames).
 
+User-facing performance concerns this workstream should explicitly answer:
+
+- **CPU utilization**: avoid “mysterious background work” (unnecessary redraws, polling loops, runaway invalidation).
+- **Memory footprint**: keep native apps lightweight (no browser runtime), and produce evidence for regressions.
+- **Redraw efficiency**: settle “immediate-mode overdraw” debates with measurable signals (paint/cache reuse/invalidation),
+  not philosophy.
+
 ## Existing foundation (what we should build on)
 
 Fret already has most of the primitives needed for a “test-engine-like” workflow:
@@ -202,6 +209,12 @@ Tooling gates (CI/automation):
 - For maintainable CI configs, tooling can also read/write a small baseline file:
   - `--perf-baseline-out <path> --perf-baseline-headroom-pct <n>` writes a `kind=perf_baseline` JSON file,
   - `--perf-baseline <path>` loads thresholds per script and gates accordingly.
+
+Gaps (still open):
+
+- **Process-level resource footprint** is not yet captured (CPU time/%, RSS/working set, peak usage). This matters for
+  “framework feels heavy” reports and for table-heavy workloads.
+- **Redraw-efficiency gates** (e.g. “idle should not paint”, “cache reuse should be stable”) are not standardized yet.
 
 Future (optional, gated):
 

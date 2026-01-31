@@ -42,7 +42,9 @@ contracts needed to unify those into a scalable workflow.
 2. Make interaction automation robust across DPI/window sizes by selecting targets via semantics, not coordinates.
 3. Make “missing repaint” bugs diagnosable via structured checks and artifacts.
 4. Standardize a minimal performance query surface for automated triage and regression gating.
-5. Preserve crate boundaries and keep `fret-ui` policy-free.
+5. Enable measuring user-facing resource concerns (CPU utilization, memory footprint, redraw efficiency) via portable,
+   structured artifacts (tooling-first; keep runtime hooks minimal).
+6. Preserve crate boundaries and keep `fret-ui` policy-free.
 
 ## Non-goals
 
