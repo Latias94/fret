@@ -1,6 +1,6 @@
 # UI Gallery Layout Correctness — Tracker
 
-Status: Draft (workstream note; ADRs remain the source of truth)
+Status: Complete (baseline established; ongoing maintenance only)
 
 This document tracks **layout correctness** (wrong bounds, wrong sizing, wrong clipping) issues found in
 `apps/fret-ui-gallery`, with a bias toward bugs that are **visually severe** and **deterministically reproducible**.
@@ -16,7 +16,7 @@ For performance investigations, see `docs/workstreams/ui-gallery-perf-scroll-mea
 ## 0.1 Milestones (This Workstream)
 
 - M0 (done): Gate the most severe P0 layout regressions in `fretboard diag suite ui-gallery-layout`.
-- M1 (next): Expand correctness coverage with a small number of additional “high-risk” gates (prefer page roots + 1–3 critical controls).
+- M1 (done): Expand correctness coverage with a small number of additional “high-risk” gates (prefer page roots + 1–3 critical controls).
 - M2 (later): Build a separate track for **visual (non-layout)** artifacts (stale paint / cache invalidation / scissor) with screenshot-based evidence and targeted checks.
 
 ## 1) Triage Checklist (Layout vs Visual)
@@ -144,6 +144,11 @@ This workstream is intentionally **demo-driven** and **contract-aware**:
 | M3 | Regression prevention | Each fixed P0 has either a unit test (preferred) or a dedicated script in `ui-gallery-layout` suite (acceptable fallback). |
 | M4 | Ongoing maintenance | New layout regressions are filed into this tracker first (ID + severity + script) before deeper refactors. |
 
+As of 2026-01-31:
+
+- M0–M3: complete for the current UI Gallery surfaces.
+- M4: ongoing (this tracker stays open for future regressions).
+
 ### 5.2 Layout Invariants (tailwind-aligned “risk semantics”)
 
 These are the most common “editor UI” failure modes, expressed in tailwind language with the intended Fret meaning.
@@ -193,7 +198,7 @@ Definition of “safe-by-default” here:
 ### 5.3 TODO (Near-term)
 
 - [x] Add/maintain a “P0-first” issue queue in this doc (table in section 3 stays authoritative).
-- [ ] Audit shadcn containers for Invariants A–D (keep the checklist explicit):
+- [x] Audit shadcn containers for Invariants A–D (keep the checklist explicit):
   - [x] Tabs content / panels (L2)
   - [x] Scroll areas used inside flex stacks (`ScrollArea` defaults to `min_w_0().min_h_0()`)
   - [x] Resizable/split panel wrappers and handle rows (L1)
