@@ -649,7 +649,7 @@ topics (if/when we implement them):
   - Definition of done (v2; mark `[x]` when all are true):
     - [ ] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
     - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
-    - [ ] The same substrate can be applied to at least one more surface (reused primitives, not a one-off hack).
+    - [x] The same substrate can be applied to at least one more surface (reused primitives, not a one-off hack).
   - Clarification: the legacy `virtual_list_keyed` API (frame-local `FnMut` row closures) cannot support “attach/detach on cache-hit frames”
     by construction. The v2 path for GPUI-like prepaint-driven window updates therefore focuses on retained-host surfaces (ADR 0192) and
     ergonomic ecosystem wrappers that adopt them by default.
@@ -1053,6 +1053,17 @@ topics (if/when we implement them):
       - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
         - window-boundary: `C:\fret-diag-perf-components-gallery-file-tree-boundary\1769830674611-script-step-0022-wheel/bundle.json` (2897/2216/30/717)
         - toggle+scroll: `C:\fret-diag-perf-components-gallery-file-tree-toggle\1769830707477-script-step-0021-wheel/bundle.json` (2719/2035/26/768)
+    - [x] Migrate one more real surface (table) onto the retained/windowed substrate and add a `diag` suite for it.
+      - Target (v0): `apps/fret-examples/src/components_gallery.rs` (table torture mode).
+      - Scripts:
+        - `tools/diag-scripts/components-gallery-table-window-boundary-scroll.json`
+        - `tools/diag-scripts/components-gallery-table-sort-and-scroll.json`
+      - Env (recommended): `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`.
+      - Builtin suite:
+        - `cargo run -p fretboard -- diag suite components-gallery-table --launch -- cargo run -p fret-demo --bin components_gallery --release`
+      - Evidence bundles (suite, view-cache, release):
+        - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833380478-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
