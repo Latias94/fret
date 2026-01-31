@@ -1874,9 +1874,11 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn enforce_modal_barrier_scope(&mut self, active_roots: &[NodeId]) {
-        if self
-            .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+        let (focus_roots, focus_barrier_root) = self.active_focus_layers();
+        if focus_barrier_root.is_some()
+            && self
+                .focus
+                .is_some_and(|n| !self.node_in_any_layer(n, focus_roots.as_slice()))
         {
             self.focus = None;
         }
@@ -2424,6 +2426,12 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn set_focus(&mut self, focus: Option<NodeId>) {
+        if let Some(focus) = focus {
+            let (active_roots, barrier_root) = self.active_focus_layers();
+            if barrier_root.is_some() && !self.node_in_any_layer(focus, active_roots.as_slice()) {
+                return;
+            }
+        }
         if self.focus != focus {
             self.ime_composing = false;
         }

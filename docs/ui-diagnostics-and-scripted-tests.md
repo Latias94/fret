@@ -298,6 +298,7 @@ Script harness:
 
 Screenshot capture:
 
+- Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
 - `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
 - `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
 - `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
@@ -352,8 +353,8 @@ Supported selectors (v1 MVP):
 
 Notes:
 
-- `capture_bundle` always writes a new `bundle.json` directory. When `FRET_DIAG_SCREENSHOTS=1`, the step waits until the corresponding screenshot has been written (so downstream automation can rely on it deterministically).
-- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`). It also waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness will create one first.
+- `capture_bundle` always writes a new `bundle.json` directory. If you need a screenshot for that bundle, follow it with a `capture_screenshot` step.
+- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 
 Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted

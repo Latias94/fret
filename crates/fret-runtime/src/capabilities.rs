@@ -9,6 +9,10 @@ pub mod keys {
     pub const UI_WINDOW_TEAR_OFF: &str = "ui.window_tear_off";
     pub const UI_CURSOR_ICONS: &str = "ui.cursor_icons";
 
+    pub const UI_WINDOW_HOVER_DETECTION: &str = "ui.window_hover_detection";
+    pub const UI_WINDOW_SET_OUTER_POSITION: &str = "ui.window_set_outer_position";
+    pub const UI_WINDOW_Z_LEVEL: &str = "ui.window_z_level";
+
     pub const CLIPBOARD_TEXT: &str = "clipboard.text";
     pub const CLIPBOARD_FILES: &str = "clipboard.files";
 
@@ -65,6 +69,9 @@ pub const KNOWN_STR_CAPABILITY_KEYS: &[&str] = &[
     keys::EXEC_BACKGROUND_WORK,
     keys::EXEC_WAKE,
     keys::EXEC_TIMERS,
+    keys::UI_WINDOW_HOVER_DETECTION,
+    keys::UI_WINDOW_SET_OUTER_POSITION,
+    keys::UI_WINDOW_Z_LEVEL,
     keys::DND_EXTERNAL_PAYLOAD,
     keys::DND_EXTERNAL_POSITION,
 ];
@@ -234,12 +241,119 @@ impl ExternalDragPositionQuality {
     }
 }
 
+/// Windowing quality signal: whether the backend can reliably determine which window is under the
+/// cursor.
+///
+/// This is used as a degradation signal for editor-grade multi-window UX (e.g. docking tear-off
+/// hover target selection under overlap).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowHoverDetectionQuality {
+    /// The backend cannot reliably determine window-under-cursor (or cannot provide global cursor
+    /// position updates needed to infer it).
+    None,
+    /// Best-effort: selection may be stale/missing or ambiguous under overlap.
+    BestEffort,
+    /// Reliable enough for editor-grade hover selection.
+    #[default]
+    Reliable,
+}
+
+impl WindowHoverDetectionQuality {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::BestEffort => "best_effort",
+            Self::Reliable => "reliable",
+        }
+    }
+
+    pub fn clamp_to_available(self, available: Self) -> Self {
+        use WindowHoverDetectionQuality::*;
+        match (self, available) {
+            (None, _) => None,
+            (_, None) => None,
+            (BestEffort, BestEffort | Reliable) => BestEffort,
+            (Reliable, Reliable) => Reliable,
+            (Reliable, BestEffort) => BestEffort,
+        }
+    }
+}
+
+/// Windowing quality signal: whether programmatic window movement via outer-position requests is
+/// reliable enough for "follow cursor" UX.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowSetOuterPositionQuality {
+    None,
+    BestEffort,
+    #[default]
+    Reliable,
+}
+
+impl WindowSetOuterPositionQuality {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::BestEffort => "best_effort",
+            Self::Reliable => "reliable",
+        }
+    }
+
+    pub fn clamp_to_available(self, available: Self) -> Self {
+        use WindowSetOuterPositionQuality::*;
+        match (self, available) {
+            (None, _) => None,
+            (_, None) => None,
+            (BestEffort, BestEffort | Reliable) => BestEffort,
+            (Reliable, Reliable) => Reliable,
+            (Reliable, BestEffort) => BestEffort,
+        }
+    }
+}
+
+/// Windowing quality signal: whether OS z-level requests (e.g. AlwaysOnTop during drags) behave
+/// predictably.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowZLevelQuality {
+    None,
+    BestEffort,
+    #[default]
+    Reliable,
+}
+
+impl WindowZLevelQuality {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::BestEffort => "best_effort",
+            Self::Reliable => "reliable",
+        }
+    }
+
+    pub fn clamp_to_available(self, available: Self) -> Self {
+        use WindowZLevelQuality::*;
+        match (self, available) {
+            (None, _) => None,
+            (_, None) => None,
+            (BestEffort, BestEffort | Reliable) => BestEffort,
+            (Reliable, Reliable) => Reliable,
+            (Reliable, BestEffort) => BestEffort,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiCapabilities {
     pub multi_window: bool,
     pub window_tear_off: bool,
     pub cursor_icons: bool,
+
+    pub window_hover_detection: WindowHoverDetectionQuality,
+    pub window_set_outer_position: WindowSetOuterPositionQuality,
+    pub window_z_level: WindowZLevelQuality,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -305,6 +419,9 @@ impl Default for PlatformCapabilities {
                 multi_window: true,
                 window_tear_off: true,
                 cursor_icons: true,
+                window_hover_detection: WindowHoverDetectionQuality::Reliable,
+                window_set_outer_position: WindowSetOuterPositionQuality::Reliable,
+                window_z_level: WindowZLevelQuality::Reliable,
             },
             clipboard: ClipboardCapabilities {
                 text: true,
@@ -357,6 +474,9 @@ impl PlatformCapabilities {
             keys::EXEC_BACKGROUND_WORK => Some(self.exec.background_work.as_str()),
             keys::EXEC_WAKE => Some(self.exec.wake.as_str()),
             keys::EXEC_TIMERS => Some(self.exec.timers.as_str()),
+            keys::UI_WINDOW_HOVER_DETECTION => Some(self.ui.window_hover_detection.as_str()),
+            keys::UI_WINDOW_SET_OUTER_POSITION => Some(self.ui.window_set_outer_position.as_str()),
+            keys::UI_WINDOW_Z_LEVEL => Some(self.ui.window_z_level.as_str()),
             keys::DND_EXTERNAL_PAYLOAD => Some(self.dnd.external_payload.as_str()),
             keys::DND_EXTERNAL_POSITION => Some(self.dnd.external_position.as_str()),
             _ => None,

@@ -7,8 +7,7 @@ use fret_core::{
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, create_dock_space_node_with_test_id,
-    handle_dock_before_close_window, handle_dock_op, handle_dock_window_created,
+    DockViewportOverlayHooksService, DockingRuntime, create_dock_space_node_with_test_id,
     render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
@@ -169,7 +168,7 @@ struct DockingDemoWindowState {
 
 #[derive(Default)]
 struct DockingDemoDriver {
-    main_window: Option<AppWindowId>,
+    docking_runtime: Option<DockingRuntime>,
 }
 
 impl DockingDemoDriver {
@@ -269,7 +268,7 @@ impl WinitAppDriver for DockingDemoDriver {
     type WindowState = DockingDemoWindowState;
 
     fn init(&mut self, _app: &mut App, main_window: AppWindowId) {
-        self.main_window = Some(main_window);
+        self.docking_runtime = Some(DockingRuntime::new(main_window));
     }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
@@ -369,7 +368,11 @@ impl WinitAppDriver for DockingDemoDriver {
     }
 
     fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
-        let _ = handle_dock_op(app, op);
+        let _ = self
+            .docking_runtime
+            .as_ref()
+            .map(|rt| rt.on_dock_op(app, op))
+            .unwrap_or(false);
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -402,7 +405,14 @@ impl WinitAppDriver for DockingDemoDriver {
         let semantics_snapshot = state.ui.semantics_snapshot();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.drive_script_for_window(app, window, bounds, semantics_snapshot, element_runtime)
+            svc.drive_script_for_window(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                semantics_snapshot,
+                element_runtime,
+            )
         });
 
         if drive.request_redraw {
@@ -492,13 +502,19 @@ impl WinitAppDriver for DockingDemoDriver {
         request: &fret_app::CreateWindowRequest,
         new_window: AppWindowId,
     ) {
-        let _ = handle_dock_window_created(app, request, new_window);
+        let _ = self
+            .docking_runtime
+            .as_ref()
+            .map(|rt| rt.on_window_created(app, request, new_window))
+            .unwrap_or(false);
     }
 
     fn before_close_window(&mut self, app: &mut App, window: AppWindowId) -> bool {
-        if let Some(main_window) = self.main_window {
-            let _ = handle_dock_before_close_window(app, window, main_window);
-        }
+        let _ = self
+            .docking_runtime
+            .as_ref()
+            .map(|rt| rt.before_close_window(app, window))
+            .unwrap_or(false);
         true
     }
 

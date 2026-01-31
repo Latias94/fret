@@ -157,7 +157,7 @@ impl Switch {
                     }
                 }));
 
-                let corner_radii = Corners::all(Px(9999.0));
+                let corner_radii = switch_tokens::state_layer_shape(&theme);
                 let pressable_props = PressableProps {
                     enabled,
                     focusable: enabled,
@@ -288,7 +288,16 @@ impl Switch {
                             |color| color.resolve(&theme),
                             || token_outline_color,
                         );
-                        let track = switch_track(cx, size, geom, chrome);
+                        let track_corner_radii = switch_tokens::track_shape(&theme);
+                        let handle_corner_radii = switch_tokens::handle_shape(&theme);
+                        let track = switch_track(
+                            cx,
+                            size,
+                            geom,
+                            chrome,
+                            track_corner_radii,
+                            handle_corner_radii,
+                        );
 
                         let ripple_base_opacity =
                             switch_tokens::pressed_state_layer_opacity(&theme, selected);
@@ -302,7 +311,7 @@ impl Switch {
                             now_frame,
                             geom.ink_bounds,
                             geom.ink_bounds,
-                            Corners::all(Px(9999.0)),
+                            switch_tokens::state_layer_shape(&theme),
                             RippleClip::Bounded,
                             state_layer_color,
                             is_pressed,
@@ -475,13 +484,15 @@ fn switch_track<H: UiHost>(
     size: SwitchSizeTokens,
     geom: SwitchGeometry,
     chrome: switch_tokens::SwitchChrome,
+    track_corner_radii: Corners,
+    handle_corner_radii: Corners,
 ) -> AnyElement {
     let mut track = ContainerProps::default();
     track.layout.size.width = Length::Px(size.track_width);
     track.layout.size.height = Length::Px(size.track_height);
     track.layout.overflow = Overflow::Visible;
     track.background = Some(chrome.track_color);
-    track.corner_radii = Corners::all(Px(9999.0));
+    track.corner_radii = track_corner_radii;
     if let Some(outline) = chrome.outline_color {
         track.border = Edges::all(size.track_outline_width);
         track.border_color = Some(outline);
@@ -494,7 +505,7 @@ fn switch_track<H: UiHost>(
         handle.layout.inset.top = Some(geom.handle_y);
         handle.layout.size.width = Length::Px(geom.handle_width);
         handle.layout.size.height = Length::Px(geom.handle_height);
-        handle.corner_radii = Corners::all(Px(9999.0));
+        handle.corner_radii = handle_corner_radii;
         handle.background = Some(chrome.handle_color);
 
         vec![cx.container(handle, |_cx| Vec::new())]

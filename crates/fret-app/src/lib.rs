@@ -19,12 +19,13 @@ pub use app_display_name::AppDisplayName;
 pub use font_catalog_cache::FontCatalogCache;
 
 pub use fret_runtime::{
-    CommandId, CommandMeta, CommandRegistry, CommandScope, CreateWindowKind, CreateWindowRequest,
-    DRAG_KIND_DOCK_PANEL, DefaultKeybinding, DockDragInversionModifier, DockDragInversionPolicy,
-    DockDragInversionSettings, DockingInteractionSettings, DragKindId, DragPhase, DragSession,
-    DragSessionId, Effect, InputContext, KeyChord, Keymap, KeymapService, Menu, MenuBar, MenuItem,
-    MenuRole, Model, ModelCx, ModelId, ModelStore, ModelUpdateError, OsAction, Platform,
-    PlatformFilter, SystemMenuType, WhenExpr, WindowRequest, format_chord, format_sequence,
+    ActivationPolicy, CommandId, CommandMeta, CommandRegistry, CommandScope, CreateWindowKind,
+    CreateWindowRequest, DRAG_KIND_DOCK_PANEL, DefaultKeybinding, DockDragInversionModifier,
+    DockDragInversionPolicy, DockDragInversionSettings, DockingInteractionSettings, DragKindId,
+    DragPhase, DragSession, DragSessionId, Effect, InputContext, KeyChord, Keymap, KeymapService,
+    Menu, MenuBar, MenuItem, MenuRole, Model, ModelCx, ModelId, ModelStore, ModelUpdateError,
+    OsAction, Platform, PlatformFilter, SystemMenuType, TaskbarVisibility, WhenExpr, WindowRequest,
+    WindowRole, WindowStyleRequest, WindowZLevel, format_chord, format_sequence,
 };
 
 pub use keymap::KeymapError;

@@ -10,7 +10,7 @@ pub use cx::ElementContext;
 pub use hash::global_root;
 pub use id::GlobalElementId;
 pub use queries::{
-    bounds_for_element, element_is_live_in_current_frame, node_for_element,
+    bounds_for_element, element_is_live_in_current_frame, node_for_element, peek_node_for_element,
     root_bounds_for_element, visual_bounds_for_element, with_element_cx,
 };
 pub use runtime::{ContinuousFrames, ElementRuntime, WindowElementState};

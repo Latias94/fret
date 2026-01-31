@@ -114,6 +114,7 @@ mod anchored;
 mod canvas;
 mod command_hooks;
 mod core;
+mod element_state_gc;
 mod identity;
 mod interactions;
 mod layout;

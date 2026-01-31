@@ -40,6 +40,27 @@ Notes:
 - `fretboard diag inspect on` enables a GPUI/Zed-style picker overlay and writes `pick.result.json` for stable selectors.
 - `fretboard diag pack --include-all` and `diag run --pack --include-all` produce a `.zip` that the offline viewer can open (`tools/fret-bundle-viewer`).
 
+Framework consistency checks (automation-friendly):
+
+- **Stale paint detection**: fails when a semantics node moves but the scene fingerprint does not change (common symptom:
+  “UI updated but pixels didn’t repaint”).
+- **Stale scene detection**: fails when a semantics node’s label/value changes (or moves) but the scene fingerprint does
+  not change (common symptom: “search results changed but text didn’t repaint / disappeared”).
+
+Example:
+
+```powershell
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json `
+  --check-stale-paint ui-gallery-nav-intro `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+```powershell
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json `
+  --check-stale-scene <test_id> `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 ## 1) GPU / renderer: debug specific passes
 
 ### 1.1 Capture a frame (RenderDoc)

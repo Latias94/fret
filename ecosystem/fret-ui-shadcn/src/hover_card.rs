@@ -14,7 +14,7 @@ use fret_ui_kit::declarative::{scheduling, style as decl_style};
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::hover_card as radix_hover_card;
-use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
+use fret_ui_kit::primitives::hover_intent::HoverIntentConfig;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -369,88 +369,14 @@ impl HoverCard {
             let has_text_selection = cx.has_active_text_selection_in_root(overlay_root_id);
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
-
-            #[derive(Debug, Default, Clone, Copy)]
-            struct HoverCardIntentDriverState {
-                last_frame_tick: Option<u64>,
-                tick: u64,
-                intent: hover_intent::HoverIntentState,
-                saw_active_since_open: bool,
-                last_pointer_down: bool,
-                close_suppressed_after_pointer_down: bool,
-            }
-
-            let frame_tick = cx.app.frame_id().0;
-            let update =
-                cx.with_state_for(hover_card_id, HoverCardIntentDriverState::default, |st| {
-                    match st.last_frame_tick {
-                        None => {
-                            st.last_frame_tick = Some(frame_tick);
-                            st.tick = frame_tick;
-                        }
-                        Some(prev) if prev != frame_tick => {
-                            st.last_frame_tick = Some(frame_tick);
-                            st.tick = frame_tick;
-                        }
-                        Some(_) => {
-                            // In some unit tests the runner-owned frame clock may not advance; fall back
-                            // to a per-call monotonic tick so delays can still elapse deterministically.
-                            st.tick = st.tick.saturating_add(1);
-                        }
-                    }
-
-                    if st.intent.is_open() != open_now {
-                        st.intent.set_open(open_now);
-                        st.saw_active_since_open = false;
-                        st.close_suppressed_after_pointer_down = false;
-                    }
-
-                    let signal_active = hovered;
-                    let was_open = st.intent.is_open();
-
-                    if pointer_down_on_content_now != st.last_pointer_down {
-                        if pointer_down_on_content_now {
-                            st.close_suppressed_after_pointer_down = false;
-                        } else if was_open && !signal_active {
-                            // Mirror Radix HoverCard: if the pointer left while the button is
-                            // held, `onClose` does not schedule a close timer. We model that by
-                            // suppressing close until the next "active -> inactive" edge.
-                            st.close_suppressed_after_pointer_down = true;
-                        }
-                        st.last_pointer_down = pointer_down_on_content_now;
-                    }
-                    if st.close_suppressed_after_pointer_down && signal_active {
-                        st.close_suppressed_after_pointer_down = false;
-                    }
-
-                    if was_open && (signal_active || pointer_down_on_content_now) {
-                        st.saw_active_since_open = true;
-                    }
-
-                    // Radix HoverCard opens/closes based on enter/leave edges, not a pure level signal.
-                    // If the root is open but we've never observed an "active" signal since it opened
-                    // (e.g. `defaultOpen=true` on first mount), keep it open until we see at least one
-                    // active period and then a leave edge.
-                    let effective_hovered = if was_open {
-                        signal_active
-                            || pointer_down_on_content_now
-                            || st.close_suppressed_after_pointer_down
-                            || has_text_selection
-                            || !st.saw_active_since_open
-                    } else {
-                        signal_active || pointer_down_on_content_now
-                    };
-
-                    let out = st.intent.update(effective_hovered, st.tick, cfg);
-                    if !was_open && out.open {
-                        st.saw_active_since_open = signal_active || pointer_down_on_content_now;
-                    } else if was_open && !out.open {
-                        st.saw_active_since_open = false;
-                        st.close_suppressed_after_pointer_down = false;
-                    }
-
-                    out
-                });
+            let update = radix_hover_card::hover_card_update_interaction(
+                cx,
+                open_now,
+                hovered,
+                pointer_down_on_content_now,
+                has_text_selection,
+                cfg,
+            );
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
 
@@ -470,6 +396,10 @@ impl HoverCard {
             );
             let opacity = motion.opacity;
             let scale = motion.scale;
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: update.open,
+            };
 
             let out = vec![trigger];
             if debug_trace {
@@ -643,10 +573,6 @@ impl HoverCard {
                 )]
             });
 
-            let overlay_presence = OverlayPresence {
-                present: motion.present,
-                interactive: update.open,
-            };
             let request = radix_hover_card::hover_card_request(
                 hover_card_id,
                 trigger_id,
@@ -752,9 +678,9 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
-        PathStyle, Point, Px, Rect, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
-        TextMetrics, TextService, TextStyle as CoreTextStyle,
+        AppWindowId, Event, Modifiers, MouseButton, MouseButtons, PathCommand, PathConstraints,
+        PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect, SemanticsRole, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
@@ -762,6 +688,7 @@ mod tests {
     };
     use fret_ui::overlay_placement;
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::prelude::ActionHooksExt;
     use fret_ui_kit::{OverlayController, ui};
 
     #[derive(Default)]
@@ -1794,5 +1721,519 @@ mod tests {
 
         // Keep IDs live to avoid surprising drop-order side effects in future refactors.
         let _ = content_id.get().expect("content element id");
+    }
+
+    #[test]
+    fn hover_card_close_transition_is_click_through() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            open: Model<bool>,
+            underlay_clicked: Model<bool>,
+            underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            frame: u64,
+        ) {
+            app.set_frame_id(FrameId(frame));
+            app.set_tick_id(TickId(frame));
+
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "hover-card-close-transition-click-through",
+                |cx| {
+                    let underlay_id_out = underlay_id.clone();
+                    let content_id_out = content_id.clone();
+                    let underlay_clicked = underlay_clicked.clone();
+                    let open = open.clone();
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Relative;
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let underlay = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(0.0));
+                                        layout.inset.top = Some(Px(0.0));
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Fill;
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                {
+                                    let underlay_id_out = underlay_id_out.clone();
+                                    let underlay_clicked = underlay_clicked.clone();
+                                    move |cx, _st, id| {
+                                        underlay_id_out.set(Some(id));
+                                        cx.pressable_toggle_bool(&underlay_clicked);
+                                        Vec::new()
+                                    }
+                                },
+                            );
+
+                            let trigger = cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(20.0));
+                                        layout.inset.top = Some(Px(20.0));
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |_cx, _st| Vec::new(),
+                            );
+
+                            let content = cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::Panel,
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        HoverCardContent::new(vec![
+                                            ui::raw_text(cx, "card").into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                    ]
+                                },
+                            );
+                            content_id_out.set(Some(content.id));
+
+                            vec![
+                                underlay,
+                                HoverCard::new(trigger, content)
+                                    .open(Some(open))
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
+                                    )
+                                    .window_margin(Px(0.0))
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        // Frame 1: closed; establish element->node mapping for the underlay.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            1,
+        );
+        let underlay_element = underlay_id.get().expect("underlay element id");
+        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
+            .expect("underlay node");
+
+        // Frame 2: open and capture content bounds.
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            2,
+        );
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .map(|n| n.bounds)
+            .expect("content bounds");
+
+        let click_pos = Point::new(
+            Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
+            Px(content_bounds.origin.y.0 + content_bounds.size.height.0 * 0.5),
+        );
+
+        // Frame 3: start close transition (present=true, interactive=false).
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id.clone(),
+            content_id.clone(),
+            3,
+        );
+
+        // Sanity: content is still mounted during the fade-out.
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected hover card content to remain mounted during close transition"
+        );
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let content_layer = ui.node_layer(content_node).expect("content layer");
+        let layer = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == content_layer)
+            .expect("overlay layer");
+        assert!(layer.visible);
+        assert!(!layer.hit_testable);
+        assert_eq!(
+            layer.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
+        assert!(!layer.wants_pointer_move_events);
+        assert!(!layer.wants_timer_events);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 4: observe click-through effects via the underlay pressable helper.
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            underlay_clicked.clone(),
+            underlay_id,
+            content_id,
+            4,
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected hover card to remain closed after click-through while closing"
+        );
+        assert_eq!(
+            app.models().get_copied(&underlay_clicked),
+            Some(true),
+            "expected close transition click to reach the underlay"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected focus to move to the underlay during click-through close transition"
+        );
+    }
+
+    #[test]
+    fn hover_card_outside_press_is_click_through_and_closes_on_leave() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_clicked = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut dyn fret_core::UiServices,
+                      frame: u64| {
+            app.set_frame_id(FrameId(frame));
+            app.set_tick_id(TickId(frame));
+
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "hover-card-outside-press-click-through",
+                |cx| {
+                    let underlay_id_out = underlay_id.clone();
+                    let underlay_clicked = underlay_clicked.clone();
+                    let open = open.clone();
+
+                    vec![cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Relative;
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let underlay = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(600.0));
+                                        layout.inset.top = Some(Px(420.0));
+                                        layout.size.width = Length::Px(Px(160.0));
+                                        layout.size.height = Length::Px(Px(80.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                {
+                                    let underlay_id_out = underlay_id_out.clone();
+                                    let underlay_clicked = underlay_clicked.clone();
+                                    move |cx, _st, id| {
+                                        underlay_id_out.set(Some(id));
+                                        cx.pressable_toggle_bool(&underlay_clicked);
+                                        Vec::new()
+                                    }
+                                },
+                            );
+
+                            let trigger = cx.pressable(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(0.0));
+                                        layout.inset.top = Some(Px(0.0));
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |_cx, _st| Vec::new(),
+                            );
+
+                            let content = cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::Panel,
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        HoverCardContent::new(vec![
+                                            ui::raw_text(cx, "card").into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                    ]
+                                },
+                            );
+
+                            vec![
+                                underlay,
+                                HoverCard::new(trigger, content)
+                                    .open(Some(open))
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_px(Px(120.0)).h_px(Px(40.0)),
+                                    )
+                                    .window_margin(Px(0.0))
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        };
+
+        // Frame 1: mount and establish element/node mappings.
+        render(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let underlay_element = underlay_id.get().expect("underlay element id");
+        let underlay_node = fret_ui::elements::node_for_element(&mut app, window, underlay_element)
+            .expect("underlay node");
+
+        // Hover trigger to open (open_delay=0).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(12.0), Px(12.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: open model should flip to true.
+        render(&mut ui, &mut app, &mut services, 2);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected hover card to open on hover"
+        );
+
+        let underlay_pos = Point::new(Px(680.0), Px(460.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Frame 3/4: allow leave to propagate; hover card should close and the outside click should
+        // activate + focus the underlay (click-through, non-modal).
+        render(&mut ui, &mut app, &mut services, 3);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        render(&mut ui, &mut app, &mut services, 4);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            app.models().get_copied(&underlay_clicked),
+            Some(true),
+            "expected outside press to reach the underlay (click-through)"
+        );
+        assert_eq!(
+            ui.focus(),
+            Some(underlay_node),
+            "expected focus to move to the underlay on click-through outside press"
+        );
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(false),
+            "expected hover card to close after leaving the hover region"
+        );
+
+        let arbitration = OverlayController::arbitration_snapshot(&ui);
+        assert_eq!(
+            arbitration.pointer_occlusion,
+            fret_ui::tree::PointerOcclusion::None
+        );
     }
 }

@@ -1687,6 +1687,8 @@ fn select_impl<H: UiHost>(
                     let width_probe_id_out = &width_probe_id_out_cell;
                     let selected_item_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let selected_item_id_out = &selected_item_id_out_cell;
+                    let selected_item_id_for_request_cell = Cell::new(None::<GlobalElementId>);
+                    let selected_item_id_for_request = &selected_item_id_for_request_cell;
                     let selected_item_text_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let selected_item_text_id_out = &selected_item_text_id_out_cell;
                     let alignment_item_pos_out_cell = Cell::new(None::<usize>);
@@ -2135,7 +2137,8 @@ fn select_impl<H: UiHost>(
                                                                                 },
                                                                                 move |cx, st, id| {
                                                                                     if is_alignment_item {
-                                                                                        selected_item_id_out.set(Some(id));
+                                                                                selected_item_id_out.set(Some(id));
+                                                                                selected_item_id_for_request.set(Some(id));
                                                                                         alignment_item_pos_out.set(Some(pos));
                                                                                         alignment_item_has_leading_non_item_out
                                                                                             .set(Some(row_idx_for_hover > 0));
@@ -2566,7 +2569,10 @@ fn select_impl<H: UiHost>(
                         on_dismiss_request.clone(),
                         overlay_children,
                     );
-                    request.initial_focus = Some(listbox_id_for_trigger);
+                    request.initial_focus = radix_select::SelectInitialFocusTargets::new()
+                        .pointer_content_focus(Some(listbox_id_for_trigger))
+                        .keyboard_entry_focus(selected_item_id_for_request_cell.get())
+                        .resolve(cx, cx.window);
                     radix_select::request_select(cx, request);
                 } else {
                     let open_for_overlay = open_for_trigger.clone();
@@ -2587,7 +2593,7 @@ fn select_impl<H: UiHost>(
                         )]
                     });
 
-                    let request = radix_select::modal_select_request_with_dismiss_handler(
+                    let mut request = radix_select::modal_select_request_with_dismiss_handler(
                         trigger_id,
                         trigger_id,
                         open_for_trigger.clone(),
@@ -2595,6 +2601,10 @@ fn select_impl<H: UiHost>(
                         on_dismiss_request.clone(),
                         overlay_children,
                     );
+                    request.initial_focus = radix_select::SelectInitialFocusTargets::new()
+                        .pointer_content_focus(Some(listbox_id_for_trigger))
+                        .keyboard_entry_focus(None)
+                        .resolve(cx, cx.window);
                     radix_select::request_select(cx, request);
                 }
             }
@@ -2855,6 +2865,66 @@ mod tests {
         root
     }
 
+    fn render_frame_with_underlay(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<SelectItem>,
+        underlay_activated: Model<bool>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "select-underlay",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(180.0));
+                            layout.inset.left = Some(Px(240.0));
+                            layout.position = PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    underlay,
+                    Select::new(model.clone(), open.clone())
+                        .items(items.clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     fn render_frame_with_dismiss_handler(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3057,6 +3127,184 @@ mod tests {
             },
         );
         assert!(app.models().get_copied(&open).unwrap_or(false));
+    }
+
+    #[test]
+    fn select_pointer_open_focuses_listbox_container() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("beta")));
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        // Pointer open: focus listbox (content), not the selected item entry.
+        let _root = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            underlay_activated.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger semantics");
+        let trigger_bounds = ui
+            .debug_node_visual_bounds(trigger.id)
+            .expect("trigger bounds");
+        let trigger_center = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert!(
+            app.models().get_copied(&open).unwrap_or(false),
+            "expected pointer down to open select"
+        );
+
+        let _root = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            underlay_activated.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
+            .expect("Beta list item");
+        assert_eq!(
+            ui.focus(),
+            Some(listbox.id),
+            "expected pointer-open to focus the listbox container"
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(beta.id),
+            "expected pointer-open to not focus the selected entry"
+        );
+    }
+
+    #[test]
+    fn select_keyboard_open_focuses_selected_entry() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("beta")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("trigger node");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(
+            app.models().get_copied(&open).unwrap_or(false),
+            "expected keydown to open select"
+        );
+
+        let _root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
+            .expect("Beta list item");
+        assert_eq!(
+            ui.focus(),
+            Some(beta.id),
+            "expected keyboard-open to focus the selected entry"
+        );
     }
 
     #[test]
@@ -3431,6 +3679,171 @@ mod tests {
 
         assert_eq!(app.models().get_copied(&open), Some(false));
         assert_eq!(app.models().get_copied(&underlay_activated), Some(false));
+    }
+
+    #[test]
+    fn select_close_transition_keeps_modal_barrier_blocking_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+        ];
+
+        // Frame 1: closed.
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            underlay_activated.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Frame 2: open.
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            underlay_activated.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected select to install a modal barrier root"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // Frame 3: closing (present=true, interactive=false).
+        let _ = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            underlay_activated.clone(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let barrier_root = snap
+            .barrier_root
+            .expect("expected the barrier root to remain while the select is closing");
+        let barrier_layer = ui.node_layer(barrier_root).expect("barrier layer");
+        let barrier = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|l| l.id == barrier_layer)
+            .expect("barrier debug layer info");
+        assert!(barrier.visible);
+        assert!(barrier.hit_testable);
+        assert!(
+            barrier.blocks_underlay_input,
+            "expected modal barrier layer to block underlay input"
+        );
+
+        let underlay_point = Point::new(Px(250.0), Px(190.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(false));
+
+        // Once the exit transition settles, the barrier should drop and the underlay should be
+        // interactive again.
+        let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+        for _ in 0..settle_frames {
+            let _ = render_frame_with_underlay(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+                underlay_activated.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_none(),
+            "expected the barrier root to be cleared once the exit transition completes"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(true));
     }
 
     #[test]

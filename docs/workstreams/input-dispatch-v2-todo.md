@@ -50,7 +50,7 @@ Keep this list short and evidence-backed:
 
 - [x] IDV2-def-006 Decide which behaviors qualify as mechanism-owned default actions (vs ecosystem policy).
   - Decision tracker: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
-  - Decision: keep v2 limited to `DefaultAction::FocusOnPointerDown` for now.
+  - Notes: keep v2 limited to `DefaultAction::FocusOnPointerDown` for now to avoid smuggling Radix/shadcn policies into `crates/fret-ui`.
 - [x] IDV2-def-007 Expand default actions incrementally with tests (e.g. selection start, scroll routing), if justified.
   - Decision: defer until we have a concrete, boundary-safe, cross-surface default.
   - Evidence: `docs/workstreams/default-actions-v2-todo-input-dispatch-v2.md`
@@ -77,10 +77,10 @@ Keep this list short and evidence-backed:
 ## MVP3 — Frozen Gating Target (Overlay Does Not Pollute Availability)
 
 - [x] IDV2-freeze-030 Freeze command palette gating while open (editor-style discoverability).
-  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`WindowCommandGatingService::set_snapshot`)
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (`WindowCommandGatingService::push_snapshot`)
 - [x] IDV2-freeze-031 Support nested overlays (stackable gating snapshots per window).
-  - Evidence: `crates/fret-runtime/src/window_command_gating.rs` (`push_snapshot`, `remove_pushed_snapshot`),
-    `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette pushes a snapshot and stores a token; closes pop it),
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs` (`push_snapshot`, `pop_snapshot`, `WindowCommandGatingHandle`),
+    `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette pushes a snapshot and stores a handle; closes pops it),
     `ecosystem/fret-ui-shadcn/src/command.rs` (gating override tests use `push_snapshot`)
 
 ## MVP4 — Coverage Targets (Keep Expanding Incrementally)
@@ -122,10 +122,20 @@ Keep this list short and evidence-backed:
   - Notes: keep policy in `ecosystem/*`, but ensure mechanism hooks exist (`prevent_default`, focus hooks, timers, auto-focus hooks).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs` (plumbs `on_open_auto_focus/on_close_auto_focus`),
     tests `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}` (auto-focus preventDefault conformance).
+- [x] IDV2-ovl-054 Align Select open modality + entry focus (pointer focuses listbox; keyboard focuses selected entry).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/select.rs` (`SelectInitialFocusTargets`),
+    `ecosystem/fret-ui-shadcn/src/select.rs` (wires `SelectInitialFocusTargets` into overlay requests).
+  - Conformance: `ecosystem/fret-ui-shadcn/src/select.rs` tests `select_pointer_open_focuses_listbox_container` and
+    `select_keyboard_open_focuses_selected_entry`.
+- [x] IDV2-ovl-055 Align Combobox open modality + entry focus (pointer/keyboard open autofocuses the search input).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/combobox.rs` (combobox is `Popover` + `CommandPalette` with `input_role=ComboBox`).
+  - Conformance: `ecosystem/fret-ui-shadcn/src/combobox.rs` tests `combobox_pointer_open_auto_focuses_search_input` and
+    `combobox_keyboard_open_auto_focuses_search_input`.
 - [x] IDV2-ovl-053 Decide hover/tooltip request caching policy under view caching (avoid stale overlays).
   - Notes: align with overlay presence (`present` vs `interactive`) so close transitions remain click-through.
 
 ## Open Questions (Keep Short)
 
 - Resolved: `WindowCommandGatingService` is stack-based per window so nested overlays can publish gating snapshots without clobbering each other (IDV2-freeze-031).
-- Do we want a “diagnostic availability trace” (which node blocked / which node provided available) for debugging complex shells?
+- Resolved: UI diagnostics expose a command gating trace for debugging cross-surface enablement.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`command_gating_trace_for_window`, `command_gating_decision_trace`)

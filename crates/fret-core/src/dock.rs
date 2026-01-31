@@ -221,6 +221,89 @@ impl DockGraph {
         true
     }
 
+    pub fn move_tabs_between_windows(
+        &mut self,
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        target_window: AppWindowId,
+        target_tabs: DockNodeId,
+        zone: DropZone,
+        insert_index: Option<usize>,
+    ) -> bool {
+        if zone == DropZone::Center && source_window == target_window && source_tabs == target_tabs
+        {
+            return true;
+        }
+
+        if self
+            .root_for_node_in_window_forest(source_window, source_tabs)
+            .is_none()
+        {
+            return false;
+        }
+        if self
+            .root_for_node_in_window_forest(target_window, target_tabs)
+            .is_none()
+        {
+            return false;
+        }
+
+        let (panels, active) = match self.nodes.get(source_tabs) {
+            Some(DockNode::Tabs { tabs, active }) if !tabs.is_empty() => (tabs.clone(), *active),
+            _ => return false,
+        };
+        let active = active.min(panels.len().saturating_sub(1));
+
+        if zone == DropZone::Center
+            && !matches!(self.nodes.get(target_tabs), Some(DockNode::Tabs { .. }))
+        {
+            return false;
+        }
+
+        if let Some(DockNode::Tabs { tabs, active }) = self.nodes.get_mut(source_tabs) {
+            tabs.clear();
+            *active = 0;
+        }
+        if self.window_root(source_window) == Some(source_tabs) {
+            let _ = self.remove_window_root(source_window);
+        }
+        self.collapse_empty_tabs_upwards(source_window, source_tabs);
+        self.remove_empty_floating_windows(source_window);
+
+        if zone == DropZone::Center {
+            let ok = self.insert_panels_into_tabs_at(target_tabs, &panels, insert_index, active);
+            self.remove_empty_floating_windows(target_window);
+            return ok;
+        }
+
+        let axis = match zone {
+            DropZone::Left | DropZone::Right => Axis::Horizontal,
+            DropZone::Top | DropZone::Bottom => Axis::Vertical,
+            DropZone::Center => unreachable!(),
+        };
+
+        let new_tabs = self.insert_node(DockNode::Tabs {
+            tabs: panels,
+            active,
+        });
+
+        let (first, second) = match zone {
+            DropZone::Left | DropZone::Top => (new_tabs, target_tabs),
+            DropZone::Right | DropZone::Bottom => (target_tabs, new_tabs),
+            DropZone::Center => unreachable!(),
+        };
+
+        let split = self.insert_node(DockNode::Split {
+            axis,
+            children: vec![first, second],
+            fractions: vec![0.5, 0.5],
+        });
+
+        self.replace_node_in_window_tree(target_window, target_tabs, split);
+        self.remove_empty_floating_windows(target_window);
+        true
+    }
+
     pub fn close_panel(&mut self, window: AppWindowId, panel: PanelKey) -> bool {
         let Some((tabs, index)) = self.find_panel_in_window(window, &panel) else {
             return false;
@@ -282,6 +365,47 @@ impl DockGraph {
 
         self.collapse_empty_tabs_upwards(source_window, source_tabs);
         self.remove_empty_floating_windows(source_window);
+        true
+    }
+
+    pub fn float_tabs_in_window(
+        &mut self,
+        source_window: AppWindowId,
+        source_tabs: DockNodeId,
+        target_window: AppWindowId,
+        rect: Rect,
+    ) -> bool {
+        if self
+            .root_for_node_in_window_forest(source_window, source_tabs)
+            .is_none()
+        {
+            return false;
+        }
+
+        let (panels, active) = match self.nodes.get(source_tabs) {
+            Some(DockNode::Tabs { tabs, active }) if !tabs.is_empty() => (tabs.clone(), *active),
+            _ => return false,
+        };
+        let active = active.min(panels.len().saturating_sub(1));
+
+        if let Some(DockNode::Tabs { tabs, active }) = self.nodes.get_mut(source_tabs) {
+            tabs.clear();
+            *active = 0;
+        }
+        if self.window_root(source_window) == Some(source_tabs) {
+            let _ = self.remove_window_root(source_window);
+        }
+        self.collapse_empty_tabs_upwards(source_window, source_tabs);
+        self.remove_empty_floating_windows(source_window);
+
+        let tabs = self.insert_node(DockNode::Tabs {
+            tabs: panels,
+            active,
+        });
+        let floating = self.insert_node(DockNode::Floating { child: tabs });
+        self.floating_windows_mut(target_window)
+            .push(DockFloatingWindow { floating, rect });
+        self.remove_empty_floating_windows(target_window);
         true
     }
 
@@ -585,6 +709,43 @@ impl DockGraph {
                 *active = list.len().saturating_sub(1);
             }
         }
+        true
+    }
+
+    fn insert_panels_into_tabs_at(
+        &mut self,
+        tabs: DockNodeId,
+        panels: &[PanelKey],
+        index: Option<usize>,
+        active_in_group: usize,
+    ) -> bool {
+        let Some(DockNode::Tabs { tabs: list, active }) = self.nodes.get_mut(tabs) else {
+            return false;
+        };
+        if panels.is_empty() {
+            return true;
+        }
+
+        let mut insert_at = index.unwrap_or(list.len()).min(list.len());
+        for panel in panels {
+            if list.contains(panel) {
+                continue;
+            }
+            list.insert(insert_at, panel.clone());
+            insert_at = insert_at.saturating_add(1);
+        }
+
+        if let Some(active_panel) = panels.get(active_in_group)
+            && let Some(ix) = list.iter().position(|p| p == active_panel)
+        {
+            *active = ix;
+        }
+        if list.is_empty() {
+            *active = 0;
+        } else if *active >= list.len() {
+            *active = list.len().saturating_sub(1);
+        }
+
         true
     }
 
@@ -893,6 +1054,21 @@ impl DockGraph {
                 *zone,
                 *insert_index,
             ),
+            DockOp::MoveTabs {
+                source_window,
+                source_tabs,
+                target_window,
+                target_tabs,
+                zone,
+                insert_index,
+            } => self.move_tabs_between_windows(
+                *source_window,
+                *source_tabs,
+                *target_window,
+                *target_tabs,
+                *zone,
+                *insert_index,
+            ),
             DockOp::FloatPanelToWindow {
                 source_window,
                 panel,
@@ -905,6 +1081,12 @@ impl DockGraph {
                 target_window,
                 rect,
             } => self.float_panel_in_window(*source_window, panel.clone(), *target_window, *rect),
+            DockOp::FloatTabsInWindow {
+                source_window,
+                source_tabs,
+                target_window,
+                rect,
+            } => self.float_tabs_in_window(*source_window, *source_tabs, *target_window, *rect),
             DockOp::SetFloatingRect {
                 window,
                 floating,
@@ -1560,6 +1742,84 @@ mod tests {
             .find_panel_in_window(w, &panel_b)
             .expect("panel in window");
         assert_eq!(tabs, main_tabs);
+    }
+
+    #[test]
+    fn float_tabs_in_window_creates_floating_container_with_tabs() {
+        let w = window(1);
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+        let panel_c = PanelKey::new("test.c");
+
+        let mut g = DockGraph::new();
+        let tabs = g.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone(), panel_c.clone()],
+            active: 1,
+        });
+        g.set_window_root(w, tabs);
+
+        assert!(g.apply_op(&DockOp::FloatTabsInWindow {
+            source_window: w,
+            source_tabs: tabs,
+            target_window: w,
+            rect: rect(10.0, 20.0, 300.0, 200.0),
+        }));
+
+        assert!(
+            g.window_root(w).is_none(),
+            "expected dock root to be removed"
+        );
+        let floatings = g.floating_windows(w);
+        assert_eq!(floatings.len(), 1);
+        assert_eq!(floatings[0].rect, rect(10.0, 20.0, 300.0, 200.0));
+        assert_eq!(
+            g.collect_panels_in_subtree(floatings[0].floating),
+            vec![panel_a, panel_b, panel_c]
+        );
+    }
+
+    #[test]
+    fn move_tabs_merges_into_target_tabs_and_preserves_active() {
+        let w = window(1);
+        let panel_a = PanelKey::new("test.a");
+        let panel_b = PanelKey::new("test.b");
+        let panel_c = PanelKey::new("test.c");
+
+        let mut g = DockGraph::new();
+        let source_tabs = g.insert_node(DockNode::Tabs {
+            tabs: vec![panel_a.clone(), panel_b.clone()],
+            active: 1,
+        });
+        let target_tabs = g.insert_node(DockNode::Tabs {
+            tabs: vec![panel_c.clone()],
+            active: 0,
+        });
+        let root = g.insert_node(DockNode::Split {
+            axis: Axis::Horizontal,
+            children: vec![source_tabs, target_tabs],
+            fractions: vec![0.5, 0.5],
+        });
+        g.set_window_root(w, root);
+
+        assert!(g.apply_op(&DockOp::MoveTabs {
+            source_window: w,
+            source_tabs,
+            target_window: w,
+            target_tabs,
+            zone: DropZone::Center,
+            insert_index: Some(0),
+        }));
+
+        assert_eq!(g.window_root(w), Some(target_tabs));
+        let DockNode::Tabs { tabs, active } = g.node(target_tabs).expect("target tabs exists")
+        else {
+            unreachable!();
+        };
+        assert_eq!(
+            tabs,
+            &vec![panel_a.clone(), panel_b.clone(), panel_c.clone()]
+        );
+        assert_eq!(*active, 1);
     }
 
     #[test]

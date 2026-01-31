@@ -28,7 +28,7 @@
 //! use fret_bootstrap::BootstrapBuilder;
 //!
 //! # #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
-//! # fn demo() -> Result<(), fret_launch::RunnerError> {
+//! # fn demo() -> Result<(), Box<dyn std::error::Error>> {
 //! let builder = fret_bootstrap::ui_app(
 //!     "todo",
 //!     |_app, _window| (),

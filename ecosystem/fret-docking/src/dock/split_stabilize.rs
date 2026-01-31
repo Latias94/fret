@@ -31,7 +31,7 @@ fn axis_len(rect: Rect, axis: Axis) -> f32 {
 
 fn preserve_child_ix(side: BoundarySide) -> usize {
     match side {
-        // Resizing the "end" edge should keep the "start" subtree stable (ImGui WantLockSizeOnce).
+        // Resizing the "end" edge should keep the "start" subtree stable.
         BoundarySide::End => 0,
         BoundarySide::Start => 1,
     }
@@ -102,7 +102,7 @@ fn collect_same_axis_locks_in_subtree(
     }
 }
 
-/// Compute ImGui-style nested-split stabilization locks for a binary split handle.
+/// Compute nested-split stabilization locks for a binary split handle.
 ///
 /// When resizing a splitter, we want only the *touching* leaf nodes to change size.
 /// Same-axis nested splits should keep their "inner siblings" stable to avoid linked splitters.
@@ -153,6 +153,8 @@ pub(super) fn apply_same_axis_locks(
     layout_root: DockNodeId,
     layout_bounds: Rect,
     axis: Axis,
+    split_handle_gap: Px,
+    split_handle_hit_thickness: Px,
     locks: &[SplitSizeLock],
 ) {
     if locks.is_empty() {
@@ -160,7 +162,13 @@ pub(super) fn apply_same_axis_locks(
     }
 
     for lock in locks {
-        let layout = compute_layout_map(graph, layout_root, layout_bounds);
+        let layout = compute_layout_map(
+            graph,
+            layout_root,
+            layout_bounds,
+            split_handle_gap,
+            split_handle_hit_thickness,
+        );
         let Some(&bounds) = layout.get(&lock.split) else {
             continue;
         };
@@ -182,8 +190,8 @@ pub(super) fn apply_same_axis_locks(
             bounds,
             2,
             fractions,
-            DOCK_SPLIT_HANDLE_GAP,
-            DOCK_SPLIT_HANDLE_HIT_THICKNESS,
+            split_handle_gap,
+            split_handle_hit_thickness,
             &[],
         );
         if computed.avail <= 0.0 || computed.mins.len() != 2 {

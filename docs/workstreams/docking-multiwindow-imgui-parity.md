@@ -9,6 +9,7 @@ Platform note:
 
 - macOS-specific plan: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
 - Executable TODO tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`
+- Detailed parity matrix (mechanics + hand feel): `docs/docking-imgui-parity-matrix.md`
 
 ## Upstream reference anchors (Dear ImGui)
 
@@ -147,6 +148,11 @@ Typical hotspots:
 - Wayland limitations on `set_outer_position`, z-order hints, and window-under-cursor semantics,
 - lack of a reliable global cursor position under some compositors,
 - decoration offsets differ across WMs; initial placement may drift without a stable “outer rect” contract.
+
+Current policy (Wayland):
+
+- Disable docking OS tear-off and prefer in-window floating fallback to keep docking predictable (see
+  `docs/workstreams/docking-multiwindow-imgui-parity-todo.md` `DW-P1-linux-003`).
 
 ## Capabilities (contract) — windowing quality signals (v1)
 

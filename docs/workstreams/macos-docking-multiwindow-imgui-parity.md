@@ -112,8 +112,11 @@ These are the user-visible outcomes we want to guarantee on macOS:
 - Cursor screen position for cross-window routing:
   - `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - `WindowEvent::PointerMoved` computes `cursor_screen_pos` from outer + surface + local position
+    - `WindowEvent::PointerButton` also bootstraps `cursor_screen_pos` + cursor calibration (avoids requiring a move)
   - `crates/fret-launch/src/runner/desktop/app_handler.rs`
     - `DeviceEvent::PointerMotion` updates `cursor_screen_pos` and drives hover/drop routing for dock drags
+  - `crates/fret-launch/src/runner/desktop/mod.rs`
+    - `MacCursorTransformTable` maps `mouseLocation` per screen; `route_internal_drag_*` refreshes before routing
 
 ### Cross-window internal-drag routing mechanics
 
@@ -125,26 +128,15 @@ These are the user-visible outcomes we want to guarantee on macOS:
 
 ## Known gaps (macOS parity)
 
-### Gap 1: Empty DockFloating OS windows may remain visible after re-dock
+### Gap 1: Empty DockFloating OS windows may remain visible after re-dock (resolved)
 
-The dock graph correctly moves panels between windows, but there is no explicit policy that closes a
-dock-floating OS window when it becomes empty.
+Status: addressed by docking runtime policy (see `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
 
-Symptoms:
+### Gap 2: macOS global cursor tracking can drift outside windows (resolved)
 
-- After re-docking the last tab/panel back into another window, the source OS window can remain open as an
-  empty shell.
-
-Why this is a parity issue:
-
-- Dear ImGui docking + multi-viewports typically auto-destroys secondary platform windows when they no longer
-  host content.
-
-### Gap 2: macOS global cursor tracking can drift outside windows
-
-When the cursor leaves all windows, the runner may rely on relative motion deltas (device events) to update
-`cursor_screen_pos`. Under certain configurations, this can drift and select the wrong window-under-cursor
-for hover/drop.
+Status: addressed by using `NSEvent::mouseLocation` mapped through a screen-keyed calibration table during
+dock drags, with delta integration only as a last-resort fallback (see
+`docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
 
 Why this matters:
 
@@ -216,20 +208,30 @@ Goal:
 - Make dock-floating windows behave like tool/child windows relative to the source window for ordering and
   Space/fullscreen behavior where appropriate.
 
+Status (2026-01-29):
+
+- The runner supports an optional parent/child relationship for `CreateWindowKind::DockFloating` on macOS by
+  passing the source window handle to winit `WindowAttributes::with_parent_window(...)`.
+- This is **disabled by default** to match Dear ImGui's multi-viewport behavior (independent top-level windows),
+  and to avoid unintended coupled window motion. It can be enabled for experimentation via the env var:
+  `FRET_MACOS_DOCKFLOAT_PARENT=1`.
+
 Non-normative guidance:
 
 - winit supports `WindowAttributes::with_parent_window(...)`, and on macOS it calls
   `NSWindow.addChildWindow_ordered(...)` internally (see `repo-ref/winit/.../window_delegate.rs`).
 
-Expected touch points:
+Implementation anchors:
 
-- Extend `WindowCreateSpec` (or the runner’s create-window path) to optionally attach a parent window for
-  `CreateWindowKind::DockFloating`.
+- Parent window handle selection (DockFloating only): `crates/fret-launch/src/runner/desktop/mod.rs` (`create_window_from_request`)
+- Create-time wiring via winit `with_parent_window(...)`: `crates/fret-launch/src/runner/desktop/mod.rs` (`create_os_window`)
 
 Acceptance checks:
 
 - When the source window is key and the user tears off a tab, the floating window reliably stays above the
   source window during the drag.
+- After tear-off, switching Spaces (and/or toggling fullscreen on the source) should keep the floating window
+  in a predictable relationship to the source window (no “orphaned in another Space” surprises).
 
 ### P1: Spaces/fullscreen conventions (explicitly locked)
 

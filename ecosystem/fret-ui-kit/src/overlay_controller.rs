@@ -86,12 +86,12 @@ pub struct OverlayRequest {
     /// Whether this overlay should close when the OS window is resized (or scale factor changes).
     pub close_on_window_resize: bool,
     pub open: Option<Model<bool>>,
+    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
+    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub dismissible_on_dismiss_request: Option<OnDismissRequest>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
     pub initial_focus: Option<GlobalElementId>,
-    pub on_open_auto_focus: Option<OnOpenAutoFocus>,
-    pub on_close_auto_focus: Option<OnCloseAutoFocus>,
     pub children: Vec<AnyElement>,
     pub toast_layer: Option<ToastLayerSpec>,
 }
@@ -113,6 +113,8 @@ impl std::fmt::Debug for OverlayRequest {
                 &self.disable_outside_pointer_events,
             )
             .field("open", &self.open)
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field(
                 "dismissible_on_dismiss_request",
                 &self.dismissible_on_dismiss_request.is_some(),
@@ -123,8 +125,6 @@ impl std::fmt::Debug for OverlayRequest {
             )
             .field("presence", &self.presence)
             .field("initial_focus", &self.initial_focus)
-            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
-            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
             .field("children_len", &self.children.len())
             .field("toast_layer", &self.toast_layer)
             .finish()
@@ -150,12 +150,12 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -196,12 +196,12 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -224,12 +224,12 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children,
             toast_layer: None,
         }
@@ -253,12 +253,12 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence,
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children: children.into_iter().collect(),
             toast_layer: None,
         }
@@ -276,12 +276,12 @@ impl OverlayRequest {
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
             dismissible_on_dismiss_request: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
             initial_focus: None,
-            on_open_auto_focus: None,
-            on_close_auto_focus: None,
             children: Vec::new(),
             toast_layer: Some(ToastLayerSpec {
                 store,
