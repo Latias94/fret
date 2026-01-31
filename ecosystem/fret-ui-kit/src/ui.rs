@@ -932,6 +932,17 @@ pub fn text<H: UiHost>(
     UiBuilder::new(TextBox::new(text, TextPreset::Sm))
 }
 
+/// Returns a patchable block text builder (full-width; shadcn-aligned defaults).
+///
+/// Use this for paragraph-like text that should wrap against the available inner width of its
+/// containing block.
+pub fn text_block<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    content: impl Into<Arc<str>>,
+) -> UiBuilder<TextBox> {
+    text(cx, content).w_full()
+}
+
 /// Returns a patchable label builder (single-line, medium weight).
 pub fn label<H: UiHost>(
     _cx: &mut ElementContext<'_, H>,
