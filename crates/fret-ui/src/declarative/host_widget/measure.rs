@@ -337,7 +337,7 @@ impl ElementHostWidget {
 
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
         let theme = cx.theme().snapshot();
-        let style = super::resolve_text_style(theme, props.style);
+        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -347,10 +347,7 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
-        let metrics = cx
-            .services
-            .text()
-            .measure_str(props.text.as_ref(), &style, constraints);
+        let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -360,7 +357,7 @@ impl ElementHostWidget {
         props: crate::element::StyledTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = super::resolve_text_style(theme, props.style);
+        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -370,7 +367,6 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
-        let input = super::build_text_input_from_attributed(&props.rich, style.clone());
         let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
@@ -381,7 +377,7 @@ impl ElementHostWidget {
         props: crate::element::SelectableTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = super::resolve_text_style(theme, props.style);
+        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -391,7 +387,6 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, constraints);
-        let input = super::build_text_input_from_attributed(&props.rich, style.clone());
         let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }

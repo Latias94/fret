@@ -40,6 +40,7 @@ mod text_edit;
 #[allow(dead_code)]
 pub(crate) mod text_input;
 mod text_input_style;
+mod text_props;
 mod text_surface;
 pub mod theme;
 pub mod theme_keys;

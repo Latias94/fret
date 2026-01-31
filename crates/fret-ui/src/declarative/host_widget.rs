@@ -10,25 +10,6 @@ mod measure;
 mod paint;
 mod semantics;
 
-fn default_text_style(theme: crate::ThemeSnapshot) -> TextStyle {
-    TextStyle {
-        size: theme.metrics.font_size,
-        line_height: Some(theme.metrics.font_line_height),
-        ..Default::default()
-    }
-}
-
-fn resolve_text_style(theme: crate::ThemeSnapshot, explicit: Option<TextStyle>) -> TextStyle {
-    explicit.unwrap_or_else(|| default_text_style(theme))
-}
-
-fn build_text_input_from_attributed(
-    rich: &fret_core::AttributedText,
-    style: TextStyle,
-) -> fret_core::TextInput {
-    fret_core::TextInput::attributed(rich.text.clone(), style, rich.spans.clone())
-}
-
 #[derive(Debug, Default, Clone)]
 struct TextCache {
     blob: Option<fret_core::TextBlobId>,

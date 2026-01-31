@@ -279,7 +279,8 @@ impl ElementHostWidget {
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let theme = cx.theme().snapshot();
-                let style = super::resolve_text_style(theme, props.style);
+                let style = props.resolved_text_style(theme);
+                let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -307,10 +308,7 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let (blob, metrics) =
-                        cx.services
-                            .text()
-                            .prepare_str(props.text.as_ref(), &style, constraints);
+                    let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -348,7 +346,8 @@ impl ElementHostWidget {
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let theme = cx.theme().snapshot();
-                let style = super::resolve_text_style(theme, props.style);
+                let style = props.resolved_text_style(theme);
+                let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -376,7 +375,6 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let input = super::build_text_input_from_attributed(&props.rich, style.clone());
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
@@ -416,7 +414,8 @@ impl ElementHostWidget {
                     .map(|k| k.0)
                     .unwrap_or(0);
                 let theme = cx.theme().snapshot();
-                let style = super::resolve_text_style(theme, props.style);
+                let style = props.resolved_text_style(theme);
+                let input = props.build_text_input_with_style(style.clone());
                 let color = props
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
@@ -444,7 +443,6 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
-                    let input = super::build_text_input_from_attributed(&props.rich, style.clone());
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
