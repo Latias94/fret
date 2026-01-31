@@ -304,6 +304,17 @@ pub enum Event {
     ClipboardTextUnavailable {
         token: ClipboardToken,
     },
+    /// Linux primary selection text payload delivered to the focused widget.
+    ///
+    /// This typically originates from middle-click paste when primary selection is enabled.
+    PrimarySelectionText {
+        token: ClipboardToken,
+        text: String,
+    },
+    /// Primary selection read completed without a text payload (unavailable/empty/error).
+    PrimarySelectionTextUnavailable {
+        token: ClipboardToken,
+    },
     /// File dialog selection metadata (token + names). Bytes must be requested via effects.
     FileDialogSelection(FileDialogSelection),
     /// File dialog data payload, typically produced by `Effect::FileDialogReadAll`.
