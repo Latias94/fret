@@ -76,6 +76,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
+    let mut max_working_set_bytes: Option<u64> = None;
+    let mut max_peak_working_set_bytes: Option<u64> = None;
+    let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
     let mut perf_baseline_headroom_pct: u32 = 20;
@@ -361,6 +364,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --max-top-solve-us".to_string())?,
                 );
+                i += 1;
+            }
+            "--max-working-set-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-working-set-bytes".to_string());
+                };
+                max_working_set_bytes = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-working-set-bytes".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-peak-working-set-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-peak-working-set-bytes".to_string());
+                };
+                max_peak_working_set_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-peak-working-set-bytes".to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-cpu-avg-percent-total-cores" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-cpu-avg-percent-total-cores".to_string());
+                };
+                let pct = v.parse::<f64>().map_err(|_| {
+                    "invalid value for --max-cpu-avg-percent-total-cores".to_string()
+                })?;
+                if pct < 0.0 {
+                    return Err("invalid value for --max-cpu-avg-percent-total-cores".to_string());
+                }
+                max_cpu_avg_percent_total_cores = Some(pct);
                 i += 1;
             }
             "--perf-baseline" => {
@@ -697,6 +736,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
     let rest: Vec<String> = positionals.into_iter().skip(1).collect();
 
+    let resource_footprint_thresholds = ResourceFootprintThresholds {
+        max_working_set_bytes,
+        max_peak_working_set_bytes,
+        max_cpu_avg_percent_total_cores,
+    };
+
     if sub != "repro" && (with_tracy || with_renderdoc || renderdoc_after_frames.is_some()) {
         return Err(
             "--with tracy/renderdoc and --renderdoc-after-frames are only supported with `diag repro` for now"
@@ -706,6 +751,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     if sub != "repro" && (!renderdoc_markers.is_empty() || renderdoc_no_outputs_png) {
         return Err(
             "--renderdoc-marker and --renderdoc-no-outputs-png are only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
+    if sub != "repro" && resource_footprint_thresholds.any() {
+        return Err(
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-cpu-avg-percent-total-cores are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -1289,6 +1340,7 @@ See: `docs/tracy.md`.\n";
                 poll_ms,
             )?;
             let mut repro_process_footprint: Option<serde_json::Value> = None;
+            let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
 
             let mut run_rows: Vec<serde_json::Value> = Vec::new();
             let mut selected_bundle_path: Option<PathBuf> = None;
@@ -1629,6 +1681,14 @@ See: `docs/tracy.md`.\n";
             if let Some(payload) = repro_process_footprint.as_ref() {
                 let _ = write_json_value(&repro_process_footprint_file, payload);
             }
+            if resource_footprint_thresholds.any() {
+                resource_footprint_gate = check_resource_footprint_thresholds(
+                    &resolved_out_dir,
+                    &repro_process_footprint_file,
+                    &resource_footprint_thresholds,
+                )
+                .ok();
+            }
 
             let captures_json = serde_json::json!({
                 "tracy": if with_tracy {
@@ -1774,6 +1834,17 @@ See: `docs/tracy.md`.\n";
                             .unwrap_or(summary_json.clone()),
                     );
                 }
+            }
+
+            if let Some(r) = resource_footprint_gate.as_ref()
+                && r.failures > 0
+                && overall_error.is_none()
+            {
+                overall_error = Some(format!(
+                    "resource footprint threshold gate failed (failures={}, evidence={})",
+                    r.failures,
+                    r.evidence_path.display()
+                ));
             }
 
             let final_summary_json = summary_json
@@ -3645,6 +3716,7 @@ fn zip_add_root_artifacts(
         "check.pixels_changed.json",
         "check.idle_no_paint.json",
         "check.perf_thresholds.json",
+        "check.resource_footprint.json",
         "check.view_cache_reuse_stable.json",
         "resource.footprint.json",
         "renderdoc.captures.json",
@@ -3739,6 +3811,201 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
     }))
 }
 
+#[derive(Debug, Clone, Default)]
+struct ResourceFootprintThresholds {
+    max_working_set_bytes: Option<u64>,
+    max_peak_working_set_bytes: Option<u64>,
+    max_cpu_avg_percent_total_cores: Option<f64>,
+}
+
+impl ResourceFootprintThresholds {
+    fn any(&self) -> bool {
+        self.max_working_set_bytes.is_some()
+            || self.max_peak_working_set_bytes.is_some()
+            || self.max_cpu_avg_percent_total_cores.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ResourceFootprintGateResult {
+    evidence_path: PathBuf,
+    failures: usize,
+}
+
+fn check_resource_footprint_thresholds(
+    out_dir: &Path,
+    footprint_path: &Path,
+    thresholds: &ResourceFootprintThresholds,
+) -> Result<ResourceFootprintGateResult, String> {
+    let out_path = out_dir.join("check.resource_footprint.json");
+    let v = read_json_value(footprint_path);
+    let footprint_present = v.is_some();
+
+    let pid = v
+        .as_ref()
+        .and_then(|v| v.get("pid"))
+        .and_then(|v| v.as_u64());
+    let killed = v
+        .as_ref()
+        .and_then(|v| v.get("killed"))
+        .and_then(|v| v.as_bool());
+    let wall_time_ms = v
+        .as_ref()
+        .and_then(|v| v.get("wall_time_ms"))
+        .and_then(|v| v.as_u64());
+    let logical_cores = v
+        .as_ref()
+        .and_then(|v| v.get("logical_cores"))
+        .and_then(|v| v.as_u64());
+    let note = v
+        .as_ref()
+        .and_then(|v| v.get("note"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let working_set_bytes = v
+        .as_ref()
+        .and_then(|v| v.get("memory"))
+        .and_then(|v| v.get("working_set_bytes"))
+        .and_then(|v| v.as_u64());
+    let peak_working_set_bytes = v
+        .as_ref()
+        .and_then(|v| v.get("memory"))
+        .and_then(|v| v.get("peak_working_set_bytes"))
+        .and_then(|v| v.as_u64());
+
+    let cpu_avg_percent_total_cores = v
+        .as_ref()
+        .and_then(|v| v.get("cpu"))
+        .and_then(|v| v.get("avg_cpu_percent_total_cores"))
+        .and_then(|v| v.as_f64());
+    let cpu_samples = v
+        .as_ref()
+        .and_then(|v| v.get("cpu"))
+        .and_then(|v| v.get("samples"))
+        .and_then(|v| v.as_u64());
+    let cpu_collector = v
+        .as_ref()
+        .and_then(|v| v.get("cpu"))
+        .and_then(|v| v.get("collector"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    let missing_reason = if footprint_present {
+        "missing_field"
+    } else {
+        "missing_footprint"
+    };
+
+    if let Some(thr) = thresholds.max_working_set_bytes {
+        match working_set_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "working_set_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "working_set_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "memory.working_set_bytes",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_peak_working_set_bytes {
+        match peak_working_set_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "peak_working_set_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "peak_working_set_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "memory.peak_working_set_bytes",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_cpu_avg_percent_total_cores {
+        match cpu_avg_percent_total_cores {
+            Some(observed) => {
+                if cpu_samples == Some(0) && cpu_collector.as_deref() == Some("sysinfo") {
+                    failures.push(serde_json::json!({
+                        "kind": "cpu_avg_percent_total_cores",
+                        "threshold": thr,
+                        "observed": observed,
+                        "reason": "insufficient_samples",
+                        "samples": cpu_samples,
+                    }));
+                } else if observed > thr {
+                    failures.push(serde_json::json!({
+                        "kind": "cpu_avg_percent_total_cores",
+                        "threshold": thr,
+                        "observed": observed,
+                        "reason": "exceeded",
+                    }));
+                }
+            }
+            None => failures.push(serde_json::json!({
+                "kind": "cpu_avg_percent_total_cores",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "cpu.avg_cpu_percent_total_cores",
+            })),
+        }
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "resource_footprint_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "footprint_file": footprint_path.file_name().and_then(|s| s.to_str()).unwrap_or("resource.footprint.json"),
+        "thresholds": {
+            "max_working_set_bytes": thresholds.max_working_set_bytes,
+            "max_peak_working_set_bytes": thresholds.max_peak_working_set_bytes,
+            "max_cpu_avg_percent_total_cores": thresholds.max_cpu_avg_percent_total_cores,
+        },
+        "observed": {
+            "present": footprint_present,
+            "pid": pid,
+            "killed": killed,
+            "wall_time_ms": wall_time_ms,
+            "logical_cores": logical_cores,
+            "note": note,
+            "cpu_collector": cpu_collector,
+            "cpu_samples": cpu_samples,
+            "cpu_avg_percent_total_cores": cpu_avg_percent_total_cores,
+            "working_set_bytes": working_set_bytes,
+            "peak_working_set_bytes": peak_working_set_bytes,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(ResourceFootprintGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
 fn write_evidence_index(
     artifacts_root: &Path,
     summary_path: &Path,
@@ -3788,6 +4055,7 @@ fn write_evidence_index(
     add_file("check.idle_no_paint", "check.idle_no_paint.json");
     add_file("check.pixels_changed", "check.pixels_changed.json");
     add_file("check.perf_thresholds", "check.perf_thresholds.json");
+    add_file("check.resource_footprint", "check.resource_footprint.json");
     add_file(
         "check.view_cache_reuse_stable",
         "check.view_cache_reuse_stable.json",

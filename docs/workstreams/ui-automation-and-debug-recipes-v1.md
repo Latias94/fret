@@ -211,12 +211,16 @@ Tooling gates (CI/automation):
   - `--perf-baseline-out <path> --perf-baseline-headroom-pct <n>` writes a `kind=perf_baseline` JSON file,
   - `--perf-baseline <path>` loads thresholds per script and gates accordingly.
 
-Gaps (still open):
+Notes (current status):
 
 - **Process-level resource footprint** is captured (best-effort) via `resource.footprint.json` and referenced from
-  `repro.summary.json`. On Windows this uses native APIs; on non-Windows platforms it uses lightweight sampling (via
-  `sysinfo`) while waiting for the demo to exit. This matters for “framework feels heavy” reports and for table-heavy
-  workloads.
+  `repro.summary.json`. `diag repro` can also gate on these values:
+  - `--max-working-set-bytes <n>`
+  - `--max-peak-working-set-bytes <n>`
+  - `--max-cpu-avg-percent-total-cores <pct>`
+  When any threshold is set, it writes `check.resource_footprint.json` and exits non-zero on failure.
+  On Windows this uses native APIs; on non-Windows platforms it uses lightweight sampling (via `sysinfo`) while waiting
+  for the demo to exit (CPU sampling is cadence-sensitive).
 - **Redraw-efficiency gates** now include an “idle should not paint” trailing-streak gate
   (`--check-idle-no-paint-min <n>`; evidence: `check.idle_no_paint.json`) and a “view cache reuse should be stable”
   trailing-streak gate (`--check-view-cache-reuse-stable-min <n>`; evidence: `check.view_cache_reuse_stable.json`).

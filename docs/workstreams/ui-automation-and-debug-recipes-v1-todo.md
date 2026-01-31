@@ -64,6 +64,7 @@ Conventions:
   - [x] `--max-top-solve-us <n>`
 - [x] Add a stable “perf baseline” file format for selected scripts (JSON).
 - [x] Add process-level resource footprint evidence (best-effort) and reference it from `repro.summary.json`.
+- [x] Add a resource footprint threshold gate (CPU/memory) and write `check.resource_footprint.json`.
 - [x] Add an “idle should not paint” redraw-efficiency gate (`--check-idle-no-paint-min <n>`).
 - [x] Add a redraw-efficiency gate for “cache reuse should be stable” regressions (`--check-view-cache-reuse-stable-min <n>`).
 - [ ] Add a nightly job candidate plan (not necessarily wired in CI yet).

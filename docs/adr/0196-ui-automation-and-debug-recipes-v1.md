@@ -145,6 +145,8 @@ This ADR is partially implemented in a way that preserves the intended crate bou
   - Process-level footprint is recorded (best-effort) as `resource.footprint.json` and referenced from `repro.summary.json`
     (`resources.process_footprint_file`). On Windows this uses native APIs; on non-Windows platforms it uses lightweight
     sampling while waiting for the demo to exit.
+  - Tooling can optionally gate on process footprint thresholds (CPU/memory) and writes `check.resource_footprint.json` as
+    evidence (fails `diag repro` on threshold violations).
   - Evidence: `apps/fretboard/src/diag.rs` (`diag repro`, `pack_repro_zip_multi`).
 - **Missing repaint checks (`fretboard`)**
   - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
