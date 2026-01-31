@@ -734,6 +734,7 @@ topics (if/when we implement them):
       - Diagnostics: bundles report `debug.stats.layout_fast_path_taken` and `debug.stats.layout_invalidations_count` (helps validate the fast path is actually taking effect in scripted harnesses).
       - Gate: `fretboard diag stats <bundle> --check-layout-fast-path-min 1` (after warmup).
       - Evidence (smoke; `components_gallery` file-tree bounce): `target/fret-diag-smoke-layout-fastpath/1769855748827-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - Suite default: `fretboard diag suite components-gallery-file-tree` sets `--check-layout-fast-path-min 1`.
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
