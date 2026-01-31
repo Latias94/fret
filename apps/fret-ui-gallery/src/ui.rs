@@ -435,14 +435,23 @@ pub(crate) fn content_view(
             |_cx| [header, tabs],
         )
     });
-    let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
-        body
-    } else {
-        cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            shadcn::ScrollArea::new([body])
-                .refine_layout(LayoutRefinement::default().w_full().h_full())
-                .into_element(cx)
-        })
+    let content = {
+        let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
+            body
+        } else {
+            cx.keyed("ui_gallery.content_scroll_area", |cx| {
+                shadcn::ScrollArea::new([body])
+                    .refine_layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx)
+            })
+        };
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::<str>::from("ui-gallery-content-scroll")),
+                ..Default::default()
+            },
+            move |_cx| [content],
+        )
     };
 
     cx.named("ui_gallery.content_view_root", |cx| {
