@@ -58,10 +58,10 @@ Conventions:
 
 ### M4: Performance regression gates (CI/automation ready)
 
-- [ ] Add a threshold gate:
-  - [ ] `--max-top-total-us <n>`
-  - [ ] `--max-top-layout-us <n>`
-  - [ ] `--max-top-solve-us <n>`
+- [x] Add a threshold gate:
+  - [x] `--max-top-total-us <n>`
+  - [x] `--max-top-layout-us <n>`
+  - [x] `--max-top-solve-us <n>`
 - [ ] Add a stable “perf baseline” file format for selected scripts (JSON).
 - [ ] Add a nightly job candidate plan (not necessarily wired in CI yet).
 

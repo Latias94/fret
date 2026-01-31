@@ -79,6 +79,18 @@ cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-view-scr
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
+Perf regression gate example (writes `check.perf_thresholds.json` to `FRET_DIAG_DIR`):
+
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery `
+  --repeat 5 `
+  --warmup-frames 5 `
+  --max-top-total-us 25000 `
+  --max-top-layout-us 15000 `
+  --max-top-solve-us 8000 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 ## 1) GPU / renderer: debug specific passes
 
 ### 1.1 Capture a frame (RenderDoc)

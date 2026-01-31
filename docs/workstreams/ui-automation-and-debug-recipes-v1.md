@@ -192,6 +192,14 @@ Standardize the perf surface so tools can query it uniformly:
   - worst-N frames by `time` and by `invalidation`,
   - stable “hotspot labels” (prefer `test_id`, else element path).
 
+Tooling gates (CI/automation):
+
+- `fretboard diag perf` supports threshold gating on the per-run “top frame” timings:
+  - `--max-top-total-us <n>`
+  - `--max-top-layout-us <n>`
+  - `--max-top-solve-us <n>` (layout-engine solve time)
+- When any threshold is set, it writes `check.perf_thresholds.json` to `FRET_DIAG_DIR` and exits non-zero on failure.
+
 Future (optional, gated):
 
 - GPU timing via wgpu timestamp queries (per pass or coarse per-frame), exported as `gpu_time_us`.
