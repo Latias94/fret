@@ -1079,6 +1079,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture-interactive";
             let is_components_gallery_file_tree_suite =
                 rest.len() == 1 && rest[0] == "components-gallery-file-tree";
+            let is_components_gallery_table_suite =
+                rest.len() == 1 && rest[0] == "components-gallery-table";
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
 
             let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
@@ -1353,6 +1355,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 &workspace_root,
                                 PathBuf::from(
                                     "tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json",
+                                ),
+                            ),
+                        ],
+                        None,
+                    )
+                } else if is_components_gallery_table_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-table-window-boundary-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-table-sort-and-scroll.json",
                                 ),
                             ),
                         ],
@@ -1745,6 +1765,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
                 // The script can require a longer timeout on cold builds; prefer a generous default
                 // when the caller didn't specify one.
+                if timeout_ms == 30_000 {
+                    timeout_ms = 600_000;
+                }
+            }
+
+            if is_components_gallery_table_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+
+                for (key, value) in [
+                    ("FRET_EXAMPLES_VIEW_CACHE", "1"),
+                    ("FRET_COMPONENTS_GALLERY_TABLE_TORTURE", "1"),
+                    ("FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N", "50000"),
+                ] {
+                    if !launch_env.iter().any(|(k, _)| k == key) {
+                        launch_env.push((key.to_string(), value.to_string()));
+                    }
+                }
+
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(256));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id
+                    .or(Some("components-gallery-table-row-0".to_string()));
+                check_stale_paint_test_id = check_stale_paint_test_id.or(Some(
+                    "components-gallery-table-row-0|components-gallery-table-header-cpu"
+                        .to_string(),
+                ));
+
                 if timeout_ms == 30_000 {
                     timeout_ms = 600_000;
                 }
