@@ -643,6 +643,9 @@ topics (if/when we implement them):
         - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
         - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
     - [~] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
+      - Baseline recorded (warmup=5; cache-root reused on worst tick in both harnesses):
+        - window-boundary: max.us(total/layout/prepaint/paint)=2897/2216/30/717 (`tick_id=37`)
+        - toggle+scroll: max.us(total/layout/prepaint/paint)=2719/2035/26/768 (`tick_id=51`)
   - Definition of done (v2; mark `[x]` when all are true):
     - [ ] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
     - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
@@ -1047,6 +1050,9 @@ topics (if/when we implement them):
       - Evidence bundles (suite, view-cache, release):
         - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829965598-components-gallery-file-tree-window-boundary-scroll/bundle.json`
         - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829992147-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+      - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
+        - window-boundary: `C:\fret-diag-perf-components-gallery-file-tree-boundary\1769830674611-script-step-0022-wheel/bundle.json` (2897/2216/30/717)
+        - toggle+scroll: `C:\fret-diag-perf-components-gallery-file-tree-toggle\1769830707477-script-step-0021-wheel/bundle.json` (2719/2035/26/768)
 
 - [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
