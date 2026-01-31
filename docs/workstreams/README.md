@@ -20,6 +20,8 @@ Active workstreams:
 - `docs/workstreams/state-driven-style-resolution-v1.md`
 - `docs/workstreams/control-rack-v1.md`
 - `docs/workstreams/control-rack-v1-todo.md`
+- `docs/workstreams/ui-gallery-layout-correctness.md`
+- `docs/workstreams/ui-gallery-perf-scroll-measure.md`
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
 - `docs/workstreams/foundation-closure-p0.md`

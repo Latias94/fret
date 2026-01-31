@@ -53,6 +53,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut inspect_trigger_path: Option<PathBuf> = None;
     let mut inspect_consume_clicks: Option<bool> = None;
     let mut timeout_ms: u64 = 30_000;
+    let mut timeout_ms_overridden: bool = false;
     let mut poll_ms: u64 = 50;
     let mut stats_top: usize = 5;
     let mut sort_override: Option<BundleStatsSort> = None;
@@ -249,6 +250,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 timeout_ms = v
                     .parse::<u64>()
                     .map_err(|_| "invalid value for --timeout-ms".to_string())?;
+                timeout_ms_overridden = true;
                 i += 1;
             }
             "--poll-ms" => {
@@ -993,6 +995,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             enum BuiltinSuite {
                 UiGallery,
+                UiGalleryLayout,
                 DockingArbitration,
             }
 
@@ -1005,6 +1008,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                         .collect(),
                     Some(BuiltinSuite::UiGallery),
+                )
+            } else if rest.len() == 1 && rest[0] == "ui-gallery-layout" {
+                (
+                    ui_gallery_layout_suite_scripts()
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    Some(BuiltinSuite::UiGalleryLayout),
                 )
             } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
                 (
@@ -1032,6 +1043,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     None,
                 )
             };
+
+            if !timeout_ms_overridden && let Some(BuiltinSuite::UiGalleryLayout) = builtin_suite {
+                timeout_ms = timeout_ms.max(180_000);
+            }
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -2705,6 +2720,22 @@ fn ui_gallery_suite_scripts() -> [&'static str; 13] {
         "tools/diag-scripts/ui-gallery-table-smoke.json",
         "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+    ]
+}
+
+fn ui_gallery_layout_suite_scripts() -> [&'static str; 11] {
+    [
+        "tools/diag-scripts/ui-gallery-topbar-command-palette-visible.json",
+        "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
+        "tools/diag-scripts/ui-gallery-overlay-modals-visible.json",
+        "tools/diag-scripts/ui-gallery-overlay-portal-geometry-clamp.json",
+        "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
+        "tools/diag-scripts/ui-gallery-dropdown-submenu-bounds.json",
+        "tools/diag-scripts/ui-gallery-contextmenu-edge-bounds.json",
+        "tools/diag-scripts/ui-gallery-menubar-text-overlap-command.json",
+        "tools/diag-scripts/ui-gallery-chrome-torture-layout.json",
+        "tools/diag-scripts/ui-gallery-intro-preview-width-bundle.json",
+        "tools/diag-scripts/ui-gallery-resizable-initial-bundle.json",
     ]
 }
 

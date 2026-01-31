@@ -86,6 +86,101 @@ fn fill_only_resolves_under_definite_available_space_in_measurement() {
 }
 
 #[test]
+fn scroll_intrinsic_viewport_mode_does_not_measure_children() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-intrinsic-viewport-mode",
+        |cx| {
+            let mut props = crate::element::ScrollProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Viewport;
+            vec![cx.scroll(props, |cx| vec![cx.text("child")])]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let _measured = ui.measure_in(&mut app, &mut text, scroll, max_constraints, 1.0);
+
+    assert_eq!(
+        ui.debug_measure_child_calls_for_parent(scroll),
+        0,
+        "expected viewport-mode scroll intrinsic measurement to avoid measuring children"
+    );
+}
+
+#[test]
+fn scroll_intrinsic_content_mode_measures_children() {
+    use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-intrinsic-content-mode",
+        |cx| {
+            let mut props = crate::element::ScrollProps::default();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.intrinsic_measure_mode = crate::element::ScrollIntrinsicMeasureMode::Content;
+            vec![cx.scroll(props, |cx| vec![cx.text("child")])]
+        },
+    );
+    ui.set_root(root);
+
+    let scroll = ui.children(root)[0];
+
+    let max_constraints = LayoutConstraints::new(
+        LayoutSize::new(None, None),
+        LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MaxContent),
+    );
+    let _measured = ui.measure_in(&mut app, &mut text, scroll, max_constraints, 1.0);
+
+    assert!(
+        ui.debug_measure_child_calls_for_parent(scroll) > 0,
+        "expected content-mode scroll intrinsic measurement to measure children"
+    );
+}
+
+#[test]
 fn text_measurement_and_paint_agree_on_wrap_width_in_a_column() {
     #[derive(Default)]
     struct RecordingTextService {

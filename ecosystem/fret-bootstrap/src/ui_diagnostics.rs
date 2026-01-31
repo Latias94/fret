@@ -844,7 +844,6 @@ impl UiDiagnosticsService {
                             active.screenshot_wait = None;
                             output.request_redraw = true;
                         }
-                    }
                 }
             }
             UiActionStepV1::PressKey {
@@ -2678,6 +2677,35 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         #[serde(default)]
         padding_px: f32,
+        /// A small tolerance to account for subpixel rounding (e.g. 1 physical px at non-1.0 DPI).
+        ///
+        /// This does not replace `padding_px` (which shrinks the allowed region); it only relaxes
+        /// strict edge containment checks by `eps_px`.
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when the target exists and its semantics bounds are at least the specified size.
+    ///
+    /// This is useful for demos where the content can legitimately be taller than the window
+    /// (scrollable pages), but we still want to gate against "collapsed to ~0" layout regressions.
+    BoundsMinSize {
+        target: UiSelectorV1,
+        #[serde(default)]
+        min_w_px: f32,
+        #[serde(default)]
+        min_h_px: f32,
+        /// A small tolerance to account for rounding / fractional layout units.
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when both targets exist and their semantics bounds do not overlap.
+    ///
+    /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
+    BoundsNonOverlapping {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
     },
 }
 
@@ -6138,13 +6166,18 @@ fn eval_predicate(
             };
             rects_intersect(node.bounds, window_bounds)
         }
-        UiPredicateV1::BoundsWithinWindow { target, padding_px } => {
+        UiPredicateV1::BoundsWithinWindow {
+            target,
+            padding_px,
+            eps_px,
+        } => {
             let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
             else {
                 return false;
             };
             let bounds = node.bounds;
             let pad = padding_px.max(0.0);
+            let eps = eps_px.max(0.0);
 
             let window_left = window_bounds.origin.x.0 + pad;
             let window_top = window_bounds.origin.y.0 + pad;
@@ -6156,10 +6189,55 @@ fn eval_predicate(
             let node_right = bounds.origin.x.0 + bounds.size.width.0;
             let node_bottom = bounds.origin.y.0 + bounds.size.height.0;
 
-            node_left >= window_left
-                && node_top >= window_top
-                && node_right <= window_right
-                && node_bottom <= window_bottom
+            node_left >= window_left - eps
+                && node_top >= window_top - eps
+                && node_right <= window_right + eps
+                && node_bottom <= window_bottom + eps
+        }
+        UiPredicateV1::BoundsMinSize {
+            target,
+            min_w_px,
+            min_h_px,
+            eps_px,
+        } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+
+            let w = node.bounds.size.width.0.max(0.0);
+            let h = node.bounds.size.height.0.max(0.0);
+
+            let min_w = min_w_px.max(0.0);
+            let min_h = min_h_px.max(0.0);
+            let eps = eps_px.max(0.0);
+
+            w + eps >= min_w && h + eps >= min_h
+        }
+        UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax0 = a.bounds.origin.x.0;
+            let ay0 = a.bounds.origin.y.0;
+            let ax1 = ax0 + a.bounds.size.width.0.max(0.0);
+            let ay1 = ay0 + a.bounds.size.height.0.max(0.0);
+
+            let bx0 = b.bounds.origin.x.0;
+            let by0 = b.bounds.origin.y.0;
+            let bx1 = bx0 + b.bounds.size.width.0.max(0.0);
+            let by1 = by0 + b.bounds.size.height.0.max(0.0);
+
+            let overlap_w = (ax1.min(bx1) - ax0.max(bx0)).max(0.0);
+            let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
+
+            !(overlap_w > eps && overlap_h > eps)
         }
     }
 }
@@ -6542,6 +6620,8 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         "enter" | "return" => Some(KeyCode::Enter),
         "tab" => Some(KeyCode::Tab),
         "space" => Some(KeyCode::Space),
+        "backspace" => Some(KeyCode::Backspace),
+        "delete" | "del" => Some(KeyCode::Delete),
         "f1" => Some(KeyCode::F1),
         "f2" => Some(KeyCode::F2),
         "f3" => Some(KeyCode::F3),
@@ -6562,7 +6642,50 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         "end" => Some(KeyCode::End),
         "page_up" => Some(KeyCode::PageUp),
         "page_down" => Some(KeyCode::PageDown),
-        _ => None,
+        _ => {
+            if key.len() == 1 {
+                return Some(match key.as_bytes()[0] {
+                    b'a' => KeyCode::KeyA,
+                    b'b' => KeyCode::KeyB,
+                    b'c' => KeyCode::KeyC,
+                    b'd' => KeyCode::KeyD,
+                    b'e' => KeyCode::KeyE,
+                    b'f' => KeyCode::KeyF,
+                    b'g' => KeyCode::KeyG,
+                    b'h' => KeyCode::KeyH,
+                    b'i' => KeyCode::KeyI,
+                    b'j' => KeyCode::KeyJ,
+                    b'k' => KeyCode::KeyK,
+                    b'l' => KeyCode::KeyL,
+                    b'm' => KeyCode::KeyM,
+                    b'n' => KeyCode::KeyN,
+                    b'o' => KeyCode::KeyO,
+                    b'p' => KeyCode::KeyP,
+                    b'q' => KeyCode::KeyQ,
+                    b'r' => KeyCode::KeyR,
+                    b's' => KeyCode::KeyS,
+                    b't' => KeyCode::KeyT,
+                    b'u' => KeyCode::KeyU,
+                    b'v' => KeyCode::KeyV,
+                    b'w' => KeyCode::KeyW,
+                    b'x' => KeyCode::KeyX,
+                    b'y' => KeyCode::KeyY,
+                    b'z' => KeyCode::KeyZ,
+                    b'0' => KeyCode::Digit0,
+                    b'1' => KeyCode::Digit1,
+                    b'2' => KeyCode::Digit2,
+                    b'3' => KeyCode::Digit3,
+                    b'4' => KeyCode::Digit4,
+                    b'5' => KeyCode::Digit5,
+                    b'6' => KeyCode::Digit6,
+                    b'7' => KeyCode::Digit7,
+                    b'8' => KeyCode::Digit8,
+                    b'9' => KeyCode::Digit9,
+                    _ => return None,
+                });
+            }
+            None
+        }
     }
 }
 
@@ -7010,6 +7133,7 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 0.0,
+            eps_px: 0.0,
         };
         assert!(eval_predicate(
             &snapshot,
@@ -7024,10 +7148,165 @@ mod tests {
                 id: "content".to_string(),
             },
             padding_px: 12.0,
+            eps_px: 0.0,
         };
         assert!(
             !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
             "expected padding to shrink the allowed window rect"
+        );
+    }
+
+    #[test]
+    fn bounds_min_size_predicate_accepts_large_enough_nodes() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node_with_test_id(
+                1,
+                None,
+                SemanticsRole::Panel,
+                rect(10.0, 10.0, 320.0, 240.0),
+                "resizable",
+                "ui-gallery-resizable-panels",
+            )],
+        };
+
+        let pred = UiPredicateV1::BoundsMinSize {
+            target: UiSelectorV1::TestId {
+                id: "ui-gallery-resizable-panels".to_string(),
+            },
+            min_w_px: 200.0,
+            min_h_px: 200.0,
+            eps_px: 0.0,
+        };
+
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected node to satisfy the min-size gate"
+        );
+    }
+
+    #[test]
+    fn bounds_min_size_predicate_rejects_collapsed_nodes() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node_with_test_id(
+                1,
+                None,
+                SemanticsRole::Panel,
+                rect(10.0, 10.0, 320.0, 0.1),
+                "resizable",
+                "ui-gallery-resizable-panels",
+            )],
+        };
+
+        let pred = UiPredicateV1::BoundsMinSize {
+            target: UiSelectorV1::TestId {
+                id: "ui-gallery-resizable-panels".to_string(),
+            },
+            min_w_px: 200.0,
+            min_h_px: 200.0,
+            eps_px: 0.0,
+        };
+
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "collapsed node should fail the min-size gate"
+        );
+    }
+
+    #[test]
+    fn bounds_non_overlapping_predicate_rejects_intersection() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "a",
+                    "a",
+                ),
+                semantics_node_with_test_id(
+                    3,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(25.0, 10.0, 20.0, 20.0),
+                    "b",
+                    "b",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsNonOverlapping {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 0.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected overlap (a right edge > b left edge) to fail"
+        );
+
+        let pred = UiPredicateV1::BoundsNonOverlapping {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 16.0,
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected eps_px to tolerate a small overlap"
         );
     }
 

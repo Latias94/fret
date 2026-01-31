@@ -1982,6 +1982,14 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats
     }
 
+    #[cfg(test)]
+    pub(crate) fn debug_measure_child_calls_for_parent(&self, parent: NodeId) -> u64 {
+        self.debug_measure_children
+            .get(&parent)
+            .map(|m| m.values().map(|r| r.calls).sum())
+            .unwrap_or(0)
+    }
+
     pub fn debug_hover_declarative_invalidation_hotspots(
         &self,
         max: usize,

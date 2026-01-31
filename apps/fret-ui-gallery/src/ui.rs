@@ -26,6 +26,9 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
     }
 
     let q_lower = q.to_ascii_lowercase();
+    if item.id.to_ascii_lowercase().contains(&q_lower) {
+        return true;
+    }
     if item.label.to_ascii_lowercase().contains(&q_lower) {
         return true;
     }
@@ -64,10 +67,21 @@ pub(crate) fn sidebar_view(
         },
     );
 
-    let query_input = shadcn::Input::new(nav_query)
-        .a11y_label("Search components")
-        .placeholder("Search (id / tag)")
-        .into_element(cx);
+    let query_input = {
+        let nav_query = nav_query.clone();
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::<str>::from("ui-gallery-nav-search")),
+                ..Default::default()
+            },
+            move |cx| {
+                [shadcn::Input::new(nav_query.clone())
+                    .a11y_label("Search components")
+                    .placeholder("Search (id / tag)")
+                    .into_element(cx)]
+            },
+        )
+    };
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
     for group in PAGE_GROUPS {
@@ -246,6 +260,7 @@ pub(crate) fn content_view(
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -257,6 +272,8 @@ pub(crate) fn content_view(
     let bisect = ui_gallery_bisect_flags();
 
     let (title, origin, docs_md, usage_md) = page_meta(selected);
+    let page_test_id: Arc<str> =
+        Arc::from(format!("ui-gallery-page-{}", selected.replace('_', "-")));
 
     let header = stack::hstack(
         cx,
@@ -273,7 +290,18 @@ pub(crate) fn content_view(
                     .items_start(),
                 |cx| {
                     vec![
-                        cx.text(title),
+                        cx.text_props(TextProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout
+                            },
+                            text: Arc::from(title),
+                            style: None,
+                            color: None,
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Ellipsis,
+                        }),
                         cx.text_props(TextProps {
                             layout: {
                                 let mut layout = fret_ui::element::LayoutStyle::default();
@@ -389,6 +417,7 @@ pub(crate) fn content_view(
         text_area,
         dropdown_open,
         context_menu_open,
+        context_menu_edge_open,
         cmdk_open,
         cmdk_query,
         last_action,
@@ -441,22 +470,38 @@ pub(crate) fn content_view(
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            shadcn::ScrollArea::new([body])
+            let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
-                .into_element(cx)
+                .viewport_test_id("ui-gallery-content-viewport");
+            if selected == PAGE_VIRTUAL_LIST_TORTURE {
+                scroll =
+                    scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
+                scroll = scroll.viewport_intrinsic_measure_mode(
+                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+                );
+            }
+            scroll.into_element(cx)
         })
     };
 
     cx.named("ui_gallery.content_view_root", |cx| {
-        cx.container(
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
-                    .p(Space::N6),
-                LayoutRefinement::default().w_full().h_full(),
-            ),
-            |_cx| [content],
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(page_test_id),
+                ..Default::default()
+            },
+            move |cx| {
+                [cx.container(
+                    decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(theme.color_required("background")))
+                            .p(Space::N6),
+                        LayoutRefinement::default().w_full().h_full(),
+                    ),
+                    |_cx| [content],
+                )]
+            },
         )
     })
 }
@@ -513,6 +558,7 @@ fn page_preview(
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -562,6 +608,7 @@ fn page_preview(
             portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             last_action,
             text_input,
             text_area,
@@ -593,6 +640,7 @@ fn page_preview(
             portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             last_action.clone(),
         ),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
@@ -845,6 +893,14 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             ]
         },
     );
+    let grid = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-grid")),
+            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-grid")),
+            ..Default::default()
+        },
+        move |_cx| [grid],
+    );
 
     let note = {
         let props = decl_style::container_props(
@@ -859,6 +915,14 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.").into_element(cx)]
         })
     };
+    let note = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-note")),
+            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-note")),
+            ..Default::default()
+        },
+        move |_cx| [note],
+    );
 
     vec![grid, note]
 }
@@ -1565,7 +1629,7 @@ fn preview_virtual_list_torture(
                 if row_cache {
                     cx.cached_subtree_with(
                         CachedSubtreeProps::default()
-                            .contained_layout(false)
+                            .contained_layout(true)
                             .cache_key(index_u64),
                         |cx| [row(cx)],
                     )
@@ -1687,7 +1751,7 @@ fn preview_virtual_list_torture(
                     if row_cache {
                         cx.cached_subtree_with(
                             CachedSubtreeProps::default()
-                                .contained_layout(false)
+                                .contained_layout(true)
                                 .cache_key(index_u64),
                             |cx| vec![row(cx)],
                         )
@@ -1710,7 +1774,24 @@ fn preview_virtual_list_torture(
         vec![list]
     });
 
-    vec![header, list]
+    let root = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |_cx| vec![header, list],
+    );
+
+    let root = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-torture-root")),
+            ..Default::default()
+        },
+        |_cx| [root],
+    );
+
+    vec![root]
 }
 
 fn code_view_torture_source() -> Arc<str> {
@@ -3551,6 +3632,7 @@ fn preview_chrome_torture(
     portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -3581,128 +3663,140 @@ fn preview_chrome_torture(
             ..Default::default()
         },
         |cx| {
-            let mut out = Vec::new();
-
-            out.extend(preview_overlay(
-                cx,
-                popover_open,
-                dialog_open,
-                alert_dialog_open,
-                sheet_open,
-                portal_geometry_popover_open,
-                dropdown_open,
-                context_menu_open,
-                last_action,
-            ));
-
-            let controls = stack::vstack(
+            let body = stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N3),
+                    .gap(Space::N4),
                 |cx| {
-                    let mut out: Vec<AnyElement> = Vec::new();
+                    let mut out = Vec::new();
 
-                    let row = stack::hstack(
+                    out.extend(preview_overlay(
                         cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Button::new("One")
-                                    .test_id("ui-gallery-chrome-btn-1")
-                                    .into_element(cx),
-                                shadcn::Button::new("Two")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .test_id("ui-gallery-chrome-btn-2")
-                                    .into_element(cx),
-                                shadcn::Button::new("Three")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .test_id("ui-gallery-chrome-btn-3")
-                                    .into_element(cx),
-                                shadcn::Button::new("Disabled")
-                                    .disabled(true)
-                                    .test_id("ui-gallery-chrome-btn-disabled")
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-                    out.push(row);
+                        popover_open,
+                        dialog_open,
+                        alert_dialog_open,
+                        sheet_open,
+                        portal_geometry_popover_open,
+                        dropdown_open,
+                        context_menu_open,
+                        context_menu_edge_open,
+                        last_action,
+                    ));
 
-                    let fields = stack::hstack(
+                    let controls = stack::vstack(
                         cx,
-                        stack::HStackProps::default().gap(Space::N2).items_start(),
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N3),
                         |cx| {
-                            vec![
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N1),
-                                    |cx| {
-                                        let input = shadcn::Input::new(text_input.clone())
-                                            .a11y_label("Chrome torture input")
-                                            .placeholder("Type")
-                                            .into_element(cx);
-                                        let input = cx.semantics(
-                                            SemanticsProps {
-                                                role: fret_core::SemanticsRole::TextField,
-                                                test_id: Some(Arc::<str>::from(
-                                                    "ui-gallery-chrome-text-input",
-                                                )),
-                                                ..Default::default()
+                            let mut out: Vec<AnyElement> = Vec::new();
+
+                            let row = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_center(),
+                                |cx| {
+                                    vec![
+                                        shadcn::Button::new("One")
+                                            .test_id("ui-gallery-chrome-btn-1")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Two")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("ui-gallery-chrome-btn-2")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Three")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-chrome-btn-3")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Disabled")
+                                            .disabled(true)
+                                            .test_id("ui-gallery-chrome-btn-disabled")
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
+                            out.push(row);
+
+                            let fields = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_start(),
+                                |cx| {
+                                    vec![
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N1),
+                                            |cx| {
+                                                let input = shadcn::Input::new(text_input.clone())
+                                                    .a11y_label("Chrome torture input")
+                                                    .placeholder("Type")
+                                                    .into_element(cx);
+                                                let input = cx.semantics(
+                                                    SemanticsProps {
+                                                        role: fret_core::SemanticsRole::TextField,
+                                                        test_id: Some(Arc::<str>::from(
+                                                            "ui-gallery-chrome-text-input",
+                                                        )),
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| vec![input],
+                                                );
+                                                vec![cx.text("Text input"), input]
                                             },
-                                            |_cx| vec![input],
-                                        );
-                                        vec![cx.text("Text input"), input]
-                                    },
-                                ),
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N1),
-                                    |cx| {
-                                        let textarea = shadcn::Textarea::new(text_area.clone())
-                                            .a11y_label("Chrome torture textarea")
-                                            .into_element(cx);
-                                        let textarea = cx.semantics(
-                                            SemanticsProps {
-                                                role: fret_core::SemanticsRole::TextField,
-                                                test_id: Some(Arc::<str>::from(
-                                                    "ui-gallery-chrome-text-area",
-                                                )),
-                                                ..Default::default()
+                                        ),
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N1),
+                                            |cx| {
+                                                let textarea =
+                                                    shadcn::Textarea::new(text_area.clone())
+                                                        .a11y_label("Chrome torture textarea")
+                                                        .into_element(cx);
+                                                let textarea = cx.semantics(
+                                                    SemanticsProps {
+                                                        role: fret_core::SemanticsRole::TextField,
+                                                        test_id: Some(Arc::<str>::from(
+                                                            "ui-gallery-chrome-text-area",
+                                                        )),
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| vec![textarea],
+                                                );
+                                                vec![cx.text("Text area"), textarea]
                                             },
-                                            |_cx| vec![textarea],
-                                        );
-                                        vec![cx.text("Text area"), textarea]
-                                    },
-                                ),
-                            ]
-                        },
-                    );
-                    out.push(fields);
+                                        ),
+                                    ]
+                                },
+                            );
+                            out.push(fields);
 
-                    let toggles = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N3).items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Checkbox::new(checkbox.clone())
-                                    .a11y_label("Chrome torture checkbox")
-                                    .test_id("ui-gallery-chrome-checkbox")
-                                    .into_element(cx),
-                                shadcn::Switch::new(switch.clone())
-                                    .a11y_label("Chrome torture switch")
-                                    .test_id("ui-gallery-chrome-switch")
-                                    .into_element(cx),
-                            ]
+                            let toggles = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N3).items_center(),
+                                |cx| {
+                                    vec![
+                                        shadcn::Checkbox::new(checkbox.clone())
+                                            .a11y_label("Chrome torture checkbox")
+                                            .test_id("ui-gallery-chrome-checkbox")
+                                            .into_element(cx),
+                                        shadcn::Switch::new(switch.clone())
+                                            .a11y_label("Chrome torture switch")
+                                            .test_id("ui-gallery-chrome-switch")
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
+                            out.push(toggles);
+
+                            out
                         },
                     );
-                    out.push(toggles);
+                    out.push(controls);
 
                     out
                 },
             );
-            out.push(controls);
 
-            out
+            vec![body]
         },
     );
 
@@ -6731,19 +6825,30 @@ fn preview_resizable(
         ])
         .into_element(cx);
 
-    let root = shadcn::ResizablePanelGroup::new(h_fractions)
-        .axis(fret_core::Axis::Horizontal)
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
-        .entries(vec![
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
-                .min_px(Px(140.0))
-                .into(),
-            shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new(vec![nested_vertical])
-                .min_px(Px(240.0))
-                .into(),
-        ])
-        .into_element(cx);
+    let root = {
+        let root = shadcn::ResizablePanelGroup::new(h_fractions)
+            .axis(fret_core::Axis::Horizontal)
+            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
+            .entries(vec![
+                shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
+                    .min_px(Px(140.0))
+                    .into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![nested_vertical])
+                    .min_px(Px(240.0))
+                    .into(),
+            ])
+            .into_element(cx);
+
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                label: Some(Arc::<str>::from("Debug:ui-gallery:resizable-panels")),
+                test_id: Some(Arc::<str>::from("ui-gallery-resizable-panels")),
+                ..Default::default()
+            },
+            move |_cx| [root],
+        )
+    };
 
     vec![cx.text("Drag the handles to resize panels."), root]
 }
@@ -7499,17 +7604,21 @@ fn preview_toast(
         |cx| {
             vec![
                 shadcn::Button::new("Default")
+                    .test_id("ui-gallery-toast-default")
                     .on_click(CMD_TOAST_DEFAULT)
                     .into_element(cx),
                 shadcn::Button::new("Success")
+                    .test_id("ui-gallery-toast-success")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_SUCCESS)
                     .into_element(cx),
                 shadcn::Button::new("Error")
+                    .test_id("ui-gallery-toast-error")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_ERROR)
                     .into_element(cx),
                 shadcn::Button::new("Action + Cancel")
+                    .test_id("ui-gallery-toast-action-cancel")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_SHOW_ACTION_CANCEL)
                     .into_element(cx),
@@ -7529,6 +7638,7 @@ fn preview_overlay(
     portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnDismissRequest;
@@ -7556,6 +7666,7 @@ fn preview_overlay(
 
                 let dropdown_open = dropdown_open.clone();
                 let context_menu_open = context_menu_open.clone();
+                let context_menu_edge_open = context_menu_edge_open.clone();
                 let popover_open = popover_open.clone();
                 let dialog_open = dialog_open.clone();
                 let alert_dialog_open = alert_dialog_open.clone();
@@ -7566,6 +7677,9 @@ fn preview_overlay(
                 let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
                     let _ = host.models_mut().update(&dropdown_open, |v| *v = false);
                     let _ = host.models_mut().update(&context_menu_open, |v| *v = false);
+                    let _ = host
+                        .models_mut()
+                        .update(&context_menu_edge_open, |v| *v = false);
                     let _ = host.models_mut().update(&popover_open, |v| *v = false);
                     let _ = host.models_mut().update(&dialog_open, |v| *v = false);
                     let _ = host.models_mut().update(&alert_dialog_open, |v| *v = false);
@@ -7654,6 +7768,30 @@ fn preview_overlay(
                     ]
                 },
             );
+
+            let context_menu_edge = shadcn::ContextMenu::new(context_menu_edge_open.clone())
+                .into_element(
+                    cx,
+                    |cx| {
+                        shadcn::Button::new("ContextMenu (edge, right click)")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-context-trigger-edge")
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Action")
+                                    .test_id("ui-gallery-context-edge-item-action")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                            shadcn::ContextMenuEntry::Separator,
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Disabled").disabled(true),
+                            ),
+                        ]
+                    },
+                );
 
             let underlay = shadcn::Button::new("Underlay (outside-press target)")
                 .variant(shadcn::ButtonVariant::Secondary)
@@ -7748,12 +7886,22 @@ fn preview_overlay(
                             .toggle_model(popover_open.clone())
                             .into_element(cx);
 
-                        shadcn::PopoverContent::new(vec![
-                            cx.text("Popover content"),
-                            open_dialog,
-                            close,
-                        ])
-                        .into_element(cx)
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::from("ui-gallery-popover-content")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    shadcn::PopoverContent::new(vec![
+                                        cx.text("Popover content"),
+                                        open_dialog,
+                                        close,
+                                    ])
+                                    .into_element(cx),
+                                ]
+                            },
+                        )
                     },
                 );
 
@@ -7767,27 +7915,71 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::DialogContent::new(vec![
-                        shadcn::DialogHeader::new(vec![
-                            shadcn::DialogTitle::new("Dialog").into_element(cx),
-                            shadcn::DialogDescription::new("Escape / overlay click closes")
+                    cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            test_id: Some(Arc::from("ui-gallery-dialog-content")),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                shadcn::DialogContent::new(vec![
+                                    shadcn::DialogHeader::new(vec![
+                                        shadcn::DialogTitle::new("Dialog").into_element(cx),
+                                        shadcn::DialogDescription::new(
+                                            "Escape / overlay click closes",
+                                        )
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    {
+                                        let body = stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N2).layout(
+                                                LayoutRefinement::default()
+                                                    .w_full()
+                                                    .min_w_0()
+                                                    .min_h_0(),
+                                            ),
+                                            |cx| {
+                                                (0..64)
+                                                    .map(|i| {
+                                                        cx.text(format!(
+                                                            "Scrollable content line {}",
+                                                            i + 1
+                                                        ))
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                            },
+                                        );
+
+                                        shadcn::ScrollArea::new([body])
+                                            .refine_layout(
+                                                LayoutRefinement::default()
+                                                    .w_full()
+                                                    .h_px(Px(240.0))
+                                                    .min_w_0()
+                                                    .min_h_0(),
+                                            )
+                                            .viewport_test_id("ui-gallery-dialog-scroll-viewport")
+                                            .into_element(cx)
+                                    },
+                                    shadcn::DialogFooter::new(vec![
+                                        shadcn::Button::new("Close")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("ui-gallery-dialog-close")
+                                            .toggle_model(dialog_open.clone())
+                                            .into_element(cx),
+                                        shadcn::Button::new("Confirm")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-dialog-confirm")
+                                            .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
                                 .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::DialogFooter::new(vec![
-                            shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .test_id("ui-gallery-dialog-close")
-                                .toggle_model(dialog_open.clone())
-                                .into_element(cx),
-                            shadcn::Button::new("Confirm")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .test_id("ui-gallery-dialog-confirm")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx)
+                            ]
+                        },
+                    )
                 },
             );
 
@@ -7801,27 +7993,43 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::AlertDialogContent::new(vec![
-                        shadcn::AlertDialogHeader::new(vec![
-                            shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                    cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            test_id: Some(Arc::from("ui-gallery-alert-dialog-content")),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                shadcn::AlertDialogContent::new(vec![
+                                    shadcn::AlertDialogHeader::new(vec![
+                                        shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                                            .into_element(cx),
+                                        shadcn::AlertDialogDescription::new(
+                                            "This is non-closable by overlay click.",
+                                        )
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    shadcn::AlertDialogFooter::new(vec![
+                                        shadcn::AlertDialogCancel::new(
+                                            "Cancel",
+                                            alert_dialog_open.clone(),
+                                        )
+                                        .test_id("ui-gallery-alert-dialog-cancel")
+                                        .into_element(cx),
+                                        shadcn::AlertDialogAction::new(
+                                            "Continue",
+                                            alert_dialog_open.clone(),
+                                        )
+                                        .test_id("ui-gallery-alert-dialog-action")
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
                                 .into_element(cx),
-                            shadcn::AlertDialogDescription::new(
-                                "This is non-closable by overlay click.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::AlertDialogFooter::new(vec![
-                            shadcn::AlertDialogCancel::new("Cancel", alert_dialog_open.clone())
-                                .test_id("ui-gallery-alert-dialog-cancel")
-                                .into_element(cx),
-                            shadcn::AlertDialogAction::new("Continue", alert_dialog_open.clone())
-                                .test_id("ui-gallery-alert-dialog-action")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx)
+                            ]
+                        },
+                    )
                 },
             );
 
@@ -7833,26 +8041,74 @@ fn preview_overlay(
                     |cx| {
                         shadcn::Button::new("Sheet")
                             .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-sheet-trigger")
                             .toggle_model(sheet_open.clone())
                             .into_element(cx)
                     },
                     |cx| {
-                        shadcn::SheetContent::new(vec![
-                            shadcn::SheetHeader::new(vec![
-                                shadcn::SheetTitle::new("Sheet").into_element(cx),
-                                shadcn::SheetDescription::new("A modal side panel.")
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::from("ui-gallery-sheet-content")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    shadcn::SheetContent::new(vec![
+                                        shadcn::SheetHeader::new(vec![
+                                            shadcn::SheetTitle::new("Sheet").into_element(cx),
+                                            shadcn::SheetDescription::new("A modal side panel.")
+                                                .into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                        {
+                                            let body = stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default()
+                                                    .gap(Space::N2)
+                                                    .layout(
+                                                        LayoutRefinement::default()
+                                                            .w_full()
+                                                            .min_w_0()
+                                                            .min_h_0(),
+                                                    ),
+                                                |cx| {
+                                                    (0..96)
+                                                        .map(|i| {
+                                                            cx.text(format!(
+                                                                "Sheet body line {}",
+                                                                i + 1
+                                                            ))
+                                                        })
+                                                        .collect::<Vec<_>>()
+                                                },
+                                            );
+
+                                            shadcn::ScrollArea::new([body])
+                                                .refine_layout(
+                                                    LayoutRefinement::default()
+                                                        .flex_1()
+                                                        .w_full()
+                                                        .min_w_0()
+                                                        .min_h_0(),
+                                                )
+                                                .viewport_test_id(
+                                                    "ui-gallery-sheet-scroll-viewport",
+                                                )
+                                                .into_element(cx)
+                                        },
+                                        shadcn::SheetFooter::new(vec![
+                                            shadcn::Button::new("Close")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .test_id("ui-gallery-sheet-close")
+                                                .toggle_model(sheet_open.clone())
+                                                .into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                    ])
                                     .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::SheetFooter::new(vec![
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(sheet_open.clone())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
+                                ]
+                            },
+                        )
                     },
                 );
 
@@ -7947,22 +8203,52 @@ fn preview_overlay(
                 cx,
                 stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
                 |cx| {
+                    let theme = Theme::global(&*cx.app).clone();
+                    let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
+
+                    let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
+                        let layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.flex(
+                            fret_ui::element::FlexProps {
+                                layout,
+                                direction: fret_core::Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::Start,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: true,
+                            },
+                            |_cx| children,
+                        )
+                    };
+
+                    let row_end = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
+                        let layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.flex(
+                            fret_ui::element::FlexProps {
+                                layout,
+                                direction: fret_core::Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::End,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            |_cx| children,
+                        )
+                    };
+
                     vec![
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [dropdown, context_menu, overlay_reset],
-                        ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [tooltip, hover_card, popover, underlay, dialog],
-                        ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [alert_dialog, sheet],
-                        ),
+                        row(cx, vec![dropdown, context_menu, overlay_reset]),
+                        row_end(cx, vec![context_menu_edge]),
+                        row(cx, vec![tooltip, hover_card, popover, underlay, dialog]),
+                        row(cx, vec![alert_dialog, sheet]),
                         portal_geometry,
                     ]
                 },

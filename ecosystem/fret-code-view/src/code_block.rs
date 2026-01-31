@@ -965,6 +965,7 @@ fn render_code_block_windowed_lines<H: UiHost>(
             axis: ScrollAxis::X,
             scroll_handle: Some(scroll_x_handle.clone()),
             probe_unbounded: true,
+            ..Default::default()
         },
         |_cx| vec![list],
     );
@@ -1193,6 +1194,7 @@ fn render_code_block_text<H: UiHost>(
             axis: ScrollAxis::X,
             scroll_handle: Some(handle.clone()),
             probe_unbounded: matches!(text_wrap, TextWrap::None),
+            ..Default::default()
         },
         |cx| {
             vec![cx.selectable_text_props(SelectableTextProps {
