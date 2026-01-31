@@ -1817,6 +1817,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 // - the retained virtual-list host reconciles row membership under cache-hit reuse,
                 // - and stale-paint checks remain green.
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
+                check_layout_fast_path_min = check_layout_fast_path_min.or(Some(1));
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_reconcile_cache_reuse_min =
@@ -1856,6 +1857,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
 
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
+                check_layout_fast_path_min = check_layout_fast_path_min.or(Some(1));
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_reconcile_cache_reuse_min =
