@@ -642,6 +642,7 @@ topics (if/when we implement them):
       - Scripts:
         - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
         - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
+        - `tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json`
       - Note: retained-vlist *window-boundary* gates are applied only to scripts named `*window-boundary*` when running multi-script suites
         (toggle/sort scripts still run, but are gated by stale-paint / wheel-scroll / view-cache reuse, etc.).
     - [~] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
