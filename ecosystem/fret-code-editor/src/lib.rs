@@ -760,6 +760,8 @@ impl CodeEditor {
                 let scroll_handle = scroll_handle.clone();
                 let scroll_dir = scroll_dir.clone();
                 let text_style = text_style.clone();
+                let editor_state = editor_state.clone();
+                let prev_stats = Rc::new(Cell::new(CodeEditorCacheStats::default()));
                 let hook: OnWindowedRowsPaintFrame = Arc::new(
                     move |painter: &mut fret_ui::canvas::CanvasPainter<'_>,
                           frame: WindowedRowsPaintFrame| {
@@ -787,10 +789,41 @@ impl CodeEditor {
                             return;
                         }
 
+                        let (stats, delta) = {
+                            let stats = editor_state.borrow().cache_stats;
+                            let prev = prev_stats.get();
+                            prev_stats.set(stats);
+                            let delta = CodeEditorCacheStats {
+                                row_text_get_calls: stats
+                                    .row_text_get_calls
+                                    .saturating_sub(prev.row_text_get_calls),
+                                row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
+                                row_text_misses: stats
+                                    .row_text_misses
+                                    .saturating_sub(prev.row_text_misses),
+                                row_text_evictions: stats
+                                    .row_text_evictions
+                                    .saturating_sub(prev.row_text_evictions),
+                                row_text_resets: stats
+                                    .row_text_resets
+                                    .saturating_sub(prev.row_text_resets),
+                                syntax_get_calls: stats
+                                    .syntax_get_calls
+                                    .saturating_sub(prev.syntax_get_calls),
+                                syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
+                                syntax_misses: stats.syntax_misses.saturating_sub(prev.syntax_misses),
+                                syntax_evictions: stats
+                                    .syntax_evictions
+                                    .saturating_sub(prev.syntax_evictions),
+                                syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
+                            };
+                            (stats, delta)
+                        };
+
                         let origin = fret_core::Point::new(Px(8.0), Px(offset.y.0 + 8.0));
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
-                            rect: Rect::new(origin, Size::new(Px(420.0), Px(24.0))),
+                            rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
                             background: overlay_bg,
                             border: Edges::all(Px(0.0)),
                             border_color: Color::TRANSPARENT,
@@ -798,12 +831,24 @@ impl CodeEditor {
                         });
 
                         let label = format!(
-                            "rows={}-{} offset_y={:.1}/{:.1} cache_max={}",
+                            "rows={}-{} y={:.0}/{:.0} max={} text {}/{}/{} (+{}/{}/{}) syn {}/{}/{} (+{}/{}/{})",
                             frame.visible_start,
                             frame.visible_end,
                             offset.y.0,
                             max.y.0,
-                            text_cache_max_entries
+                            text_cache_max_entries,
+                            stats.row_text_get_calls,
+                            stats.row_text_hits,
+                            stats.row_text_misses,
+                            delta.row_text_get_calls,
+                            delta.row_text_hits,
+                            delta.row_text_misses,
+                            stats.syntax_get_calls,
+                            stats.syntax_hits,
+                            stats.syntax_misses,
+                            delta.syntax_get_calls,
+                            delta.syntax_hits,
+                            delta.syntax_misses
                         );
                         let key = painter.key(&("fret-code-editor-torture-overlay", 0u8));
                         let _ = painter.text(
@@ -819,7 +864,7 @@ impl CodeEditor {
                                 a: 1.0,
                             },
                             CanvasTextConstraints {
-                                max_width: Some(Px(400.0)),
+                                max_width: Some(Px(600.0)),
                                 wrap: TextWrap::None,
                                 overflow: TextOverflow::Clip,
                             },
