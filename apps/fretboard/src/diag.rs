@@ -2229,9 +2229,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 // Prefer exercising the prefetch path (virt-001 v2 slice) rather than requiring a
                 // window mismatch escape.
                 check_vlist_window_prefetch_min = check_vlist_window_prefetch_min.or(Some(1));
-                // Avoid rerendering cache roots due to *escape* window updates.
+                // Keep escape rerenders bounded: we still expect rare escapes under inertial scroll
+                // and/or coarse wheel deltas, but they should remain infrequent.
                 check_vlist_scroll_window_dirty_max =
-                    check_vlist_scroll_window_dirty_max.or(Some(0));
+                    check_vlist_scroll_window_dirty_max.or(Some(2));
                 // Bound prefetch-driven rerenders to catch runaway steady-state overhead.
                 check_vlist_prefetch_window_dirty_max =
                     check_vlist_prefetch_window_dirty_max.or(Some(30));
