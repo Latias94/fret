@@ -2989,6 +2989,10 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     #[serde(default)]
+    pub layout_hotspots: Vec<UiLayoutHotspotV1>,
+    #[serde(default)]
+    pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
+    #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
     ///
@@ -3120,6 +3124,16 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_layout_engine_solves()
                 .iter()
                 .map(UiLayoutEngineSolveV1::from_solve)
+                .collect(),
+            layout_hotspots: ui
+                .debug_layout_hotspots()
+                .iter()
+                .map(UiLayoutHotspotV1::from_hotspot)
+                .collect(),
+            widget_measure_hotspots: ui
+                .debug_widget_measure_hotspots()
+                .iter()
+                .map(UiWidgetMeasureHotspotV1::from_hotspot)
                 .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
@@ -4550,6 +4564,52 @@ impl UiLayoutEngineSolveV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    pub widget_type: String,
+    pub layout_time_us: u64,
+    #[serde(default)]
+    pub inclusive_time_us: u64,
+}
+
+impl UiLayoutHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugLayoutHotspot) -> Self {
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            widget_type: h.widget_type.to_string(),
+            layout_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWidgetMeasureHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    pub widget_type: String,
+    pub measure_time_us: u64,
+    #[serde(default)]
+    pub inclusive_time_us: u64,
+}
+
+impl UiWidgetMeasureHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugWidgetMeasureHotspot) -> Self {
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            widget_type: h.widget_type.to_string(),
+            measure_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineMeasureHotspotV1 {
     pub node: u64,
     pub measure_time_us: u64,
@@ -4924,6 +4984,18 @@ impl UiSemanticsNodeV1 {
 pub struct UiFrameStatsV1 {
     pub layout_time_us: u64,
     #[serde(default)]
+    pub layout_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_barrier_relayouts_time_us: u64,
+    #[serde(default)]
+    pub layout_view_cache_time_us: u64,
+    #[serde(default)]
+    pub layout_semantics_refresh_time_us: u64,
+    #[serde(default)]
+    pub layout_focus_repair_time_us: u64,
+    #[serde(default)]
+    pub layout_deferred_cleanup_time_us: u64,
+    #[serde(default)]
     pub prepaint_time_us: u64,
     pub paint_time_us: u64,
     pub layout_nodes_visited: u32,
@@ -5028,6 +5100,14 @@ impl UiFrameStatsV1 {
     fn from_stats(stats: UiDebugFrameStats) -> Self {
         Self {
             layout_time_us: stats.layout_time.as_micros() as u64,
+            layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
+            layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()
+                as u64,
+            layout_view_cache_time_us: stats.layout_view_cache_time.as_micros() as u64,
+            layout_semantics_refresh_time_us: stats.layout_semantics_refresh_time.as_micros()
+                as u64,
+            layout_focus_repair_time_us: stats.layout_focus_repair_time.as_micros() as u64,
+            layout_deferred_cleanup_time_us: stats.layout_deferred_cleanup_time.as_micros() as u64,
             prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,

@@ -2374,6 +2374,12 @@ fn triage_json_from_stats(
             "timestamp_unix_ms": row.timestamp_unix_ms,
             "total_time_us": row.total_time_us,
             "layout_time_us": row.layout_time_us,
+            "layout_roots_time_us": row.layout_roots_time_us,
+            "layout_barrier_relayouts_time_us": row.layout_barrier_relayouts_time_us,
+            "layout_view_cache_time_us": row.layout_view_cache_time_us,
+            "layout_semantics_refresh_time_us": row.layout_semantics_refresh_time_us,
+            "layout_focus_repair_time_us": row.layout_focus_repair_time_us,
+            "layout_deferred_cleanup_time_us": row.layout_deferred_cleanup_time_us,
             "prepaint_time_us": row.prepaint_time_us,
             "paint_time_us": row.paint_time_us,
             "invalidation_walk_calls": row.invalidation_walk_calls,
@@ -3820,6 +3826,12 @@ struct BundleStatsSnapshotRow {
     timestamp_unix_ms: Option<u64>,
     frame_delta_ms: Option<u64>,
     layout_time_us: u64,
+    layout_roots_time_us: u64,
+    layout_barrier_relayouts_time_us: u64,
+    layout_view_cache_time_us: u64,
+    layout_semantics_refresh_time_us: u64,
+    layout_focus_repair_time_us: u64,
+    layout_deferred_cleanup_time_us: u64,
     prepaint_time_us: u64,
     paint_time_us: u64,
     total_time_us: u64,
@@ -4647,6 +4659,30 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_time_us".to_string(),
                     Value::from(row.layout_time_us),
+                );
+                obj.insert(
+                    "layout_roots_time_us".to_string(),
+                    Value::from(row.layout_roots_time_us),
+                );
+                obj.insert(
+                    "layout_barrier_relayouts_time_us".to_string(),
+                    Value::from(row.layout_barrier_relayouts_time_us),
+                );
+                obj.insert(
+                    "layout_view_cache_time_us".to_string(),
+                    Value::from(row.layout_view_cache_time_us),
+                );
+                obj.insert(
+                    "layout_semantics_refresh_time_us".to_string(),
+                    Value::from(row.layout_semantics_refresh_time_us),
+                );
+                obj.insert(
+                    "layout_focus_repair_time_us".to_string(),
+                    Value::from(row.layout_focus_repair_time_us),
+                );
+                obj.insert(
+                    "layout_deferred_cleanup_time_us".to_string(),
+                    Value::from(row.layout_deferred_cleanup_time_us),
                 );
                 obj.insert(
                     "prepaint_time_us".to_string(),
@@ -6720,6 +6756,30 @@ fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("paint_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_roots_time_us = stats
+                .and_then(|m| m.get("layout_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_barrier_relayouts_time_us = stats
+                .and_then(|m| m.get("layout_barrier_relayouts_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_view_cache_time_us = stats
+                .and_then(|m| m.get("layout_view_cache_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_semantics_refresh_time_us = stats
+                .and_then(|m| m.get("layout_semantics_refresh_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_focus_repair_time_us = stats
+                .and_then(|m| m.get("layout_focus_repair_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_deferred_cleanup_time_us = stats
+                .and_then(|m| m.get("layout_deferred_cleanup_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let total_time_us = layout_time_us
                 .saturating_add(prepaint_time_us)
                 .saturating_add(paint_time_us);
@@ -7012,6 +7072,12 @@ fn bundle_stats_from_json_with_options(
                 timestamp_unix_ms,
                 frame_delta_ms,
                 layout_time_us,
+                layout_roots_time_us,
+                layout_barrier_relayouts_time_us,
+                layout_view_cache_time_us,
+                layout_semantics_refresh_time_us,
+                layout_focus_repair_time_us,
+                layout_deferred_cleanup_time_us,
                 prepaint_time_us,
                 paint_time_us,
                 total_time_us,

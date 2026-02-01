@@ -165,6 +165,12 @@ impl<H: UiHost> Node<H> {
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
     pub layout_time: Duration,
+    pub layout_roots_time: Duration,
+    pub layout_barrier_relayouts_time: Duration,
+    pub layout_view_cache_time: Duration,
+    pub layout_semantics_refresh_time: Duration,
+    pub layout_focus_repair_time: Duration,
+    pub layout_deferred_cleanup_time: Duration,
     pub prepaint_time: Duration,
     pub paint_time: Duration,
     pub layout_nodes_visited: u32,
@@ -710,6 +716,34 @@ pub struct UiDebugLayoutEngineSolve {
     pub top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
 }
 
+#[derive(Debug, Clone)]
+pub struct UiDebugLayoutHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugWidgetMeasureHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugLayoutStackFrame {
+    child_inclusive_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugWidgetMeasureStackFrame {
+    child_inclusive_time: Duration,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugCacheRootReuseReason {
     FirstMount,
@@ -1019,6 +1053,10 @@ pub struct UiTree<H: UiHost> {
     debug_view_cache_contained_relayout_roots: Vec<NodeId>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
+    debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
+    debug_layout_stack: Vec<DebugLayoutStackFrame>,
+    debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
+    debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
     debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
@@ -1118,6 +1156,10 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
             debug_layout_engine_solves: Vec::new(),
+            debug_layout_hotspots: Vec::new(),
+            debug_layout_stack: Vec::new(),
+            debug_widget_measure_hotspots: Vec::new(),
+            debug_widget_measure_stack: Vec::new(),
             debug_measure_children: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
             debug_model_change_hotspots: Vec::new(),
@@ -1273,6 +1315,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.debug_stats.frame_id = frame_id;
+        self.debug_stats.layout_roots_time = Duration::default();
+        self.debug_stats.layout_barrier_relayouts_time = Duration::default();
+        self.debug_stats.layout_view_cache_time = Duration::default();
+        self.debug_stats.layout_semantics_refresh_time = Duration::default();
+        self.debug_stats.layout_focus_repair_time = Duration::default();
+        self.debug_stats.layout_deferred_cleanup_time = Duration::default();
         self.debug_stats.model_change_invalidation_roots = 0;
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;
@@ -1315,6 +1363,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_view_cache_contained_relayout_roots.clear();
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
+        self.debug_layout_hotspots.clear();
+        self.debug_layout_stack.clear();
+        self.debug_widget_measure_hotspots.clear();
+        self.debug_widget_measure_stack.clear();
         self.debug_measure_children.clear();
         self.debug_invalidation_walks.clear();
         self.debug_model_change_hotspots.clear();
@@ -1731,6 +1783,20 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_layout_engine_solves.as_slice()
+    }
+
+    pub fn debug_layout_hotspots(&self) -> &[UiDebugLayoutHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_hotspots.as_slice()
+    }
+
+    pub fn debug_widget_measure_hotspots(&self) -> &[UiDebugWidgetMeasureHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_widget_measure_hotspots.as_slice()
     }
 
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
