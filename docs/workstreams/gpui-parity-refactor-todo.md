@@ -176,6 +176,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Removed the global “skip sweep while reuse exists” GC stopgap.
     - Made liveness explicit under reuse via layer roots + view-cache reuse roots + per-root subtree membership lists (ADR 0191).
     - Stabilized unkeyed element identity generation by using per-callsite counters (reduces accidental subtree swaps under conditional structure).
+  - Progress (diagnostics): bundles now include retained keep-alive root samples (`debug.element_runtime.retained_keep_alive_roots_*`), so the full liveness root set can be audited from a single run.
   - Root-cause framing (keep honest):
     - When a live interactive subtree is swept while view-cache reuse exists, the GC is usually behaving correctly on the graph it sees.
       The bug is typically that ownership/liveness bookkeeping allowed the subtree to become an *island root* (unreachable from both
