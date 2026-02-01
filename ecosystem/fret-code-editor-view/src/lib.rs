@@ -45,6 +45,25 @@ impl DisplayMap {
         let wrap_cols = wrap_cols.filter(|v| *v > 0);
 
         let line_count = buf.line_count().max(1);
+
+        if wrap_cols.is_none() {
+            let mut line_to_first_row = Vec::with_capacity(line_count);
+            let mut row_to_line = Vec::with_capacity(line_count);
+            let mut row_start_col = Vec::with_capacity(line_count);
+            for line in 0..line_count {
+                line_to_first_row.push(line);
+                row_to_line.push(line);
+                row_start_col.push(0);
+            }
+
+            return Self {
+                wrap_cols,
+                line_to_first_row,
+                row_to_line,
+                row_start_col,
+            };
+        }
+
         let mut line_to_first_row = Vec::with_capacity(line_count);
         let mut row_to_line = Vec::new();
         let mut row_start_col = Vec::new();
