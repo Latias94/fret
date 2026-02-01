@@ -60,6 +60,7 @@ Tracking format:
 - 2026-02-01: fixed calendar day number alignment (centered text within day cells) and added a selected-day text-centering gate (`calendar-14`).
 - 2026-02-01: added a hover-day background gate using deterministic hover goldens (`calendar-14.hover-day-13`).
 - 2026-02-01: added a focus-visible ring gate using deterministic keyboard-focus goldens (`calendar-14.focus-kbd-selected`).
+- 2026-02-01: added constrained-viewport (vp375x320) gates for Calendar selection/hover/focus (`calendar-14.vp375x320`, `calendar-14.hover-day-13-vp375x320`, `calendar-14.focus-kbd-selected-vp375x320`).
 
 ---
 
