@@ -252,8 +252,6 @@ impl TextBuffer {
     }
 
     pub fn apply(&mut self, edit: Edit) -> Result<BufferDelta, EditError> {
-        let before_text = self.text.clone();
-        let before_lines = self.line_starts.clone();
         let before_rev = self.revision;
 
         let (start, end, insert) = match edit {
@@ -274,19 +272,19 @@ impl TextBuffer {
         if !insert.is_char_boundary(insert.len()) {
             return Err(EditError::NotCharBoundary);
         }
-        if !before_text.is_char_boundary(start) || !before_text.is_char_boundary(end) {
+        if !self.text.is_char_boundary(start) || !self.text.is_char_boundary(end) {
             return Err(EditError::NotCharBoundary);
         }
 
-        self.text.replace_range(start..end, &insert);
-        self.revision = Revision(self.revision.0.saturating_add(1));
-        self.rebuild_line_index();
-
-        let old_start_line = line_index_at_byte(&before_lines, &before_text, start);
-        let old_end_line = line_index_at_byte(&before_lines, &before_text, end);
+        let old_start_line = self.line_index_at_byte(start);
+        let old_end_line = self.line_index_at_byte(end);
         let old_count = old_end_line
             .saturating_sub(old_start_line)
             .saturating_add(1);
+
+        self.text.replace_range(start..end, &insert);
+        self.revision = Revision(self.revision.0.saturating_add(1));
+        self.update_line_index_after_replace(start, end, &insert);
 
         let new_end = start.saturating_add(insert.len()).min(self.text.len());
         let new_end_line = self.line_index_at_byte(new_end);
@@ -303,6 +301,47 @@ impl TextBuffer {
                 new_count,
             },
         })
+    }
+
+    fn update_line_index_after_replace(&mut self, start: usize, end: usize, insert: &str) {
+        // Remove line starts whose preceding '\n' is deleted by the edit.
+        // A line start at `k` corresponds to a '\n' at `k - 1`, so it is invalidated when:
+        // start <= k - 1 < end  <=>  start + 1 <= k <= end.
+        let remove_begin = lower_bound(&self.line_starts, start.saturating_add(1));
+        let remove_end = upper_bound(&self.line_starts, end);
+        if remove_begin < remove_end {
+            self.line_starts.drain(remove_begin..remove_end);
+        }
+
+        let old_len = end.saturating_sub(start) as i64;
+        let new_len = insert.len() as i64;
+        let delta = new_len - old_len;
+        if delta != 0 {
+            // Shift line starts strictly after the replaced range end.
+            // In the pure-insert case (start == end), a line start exactly at `start` must not move
+            // because the line still starts at that byte (the inserted text becomes part of it).
+            let shift_begin = upper_bound(&self.line_starts, end);
+            for v in &mut self.line_starts[shift_begin..] {
+                *v = (*v as i64 + delta) as usize;
+            }
+        }
+
+        // Insert line starts introduced by the inserted text. Each '\n' creates a new line start at
+        // the following byte.
+        let insert_at = upper_bound(&self.line_starts, start);
+        let mut new_starts: Vec<usize> = Vec::new();
+        for (i, b) in insert.as_bytes().iter().enumerate() {
+            if *b == b'\n' {
+                new_starts.push(start.saturating_add(i).saturating_add(1));
+            }
+        }
+        if !new_starts.is_empty() {
+            self.line_starts.splice(insert_at..insert_at, new_starts);
+        }
+
+        if self.line_starts.is_empty() {
+            self.line_starts.push(0);
+        }
     }
 
     pub fn apply_tx(&mut self, tx: &TextBufferTx) -> Result<(), EditError> {
@@ -433,12 +472,16 @@ impl TextBuffer {
     }
 }
 
-fn line_index_at_byte(starts: &[usize], text: &str, idx: usize) -> usize {
-    let idx = idx.min(text.len());
-    match starts.binary_search(&idx) {
-        Ok(i) => i,
-        Err(0) => 0,
-        Err(i) => i - 1,
+fn lower_bound(starts: &[usize], value: usize) -> usize {
+    match starts.binary_search(&value) {
+        Ok(i) | Err(i) => i,
+    }
+}
+
+fn upper_bound(starts: &[usize], value: usize) -> usize {
+    match starts.binary_search(&value) {
+        Ok(i) => i + 1,
+        Err(i) => i,
     }
 }
 
@@ -481,6 +524,55 @@ mod tests {
         assert_eq!(delta.lines.start, 0);
         assert!(delta.lines.old_count >= 2);
         assert!(delta.lines.new_count >= 2);
+    }
+
+    #[test]
+    fn delete_newline_merges_lines_and_updates_index() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "a\nb".to_string()).unwrap();
+        assert_eq!(buf.line_count(), 2);
+        assert_eq!(buf.line_start(0), Some(0));
+        assert_eq!(buf.line_start(1), Some(2));
+
+        buf.apply(Edit::Delete { range: 1..2 }).unwrap();
+
+        assert_eq!(buf.text(), "ab");
+        assert_eq!(buf.line_count(), 1);
+        assert_eq!(buf.line_start(0), Some(0));
+        assert_eq!(buf.line_start(1), None);
+    }
+
+    #[test]
+    fn insert_at_line_start_does_not_shift_line_start() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "a\nb".to_string()).unwrap();
+        assert_eq!(buf.line_start(1), Some(2));
+
+        buf.apply(Edit::Insert {
+            at: 2,
+            text: "X".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(buf.text(), "a\nXb");
+        assert_eq!(buf.line_start(1), Some(2));
+    }
+
+    #[test]
+    fn insert_newline_creates_new_line_start() {
+        let doc = DocId::new();
+        let mut buf = TextBuffer::new(doc, "ab".to_string()).unwrap();
+        assert_eq!(buf.line_count(), 1);
+
+        buf.apply(Edit::Insert {
+            at: 1,
+            text: "\n".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(buf.text(), "a\nb");
+        assert_eq!(buf.line_count(), 2);
+        assert_eq!(buf.line_start(1), Some(2));
     }
 
     #[test]

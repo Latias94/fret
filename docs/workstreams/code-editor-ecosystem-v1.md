@@ -6,6 +6,7 @@ Last updated: 2026-02-01
 Recent changes (2026-02-01):
 
 - Web: avoid wasm panics from unsupported `std::time` usage; prefer `fret_core::time` / wasm-capable time sources.
+- Buffer: update `TextBuffer` line index incrementally on edits (avoid full rescans); add newline-boundary tests.
 - Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
 - Web IME: add a cursor-area debug overlay and include mount/DPR fields in the debug snapshot for faster triage.
 - Web IME: add textarea DOM metrics (client/scroll size + selectionStart/End) to debug snapshot to debug candidate UI jitter.
