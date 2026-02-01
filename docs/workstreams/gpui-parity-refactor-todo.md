@@ -1187,6 +1187,13 @@ topics (if/when we implement them):
         - Stable semantics anchors: tab drag handles + pane roots should expose `test_id` values for scripts.
       - Script: `tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json`
       - Builtin suite: `fretboard diag suite workspace-shell-demo --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
+        - Defaults: `--warmup-frames 5`, enables `cache+shell`, and enforces:
+          - `--check-view-cache-reuse-min 1`
+          - `--check-retained-vlist-reconcile-no-notify 1`
+          - `--check-retained-vlist-reconcile-cache-reuse 1`
+          - `--check-retained-vlist-scroll-window-dirty-max 0`
+          - `--check-wheel-scroll workspace-shell-file-tree-node-0`
+          - `--check-stale-paint workspace-shell-file-tree-node-0`
       - Evidence bundle (cache+shell, release): `target/fret-diag/1769929575549-workspace-shell-demo-tab-drag-and-scroll/bundle.json`
     - [x] Adopt the ui-kit retained file tree component in the workspace shell (or a thin adapter), so eco-009 directly validates workspace integration.
       - Component: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`).
