@@ -663,6 +663,8 @@ topics (if/when we implement them):
         - Direction hint: when both ends are "near", prefer the last observed scroll direction to avoid prefetch oscillation.
       - Tree retained harness now fits a `prefetch_reconciles_max=30` budget.
         - Evidence: `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch30-directionState/1769921894057-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - Before (budget ~40): `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch9/1769913766043-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - After (budget 30): `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch30-directionState/1769921894057-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
     - [x] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
       - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (marks retained hosts for reconcile),
         `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
