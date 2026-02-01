@@ -1257,9 +1257,13 @@ topics (if/when we implement them):
       - Scripts:
         - `tools/diag-scripts/components-gallery-table-window-boundary-scroll.json`
         - `tools/diag-scripts/components-gallery-table-sort-and-scroll.json`
+        - (keep-alive bounce; ADR 0192): `tools/diag-scripts/components-gallery-table-window-boundary-bounce.json`
       - Env (recommended): `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`.
       - Builtin suite:
         - `cargo run -p fretboard -- diag suite components-gallery-table --launch -- cargo run -p fret-demo --bin components_gallery --release`
+      - Keep-alive suite:
+        - Env: `FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE=256`
+        - `cargo run -p fretboard -- diag suite components-gallery-table-keep-alive --launch -- cargo run -p fret-demo --bin components_gallery --release`
       - Evidence bundles (suite, view-cache, release):
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833380478-components-gallery-table-window-boundary-scroll/bundle.json`
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
@@ -1267,6 +1271,8 @@ topics (if/when we implement them):
         - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862668739-components-gallery-table-sort-and-scroll/bundle.json`
         - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json`
         - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json`
+      - Evidence (keep-alive bounce; cache+shell, release; keep-alive gate enabled):
+        - `target/fret-diag/1769958870151-components-gallery-table-window-boundary-bounce/bundle.json`
       - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to `components-gallery-table-window-boundary-scroll.json`
         (the sort+scroll script is still gated by view-cache reuse + wheel-scroll + stale-paint, etc.).
       - Note: the suite also enables `--check-vlist-policy-key-stable`, applied only to the window-boundary script (policy changes are expected in sort/toggle style scripts).
