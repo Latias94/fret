@@ -1229,6 +1229,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
             let is_ui_gallery_inspector_torture_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture";
+            let is_ui_gallery_inspector_torture_keep_alive_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture-keep-alive";
             let is_ui_gallery_file_tree_torture_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture";
             let is_ui_gallery_file_tree_torture_interactive_suite =
@@ -1496,6 +1498,24 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 "tools/diag-scripts/ui-gallery-inspector-torture-scroll.json",
                             ),
                         )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_inspector_torture_keep_alive_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-inspector-torture-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-inspector-torture-bounce-keep-alive.json",
+                                ),
+                            ),
+                        ],
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_file_tree_torture_suite {
@@ -2380,6 +2400,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 for (k, v) in [
                     ("FRET_UI_GALLERY_VIEW_CACHE", "1"),
                     ("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1"),
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
                 ] {
                     if !launch_env.iter().any(|(key, _)| key == k) {
                         launch_env.push((k.to_string(), v.to_string()));
@@ -2395,10 +2418,44 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_max.or(Some(256));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
-                check_wheel_scroll_test_id = check_wheel_scroll_test_id
-                    .or(Some("ui-gallery-inspector-row-0-label".to_string()));
-                check_stale_paint_test_id = check_stale_paint_test_id
-                    .or(Some("ui-gallery-inspector-row-0-label".to_string()));
+                check_wheel_scroll_test_id =
+                    check_wheel_scroll_test_id.or(Some("ui-gallery-inspector-root".to_string()));
+                check_stale_paint_test_id =
+                    check_stale_paint_test_id.or(Some("ui-gallery-inspector-root".to_string()));
+            }
+
+            if is_ui_gallery_inspector_torture_keep_alive_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                for (k, v) in [
+                    ("FRET_UI_GALLERY_VIEW_CACHE", "1"),
+                    ("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1"),
+                    ("FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE", "256"),
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
+
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(256));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_retained_vlist_keep_alive_reuse_min =
+                    check_retained_vlist_keep_alive_reuse_min.or(Some(1));
+                check_wheel_scroll_test_id =
+                    check_wheel_scroll_test_id.or(Some("ui-gallery-inspector-root".to_string()));
+                check_stale_paint_test_id =
+                    check_stale_paint_test_id.or(Some("ui-gallery-inspector-root".to_string()));
             }
 
             if is_ui_gallery_file_tree_torture_suite {
@@ -7314,6 +7371,17 @@ fn check_bundle_for_wheel_scroll_json(
                         break;
                     }
                 }
+            }
+        }
+
+        // As a fallback, accept “hit target changed under the fixed pointer position” as evidence
+        // that a scroll occurred. This is important for wheel targets that are scroll containers
+        // (their own bounds stay fixed while their contents move).
+        if !moved {
+            let hit_before = hit_test_node_id(before);
+            let hit_after = hit_test_node_id(after);
+            if hit_before.is_some() && hit_after.is_some() && hit_before != hit_after {
+                moved = true;
             }
         }
 
