@@ -892,6 +892,63 @@ mod tests {
     }
 
     #[test]
+    fn prefetch_virtual_range_step_skips_when_both_edges_near_without_direction_hint() {
+        let rendered = VirtualRange {
+            start_index: 10,
+            end_index: 20,
+            overscan: 2,
+            count: 100,
+        };
+        let visible = VirtualRange {
+            start_index: 9,
+            end_index: 21,
+            overscan: 0,
+            count: 100,
+        };
+
+        let prefetch = prefetch_virtual_range_step(rendered, visible, 1, 3, None);
+        assert_eq!(prefetch, None);
+    }
+
+    #[test]
+    fn prefetch_virtual_range_step_avoids_oscillation_by_preferring_direction_hint() {
+        let rendered = VirtualRange {
+            start_index: 10,
+            end_index: 20,
+            overscan: 2,
+            count: 100,
+        };
+        let visible = VirtualRange {
+            start_index: 9,
+            end_index: 21,
+            overscan: 0,
+            count: 100,
+        };
+
+        let forward = prefetch_virtual_range_step(rendered, visible, 1, 3, Some(true));
+        assert_eq!(
+            forward,
+            Some(VirtualRange {
+                start_index: 11,
+                end_index: 21,
+                overscan: 2,
+                count: 100
+            })
+        );
+
+        let backward = prefetch_virtual_range_step(rendered, visible, 1, 3, Some(false));
+        assert_eq!(
+            backward,
+            Some(VirtualRange {
+                start_index: 9,
+                end_index: 19,
+                overscan: 2,
+                count: 100
+            })
+        );
+    }
+
+    #[test]
     fn scroll_offset_for_item_matches_nearest_semantics() {
         let mut metrics = VirtualListMetrics::default();
         metrics.ensure(10, Px(10.0), Px(0.0), Px(0.0));
