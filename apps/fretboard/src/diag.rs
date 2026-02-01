@@ -96,6 +96,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_view_cache_reuse_stable_min: Option<u64> = None;
+    let mut check_redraw_hitches_max_total_ms_threshold: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
     let mut check_dock_drag_min: Option<u64> = None;
@@ -548,6 +549,17 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })?);
                 i += 1;
             }
+            "--check-redraw-hitches-max-total-ms" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-redraw-hitches-max-total-ms".to_string());
+                };
+                check_redraw_hitches_max_total_ms_threshold =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-redraw-hitches-max-total-ms".to_string()
+                    })?);
+                i += 1;
+            }
             "--check-overlay-synthesis-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -757,6 +769,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     if sub != "repro" && resource_footprint_thresholds.any() {
         return Err(
             "--max-working-set-bytes/--max-peak-working-set-bytes/--max-cpu-avg-percent-total-cores are only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
+    if sub != "repro" && check_redraw_hitches_max_total_ms_threshold.is_some() {
+        return Err(
+            "--check-redraw-hitches-max-total-ms is only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -1284,6 +1302,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let mut repro_launch = launch.clone();
             let mut repro_launch_env = launch_env.clone();
 
+            if check_redraw_hitches_max_total_ms_threshold.is_some() {
+                let _ = ensure_env_var(&mut repro_launch_env, "FRET_REDRAW_HITCH_LOG", "1");
+                let _ = ensure_env_var(
+                    &mut repro_launch_env,
+                    "FRET_REDRAW_HITCH_LOG_PATH",
+                    "redraw_hitches.log",
+                );
+            }
+
             let mut tracy_feature_injected: bool = false;
             let mut tracy_env_enabled: bool = false;
             if with_tracy {
@@ -1341,6 +1368,7 @@ See: `docs/tracy.md`.\n";
             )?;
             let mut repro_process_footprint: Option<serde_json::Value> = None;
             let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
+            let mut redraw_hitches_gate: Option<RedrawHitchesGateResult> = None;
 
             let mut run_rows: Vec<serde_json::Value> = Vec::new();
             let mut selected_bundle_path: Option<PathBuf> = None;
@@ -1689,6 +1717,10 @@ See: `docs/tracy.md`.\n";
                 )
                 .ok();
             }
+            if let Some(max_total_ms) = check_redraw_hitches_max_total_ms_threshold {
+                redraw_hitches_gate =
+                    check_redraw_hitches_max_total_ms(&resolved_out_dir, max_total_ms).ok();
+            }
 
             let captures_json = serde_json::json!({
                 "tracy": if with_tracy {
@@ -1842,6 +1874,16 @@ See: `docs/tracy.md`.\n";
             {
                 overall_error = Some(format!(
                     "resource footprint threshold gate failed (failures={}, evidence={})",
+                    r.failures,
+                    r.evidence_path.display()
+                ));
+            }
+            if let Some(r) = redraw_hitches_gate.as_ref()
+                && r.failures > 0
+                && overall_error.is_none()
+            {
+                overall_error = Some(format!(
+                    "redraw hitch threshold gate failed (failures={}, evidence={})",
                     r.failures,
                     r.evidence_path.display()
                 ));
@@ -3719,9 +3761,11 @@ fn zip_add_root_artifacts(
         "check.pixels_changed.json",
         "check.idle_no_paint.json",
         "check.perf_thresholds.json",
+        "check.redraw_hitches.json",
         "check.resource_footprint.json",
         "check.view_cache_reuse_stable.json",
         "resource.footprint.json",
+        "redraw_hitches.log",
         "renderdoc.captures.json",
         "tracy.note.md",
     ];
@@ -4009,6 +4053,189 @@ fn check_resource_footprint_thresholds(
     })
 }
 
+#[derive(Debug, Clone)]
+struct RedrawHitchesGateResult {
+    evidence_path: PathBuf,
+    failures: usize,
+}
+
+#[derive(Debug, Clone)]
+struct RedrawHitchRecord {
+    line_no: usize,
+    ts_unix_ms: Option<u64>,
+    total_ms: u64,
+    prepare_ms: Option<u64>,
+    render_ms: Option<u64>,
+    record_ms: Option<u64>,
+    present_ms: Option<u64>,
+    scene_ops: Option<u64>,
+    line: String,
+}
+
+fn check_redraw_hitches_max_total_ms(
+    out_dir: &Path,
+    max_total_ms: u64,
+) -> Result<RedrawHitchesGateResult, String> {
+    let log_path = out_dir.join("redraw_hitches.log");
+    let out_path = out_dir.join("check.redraw_hitches.json");
+
+    let parse_u64_after = |s: &str, needle: &str| -> Option<u64> {
+        let start = s.find(needle)? + needle.len();
+        let bytes = s.as_bytes();
+        let mut end = start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+        if end == start {
+            return None;
+        }
+        s.get(start..end)?.parse::<u64>().ok()
+    };
+
+    let parse_opt_u64_dbg = |s: &str, key: &str| -> Option<u64> {
+        let needle = format!("{key}=Some(");
+        let start = s.find(&needle)? + needle.len();
+        let bytes = s.as_bytes();
+        let mut end = start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+        if end == start {
+            return None;
+        }
+        s.get(start..end)?.parse::<u64>().ok()
+    };
+
+    let parse_ts = |s: &str| -> Option<u64> {
+        let s = s.strip_prefix('[')?;
+        let end = s.find(']')?;
+        s.get(0..end)?.parse::<u64>().ok()
+    };
+
+    let truncate = |s: &str, max_chars: usize| -> String {
+        if s.chars().count() <= max_chars {
+            return s.to_string();
+        }
+        s.chars().take(max_chars).collect()
+    };
+
+    let contents = std::fs::read_to_string(&log_path).ok();
+    let present = contents.is_some();
+
+    let mut records: Vec<RedrawHitchRecord> = Vec::new();
+    if let Some(contents) = contents.as_ref() {
+        for (idx, line) in contents.lines().enumerate() {
+            let Some(total_ms) = parse_u64_after(line, "total_ms=") else {
+                continue;
+            };
+            records.push(RedrawHitchRecord {
+                line_no: idx.saturating_add(1),
+                ts_unix_ms: parse_ts(line),
+                total_ms,
+                prepare_ms: parse_opt_u64_dbg(line, "prepare_ms"),
+                render_ms: parse_opt_u64_dbg(line, "render_ms"),
+                record_ms: parse_opt_u64_dbg(line, "record_ms"),
+                present_ms: parse_opt_u64_dbg(line, "present_ms"),
+                scene_ops: parse_u64_after(line, "scene_ops="),
+                line: truncate(line, 400),
+            });
+        }
+    }
+
+    let mut totals: Vec<u64> = records.iter().map(|r| r.total_ms).collect();
+    totals.sort_unstable();
+
+    let max_observed = totals.last().copied();
+    let avg_observed = if totals.is_empty() {
+        None
+    } else {
+        Some(totals.iter().sum::<u64>() as f64 / totals.len() as f64)
+    };
+    let p95_observed = if totals.is_empty() {
+        None
+    } else {
+        let idx = (totals.len().saturating_sub(1)) * 95 / 100;
+        totals.get(idx).copied()
+    };
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    if !present {
+        failures.push(serde_json::json!({
+            "kind": "log_file",
+            "reason": "missing_log",
+            "file": log_path.file_name().and_then(|s| s.to_str()).unwrap_or("redraw_hitches.log"),
+        }));
+    } else if records.is_empty() {
+        failures.push(serde_json::json!({
+            "kind": "parse",
+            "reason": "no_records",
+            "field": "total_ms",
+        }));
+    }
+
+    if let Some(observed) = max_observed
+        && observed > max_total_ms
+    {
+        failures.push(serde_json::json!({
+            "kind": "max_total_ms",
+            "threshold": max_total_ms,
+            "observed": observed,
+            "reason": "exceeded",
+        }));
+    }
+
+    records.sort_by(|a, b| b.total_ms.cmp(&a.total_ms));
+    let top = records
+        .iter()
+        .take(10)
+        .map(|r| {
+            serde_json::json!({
+                "line_no": r.line_no,
+                "ts_unix_ms": r.ts_unix_ms,
+                "total_ms": r.total_ms,
+                "prepare_ms": r.prepare_ms,
+                "render_ms": r.render_ms,
+                "record_ms": r.record_ms,
+                "present_ms": r.present_ms,
+                "scene_ops": r.scene_ops,
+                "line": r.line,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "redraw_hitches_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "log_file": log_path.file_name().and_then(|s| s.to_str()).unwrap_or("redraw_hitches.log"),
+        "thresholds": {
+            "max_total_ms": max_total_ms,
+        },
+        "observed": {
+            "present": present,
+            "records": totals.len(),
+            "max_total_ms": max_observed,
+            "p95_total_ms": p95_observed,
+            "avg_total_ms": avg_observed,
+        },
+        "top": top,
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(RedrawHitchesGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
 fn write_evidence_index(
     artifacts_root: &Path,
     summary_path: &Path,
@@ -4045,6 +4272,7 @@ fn write_evidence_index(
     add_file("repro.summary", "repro.summary.json");
     add_file("repro.zip", "repro.zip");
     add_file("resource.footprint", "resource.footprint.json");
+    add_file("redraw_hitches", "redraw_hitches.log");
     add_file("renderdoc.captures", "renderdoc.captures.json");
     add_file("tracy.note", "tracy.note.md");
     add_file("script", "script.json");
@@ -4058,6 +4286,7 @@ fn write_evidence_index(
     add_file("check.idle_no_paint", "check.idle_no_paint.json");
     add_file("check.pixels_changed", "check.pixels_changed.json");
     add_file("check.perf_thresholds", "check.perf_thresholds.json");
+    add_file("check.redraw_hitches", "check.redraw_hitches.json");
     add_file("check.resource_footprint", "check.resource_footprint.json");
     add_file(
         "check.view_cache_reuse_stable",
@@ -6014,6 +6243,30 @@ fn maybe_launch_demo(
             _ => cmd.env(key, value),
         };
     }
+
+    // When collecting redraw hitch logs under `diag repro`, default to writing into `FRET_DIAG_DIR`
+    // (and thus into `--dir`) so the log can be packed and checked deterministically.
+    //
+    // The desktop runner resolves relative `FRET_REDRAW_HITCH_LOG_PATH` against `FRET_DIAG_DIR`.
+    let is_truthy = |v: &str| !v.trim().is_empty() && v.trim() != "0";
+    let redraw_hitch_log_enabled = if let Some((_, v)) = launch_env
+        .iter()
+        .find(|(k, _)| k == "FRET_REDRAW_HITCH_LOG")
+    {
+        is_truthy(v)
+    } else if let Ok(v) = std::env::var("FRET_REDRAW_HITCH_LOG") {
+        is_truthy(&v)
+    } else {
+        false
+    };
+    let redraw_hitch_log_path_set = launch_env
+        .iter()
+        .any(|(k, v)| k == "FRET_REDRAW_HITCH_LOG_PATH" && !v.trim().is_empty())
+        || std::env::var_os("FRET_REDRAW_HITCH_LOG_PATH").is_some_and(|v| !v.is_empty());
+    if redraw_hitch_log_enabled && !redraw_hitch_log_path_set {
+        cmd.env("FRET_REDRAW_HITCH_LOG_PATH", "redraw_hitches.log");
+    }
+
     if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR").filter(|v| !v.is_empty()) {
         cmd.env("CARGO_TARGET_DIR", target_dir);
     }
@@ -13462,5 +13715,82 @@ mod tests {
         assert_eq!(t.max_top_total_us, Some(25_000));
         assert_eq!(t.max_top_layout_us, Some(15_000));
         assert_eq!(t.max_top_solve_us, Some(8_000));
+    }
+
+    #[test]
+    fn redraw_hitch_gate_fails_when_log_missing() {
+        let out_dir = tmp_out_dir("redraw_hitch_gate_missing");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let r = check_redraw_hitches_max_total_ms(&out_dir, 16).unwrap();
+        assert!(r.failures > 0);
+
+        let v = read_json_value(&out_dir.join("check.redraw_hitches.json")).unwrap();
+        assert_eq!(
+            v.get("kind").and_then(|v| v.as_str()),
+            Some("redraw_hitches_thresholds")
+        );
+        assert_eq!(
+            v.get("observed")
+                .and_then(|v| v.get("present"))
+                .and_then(|v| v.as_bool()),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn redraw_hitch_gate_passes_under_threshold() {
+        let out_dir = tmp_out_dir("redraw_hitch_gate_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let log = out_dir.join("redraw_hitches.log");
+        std::fs::write(
+            &log,
+            "\
+[1] [thread=ThreadId(1)] redraw hitch window=AppWindowId(1v1) total_ms=10 prepare_ms=Some(0) render_ms=Some(10) record_ms=Some(0) present_ms=Some(0) scene_ops=1 bounds=Rect {} scale_factor=1.0\n\
+[2] [thread=ThreadId(1)] redraw hitch window=AppWindowId(1v1) total_ms=12 prepare_ms=Some(0) render_ms=Some(12) record_ms=Some(0) present_ms=Some(0) scene_ops=1 bounds=Rect {} scale_factor=1.0\n",
+        )
+        .unwrap();
+
+        let r = check_redraw_hitches_max_total_ms(&out_dir, 20).unwrap();
+        assert_eq!(r.failures, 0);
+
+        let v = read_json_value(&out_dir.join("check.redraw_hitches.json")).unwrap();
+        assert_eq!(
+            v.get("failures")
+                .and_then(|v| v.as_array())
+                .map(|a| a.len()),
+            Some(0)
+        );
+        assert_eq!(
+            v.get("observed")
+                .and_then(|v| v.get("records"))
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn redraw_hitch_gate_fails_over_threshold() {
+        let out_dir = tmp_out_dir("redraw_hitch_gate_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let log = out_dir.join("redraw_hitches.log");
+        std::fs::write(
+            &log,
+            "\
+[1] [thread=ThreadId(1)] redraw hitch window=AppWindowId(1v1) total_ms=30 prepare_ms=Some(0) render_ms=Some(29) record_ms=Some(0) present_ms=Some(1) scene_ops=1 bounds=Rect {} scale_factor=1.0\n",
+        )
+        .unwrap();
+
+        let r = check_redraw_hitches_max_total_ms(&out_dir, 20).unwrap();
+        assert_eq!(r.failures, 1);
+
+        let v = read_json_value(&out_dir.join("check.redraw_hitches.json")).unwrap();
+        let failures = v.get("failures").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(
+            failures
+                .iter()
+                .any(|f| f.get("kind").and_then(|v| v.as_str()) == Some("max_total_ms")),
+            true
+        );
     }
 }
