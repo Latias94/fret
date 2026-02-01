@@ -2864,13 +2864,28 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let size = window.surface_size();
+        let surface_usage = {
+            let base = self.diag_bundle_screenshots.surface_usage();
+            #[cfg(feature = "diag-screenshots")]
+            {
+                if self.diag_screenshots.is_some() {
+                    base | wgpu::TextureUsages::COPY_SRC
+                } else {
+                    base
+                }
+            }
+            #[cfg(not(feature = "diag-screenshots"))]
+            {
+                base
+            }
+        };
         let surface = SurfaceState::new_with_usage(
             &context.adapter,
             &context.device,
             surface,
             size.width,
             size.height,
-            self.diag_bundle_screenshots.surface_usage(),
+            surface_usage,
         )?;
 
         let id = self.windows.insert_with_key(|id| {
