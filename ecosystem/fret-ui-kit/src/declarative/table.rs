@@ -142,6 +142,13 @@ pub struct TableViewProps {
     ///   measure visible rows and write sizes back into the virtualizer.
     pub row_measure_mode: TableRowMeasureMode,
     pub overscan: usize,
+    /// Optional retained-subtree budget for overscan window shifts (retained host path).
+    ///
+    /// When `None`, the default heuristic is `overscan * 2`.
+    ///
+    /// Larger values reduce remount/layout churn when the window oscillates across boundaries
+    /// (e.g. scroll “bounce” patterns), at the cost of retaining more offscreen subtrees.
+    pub keep_alive: Option<usize>,
     pub default_column_width: Px,
     pub min_column_width: Px,
     /// When `true`, clicking a sortable header updates `TableState.sorting`.
@@ -199,6 +206,7 @@ impl Default for TableViewProps {
             row_height: None,
             row_measure_mode: TableRowMeasureMode::Fixed,
             overscan: 2,
+            keep_alive: None,
             default_column_width: Px(160.0),
             min_column_width: Px(40.0),
             enable_sorting: true,
@@ -822,7 +830,9 @@ where
 
     let mut options = VirtualListOptions::new(row_h, props.overscan);
     options.items_revision = items_revision;
-    options.keep_alive = props.overscan.saturating_mul(2);
+    options.keep_alive = props
+        .keep_alive
+        .unwrap_or_else(|| props.overscan.saturating_mul(2));
     match props.row_measure_mode {
         TableRowMeasureMode::Fixed => {
             options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
@@ -1836,7 +1846,9 @@ where
 
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
-    list_options.keep_alive = props.overscan.saturating_mul(2);
+    list_options.keep_alive = props
+        .keep_alive
+        .unwrap_or_else(|| props.overscan.saturating_mul(2));
     match props.row_measure_mode {
         TableRowMeasureMode::Fixed => {
             list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
