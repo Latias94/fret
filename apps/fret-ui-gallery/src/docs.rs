@@ -104,6 +104,29 @@ let list = cx.virtual_list_keyed(
 ```
 "#;
 
+pub(crate) const DOC_UI_KIT_LIST_TORTURE: &str = r#"
+## List (UI kit torture harness)
+
+This page is an ecosystem-level harness for `fret-ui-kit::declarative::list`.
+
+It intentionally uses the **retained-host** VirtualList path (ADR 0192) to validate that:
+
+- scroll can update membership under cache-hit reuse,
+- crossing window boundaries does not require dirtying the parent cache-root,
+- correctness remains stale-paint safe under view-cache + shell reuse.
+"#;
+
+pub(crate) const USAGE_UI_KIT_LIST_TORTURE: &str = r#"
+Run with view-cache enabled:
+
+- `FRET_UI_GALLERY_VIEW_CACHE=1`
+- `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+
+Script:
+
+- `tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json`
+"#;
+
 pub(crate) const DOC_CODE_VIEW_TORTURE: &str = r#"
 ## Code View (torture harness)
 

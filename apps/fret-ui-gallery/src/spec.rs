@@ -96,6 +96,7 @@ pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
+pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
 pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
@@ -165,6 +166,7 @@ pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
+pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_kit_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
 pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
@@ -364,6 +366,22 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["virtual_list", "performance", "gpui-parity", "harness"],
                 docs::DOC_VIRTUAL_LIST_TORTURE,
                 docs::USAGE_VIRTUAL_LIST_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_UI_KIT_LIST_TORTURE,
+                "List (UI Kit Torture)",
+                "List / UI Kit Retained Virtualization Harness",
+                "fret-ui-kit (retained-host list surface)",
+                CMD_NAV_UI_KIT_LIST_TORTURE,
+                &[
+                    "list",
+                    "virtual_list",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_UI_KIT_LIST_TORTURE,
+                docs::USAGE_UI_KIT_LIST_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CODE_VIEW_TORTURE,
