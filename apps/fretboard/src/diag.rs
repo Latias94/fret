@@ -4378,6 +4378,7 @@ fn script_requires_retained_vlist_keep_alive_reuse_gate(script: &Path) -> bool {
     matches!(
         name,
         "components-gallery-file-tree-window-boundary-bounce.json"
+            | "ui-gallery-inspector-torture-bounce-keep-alive.json"
     )
 }
 

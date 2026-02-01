@@ -1171,9 +1171,9 @@ topics (if/when we implement them):
       - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-inspector-torture-scroll.json --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --check-view-cache-reuse-min 1 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-inspector-root --check-stale-paint ui-gallery-inspector-root --launch -- cargo run -p fret-ui-gallery --release`
     - Evidence bundle (cache+shell, release): `target/fret-diag-inspector-torture-local2/1769735532323-ui-gallery-inspector-torture-scroll/bundle.json`
     - Re-verified (cache+shell, release; retained gates enforced incl. attach/detach min): `target/fret-diag-inspector-suite-min-gate/1769756657266-ui-gallery-inspector-torture-scroll/bundle.json`
-    - Evidence (keep-alive suite smoke; cache+shell, release):
-      - `target/fret-diag-inspector-keep-alive-smoke3/1769952075143-ui-gallery-inspector-torture-scroll/bundle.json`
-      - `target/fret-diag-inspector-keep-alive-smoke3/1769952102292-ui-gallery-inspector-torture-bounce-keep-alive/bundle.json`
+    - Evidence (keep-alive suite smoke; cache+shell, release; keep-alive gate enabled):
+      - `target/fret-diag-inspector-keep-alive-smoke4/1769952707386-ui-gallery-inspector-torture-scroll/bundle.json`
+      - `target/fret-diag-inspector-keep-alive-smoke4/1769952733603-ui-gallery-inspector-torture-bounce-keep-alive/bundle.json`
     - Builtin suite: `fretboard diag suite ui-gallery-inspector-torture --launch -- cargo run -p fret-ui-gallery --release` defaults to `--warmup-frames 5`, enables `cache+shell`, and enforces the retained VirtualList gates above.
       - Note (2026-01-30): retained VirtualList post-run checks are applied whenever configured (no per-script whitelist), so suite gates are effective.
     - Builtin suite (keep-alive): `fretboard diag suite ui-gallery-inspector-torture-keep-alive --launch -- cargo run -p fret-ui-gallery --release` defaults to `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=256` and enforces `--check-retained-vlist-keep-alive-reuse-min 1`.
