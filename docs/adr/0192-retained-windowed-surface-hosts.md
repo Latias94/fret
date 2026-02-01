@@ -160,5 +160,9 @@ Retained windowed surface implementers SHOULD verify:
 - GPUI VirtualList (prepaint-driven windowing):
   - `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
 - Flutter slivers / retained element lifecycle:
-  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`_InactiveElements`, `finalizeTree`)
-  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart` (`_keepAliveBucket`)
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart`
+    - `_InactiveElements` (~`framework.dart:2099`)
+    - `BuildOwner.finalizeTree` (~`framework.dart:3339`)
+    - `Element.deactivateChild` (~`framework.dart:4632`)
+  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`
+    - `RenderSliverMultiBoxAdaptor._keepAliveBucket` (~`sliver_multi_box_adaptor.dart:233`)

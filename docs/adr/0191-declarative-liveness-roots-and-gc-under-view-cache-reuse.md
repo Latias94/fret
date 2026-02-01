@@ -364,8 +364,12 @@ Success criteria:
     - `RenderSliverMultiBoxAdaptor._keepAliveBucket` (~`sliver_multi_box_adaptor.dart:233`)
 - GPUI view caching reference: `crates/gpui/src/view.rs`, `crates/gpui/src/window.rs` (Zed upstream).
   - Anchors (pinned `repo-ref/zed`, may drift upstream):
+    - `ViewCacheKey` (~`view.rs:22`)
     - `AnyView::cached` (~`view.rs:103`)
     - `reuse_prepaint` (~`view.rs:216`)
+    - `detect_accessed_entities` (~`view.rs:227`)
     - `reuse_paint` (~`view.rs:280`)
-    - `WindowInvalidator.dirty_views` (~`window.rs:102`)
-    - `Window::mark_view_dirty` (~`window.rs:1476`)
+    - `WindowInvalidatorInner.dirty_views` (~`window.rs:105`)
+    - `Window::mark_view_dirty` (~`window.rs:1466`)
+    - `Window::use_keyed_state` / `with_global_id` (~`window.rs:2839`)
+    - `Window::with_element_state` (~`window.rs:2840`)

@@ -212,7 +212,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - add debug-only diagnostics when updating `NodeEntry.root` for an element that already has a different `root`,
       - decide whether to preserve the original root (avoid cross-root pollution) or split bookkeeping per-root if overwrites are expected/legitimate.
   - Historical investigation plan (pre-fix):
-    - Export/confirm the liveness roots on the failing frame: which layer roots are active (and whether “invisible” layers still count as liveness roots), plus the current `view_cache_reuse_roots` list.
+    - Export/confirm the liveness roots on the failing frame: which layer roots are active (and whether “invisible” layers still count as liveness roots), plus the current `view_cache_reuse_roots` list, plus retained keep-alive roots (ADR 0192).
     - Export the sever-parent mapping (parent node -> element id/path + cache-root flags) so the detach callsite can be tied back to the authoring UI structure.
     - Add debug-only diagnostics for `NodeEntry.root` overwrites (element + old_root + new_root + debug paths) to validate or falsify the “cross-root ownership overwrite” hypothesis.
     - Re-run the overlay torture with the stopgap disabled and use the new fields to decide whether the fix is:
