@@ -111,12 +111,50 @@ Exit criteria:
   - emoji sequences (ZWJ/VS16/keycaps)
   - IME preedit (Windows-first)
 
+#### WP6 — macOS baseline (IME + geometry + pixel correctness)
+
+Goal:
+
+- Validate that the v2 text stack behaves correctly on macOS (winit-appkit), with the same
+  user-visible behavior as Windows wherever feasible, and with clearly documented, bounded
+  platform deltas where it is not.
+
+Exit criteria:
+
+- IME:
+  - `Ime::Preedit` / `Ime::Commit` / `Ime::DeleteSurrounding` flows work end-to-end on macOS.
+  - Candidate window positioning is stable using IME cursor area updates.
+  - Note: the runner currently requests IME updates for `cursor_area` only; if any macOS IME
+    requires `surrounding_text` for correct behavior (e.g. deletion/suggestions), track and wire it
+    explicitly as part of this work package.
+  - UTF-16 composed-view ranges published via `WindowTextInputSnapshot` remain deterministic under:
+    - mixed scripts (LTR + RTL)
+    - emoji sequences (ZWJ/VS16/keycaps)
+    - IME preedit composition
+- Geometry queries:
+  - `hit_test_point`, `caret_rect`, and `selection_rects(_clipped)` remain stable under:
+    - non-integer scale factors
+    - multiline wraps
+    - mixed-script runs
+- Pixel correctness:
+  - Vertical baseline/line-advance snapping does not accumulate drift across long paragraphs.
+  - Caret/selection geometry aligns with painted glyph positions (no “cursor drift”).
+
+Evidence checklist (when completed):
+
+- `cargo nextest run -p fret-render`
+- `cargo nextest run -p fret-ui`
+- `cargo nextest run --workspace` (preferred before landing)
+- Manual sanity pass on macOS:
+  - `cargo run -p fret-demo --bin emoji_conformance_demo`
+  - `cargo run -p fret-demo --bin cjk_conformance_demo`
+
 #### WP7 — Text module graduation (remove legacy + rename/flatten modules)
 
 Goal:
 
-- Retire the legacy `text_v2` module namespace once the Parley path is the only shaping backend and the
-  platform baseline (Windows + macOS) is validated, then rename/flatten modules to reduce churn.
+- Retire the legacy `text_v2` module namespace once the Parley path is the only shaping backend, then
+  rename/flatten modules to reduce churn.
 
 Exit criteria:
 
@@ -368,7 +406,7 @@ Legend:
 - Ellipsis glyph choice: keep current `"…"` vs legacy placeholder; ensure fallback is stable across platforms.
 - Parley cluster/index semantics: ensure we can map to UTF-8 byte offsets with correct clamping.
 - Atlas eviction determinism: ensure eviction does not cause flicker without explicit rebuild strategy.
-- Text module graduation: tracked as WP7 once the platform baseline is validated.
+- macOS baseline: tracked as WP6 (Windows-first; validate macOS after contract stabilization).
 - Platform defaults: decide `TextQualitySettings` defaults per platform (Windows-first; validate macOS after contract stabilization).
 
 ## Progress Log (append-only)
@@ -397,3 +435,5 @@ Legend:
 - 2026-01-14: Add cjk-lite bundle + CJK conformance demo and atlas test (commit `8c0700b`).
 - 2026-01-14: Add wasm fallback candidates for bundled fonts (commit `56b6e92`).
 - 2026-01-31: Add deterministic window snapshot smoke test for mixed-script + emoji + IME preedit.
+- 2026-02-01: Graduate `text_v2` module namespace into `text/*` (mechanical rename + import updates; no behavior change).
+- 2026-02-01: Start WP6 (macOS baseline) tracker.

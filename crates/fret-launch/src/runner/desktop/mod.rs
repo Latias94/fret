@@ -4346,6 +4346,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
                             self.app.request_redraw(new_window);
                         }
+                        WindowRequest::SetInnerSize { window, size } => {
+                            if let Some(state) = self.windows.get(window) {
+                                let _ = state.window.request_surface_size(
+                                    winit::dpi::LogicalSize::new(
+                                        size.width.0 as f64,
+                                        size.height.0 as f64,
+                                    )
+                                    .into(),
+                                );
+                                state.window.request_redraw();
+                            }
+                        }
                         WindowRequest::Raise {
                             window,
                             sender: sender_id,

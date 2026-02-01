@@ -119,7 +119,7 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
     with_window_frame(app, window, |window_frame| {
         window_frame
             .and_then(|w| w.children.get(&node))
-            .cloned()
+            .map(|children| children.as_ref().to_vec())
             .unwrap_or_default()
     })
 }
@@ -227,13 +227,16 @@ where
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
 
-            window_frame.instances.insert(
-                root_node,
-                ElementRecord {
-                    element: root_id,
-                    instance: ElementInstance::Stack(StackProps::default()),
-                },
-            );
+            let inserted = window_frame
+                .instances
+                .insert(
+                    root_node,
+                    ElementRecord {
+                        element: root_id,
+                        instance: ElementInstance::Stack(StackProps::default()),
+                    },
+                )
+                .is_none();
 
             let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
             for child in children {
@@ -250,7 +253,12 @@ where
                 ));
             }
             ui.set_children(root_node, mounted_children.clone());
-            window_frame.children.insert(root_node, mounted_children);
+            window_frame
+                .children
+                .insert(root_node, Arc::<[NodeId]>::from(mounted_children));
+            if inserted {
+                window_frame.revision = window_frame.revision.saturating_add(1);
+            }
 
             let retained_virtual_lists = window_state.take_retained_virtual_list_reconciles();
             if !retained_virtual_lists.is_empty() {
@@ -535,9 +543,13 @@ where
             let removed = ui.remove_subtree(services, node);
             app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                 let window_frame = frame.windows.entry(window).or_default();
+                let any_removed = !removed.is_empty();
                 for removed in removed {
                     window_frame.instances.remove(&removed);
                     window_frame.children.remove(&removed);
+                }
+                if any_removed {
+                    window_frame.revision = window_frame.revision.saturating_add(1);
                 }
             });
         }
@@ -655,13 +667,21 @@ where
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
 
-            window_frame.instances.insert(
-                root_node,
-                ElementRecord {
-                    element: root_id,
-                    instance: ElementInstance::DismissibleLayer(DismissibleLayerProps::default()),
-                },
-            );
+            let inserted = window_frame
+                .instances
+                .insert(
+                    root_node,
+                    ElementRecord {
+                        element: root_id,
+                        instance: ElementInstance::DismissibleLayer(
+                            DismissibleLayerProps::default(),
+                        ),
+                    },
+                )
+                .is_none();
+            if inserted {
+                window_frame.revision = window_frame.revision.saturating_add(1);
+            }
 
             let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
             for child in children {
@@ -915,9 +935,13 @@ where
             let removed = ui.remove_subtree(services, node);
             app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
                 let window_frame = frame.windows.entry(window).or_default();
+                let any_removed = !removed.is_empty();
                 for removed in removed {
                     window_frame.instances.remove(&removed);
                     window_frame.children.remove(&removed);
+                }
+                if any_removed {
+                    window_frame.revision = window_frame.revision.saturating_add(1);
                 }
             });
         }
@@ -1140,15 +1164,21 @@ fn mount_element<H: UiHost>(
         }
     }
 
-    window_frame.instances.insert(
-        node,
-        ElementRecord {
-            element: id,
-            instance,
-        },
-    );
     if let Some((present, interactive)) = interactivity_gate_state {
         ui.sync_interactivity_gate_widget(node, present, interactive);
+    }
+    let inserted = window_frame
+        .instances
+        .insert(
+            node,
+            ElementRecord {
+                element: id,
+                instance,
+            },
+        )
+        .is_none();
+    if inserted {
+        window_frame.revision = window_frame.revision.saturating_add(1);
     }
 
     if reuse_view_cache {
@@ -1172,7 +1202,7 @@ fn mount_element<H: UiHost>(
         window_frame
             .children
             .entry(node)
-            .or_insert_with(|| ui.children(node));
+            .or_insert_with(|| Arc::<[NodeId]>::from(ui.children(node)));
 
         let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
         let touched =
@@ -1266,7 +1296,9 @@ fn mount_element<H: UiHost>(
         } else {
             ui.set_children_in_mount(node, child_nodes.clone());
         }
-        window_frame.children.insert(node, child_nodes);
+        window_frame
+            .children
+            .insert(node, Arc::<[NodeId]>::from(child_nodes));
 
         // Keep a complete retained-subtree element list for this cache root so cache-hit frames
         // can refresh liveness without re-running the render closure.
@@ -1296,7 +1328,9 @@ fn mount_element<H: UiHost>(
         } else {
             ui.set_children_in_mount(node, child_nodes.clone());
         }
-        window_frame.children.insert(node, child_nodes);
+        window_frame
+            .children
+            .insert(node, Arc::<[NodeId]>::from(child_nodes));
     }
 
     node
@@ -1470,7 +1504,9 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         );
 
         ui.set_children_barrier(node, next_children.clone());
-        window_frame.children.insert(node, next_children);
+        window_frame
+            .children
+            .insert(node, Arc::<[NodeId]>::from(next_children));
 
         if let Some(record) = window_frame.instances.get_mut(&node) {
             if let ElementInstance::VirtualList(props) = &mut record.instance {
@@ -1798,7 +1834,7 @@ mod tests {
         let mut window_frame = WindowFrame::default();
         window_frame
             .children
-            .insert(root, vec![ui_child, frame_child]);
+            .insert(root, Arc::<[NodeId]>::from(vec![ui_child, frame_child]));
 
         let reachable = collect_reachable_nodes_for_gc(&ui, Some(&window_frame), [root]);
         assert!(reachable.contains(&root));
@@ -1843,7 +1879,9 @@ mod tests {
 
         // Intentionally omit `ui.set_children(root_node, ..)` so `UiTree` has no child edges.
         let mut window_frame = WindowFrame::default();
-        window_frame.children.insert(root_node, vec![child_node]);
+        window_frame
+            .children
+            .insert(root_node, Arc::<[NodeId]>::from(vec![child_node]));
 
         let mut window_state = crate::elements::WindowElementState::default();
 
@@ -1917,7 +1955,7 @@ fn push_existing_subtree_children<H: UiHost>(
         if ui_children.is_empty() {
             stack.extend(frame_children.iter().copied());
         } else {
-            for &child in frame_children {
+            for &child in frame_children.iter() {
                 if !ui_children.contains(&child) {
                     stack.push(child);
                 }

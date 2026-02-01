@@ -218,6 +218,10 @@ pub enum Effect {
 pub enum WindowRequest {
     Create(CreateWindowRequest),
     Close(AppWindowId),
+    SetInnerSize {
+        window: AppWindowId,
+        size: fret_core::Size,
+    },
     Raise {
         window: AppWindowId,
         sender: Option<AppWindowId>,

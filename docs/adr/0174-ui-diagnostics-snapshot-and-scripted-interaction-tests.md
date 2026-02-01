@@ -205,6 +205,9 @@ Test ID rules:
 
 Define `UiActionScriptV1` as a sequence of steps:
 
+Note: the implementation currently supports a v1 MVP step set, and also supports a schema v2 extension
+(`UiActionScriptV2`) with intent-level steps (see `docs/ui-diagnostics-and-scripted-tests.md`).
+
 - `OpenDemo { name }` (test harness only)
 - `Click { target: UiSelectorV1 }`
 - `DoubleClick { target: UiSelectorV1 }`

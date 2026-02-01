@@ -84,6 +84,58 @@ pub(crate) fn wrap_with_constraints(
     }
 }
 
+/// Wraps text for measurement only.
+///
+/// The returned `lines[*].glyphs` is intentionally empty to avoid per-glyph work in layout.
+pub(crate) fn wrap_with_constraints_measure_only(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    constraints: TextConstraints,
+) -> WrappedLayout {
+    let scale = constraints.scale_factor.max(1.0);
+    let text_len = match input {
+        TextInputRef::Plain { text, .. } => text.len(),
+        TextInputRef::Attributed { text, .. } => text.len(),
+    };
+
+    let has_newlines = match input {
+        TextInputRef::Plain { text, .. } => text.contains('\n'),
+        TextInputRef::Attributed { text, .. } => text.contains('\n'),
+    };
+    if has_newlines {
+        return wrap_with_newlines_measure_only(shaper, input, constraints, scale);
+    }
+
+    match constraints {
+        TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            ..
+        } => {
+            let mut line = shaper.shape_single_line_metrics(input, scale);
+            line.width = max_width.0 * scale;
+            WrappedLayout {
+                text_len,
+                kept_end: text_len,
+                line_ranges: vec![0..text_len],
+                lines: vec![line],
+            }
+        }
+        TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            ..
+        } => wrap_word_measure_only(shaper, input, text_len, max_width.0 * scale, scale),
+        _ => WrappedLayout {
+            text_len,
+            kept_end: text_len,
+            line_ranges: vec![0..text_len],
+            lines: vec![shaper.shape_single_line_metrics(input, scale)],
+        },
+    }
+}
+
 fn wrap_with_newlines(
     shaper: &mut ParleyShaper,
     input: TextInputRef<'_>,
@@ -121,6 +173,63 @@ fn wrap_with_newlines(
         p_start = i + 1;
     }
     push_paragraph(
+        shaper,
+        text,
+        base,
+        spans,
+        p_start..text_len,
+        constraints,
+        max_width_px,
+        scale,
+        &mut line_ranges,
+        &mut lines,
+    );
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
+fn wrap_with_newlines_measure_only(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    constraints: TextConstraints,
+    scale: f32,
+) -> WrappedLayout {
+    let (text, base, spans) = match input {
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
+    };
+
+    let text_len = text.len();
+    let max_width_px = constraints.max_width.map(|w| w.0 * scale);
+
+    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+    let mut lines: Vec<ShapedLineLayout> = Vec::new();
+
+    let mut p_start = 0usize;
+    for (i, ch) in text.char_indices() {
+        if ch != '\n' {
+            continue;
+        }
+        push_paragraph_measure_only(
+            shaper,
+            text,
+            base,
+            spans,
+            p_start..i,
+            constraints,
+            max_width_px,
+            scale,
+            &mut line_ranges,
+            &mut lines,
+        );
+        p_start = i + 1;
+    }
+    push_paragraph_measure_only(
         shaper,
         text,
         base,
@@ -222,6 +331,79 @@ fn push_paragraph(
         }
         _ => {
             let line = shape_slice(shaper, text, base, spans, paragraph_range.clone(), scale);
+            out_ranges.push(paragraph_range);
+            out_lines.push(line);
+        }
+    }
+}
+
+fn push_paragraph_measure_only(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    constraints: TextConstraints,
+    max_width_px: Option<f32>,
+    scale: f32,
+    out_ranges: &mut Vec<Range<usize>>,
+    out_lines: &mut Vec<ShapedLineLayout>,
+) {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+    let paragraph_range = start..end;
+
+    match constraints {
+        TextConstraints {
+            max_width: Some(_),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let slice = &text[paragraph_range.clone()];
+            let spans =
+                spans.map(|spans| slice_spans(spans, paragraph_range.start, paragraph_range.end));
+            let mut shaped = match spans.as_ref() {
+                Some(s) => shaper.shape_single_line_metrics(
+                    TextInputRef::Attributed {
+                        text: slice,
+                        base,
+                        spans: s.as_slice(),
+                    },
+                    scale,
+                ),
+                None => shaper.shape_single_line_metrics(TextInputRef::plain(slice, base), scale),
+            };
+            shaped.width = max_w;
+            out_ranges.push(paragraph_range);
+            out_lines.push(shaped);
+        }
+        TextConstraints {
+            max_width: Some(_),
+            wrap: TextWrap::Word,
+            ..
+        } => {
+            let Some(max_w) = max_width_px else {
+                return;
+            };
+            let (ranges, lines) = wrap_word_range_measure_only(
+                shaper,
+                text,
+                base,
+                spans,
+                paragraph_range,
+                max_w,
+                scale,
+            );
+            out_ranges.extend(ranges);
+            out_lines.extend(lines);
+        }
+        _ => {
+            let line =
+                shape_slice_measure_only(shaper, text, base, spans, paragraph_range.clone(), scale);
             out_ranges.push(paragraph_range);
             out_lines.push(line);
         }
@@ -354,6 +536,29 @@ fn wrap_grapheme(
     }
 }
 
+fn wrap_word_measure_only(
+    shaper: &mut ParleyShaper,
+    input: TextInputRef<'_>,
+    text_len: usize,
+    max_width_px: f32,
+    scale: f32,
+) -> WrappedLayout {
+    let (text, base, spans) = match input {
+        TextInputRef::Plain { text, style } => (text, style, None),
+        TextInputRef::Attributed { text, base, spans } => (text, base, Some(spans)),
+    };
+
+    let (line_ranges, lines) =
+        wrap_word_range_measure_only(shaper, text, base, spans, 0..text_len, max_width_px, scale);
+
+    WrappedLayout {
+        text_len,
+        kept_end: text_len,
+        line_ranges,
+        lines,
+    }
+}
+
 fn wrap_grapheme_range(
     shaper: &mut ParleyShaper,
     text: &str,
@@ -428,6 +633,8 @@ fn wrap_word_range(
     max_width_px: f32,
     scale: f32,
 ) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    const WRAP_WORD_PROBE_MIN_BYTES: usize = 256;
+
     let start = range.start.min(text.len());
     let end = range.end.min(text.len());
 
@@ -443,20 +650,51 @@ fn wrap_word_range(
 
     let mut offset = start;
     while offset < end {
-        let slice = &text[offset..end];
-        let full = shape_slice(shaper, text, base, spans, offset..end, scale);
+        // Avoid shaping the full remaining paragraph on each line (O(n^2) behavior for long text).
+        // Instead, shape a prefix probe that is large enough to exceed `max_width_px`, then cut.
+        let slice_all = &text[offset..end];
 
-        if full.width <= max_width_px + 0.5 {
-            lines.push(full);
+        let mut probe_rel = WRAP_WORD_PROBE_MIN_BYTES.min(slice_all.len());
+        probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
+        if probe_rel == 0 {
+            let first = slice_all.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
+            probe_rel = first.max(1).min(slice_all.len());
+            probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
+        }
+
+        let (probe_end, probe) = loop {
+            let probe_end = offset.saturating_add(probe_rel).min(end);
+            let shaped = shape_slice(shaper, text, base, spans, offset..probe_end, scale);
+
+            // If the shaped prefix doesn't exceed the width yet, grow the probe (up to the end).
+            if shaped.width <= max_width_px + 0.5 && probe_end < end {
+                let next_rel = (probe_rel.saturating_mul(2)).min(slice_all.len());
+                if next_rel == probe_rel {
+                    return (line_ranges, lines);
+                }
+                probe_rel = clamp_to_char_boundary(slice_all, next_rel);
+                if probe_rel == 0 || probe_rel == next_rel {
+                    probe_rel = next_rel;
+                }
+                continue;
+            }
+
+            break (probe_end, shaped);
+        };
+
+        // If the remaining text fits in a single line, we're done.
+        if probe.width <= max_width_px + 0.5 && probe_end == end {
+            lines.push(probe);
             line_ranges.push(offset..end);
             break;
         }
 
-        let mut cut_end = wrap_word_cut_end(slice, &full.clusters, max_width_px);
+        let slice = &text[offset..probe_end];
+        let mut cut_end = wrap_word_cut_end(slice, &probe.clusters, max_width_px);
         cut_end = clamp_to_char_boundary(slice, cut_end);
 
         if cut_end == 0 {
-            cut_end = first_cluster_end(slice, &full.clusters);
+            cut_end = first_cluster_end(slice, &probe.clusters);
             cut_end = clamp_to_char_boundary(slice, cut_end);
         }
         if cut_end == 0 {
@@ -471,6 +709,118 @@ fn wrap_word_range(
             if cut2 > 0 && cut2 < cut_end {
                 cut_end = clamp_to_char_boundary(slice, cut2);
                 kept = shape_slice(shaper, text, base, spans, offset..(offset + cut_end), scale);
+            }
+        }
+
+        if cut_end == 0 {
+            break;
+        }
+
+        lines.push(kept);
+        line_ranges.push(offset..(offset + cut_end));
+        offset = offset.saturating_add(cut_end);
+    }
+
+    (line_ranges, lines)
+}
+
+fn wrap_word_range_measure_only(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    max_width_px: f32,
+    scale: f32,
+) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    const WRAP_WORD_PROBE_MIN_BYTES: usize = 256;
+
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+
+    if start >= end {
+        return (
+            vec![start..start],
+            vec![shape_slice_measure_only(
+                shaper,
+                text,
+                base,
+                spans,
+                start..start,
+                scale,
+            )],
+        );
+    }
+
+    let mut lines: Vec<ShapedLineLayout> = Vec::new();
+    let mut line_ranges: Vec<Range<usize>> = Vec::new();
+
+    let mut offset = start;
+    while offset < end {
+        let slice_all = &text[offset..end];
+
+        let mut probe_rel = WRAP_WORD_PROBE_MIN_BYTES.min(slice_all.len());
+        probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
+        if probe_rel == 0 {
+            let first = slice_all.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
+            probe_rel = first.max(1).min(slice_all.len());
+            probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
+        }
+
+        let (probe_end, probe) = loop {
+            let probe_end = offset.saturating_add(probe_rel).min(end);
+            let shaped =
+                shape_slice_measure_only(shaper, text, base, spans, offset..probe_end, scale);
+
+            if shaped.width <= max_width_px + 0.5 && probe_end < end {
+                let next_rel = (probe_rel.saturating_mul(2)).min(slice_all.len());
+                if next_rel == probe_rel {
+                    return (line_ranges, lines);
+                }
+                probe_rel = clamp_to_char_boundary(slice_all, next_rel);
+                if probe_rel == 0 || probe_rel == next_rel {
+                    probe_rel = next_rel;
+                }
+                continue;
+            }
+
+            break (probe_end, shaped);
+        };
+
+        if probe.width <= max_width_px + 0.5 && probe_end == end {
+            lines.push(probe);
+            line_ranges.push(offset..end);
+            break;
+        }
+
+        let slice = &text[offset..probe_end];
+        let mut cut_end = wrap_word_cut_end(slice, &probe.clusters, max_width_px);
+        cut_end = clamp_to_char_boundary(slice, cut_end);
+
+        if cut_end == 0 {
+            cut_end = first_cluster_end(slice, &probe.clusters);
+            cut_end = clamp_to_char_boundary(slice, cut_end);
+        }
+        if cut_end == 0 {
+            let first = slice.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
+            cut_end = first.max(1).min(slice.len());
+            cut_end = clamp_to_char_boundary(slice, cut_end);
+        }
+
+        let mut kept =
+            shape_slice_measure_only(shaper, text, base, spans, offset..(offset + cut_end), scale);
+        if kept.width > max_width_px + 0.5 && cut_end > 0 {
+            let cut2 = cut_end_for_available(&slice[..cut_end], &kept.clusters, max_width_px);
+            if cut2 > 0 && cut2 < cut_end {
+                cut_end = clamp_to_char_boundary(slice, cut2);
+                kept = shape_slice_measure_only(
+                    shaper,
+                    text,
+                    base,
+                    spans,
+                    offset..(offset + cut_end),
+                    scale,
+                );
             }
         }
 
@@ -556,6 +906,33 @@ fn shape_slice(
             )
         }
         None => shaper.shape_single_line(TextInputRef::plain(slice, base), scale),
+    }
+}
+
+fn shape_slice_measure_only(
+    shaper: &mut ParleyShaper,
+    text: &str,
+    base: &fret_core::TextStyle,
+    spans: Option<&[TextSpan]>,
+    range: Range<usize>,
+    scale: f32,
+) -> ShapedLineLayout {
+    let start = range.start.min(text.len());
+    let end = range.end.min(text.len());
+    let slice = &text[start..end];
+    match spans {
+        Some(spans) => {
+            let out = slice_spans(spans, start, end);
+            shaper.shape_single_line_metrics(
+                TextInputRef::Attributed {
+                    text: slice,
+                    base,
+                    spans: &out,
+                },
+                scale,
+            )
+        }
+        None => shaper.shape_single_line_metrics(TextInputRef::plain(slice, base), scale),
     }
 }
 
@@ -991,6 +1368,58 @@ mod tests {
         assert_eq!(wrapped.line_ranges.len(), 2);
         assert_eq!(wrapped.line_ranges[0], 0..0);
         assert_eq!(wrapped.line_ranges[1], 1..1);
+    }
+
+    #[test]
+    fn wrap_measure_only_matches_line_ranges_and_sizes_for_word_wrap() {
+        let mut shaper_full = ParleyShaper::new();
+        let mut shaper_measure = ParleyShaper::new();
+        let base = TextStyle {
+            font: FontId::default(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let text = "hello world hello world hello world hello world hello world hello world";
+        let spans = [TextSpan {
+            len: text.len(),
+            shaping: TextShapingStyle::default(),
+            paint: TextPaintStyle::default(),
+        }];
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(60.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let full = wrap_with_constraints(
+            &mut shaper_full,
+            TextInputRef::Attributed {
+                text,
+                base: &base,
+                spans: &spans,
+            },
+            constraints,
+        );
+        let measure = wrap_with_constraints_measure_only(
+            &mut shaper_measure,
+            TextInputRef::Attributed {
+                text,
+                base: &base,
+                spans: &spans,
+            },
+            constraints,
+        );
+
+        assert_eq!(full.line_ranges, measure.line_ranges);
+        assert_eq!(full.lines.len(), measure.lines.len());
+        for (a, b) in full.lines.iter().zip(measure.lines.iter()) {
+            assert!((a.width - b.width).abs() < 0.01);
+            assert!((a.line_height - b.line_height).abs() < 0.01);
+        }
+        assert!(measure.lines.iter().all(|l| l.glyphs.is_empty()));
     }
 
     #[test]

@@ -2935,11 +2935,12 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let inspection_active = app
+            let (inspection_active, diag_enabled) = app
                 .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    svc.wants_inspection_active(window)
+                    (svc.wants_inspection_active(window), svc.is_enabled())
                 });
             state.ui.set_inspection_active(inspection_active);
+            state.ui.set_debug_enabled(diag_enabled);
         }
 
         scene.clear();
@@ -2961,6 +2962,10 @@ impl WinitAppDriver for UiGalleryDriver {
                     element_runtime,
                 )
             });
+
+            for effect in drive.effects {
+                app.push_effect(effect);
+            }
 
             if drive.request_redraw {
                 app.request_redraw(window);

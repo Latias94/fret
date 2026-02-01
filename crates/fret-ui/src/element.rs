@@ -3,8 +3,8 @@ use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle,
-    TextWrap, UvRect, ViewportFit,
+    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
+    TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -1619,6 +1619,22 @@ impl ScrollAxis {
 #[derive(Debug, Default, Clone)]
 pub struct ScrollState {
     pub scroll_handle: crate::scroll::ScrollHandle,
+    pub(crate) intrinsic_measure_cache: Option<ScrollIntrinsicMeasureCache>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ScrollIntrinsicMeasureCacheKey {
+    pub avail_w: u64,
+    pub avail_h: u64,
+    pub axis: u8,
+    pub probe_unbounded: bool,
+    pub scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ScrollIntrinsicMeasureCache {
+    pub key: ScrollIntrinsicMeasureCacheKey,
+    pub max_child: Size,
 }
 
 #[derive(Debug, Clone, Copy)]
