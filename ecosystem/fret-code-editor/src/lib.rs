@@ -1241,31 +1241,37 @@ fn handle_key_down(
     modifiers: Modifiers,
 ) -> bool {
     let mut st = state.borrow_mut();
+    let shift = modifiers.shift;
+    let ctrl_or_meta = modifiers.ctrl || modifiers.meta;
+    let word = modifiers.ctrl || modifiers.alt;
+    let meta = modifiers.meta;
+
     if st.preedit.is_some() {
-        match key {
+        let cancel_preedit = match key {
             KeyCode::ArrowLeft
             | KeyCode::ArrowRight
             | KeyCode::ArrowUp
             | KeyCode::ArrowDown
             | KeyCode::Home
             | KeyCode::End
-            | KeyCode::PageUp
-            | KeyCode::PageDown
             | KeyCode::Backspace
             | KeyCode::Delete
             | KeyCode::Enter
-            | KeyCode::Tab => {
-                st.preedit = None;
-            }
-            _ => {}
+            | KeyCode::Tab => true,
+            KeyCode::PageUp | KeyCode::PageDown => !ctrl_or_meta,
+            _ => false,
+        };
+        if cancel_preedit {
+            st.preedit = None;
         }
     }
-    let cell_w_px = cell_w.get();
 
-    let shift = modifiers.shift;
-    let ctrl_or_meta = modifiers.ctrl || modifiers.meta;
-    let word = modifiers.ctrl || modifiers.alt;
-    let meta = modifiers.meta;
+    // Let workspace keymaps handle global page navigation (e.g. tab switching).
+    if ctrl_or_meta && matches!(key, KeyCode::PageUp | KeyCode::PageDown) {
+        return false;
+    }
+
+    let cell_w_px = cell_w.get();
 
     match key {
         KeyCode::ArrowLeft => {
@@ -2415,6 +2421,37 @@ fn materialize_row_rich_text(
 mod tests {
     use super::*;
 
+    #[derive(Default)]
+    struct TestHost {
+        models: fret_runtime::ModelStore,
+        next_timer: u64,
+        next_clipboard: u64,
+    }
+
+    impl fret_ui::action::UiActionHost for TestHost {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            &mut self.models
+        }
+
+        fn push_effect(&mut self, _effect: fret_runtime::Effect) {}
+
+        fn request_redraw(&mut self, _window: fret_core::AppWindowId) {}
+
+        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+            self.next_timer = self.next_timer.saturating_add(1);
+            fret_runtime::TimerToken(self.next_timer)
+        }
+
+        fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
+            self.next_clipboard = self.next_clipboard.saturating_add(1);
+            fret_runtime::ClipboardToken(self.next_clipboard)
+        }
+    }
+
+    impl fret_ui::action::UiFocusActionHost for TestHost {
+        fn request_focus(&mut self, _target: fret_ui::GlobalElementId) {}
+    }
+
     #[test]
     fn replace_buffer_resets_state() {
         let handle = CodeEditorHandle::new("hello");
@@ -2456,6 +2493,56 @@ mod tests {
         handle.replace_buffer(buffer);
 
         assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
+    }
+
+    #[test]
+    fn ctrl_page_down_bubbles_and_keeps_preedit() {
+        let handle = CodeEditorHandle::new("hello\nworld");
+        let preedit = PreeditState {
+            text: "世界".to_string(),
+            cursor: Some((0, "世".len())),
+        };
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 2,
+                focus: 2,
+            };
+            st.preedit = Some(preedit.clone());
+        }
+
+        let mut host = TestHost::default();
+        let action_cx = ActionCx {
+            window: fret_core::AppWindowId::default(),
+            target: fret_ui::GlobalElementId(0),
+        };
+        let scroll = fret_ui::scroll::ScrollHandle::default();
+        let cell_w = Cell::new(Px(10.0));
+
+        let handled = handle_key_down(
+            &mut host,
+            action_cx,
+            &handle.state,
+            Px(16.0),
+            &scroll,
+            &cell_w,
+            KeyCode::PageDown,
+            Modifiers {
+                ctrl: true,
+                ..Modifiers::default()
+            },
+        );
+
+        assert!(!handled);
+        let st = handle.state.borrow();
+        assert_eq!(st.preedit, Some(preedit));
+        assert_eq!(
+            st.selection,
+            Selection {
+                anchor: 2,
+                focus: 2
+            }
+        );
     }
 
     #[test]
