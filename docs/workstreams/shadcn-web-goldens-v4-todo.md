@@ -57,6 +57,7 @@ Tracking format:
 - 2026-02-01: added a range-middle background gate (`calendar-04`) using the web golden’s computed `backgroundColor` and a scene quad matcher that prefers opaque backgrounds.
 - 2026-02-01: added range-start/range-end background gates (`calendar-04`) and a semantics gate for disabled navigation buttons (`calendar-11`).
 - 2026-02-01: added a disabled-day semantics gate (`calendar-08`, `rdp-disabled` / `data-disabled=true`).
+- 2026-02-01: fixed calendar day number alignment (centered text within day cells) and added a selected-day text-centering gate (`calendar-14`).
 
 ---
 
