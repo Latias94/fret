@@ -31,6 +31,7 @@ Primary tool anchors:
 
 - diagnostics/perf harness: `apps/fretboard` (`fretboard diag perf`, `fretboard diag stats`)
 - scripted repros: `tools/diag-scripts/ui-gallery-virtual-list-torture.json`
+- scripted repros (interaction latency): `tools/diag-scripts/ui-gallery-nav-card-click-latency.json`
 
 ## 1) Repro (deterministic)
 
@@ -56,6 +57,34 @@ Then inspect the slow bundle:
 ```powershell
 cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 1 --json
 ```
+
+### 1.1 Repro: Sidebar nav “Card” click latency
+
+This repro isolates the reported “~0.5s until the right panel shows” symptom.
+
+Script:
+
+- `tools/diag-scripts/ui-gallery-nav-card-click-latency.json`
+
+Run (debug build, easiest to see):
+
+```powershell
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-nav-card-click-latency.json `
+  --env FRET_UI_GALLERY_START_PAGE=button `
+  --launch -- cargo run -p fret-ui-gallery
+```
+
+Then inspect the “second click” bundle and check `dt_ms` (frame delta) plus layout/measure hotspots:
+
+```powershell
+cargo run -p fretboard -- diag stats target/fret-diag/<dir>/bundle.json --sort time --top 1
+```
+
+Finding (2026-02-01, debug build):
+
+- worst post-click frame is dominated by a deep `measure()` walk under the content scroll viewport
+  (`SemanticsProps.test_id = ui-gallery-content-viewport`), matching the perceived stall.
+- layout engine solve time is typically small; the time is in the host/widget `measure()` traversal.
 
 ## 2) Observability (what to turn on)
 
