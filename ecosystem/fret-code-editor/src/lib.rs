@@ -851,6 +851,46 @@ impl CodeEditor {
                     },
                 ));
 
+                let sel_state = editor_state.clone();
+                let sel_scroll = scroll_handle.clone();
+                let sel_cell_w = cell_w.clone();
+                cx.text_input_region_on_set_selection(Arc::new(
+                    move |host: &mut dyn UiActionHost, action_cx: ActionCx, anchor, focus| {
+                        let mut st = sel_state.borrow_mut();
+                        if st.preedit.is_some() {
+                            return false;
+                        }
+
+                        let text = st.buffer.text();
+                        let caret = fret_code_editor_view::clamp_to_char_boundary(
+                            text,
+                            st.selection.caret().min(text.len()),
+                        );
+                        let (start, end) = a11y_text_window_bounds(text, caret);
+
+                        let new_anchor = map_a11y_offset_to_buffer(text, start, end, anchor);
+                        let new_focus = map_a11y_offset_to_buffer(text, start, end, focus);
+
+                        st.selection = Selection {
+                            anchor: new_anchor,
+                            focus: new_focus,
+                        };
+                        st.undo_group = None;
+
+                        push_caret_rect_effect(
+                            host,
+                            action_cx,
+                            &st,
+                            row_h,
+                            sel_cell_w.get(),
+                            &sel_scroll,
+                        );
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                        true
+                    },
+                ));
+
                 let clipboard_state = editor_state.clone();
                 let clipboard_scroll = scroll_handle.clone();
                 let clipboard_cell_w = cell_w.clone();
@@ -931,16 +971,7 @@ fn a11y_composed_text_window(
     let caret =
         fret_code_editor_view::clamp_to_char_boundary(text, st.selection.caret().min(text.len()));
 
-    let start = fret_code_editor_view::clamp_to_char_boundary(
-        text,
-        caret.saturating_sub(A11Y_WINDOW_BYTES_BEFORE),
-    );
-    let end = fret_code_editor_view::clamp_to_char_boundary(
-        text,
-        caret
-            .saturating_add(A11Y_WINDOW_BYTES_AFTER)
-            .min(text.len()),
-    );
+    let (start, end) = a11y_text_window_bounds(text, caret);
 
     let before = text.get(start..caret).unwrap_or("");
     let after = text.get(caret..end).unwrap_or("");
@@ -985,6 +1016,37 @@ fn a11y_composed_text_window(
     let selection = Some((map(st.selection.anchor), map(st.selection.focus)));
 
     (display, selection, None)
+}
+
+fn a11y_text_window_bounds(text: &str, caret: usize) -> (usize, usize) {
+    let caret = fret_code_editor_view::clamp_to_char_boundary(text, caret).min(text.len());
+    let start = fret_code_editor_view::clamp_to_char_boundary(
+        text,
+        caret.saturating_sub(A11Y_WINDOW_BYTES_BEFORE),
+    );
+    let end = fret_code_editor_view::clamp_to_char_boundary(
+        text,
+        caret
+            .saturating_add(A11Y_WINDOW_BYTES_AFTER)
+            .min(text.len()),
+    );
+    (start, end)
+}
+
+fn map_a11y_offset_to_buffer(
+    text: &str,
+    window_start: usize,
+    window_end: usize,
+    offset: u32,
+) -> usize {
+    let window_start = window_start.min(text.len());
+    let window_end = window_end.min(text.len()).max(window_start);
+    let window_len = window_end.saturating_sub(window_start);
+    let offset = usize::try_from(offset)
+        .unwrap_or(usize::MAX)
+        .min(window_len);
+    let buf = window_start.saturating_add(offset).min(window_end);
+    fret_code_editor_view::clamp_to_char_boundary(text, buf).min(text.len())
 }
 
 fn line_len_cols(line: &str) -> usize {
@@ -2162,6 +2224,44 @@ mod tests {
             rich.spans.iter().any(|s| s.paint.bg.is_some()),
             "expected cursor range to be highlighted"
         );
+    }
+
+    #[test]
+    fn a11y_window_maps_offsets_back_to_buffer_selection() {
+        let handle = CodeEditorHandle::new("hello 😀 world");
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: "hello 😀 ".len(),
+                focus: "hello 😀 ".len(),
+            };
+            st.preedit = None;
+        }
+
+        let st = handle.state.borrow();
+        let (value, selection, composition) = a11y_composed_text_window(&st);
+        assert_eq!(composition, None);
+        assert_eq!(value.as_str(), "hello 😀 world");
+        assert_eq!(
+            selection,
+            Some(("hello 😀 ".len() as u32, "hello 😀 ".len() as u32))
+        );
+
+        let text = st.buffer.text();
+        let caret = fret_code_editor_view::clamp_to_char_boundary(
+            text,
+            st.selection.caret().min(text.len()),
+        );
+        let (start, end) = a11y_text_window_bounds(text, caret);
+        assert_eq!(start, 0);
+        assert_eq!(end, text.len());
+
+        let anchor = 0u32;
+        let focus = u32::try_from("hello".len()).unwrap();
+        let new_anchor = map_a11y_offset_to_buffer(text, start, end, anchor);
+        let new_focus = map_a11y_offset_to_buffer(text, start, end, focus);
+        assert_eq!(new_anchor, 0);
+        assert_eq!(new_focus, "hello".len());
     }
 
     #[cfg(feature = "syntax-rust")]
