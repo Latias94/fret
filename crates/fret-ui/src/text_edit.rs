@@ -1140,6 +1140,7 @@ pub(crate) mod ime {
 mod word_boundary_tests {
     use super::utf8;
     use fret_runtime::TextBoundaryMode;
+    use unicode_segmentation::UnicodeSegmentation;
 
     #[test]
     fn unicode_word_and_identifier_boundaries_differ_on_apostrophes() {
@@ -1225,6 +1226,78 @@ mod word_boundary_tests {
         assert_eq!(
             utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
             (0, text.len())
+        );
+    }
+
+    #[test]
+    fn unicode_word_selects_the_uax29_word_for_mixed_latin_cjk_runs() {
+        let text = "a 你好 world";
+        let idx = text.find('你').expect("expected cjk char");
+
+        let expected = text
+            .unicode_word_indices()
+            .find(|(start, word)| (*start..(*start + word.len())).contains(&idx))
+            .map(|(start, word)| (start, start + word.len()))
+            .expect("expected unicode word for cjk char");
+
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::UnicodeWord),
+            expected
+        );
+    }
+
+    #[test]
+    fn unicode_word_falls_back_to_grapheme_for_emoji_inside_mixed_script() {
+        let emoji = "👩‍💻";
+        let text = format!("中文{emoji}代码");
+        let idx = text.find(emoji).expect("expected emoji to be present") + 1;
+        let (a, b) = utf8::select_word_range(&text, idx, TextBoundaryMode::UnicodeWord);
+        assert_eq!(&text[a..b], emoji);
+    }
+
+    #[test]
+    fn identifier_stops_at_dot_and_colons() {
+        let text = "foo.bar::baz qux";
+
+        let idx = text.find('o').expect("expected identifier char");
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            (0, "foo".len())
+        );
+
+        let idx = text.find("bar").expect("expected bar") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo.".len(), "foo.bar".len())
+        );
+
+        let idx = text.find("baz").expect("expected baz") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo.bar::".len(), "foo.bar::baz".len())
+        );
+    }
+
+    #[test]
+    fn identifier_stops_at_hyphens_but_includes_digits() {
+        let text = "foo-1 bar-99 baz";
+
+        let idx = text.find('f').expect("expected foo");
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            (0, "foo".len())
+        );
+
+        let idx = text.find("bar").expect("expected bar") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo-1 ".len(), "foo-1 bar".len())
+        );
+
+        let idx = text.find("99").expect("expected digits") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo-1 bar-".len(), "foo-1 bar-99".len())
         );
     }
 }

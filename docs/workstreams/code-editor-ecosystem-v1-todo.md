@@ -91,6 +91,7 @@ Legend:
 
 - [~] Unicode word boundaries: Latin/CJK/emoji (seed tests added; expand coverage).
 - [~] Identifier boundaries: underscores, digits, mixed scripts, punctuation (seed tests added; expand coverage).
+- Note: expanded coverage in `crates/fret-ui/src/text_edit.rs` (mixed Latin/CJK/emoji; identifier punctuation).
 - [~] Double/triple click selection under scroll offsets and transforms (existing SelectableText tests; add mode coverage and TextInput/TextArea click selection).
   - Done: selectable text double-click respects `WindowTextBoundaryModeService` under `render_transform` and `Scroll` offset.
   - Done: text input + text area double-click respect `WindowTextBoundaryModeService` under `render_transform` and `Scroll` offset.
