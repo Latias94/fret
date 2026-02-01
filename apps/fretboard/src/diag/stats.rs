@@ -1,12 +1,20 @@
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+use super::util::{
+    now_unix_ms, read_pick_result, read_pick_result_run_id, read_script_result,
+    read_script_result_run_id, touch, write_json_value, write_script,
+};
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-enum BundleStatsSort {
+pub(super) enum BundleStatsSort {
     #[default]
     Invalidation,
     Time,
 }
 
 impl BundleStatsSort {
-    fn parse(s: &str) -> Result<Self, String> {
+    pub(super) fn parse(s: &str) -> Result<Self, String> {
         match s.trim() {
             "invalidation" => Ok(Self::Invalidation),
             "time" => Ok(Self::Time),
@@ -16,7 +24,7 @@ impl BundleStatsSort {
         }
     }
 
-    fn as_str(self) -> &'static str {
+    pub(super) fn as_str(self) -> &'static str {
         match self {
             Self::Invalidation => "invalidation",
             Self::Time => "time",
@@ -25,18 +33,18 @@ impl BundleStatsSort {
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsReport {
+pub(super) struct BundleStatsReport {
     sort: BundleStatsSort,
     warmup_frames: u64,
-    windows: u32,
-    snapshots: u32,
+    pub(super) windows: u32,
+    pub(super) snapshots: u32,
     snapshots_considered: u32,
     snapshots_skipped_warmup: u32,
-    snapshots_with_model_changes: u32,
-    snapshots_with_global_changes: u32,
+    pub(super) snapshots_with_model_changes: u32,
+    pub(super) snapshots_with_global_changes: u32,
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
-    snapshots_with_hover_layout_invalidations: u32,
+    pub(super) snapshots_with_hover_layout_invalidations: u32,
     sum_layout_time_us: u64,
     sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
@@ -44,100 +52,101 @@ struct BundleStatsReport {
     sum_cache_roots: u64,
     sum_cache_roots_reused: u64,
     sum_cache_replayed_ops: u64,
-    sum_invalidation_walk_calls: u64,
-    sum_invalidation_walk_nodes: u64,
+    pub(super) sum_invalidation_walk_calls: u64,
+    pub(super) sum_invalidation_walk_nodes: u64,
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
-    sum_hover_layout_invalidations: u64,
+    pub(super) sum_hover_layout_invalidations: u64,
     max_layout_time_us: u64,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
-    max_invalidation_walk_calls: u32,
-    max_invalidation_walk_nodes: u32,
+    pub(super) max_invalidation_walk_calls: u32,
+    pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
     max_global_change_invalidation_roots: u32,
-    max_hover_layout_invalidations: u32,
+    pub(super) max_hover_layout_invalidations: u32,
     worst_hover_layout: Option<BundleStatsWorstHoverLayout>,
     global_type_hotspots: Vec<BundleStatsGlobalTypeHotspot>,
     model_source_hotspots: Vec<BundleStatsModelSourceHotspot>,
-    top: Vec<BundleStatsSnapshotRow>,
+    pub(super) top: Vec<BundleStatsSnapshotRow>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsSnapshotRow {
-    window: u64,
-    tick_id: u64,
-    frame_id: u64,
-    timestamp_unix_ms: Option<u64>,
-    layout_time_us: u64,
-    prepaint_time_us: u64,
-    paint_time_us: u64,
-    total_time_us: u64,
-    layout_nodes_performed: u32,
-    paint_nodes_performed: u32,
-    paint_cache_misses: u32,
-    layout_engine_solves: u64,
-    layout_engine_solve_time_us: u64,
-    changed_models: u32,
-    changed_globals: u32,
-    changed_global_types_sample: Vec<String>,
-    propagated_model_change_models: u32,
-    propagated_model_change_observation_edges: u32,
-    propagated_model_change_unobserved_models: u32,
-    propagated_global_change_globals: u32,
-    propagated_global_change_observation_edges: u32,
-    propagated_global_change_unobserved_globals: u32,
-    invalidation_walk_calls: u32,
-    invalidation_walk_nodes: u32,
-    model_change_invalidation_roots: u32,
-    global_change_invalidation_roots: u32,
-    invalidation_walk_calls_model_change: u32,
-    invalidation_walk_nodes_model_change: u32,
-    invalidation_walk_calls_global_change: u32,
-    invalidation_walk_nodes_global_change: u32,
-    invalidation_walk_calls_hover: u32,
-    invalidation_walk_nodes_hover: u32,
-    invalidation_walk_calls_focus: u32,
-    invalidation_walk_nodes_focus: u32,
-    invalidation_walk_calls_other: u32,
-    invalidation_walk_nodes_other: u32,
-    top_invalidation_walks: Vec<BundleStatsInvalidationWalk>,
-    hover_pressable_target_changes: u32,
-    hover_hover_region_target_changes: u32,
-    hover_declarative_instance_changes: u32,
-    hover_declarative_hit_test_invalidations: u32,
-    hover_declarative_layout_invalidations: u32,
-    hover_declarative_paint_invalidations: u32,
-    top_hover_declarative_invalidations: Vec<BundleStatsHoverDeclarativeInvalidationHotspot>,
-    cache_roots: u32,
-    cache_roots_reused: u32,
-    cache_roots_contained_relayout: u32,
-    cache_replayed_ops: u64,
-    view_cache_contained_relayouts: u32,
-    set_children_barrier_writes: u32,
-    barrier_relayouts_scheduled: u32,
-    barrier_relayouts_performed: u32,
-    virtual_list_visible_range_checks: u32,
-    virtual_list_visible_range_refreshes: u32,
-    top_cache_roots: Vec<BundleStatsCacheRoot>,
-    top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
-    top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
-    model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
-    model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
-    global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
-    global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+pub(super) struct BundleStatsSnapshotRow {
+    pub(super) window: u64,
+    pub(super) tick_id: u64,
+    pub(super) frame_id: u64,
+    pub(super) timestamp_unix_ms: Option<u64>,
+    pub(super) layout_time_us: u64,
+    pub(super) prepaint_time_us: u64,
+    pub(super) paint_time_us: u64,
+    pub(super) total_time_us: u64,
+    pub(super) layout_nodes_performed: u32,
+    pub(super) paint_nodes_performed: u32,
+    pub(super) paint_cache_misses: u32,
+    pub(super) layout_engine_solves: u64,
+    pub(super) layout_engine_solve_time_us: u64,
+    pub(super) changed_models: u32,
+    pub(super) changed_globals: u32,
+    pub(super) changed_global_types_sample: Vec<String>,
+    pub(super) propagated_model_change_models: u32,
+    pub(super) propagated_model_change_observation_edges: u32,
+    pub(super) propagated_model_change_unobserved_models: u32,
+    pub(super) propagated_global_change_globals: u32,
+    pub(super) propagated_global_change_observation_edges: u32,
+    pub(super) propagated_global_change_unobserved_globals: u32,
+    pub(super) invalidation_walk_calls: u32,
+    pub(super) invalidation_walk_nodes: u32,
+    pub(super) model_change_invalidation_roots: u32,
+    pub(super) global_change_invalidation_roots: u32,
+    pub(super) invalidation_walk_calls_model_change: u32,
+    pub(super) invalidation_walk_nodes_model_change: u32,
+    pub(super) invalidation_walk_calls_global_change: u32,
+    pub(super) invalidation_walk_nodes_global_change: u32,
+    pub(super) invalidation_walk_calls_hover: u32,
+    pub(super) invalidation_walk_nodes_hover: u32,
+    pub(super) invalidation_walk_calls_focus: u32,
+    pub(super) invalidation_walk_nodes_focus: u32,
+    pub(super) invalidation_walk_calls_other: u32,
+    pub(super) invalidation_walk_nodes_other: u32,
+    pub(super) top_invalidation_walks: Vec<BundleStatsInvalidationWalk>,
+    pub(super) hover_pressable_target_changes: u32,
+    pub(super) hover_hover_region_target_changes: u32,
+    pub(super) hover_declarative_instance_changes: u32,
+    pub(super) hover_declarative_hit_test_invalidations: u32,
+    pub(super) hover_declarative_layout_invalidations: u32,
+    pub(super) hover_declarative_paint_invalidations: u32,
+    pub(super) top_hover_declarative_invalidations:
+        Vec<BundleStatsHoverDeclarativeInvalidationHotspot>,
+    pub(super) cache_roots: u32,
+    pub(super) cache_roots_reused: u32,
+    pub(super) cache_roots_contained_relayout: u32,
+    pub(super) cache_replayed_ops: u64,
+    pub(super) view_cache_contained_relayouts: u32,
+    pub(super) set_children_barrier_writes: u32,
+    pub(super) barrier_relayouts_scheduled: u32,
+    pub(super) barrier_relayouts_performed: u32,
+    pub(super) virtual_list_visible_range_checks: u32,
+    pub(super) virtual_list_visible_range_refreshes: u32,
+    pub(super) top_cache_roots: Vec<BundleStatsCacheRoot>,
+    pub(super) top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
+    pub(super) top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
+    pub(super) model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
+    pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
+    pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
+    pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsHoverDeclarativeInvalidationHotspot {
-    node: u64,
-    element: Option<u64>,
-    hit_test: u32,
-    layout: u32,
-    paint: u32,
-    role: Option<String>,
-    test_id: Option<String>,
+pub(super) struct BundleStatsHoverDeclarativeInvalidationHotspot {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) hit_test: u32,
+    pub(super) layout: u32,
+    pub(super) paint: u32,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -150,78 +159,78 @@ struct BundleStatsWorstHoverLayout {
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsInvalidationWalk {
-    root_node: u64,
-    root_element: Option<u64>,
-    kind: Option<String>,
-    source: Option<String>,
-    detail: Option<String>,
-    walked_nodes: u32,
-    truncated_at: Option<u64>,
-    root_role: Option<String>,
-    root_test_id: Option<String>,
+pub(super) struct BundleStatsInvalidationWalk {
+    pub(super) root_node: u64,
+    pub(super) root_element: Option<u64>,
+    pub(super) kind: Option<String>,
+    pub(super) source: Option<String>,
+    pub(super) detail: Option<String>,
+    pub(super) walked_nodes: u32,
+    pub(super) truncated_at: Option<u64>,
+    pub(super) root_role: Option<String>,
+    pub(super) root_test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsCacheRoot {
-    root_node: u64,
-    element: Option<u64>,
-    element_path: Option<String>,
-    reused: bool,
-    contained_layout: bool,
-    contained_relayout_in_frame: bool,
-    paint_replayed_ops: u32,
-    reuse_reason: Option<String>,
-    root_in_semantics: Option<bool>,
-    root_role: Option<String>,
-    root_test_id: Option<String>,
+pub(super) struct BundleStatsCacheRoot {
+    pub(super) root_node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_path: Option<String>,
+    pub(super) reused: bool,
+    pub(super) contained_layout: bool,
+    pub(super) contained_relayout_in_frame: bool,
+    pub(super) paint_replayed_ops: u32,
+    pub(super) reuse_reason: Option<String>,
+    pub(super) root_in_semantics: Option<bool>,
+    pub(super) root_role: Option<String>,
+    pub(super) root_test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsLayoutEngineSolve {
-    root_node: u64,
-    solve_time_us: u64,
-    measure_calls: u64,
-    measure_cache_hits: u64,
-    measure_time_us: u64,
-    top_measures: Vec<BundleStatsLayoutEngineMeasureHotspot>,
-    root_role: Option<String>,
-    root_test_id: Option<String>,
+pub(super) struct BundleStatsLayoutEngineSolve {
+    pub(super) root_node: u64,
+    pub(super) solve_time_us: u64,
+    pub(super) measure_calls: u64,
+    pub(super) measure_cache_hits: u64,
+    pub(super) measure_time_us: u64,
+    pub(super) top_measures: Vec<BundleStatsLayoutEngineMeasureHotspot>,
+    pub(super) root_role: Option<String>,
+    pub(super) root_test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsLayoutEngineMeasureHotspot {
-    node: u64,
-    measure_time_us: u64,
-    calls: u64,
-    cache_hits: u64,
-    element: Option<u64>,
-    element_kind: Option<String>,
-    top_children: Vec<BundleStatsLayoutEngineMeasureChildHotspot>,
-    role: Option<String>,
-    test_id: Option<String>,
+pub(super) struct BundleStatsLayoutEngineMeasureHotspot {
+    pub(super) node: u64,
+    pub(super) measure_time_us: u64,
+    pub(super) calls: u64,
+    pub(super) cache_hits: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) top_children: Vec<BundleStatsLayoutEngineMeasureChildHotspot>,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsLayoutEngineMeasureChildHotspot {
-    child: u64,
-    measure_time_us: u64,
-    calls: u64,
-    element: Option<u64>,
-    element_kind: Option<String>,
-    role: Option<String>,
-    test_id: Option<String>,
+pub(super) struct BundleStatsLayoutEngineMeasureChildHotspot {
+    pub(super) child: u64,
+    pub(super) measure_time_us: u64,
+    pub(super) calls: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsModelChangeHotspot {
+pub(super) struct BundleStatsModelChangeHotspot {
     model: u64,
     observation_edges: u32,
     changed_at: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsModelChangeUnobserved {
+pub(super) struct BundleStatsModelChangeUnobserved {
     model: u64,
     created_type: Option<String>,
     created_at: Option<String>,
@@ -229,14 +238,14 @@ struct BundleStatsModelChangeUnobserved {
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsGlobalChangeHotspot {
+pub(super) struct BundleStatsGlobalChangeHotspot {
     type_name: String,
     observation_edges: u32,
     changed_at: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
-struct BundleStatsGlobalChangeUnobserved {
+pub(super) struct BundleStatsGlobalChangeUnobserved {
     type_name: String,
     changed_at: Option<String>,
 }
@@ -254,7 +263,7 @@ struct BundleStatsModelSourceHotspot {
 }
 
 impl BundleStatsReport {
-    fn print_human(&self, bundle_path: &Path) {
+    pub(super) fn print_human(&self, bundle_path: &Path) {
         println!("bundle: {}", bundle_path.display());
         println!(
             "windows={} snapshots={} considered={} warmup_skipped={} model_changes={} global_changes={} propagated_model_changes={} propagated_global_changes={}",
@@ -693,7 +702,7 @@ impl BundleStatsReport {
         }
     }
 
-    fn to_json(&self) -> serde_json::Value {
+    pub(super) fn to_json(&self) -> serde_json::Value {
         use serde_json::{Map, Value};
 
         let mut root = Map::new();
@@ -1420,11 +1429,11 @@ impl BundleStatsReport {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-struct BundleStatsOptions {
-    warmup_frames: u64,
+pub(super) struct BundleStatsOptions {
+    pub(super) warmup_frames: u64,
 }
 
-fn bundle_stats_from_path(
+pub(super) fn bundle_stats_from_path(
     bundle_path: &Path,
     top: usize,
     sort: BundleStatsSort,
@@ -1435,13 +1444,17 @@ fn bundle_stats_from_path(
     bundle_stats_from_json_with_options(&bundle, top, sort, opts)
 }
 
-fn check_bundle_for_stale_paint(bundle_path: &Path, test_id: &str, eps: f32) -> Result<(), String> {
+pub(super) fn check_bundle_for_stale_paint(
+    bundle_path: &Path,
+    test_id: &str,
+    eps: f32,
+) -> Result<(), String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     check_bundle_for_stale_paint_json(&bundle, bundle_path, test_id, eps)
 }
 
-fn check_bundle_for_stale_paint_json(
+pub(super) fn check_bundle_for_stale_paint_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
@@ -1535,21 +1548,25 @@ fn check_bundle_for_stale_paint_json(
     Err(msg)
 }
 
-fn check_bundle_for_stale_scene(bundle_path: &Path, test_id: &str, eps: f32) -> Result<(), String> {
+pub(super) fn check_bundle_for_stale_scene(
+    bundle_path: &Path,
+    test_id: &str,
+    eps: f32,
+) -> Result<(), String> {
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     check_bundle_for_stale_scene_json(&bundle, bundle_path, test_id, eps)
 }
 
 #[derive(Debug, Clone, Default)]
-struct SemanticsChangedRepaintedScan {
+pub(super) struct SemanticsChangedRepaintedScan {
     missing_scene_fingerprint: bool,
     missing_semantics_fingerprint: bool,
     suspicious_lines: Vec<String>,
-    findings: Vec<serde_json::Value>,
+    pub(super) findings: Vec<serde_json::Value>,
 }
 
-fn check_bundle_for_semantics_changed_repainted(
+pub(super) fn check_bundle_for_semantics_changed_repainted(
     bundle_path: &Path,
     warmup_frames: u64,
     dump_json: bool,
@@ -1574,7 +1591,7 @@ fn check_bundle_for_semantics_changed_repainted(
     check_bundle_for_semantics_changed_repainted_json(&bundle, bundle_path, warmup_frames)
 }
 
-fn check_bundle_for_semantics_changed_repainted_json(
+pub(super) fn check_bundle_for_semantics_changed_repainted_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     warmup_frames: u64,
@@ -1612,7 +1629,7 @@ fn check_bundle_for_semantics_changed_repainted_json(
     Err(msg)
 }
 
-fn scan_semantics_changed_repainted_json(
+pub(super) fn scan_semantics_changed_repainted_json(
     bundle: &serde_json::Value,
     warmup_frames: u64,
 ) -> SemanticsChangedRepaintedScan {
@@ -2136,7 +2153,7 @@ fn semantics_node_fingerprint_json(node: &serde_json::Value) -> u64 {
     hasher.finish()
 }
 
-fn check_bundle_for_stale_scene_json(
+pub(super) fn check_bundle_for_stale_scene_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
@@ -2364,7 +2381,7 @@ fn semantics_parent_map(snapshot: &serde_json::Value) -> std::collections::HashM
     parents
 }
 
-fn check_bundle_for_wheel_scroll(
+pub(super) fn check_bundle_for_wheel_scroll(
     bundle_path: &Path,
     test_id: &str,
     warmup_frames: u64,
@@ -2374,7 +2391,7 @@ fn check_bundle_for_wheel_scroll(
     check_bundle_for_wheel_scroll_json(&bundle, bundle_path, test_id, warmup_frames)
 }
 
-fn check_bundle_for_wheel_scroll_json(
+pub(super) fn check_bundle_for_wheel_scroll_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     test_id: &str,
@@ -2494,7 +2511,7 @@ fn check_bundle_for_wheel_scroll_json(
     Err(msg)
 }
 
-fn check_bundle_for_drag_cache_root_paint_only(
+pub(super) fn check_bundle_for_drag_cache_root_paint_only(
     bundle_path: &Path,
     test_id: &str,
     warmup_frames: u64,
@@ -2660,7 +2677,7 @@ in bundle: {}",
     Ok(())
 }
 
-fn check_bundle_for_gc_sweep_liveness(
+pub(super) fn check_bundle_for_gc_sweep_liveness(
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
@@ -2754,7 +2771,7 @@ fn check_bundle_for_gc_sweep_liveness(
     Err(msg)
 }
 
-fn check_bundle_for_view_cache_reuse_min(
+pub(super) fn check_bundle_for_view_cache_reuse_min(
     bundle_path: &Path,
     min_reuse_events: u64,
     warmup_frames: u64,
@@ -2769,7 +2786,7 @@ fn check_bundle_for_view_cache_reuse_min(
     )
 }
 
-fn check_bundle_for_view_cache_reuse_min_json(
+pub(super) fn check_bundle_for_view_cache_reuse_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_reuse_events: u64,
@@ -2906,7 +2923,7 @@ fn snapshot_view_cache_reuse_signal(snapshot: &serde_json::Value) -> ViewCacheRe
     }
 }
 
-fn check_bundle_for_view_cache_reuse_stable_min(
+pub(super) fn check_bundle_for_view_cache_reuse_stable_min(
     bundle_path: &Path,
     out_dir: &Path,
     min_tail_frames: u64,
@@ -3075,7 +3092,7 @@ fn check_bundle_for_view_cache_reuse_stable_min(
     ))
 }
 
-fn check_bundle_for_overlay_synthesis_min(
+pub(super) fn check_bundle_for_overlay_synthesis_min(
     bundle_path: &Path,
     min_synthesized_events: u64,
     warmup_frames: u64,
@@ -3090,7 +3107,7 @@ fn check_bundle_for_overlay_synthesis_min(
     )
 }
 
-fn check_bundle_for_overlay_synthesis_min_json(
+pub(super) fn check_bundle_for_overlay_synthesis_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_synthesized_events: u64,
@@ -3184,7 +3201,7 @@ bundle: {}",
     ))
 }
 
-fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
+pub(super) fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
     bundle_path: &Path,
     min_reconcile_events: u64,
     warmup_frames: u64,
@@ -3199,7 +3216,7 @@ fn check_bundle_for_retained_vlist_reconcile_no_notify_min(
     )
 }
 
-fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
+pub(super) fn check_bundle_for_retained_vlist_reconcile_no_notify_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_reconcile_events: u64,
@@ -3306,7 +3323,7 @@ bundle: {}",
     Ok(())
 }
 
-fn check_bundle_for_retained_vlist_attach_detach_max(
+pub(super) fn check_bundle_for_retained_vlist_attach_detach_max(
     bundle_path: &Path,
     max_delta: u64,
     warmup_frames: u64,
@@ -3321,7 +3338,7 @@ fn check_bundle_for_retained_vlist_attach_detach_max(
     )
 }
 
-fn check_bundle_for_retained_vlist_attach_detach_max_json(
+pub(super) fn check_bundle_for_retained_vlist_attach_detach_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     max_delta: u64,
@@ -3447,7 +3464,7 @@ fn check_bundle_for_retained_vlist_attach_detach_max_json(
     Err(msg)
 }
 
-fn check_bundle_for_viewport_input_min(
+pub(super) fn check_bundle_for_viewport_input_min(
     bundle_path: &Path,
     min_events: u64,
     warmup_frames: u64,
@@ -3457,7 +3474,7 @@ fn check_bundle_for_viewport_input_min(
     check_bundle_for_viewport_input_min_json(&bundle, bundle_path, min_events, warmup_frames)
 }
 
-fn check_bundle_for_viewport_input_min_json(
+pub(super) fn check_bundle_for_viewport_input_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_events: u64,
@@ -3509,7 +3526,7 @@ fn check_bundle_for_viewport_input_min_json(
     ))
 }
 
-fn check_bundle_for_dock_drag_min(
+pub(super) fn check_bundle_for_dock_drag_min(
     bundle_path: &Path,
     min_active_frames: u64,
     warmup_frames: u64,
@@ -3519,7 +3536,7 @@ fn check_bundle_for_dock_drag_min(
     check_bundle_for_dock_drag_min_json(&bundle, bundle_path, min_active_frames, warmup_frames)
 }
 
-fn check_bundle_for_dock_drag_min_json(
+pub(super) fn check_bundle_for_dock_drag_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_active_frames: u64,
@@ -3572,7 +3589,7 @@ fn check_bundle_for_dock_drag_min_json(
     ))
 }
 
-fn check_bundle_for_viewport_capture_min(
+pub(super) fn check_bundle_for_viewport_capture_min(
     bundle_path: &Path,
     min_active_frames: u64,
     warmup_frames: u64,
@@ -3587,7 +3604,7 @@ fn check_bundle_for_viewport_capture_min(
     )
 }
 
-fn check_bundle_for_viewport_capture_min_json(
+pub(super) fn check_bundle_for_viewport_capture_min_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
     min_active_frames: u64,
@@ -3640,7 +3657,7 @@ fn check_bundle_for_viewport_capture_min_json(
     ))
 }
 
-fn bundle_stats_from_json_with_options(
+pub(super) fn bundle_stats_from_json_with_options(
     bundle: &serde_json::Value,
     top: usize,
     sort: BundleStatsSort,
@@ -4358,7 +4375,7 @@ fn snapshot_top_hover_declarative_invalidations(
     out
 }
 
-fn check_report_for_hover_layout_invalidations(
+pub(super) fn check_report_for_hover_layout_invalidations(
     report: &BundleStatsReport,
     max_allowed: u32,
 ) -> Result<(), String> {
@@ -4828,24 +4845,24 @@ impl SemanticsIndex {
 }
 
 #[derive(Debug, Clone)]
-struct ScriptResultSummary {
-    run_id: u64,
-    stage: Option<String>,
-    step_index: Option<u64>,
-    reason: Option<String>,
-    last_bundle_dir: Option<String>,
+pub(super) struct ScriptResultSummary {
+    pub(super) run_id: u64,
+    pub(super) stage: Option<String>,
+    pub(super) step_index: Option<u64>,
+    pub(super) reason: Option<String>,
+    pub(super) last_bundle_dir: Option<String>,
 }
 
 #[derive(Debug, Clone)]
-struct PickResultSummary {
-    run_id: u64,
-    stage: Option<String>,
-    reason: Option<String>,
-    last_bundle_dir: Option<String>,
-    selector: Option<serde_json::Value>,
+pub(super) struct PickResultSummary {
+    pub(super) run_id: u64,
+    pub(super) stage: Option<String>,
+    pub(super) reason: Option<String>,
+    pub(super) last_bundle_dir: Option<String>,
+    pub(super) selector: Option<serde_json::Value>,
 }
 
-fn run_script_and_wait(
+pub(super) fn run_script_and_wait(
     src: &Path,
     script_path: &Path,
     script_trigger_path: &Path,
@@ -4907,12 +4924,15 @@ fn run_script_and_wait(
     }
 }
 
-fn clear_script_result_files(script_result_path: &Path, script_result_trigger_path: &Path) {
+pub(super) fn clear_script_result_files(
+    script_result_path: &Path,
+    script_result_trigger_path: &Path,
+) {
     let _ = std::fs::remove_file(script_result_path);
     let _ = std::fs::remove_file(script_result_trigger_path);
 }
 
-fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
+pub(super) fn report_result_and_exit(result: &ScriptResultSummary) -> ! {
     match result.stage.as_deref() {
         Some("passed") => {
             println!("PASS (run_id={})", result.run_id);
@@ -4971,7 +4991,7 @@ fn expected_failure_dump_suffixes(result: &ScriptResultSummary) -> Vec<String> {
     }
 }
 
-fn wait_for_failure_dump_bundle(
+pub(super) fn wait_for_failure_dump_bundle(
     out_dir: &Path,
     result: &ScriptResultSummary,
     timeout_ms: u64,
@@ -5022,7 +5042,7 @@ fn find_latest_export_dir_with_suffix(out_dir: &Path, suffix: &str) -> Option<Pa
     best.map(|(_, p)| p)
 }
 
-fn run_pick_and_wait(
+pub(super) fn run_pick_and_wait(
     pick_trigger_path: &Path,
     pick_result_path: &Path,
     pick_result_trigger_path: &Path,
@@ -5088,7 +5108,7 @@ fn run_pick_and_wait(
     }
 }
 
-fn report_pick_result_and_exit(result: &PickResultSummary) -> ! {
+pub(super) fn report_pick_result_and_exit(result: &PickResultSummary) -> ! {
     match result.stage.as_deref() {
         Some("picked") => {
             if let Some(sel) = result.selector.as_ref() {
@@ -5118,7 +5138,7 @@ fn report_pick_result_and_exit(result: &PickResultSummary) -> ! {
     }
 }
 
-fn write_pick_script(selector: &serde_json::Value, dst: &Path) -> Result<(), String> {
+pub(super) fn write_pick_script(selector: &serde_json::Value, dst: &Path) -> Result<(), String> {
     let script = serde_json::json!({
         "schema_version": 1,
         "steps": [
@@ -5135,7 +5155,7 @@ fn write_pick_script(selector: &serde_json::Value, dst: &Path) -> Result<(), Str
     std::fs::write(dst, bytes).map_err(|e| e.to_string())
 }
 
-fn apply_pick_to_script(
+pub(super) fn apply_pick_to_script(
     src: &Path,
     dst: &Path,
     json_pointer: &str,
@@ -5154,7 +5174,7 @@ fn apply_pick_to_script(
     std::fs::write(dst, bytes).map_err(|e| e.to_string())
 }
 
-fn json_pointer_set(
+pub(super) fn json_pointer_set(
     root: &mut serde_json::Value,
     pointer: &str,
     value: serde_json::Value,
@@ -5257,4 +5277,3 @@ fn unescape_json_pointer_token(raw: &str) -> String {
     }
     out
 }
-

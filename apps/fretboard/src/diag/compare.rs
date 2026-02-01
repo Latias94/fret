@@ -1,14 +1,22 @@
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
+
+use super::LaunchedDemo;
+use super::stats::BundleStatsSort;
+use super::util::{now_unix_ms, touch};
+
 #[derive(Debug, Clone, Copy)]
-struct CompareOptions {
-    warmup_frames: u64,
-    eps_px: f32,
-    ignore_bounds: bool,
-    ignore_scene_fingerprint: bool,
+pub(super) struct CompareOptions {
+    pub(super) warmup_frames: u64,
+    pub(super) eps_px: f32,
+    pub(super) ignore_bounds: bool,
+    pub(super) ignore_scene_fingerprint: bool,
 }
 
 #[derive(Debug, Clone)]
-struct CompareReport {
-    ok: bool,
+pub(super) struct CompareReport {
+    pub(super) ok: bool,
     a_path: PathBuf,
     b_path: PathBuf,
     a_frame_id: Option<u64>,
@@ -16,20 +24,20 @@ struct CompareReport {
     a_scene_fingerprint: Option<u64>,
     b_scene_fingerprint: Option<u64>,
     opts: CompareOptions,
-    diffs: Vec<CompareDiff>,
+    pub(super) diffs: Vec<CompareDiff>,
 }
 
 #[derive(Debug, Clone)]
-struct CompareDiff {
-    kind: &'static str,
-    key: Option<String>,
-    field: Option<&'static str>,
-    a: Option<serde_json::Value>,
-    b: Option<serde_json::Value>,
+pub(super) struct CompareDiff {
+    pub(super) kind: &'static str,
+    pub(super) key: Option<String>,
+    pub(super) field: Option<&'static str>,
+    pub(super) a: Option<serde_json::Value>,
+    pub(super) b: Option<serde_json::Value>,
 }
 
 impl CompareReport {
-    fn print_human(&self) {
+    pub(super) fn print_human(&self) {
         println!("bundle_a: {}", self.a_path.display());
         println!("bundle_b: {}", self.b_path.display());
         if let (Some(a), Some(b)) = (self.a_frame_id, self.b_frame_id) {
@@ -66,7 +74,7 @@ impl CompareReport {
         }
     }
 
-    fn to_human_error(&self) -> String {
+    pub(super) fn to_human_error(&self) -> String {
         let mut msg = String::new();
         msg.push_str("bundle compare failed\n");
         msg.push_str(&format!("bundle_a: {}\n", self.a_path.display()));
@@ -96,7 +104,7 @@ impl CompareReport {
         msg
     }
 
-    fn to_json(&self) -> serde_json::Value {
+    pub(super) fn to_json(&self) -> serde_json::Value {
         let diffs = self
             .diffs
             .iter()
@@ -130,7 +138,7 @@ impl CompareReport {
     }
 }
 
-fn compare_bundles(
+pub(super) fn compare_bundles(
     a_bundle_path: &Path,
     b_bundle_path: &Path,
     opts: CompareOptions,
@@ -144,7 +152,7 @@ fn compare_bundles(
     compare_bundles_json(&a_bundle, a_bundle_path, &b_bundle, b_bundle_path, opts)
 }
 
-fn compare_bundles_json(
+pub(super) fn compare_bundles_json(
     a_bundle: &serde_json::Value,
     a_bundle_path: &Path,
     b_bundle: &serde_json::Value,
@@ -514,7 +522,7 @@ fn compare_focus_and_capture_by_test_id(
     }
 }
 
-fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
+pub(super) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
     let s = std::fs::read_to_string(out_dir.join("latest.txt")).ok()?;
     let s = s.trim();
     if s.is_empty() {
@@ -528,7 +536,7 @@ fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
     })
 }
 
-fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
+pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     let mut best: Option<(u64, PathBuf)> = None;
     let entries = std::fs::read_dir(out_dir).ok()?;
     for entry in entries.flatten() {
@@ -548,7 +556,7 @@ fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     best.map(|(_, p)| p)
 }
 
-fn maybe_launch_demo(
+pub(super) fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
     launch_env: &[(String, String)],
     workspace_root: &Path,
@@ -987,7 +995,7 @@ fn kill_launched_demo(child: &mut Option<LaunchedDemo>) {
     }
 }
 
-fn stop_launched_demo(
+pub(super) fn stop_launched_demo(
     child: &mut Option<LaunchedDemo>,
     exit_path: &Path,
     poll_ms: u64,
@@ -1043,42 +1051,7 @@ fn stop_launched_demo(
     footprint
 }
 
-fn touch(path: &Path) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let mut f = std::fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .open(path)
-        .map_err(|e| e.to_string())?;
-    use std::io::Write as _;
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or_default();
-    writeln!(f, "{ts}").map_err(|e| e.to_string())?;
-    let _ = f.flush();
-    Ok(())
-}
-
-fn write_script(src: &Path, dst: &Path) -> Result<(), String> {
-    let bytes = std::fs::read(src).map_err(|e| e.to_string())?;
-    if let Some(parent) = dst.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    std::fs::write(dst, bytes).map_err(|e| e.to_string())
-}
-
-fn now_unix_ms() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
-}
-
-fn ensure_env_var(env: &mut Vec<(String, String)>, key: &str, value: &str) -> bool {
+pub(super) fn ensure_env_var(env: &mut Vec<(String, String)>, key: &str, value: &str) -> bool {
     if env.iter().any(|(k, _)| k == key) {
         return false;
     }
@@ -1086,7 +1059,7 @@ fn ensure_env_var(env: &mut Vec<(String, String)>, key: &str, value: &str) -> bo
     true
 }
 
-fn cargo_run_inject_feature(cmd: &mut Vec<String>, feature: &str) -> bool {
+pub(super) fn cargo_run_inject_feature(cmd: &mut Vec<String>, feature: &str) -> bool {
     if cmd.is_empty() {
         return false;
     }
@@ -1197,7 +1170,7 @@ fn list_files_with_extensions(dir: &Path, exts: &[&str]) -> Vec<PathBuf> {
     out
 }
 
-fn wait_for_files_with_extensions(
+pub(super) fn wait_for_files_with_extensions(
     dir: &Path,
     exts: &[&str],
     timeout_ms: u64,
@@ -1217,17 +1190,17 @@ fn wait_for_files_with_extensions(
 }
 
 #[derive(Debug, Clone)]
-struct RenderdocDumpAttempt {
-    marker: String,
-    out_dir: PathBuf,
-    exit_code: Option<i32>,
-    response_json: Option<PathBuf>,
-    stdout_file: Option<PathBuf>,
-    stderr_file: Option<PathBuf>,
-    error: Option<String>,
+pub(super) struct RenderdocDumpAttempt {
+    pub(super) marker: String,
+    pub(super) out_dir: PathBuf,
+    pub(super) exit_code: Option<i32>,
+    pub(super) response_json: Option<PathBuf>,
+    pub(super) stdout_file: Option<PathBuf>,
+    pub(super) stderr_file: Option<PathBuf>,
+    pub(super) error: Option<String>,
 }
 
-fn run_fret_renderdoc_dump(
+pub(super) fn run_fret_renderdoc_dump(
     workspace_root: &Path,
     capture: &Path,
     out_dir: &Path,
@@ -1312,23 +1285,15 @@ fn run_fret_renderdoc_dump(
     }
 }
 
-fn write_json_value(path: &Path, v: &serde_json::Value) -> Result<(), String> {
-    let bytes = serde_json::to_vec_pretty(v).map_err(|e| e.to_string())?;
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    std::fs::write(path, bytes).map_err(|e| e.to_string())
-}
-
 #[derive(Debug, Clone, Copy, Default)]
-struct PerfThresholds {
-    max_top_total_us: Option<u64>,
-    max_top_layout_us: Option<u64>,
-    max_top_solve_us: Option<u64>,
+pub(super) struct PerfThresholds {
+    pub(super) max_top_total_us: Option<u64>,
+    pub(super) max_top_layout_us: Option<u64>,
+    pub(super) max_top_solve_us: Option<u64>,
 }
 
 impl PerfThresholds {
-    fn any(self) -> bool {
+    pub(super) fn any(self) -> bool {
         self.max_top_total_us.is_some()
             || self.max_top_layout_us.is_some()
             || self.max_top_solve_us.is_some()
@@ -1336,12 +1301,12 @@ impl PerfThresholds {
 }
 
 #[derive(Debug, Clone)]
-struct PerfBaselineFile {
-    path: PathBuf,
-    thresholds_by_script: std::collections::HashMap<String, PerfThresholds>,
+pub(super) struct PerfBaselineFile {
+    pub(super) path: PathBuf,
+    pub(super) thresholds_by_script: std::collections::HashMap<String, PerfThresholds>,
 }
 
-fn normalize_repo_relative_path(workspace_root: &Path, p: &Path) -> String {
+pub(super) fn normalize_repo_relative_path(workspace_root: &Path, p: &Path) -> String {
     let rel = p.strip_prefix(workspace_root).unwrap_or(p);
     let mut out = String::new();
     for (idx, part) in rel.components().enumerate() {
@@ -1354,7 +1319,10 @@ fn normalize_repo_relative_path(workspace_root: &Path, p: &Path) -> String {
     out
 }
 
-fn read_perf_baseline_file(workspace_root: &Path, path: &Path) -> Result<PerfBaselineFile, String> {
+pub(super) fn read_perf_baseline_file(
+    workspace_root: &Path,
+    path: &Path,
+) -> Result<PerfBaselineFile, String> {
     use std::collections::HashMap;
 
     let resolved = if path.is_absolute() {
@@ -1428,12 +1396,12 @@ fn read_perf_baseline_file(workspace_root: &Path, path: &Path) -> Result<PerfBas
     })
 }
 
-fn apply_perf_baseline_headroom(value_us: u64, headroom_pct: u32) -> u64 {
+pub(super) fn apply_perf_baseline_headroom(value_us: u64, headroom_pct: u32) -> u64 {
     let pct = (headroom_pct as u64).min(10_000);
     value_us.saturating_mul(100 + pct).saturating_add(99) / 100
 }
 
-fn resolve_threshold(
+pub(super) fn resolve_threshold(
     cli: Option<u64>,
     baseline: Option<u64>,
 ) -> (Option<u64>, Option<&'static str>) {
@@ -1446,7 +1414,7 @@ fn resolve_threshold(
     (None, None)
 }
 
-fn scan_perf_threshold_failures(
+pub(super) fn scan_perf_threshold_failures(
     script: &str,
     sort: BundleStatsSort,
     cli: PerfThresholds,
@@ -1502,20 +1470,4 @@ fn scan_perf_threshold_failures(
     out
 }
 
-fn read_script_result(path: &Path) -> Option<serde_json::Value> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice(&bytes).ok()
-}
-
-fn read_script_result_run_id(path: &Path) -> Option<u64> {
-    read_script_result(path)?.get("run_id")?.as_u64()
-}
-
-fn read_pick_result(path: &Path) -> Option<serde_json::Value> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice(&bytes).ok()
-}
-
-fn read_pick_result_run_id(path: &Path) -> Option<u64> {
-    read_pick_result(path)?.get("run_id")?.as_u64()
-}
+// (moved to `diag::util`)

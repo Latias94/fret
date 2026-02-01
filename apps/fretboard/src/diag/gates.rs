@@ -1,11 +1,15 @@
-struct ResourceFootprintThresholds {
-    max_working_set_bytes: Option<u64>,
-    max_peak_working_set_bytes: Option<u64>,
-    max_cpu_avg_percent_total_cores: Option<f64>,
+use std::path::{Path, PathBuf};
+
+use super::util::{now_unix_ms, read_json_value, write_json_value};
+
+pub(super) struct ResourceFootprintThresholds {
+    pub(super) max_working_set_bytes: Option<u64>,
+    pub(super) max_peak_working_set_bytes: Option<u64>,
+    pub(super) max_cpu_avg_percent_total_cores: Option<f64>,
 }
 
 impl ResourceFootprintThresholds {
-    fn any(&self) -> bool {
+    pub(super) fn any(&self) -> bool {
         self.max_working_set_bytes.is_some()
             || self.max_peak_working_set_bytes.is_some()
             || self.max_cpu_avg_percent_total_cores.is_some()
@@ -13,12 +17,12 @@ impl ResourceFootprintThresholds {
 }
 
 #[derive(Debug, Clone)]
-struct ResourceFootprintGateResult {
-    evidence_path: PathBuf,
-    failures: usize,
+pub(super) struct ResourceFootprintGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
 }
 
-fn check_resource_footprint_thresholds(
+pub(super) fn check_resource_footprint_thresholds(
     out_dir: &Path,
     footprint_path: &Path,
     thresholds: &ResourceFootprintThresholds,
@@ -193,9 +197,9 @@ fn check_resource_footprint_thresholds(
 }
 
 #[derive(Debug, Clone)]
-struct RedrawHitchesGateResult {
-    evidence_path: PathBuf,
-    failures: usize,
+pub(super) struct RedrawHitchesGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -213,7 +217,7 @@ struct RedrawHitchRecord {
     line: String,
 }
 
-fn check_redraw_hitches_max_total_ms(
+pub(super) fn check_redraw_hitches_max_total_ms(
     out_dir: &Path,
     max_total_ms: u64,
 ) -> Result<RedrawHitchesGateResult, String> {
@@ -380,4 +384,3 @@ fn check_redraw_hitches_max_total_ms(
         failures,
     })
 }
-

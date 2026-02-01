@@ -1,12 +1,40 @@
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::process::Child;
 use std::time::{Duration, Instant};
 
 use zip::write::FileOptions;
 
-include!("gates.rs");
-include!("compare.rs");
-include!("stats.rs");
+mod compare;
+mod gates;
+mod stats;
+mod util;
+
+use compare::{
+    CompareOptions, CompareReport, PerfThresholds, RenderdocDumpAttempt,
+    apply_perf_baseline_headroom, cargo_run_inject_feature, compare_bundles, ensure_env_var,
+    find_latest_export_dir, maybe_launch_demo, normalize_repo_relative_path, read_latest_pointer,
+    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
+    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
+};
+use gates::{
+    RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
+    check_redraw_hitches_max_total_ms, check_resource_footprint_thresholds,
+};
+use stats::{
+    BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
+    apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
+    check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
+    check_bundle_for_overlay_synthesis_min, check_bundle_for_retained_vlist_attach_detach_max,
+    check_bundle_for_retained_vlist_reconcile_no_notify_min,
+    check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
+    check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
+    check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
+    check_bundle_for_viewport_input_min, check_bundle_for_wheel_scroll,
+    check_report_for_hover_layout_invalidations, clear_script_result_files,
+    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
+    wait_for_failure_dump_bundle, write_pick_script,
+};
+use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
 #[derive(Debug, Clone)]
 struct ReproPackItem {
@@ -3409,7 +3437,7 @@ See: `docs/tracy.md`.\n";
                 timeout_ms,
                 poll_ms,
             )?;
-            report_pick_result_and_exit(&result);
+            report_pick_result_and_exit(&result)
         }
         "pick-script" => {
             if !rest.is_empty() {
@@ -3768,11 +3796,6 @@ fn metadata_mtime_unix_ms(meta: &std::fs::Metadata) -> Option<u64> {
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .ok()?;
     Some(dur.as_millis().min(u64::MAX as u128) as u64)
-}
-
-fn read_json_value(path: &Path) -> Option<serde_json::Value> {
-    let bytes = std::fs::read(path).ok()?;
-    serde_json::from_slice(&bytes).ok()
 }
 
 fn json_file_summary(path: &Path) -> Option<serde_json::Value> {
@@ -5291,6 +5314,17 @@ fn percentile_nearest_rank_sorted(sorted: &[u64], percentile: f64) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::diag::compare::compare_bundles_json;
+    use crate::diag::stats::{
+        bundle_stats_from_json_with_options, check_bundle_for_dock_drag_min_json,
+        check_bundle_for_overlay_synthesis_min_json,
+        check_bundle_for_retained_vlist_attach_detach_max_json,
+        check_bundle_for_retained_vlist_reconcile_no_notify_min_json,
+        check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
+        check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
+        check_bundle_for_viewport_input_min_json, json_pointer_set,
+        scan_semantics_changed_repainted_json,
+    };
     use serde_json::json;
     use std::path::Path;
     use std::time::{SystemTime, UNIX_EPOCH};
