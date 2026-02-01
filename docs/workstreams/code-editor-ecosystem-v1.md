@@ -10,7 +10,7 @@ Recent changes (2026-02-01):
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
-- Web IME: mount the hidden textarea into a per-canvas container (no longer appended directly to `document.body`).
+- Web IME: mount the hidden textarea into a per-canvas overlay layer (wrapper + overlay; no longer appended directly to `document.body`).
 - A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
 - A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
 - Web: enable a default CJK demo font bundle to avoid “tofu” squares in IME/editor harnesses.
@@ -75,9 +75,10 @@ We are **not** building “the editor app”; we are building reusable ecosystem
 
 P0 (correctness and contracts):
 
-- Semantics role + semantics projection strategy for a windowed editor surface (a11y).
-- Selection + composition range invariants: ensure ADR 0071 “display text indices” rules are followed end-to-end.
-- Web: move the hidden textarea from a global singleton to a per-window attachment (multi-window + docking safe).
+- Web IME: stabilize caret anchoring and reduce candidate UI jitter across browsers (textarea style + cursor-area mapping).
+- Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
+- Selection + composition range invariants: expand ADR 0071 coverage across TextInput/TextArea/CodeEditor (including a11y selection actions).
+- Web: ensure editor surfaces have a robust default CJK fallback (avoid tofu when using monospace stacks).
 
 P1 (robustness and testability):
 

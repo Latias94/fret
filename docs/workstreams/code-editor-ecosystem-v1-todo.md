@@ -39,7 +39,7 @@ Legend:
 
 ### DOM element lifecycle
 
-- [~] Create the hidden textarea element (tracked per `AppWindowId` and mounted to a per-canvas container; overlay attachment still TBD for multi-canvas/docking).
+- [x] Create the hidden textarea element (tracked per `AppWindowId` and mounted into a per-canvas wrapper/overlay layer).
 - [x] Define focus/blur rules and map them to `Effect::ImeAllow`.
 - [x] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
 
