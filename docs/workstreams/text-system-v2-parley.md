@@ -122,7 +122,7 @@ Exit criteria:
 
 - No legacy shaping backend remains (Parley-only; no runtime/feature gates).
 - The `text_v2` module namespace is removed:
-  - `crates/fret-render/src/text_v2/*` is renamed/flattened into the canonical text module surface.
+  - `crates/fret-render/src/text/*` is the canonical module surface for Parley shaping + wrapping.
   - all imports, tests, and call sites stop referencing `text_v2`.
 - All text conformance and UI integration tests pass:
   - `cargo nextest run -p fret-render`
@@ -250,11 +250,11 @@ Legend:
   - caret stops
   - hit-testing
   - span-aware paint assignment
-  - Evidence: `crates/fret-render/src/text_v2/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
-    `crates/fret-render/src/text_v2/wrapper.rs` (`hit_test_x`), `crates/fret-render/src/text.rs`
+  - Evidence: `crates/fret-render/src/text/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
+    `crates/fret-render/src/text/wrapper.rs` (`hit_test_x`), `crates/fret-render/src/text.rs`
     (`caret_stops_for_slice`, `paint_span_for_text_range`).
   - Tests: `crates/fret-render/src/text.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
-    `crates/fret-render/src/text_v2/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+    `crates/fret-render/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 
 **B3 — Wrapper (wrap + truncation)**
 - [x] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
@@ -352,9 +352,9 @@ Legend:
   - Evidence: `crates/fret-render/src/text.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
 - [x] Unit tests: ellipsis truncation caret/hit-test mapping.
   - Evidence: `crates/fret-render/src/text.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
-    `crates/fret-render/src/text_v2/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
+    `crates/fret-render/src/text/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
 - [x] Unit tests: wrap boundaries across span boundaries.
-  - Evidence: `crates/fret-render/src/text_v2/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+  - Evidence: `crates/fret-render/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 - [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
 - [x] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
   - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
