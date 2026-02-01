@@ -1242,6 +1242,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
             let is_workspace_shell_demo_suite =
                 rest.len() == 1 && rest[0] == "workspace-shell-demo";
+            let is_workspace_shell_demo_file_tree_keep_alive_suite =
+                rest.len() == 1 && rest[0] == "workspace-shell-demo-file-tree-keep-alive";
 
             let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
                 if is_ui_gallery_suite {
@@ -1586,6 +1588,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json",
+                            ),
+                        )],
+                        None,
+                    )
+                } else if is_workspace_shell_demo_file_tree_keep_alive_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/workspace-shell-demo-file-tree-bounce-keep-alive.json",
                             ),
                         )],
                         None,
@@ -2098,6 +2110,47 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .or(Some("workspace-shell-file-tree-node-0".to_string()));
                 check_stale_paint_test_id = check_stale_paint_test_id
                     .or(Some("workspace-shell-file-tree-node-0".to_string()));
+            }
+
+            if is_workspace_shell_demo_file_tree_keep_alive_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+
+                for (key, value) in [
+                    ("FRET_EXAMPLES_VIEW_CACHE", "1"),
+                    ("FRET_EXAMPLES_VIEW_CACHE_SHELL", "1"),
+                    ("FRET_WORKSPACE_SHELL_FILE_TREE_KEEP_ALIVE", "256"),
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(k, _)| k == key) {
+                        launch_env.push((key.to_string(), value.to_string()));
+                    }
+                }
+
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_reconcile_cache_reuse_min =
+                    check_retained_vlist_reconcile_cache_reuse_min.or(Some(1));
+                check_retained_vlist_keep_alive_reuse_min =
+                    check_retained_vlist_keep_alive_reuse_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(256));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id
+                    .or(Some("workspace-shell-file-tree-node-0".to_string()));
+                check_stale_paint_test_id = check_stale_paint_test_id
+                    .or(Some("workspace-shell-file-tree-root".to_string()));
+
+                if timeout_ms == 30_000 {
+                    timeout_ms = 600_000;
+                }
             }
 
             if is_components_gallery_table_suite {
@@ -4379,6 +4432,7 @@ fn script_requires_retained_vlist_keep_alive_reuse_gate(script: &Path) -> bool {
         name,
         "components-gallery-file-tree-window-boundary-bounce.json"
             | "ui-gallery-inspector-torture-bounce-keep-alive.json"
+            | "workspace-shell-demo-file-tree-bounce-keep-alive.json"
     )
 }
 
@@ -7262,36 +7316,53 @@ fn check_bundle_for_wheel_scroll_json(
             .and_then(|v| v.as_array())
             .map_or(&[][..], |v| v);
 
-        let mut before: Option<&serde_json::Value> = None;
-        let mut before_frame: u64 = 0;
-        let mut after: Option<&serde_json::Value> = None;
-        let mut after_frame_id: u64 = 0;
-        for s in snaps {
-            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            if frame_id < after_frame {
-                if frame_id >= before_frame && frame_id < after_frame {
-                    before = Some(s);
-                    before_frame = frame_id;
-                }
-                continue;
-            }
-            after = Some(s);
-            after_frame_id = frame_id;
-            break;
-        }
-
-        let (Some(before), Some(after)) = (before, after) else {
-            failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} error=missing_before_or_after_snapshot"
-            ));
-            continue;
-        };
-
         let mut chosen_test_id: Option<&str> = None;
+        let mut chosen_before: Option<&serde_json::Value> = None;
+        let mut chosen_after: Option<&serde_json::Value> = None;
         let mut target_before: u64 = 0;
         let mut target_after: u64 = 0;
         let mut y_before: f64 = 0.0;
+        let mut after_frame_id: u64 = 0;
+
         for candidate in candidates {
+            let mut before: Option<&serde_json::Value> = None;
+            let mut before_frame_id: u64 = 0;
+            for s in snaps {
+                let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                if frame_id >= after_frame {
+                    break;
+                }
+                if semantics_node_y_for_test_id(s, candidate).is_none() {
+                    continue;
+                }
+                if frame_id >= before_frame_id {
+                    before = Some(s);
+                    before_frame_id = frame_id;
+                }
+            }
+
+            let mut after: Option<&serde_json::Value> = None;
+            let mut after_frame_id_for_candidate: u64 = 0;
+            for s in snaps {
+                let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                if frame_id < after_frame {
+                    continue;
+                }
+                if semantics_node_y_for_test_id(s, candidate).is_none() {
+                    continue;
+                }
+                if semantics_node_id_for_test_id(s, candidate).is_none() {
+                    continue;
+                }
+                after = Some(s);
+                after_frame_id_for_candidate = frame_id;
+                break;
+            }
+
+            let (Some(before), Some(after)) = (before, after) else {
+                continue;
+            };
+
             let Some(tb) = semantics_node_id_for_test_id(before, candidate) else {
                 continue;
             };
@@ -7301,15 +7372,21 @@ fn check_bundle_for_wheel_scroll_json(
             let Some(yb) = semantics_node_y_for_test_id(before, candidate) else {
                 continue;
             };
+
             chosen_test_id = Some(*candidate);
+            chosen_before = Some(before);
+            chosen_after = Some(after);
             target_before = tb;
             target_after = ta;
             y_before = yb;
+            after_frame_id = after_frame_id_for_candidate;
             break;
         }
-        let Some(test_id) = chosen_test_id else {
+
+        let (Some(test_id), Some(before), Some(after)) = (chosen_test_id, chosen_before, chosen_after)
+        else {
             failures.push(format!(
-                "window={window_id} wheel_frame={wheel_frame} error=missing_test_id_before_or_after test_ids={:?}",
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame} error=missing_test_id_before_or_after test_ids={:?}",
                 candidates
             ));
             continue;
