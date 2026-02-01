@@ -177,7 +177,7 @@ Evidence anchors:
 ## M6 — Semantics (a11y) and selection state
 
 - [~] Define semantics role for the editor surface (current baseline: `TextInputRegion` emits `SemanticsRole::TextField`).
-- [~] Ensure selection and composition ranges follow ADR 0071 rules (baseline: app-provided UTF-8 ranges within an app-provided value).
+- [~] Ensure selection and composition ranges follow ADR 0071 rules (baseline: app-provided UTF-8 ranges within an app-provided value; code editor handles `SetTextSelection` best-effort within its windowed value).
 - [ ] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (document the tradeoff).
 
 ---

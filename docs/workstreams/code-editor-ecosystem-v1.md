@@ -12,6 +12,7 @@ Recent changes (2026-02-01):
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
 - Web IME: mount the hidden textarea into a per-canvas container (no longer appended directly to `document.body`).
 - A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
+- A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
 - Web: enable a default CJK demo font bundle to avoid “tofu” squares in IME/editor harnesses.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
