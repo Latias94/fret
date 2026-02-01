@@ -111,32 +111,32 @@ Exit criteria:
   - emoji sequences (ZWJ/VS16/keycaps)
   - IME preedit (Windows-first)
 
-#### WP7 — `text_v2` graduation (remove legacy + rename/flatten modules)
+#### WP7 — Text module graduation (remove legacy + rename/flatten modules)
 
 Goal:
 
-- Retire the temporary `text_v2` module namespace once the Parley path is the only shaping backend and the
+- Retire the legacy `text_v2` module namespace once the Parley path is the only shaping backend and the
   platform baseline (Windows + macOS) is validated, then rename/flatten modules to reduce churn.
 
 Exit criteria:
 
 - No legacy shaping backend remains (Parley-only; no runtime/feature gates).
-- The `text_v2` module namespace is removed:
-  - `crates/fret-render/src/text/*` is the canonical module surface for Parley shaping + wrapping.
-  - all imports, tests, and call sites stop referencing `text_v2`.
+- The text module surface is canonical for Parley shaping + wrapping:
+  - `crates/fret-render/src/text/*` hosts the shaper + wrapper used by `TextSystem`.
+  - no legacy namespace remains in code.
 - All text conformance and UI integration tests pass:
   - `cargo nextest run -p fret-render`
   - `cargo nextest run -p fret-ui`
   - `cargo nextest run --workspace` (preferred before landing)
 - Documentation is updated to match the new module surface:
-  - workstreams referencing `text_v2` are updated
+  - workstreams referencing the legacy namespace are updated
   - ADR cross-references remain valid (update anchors if necessary)
 
 Evidence checklist (when completed):
 
-- `rg -n "text_v2" crates/ ecosystem/` returns no hits (or only in historical docs).
+- A search for legacy namespace references in Rust code returns no hits.
 - A focused PR/commit contains only mechanical renames + import updates + test fixes (no behavior changes).
-- This tracker no longer lists "`text_v2` naming" as an open question (Risks section).
+- This tracker no longer lists module graduation as an open question (Risks section).
 
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
@@ -368,7 +368,7 @@ Legend:
 - Ellipsis glyph choice: keep current `"…"` vs legacy placeholder; ensure fallback is stable across platforms.
 - Parley cluster/index semantics: ensure we can map to UTF-8 byte offsets with correct clamping.
 - Atlas eviction determinism: ensure eviction does not cause flicker without explicit rebuild strategy.
-- `text_v2` naming: tracked as WP7 (graduation / rename / flattening) once the platform baseline is validated.
+- Text module graduation: tracked as WP7 once the platform baseline is validated.
 - Platform defaults: decide `TextQualitySettings` defaults per platform (Windows-first; validate macOS after contract stabilization).
 
 ## Progress Log (append-only)
@@ -378,7 +378,7 @@ Legend:
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
 - 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render/src/text/parley_shaper.rs`).
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
-- 2026-01-13: M1.2: add `text_v2` wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
+- 2026-01-13: M1.2: add wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
 - 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).
 - 2026-01-13: M1.4: align Parley rasterization with cosmic-text subpixel binning + wire `add_fonts` and `set_font_families` into Parley fontique generics (reduces drift across backends).
 - 2026-01-13: M1.5: add Parley word wrap + multiline layout (commit `12e0aa2`), then extend wrapping across newlines (commit `63a00be`).
