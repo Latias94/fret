@@ -3765,6 +3765,22 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).and_then(|n| n.parent)
     }
 
+    pub fn debug_node_measured_size(&self, node: NodeId) -> Option<Size> {
+        self.nodes.get(node).map(|n| n.measured_size)
+    }
+
+    /// Debug helper for mapping a `NodeId` back to the declarative `ElementInstance` kind (when
+    /// the node is driven by the declarative renderer).
+    pub fn debug_declarative_instance_kind(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> Option<&'static str> {
+        crate::declarative::element_record_for_node(app, window, node)
+            .map(|record| record.instance.kind_name())
+    }
+
     pub fn first_focusable_ancestor_including_declarative(
         &self,
         app: &mut H,
