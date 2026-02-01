@@ -286,6 +286,14 @@ fn run_fret_root_with_ui_and_services(
     (ui, snap, root)
 }
 
+fn render_calendar_in_bounds(
+    bounds: Rect,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (UiTree<App>, fret_core::SemanticsSnapshot, NodeId) {
+    let mut services = StyleAwareServices::default();
+    run_fret_root_with_ui_and_services(bounds, &mut services, f)
+}
+
 fn find_semantics<'a>(
     snap: &'a fret_core::SemanticsSnapshot,
     role: SemanticsRole,
@@ -1413,6 +1421,225 @@ fn web_vs_fret_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web_target
             3.0,
         );
     }
+}
+
+#[test]
+fn web_vs_fret_calendar_11_disabled_navigation_semantics_matches_web() {
+    let web = read_web_golden("calendar-11");
+    let theme = web_theme(&web);
+
+    let web_month_grids = find_all(&theme.root, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    });
+    assert_eq!(
+        web_month_grids.len(),
+        2,
+        "expected two month grids for calendar-11"
+    );
+
+    let month_labels: Vec<(time::Month, i32)> = web_month_grids
+        .iter()
+        .map(|grid| {
+            let label = grid
+                .attrs
+                .get("aria-label")
+                .expect("web month grid aria-label");
+            parse_calendar_title_label(label).expect("web month label (Month YYYY)")
+        })
+        .collect();
+    let (month_a, year_a) = month_labels[0];
+    let (month_b, year_b) = month_labels[1];
+
+    let locale = web_month_grids
+        .first()
+        .and_then(|grid| grid.attrs.get("aria-label"))
+        .and_then(|label| label.chars().next())
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                fret_ui_shadcn::calendar::CalendarLocale::En
+            } else {
+                fret_ui_shadcn::calendar::CalendarLocale::Es
+            }
+        })
+        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+
+    let in_view = |d: time::Date| {
+        (d.month() == month_a && d.year() == year_a) || (d.month() == month_b && d.year() == year_b)
+    };
+
+    let web_prev = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Previous Month")
+    })
+    .expect("web prev-month button");
+    let web_next = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Go to the Next Month")
+    })
+    .expect("web next-month button");
+
+    let web_prev_disabled = web_prev
+        .attrs
+        .get("aria-disabled")
+        .is_some_and(|v| v == "true");
+    let web_next_disabled = web_next
+        .attrs
+        .get("aria-disabled")
+        .is_some_and(|v| v == "true");
+
+    let web_disable_navigation = web_prev
+        .attrs
+        .get("aria-disabled")
+        .is_some_and(|v| v == "true")
+        && web_next
+            .attrs
+            .get("aria-disabled")
+            .is_some_and(|v| v == "true");
+
+    let week_start = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    })
+    .iter()
+    .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+    .and_then(|n| n.attrs.get("aria-label"))
+    .and_then(|label| parse_calendar_weekday_label(label))
+    .unwrap_or(time::Weekday::Sunday);
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(
+        !web_day_buttons.is_empty(),
+        "expected calendar day buttons for calendar-11"
+    );
+
+    let web_today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let web_show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+    let web_show_outside_days =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-outside")).is_some();
+
+    let web_has_out_of_view_days = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .filter_map(|label| parse_calendar_day_aria_label(label).map(|(d, _)| d))
+        .any(|d| !in_view(d));
+
+    let web_month_bounds =
+        if web_disable_navigation && web_show_outside_days && !web_has_out_of_view_days {
+            Some(((month_a, year_a), (month_b, year_b)))
+        } else {
+            None
+        };
+
+    let web_disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if in_view(date) {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let origin_x = web_rdp_root.rect.x;
+    let origin_y = web_rdp_root.rect.y;
+
+    let (_ui, snap, _root) = render_calendar_in_bounds(
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+        ),
+        move |cx| {
+            use fret_ui_headless::calendar::CalendarMonth;
+
+            let month_model: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(year_a, month_a));
+            let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+
+            let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                .locale(locale)
+                .week_start(week_start)
+                .number_of_months(2)
+                .disable_navigation(web_disable_navigation)
+                .show_outside_days(web_show_outside_days)
+                .disable_outside_days(web_disable_outside_days)
+                .show_week_number(web_show_week_number);
+
+            if let Some(today) = web_today {
+                calendar = calendar.today(today);
+            }
+            if let Some(((start_month, start_year), (end_month, end_year))) = web_month_bounds {
+                calendar = calendar.month_bounds(
+                    CalendarMonth::new(start_year, start_month),
+                    CalendarMonth::new(end_year, end_month),
+                );
+            }
+
+            let calendar = calendar.into_element(cx);
+            let calendar = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        layout
+                    },
+                    padding: fret_core::Edges {
+                        left: Px(origin_x),
+                        top: Px(origin_y),
+                        right: Px(0.0),
+                        bottom: Px(0.0),
+                    },
+                    ..Default::default()
+                },
+                move |_cx| vec![calendar],
+            );
+
+            vec![calendar]
+        },
+    );
+
+    let fret_prev = find_semantics(
+        &snap,
+        SemanticsRole::Button,
+        Some("Go to the Previous Month"),
+    )
+    .expect("fret prev-month semantics node");
+    assert!(
+        fret_prev.flags.disabled == web_prev_disabled,
+        "expected prev-month semantics flags.disabled={web_prev_disabled}"
+    );
+
+    let fret_next = find_semantics(&snap, SemanticsRole::Button, Some("Go to the Next Month"))
+        .expect("fret next-month semantics node");
+    assert!(
+        fret_next.flags.disabled == web_next_disabled,
+        "expected next-month semantics flags.disabled={web_next_disabled}"
+    );
 }
 
 macro_rules! calendar_single_month_geometry_test {

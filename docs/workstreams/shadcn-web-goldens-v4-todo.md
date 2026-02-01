@@ -55,6 +55,7 @@ Tracking format:
 - 2026-01-31: added `date-picker-with-presets.preset-tomorrow-vp375x240` open golden + placement gate (Select interaction + deterministic date selection).
 - 2026-02-01: added a selected-day background gate (`calendar-14`) and fixed calendar chrome margins so row gaps don't inflate the selected background quad.
 - 2026-02-01: added a range-middle background gate (`calendar-04`) using the web golden’s computed `backgroundColor` and a scene quad matcher that prefers opaque backgrounds.
+- 2026-02-01: added range-start/range-end background gates (`calendar-04`) and a semantics gate for disabled navigation buttons (`calendar-11`).
 
 ---
 
