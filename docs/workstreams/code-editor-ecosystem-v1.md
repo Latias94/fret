@@ -430,7 +430,14 @@ Evidence anchors:
 
 - [~] Define semantics role for the editor surface (currently: `TextInputRegion` emits `SemanticsRole::TextField`).
 - [~] Ensure selection and composition ranges follow ADR 0071 rules (partial: `TextInputRegion` can publish UTF-8 ranges within an app-provided value).
-- [ ] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (document the tradeoff).
+- [x] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1.
+  - v1 decision: **stub/viewport semantics**.
+  - We expose:
+    - one `TextField` node (the `TextInputRegion`) whose `value` is a **windowed** buffer slice around the caret,
+      plus selection/composition ranges within that value (ADR 0071).
+    - one `Viewport` node for the scrollable windowed surface (no per-row semantics nodes).
+  - Tradeoff: this is not full-document accessible text. It is, however, stable and performant for very large
+    documents and keeps the semantics tree bounded and deterministic while the editor virtualization story evolves.
 
 ### 7) Diagnostics and perf attribution
 
