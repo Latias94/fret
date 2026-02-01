@@ -76,6 +76,8 @@ Conventions:
   - Script: `tools/diag-scripts/ui-gallery-window-resize-stress.json`
   - Tip: run with `--env FRET_REDRAW_HITCH_LOG=1 --env FRET_REDRAW_HITCH_LOG_PATH=redraw_hitches.log` so the log is written
     into `FRET_DIAG_DIR` and gets packed by `diag repro`.
+- [x] Add a redraw hitch regression gate (`--check-redraw-hitches-max-total-ms <n>`) that writes
+  `check.redraw_hitches.json` and fails `diag repro` when exceeded.
 - [ ] Add a nightly job candidate plan (not necessarily wired in CI yet).
 
 ### M5: GPU profiling (optional, gated)

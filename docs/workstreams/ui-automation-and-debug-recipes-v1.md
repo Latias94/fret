@@ -235,6 +235,10 @@ Notes (current status):
   When any threshold is set, it writes `check.resource_footprint.json` and exits non-zero on failure.
   On Windows this uses native APIs; on non-Windows platforms it uses lightweight sampling (via `sysinfo`) while waiting
   for the demo to exit (CPU sampling is cadence-sensitive).
+- **Redraw hitch gating** is supported for “resize feels laggy” style regressions:
+  - `--check-redraw-hitches-max-total-ms <n>` writes `check.redraw_hitches.json` and exits non-zero on failure.
+  - When enabled, `diag repro` also defaults `FRET_REDRAW_HITCH_LOG_PATH=redraw_hitches.log` so the raw log is written
+    into `FRET_DIAG_DIR` and gets packed into `repro.zip`.
 - **Redraw-efficiency gates** now include an “idle should not paint” trailing-streak gate
   (`--check-idle-no-paint-min <n>`; evidence: `check.idle_no_paint.json`) and a “view cache reuse should be stable”
   trailing-streak gate (`--check-view-cache-reuse-stable-min <n>`; evidence: `check.view_cache_reuse_stable.json`).

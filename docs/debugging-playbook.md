@@ -91,6 +91,24 @@ cargo run -p fretboard -- diag perf ui-gallery `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
+Resource footprint gate example (writes `check.resource_footprint.json` to `FRET_DIAG_DIR`):
+
+```powershell
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle.json `
+  --max-working-set-bytes 1200000000 `
+  --max-peak-working-set-bytes 1600000000 `
+  --max-cpu-avg-percent-total-cores 250 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Redraw hitch gate example (writes `check.redraw_hitches.json` and includes `redraw_hitches.log` in `repro.zip`):
+
+```powershell
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-window-resize-stress.json `
+  --check-redraw-hitches-max-total-ms 120 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 Widget-level layout hotspot attribution (useful for “resize feels laggy” reports):
 
 ```powershell
