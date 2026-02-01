@@ -4063,6 +4063,8 @@ struct RedrawHitchesGateResult {
 struct RedrawHitchRecord {
     line_no: usize,
     ts_unix_ms: Option<u64>,
+    tick_id: Option<u64>,
+    frame_id: Option<u64>,
     total_ms: u64,
     prepare_ms: Option<u64>,
     render_ms: Option<u64>,
@@ -4131,6 +4133,8 @@ fn check_redraw_hitches_max_total_ms(
             records.push(RedrawHitchRecord {
                 line_no: idx.saturating_add(1),
                 ts_unix_ms: parse_ts(line),
+                tick_id: parse_u64_after(line, "tick_id="),
+                frame_id: parse_u64_after(line, "frame_id="),
                 total_ms,
                 prepare_ms: parse_opt_u64_dbg(line, "prepare_ms"),
                 render_ms: parse_opt_u64_dbg(line, "render_ms"),
@@ -4192,6 +4196,8 @@ fn check_redraw_hitches_max_total_ms(
             serde_json::json!({
                 "line_no": r.line_no,
                 "ts_unix_ms": r.ts_unix_ms,
+                "tick_id": r.tick_id,
+                "frame_id": r.frame_id,
                 "total_ms": r.total_ms,
                 "prepare_ms": r.prepare_ms,
                 "render_ms": r.render_ms,
@@ -13791,6 +13797,35 @@ mod tests {
                 .iter()
                 .any(|f| f.get("kind").and_then(|v| v.as_str()) == Some("max_total_ms")),
             true
+        );
+    }
+
+    #[test]
+    fn redraw_hitch_gate_parses_tick_and_frame_ids() {
+        let out_dir = tmp_out_dir("redraw_hitch_gate_tick_frame");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let log = out_dir.join("redraw_hitches.log");
+        std::fs::write(
+            &log,
+            "\
+[1] [thread=ThreadId(1)] redraw hitch window=AppWindowId(1v1) tick_id=7 frame_id=9 total_ms=30 prepare_ms=Some(0) render_ms=Some(29) record_ms=Some(0) present_ms=Some(1) scene_ops=1 bounds=Rect {} scale_factor=1.0\n",
+        )
+        .unwrap();
+
+        let _ = check_redraw_hitches_max_total_ms(&out_dir, 10).unwrap();
+        let v = read_json_value(&out_dir.join("check.redraw_hitches.json")).unwrap();
+        let top = v.get("top").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(
+            top.first()
+                .and_then(|t| t.get("tick_id"))
+                .and_then(|v| v.as_u64()),
+            Some(7)
+        );
+        assert_eq!(
+            top.first()
+                .and_then(|t| t.get("frame_id"))
+                .and_then(|v| v.as_u64()),
+            Some(9)
         );
     }
 }

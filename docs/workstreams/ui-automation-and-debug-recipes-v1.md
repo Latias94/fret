@@ -205,6 +205,12 @@ This is intentionally “best effort” but must produce actionable artifacts, n
 
 Standardize the perf surface so tools can query it uniformly:
 
+- Why this matters (user-facing concerns we should keep in scope for v1):
+  - **CPU cost** (layout / text / hit-test / scene building) is often the primary source of “UI feels laggy”.
+  - **Memory footprint** should stay lightweight (no implicit “browser runtime” tax).
+  - **Redraw efficiency** should be measurable: the framework should not “over-redraw” without evidence (debates about
+    immediate-mode vs retained-mode should be grounded in invalidation + cache reuse metrics, not anecdotes).
+
 - per snapshot:
   - `layout_time_us`, `paint_time_us`, `total_time_us` (already in stats),
   - `layout_engine_solves` + top measures (already exported),
@@ -235,6 +241,9 @@ Notes (current status):
   When any threshold is set, it writes `check.resource_footprint.json` and exits non-zero on failure.
   On Windows this uses native APIs; on non-Windows platforms it uses lightweight sampling (via `sysinfo`) while waiting
   for the demo to exit (CPU sampling is cadence-sensitive).
+  - Note: when `diag repro` launches via `cargo run ...`, the captured PID may be the `cargo` wrapper process rather than
+    the final app process. For accurate footprint numbers, prefer launching a built binary directly (until we add a
+    “resolve child process” mode).
 - **Redraw hitch gating** is supported for “resize feels laggy” style regressions:
   - `--check-redraw-hitches-max-total-ms <n>` writes `check.redraw_hitches.json` and exits non-zero on failure.
   - When enabled, `diag repro` also defaults `FRET_REDRAW_HITCH_LOG_PATH=redraw_hitches.log` so the raw log is written

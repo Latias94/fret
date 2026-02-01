@@ -528,8 +528,8 @@ $env:FRET_REDRAW_HITCH_LOG_PATH="redraw_hitches.log"
 cargo run -p fret-demo --bin todo_demo
 ```
 
-The log is written to `.fret/redraw_hitches.log` (and/or `FRET_REDRAW_HITCH_LOG_PATH`) and includes `prepare` / `render` / `record` /
-`present` timings plus any surface error.
+The log is written to `.fret/redraw_hitches.log` (and/or `FRET_REDRAW_HITCH_LOG_PATH`) and includes `tick_id` / `frame_id` plus
+`prepare` / `render` / `record` / `present` timings and any surface error.
 
 If `render_ms` is clearly CPU-dominated but you still can’t tell where the time went, you can
 enable internal layout profiling logs (best-effort, debug-only surface; useful while iterating on
