@@ -839,18 +839,18 @@ topics (if/when we implement them):
         - `--check-view-cache-reuse-min 5`
         - `--check-vlist-policy-key-stable`
         - `--check-vlist-scroll-window-dirty-max 2`
-        - `--check-vlist-window-mismatch-min 1`
+        - `--check-vlist-window-prefetch-min 1`
+        - `--check-vlist-prefetch-window-dirty-max 30`
         - `--check-wheel-scroll ui-gallery-virtual-list-row-0-label`
         - `--check-stale-paint ui-gallery-virtual-list-row-0-label`
         - plus launch env: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
           `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0` (legacy path).
-      - Evidence bundle (suite; cache+shell, release): `target/fret-diag-vlist-window-boundary-suite-local2/1769706605050-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
-      - Evidence bundle (suite; cache+shell, release; tightened gates): `target/fret-diag-vlist-window-boundary-tight/1769822459692-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
-      - Evidence bundle (suite; cache+shell, release; dirty-max=2 default): `target/fret-diag-vlist-window-boundary-tight2/1769822968582-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
+        `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Gate tightening ladder (post-warmup):
         - Current: `--check-vlist-scroll-window-dirty-max 2` (catches “too many boundary ticks” regressions).
-        - Next: aim for `1` as we shift more window updates into prepaint.
-        - Target: `0` for retained-host surfaces once prepaint-driven window updates no longer require cache-root rerenders.
+        - Next: aim for `1` as we keep shifting window work earlier (prefetch) and reduce escape-only rerenders.
+        - Target: `0` once the non-retained path grows a cache-hit attach/detach boundary (virt-001 v2) rather than relying on cache-root rerenders.
 
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
