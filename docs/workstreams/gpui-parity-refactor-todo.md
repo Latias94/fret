@@ -710,9 +710,12 @@ topics (if/when we implement them):
               - Prefetch reconciles observed: 23 (warmup excluded); shift_kinds: `none=111`, `prefetch=25`, `escape=3`
               - max.us(total/layout/prepaint/paint)=4435/3656/45/734; max `reconcile_time_us`=50
               - Evidence: `target/fret-diag-perf-vlist-retained-boundary-prefetch5/1769878053904-script-step-0048-wheel/bundle.json`
+            - Suite gate (same harness, but with the full retained-vlist correctness gates enabled):
+              - PASS: `fretboard diag suite ui-gallery-virt-retained --check-retained-vlist-prefetch-reconciles-min 1`
+              - Evidence: `target/fret-diag-perf-ui-gallery-virt-retained-suite-prefetch7/1769911980127-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
   - Definition of done (v2; mark `[x]` when all are true):
     - [x] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
-    - [ ] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
+    - [x] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
     - [x] The same substrate can be applied to at least one more surface (reused primitives, not a one-off hack).
   - Clarification: the legacy `virtual_list_keyed` API (frame-local `FnMut` row closures) cannot support “attach/detach on cache-hit frames”
     by construction. The v2 path for GPUI-like prepaint-driven window updates therefore focuses on retained-host surfaces (ADR 0192) and
