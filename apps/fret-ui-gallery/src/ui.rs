@@ -8038,6 +8038,10 @@ fn preview_data_table_torture(
     let variable_height = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_DATA_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
 
     #[derive(Debug, Clone)]
     struct Row {
@@ -8132,8 +8136,11 @@ fn preview_data_table_torture(
                     let retained =
                         std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
                     vec![if retained {
-                        shadcn::DataTable::new()
-                            .overscan(10)
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
                             .row_height(Px(28.0))
                             .measure_rows(variable_height)
                             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
@@ -8174,8 +8181,11 @@ fn preview_data_table_torture(
                                 Some(Arc::<str>::from("ui-gallery-data-table-row-")),
                             )
                     } else {
-                        shadcn::DataTable::new()
-                            .overscan(10)
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
                             .row_height(Px(28.0))
                             .measure_rows(variable_height)
                             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))

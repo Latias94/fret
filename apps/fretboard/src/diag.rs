@@ -1215,6 +1215,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained";
             let is_ui_gallery_data_table_retained_measured_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained-measured";
+            let is_ui_gallery_data_table_retained_keep_alive_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained-keep-alive";
             let is_ui_gallery_table_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-table-retained";
             let is_ui_gallery_table_retained_measured_suite =
@@ -1354,6 +1356,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 ),
                             ),
                         ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_data_table_retained_keep_alive_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-data-table-window-boundary-bounce-keep-alive.json",
+                            ),
+                        )],
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_table_retained_suite {
@@ -2037,6 +2049,46 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_wheel_scroll_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
                 check_stale_paint_test_id =
                     check_stale_paint_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
+            }
+
+            if is_ui_gallery_data_table_retained_keep_alive_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                for (key, value) in [
+                    ("FRET_UI_GALLERY_VIEW_CACHE", "1"),
+                    ("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1"),
+                    ("FRET_UI_GALLERY_DATA_TABLE_RETAINED", "1"),
+                    ("FRET_UI_GALLERY_DATA_TABLE_KEEP_ALIVE", "256"),
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(k, _)| k == key) {
+                        launch_env.push((key.to_string(), value.to_string()));
+                    }
+                }
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_retained_vlist_reconcile_no_notify_min =
+                    check_retained_vlist_reconcile_no_notify_min.or(Some(1));
+                check_retained_vlist_reconcile_cache_reuse_min =
+                    check_retained_vlist_reconcile_cache_reuse_min.or(Some(1));
+                check_retained_vlist_keep_alive_reuse_min =
+                    check_retained_vlist_keep_alive_reuse_min.or(Some(1));
+                check_retained_vlist_attach_detach_min =
+                    check_retained_vlist_attach_detach_min.or(Some(1));
+                check_retained_vlist_attach_detach_max =
+                    check_retained_vlist_attach_detach_max.or(Some(256));
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_wheel_scroll_test_id =
+                    check_wheel_scroll_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
+                check_stale_paint_test_id =
+                    check_stale_paint_test_id.or(Some("ui-gallery-data-table-row-0".to_string()));
+
+                if timeout_ms == 30_000 {
+                    timeout_ms = 600_000;
+                }
             }
 
             if is_components_gallery_file_tree_suite {
@@ -4487,6 +4539,7 @@ fn script_requires_retained_vlist_keep_alive_reuse_gate(script: &Path) -> bool {
         name,
         "components-gallery-file-tree-window-boundary-bounce.json"
             | "components-gallery-table-window-boundary-bounce.json"
+            | "ui-gallery-data-table-window-boundary-bounce-keep-alive.json"
             | "ui-gallery-inspector-torture-bounce-keep-alive.json"
             | "workspace-shell-demo-file-tree-bounce-keep-alive.json"
     )
