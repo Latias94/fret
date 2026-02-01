@@ -17,6 +17,7 @@ Recent changes (2026-02-01):
 - Editor: fix caret up/down movement clamping to display rows when soft wrap is enabled (regression test included).
 - View/Editor: reduce per-keystroke overhead by avoiding full display-map rebuilds when wrap is disabled and line count is unchanged.
 - Editor: implement Home/End navigation over visual rows under soft wrap (Ctrl+Home/End clamps to document bounds).
+- Editor: add word navigation/deletion shortcuts (`Ctrl/Alt+Arrow`, `Ctrl/Alt+Backspace/Delete`) using the shared text-boundary mode.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
