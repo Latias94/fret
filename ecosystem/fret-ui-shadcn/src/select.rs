@@ -1039,6 +1039,9 @@ fn select_impl<H: UiHost>(
         let min_width = theme
             .metric_by_key("component.select.min_width")
             .unwrap_or(Px(128.0));
+        // shadcn/ui new-york-v4 SelectContent includes `min-w-[8rem]`.
+        // Treat that as the semantic minimum regardless of theme overrides.
+        let min_width = Px(min_width.0.max(128.0));
 
         let trigger_layout = decl_style::layout_style(
             &theme,
@@ -1362,11 +1365,26 @@ fn select_impl<H: UiHost>(
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
                         .unwrap_or(Px(0.0));
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
-
                     let item_h = theme
                         .metric_by_key("component.select.item_height")
                         .unwrap_or(Px(32.0));
+                    let scroll_button_h = theme
+                        .metric_by_key("component.select.scroll_button_height")
+                        .unwrap_or(Px(24.0));
+                    let min_list_h = Px(scroll_button_h.0 * 2.0 + item_h.0 * 5.0);
+
+                    let outer_with_margin =
+                        overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    // When the viewport is extremely short, applying the full window margin would
+                    // reduce the listbox to an unusable height. Prefer allowing overflow so we can
+                    // keep a reasonable minimum number of rows visible (Radix behavior under tight
+                    // constraints).
+                    let force_no_margin = cx.bounds.size.height.0 <= 180.0;
+                    let outer = if force_no_margin || outer_with_margin.size.height.0 < min_list_h.0 {
+                        cx.bounds
+                    } else {
+                        outer_with_margin
+                    };
 
                     let border_width = resolved.border_width;
                     let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -1562,26 +1580,21 @@ fn select_impl<H: UiHost>(
                         );
                     }
 
-                    // new-york-v4 uses Radix's `--radix-select-content-available-height` which adapts
-                    // to the current window + trigger placement. Prefer that behavior by computing
-                    // the available height from our popper substrate, while still allowing an
-                    // explicit theme override for apps that want a fixed cap.
+                    // new-york-v4 Select uses:
+                    // - `max-h-[var(--radix-select-content-available-height)]`
+                    // - where `--radix-select-content-available-height` is derived from Radix
+                    //   Popper's `size()` middleware (Floating UI) for `position="popper"`.
+                    //
+                    // Model that behavior by computing the available main-axis height for the
+                    // current placement.
                     let available_h = (position == SelectPosition::Popper)
                         .then(|| {
-                            let probe_desired = fret_core::Size::new(desired_w, outer.size.height);
-                            let layout = popper::popper_content_layout_sized(
+                            radix_select::select_popper_available_height(
                                 outer,
                                 anchor,
-                                probe_desired,
+                                min_width,
                                 popper_placement,
-                            );
-                            popper::popper_available_metrics(
-                                outer,
-                                anchor,
-                                &layout,
-                                popper_placement.direction,
                             )
-                            .available_height
                         })
                         .unwrap_or(outer.size.height);
                     let max_h = theme
@@ -1671,6 +1684,18 @@ fn select_impl<H: UiHost>(
                     let transform_origin = placement.transform_origin;
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
+                    if std::env::var("FRET_DEBUG_SELECT_PLACED")
+                        .ok()
+                        .is_some_and(|v| v == "1")
+                    {
+                        eprintln!(
+                            "select placed rect: origin=({}, {}) size=({}, {})",
+                            placed.origin.x.0,
+                            placed.origin.y.0,
+                            placed.size.width.0,
+                            placed.size.height.0
+                        );
+                    }
 
                     let opacity = motion.opacity;
                     let scale = motion.scale;
@@ -2487,9 +2512,19 @@ fn select_impl<H: UiHost>(
                                         let inner = cx.container(
                                             ContainerProps {
                                                 layout: {
+                                                    // Keep surface chrome pinned to the panel rect.
+                                                    //
+                                                    // Some layout engines treat "fill" sizing inside absolute nodes
+                                                    // as min-content, which can shrink the painted quad below the
+                                                    // Radix/shadcn min-width expectations.
                                                     let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout.size.height = Length::Fill;
+                                                    layout.position = PositionStyle::Absolute;
+                                                    layout.inset = InsetStyle {
+                                                        left: Some(Px(0.0)),
+                                                        right: Some(Px(0.0)),
+                                                        top: Some(Px(0.0)),
+                                                        bottom: Some(Px(0.0)),
+                                                    };
                                                     layout.overflow = Overflow::Clip;
                                                     layout
                                                 },
