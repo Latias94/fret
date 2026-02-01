@@ -34,6 +34,9 @@ This ADR locks the contract needed to:
 - **Liveness roots**: the root set used for reachability under GC.
   - **Layer roots**: installed layer roots for the window (including invisible layers).
   - **View-cache reuse roots**: cache-root elements that are marked as reused for this frame.
+  - **Retained keep-alive roots**: runtime-owned keep-alive buckets that must remain live even when
+    they are not currently in the visible/active window (e.g. retained virtual-list keep-alive,
+    ADR 0192).
 - **ViewCache root**: an element/node that defines a reuse boundary and a cache key boundary (ADR 1152).
 - **Cache hit**: reusing a ViewCache root without re-running its declarative child render closure.
 - **Structural detach**: an explicit parent/child relationship removal (e.g. `set_children` dropping a
@@ -50,12 +53,15 @@ The contract is the source of truth; the mapping may evolve.
 
 - **Layer roots**: `UiTree::all_layer_roots` (`crates/fret-ui/src/tree/layers.rs`).
 - **View-cache reuse roots**: `WindowElementState::{mark_view_cache_reuse_root, view_cache_reuse_roots}` (`crates/fret-ui/src/elements/runtime.rs`).
+- **Retained keep-alive roots**: `WindowElementState::retained_virtual_list_keep_alive_roots` (`crates/fret-ui/src/elements/runtime.rs`).
 - **Subtree membership list**: `WindowElementState::view_cache_elements_for_root` (`crates/fret-ui/src/elements/runtime.rs`).
 - **GC reachability under reuse**: `crates/fret-ui/src/declarative/mount.rs` (see the `reachable_from_view_cache_roots` set and the sweep predicate).
 - **Removed-subtree attribution** (diagnostics): `UiDebugRemoveSubtreeRecord` exported from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
   - Note: `removed_subtrees.reachable_from_layer_roots` MUST reflect the same conservative reachability used by GC, not just `UiTree.children`.
     Cache-hit frames can temporarily have incomplete `UiTree` child edges, while the last mounted `WindowFrame.children` still retains authoritative
     element-tree edges. For GC and diagnostics, reachability should be computed from the liveness roots using the union of both sources.
+  - Note: the field name is historical. In current implementations it represents reachability from the
+    window's liveness roots (layer roots + retained keep-alive roots), not strictly from layer roots.
 - **Ownership root**: `NodeEntry.root` (`crates/fret-ui/src/elements/runtime.rs`); cross-root overwrites must not be “repaired” implicitly (ADR 0191).
 
 ## Non-normative reference patterns (best practice survey)
@@ -131,7 +137,8 @@ When view-cache is enabled, the liveness root set MUST include:
 
 1. **All installed layer roots** for the window (base root + overlay/popup/modal roots).
 2. **All ViewCache reuse roots**, mapped to their current `NodeId` via the element runtime's identity map.
-3. Optional: additional explicitly pinned roots (future: long-lived background roots, debugging tools).
+3. **All retained keep-alive roots** (e.g. retained VirtualList keep-alive buckets; ADR 0192).
+4. Optional: additional explicitly pinned roots (future: long-lived background roots, debugging tools).
 
 Critically:
 
