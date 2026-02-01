@@ -217,6 +217,102 @@ impl ParleyShaper {
             clusters,
         }
     }
+
+    pub fn shape_single_line_metrics(
+        &mut self,
+        input: TextInputRef<'_>,
+        scale: f32,
+    ) -> ShapedLineLayout {
+        let (text, base_style, spans) = match input {
+            TextInputRef::Plain { text, style } => (text, style, &[][..]),
+            TextInputRef::Attributed { text, base, spans } => (text, base, spans),
+        };
+
+        let root_style = ParleyTextStyle::default();
+        let mut builder = self
+            .lcx
+            .tree_builder(&mut self.fcx, scale, true, &root_style);
+
+        builder.push_style_span(base_parley_style(base_style));
+
+        if let Some(span_ranges) = resolve_span_ranges(text, spans) {
+            for (range, span) in span_ranges {
+                let chunk = &text[range.clone()];
+                if let Some(props) = shaping_properties_for_span(base_style, span) {
+                    builder.push_style_modification_span(props.iter());
+                    builder.push_text(chunk);
+                    builder.pop_style_span();
+                } else {
+                    builder.push_text(chunk);
+                }
+            }
+        } else {
+            builder.push_text(text);
+        }
+
+        builder.pop_style_span();
+        let _built_text = builder.build_into(&mut self.layout);
+        self.layout.break_all_lines(None);
+
+        let Some(line) = self.layout.lines().next() else {
+            if text.is_empty() {
+                let fallback =
+                    self.shape_single_line_metrics(TextInputRef::plain(" ", base_style), scale);
+                return ShapedLineLayout {
+                    width: 0.0,
+                    ascent: fallback.ascent,
+                    descent: fallback.descent,
+                    baseline: fallback.baseline,
+                    line_height: fallback.line_height,
+                    glyphs: Vec::new(),
+                    clusters: Vec::new(),
+                };
+            }
+            return ShapedLineLayout {
+                width: 0.0,
+                ascent: 0.0,
+                descent: 0.0,
+                baseline: 0.0,
+                line_height: 0.0,
+                glyphs: Vec::new(),
+                clusters: Vec::new(),
+            };
+        };
+
+        let metrics = *line.metrics();
+        let mut line_height = metrics.line_height.max(0.0);
+        line_height = line_height.max(min_line_height_for_metrics(metrics.ascent, metrics.descent));
+        if let Some(requested) = base_style.line_height {
+            line_height = line_height.max((requested.0 * scale).max(0.0));
+        }
+
+        let mut clusters: Vec<ShapedCluster> = Vec::new();
+
+        let mut run_x = metrics.offset;
+        for run in line.runs() {
+            for cluster in run.visual_clusters() {
+                let cluster_range = cluster.text_range();
+                let cluster_x0 = run_x;
+                run_x = cluster_x0 + cluster.advance();
+                clusters.push(ShapedCluster {
+                    text_range: cluster_range,
+                    x0: cluster_x0,
+                    x1: run_x,
+                    is_rtl: cluster.is_rtl(),
+                });
+            }
+        }
+
+        ShapedLineLayout {
+            width: metrics.advance,
+            ascent: metrics.ascent,
+            descent: metrics.descent,
+            baseline: metrics.baseline,
+            line_height,
+            glyphs: Vec::new(),
+            clusters,
+        }
+    }
 }
 
 fn resolve_span_ranges<'a>(
