@@ -6881,7 +6881,6 @@ fn preview_select(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     let select = shadcn::Select::new(value.clone(), open)
-        .trigger_test_id("ui-gallery-select-trigger")
         .placeholder("Pick a fruit")
         .items(
             [
