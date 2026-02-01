@@ -44,6 +44,32 @@
       "n": 5
     },
     {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "workspace-shell-file-tree-node-0"
+      },
+      "delta_x": 0.0,
+      "delta_y": -520.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 5
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "workspace-shell-file-tree-node-0"
+      },
+      "delta_x": 0.0,
+      "delta_y": -520.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 5
+    },
+    {
       "type": "drag_pointer",
       "target": {
         "kind": "test_id",
