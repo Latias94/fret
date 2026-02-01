@@ -75,6 +75,43 @@ Notes:
 - When the UI “feels stuck”, check `frame delta (ms)` in `diag stats` output. A large `dt_ms` on the top row indicates a
   long delay between frames (not just an expensive frame).
 
+## Findings (2026-02-01)
+
+### Summary
+
+In **debug builds**, the worst post-click frame is dominated by **scrollable content measurement** for the UI Gallery
+content viewport (`SemanticsProps.test_id = ui-gallery-content-viewport`). This matches the reported 0.5s+ latency:
+the frame is blocked inside a deep `measure()` walk while the ScrollArea probes its content extent.
+
+In **release builds**, the same path is still the top cost but is typically ~100ms-scale, not ~900ms-scale.
+
+### Evidence (debug build)
+
+Bundle: the `*-ui-gallery-nav-card-click-latency-second/bundle.json` captured by the script.
+
+Key signals in the worst snapshot (often `frame_id ~= 74`):
+
+- `debug.stats.layout_time_us ~= 950k`
+- `debug.stats.layout_roots_time_us ~= 940k`
+- `debug.stats.layout_engine_solve_time_us ~= single-digit ms`
+- `debug.widget_measure_hotspots[0]`:
+  - `widget_type = fret_ui::declarative::host_widget::ElementHostWidget`
+  - `inclusive_time_us ~= 900k`
+  - the corresponding `debug.semantics.nodes[]` entry has `test_id = ui-gallery-content-viewport`
+
+Interpretation:
+
+- This is **not** dominated by layout engine solve time (taffy time is small).
+- The dominant cost is a deep `measure()` subtree under the ScrollArea viewport required to compute the scrollable
+  content extent when `ScrollProps.probe_unbounded = true` (default).
+- `viewport_intrinsic_measure_mode = Viewport` helps intrinsic sizing, but it does not change this layout-time probe.
+
+### Immediate mitigation options
+
+- Prefer `--release` for UI Gallery perception checks (debug will exaggerate stalls for deep measure walks).
+- Consider `profile.dev` opt-level overrides for hot crates (`fret-ui`, `fret-ui-shadcn`, `fret-render`) to reduce
+  interactive latency during development without switching to full release builds.
+
 ## Notes
 
 - If the perf report cannot attribute time to a meaningful region, add minimal `test_id` anchors at the demo surface
