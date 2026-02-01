@@ -1,7 +1,7 @@
 //! Winit `ApplicationHandler` integration.
 
 use super::*;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
@@ -53,9 +53,68 @@ fn redraw_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     paths.into_iter()
 }
 
-fn write_redraw_hitch_log(line: &str) {
-    use std::io::Write as _;
+struct HitchLogWriter {
+    file: std::io::BufWriter<std::fs::File>,
+}
 
+struct HitchLogState {
+    writers: Vec<HitchLogWriter>,
+    writes_since_flush: u32,
+    last_flush: std::time::Instant,
+}
+
+impl HitchLogState {
+    fn new() -> Self {
+        let mut writers = Vec::new();
+        for path in redraw_hitch_log_paths() {
+            if let Some(dir) = path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            if let Ok(file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+            {
+                writers.push(HitchLogWriter {
+                    file: std::io::BufWriter::with_capacity(16 * 1024, file),
+                });
+            }
+        }
+
+        Self {
+            writers,
+            writes_since_flush: 0,
+            last_flush: std::time::Instant::now(),
+        }
+    }
+
+    fn write_line(&mut self, msg: &str) {
+        use std::io::Write as _;
+
+        let mut i = 0;
+        while i < self.writers.len() {
+            let ok = self.writers[i].file.write_all(msg.as_bytes()).is_ok();
+            if ok {
+                i += 1;
+            } else {
+                self.writers.swap_remove(i);
+            }
+        }
+
+        self.writes_since_flush = self.writes_since_flush.saturating_add(1);
+        let should_flush =
+            self.writes_since_flush >= 64 || self.last_flush.elapsed().as_millis() >= 250;
+        if should_flush {
+            for w in self.writers.iter_mut() {
+                let _ = w.file.flush();
+            }
+            self.writes_since_flush = 0;
+            self.last_flush = std::time::Instant::now();
+        }
+    }
+}
+
+fn write_redraw_hitch_log(line: &str) {
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .map(|d| d.as_millis())
@@ -63,19 +122,10 @@ fn write_redraw_hitch_log(line: &str) {
     let thread_id = format!("{:?}", std::thread::current().id());
     let msg = format!("[{ts}] [thread={thread_id}] {line}\n");
 
-    for path in redraw_hitch_log_paths() {
-        if let Some(dir) = path.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-        {
-            let _ = file.write_all(msg.as_bytes());
-            let _ = file.flush();
-        }
-    }
+    static STATE: OnceLock<Mutex<HitchLogState>> = OnceLock::new();
+    let state = STATE.get_or_init(|| Mutex::new(HitchLogState::new()));
+    let mut state = state.lock().unwrap_or_else(|e| e.into_inner());
+    state.write_line(&msg);
 }
 
 impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
