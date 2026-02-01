@@ -105,6 +105,30 @@ impl ParleyShaper {
         true
     }
 
+    pub fn append_generic_family_name(
+        &mut self,
+        generic: parley::fontique::GenericFamily,
+        family_name: &str,
+    ) -> bool {
+        let Some(id) = self.fcx.collection.family_id(family_name) else {
+            return false;
+        };
+
+        if self
+            .fcx
+            .collection
+            .generic_families(generic)
+            .any(|existing| existing == id)
+        {
+            return false;
+        }
+
+        self.fcx
+            .collection
+            .append_generic_families(generic, std::iter::once(id));
+        true
+    }
+
     pub fn shape_single_line(&mut self, input: TextInputRef<'_>, scale: f32) -> ShapedLineLayout {
         let (text, base_style, spans) = match input {
             TextInputRef::Plain { text, style } => (text, style, &[][..]),
