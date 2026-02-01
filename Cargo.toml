@@ -106,6 +106,9 @@ zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
 
 # Speed up debug builds: Taffy is layout-hot and also expensive to compile unoptimized.
 # GPUI applies a similar per-package opt-level override for Taffy.
+[profile.dev]
+opt-level = 1
+
 [profile.dev.package.taffy]
 opt-level = 3
 
