@@ -1262,22 +1262,44 @@ fn handle_key_down(
 
     let shift = modifiers.shift;
     let ctrl_or_meta = modifiers.ctrl || modifiers.meta;
+    let word = modifiers.ctrl || modifiers.alt;
+    let meta = modifiers.meta;
 
     match key {
         KeyCode::ArrowLeft => {
-            move_caret_left(&mut st, shift);
+            if meta {
+                move_caret_home_end(&mut st, true, false, shift);
+            } else if word {
+                move_word(&mut st, -1, shift);
+            } else {
+                move_caret_left(&mut st, shift);
+            }
             st.undo_group = None;
         }
         KeyCode::ArrowRight => {
-            move_caret_right(&mut st, shift);
+            if meta {
+                move_caret_home_end(&mut st, false, false, shift);
+            } else if word {
+                move_word(&mut st, 1, shift);
+            } else {
+                move_caret_right(&mut st, shift);
+            }
             st.undo_group = None;
         }
         KeyCode::ArrowUp => {
-            move_caret_vertical(&mut st, -1, shift);
+            if meta {
+                move_caret_home_end(&mut st, true, true, shift);
+            } else {
+                move_caret_vertical(&mut st, -1, shift);
+            }
             st.undo_group = None;
         }
         KeyCode::ArrowDown => {
-            move_caret_vertical(&mut st, 1, shift);
+            if meta {
+                move_caret_home_end(&mut st, false, true, shift);
+            } else {
+                move_caret_vertical(&mut st, 1, shift);
+            }
             st.undo_group = None;
         }
         KeyCode::Home => {
@@ -1289,10 +1311,18 @@ fn handle_key_down(
             st.undo_group = None;
         }
         KeyCode::Backspace => {
-            delete_backward(&mut st);
+            if word {
+                delete_word_backward(&mut st);
+            } else {
+                delete_backward(&mut st);
+            }
         }
         KeyCode::Delete => {
-            delete_forward(&mut st);
+            if word {
+                delete_word_forward(&mut st);
+            } else {
+                delete_forward(&mut st);
+            }
         }
         KeyCode::Enter => {
             let _ = insert_text(&mut st, "\n");
@@ -1300,12 +1330,8 @@ fn handle_key_down(
         KeyCode::Tab => {
             let _ = insert_text(&mut st, "\t");
         }
-        KeyCode::KeyC if ctrl_or_meta => {
-            copy_selection(host, &st);
-        }
-        KeyCode::KeyV if ctrl_or_meta => {
-            request_paste(host, action_cx);
-        }
+        KeyCode::KeyC if ctrl_or_meta => copy_selection(host, &st),
+        KeyCode::KeyV if ctrl_or_meta => request_paste(host, action_cx),
         _ => return false,
     }
 
@@ -1365,6 +1391,80 @@ fn request_paste(host: &mut dyn UiActionHost, action_cx: ActionCx) {
         window: action_cx.window,
         token,
     });
+}
+
+fn delete_word_backward(st: &mut CodeEditorState) {
+    let range = st.selection.normalized();
+    let start = range.start.min(st.buffer.len_bytes());
+    let end = range.end.min(st.buffer.len_bytes());
+    if start != end {
+        let _ = apply_and_record_edit(
+            st,
+            UndoGroupKind::Backspace,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
+        return;
+    }
+
+    let caret = st.selection.caret().min(st.buffer.len_bytes());
+    if caret == 0 {
+        return;
+    }
+
+    let prev = move_word_left(st.buffer.text(), caret, st.text_boundary_mode).min(caret);
+    if prev == caret {
+        return;
+    }
+
+    let _ = apply_and_record_edit(
+        st,
+        UndoGroupKind::Backspace,
+        Edit::Delete { range: prev..caret },
+        Selection {
+            anchor: prev,
+            focus: prev,
+        },
+    );
+}
+
+fn delete_word_forward(st: &mut CodeEditorState) {
+    let range = st.selection.normalized();
+    let start = range.start.min(st.buffer.len_bytes());
+    let end = range.end.min(st.buffer.len_bytes());
+    if start != end {
+        let _ = apply_and_record_edit(
+            st,
+            UndoGroupKind::DeleteForward,
+            Edit::Delete { range: start..end },
+            Selection {
+                anchor: start,
+                focus: start,
+            },
+        );
+        return;
+    }
+
+    let caret = st.selection.caret().min(st.buffer.len_bytes());
+    let next = move_word_right(st.buffer.text(), caret, st.text_boundary_mode)
+        .max(caret)
+        .min(st.buffer.len_bytes());
+    if next == caret {
+        return;
+    }
+
+    let _ = apply_and_record_edit(
+        st,
+        UndoGroupKind::DeleteForward,
+        Edit::Delete { range: caret..next },
+        Selection {
+            anchor: caret,
+            focus: caret,
+        },
+    );
 }
 
 fn delete_backward(st: &mut CodeEditorState) {
@@ -2551,6 +2651,39 @@ mod tests {
         };
         move_caret_home_end(&mut st, false, true, false);
         assert_eq!(st.selection.caret(), st.buffer.len_bytes());
+    }
+
+    #[test]
+    fn delete_word_backward_removes_previous_word() {
+        let handle = CodeEditorHandle::new("hello world");
+        handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+
+        let mut st = handle.state.borrow_mut();
+        let end = st.buffer.len_bytes();
+        st.selection = Selection {
+            anchor: end,
+            focus: end,
+        };
+
+        delete_word_backward(&mut st);
+        assert_eq!(st.buffer.text(), "hello ");
+        assert_eq!(st.selection.caret(), "hello ".len());
+    }
+
+    #[test]
+    fn delete_word_forward_removes_next_word() {
+        let handle = CodeEditorHandle::new("hello world");
+        handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+
+        delete_word_forward(&mut st);
+        assert_eq!(st.buffer.text(), " world");
+        assert_eq!(st.selection.caret(), 0);
     }
 
     #[cfg(feature = "syntax-rust")]
