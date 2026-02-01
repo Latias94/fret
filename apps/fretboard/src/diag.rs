@@ -3793,10 +3793,14 @@ struct BundleStatsReport {
     sum_model_change_invalidation_roots: u64,
     sum_global_change_invalidation_roots: u64,
     sum_hover_layout_invalidations: u64,
+    sum_frame_delta_ms: u64,
+    p50_frame_delta_ms: u64,
+    p95_frame_delta_ms: u64,
     max_layout_time_us: u64,
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
+    max_frame_delta_ms: u64,
     max_invalidation_walk_calls: u32,
     max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -3814,6 +3818,7 @@ struct BundleStatsSnapshotRow {
     tick_id: u64,
     frame_id: u64,
     timestamp_unix_ms: Option<u64>,
+    frame_delta_ms: Option<u64>,
     layout_time_us: u64,
     prepaint_time_us: u64,
     paint_time_us: u64,
@@ -4029,6 +4034,15 @@ impl BundleStatsReport {
             self.max_prepaint_time_us,
             self.max_paint_time_us
         );
+        if self.max_frame_delta_ms > 0 {
+            println!(
+                "frame delta (ms): sum={} p50={} p95={} max={}",
+                self.sum_frame_delta_ms,
+                self.p50_frame_delta_ms,
+                self.p95_frame_delta_ms,
+                self.max_frame_delta_ms
+            );
+        }
         println!(
             "cache roots sum: roots={} reused={} replayed_ops={}",
             self.sum_cache_roots, self.sum_cache_roots_reused, self.sum_cache_replayed_ops
@@ -4085,12 +4099,17 @@ impl BundleStatsReport {
                 .timestamp_unix_ms
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
+            let dt = row
+                .frame_delta_ms
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} dt_ms={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
                 ts,
+                dt,
                 row.total_time_us,
                 row.layout_time_us,
                 row.prepaint_time_us,
@@ -4474,6 +4493,22 @@ impl BundleStatsReport {
             "snapshots_with_hover_layout_invalidations".to_string(),
             Value::from(self.snapshots_with_hover_layout_invalidations),
         );
+        root.insert(
+            "frame_delta_ms_sum".to_string(),
+            Value::from(self.sum_frame_delta_ms),
+        );
+        root.insert(
+            "frame_delta_ms_p50".to_string(),
+            Value::from(self.p50_frame_delta_ms),
+        );
+        root.insert(
+            "frame_delta_ms_p95".to_string(),
+            Value::from(self.p95_frame_delta_ms),
+        );
+        root.insert(
+            "frame_delta_ms_max".to_string(),
+            Value::from(self.max_frame_delta_ms),
+        );
 
         let mut sum = Map::new();
         sum.insert(
@@ -4604,6 +4639,10 @@ impl BundleStatsReport {
                     row.timestamp_unix_ms
                         .map(Value::from)
                         .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "frame_delta_ms".to_string(),
+                    row.frame_delta_ms.map(Value::from).unwrap_or(Value::Null),
                 );
                 obj.insert(
                     "layout_time_us".to_string(),
@@ -6569,6 +6608,9 @@ fn bundle_stats_from_json_with_options(
     out.windows = windows.len().min(u32::MAX as usize) as u32;
 
     let mut rows: Vec<BundleStatsSnapshotRow> = Vec::new();
+    let mut last_timestamp_by_window: std::collections::HashMap<u64, u64> =
+        std::collections::HashMap::new();
+    let mut frame_deltas_ms: Vec<u64> = Vec::new();
     let mut global_type_counts: std::collections::HashMap<String, u64> =
         std::collections::HashMap::new();
     let mut model_source_counts: std::collections::HashMap<String, u64> =
@@ -6584,9 +6626,24 @@ fn bundle_stats_from_json_with_options(
             let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
             if frame_id < opts.warmup_frames {
                 out.snapshots_skipped_warmup = out.snapshots_skipped_warmup.saturating_add(1);
+                last_timestamp_by_window.remove(&window_id);
                 continue;
             }
             out.snapshots_considered = out.snapshots_considered.saturating_add(1);
+
+            let timestamp_unix_ms = s.get("timestamp_unix_ms").and_then(|v| v.as_u64());
+            let frame_delta_ms = match (
+                last_timestamp_by_window.get(&window_id).copied(),
+                timestamp_unix_ms,
+            ) {
+                (Some(prev), Some(now)) if now >= prev => Some(now - prev),
+                _ => None,
+            };
+            if let Some(ts) = timestamp_unix_ms {
+                last_timestamp_by_window.insert(window_id, ts);
+            } else {
+                last_timestamp_by_window.remove(&window_id);
+            }
 
             let changed_models = s
                 .get("changed_models")
@@ -6952,7 +7009,8 @@ fn bundle_stats_from_json_with_options(
                 window: window_id,
                 tick_id: s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
                 frame_id: s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
-                timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
+                timestamp_unix_ms,
+                frame_delta_ms,
                 layout_time_us,
                 prepaint_time_us,
                 paint_time_us,
@@ -7011,7 +7069,21 @@ fn bundle_stats_from_json_with_options(
                 global_change_hotspots,
                 global_change_unobserved,
             });
+
+            if let Some(dt_ms) = frame_delta_ms {
+                out.sum_frame_delta_ms = out.sum_frame_delta_ms.saturating_add(dt_ms);
+                out.max_frame_delta_ms = out.max_frame_delta_ms.max(dt_ms);
+                frame_deltas_ms.push(dt_ms);
+            }
         }
+    }
+
+    if !frame_deltas_ms.is_empty() {
+        frame_deltas_ms.sort_unstable();
+        let p50_idx = frame_deltas_ms.len() / 2;
+        let p95_idx = ((frame_deltas_ms.len() - 1) * 95) / 100;
+        out.p50_frame_delta_ms = frame_deltas_ms[p50_idx];
+        out.p95_frame_delta_ms = frame_deltas_ms[p95_idx];
     }
 
     match sort {
