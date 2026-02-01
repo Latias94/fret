@@ -2,6 +2,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
+use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -133,7 +134,8 @@ where
                                  test_id: &'static str,
                                  dir: f32,
                                  visible: bool| {
-                let handle = handle.clone();
+                let handle_for_pressable = handle.clone();
+                let handle_for_wheel = handle.clone();
                 let theme = theme.clone();
                 let pressable = cx.pressable(
                     PressableProps {
@@ -153,6 +155,7 @@ where
                         ..Default::default()
                     },
                     move |cx, _st| {
+                        let handle = handle_for_pressable.clone();
                         let on_scroll = Arc::new(move |host: &mut dyn fret_ui::action::UiActionHost,
                                                   action_cx: ActionCx| {
                             let prev = handle.offset();
@@ -233,6 +236,23 @@ where
                     },
                 )
                 ;
+
+                // In the DOM, wheel events scroll the nearest scrollable ancestor even if the
+                // pointer is over non-scrollable affordances (like Radix's scroll buttons).
+                // Our buttons are siblings of the scroll viewport, so explicitly forward wheel
+                // scrolling to the same handle to avoid "stuck" scrolling when the pointer lands
+                // over the button strip.
+                let pressable = cx.pointer_region(PointerRegionProps::default(), move |cx| {
+                    cx.pointer_region_on_wheel(Arc::new(move |host, action_cx, wheel| {
+                        let prev = handle_for_wheel.offset();
+                        let next = Point::new(prev.x, Px(prev.y.0 - wheel.delta.y.0));
+                        handle_for_wheel.set_offset(next);
+                        host.invalidate(Invalidation::HitTestOnly);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }));
+                    vec![pressable]
+                });
 
                 let gated = cx.interactivity_gate(true, visible, |_cx| vec![pressable]);
                 cx.opacity(if visible { 1.0 } else { 0.0 }, |_cx| vec![gated])
