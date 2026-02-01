@@ -15,6 +15,7 @@ Recent changes (2026-02-01):
 - View: expose `DisplayMap::display_row_byte_range` to slice buffer text into wrapped display rows (tests included).
 - Editor: render wrapped display rows in the windowed surface (selection/caret/preedit/syntax spans operate in display-row space).
 - Editor: fix caret up/down movement clamping to display rows when soft wrap is enabled (regression test included).
+- View/Editor: reduce per-keystroke overhead by avoiding full display-map rebuilds when wrap is disabled and line count is unchanged.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
