@@ -1825,6 +1825,35 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
             || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
     });
 
+    let outside_disabled = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label").map(|l| (*n, l)))
+        .filter_map(|(n, label)| {
+            let (date, _selected) = parse_calendar_day_aria_label(label)?;
+            if in_view(date) {
+                return None;
+            }
+            let disabled = n.attrs.contains_key("disabled")
+                || n.attrs.get("aria-disabled").is_some_and(|v| v == "true");
+            if !disabled {
+                return None;
+            }
+            Some((n, label))
+        })
+        .next();
+
+    let outside_expected_fg = outside_disabled.and_then(|(n, label)| {
+        let web_color_css = n.computed_style.get("color")?.as_str();
+        let web_color = parse_css_color(web_color_css)
+            .unwrap_or_else(|| panic!("invalid css color: {web_color_css}"));
+        let web_opacity = n
+            .computed_style
+            .get("opacity")
+            .and_then(|v| v.parse::<f32>().ok())
+            .unwrap_or(1.0);
+        Some((label.to_string(), apply_opacity(web_color, web_opacity)))
+    });
+
     let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
     let origin_x = web_rdp_root.rect.x;
     let origin_y = web_rdp_root.rect.y;
@@ -1921,6 +1950,27 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
         expected_next_icon,
         0.02,
     );
+
+    if let Some((outside_label, expected)) = outside_expected_fg {
+        let fret_outside =
+            find_semantics(&snap, SemanticsRole::Button, Some(outside_label.as_str()))
+                .unwrap_or_else(|| {
+                    panic!("missing fret outside-day button label={outside_label:?} for {web_name}")
+                });
+        assert!(
+            fret_outside.flags.disabled,
+            "expected outside-day semantics flags.disabled=true for {outside_label:?} ({web_name})"
+        );
+
+        let fret_fg = find_best_text_color_in_rect(&scene, fret_outside.bounds)
+            .unwrap_or_else(|| panic!("painted outside-day text for {web_name}"));
+        assert_rgba_close(
+            &format!("{web_name} outside-day disabled text color"),
+            fret_fg,
+            expected,
+            0.02,
+        );
+    }
 }
 
 #[test]
