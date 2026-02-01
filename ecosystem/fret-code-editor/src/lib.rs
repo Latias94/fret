@@ -1247,6 +1247,8 @@ fn handle_key_down(
             | KeyCode::ArrowRight
             | KeyCode::ArrowUp
             | KeyCode::ArrowDown
+            | KeyCode::Home
+            | KeyCode::End
             | KeyCode::Backspace
             | KeyCode::Delete
             | KeyCode::Enter
@@ -1278,6 +1280,14 @@ fn handle_key_down(
             move_caret_vertical(&mut st, 1, shift);
             st.undo_group = None;
         }
+        KeyCode::Home => {
+            move_caret_home_end(&mut st, true, ctrl_or_meta, shift);
+            st.undo_group = None;
+        }
+        KeyCode::End => {
+            move_caret_home_end(&mut st, false, ctrl_or_meta, shift);
+            st.undo_group = None;
+        }
         KeyCode::Backspace => {
             delete_backward(&mut st);
         }
@@ -1304,6 +1314,34 @@ fn handle_key_down(
     host.notify(action_cx);
     host.request_redraw(action_cx.window);
     true
+}
+
+fn move_caret_home_end(st: &mut CodeEditorState, home: bool, ctrl_or_meta: bool, extend: bool) {
+    let sel = st.selection.normalized();
+    let mut caret = st.selection.caret().min(st.buffer.len_bytes());
+    if !st.selection.is_caret() && !extend {
+        caret = if home { sel.start } else { sel.end };
+    }
+
+    let target = if ctrl_or_meta {
+        if home { 0 } else { st.buffer.len_bytes() }
+    } else {
+        let row = st.display_map.byte_to_display_point(&st.buffer, caret).row;
+        let row_range = st.display_map.display_row_byte_range(&st.buffer, row);
+        if home { row_range.start } else { row_range.end }
+    };
+
+    if extend {
+        if st.selection.is_caret() {
+            st.selection.anchor = caret;
+        }
+        st.selection.focus = target;
+    } else {
+        st.selection = Selection {
+            anchor: target,
+            focus: target,
+        };
+    }
 }
 
 fn copy_selection(host: &mut dyn UiActionHost, st: &CodeEditorState) {
@@ -2475,6 +2513,44 @@ mod tests {
             .expect("apply edit");
             assert_eq!(st.display_map.row_count(), 2);
         }
+    }
+
+    #[test]
+    fn home_end_move_within_wrapped_display_rows() {
+        let handle = CodeEditorHandle::new("abcd\nef");
+        handle.set_soft_wrap_cols(Some(2));
+
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 3,
+            focus: 3,
+        };
+
+        // caret at byte 3 is in the second wrapped row ("cd"): row start is byte 2, end is byte 4.
+        move_caret_home_end(&mut st, true, false, false);
+        assert_eq!(st.selection.caret(), 2);
+
+        st.selection = Selection {
+            anchor: 3,
+            focus: 3,
+        };
+        move_caret_home_end(&mut st, false, false, false);
+        assert_eq!(st.selection.caret(), 4);
+
+        // Ctrl+Home/End should clamp to document bounds.
+        st.selection = Selection {
+            anchor: 3,
+            focus: 3,
+        };
+        move_caret_home_end(&mut st, true, true, false);
+        assert_eq!(st.selection.caret(), 0);
+
+        st.selection = Selection {
+            anchor: 3,
+            focus: 3,
+        };
+        move_caret_home_end(&mut st, false, true, false);
+        assert_eq!(st.selection.caret(), st.buffer.len_bytes());
     }
 
     #[cfg(feature = "syntax-rust")]
