@@ -1144,6 +1144,7 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
+ "fret-workspace",
  "glam",
  "image",
  "serde_json",
