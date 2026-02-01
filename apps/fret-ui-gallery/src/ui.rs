@@ -5335,7 +5335,6 @@ fn preview_material3_chip(
     let activate_row1 = activate.clone();
     let activate_row2 = activate.clone();
     let activate_row3 = activate.clone();
-    let activate_row4 = activate.clone();
 
     let last_action_for_input_selected = last_action.clone();
     let activate_input_selected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {

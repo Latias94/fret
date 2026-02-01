@@ -2597,24 +2597,24 @@ impl WinitAppDriver for UiGalleryDriver {
                 });
             }
             CMD_APP_SETTINGS_WRITE_PROJECT => {
-                let os = app
-                    .models()
-                    .get_cloned(&state.settings_menu_bar_os)
-                    .flatten()
-                    .as_deref()
-                    .map(str::to_string);
-                let in_window = app
-                    .models()
-                    .get_cloned(&state.settings_menu_bar_in_window)
-                    .flatten()
-                    .as_deref()
-                    .map(str::to_string);
-
-                let os = Self::menu_bar_mode_from_key(os.as_deref());
-                let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
-
                 #[cfg(not(target_arch = "wasm32"))]
                 {
+                    let os = app
+                        .models()
+                        .get_cloned(&state.settings_menu_bar_os)
+                        .flatten()
+                        .as_deref()
+                        .map(str::to_string);
+                    let in_window = app
+                        .models()
+                        .get_cloned(&state.settings_menu_bar_in_window)
+                        .flatten()
+                        .as_deref()
+                        .map(str::to_string);
+
+                    let os = Self::menu_bar_mode_from_key(os.as_deref());
+                    let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
+
                     let result =
                         Self::write_project_settings_menu_bar(os, in_window).and_then(|_| {
                             let paths = LayeredConfigPaths::for_project_root(".");
