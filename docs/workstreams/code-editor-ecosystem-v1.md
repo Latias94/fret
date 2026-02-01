@@ -19,6 +19,7 @@ Recent changes (2026-02-01):
 - Editor: implement Home/End navigation over visual rows under soft wrap (Ctrl+Home/End clamps to document bounds).
 - Editor: add word navigation/deletion shortcuts (`Ctrl/Alt+Arrow`, `Ctrl/Alt+Backspace/Delete`) using the shared text-boundary mode.
 - Editor: add PageUp/PageDown navigation based on the scroll viewport height (moves caret + scrolls).
+- Editor: bubble Ctrl/Meta+PageUp/PageDown to workspace keymaps (do not cancel preedit for these chords).
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
