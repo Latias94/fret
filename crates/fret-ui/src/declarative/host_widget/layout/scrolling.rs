@@ -4,6 +4,54 @@ use crate::declarative::prelude::*;
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
+use std::sync::OnceLock;
+use std::time::{Duration, Instant};
+
+#[derive(Debug, Clone)]
+struct ScrollLayoutProfileConfig {
+    min_elapsed: Duration,
+    min_self_measure: Duration,
+}
+
+impl ScrollLayoutProfileConfig {
+    fn from_env() -> Option<Self> {
+        let enabled = std::env::var("FRET_SCROLL_LAYOUT_PROFILE")
+            .ok()
+            .is_some_and(|v| v == "1");
+        if !enabled {
+            return None;
+        }
+
+        let min_us = std::env::var("FRET_SCROLL_LAYOUT_PROFILE_MIN_US")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(2_000);
+        let min_measure_us = std::env::var("FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(1_000);
+
+        Some(Self {
+            min_elapsed: Duration::from_micros(min_us),
+            min_self_measure: Duration::from_micros(min_measure_us),
+        })
+    }
+}
+
+fn scroll_layout_profile_config() -> Option<&'static ScrollLayoutProfileConfig> {
+    static CONFIG: OnceLock<Option<ScrollLayoutProfileConfig>> = OnceLock::new();
+    CONFIG
+        .get_or_init(ScrollLayoutProfileConfig::from_env)
+        .as_ref()
+}
+
+fn available_space_cache_key(space: AvailableSpace) -> u64 {
+    match space {
+        AvailableSpace::Definite(px) => (0 << 62) | (px.0.to_bits() as u64),
+        AvailableSpace::MinContent => 1 << 62,
+        AvailableSpace::MaxContent => 2 << 62,
+    }
+}
 
 impl ElementHostWidget {
     pub(super) fn layout_virtual_list_impl<H: UiHost>(
@@ -452,6 +500,12 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
+        let profile_cfg = scroll_layout_profile_config();
+        let profile_started = profile_cfg.is_some().then(Instant::now);
+        let mut t_measure_children: Duration = Duration::default();
+        let mut t_solve_barrier: Duration = Duration::default();
+        let mut t_layout_children: Duration = Duration::default();
+
         let mut max_child = Size::new(Px(0.0), Px(0.0));
         let child_constraints = LayoutConstraints::new(
             LayoutSize::new(None, None),
@@ -468,10 +522,50 @@ impl ElementHostWidget {
                 },
             ),
         );
-        for &child in cx.children {
-            let child_size = cx.measure_in(child, child_constraints);
-            max_child.width = Px(max_child.width.0.max(child_size.width.0));
-            max_child.height = Px(max_child.height.0.max(child_size.height.0));
+
+        let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
+        let mut cached_max_child: Option<Size> = None;
+        if !is_probe_layout && cx.children.len() == 1 {
+            let child = cx.children[0];
+            if !cx.tree.node_needs_layout(child) {
+                let cache_key = crate::element::ScrollIntrinsicMeasureCacheKey {
+                    avail_w: available_space_cache_key(child_constraints.available.width),
+                    avail_h: available_space_cache_key(child_constraints.available.height),
+                    axis: match props.axis {
+                        crate::element::ScrollAxis::X => 0,
+                        crate::element::ScrollAxis::Y => 1,
+                        crate::element::ScrollAxis::Both => 2,
+                    },
+                    probe_unbounded: props.probe_unbounded,
+                    scale_bits: cx.scale_factor.to_bits(),
+                };
+
+                cached_max_child = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        state
+                            .intrinsic_measure_cache
+                            .and_then(|cache| (cache.key == cache_key).then_some(cache.max_child))
+                    },
+                );
+            }
+        }
+
+        if let Some(cached) = cached_max_child {
+            max_child = cached;
+        } else {
+            let measure_started = profile_cfg.is_some().then(Instant::now);
+            for &child in cx.children {
+                let child_size = cx.measure_in(child, child_constraints);
+                max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                max_child.height = Px(max_child.height.0.max(child_size.height.0));
+            }
+            if let Some(started) = measure_started {
+                t_measure_children = started.elapsed();
+            }
         }
 
         let desired = clamp_to_constraints(max_child, props.layout, cx.available);
@@ -502,7 +596,6 @@ impl ElementHostWidget {
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
         // prematurely.
-        let is_probe_layout = cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe;
         let external_handle = props.scroll_handle.clone();
         let handle = crate::elements::with_element_state(
             &mut *cx.app,
@@ -519,6 +612,30 @@ impl ElementHostWidget {
                     handle.set_content_size_internal(Size::new(content_w, content_h));
                     let prev = handle.offset();
                     handle.set_offset_internal(prev);
+
+                    if cx.children.len() == 1 {
+                        state.intrinsic_measure_cache =
+                            Some(crate::element::ScrollIntrinsicMeasureCache {
+                                key: crate::element::ScrollIntrinsicMeasureCacheKey {
+                                    avail_w: available_space_cache_key(
+                                        child_constraints.available.width,
+                                    ),
+                                    avail_h: available_space_cache_key(
+                                        child_constraints.available.height,
+                                    ),
+                                    axis: match props.axis {
+                                        crate::element::ScrollAxis::X => 0,
+                                        crate::element::ScrollAxis::Y => 1,
+                                        crate::element::ScrollAxis::Both => 2,
+                                    },
+                                    probe_unbounded: props.probe_unbounded,
+                                    scale_bits: cx.scale_factor.to_bits(),
+                                },
+                                max_child,
+                            });
+                    } else {
+                        state.intrinsic_measure_cache = None;
+                    }
                 }
                 handle
             },
@@ -532,13 +649,68 @@ impl ElementHostWidget {
         let content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
         if !is_probe_layout {
+            let solve_started = profile_cfg.is_some().then(Instant::now);
             let roots: Vec<(NodeId, Rect)> =
                 cx.children.iter().map(|&c| (c, content_bounds)).collect();
             cx.solve_barrier_child_roots_if_needed(&roots);
+            if let Some(started) = solve_started {
+                t_solve_barrier = started.elapsed();
+            }
         }
 
+        let layout_started = profile_cfg.is_some().then(Instant::now);
         for &child in cx.children {
             let _ = cx.layout_in(child, content_bounds);
+        }
+        if let Some(started) = layout_started {
+            t_layout_children = started.elapsed();
+        }
+
+        if let Some(cfg) = profile_cfg
+            && let Some(started) = profile_started
+        {
+            let total = started.elapsed();
+            if total >= cfg.min_elapsed && t_measure_children >= cfg.min_self_measure {
+                let element_path: Option<String> = {
+                    #[cfg(feature = "diagnostics")]
+                    {
+                        Some(crate::elements::with_window_state(
+                            &mut *cx.app,
+                            window,
+                            |st| {
+                                st.debug_path_for_element(self.element)
+                                    .unwrap_or_else(|| "<unknown>".to_string())
+                            },
+                        ))
+                    }
+                    #[cfg(not(feature = "diagnostics"))]
+                    {
+                        None
+                    }
+                };
+
+                tracing::info!(
+                    window = ?cx.window,
+                    node = ?cx.node,
+                    element = self.element.0,
+                    pass = ?cx.pass_kind,
+                    axis = ?props.axis,
+                    probe_unbounded = props.probe_unbounded,
+                    children = cx.children.len(),
+                    available_w = cx.available.width.0,
+                    available_h = cx.available.height.0,
+                    desired_w = desired.width.0,
+                    desired_h = desired.height.0,
+                    content_w = content_w.0,
+                    content_h = content_h.0,
+                    measure_children_us = t_measure_children.as_micros() as u64,
+                    solve_barrier_us = t_solve_barrier.as_micros() as u64,
+                    layout_children_us = t_layout_children.as_micros() as u64,
+                    total_us = total.as_micros() as u64,
+                    element_path = element_path.as_deref().unwrap_or("<unknown>"),
+                    "scroll layout profile"
+                );
+            }
         }
 
         desired
