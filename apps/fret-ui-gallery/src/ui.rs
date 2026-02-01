@@ -5,6 +5,7 @@ use fret_core::{
     AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
     Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
+use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
 use fret_ui::Theme;
 use fret_ui::element::{CanvasProps, StackProps};
@@ -432,18 +433,41 @@ pub(crate) fn content_view(
         code_editor_syntax_rust,
         code_editor_boundary_identifier,
     );
-    let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-        cx.text(docs_md)
+
+    let active_tab: Arc<str> = cx
+        .watch_model(&content_tab)
+        .layout()
+        .cloned()
+        .flatten()
+        .unwrap_or_else(|| Arc::from("preview"));
+
+    let docs_panel = if active_tab.as_ref() != "docs" {
+        Vec::new()
+    } else if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        vec![cx.text(docs_md)]
     } else {
-        markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
+        vec![markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)]
     };
-    let usage_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
-        cx.text(usage_md)
+    let usage_panel = if active_tab.as_ref() != "usage" {
+        Vec::new()
+    } else if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+        vec![cx.text(usage_md)]
     } else {
-        markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
+        vec![markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)]
     };
 
     let tabs = if (bisect & BISECT_DISABLE_TABS) != 0 {
+        let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+            cx.text(docs_md)
+        } else {
+            markdown::Markdown::new(Arc::from(docs_md)).into_element(cx)
+        };
+        let usage_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
+            cx.text(usage_md)
+        } else {
+            markdown::Markdown::new(Arc::from(usage_md)).into_element(cx)
+        };
+
         stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -457,8 +481,8 @@ pub(crate) fn content_view(
             .list_full_width(true)
             .items([
                 shadcn::TabsItem::new("preview", "Preview", [preview_panel]),
-                shadcn::TabsItem::new("usage", "Usage", [usage_panel]),
-                shadcn::TabsItem::new("docs", "Notes", [docs_panel]),
+                shadcn::TabsItem::new("usage", "Usage", usage_panel),
+                shadcn::TabsItem::new("docs", "Notes", docs_panel),
             ])
             .into_element(cx)
     };
@@ -478,7 +502,10 @@ pub(crate) fn content_view(
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
             let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
-                .viewport_test_id("ui-gallery-content-viewport");
+                .viewport_test_id("ui-gallery-content-viewport")
+                .viewport_intrinsic_measure_mode(
+                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+                );
             if selected == PAGE_VIRTUAL_LIST_TORTURE {
                 scroll =
                     scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
