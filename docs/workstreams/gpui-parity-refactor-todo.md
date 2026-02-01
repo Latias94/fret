@@ -867,7 +867,7 @@ topics (if/when we implement them):
     - Evidence bundle (measured rows; cache+shell, release; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-measured-local1/1769676590792-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
     - Gate (suite, measured retained all-in-one): `fretboard diag suite ui-gallery-retained-measured --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --dir target/fret-diag-retained-measured-all-local1 --launch -- cargo run -p fret-ui-gallery --release`
       - Defaults: `ui-gallery-retained-measured` enables view-cache+shell plus the measured variants for VirtualList/Tree/DataTable/Table, and uses multi-test-id wheel-scroll + stale-paint gates.
-      - Prefetch max gate: defaults to `--check-retained-vlist-prefetch-reconciles-max 40` for `*window-boundary*` scripts (tree drives the budget).
+      - Prefetch max gate: defaults to `--check-retained-vlist-prefetch-reconciles-max 30` for `*window-boundary*` scripts (tree drives the budget).
       - Note: retained-vlist window-boundary gates (reconcile/no-notify/attach-detach bounds) apply only to the boundary scripts in the suite (not to interaction-only scripts).
       - Evidence bundles (measured all-in-one; cache+shell, release):
         - `target/fret-diag-retained-measured-all-local1/1769680828211-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
@@ -888,7 +888,7 @@ topics (if/when we implement them):
     - Gate (suite, measured rows): `fretboard diag suite ui-gallery-tree-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-tree-row-0 --check-stale-paint ui-gallery-tree-row-0 ...`
       - Note: in this multi-script suite, the retained-vlist window-boundary gates apply only to `ui-gallery-tree-window-boundary-scroll-retained.json` (the toggle+scroll script is still gated by wheel-scroll + stale-paint, etc.).
       - Defaults: `ui-gallery-tree-retained-measured` sets `FRET_UI_GALLERY_TREE_RETAINED=1` and `FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT=1`.
-      - Prefetch max gate: `ui-gallery-tree-retained` and `ui-gallery-tree-retained-measured` default to `--check-retained-vlist-prefetch-reconciles-max 40` for `*window-boundary*` scripts (tree currently triggers ~38 prefetch reconciles with `--warmup-frames 5`).
+      - Prefetch max gate: `ui-gallery-tree-retained` and `ui-gallery-tree-retained-measured` default to `--check-retained-vlist-prefetch-reconciles-max 30` for `*window-boundary*` scripts (tree should stay under budget with `--warmup-frames 5`).
     - Note: the script uses the sidebar search input (`ui-gallery-nav-search`) to keep navigation stable as the page list grows.
     - Evidence bundles (cache+shell, release; pass no-notify + bounded-delta + wheel-scroll + stale-paint gates):
       - `target/fret-diag-tree-retained-suite-shell3/1769649443728-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
