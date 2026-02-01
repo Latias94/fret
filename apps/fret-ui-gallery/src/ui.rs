@@ -3141,6 +3141,12 @@ fn preview_web_ime_harness(
                                 snapshot.suppress_next_input as u8
                             )));
                             lines.push(cx.text(format!(
+                                "  position_mode={:?} mount_kind={:?} dpr={:?}",
+                                snapshot.position_mode.as_deref(),
+                                snapshot.mount_kind.as_deref(),
+                                snapshot.device_pixel_ratio,
+                            )));
+                            lines.push(cx.text(format!(
                                 "  last_input_type={:?}",
                                 snapshot.last_input_type.as_deref()
                             )));

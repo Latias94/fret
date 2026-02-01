@@ -7,6 +7,7 @@ Recent changes (2026-02-01):
 
 - Web: avoid wasm panics from unsupported `std::time` usage; prefer `fret_core::time` / wasm-capable time sources.
 - Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
+- Web IME: add a cursor-area debug overlay and include mount/DPR fields in the debug snapshot for faster triage.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).

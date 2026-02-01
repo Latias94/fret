@@ -109,6 +109,8 @@ struct WebImeBridge {
     last_cursor_area: Option<fret_core::Rect>,
     #[cfg(debug_assertions)]
     debug: Rc<RefCell<WebImeDebugState>>,
+    #[cfg(debug_assertions)]
+    cursor_overlay: Option<HtmlElement>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -137,6 +139,15 @@ impl WebImeBridge {
         waker: Option<WebWaker>,
         #[cfg(debug_assertions)] debug: Rc<RefCell<WebImeDebugState>>,
     ) -> Option<Self> {
+        #[cfg(debug_assertions)]
+        let mount_kind: Option<&'static str> = mount.as_ref().map(|m| {
+            if m.get_attribute("data-fret-ime-overlay").as_deref() == Some("1") {
+                "overlay"
+            } else {
+                "mount"
+            }
+        });
+
         let Ok(el) = document.create_element("textarea") else {
             return None;
         };
@@ -190,6 +201,9 @@ impl WebImeBridge {
         let _ = style.set_property("z-index", "2147483647");
         let _ = textarea_el.set_attribute("aria-hidden", "true");
 
+        #[cfg(debug_assertions)]
+        let mut cursor_overlay: Option<HtmlElement> = None;
+
         if let Some(mount) = mount {
             // Only mutate inline styles for mounts we own.
             if mount.get_attribute("data-fret-ime-mount").as_deref() == Some("1") {
@@ -214,8 +228,18 @@ impl WebImeBridge {
                 }
             }
             let _ = mount.append_child(&textarea_el);
+
+            #[cfg(debug_assertions)]
+            {
+                cursor_overlay = Self::ensure_cursor_overlay(document, Some(mount), position_mode);
+            }
         } else if let Some(body) = document.body() {
             let _ = body.append_child(&textarea_el);
+
+            #[cfg(debug_assertions)]
+            {
+                cursor_overlay = Self::ensure_cursor_overlay(document, None, position_mode);
+            }
         }
 
         let composing = Rc::new(Cell::new(false));
@@ -227,6 +251,18 @@ impl WebImeBridge {
             st.snapshot.enabled = false;
             st.snapshot.composing = false;
             st.snapshot.suppress_next_input = false;
+            st.snapshot.position_mode = Some(
+                match position_mode {
+                    WebImePositionMode::Absolute => "absolute",
+                    WebImePositionMode::Fixed => "fixed",
+                }
+                .to_string(),
+            );
+            st.snapshot.mount_kind = mount_kind
+                .map(|v| v.to_string())
+                .or_else(|| document.body().is_some().then_some("body".to_string()));
+            st.snapshot.device_pixel_ratio =
+                document.default_view().map(|v| v.device_pixel_ratio());
             st.dirty = true;
         }
 
@@ -242,9 +278,55 @@ impl WebImeBridge {
             last_cursor_area: None,
             #[cfg(debug_assertions)]
             debug,
+            #[cfg(debug_assertions)]
+            cursor_overlay,
         };
         bridge.install_listeners();
         Some(bridge)
+    }
+
+    #[cfg(debug_assertions)]
+    fn ensure_cursor_overlay(
+        document: &Document,
+        mount: Option<HtmlElement>,
+        position_mode: WebImePositionMode,
+    ) -> Option<HtmlElement> {
+        let Ok(el) = document.create_element("div") else {
+            return None;
+        };
+        let Ok(overlay) = el.dyn_into::<HtmlElement>() else {
+            return None;
+        };
+
+        let _ = overlay.set_attribute("data-fret-ime-cursor-overlay", "1");
+        let style = overlay.style();
+        let _ = style.set_property(
+            "position",
+            match position_mode {
+                WebImePositionMode::Absolute => "absolute",
+                WebImePositionMode::Fixed => "fixed",
+            },
+        );
+        let _ = style.set_property("left", "0px");
+        let _ = style.set_property("top", "0px");
+        let _ = style.set_property("width", "0px");
+        let _ = style.set_property("height", "0px");
+        let _ = style.set_property("pointer-events", "none");
+        let _ = style.set_property("box-sizing", "border-box");
+        let _ = style.set_property("outline", "1px solid rgba(255, 0, 0, 0.65)");
+        let _ = style.set_property("background", "rgba(255, 0, 0, 0.08)");
+        let _ = style.set_property("z-index", "2147483646");
+        let _ = style.set_property("display", "none");
+
+        if let Some(mount) = mount {
+            let _ = mount.append_child(&overlay);
+        } else if let Some(body) = document.body() {
+            let _ = body.append_child(&overlay);
+        } else {
+            return None;
+        }
+
+        Some(overlay)
     }
 
     fn wake(&self) {
@@ -681,12 +763,27 @@ impl WebImeBridge {
             let mut st = self.debug.borrow_mut();
             st.snapshot.last_cursor_area = Some(rect);
             st.snapshot.cursor_area_set_seen = st.snapshot.cursor_area_set_seen.saturating_add(1);
+            st.snapshot.device_pixel_ratio = self
+                .textarea
+                .owner_document()
+                .and_then(|d| d.default_view())
+                .map(|v| v.device_pixel_ratio());
             st.dirty = true;
         }
         let textarea_el: HtmlElement = self.textarea.clone().unchecked_into();
         let style = textarea_el.style();
         let _ = style.set_property("left", &format!("{}px", rect.origin.x.0.max(0.0)));
         let _ = style.set_property("top", &format!("{}px", rect.origin.y.0.max(0.0)));
+
+        #[cfg(debug_assertions)]
+        if let Some(overlay) = self.cursor_overlay.as_ref() {
+            let style = overlay.style();
+            let _ = style.set_property("display", "block");
+            let _ = style.set_property("left", &format!("{}px", rect.origin.x.0.max(0.0)));
+            let _ = style.set_property("top", &format!("{}px", rect.origin.y.0.max(0.0)));
+            let _ = style.set_property("width", &format!("{}px", rect.size.width.0.max(0.0)));
+            let _ = style.set_property("height", &format!("{}px", rect.size.height.0.max(0.0)));
+        }
     }
 }
 
