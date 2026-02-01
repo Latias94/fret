@@ -21,6 +21,22 @@ If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed
 - When evaluating progress, first decide whether you mean **A-layer** (`@xyflow/system` substrate)
   or **B-layer** (ReactFlow runtime/store + component ecosystem). This doc covers both.
 
+## Focus window (current refactor target)
+
+Last audited: 2026-02-01
+
+This document is intentionally exhaustive. During large refactors, keep a small “focus window” so
+work remains coherent and measurable. For the execution plan + gates, see:
+`docs/workstreams/fret-node-xyflow-parity.md`.
+
+Current top gaps (aligned to workstream M0/M5):
+
+- **Derived internals invalidation discipline** (`updateNodeInternals`-style semantics): avoid over/under invalidation.
+- **Internals update pipeline determinism** (batching + stable ordering): ensure repeatable results.
+- **Coordinate-space correctness under `render_transform`** (screen px vs canvas units): keep thresholds and hit slop zoom-safe.
+- **Cache correctness + perf guardrails** (scene op caches, geometry caches): avoid perf cliffs during pan/zoom.
+- **Stable overlay anchoring** (minimap/controls/toolbars): overlays must not “steal” input or drift.
+
 Legend:
 
 - `[x]` implemented (or functionally equivalent)
@@ -879,7 +895,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [~] **Automated conformance tests**
   - Current coverage:
     - drag/connect undo granularity: `ecosystem/fret-node/src/ui/canvas/widget.rs`
-    - connection drag threshold helper: `ecosystem/fret-node/src/ui/canvas/widget/threshold.rs`
+    - connection drag threshold helper (canvas-space under `render_transform`): `ecosystem/fret-canvas/src/drag/threshold.rs` (`exceeds_drag_threshold_in_canvas_space`)
     - clipboard fragment determinism: `ecosystem/fret-node/src/ops/fragment.rs`
     - paint cache conformance (path/text reuse + auto-measure dedupe): `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
     - interaction conformance (marquee + reconnect threshold): `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`

@@ -111,32 +111,70 @@ Exit criteria:
   - emoji sequences (ZWJ/VS16/keycaps)
   - IME preedit (Windows-first)
 
-#### WP7 — `text_v2` graduation (remove legacy + rename/flatten modules)
+#### WP6 — macOS baseline (IME + geometry + pixel correctness)
 
 Goal:
 
-- Retire the temporary `text_v2` module namespace once the Parley path is the only shaping backend and the
-  platform baseline (Windows + macOS) is validated, then rename/flatten modules to reduce churn.
+- Validate that the v2 text stack behaves correctly on macOS (winit-appkit), with the same
+  user-visible behavior as Windows wherever feasible, and with clearly documented, bounded
+  platform deltas where it is not.
+
+Exit criteria:
+
+- IME:
+  - `Ime::Preedit` / `Ime::Commit` / `Ime::DeleteSurrounding` flows work end-to-end on macOS.
+  - Candidate window positioning is stable using IME cursor area updates.
+  - Note: the runner currently requests IME updates for `cursor_area` only; if any macOS IME
+    requires `surrounding_text` for correct behavior (e.g. deletion/suggestions), track and wire it
+    explicitly as part of this work package.
+  - UTF-16 composed-view ranges published via `WindowTextInputSnapshot` remain deterministic under:
+    - mixed scripts (LTR + RTL)
+    - emoji sequences (ZWJ/VS16/keycaps)
+    - IME preedit composition
+- Geometry queries:
+  - `hit_test_point`, `caret_rect`, and `selection_rects(_clipped)` remain stable under:
+    - non-integer scale factors
+    - multiline wraps
+    - mixed-script runs
+- Pixel correctness:
+  - Vertical baseline/line-advance snapping does not accumulate drift across long paragraphs.
+  - Caret/selection geometry aligns with painted glyph positions (no “cursor drift”).
+
+Evidence checklist (when completed):
+
+- `cargo nextest run -p fret-render`
+- `cargo nextest run -p fret-ui`
+- `cargo nextest run --workspace` (preferred before landing)
+- Manual sanity pass on macOS:
+  - `cargo run -p fret-demo --bin emoji_conformance_demo`
+  - `cargo run -p fret-demo --bin cjk_conformance_demo`
+
+#### WP7 — Text module graduation (remove legacy + rename/flatten modules)
+
+Goal:
+
+- Retire the legacy `text_v2` module namespace once the Parley path is the only shaping backend, then
+  rename/flatten modules to reduce churn.
 
 Exit criteria:
 
 - No legacy shaping backend remains (Parley-only; no runtime/feature gates).
-- The `text_v2` module namespace is removed:
-  - `crates/fret-render/src/text_v2/*` is renamed/flattened into the canonical text module surface.
-  - all imports, tests, and call sites stop referencing `text_v2`.
+- The text module surface is canonical for Parley shaping + wrapping:
+  - `crates/fret-render/src/text/*` hosts the shaper + wrapper used by `TextSystem`.
+  - no legacy namespace remains in code.
 - All text conformance and UI integration tests pass:
   - `cargo nextest run -p fret-render`
   - `cargo nextest run -p fret-ui`
   - `cargo nextest run --workspace` (preferred before landing)
 - Documentation is updated to match the new module surface:
-  - workstreams referencing `text_v2` are updated
+  - workstreams referencing the legacy namespace are updated
   - ADR cross-references remain valid (update anchors if necessary)
 
 Evidence checklist (when completed):
 
-- `rg -n "text_v2" crates/ ecosystem/` returns no hits (or only in historical docs).
+- A search for legacy namespace references in Rust code returns no hits.
 - A focused PR/commit contains only mechanical renames + import updates + test fixes (no behavior changes).
-- This tracker no longer lists "`text_v2` naming" as an open question (Risks section).
+- This tracker no longer lists module graduation as an open question (Risks section).
 
 ### M1 — Renderer text system v2 (Parley + wrapper + atlas)
 
@@ -250,11 +288,11 @@ Legend:
   - caret stops
   - hit-testing
   - span-aware paint assignment
-  - Evidence: `crates/fret-render/src/text_v2/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
-    `crates/fret-render/src/text_v2/wrapper.rs` (`hit_test_x`), `crates/fret-render/src/text.rs`
+  - Evidence: `crates/fret-render/src/text/parley_shaper.rs` (`ShapedCluster`, `ParleyGlyph::is_rtl`),
+    `crates/fret-render/src/text/wrapper.rs` (`hit_test_x`), `crates/fret-render/src/text.rs`
     (`caret_stops_for_slice`, `paint_span_for_text_range`).
   - Tests: `crates/fret-render/src/text.rs` (`paint_span_for_text_range_is_directional_across_span_boundary`),
-    `crates/fret-render/src/text_v2/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+    `crates/fret-render/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 
 **B3 — Wrapper (wrap + truncation)**
 - [x] Implement `wrap=None` using a wrapper layer that drives shaping on slices.
@@ -352,20 +390,23 @@ Legend:
   - Evidence: `crates/fret-render/src/text.rs` (`sanitize_spans_for_text` + tests `sanitize_spans_*`).
 - [x] Unit tests: ellipsis truncation caret/hit-test mapping.
   - Evidence: `crates/fret-render/src/text.rs` (`ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end`),
-    `crates/fret-render/src/text_v2/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
+    `crates/fret-render/src/text/wrapper.rs` (`none_ellipsis_adds_zero_len_cluster_at_cut_end`).
 - [x] Unit tests: wrap boundaries across span boundaries.
-  - Evidence: `crates/fret-render/src/text_v2/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
+  - Evidence: `crates/fret-render/src/text/wrapper.rs` (`word_wrap_produces_multiple_lines_and_full_coverage`).
 - [x] Unit conformance: color emoji glyphs populate `color_atlas` when a bundled color emoji font is present.
 - [x] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
   - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
     (`snapshot_reports_composed_utf16_ranges_for_mixed_script_text_during_ime_preedit`).
+- [x] Integration demo: emoji sequences (ZWJ/VS16/keycaps) + IME preedit smoke (deterministic snapshot).
+  - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
+    (`snapshot_reports_composed_utf16_ranges_for_emoji_sequences_during_ime_preedit`).
 
 ## Risks / Open Questions
 
 - Ellipsis glyph choice: keep current `"…"` vs legacy placeholder; ensure fallback is stable across platforms.
 - Parley cluster/index semantics: ensure we can map to UTF-8 byte offsets with correct clamping.
 - Atlas eviction determinism: ensure eviction does not cause flicker without explicit rebuild strategy.
-- `text_v2` naming: tracked as WP7 (graduation / rename / flattening) once the platform baseline is validated.
+- macOS baseline: tracked as WP6 (Windows-first; validate macOS after contract stabilization).
 - Platform defaults: decide `TextQualitySettings` defaults per platform (Windows-first; validate macOS after contract stabilization).
 
 ## Progress Log (append-only)
@@ -373,9 +414,9 @@ Legend:
 - 2026-01-13: ADR 0157 added (design locked), worktree created.
 - 2026-01-13: ADR 0158 added (layout cache boundary + glyph residency direction).
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
-- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype in `crates/fret-render/src/text_v2/mod.rs`.
+- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render/src/text/parley_shaper.rs`).
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
-- 2026-01-13: M1.2: add `text_v2` wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
+- 2026-01-13: M1.2: add wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
 - 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).
 - 2026-01-13: M1.4: align Parley rasterization with cosmic-text subpixel binning + wire `add_fonts` and `set_font_families` into Parley fontique generics (reduces drift across backends).
 - 2026-01-13: M1.5: add Parley word wrap + multiline layout (commit `12e0aa2`), then extend wrapping across newlines (commit `63a00be`).
@@ -394,3 +435,5 @@ Legend:
 - 2026-01-14: Add cjk-lite bundle + CJK conformance demo and atlas test (commit `8c0700b`).
 - 2026-01-14: Add wasm fallback candidates for bundled fonts (commit `56b6e92`).
 - 2026-01-31: Add deterministic window snapshot smoke test for mixed-script + emoji + IME preedit.
+- 2026-02-01: Graduate `text_v2` module namespace into `text/*` (mechanical rename + import updates; no behavior change).
+- 2026-02-01: Start WP6 (macOS baseline) tracker.

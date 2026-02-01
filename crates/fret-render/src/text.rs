@@ -15,6 +15,9 @@ use std::{
 
 use parley::fontique::GenericFamily as ParleyGenericFamily;
 
+pub(crate) mod parley_shaper;
+pub(crate) mod wrapper;
+
 struct FretFallback;
 
 impl cosmic_text::Fallback for FretFallback {
@@ -1142,7 +1145,7 @@ fn paint_fingerprint_color(
 
 pub struct TextSystem {
     font_system: FontSystem,
-    parley_shaper: crate::text_v2::parley_shaper::ParleyShaper,
+    parley_shaper: crate::text::parley_shaper::ParleyShaper,
     parley_scale: parley::swash::scale::ScaleContext,
     font_stack_key: u64,
     font_db_revision: u64,
@@ -1170,7 +1173,7 @@ pub struct TextSystem {
 pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
 
 fn metrics_from_wrapped_lines(
-    lines: &[crate::text_v2::parley_shaper::ShapedLineLayout],
+    lines: &[crate::text::parley_shaper::ShapedLineLayout],
     scale: f32,
 ) -> TextMetrics {
     let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
@@ -1375,7 +1378,7 @@ impl TextSystem {
             font_stack_cache_key(&locale, &db, font_db_revision, &common_fallback_config);
         let font_system = FontSystem::new_with_locale_and_db_and_fallback(locale, db, FretFallback);
 
-        let mut parley_shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let mut parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
         if let Some(sans) = sans {
             let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SansSerif, sans);
             let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SystemUi, sans);
@@ -1881,7 +1884,7 @@ impl TextSystem {
                         style,
                     },
                 };
-                let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+                let wrapped = crate::text::wrapper::wrap_with_constraints(
                     &mut self.parley_shaper,
                     input,
                     constraints,
@@ -2113,7 +2116,7 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints(
             &mut self.parley_shaper,
             TextInputRef::plain(text, style),
             constraints,
@@ -2161,7 +2164,7 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints(
             &mut self.parley_shaper,
             TextInputRef::Attributed {
                 text: rich.text.as_ref(),
@@ -2763,7 +2766,7 @@ fn utf8_char_boundaries(text: &str) -> Vec<usize> {
 fn caret_stops_for_slice(
     slice: &str,
     base_offset: usize,
-    clusters: &[crate::text_v2::parley_shaper::ShapedCluster],
+    clusters: &[crate::text::parley_shaper::ShapedCluster],
     line_width_px: f32,
     scale: f32,
     kept_end: usize,
@@ -3272,7 +3275,7 @@ mod tests {
 
     #[test]
     fn caret_stops_for_slice_interpolates_within_cluster_ltr() {
-        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
             text_range: 0..4,
             x0: 0.0,
             x1: 40.0,
@@ -3291,7 +3294,7 @@ mod tests {
 
     #[test]
     fn caret_stops_for_slice_interpolates_within_cluster_rtl() {
-        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
             text_range: 0..4,
             x0: 0.0,
             x1: 40.0,
@@ -3323,12 +3326,12 @@ mod tests {
     fn synthetic_clusters_for_text(
         text: &str,
         advance: f32,
-    ) -> Vec<crate::text_v2::parley_shaper::ShapedCluster> {
+    ) -> Vec<crate::text::parley_shaper::ShapedCluster> {
         let mut out = Vec::new();
         let mut x = 0.0_f32;
         for (start, ch) in text.char_indices() {
             let end = start + ch.len_utf8();
-            out.push(crate::text_v2::parley_shaper::ShapedCluster {
+            out.push(crate::text::parley_shaper::ShapedCluster {
                 text_range: start..end,
                 x0: x,
                 x1: x + advance,
@@ -3341,7 +3344,7 @@ mod tests {
 
     #[test]
     fn selection_rects_for_rtl_line_has_positive_width() {
-        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
             text_range: 0..4,
             x0: 0.0,
             x1: 40.0,
@@ -3367,7 +3370,7 @@ mod tests {
 
     #[test]
     fn hit_test_point_for_rtl_line_maps_left_edge_to_logical_end() {
-        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
             text_range: 0..4,
             x0: 0.0,
             x1: 40.0,
@@ -3945,9 +3948,9 @@ mod tests {
             scale_factor: 1.0,
         };
 
-        let mut shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let mut shaper = crate::text::parley_shaper::ParleyShaper::new();
         let base = TextStyle::default();
-        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints(
             &mut shaper,
             TextInputRef::plain(text, &base),
             constraints,
@@ -3968,9 +3971,9 @@ mod tests {
             scale_factor: 1.0,
         };
 
-        let mut shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let mut shaper = crate::text::parley_shaper::ParleyShaper::new();
         let base = TextStyle::default();
-        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints(
             &mut shaper,
             TextInputRef::plain(text, &base),
             constraints,
@@ -4174,8 +4177,7 @@ mod tests {
             cosmic_text::fontdb::Database::new(),
             super::FretFallback,
         );
-        text.parley_shaper =
-            crate::text_v2::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
         text.font_db_revision = 0;
         text.font_stack_key = super::font_stack_cache_key(
             text.font_system.locale(),
@@ -4273,8 +4275,7 @@ mod tests {
             cosmic_text::fontdb::Database::new(),
             super::FretFallback,
         );
-        text.parley_shaper =
-            crate::text_v2::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
         text.font_db_revision = 0;
         text.font_stack_key = super::font_stack_cache_key(
             text.font_system.locale(),
