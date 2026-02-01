@@ -7317,18 +7317,27 @@ fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
 fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     cx.keyed("ui_gallery.slider_page", |cx| {
-        let single = shadcn::Slider::new_controllable(cx, None, || vec![35.0])
-            .range(0.0, 100.0)
-            .into_element(cx);
+        let single = cx.keyed("ui_gallery.slider.single", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![35.0])
+                .range(0.0, 100.0)
+                .test_id("ui-gallery-slider-single")
+                .into_element(cx)
+        });
 
-        let range = shadcn::Slider::new_controllable(cx, None, || vec![20.0, 80.0])
-            .range(0.0, 100.0)
-            .min_steps_between_thumbs(5)
-            .into_element(cx);
+        let range = cx.keyed("ui_gallery.slider.range", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![20.0, 80.0])
+                .range(0.0, 100.0)
+                .min_steps_between_thumbs(5)
+                .test_id("ui-gallery-slider-range")
+                .into_element(cx)
+        });
 
-        let disabled = shadcn::Slider::new_controllable(cx, None, || vec![60.0])
-            .disabled(true)
-            .into_element(cx);
+        let disabled = cx.keyed("ui_gallery.slider.disabled", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![60.0])
+                .disabled(true)
+                .test_id("ui-gallery-slider-disabled")
+                .into_element(cx)
+        });
 
         let items: Vec<AnyElement> = vec![
             cx.text("Single value"),
