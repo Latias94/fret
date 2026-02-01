@@ -124,11 +124,22 @@ pub struct PointerRegionProps {
 }
 
 /// A focusable event region that participates in text input / IME routing.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TextInputRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
     pub text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
+    /// Optional accessibility label for this text input region.
+    pub a11y_label: Option<Arc<str>>,
+    /// Optional accessibility value text for this text input region.
+    ///
+    /// When present, selection and composition ranges are interpreted as UTF-8 byte offsets within
+    /// this value (ADR 0071).
+    pub a11y_value: Option<Arc<str>>,
+    /// Optional selection range (anchor, focus) in UTF-8 byte offsets within `a11y_value`.
+    pub a11y_text_selection: Option<(u32, u32)>,
+    /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
+    pub a11y_text_composition: Option<(u32, u32)>,
 }
 
 /// An internal drag event listener region primitive.
@@ -164,6 +175,10 @@ impl Default for TextInputRegionProps {
             layout: LayoutStyle::default(),
             enabled: true,
             text_boundary_mode_override: None,
+            a11y_label: None,
+            a11y_value: None,
+            a11y_text_selection: None,
+            a11y_text_composition: None,
         }
     }
 }

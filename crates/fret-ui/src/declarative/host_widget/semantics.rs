@@ -215,6 +215,39 @@ impl ElementHostWidget {
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);
             }
+            ElementInstance::TextInputRegion(props) => {
+                cx.set_role(SemanticsRole::TextField);
+                if let Some(label) = props.a11y_label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(value) = props.a11y_value.as_ref() {
+                    cx.set_value(value.as_ref().to_string());
+                }
+                cx.set_disabled(!props.enabled);
+                cx.set_focusable(props.enabled);
+
+                // This is a mechanism-only surface: it can accept selection updates via hooks, but
+                // does not provide an internal buffer for `SetValue` edits.
+                cx.set_value_editable(false);
+                cx.set_text_selection_supported(props.enabled);
+
+                // Only publish ranges when focused, matching TextInput/TextArea behavior.
+                if cx.focus == Some(cx.node) && props.a11y_value.is_some() {
+                    if let Some((anchor, focus)) = props.a11y_text_selection {
+                        cx.set_text_selection(anchor, focus);
+                    } else {
+                        cx.clear_text_selection();
+                    }
+                    if let Some((start, end)) = props.a11y_text_composition {
+                        cx.set_text_composition(start, end);
+                    } else {
+                        cx.clear_text_composition();
+                    }
+                } else {
+                    cx.clear_text_selection();
+                    cx.clear_text_composition();
+                }
+            }
             ElementInstance::Flex(_)
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::FocusScope(_)
@@ -225,7 +258,6 @@ impl ElementHostWidget {
             }
             ElementInstance::Image(_)
             | ElementInstance::PointerRegion(_)
-            | ElementInstance::TextInputRegion(_)
             | ElementInstance::InternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
