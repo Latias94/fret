@@ -2044,6 +2044,17 @@ impl<H: UiHost> UiTree<H> {
         self.debug_enabled
     }
 
+    pub(crate) fn node_layout_invalidated(&self, node: NodeId) -> bool {
+        self.nodes
+            .get(node)
+            .map(|n| n.invalidation.layout)
+            .unwrap_or(false)
+    }
+
+    pub(crate) fn node_measured_size(&self, node: NodeId) -> Option<Size> {
+        self.nodes.get(node).map(|n| n.measured_size)
+    }
+
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
     }

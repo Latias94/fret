@@ -5,6 +5,7 @@ use crate::declarative::prelude::*;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 use fret_core::FrameId;
+use std::sync::OnceLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ScrollLayoutProbeKey {
@@ -24,6 +25,19 @@ fn available_space_cache_key(space: AvailableSpace) -> u64 {
         AvailableSpace::MinContent => 1 << 62,
         AvailableSpace::MaxContent => 2 << 62,
     }
+}
+
+fn scroll_defer_unbounded_probe_on_invalidation_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        std::env::var_os("FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION")
+            .is_some_and(|v| !v.is_empty())
+    })
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct ScrollDeferredUnboundedProbeState {
+    pending: bool,
 }
 
 impl ElementHostWidget {
@@ -521,6 +535,56 @@ impl ElementHostWidget {
             ),
         );
 
+        let wants_unbounded_probe = props.probe_unbounded
+            && (props.axis.scroll_x() || props.axis.scroll_y())
+            && !is_probe_layout;
+        let should_defer_unbounded_probe = wants_unbounded_probe
+            && scroll_defer_unbounded_probe_on_invalidation_enabled()
+            && cx
+                .children
+                .iter()
+                .copied()
+                .any(|child| cx.tree.node_layout_invalidated(child));
+
+        let mut defer_state = crate::elements::with_element_state(
+            &mut *cx.app,
+            window,
+            self.element,
+            ScrollDeferredUnboundedProbeState::default,
+            |state| *state,
+        );
+
+        let defer_this_frame = should_defer_unbounded_probe && !defer_state.pending;
+        if defer_this_frame {
+            defer_state.pending = true;
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                ScrollDeferredUnboundedProbeState::default,
+                |state| *state = defer_state,
+            );
+
+            // Ensure we run another layout soon so we can compute accurate scroll extents.
+            cx.tree.invalidate_with_source_and_detail(
+                cx.node,
+                Invalidation::Layout,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+            );
+            cx.request_animation_frame();
+        } else if defer_state.pending {
+            // Consume the pending deferral by running the unbounded probe on this frame.
+            defer_state.pending = false;
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                ScrollDeferredUnboundedProbeState::default,
+                |state| *state = defer_state,
+            );
+        }
+
         // Avoid recomputing the unbounded scroll probe twice in a single frame when the runtime
         // performs probe+final layout passes (e.g. view-cache reconciliation).
         let key = ScrollLayoutProbeKey {
@@ -545,7 +609,18 @@ impl ElementHostWidget {
             },
         );
 
-        let max_child = if let Some(cached) = cached {
+        let max_child = if defer_this_frame {
+            // Use the previous measured size as a best-effort estimate and avoid a deep measure
+            // walk on this frame.
+            let mut max_child = Size::new(Px(0.0), Px(0.0));
+            for &child in cx.children {
+                if let Some(child_size) = cx.tree.node_measured_size(child) {
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+            }
+            max_child
+        } else if let Some(cached) = cached {
             cached
         } else {
             let mut max_child = Size::new(Px(0.0), Px(0.0));
