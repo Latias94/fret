@@ -931,6 +931,10 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json`
     - Script (sort + select + scroll): `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
     - Run with: `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+    - Keep-alive bounce (ADR 0192):
+      - Env: `FRET_UI_GALLERY_DATA_TABLE_KEEP_ALIVE=256`
+      - Script: `tools/diag-scripts/ui-gallery-data-table-window-boundary-bounce-keep-alive.json`
+      - Suite: `fretboard diag suite ui-gallery-data-table-retained-keep-alive --launch -- cargo run -p fret-ui-gallery --release`
     - Variant (measured rows): set `FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT=1` (enables `DataTable::measure_rows(true)` and introduces multi-line cell content).
     - Expectation: crossing the overscan boundary reconciles attach/detach deltas (no parent cache-root rerender), and remains stale-paint safe.
     - Gate (suite): `fretboard diag suite ui-gallery-data-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-data-table-row-0 --check-stale-paint ui-gallery-data-table-row-0 ...`
@@ -947,6 +951,7 @@ topics (if/when we implement them):
       - (With staged prefetch max gate) `target/fret-diag-perf-ui-gallery-data-table-retained-suite-prefetch10/1769913891537-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
       - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679828598-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
       - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679856618-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
+      - (Keep-alive bounce) `target/fret-diag/1769961130938-ui-gallery-data-table-window-boundary-bounce-keep-alive/bundle.json`
   - UI kit list harness (retained host consumer; ADR 0192):
     - Page: `apps/fret-ui-gallery/src/ui.rs` (`preview_ui_kit_list_torture`), `apps/fret-ui-gallery/src/spec.rs` (`PAGE_UI_KIT_LIST_TORTURE`).
     - Script: `tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json`
