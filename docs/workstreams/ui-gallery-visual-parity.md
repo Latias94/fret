@@ -43,6 +43,7 @@ For performance investigations, see `docs/workstreams/ui-gallery-perf-scroll-mea
 | VP-005 | P1 | Combobox | Dropdown height/padding differs; disabled text baseline too tight. | Needs a new script | Open |
 | VP-006 | P1 | Tabs | Visual styling differs from upstream (indicator/spacing). | Needs a new script | Open |
 | VP-007 | P1 | UI Gallery perf | Clicking card feels delayed (~0.5s). | Use `fretboard diag perf` + targeted page start | Tracked in perf workstream |
+| VP-008 | P1 | Select | Wheel-up from bottom can be “pulled back” (appears stuck) when a row is active/hovered. | `tools/diag-scripts/ui-gallery-select-wheel-up-from-bottom.json` (run with `--check-wheel-scroll ui-gallery-select-item-item-40`) | Fixed (commit `624692f`) |
 
 ## Recent Instrumentation (to enable repros)
 
