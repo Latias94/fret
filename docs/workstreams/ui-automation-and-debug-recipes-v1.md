@@ -43,6 +43,12 @@ Practical perf triage recipe we should keep tightening (especially for “resize
   whether the hitch is CPU-side UI work or GPU/present/surface behavior (see `docs/debugging-playbook.md`).
 - If `render_ms` dominates, capture a bundle during the problematic interaction and use `fretboard diag stats --sort time`
   to attribute the slowest snapshots to `layout` vs `paint` (and to `layout_engine_solve_time_us` when relevant).
+- If `layout_time_us` is large but `layout_engine_solve_time_us` is small, enable `FRET_LAYOUT_NODE_PROFILE=1` to
+  attribute time to individual widget `layout()` calls (e.g. identify intrinsic-measure dominated nodes like scroll
+  containers).
+- If a `Scroll` node dominates, enable `FRET_SCROLL_LAYOUT_PROFILE=1` and (when needed) `FRET_MEASURE_NODE_PROFILE=1` to
+  see whether the hitch is dominated by “probe-unbounded” intrinsic measurement (e.g. `avail_h=MaxContent`) vs final
+  child layout.
 
 ## Existing foundation (what we should build on)
 

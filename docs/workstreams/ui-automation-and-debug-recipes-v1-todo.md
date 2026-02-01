@@ -66,7 +66,16 @@ Conventions:
 - [x] Add a resource footprint threshold gate (CPU/memory) and write `check.resource_footprint.json`.
 - [x] Add an “idle should not paint” redraw-efficiency gate (`--check-idle-no-paint-min <n>`).
 - [x] Add a redraw-efficiency gate for “cache reuse should be stable” regressions (`--check-view-cache-reuse-stable-min <n>`).
-- [ ] Add a window resize stress repro that collects `redraw_hitches.log` plus a bundle for `diag stats --sort time` attribution.
+- [x] Add widget-level layout hotspot attribution logging (`FRET_LAYOUT_NODE_PROFILE=1`) for cases where
+  `layout_time_us` is large but `layout_engine_solve_time_us` is small.
+- [x] Add scroll layout phase profiling (`FRET_SCROLL_LAYOUT_PROFILE=1`) to split `Scroll` layout into
+  `measure_children_us` / `solve_barrier_us` / `layout_children_us`.
+- [x] Add intrinsic measure hotspot attribution logging (`FRET_MEASURE_NODE_PROFILE=1`) to pinpoint `measure()` cascades
+  (e.g. `avail_h=MaxContent|MinContent`).
+- [x] Add a window resize stress repro that collects `redraw_hitches.log` plus a bundle for `diag stats --sort time` attribution.
+  - Script: `tools/diag-scripts/ui-gallery-window-resize-stress.json`
+  - Tip: run with `--env FRET_REDRAW_HITCH_LOG=1 --env FRET_REDRAW_HITCH_LOG_PATH=redraw_hitches.log` so the log is written
+    into `FRET_DIAG_DIR` and gets packed by `diag repro`.
 - [ ] Add a nightly job candidate plan (not necessarily wired in CI yet).
 
 ### M5: GPU profiling (optional, gated)
