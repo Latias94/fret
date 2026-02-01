@@ -210,7 +210,7 @@ pub struct UiDiagnosticsService {
     pick_armed_run_id: Option<u64>,
     pending_pick: Option<PendingPick>,
     app_snapshot_provider:
-        Option<Arc<dyn Fn(&mut App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+        Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -233,7 +233,7 @@ impl UiDiagnosticsService {
 
     pub fn set_app_snapshot_provider(
         &mut self,
-        provider: Option<Arc<dyn Fn(&mut App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+        provider: Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     ) {
         self.app_snapshot_provider = provider;
     }
@@ -3938,6 +3938,16 @@ pub struct UiWebImeBridgeDebugSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_cursor_area: Option<RectV1>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_cursor_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_commit_text: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recent_events: Vec<String>,
+
     pub beforeinput_seen: u64,
     pub input_seen: u64,
     pub suppressed_input_seen: u64,
@@ -3968,6 +3978,10 @@ impl UiWebImeBridgeDebugSnapshotV1 {
             last_input_data: snapshot.last_input_data.clone(),
             last_key_code: snapshot.last_key_code,
             last_cursor_area: snapshot.last_cursor_area.map(RectV1::from),
+            last_preedit_text: snapshot.last_preedit_text.clone(),
+            last_preedit_cursor_utf16: snapshot.last_preedit_cursor_utf16,
+            last_commit_text: snapshot.last_commit_text.clone(),
+            recent_events: snapshot.recent_events.clone(),
             beforeinput_seen: snapshot.beforeinput_seen,
             input_seen: snapshot.input_seen,
             suppressed_input_seen: snapshot.suppressed_input_seen,

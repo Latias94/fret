@@ -355,7 +355,7 @@ Legend:
   - `composition*` → `ImeEvent`,
   - command-dispatch suppression to avoid double insert.
 - [x] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
-- [x] Add debug-only counters/logging for bridge behavior (snapshot published as a global for harness views).
+- [x] Add debug-only counters/logging for bridge behavior (snapshot published as a global for harness views, including a small recent-event ring buffer).
 - [x] Add a web harness page (or demo mode) dedicated to IME conformance.
 
 Evidence anchors:

@@ -98,6 +98,22 @@ fn debug_truncate(s: &str, max_chars: usize) -> String {
 }
 
 #[cfg(debug_assertions)]
+fn debug_push_recent_event(debug: &Rc<RefCell<WebImeDebugState>>, event: impl AsRef<str>) {
+    const MAX_EVENTS: usize = 24;
+    const MAX_CHARS: usize = 160;
+
+    let mut st = debug.borrow_mut();
+    st.snapshot
+        .recent_events
+        .push(debug_truncate(event.as_ref(), MAX_CHARS));
+    if st.snapshot.recent_events.len() > MAX_EVENTS {
+        let excess = st.snapshot.recent_events.len().saturating_sub(MAX_EVENTS);
+        st.snapshot.recent_events.drain(0..excess);
+    }
+    st.dirty = true;
+}
+
+#[cfg(debug_assertions)]
 fn debug_update_textarea_metrics(
     textarea: &HtmlTextAreaElement,
     debug: &Rc<RefCell<WebImeDebugState>>,
@@ -515,6 +531,8 @@ impl WebImeBridge {
                 }
                 #[cfg(debug_assertions)]
                 debug_update_textarea_metrics(&textarea, &debug);
+                #[cfg(debug_assertions)]
+                debug_push_recent_event(&debug, "compositionstart");
             })
                 as Box<dyn FnMut(WebSysEvent)>);
             let _ = target
@@ -560,12 +578,32 @@ impl WebImeBridge {
                 {
                     let mut st = debug.borrow_mut();
                     st.snapshot.composing = true;
+                    st.snapshot.last_preedit_text = {
+                        let text = textarea.value();
+                        (!text.is_empty()).then(|| debug_truncate(text.as_str(), 64))
+                    };
+                    st.snapshot.last_preedit_cursor_utf16 = textarea
+                        .selection_start()
+                        .ok()
+                        .flatten()
+                        .zip(textarea.selection_end().ok().flatten())
+                        .map(|(s, e)| (s, e));
                     st.snapshot.composition_update_seen =
                         st.snapshot.composition_update_seen.saturating_add(1);
                     st.dirty = true;
                 }
                 #[cfg(debug_assertions)]
                 debug_update_textarea_metrics(&textarea, &debug);
+                #[cfg(debug_assertions)]
+                debug_push_recent_event(
+                    &debug,
+                    format!(
+                        "compositionupdate preedit_chars={} sel_utf16={:?}..{:?}",
+                        textarea.value().chars().count(),
+                        textarea.selection_start().ok().flatten(),
+                        textarea.selection_end().ok().flatten(),
+                    ),
+                );
             })
                 as Box<dyn FnMut(WebSysEvent)>);
             let _ = target
@@ -588,7 +626,8 @@ impl WebImeBridge {
                 let text = textarea.value();
                 textarea.set_value("");
 
-                if let Some(committed) = sanitize_text_input(&text) {
+                let committed = sanitize_text_input(&text);
+                if let Some(committed) = committed.clone() {
                     queue
                         .borrow_mut()
                         .push(Event::Ime(fret_core::ImeEvent::Commit(committed)));
@@ -608,12 +647,22 @@ impl WebImeBridge {
                     let mut st = debug.borrow_mut();
                     st.snapshot.composing = false;
                     st.snapshot.suppress_next_input = true;
+                    st.snapshot.last_commit_text =
+                        committed.as_deref().map(|s| debug_truncate(s, 64));
                     st.snapshot.composition_end_seen =
                         st.snapshot.composition_end_seen.saturating_add(1);
                     st.dirty = true;
                 }
                 #[cfg(debug_assertions)]
                 debug_update_textarea_metrics(&textarea, &debug);
+                #[cfg(debug_assertions)]
+                debug_push_recent_event(
+                    &debug,
+                    format!(
+                        "compositionend commit={:?} suppress_next_input=1",
+                        committed.as_deref()
+                    ),
+                );
             })
                 as Box<dyn FnMut(WebSysEvent)>);
             let _ = target
@@ -661,6 +710,10 @@ impl WebImeBridge {
                     let data = input.data().unwrap_or_default();
                     st.snapshot.last_input_data =
                         (!data.is_empty()).then(|| debug_truncate(&data, 64));
+                    let commit = input.data().unwrap_or_default();
+                    if !commit.is_empty() {
+                        st.snapshot.last_commit_text = Some(debug_truncate(&commit, 64));
+                    }
                     st.dirty = true;
                 }
 
@@ -680,6 +733,15 @@ impl WebImeBridge {
 
                 #[cfg(debug_assertions)]
                 debug_update_textarea_metrics(&textarea, &debug);
+                #[cfg(debug_assertions)]
+                debug_push_recent_event(
+                    &debug,
+                    format!(
+                        "input type={:?} data={:?}",
+                        input.input_type(),
+                        input.data().unwrap_or_default()
+                    ),
+                );
             })
                 as Box<dyn FnMut(WebSysEvent)>);
             let _ = target.add_event_listener_with_callback("input", cb.as_ref().unchecked_ref());
@@ -733,6 +795,16 @@ impl WebImeBridge {
                         (!data.is_empty()).then(|| debug_truncate(&data, 64));
                     st.dirty = true;
                 }
+                #[cfg(debug_assertions)]
+                debug_push_recent_event(
+                    &debug,
+                    format!(
+                        "beforeinput type={:?} composing={} data={:?}",
+                        input_type,
+                        input.is_composing() as u8,
+                        input.data().unwrap_or_default()
+                    ),
+                );
                 if !input_type.starts_with("insert") {
                     return;
                 }
@@ -777,6 +849,8 @@ impl WebImeBridge {
         }
         #[cfg(debug_assertions)]
         debug_update_textarea_metrics(&self.textarea, &self.debug);
+        #[cfg(debug_assertions)]
+        debug_push_recent_event(&self.debug, format!("ime_allow enabled={}", enabled as u8));
 
         if enabled {
             let _ = self.textarea.focus();
@@ -818,6 +892,14 @@ impl WebImeBridge {
         }
         #[cfg(debug_assertions)]
         debug_update_textarea_metrics(&self.textarea, &self.debug);
+        #[cfg(debug_assertions)]
+        debug_push_recent_event(
+            &self.debug,
+            format!(
+                "cursor_area_set x={} y={} w={} h={}",
+                rect.origin.x.0, rect.origin.y.0, rect.size.width.0, rect.size.height.0
+            ),
+        );
         let textarea_el: HtmlElement = self.textarea.clone().unchecked_into();
         let style = textarea_el.style();
         let left_px = rect.origin.x.0.max(0.0).round();

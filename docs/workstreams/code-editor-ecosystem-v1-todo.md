@@ -59,6 +59,8 @@ Legend:
 
 - [x] Counters: last `inputType`, whether suppressed, last composing state.
 - [x] Counters: last caret-rect anchor and whether positioning was attempted.
+- [x] Record a small `recent_events` ring buffer for ordering diagnostics (`beforeinput`/`input`/`composition*`/cursor area updates).
+- [x] Surface `WindowTextInputSnapshotService` + `WindowInputContextService` snapshots in the UI Gallery harness panel for cross-layer debugging.
 
 ### Harness
 

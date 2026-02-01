@@ -153,6 +153,18 @@ pub struct WebImeBridgeDebugSnapshot {
     pub last_key_code: Option<KeyCode>,
     pub last_cursor_area: Option<Rect>,
 
+    /// Truncated preedit text observed during `compositionupdate`.
+    pub last_preedit_text: Option<String>,
+    /// Preedit cursor range in UTF-16 code units (begin, end) as reported by the textarea.
+    pub last_preedit_cursor_utf16: Option<(u32, u32)>,
+    /// Truncated committed text observed during `compositionend` or `input`.
+    pub last_commit_text: Option<String>,
+
+    /// Recent IME-related DOM events (debug-only ring buffer).
+    ///
+    /// Intended to help diagnose ordering differences across browsers/IMEs.
+    pub recent_events: Vec<String>,
+
     pub beforeinput_seen: u64,
     pub input_seen: u64,
     pub suppressed_input_seen: u64,

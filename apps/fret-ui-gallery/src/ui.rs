@@ -3513,6 +3513,44 @@ fn preview_web_ime_harness(
                             )),
                         ];
 
+                        if let Some(snapshot) = cx
+                            .app
+                            .global::<fret_runtime::WindowTextInputSnapshotService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_text_input_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} is_composing={}",
+                                snapshot.focus_is_text_input as u8, snapshot.is_composing as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  text_len_utf16={} selection_utf16={:?} marked_utf16={:?}",
+                                snapshot.text_len_utf16, snapshot.selection_utf16, snapshot.marked_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  ime_cursor_area={:?}",
+                                snapshot.ime_cursor_area
+                            )));
+                        } else {
+                            lines.push(cx.text("window_text_input_snapshot: <unavailable>"));
+                        }
+
+                        if let Some(input_ctx) = cx
+                            .app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_input_context_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} text_boundary_mode={:?}",
+                                input_ctx.focus_is_text_input as u8, input_ctx.text_boundary_mode
+                            )));
+                        } else {
+                            lines.push(cx.text("window_input_context_snapshot: <unavailable>"));
+                        }
+
                         let snapshot = cx
                             .app
                             .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
@@ -3524,6 +3562,15 @@ fn preview_web_ime_harness(
                                 snapshot.enabled as u8,
                                 snapshot.composing as u8,
                                 snapshot.suppress_next_input as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_preedit_text={:?} preedit_cursor_utf16={:?}",
+                                snapshot.last_preedit_text.as_deref(),
+                                snapshot.last_preedit_cursor_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_commit_text={:?}",
+                                snapshot.last_commit_text.as_deref()
                             )));
                             lines.push(cx.text(format!(
                                 "  position_mode={:?} mount_kind={:?} dpr={:?}",
@@ -3567,6 +3614,13 @@ fn preview_web_ime_harness(
                                 snapshot.textarea_scroll_width_px,
                                 snapshot.textarea_scroll_height_px,
                             )));
+
+                            if !snapshot.recent_events.is_empty() {
+                                lines.push(cx.text("  recent_events:"));
+                                for e in snapshot.recent_events.iter().rev().take(10) {
+                                    lines.push(cx.text(format!("    {e}")));
+                                }
+                            }
                         } else {
                             lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
                         }
