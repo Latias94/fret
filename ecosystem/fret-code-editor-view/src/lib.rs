@@ -19,6 +19,139 @@ impl DisplayPoint {
     }
 }
 
+/// A minimal display mapping for v1 editor surfaces.
+///
+/// Today this only supports an optional "wrap after N Unicode scalar columns" mode. This is not a
+/// substitute for pixel-accurate wrapping, but it provides a stable contract surface for:
+///
+/// - caret movement (byte ↔ display point),
+/// - selection geometry,
+/// - future display-map expansion (wrap/fold/inlays).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DisplayMap {
+    wrap_cols: Option<usize>,
+    line_to_first_row: Vec<usize>,
+    row_to_line: Vec<usize>,
+    row_start_col: Vec<usize>,
+}
+
+impl DisplayMap {
+    /// Build a display map from the current buffer state.
+    ///
+    /// `wrap_cols` counts Unicode scalar values within a logical line (newline excluded).
+    /// When `None`, display rows match logical lines.
+    pub fn new(buf: &TextBuffer, wrap_cols: Option<usize>) -> Self {
+        let wrap_cols = wrap_cols.filter(|v| *v > 0);
+
+        let line_count = buf.line_count().max(1);
+        let mut line_to_first_row = Vec::with_capacity(line_count);
+        let mut row_to_line = Vec::new();
+        let mut row_start_col = Vec::new();
+
+        for line in 0..line_count {
+            line_to_first_row.push(row_to_line.len());
+
+            let cols = buf.line_text(line).unwrap_or("").chars().count();
+            let rows_for_line = match wrap_cols {
+                None => 1,
+                Some(wrap) => ((cols.max(1) + wrap - 1) / wrap).max(1),
+            };
+
+            for row_in_line in 0..rows_for_line {
+                row_to_line.push(line);
+                row_start_col.push(row_in_line * wrap_cols.unwrap_or(usize::MAX));
+            }
+        }
+
+        if row_to_line.is_empty() {
+            row_to_line.push(0);
+            row_start_col.push(0);
+        }
+
+        Self {
+            wrap_cols,
+            line_to_first_row,
+            row_to_line,
+            row_start_col,
+        }
+    }
+
+    pub fn row_count(&self) -> usize {
+        self.row_to_line.len().max(1)
+    }
+
+    pub fn wrap_cols(&self) -> Option<usize> {
+        self.wrap_cols
+    }
+
+    /// Map a UTF-8 byte index in the buffer to a wrapped display coordinate.
+    pub fn byte_to_display_point(&self, buf: &TextBuffer, byte: usize) -> DisplayPoint {
+        let pt = byte_to_display_point(buf, byte);
+        let Some(wrap) = self.wrap_cols else {
+            return pt;
+        };
+
+        let line = pt.row.min(self.line_to_first_row.len().saturating_sub(1));
+        let line_first = *self.line_to_first_row.get(line).unwrap_or(&0);
+        let line_last_excl = self
+            .line_to_first_row
+            .get(line + 1)
+            .copied()
+            .unwrap_or_else(|| self.row_to_line.len());
+        let rows_for_line = line_last_excl.saturating_sub(line_first).max(1);
+
+        let row_in_line = (pt.col / wrap).min(rows_for_line.saturating_sub(1));
+        let col_in_row = pt.col.saturating_sub(row_in_line * wrap);
+        DisplayPoint::new(line_first + row_in_line, col_in_row)
+    }
+
+    /// Map a wrapped display coordinate to a UTF-8 byte index in the buffer.
+    ///
+    /// If the point is out of bounds, this clamps to the nearest representable position.
+    pub fn display_point_to_byte(&self, buf: &TextBuffer, mut pt: DisplayPoint) -> usize {
+        let Some(_wrap) = self.wrap_cols else {
+            return display_point_to_byte(buf, pt);
+        };
+
+        if self.row_to_line.is_empty() {
+            return 0;
+        }
+        pt.row = pt.row.min(self.row_to_line.len().saturating_sub(1));
+        let line = self.row_to_line[pt.row];
+        let Some(range) = buf.line_byte_range(line) else {
+            return buf.len_bytes();
+        };
+        let start = range.start.min(buf.len_bytes());
+        let end = range.end.min(buf.len_bytes());
+        if start >= end {
+            return start;
+        }
+
+        let Some(line_text) = buf.text().get(start..end) else {
+            return start;
+        };
+
+        let row_start_col = self.row_start_col[pt.row];
+        let col_in_line = row_start_col.saturating_add(pt.col);
+
+        let mut remaining = col_in_line;
+        let mut offset = start;
+        for ch in line_text.chars() {
+            if remaining == 0 {
+                break;
+            }
+            offset = offset.saturating_add(ch.len_utf8());
+            remaining -= 1;
+        }
+
+        // Clamp to the logical line end (excluding the trailing newline).
+        offset.min(end).min(display_point_to_byte(
+            buf,
+            DisplayPoint::new(line, usize::MAX),
+        ))
+    }
+}
+
 /// Map a UTF-8 byte index in the buffer to a `(row, col)` display coordinate.
 pub fn byte_to_display_point(buf: &TextBuffer, mut byte: usize) -> DisplayPoint {
     byte = byte.min(buf.len_bytes());
@@ -371,5 +504,64 @@ mod tests {
             select_word_range("a_b c", 1, TextBoundaryMode::Identifier),
             (0, "a_b".len())
         );
+    }
+}
+
+#[cfg(test)]
+mod display_map_tests {
+    use super::*;
+    use fret_code_editor_buffer::{DocId, TextBuffer};
+
+    #[test]
+    fn display_map_without_wrap_matches_logical_lines() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "ab\nc".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, None);
+        assert_eq!(map.row_count(), 2);
+
+        assert_eq!(map.byte_to_display_point(&buf, 0), DisplayPoint::new(0, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 2), DisplayPoint::new(0, 2));
+        assert_eq!(map.byte_to_display_point(&buf, 3), DisplayPoint::new(1, 0));
+        assert_eq!(
+            map.display_point_to_byte(&buf, DisplayPoint::new(1, 1)),
+            buf.len_bytes()
+        );
+    }
+
+    #[test]
+    fn display_map_wrap_cols_splits_rows() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcd\nef".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, Some(2));
+        assert_eq!(map.row_count(), 3);
+
+        // "abcd" is split into 2 display rows: "ab" and "cd".
+        assert_eq!(map.byte_to_display_point(&buf, 0), DisplayPoint::new(0, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 2), DisplayPoint::new(1, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 4), DisplayPoint::new(1, 2));
+
+        // Second logical line "ef" stays a single row.
+        assert_eq!(map.byte_to_display_point(&buf, 5), DisplayPoint::new(2, 0));
+        assert_eq!(map.byte_to_display_point(&buf, 7), DisplayPoint::new(2, 2));
+    }
+
+    #[test]
+    fn display_map_wrapped_roundtrips_char_boundaries() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "a馃槂bc".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, Some(2));
+
+        let bytes = [
+            0usize,
+            1,
+            1 + "馃槂".len(),
+            1 + "馃槂".len() + 1,
+            buf.len_bytes(),
+        ];
+        for byte in bytes {
+            let pt = map.byte_to_display_point(&buf, byte);
+            let back = map.display_point_to_byte(&buf, pt);
+            assert_eq!(back, byte);
+        }
     }
 }
