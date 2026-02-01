@@ -8713,6 +8713,10 @@ fn preview_table_retained_torture(
     let variable_height = std::env::var_os("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
 
     #[derive(Clone)]
     struct TableRow {
@@ -8811,6 +8815,9 @@ fn preview_table_retained_torture(
                     let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
                     props.overscan = 10;
                     props.row_height = Some(Px(28.0));
+                    if keep_alive > 0 {
+                        props.keep_alive = Some(keep_alive);
+                    }
                     props.row_measure_mode = if variable_height {
                         fret_ui_kit::declarative::table::TableRowMeasureMode::Measured
                     } else {
