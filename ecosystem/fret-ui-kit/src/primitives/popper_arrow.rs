@@ -9,13 +9,14 @@
 //! In Fret, placement math lives in `crate::primitives::popper`, while this module provides a
 //! small renderer-agnostic element builder for the common "diamond" arrow shape.
 
-use fret_core::{Color, Corners, Edges, Point, Px, Transform2D};
+use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, Transform2D};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SizeStyle, VisualTransformProps,
+    SemanticsProps, SizeStyle, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{AnchoredPanelLayout, Side};
 use fret_ui::{ElementContext, UiHost};
+use std::sync::Arc;
 
 use crate::primitives::popper;
 
@@ -60,6 +61,7 @@ pub fn diamond_arrow_element<H: UiHost>(
         style,
         Px(0.0),
         Px(0.0),
+        None,
     )
 }
 
@@ -71,6 +73,7 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
     style: DiamondArrowStyle,
     corner_radius: Px,
     outset: Px,
+    test_id: Option<Arc<str>>,
 ) -> Option<AnyElement> {
     if popper::should_hide_arrow(layout) {
         return None;
@@ -124,9 +127,10 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
     let transform = Transform2D::rotation_about_degrees(45.0, center);
 
     let border_color = style.border;
+    let test_id = test_id.clone();
     Some(
         cx.visual_transform_props(VisualTransformProps { layout, transform }, move |cx| {
-            vec![cx.container(
+            let container = cx.container(
                 ContainerProps {
                     layout: LayoutStyle {
                         size: SizeStyle {
@@ -148,7 +152,28 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
                     snap_to_device_pixels: false,
                 },
                 |_cx| Vec::new(),
-            )]
+            );
+
+            if let Some(test_id) = &test_id {
+                vec![cx.semantics(
+                    SemanticsProps {
+                        role: SemanticsRole::Generic,
+                        test_id: Some(test_id.clone()),
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |_cx| vec![container],
+                )]
+            } else {
+                vec![container]
+            }
         }),
     )
 }
