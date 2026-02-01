@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "card" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-card" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-card" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 30 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-card-click-latency-first" },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "button" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-button" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-button" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "card" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-card" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-card" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 30 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-card-click-latency-second" }
+  ]
+}
+

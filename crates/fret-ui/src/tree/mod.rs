@@ -108,6 +108,21 @@ struct ViewCacheFlags {
     layout_definite: bool,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct NodeMeasureCacheKey {
+    known_w_bits: Option<u32>,
+    known_h_bits: Option<u32>,
+    avail_w: (u8, u32),
+    avail_h: (u8, u32),
+    scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct NodeMeasureCache {
+    key: NodeMeasureCacheKey,
+    size: Size,
+}
+
 struct Node<H: UiHost> {
     widget: Option<Box<dyn Widget<H>>>,
     element: Option<GlobalElementId>,
@@ -115,6 +130,7 @@ struct Node<H: UiHost> {
     children: Vec<NodeId>,
     bounds: Rect,
     measured_size: Size,
+    measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
     interaction_cache: Option<prepaint::InteractionCacheEntry>,
@@ -191,6 +207,7 @@ impl<H: UiHost> Node<H> {
             children: Vec::new(),
             bounds: Rect::default(),
             measured_size: Size::default(),
+            measure_cache: None,
             invalidation: InvalidationFlags {
                 layout: true,
                 paint: true,
@@ -219,6 +236,12 @@ impl<H: UiHost> Node<H> {
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
     pub layout_time: Duration,
+    pub layout_roots_time: Duration,
+    pub layout_barrier_relayouts_time: Duration,
+    pub layout_view_cache_time: Duration,
+    pub layout_semantics_refresh_time: Duration,
+    pub layout_focus_repair_time: Duration,
+    pub layout_deferred_cleanup_time: Duration,
     pub prepaint_time: Duration,
     pub paint_time: Duration,
     pub layout_nodes_visited: u32,
@@ -806,6 +829,34 @@ pub struct UiDebugLayoutEngineSolve {
     pub top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
 }
 
+#[derive(Debug, Clone)]
+pub struct UiDebugLayoutHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugWidgetMeasureHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugLayoutStackFrame {
+    child_inclusive_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugWidgetMeasureStackFrame {
+    child_inclusive_time: Duration,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugCacheRootReuseReason {
     FirstMount,
@@ -1104,6 +1155,7 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_layout: GlobalObservationIndex,
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
+    measure_cache_this_frame: HashMap<MeasureStackKey, Size>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     layout_invalidations_count: u32,
@@ -1118,6 +1170,10 @@ pub struct UiTree<H: UiHost> {
     debug_view_cache_contained_relayout_roots: Vec<NodeId>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
+    debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
+    debug_layout_stack: Vec<DebugLayoutStackFrame>,
+    debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
+    debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
     debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
@@ -1169,7 +1225,273 @@ pub struct UiTree<H: UiHost> {
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
+    layout_node_profile: Option<LayoutNodeProfileState>,
+    measure_node_profile: Option<MeasureNodeProfileState>,
     deferred_cleanup: Vec<Box<dyn Widget<H>>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutNodeProfileEntry {
+    node: NodeId,
+    pass_kind: crate::layout_pass::LayoutPassKind,
+    bounds: Rect,
+    elapsed_total: Duration,
+    elapsed_self: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutNodeProfileConfig {
+    top_n: usize,
+    min_elapsed: Duration,
+}
+
+impl LayoutNodeProfileConfig {
+    fn from_env() -> Option<Self> {
+        let enabled = std::env::var("FRET_LAYOUT_NODE_PROFILE")
+            .ok()
+            .is_some_and(|v| v == "1");
+        if !enabled {
+            return None;
+        }
+
+        let top_n = std::env::var("FRET_LAYOUT_NODE_PROFILE_TOP")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(16)
+            .max(1)
+            .min(128);
+
+        let min_us = std::env::var("FRET_LAYOUT_NODE_PROFILE_MIN_US")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(500);
+
+        Some(Self {
+            top_n,
+            min_elapsed: Duration::from_micros(min_us),
+        })
+    }
+}
+
+#[derive(Debug)]
+struct LayoutNodeProfileState {
+    config: LayoutNodeProfileConfig,
+    frame_id: FrameId,
+    entries: Vec<LayoutNodeProfileEntry>,
+    stack: Vec<LayoutNodeProfileStackEntry>,
+    total_self_time: Duration,
+    nodes_profiled: u64,
+}
+
+impl LayoutNodeProfileState {
+    fn new(config: LayoutNodeProfileConfig, frame_id: FrameId) -> Self {
+        Self {
+            config,
+            frame_id,
+            entries: Vec::new(),
+            stack: Vec::new(),
+            total_self_time: Duration::default(),
+            nodes_profiled: 0,
+        }
+    }
+
+    fn enter(&mut self, node: NodeId, pass_kind: crate::layout_pass::LayoutPassKind, bounds: Rect) {
+        self.stack.push(LayoutNodeProfileStackEntry {
+            node,
+            pass_kind,
+            bounds,
+            started: std::time::Instant::now(),
+            child_time: Duration::default(),
+        });
+    }
+
+    fn exit(&mut self, node: NodeId) {
+        let Some(entry) = self.stack.pop() else {
+            return;
+        };
+        if entry.node != node {
+            // Best-effort: avoid poisoning the layout pass if the stack gets out of sync.
+            self.stack.clear();
+            return;
+        }
+
+        let elapsed_total = entry.started.elapsed();
+        let elapsed_self = elapsed_total.saturating_sub(entry.child_time);
+        self.total_self_time = self.total_self_time.saturating_add(elapsed_self);
+        self.nodes_profiled = self.nodes_profiled.saturating_add(1);
+
+        if let Some(parent) = self.stack.last_mut() {
+            parent.child_time = parent.child_time.saturating_add(elapsed_total);
+        }
+
+        self.record(LayoutNodeProfileEntry {
+            node: entry.node,
+            pass_kind: entry.pass_kind,
+            bounds: entry.bounds,
+            elapsed_total,
+            elapsed_self,
+        });
+    }
+
+    fn record(&mut self, entry: LayoutNodeProfileEntry) {
+        if entry.elapsed_self < self.config.min_elapsed {
+            return;
+        }
+
+        // Keep a stable, small "top N" list; N is tiny (default 16), so O(N) insertion is fine.
+        let mut inserted = false;
+        for i in 0..self.entries.len() {
+            if entry.elapsed_self > self.entries[i].elapsed_self {
+                self.entries.insert(i, entry);
+                inserted = true;
+                break;
+            }
+        }
+        if !inserted {
+            self.entries.push(entry);
+        }
+        if self.entries.len() > self.config.top_n {
+            self.entries.truncate(self.config.top_n);
+        }
+    }
+}
+
+#[derive(Debug)]
+struct LayoutNodeProfileStackEntry {
+    node: NodeId,
+    pass_kind: crate::layout_pass::LayoutPassKind,
+    bounds: Rect,
+    started: std::time::Instant,
+    child_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MeasureNodeProfileEntry {
+    node: NodeId,
+    constraints: crate::layout_constraints::LayoutConstraints,
+    elapsed_total: Duration,
+    elapsed_self: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MeasureNodeProfileConfig {
+    top_n: usize,
+    min_elapsed: Duration,
+}
+
+impl MeasureNodeProfileConfig {
+    fn from_env() -> Option<Self> {
+        let enabled = std::env::var("FRET_MEASURE_NODE_PROFILE")
+            .ok()
+            .is_some_and(|v| v == "1");
+        if !enabled {
+            return None;
+        }
+
+        let top_n = std::env::var("FRET_MEASURE_NODE_PROFILE_TOP")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(16)
+            .max(1)
+            .min(128);
+
+        let min_us = std::env::var("FRET_MEASURE_NODE_PROFILE_MIN_US")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(500);
+
+        Some(Self {
+            top_n,
+            min_elapsed: Duration::from_micros(min_us),
+        })
+    }
+}
+
+#[derive(Debug)]
+struct MeasureNodeProfileState {
+    config: MeasureNodeProfileConfig,
+    frame_id: FrameId,
+    entries: Vec<MeasureNodeProfileEntry>,
+    stack: Vec<MeasureNodeProfileStackEntry>,
+    total_self_time: Duration,
+    nodes_profiled: u64,
+}
+
+impl MeasureNodeProfileState {
+    fn new(config: MeasureNodeProfileConfig, frame_id: FrameId) -> Self {
+        Self {
+            config,
+            frame_id,
+            entries: Vec::new(),
+            stack: Vec::new(),
+            total_self_time: Duration::default(),
+            nodes_profiled: 0,
+        }
+    }
+
+    fn enter(&mut self, node: NodeId, constraints: crate::layout_constraints::LayoutConstraints) {
+        self.stack.push(MeasureNodeProfileStackEntry {
+            node,
+            constraints,
+            started: std::time::Instant::now(),
+            child_time: Duration::default(),
+        });
+    }
+
+    fn exit(&mut self, node: NodeId) {
+        let Some(entry) = self.stack.pop() else {
+            return;
+        };
+        if entry.node != node {
+            self.stack.clear();
+            return;
+        }
+
+        let elapsed_total = entry.started.elapsed();
+        let elapsed_self = elapsed_total.saturating_sub(entry.child_time);
+        self.total_self_time = self.total_self_time.saturating_add(elapsed_self);
+        self.nodes_profiled = self.nodes_profiled.saturating_add(1);
+
+        if let Some(parent) = self.stack.last_mut() {
+            parent.child_time = parent.child_time.saturating_add(elapsed_total);
+        }
+
+        self.record(MeasureNodeProfileEntry {
+            node: entry.node,
+            constraints: entry.constraints,
+            elapsed_total,
+            elapsed_self,
+        });
+    }
+
+    fn record(&mut self, entry: MeasureNodeProfileEntry) {
+        if entry.elapsed_total < self.config.min_elapsed {
+            return;
+        }
+
+        let mut inserted = false;
+        for i in 0..self.entries.len() {
+            if entry.elapsed_total > self.entries[i].elapsed_total {
+                self.entries.insert(i, entry);
+                inserted = true;
+                break;
+            }
+        }
+        if !inserted {
+            self.entries.push(entry);
+        }
+        if self.entries.len() > self.config.top_n {
+            self.entries.truncate(self.config.top_n);
+        }
+    }
+}
+
+#[derive(Debug)]
+struct MeasureNodeProfileStackEntry {
+    node: NodeId,
+    constraints: crate::layout_constraints::LayoutConstraints,
+    started: std::time::Instant,
+    child_time: Duration,
 }
 
 #[derive(Clone)]
@@ -1207,6 +1529,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
+            measure_cache_this_frame: HashMap::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             layout_invalidations_count: 0,
@@ -1220,6 +1543,10 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
             debug_layout_engine_solves: Vec::new(),
+            debug_layout_hotspots: Vec::new(),
+            debug_layout_stack: Vec::new(),
+            debug_widget_measure_hotspots: Vec::new(),
+            debug_widget_measure_stack: Vec::new(),
             debug_measure_children: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
             debug_model_change_hotspots: Vec::new(),
@@ -1265,6 +1592,8 @@ impl<H: UiHost> Default for UiTree<H> {
             propagation_visited: HashMap::new(),
             semantics: None,
             semantics_requested: false,
+            layout_node_profile: None,
+            measure_node_profile: None,
             deferred_cleanup: Vec::new(),
         }
     }
@@ -1303,7 +1632,7 @@ impl MeasureReentrancyDiagnostics {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct MeasureStackKey {
     node: NodeId,
     known_w_bits: Option<u32>,
@@ -1398,6 +1727,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.debug_stats.frame_id = frame_id;
+        self.debug_stats.layout_roots_time = Duration::default();
+        self.debug_stats.layout_barrier_relayouts_time = Duration::default();
+        self.debug_stats.layout_view_cache_time = Duration::default();
+        self.debug_stats.layout_semantics_refresh_time = Duration::default();
+        self.debug_stats.layout_focus_repair_time = Duration::default();
+        self.debug_stats.layout_deferred_cleanup_time = Duration::default();
         self.debug_stats.model_change_invalidation_roots = 0;
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;
@@ -1440,6 +1775,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_view_cache_contained_relayout_roots.clear();
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
+        self.debug_layout_hotspots.clear();
+        self.debug_layout_stack.clear();
+        self.debug_widget_measure_hotspots.clear();
+        self.debug_widget_measure_stack.clear();
         self.debug_measure_children.clear();
         self.debug_invalidation_walks.clear();
         self.debug_model_change_hotspots.clear();
@@ -1858,6 +2197,20 @@ impl<H: UiHost> UiTree<H> {
         self.debug_layout_engine_solves.as_slice()
     }
 
+    pub fn debug_layout_hotspots(&self) -> &[UiDebugLayoutHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_hotspots.as_slice()
+    }
+
+    pub fn debug_widget_measure_hotspots(&self) -> &[UiDebugWidgetMeasureHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_widget_measure_hotspots.as_slice()
+    }
+
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
     }
@@ -2101,6 +2454,17 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn debug_enabled(&self) -> bool {
         self.debug_enabled
+    }
+
+    pub(crate) fn node_layout_invalidated(&self, node: NodeId) -> bool {
+        self.nodes
+            .get(node)
+            .map(|n| n.invalidation.layout)
+            .unwrap_or(false)
+    }
+
+    pub(crate) fn node_measured_size(&self, node: NodeId) -> Option<Size> {
+        self.nodes.get(node).map(|n| n.measured_size)
     }
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
@@ -5177,6 +5541,14 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        let profile_semantics =
+            std::env::var_os("FRET_SEMANTICS_PROFILE").is_some_and(|v| !v.is_empty() && v != "0");
+        let profile_started = profile_semantics.then(Instant::now);
+        let mut t_element_id_map: Option<Duration> = None;
+        let mut t_window_frame_children: Option<Duration> = None;
+        let mut t_traversal: Option<Duration> = None;
+        let mut t_relations: Option<Duration> = None;
+
         let base_root = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root));
@@ -5190,19 +5562,32 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let element_id_map: HashMap<u64, NodeId> =
-            crate::declarative::frame::element_id_map_for_window(app, window);
+        let element_id_map = {
+            let started = profile_semantics.then(Instant::now);
+            let out = crate::declarative::frame::element_id_map_for_window(app, window);
+            if let Some(started) = started {
+                t_element_id_map = Some(started.elapsed());
+            }
+            out
+        };
 
         // View-cache reuse can legitimately skip re-setting `UiTree` child edges for cached
         // subtrees. `WindowFrame` retains the authoritative element-tree edges, so semantics
         // traversal should treat the union as the effective child list (mirrors GC reachability
         // bookkeeping). Only pay the cost when view-cache reuse can occur.
-        let window_frame_children: HashMap<NodeId, Vec<NodeId>> = if self.view_cache_active() {
-            crate::declarative::with_window_frame(app, window, |window_frame| {
-                window_frame.map(|w| w.children.clone()).unwrap_or_default()
-            })
-        } else {
-            HashMap::new()
+        let window_frame_children: HashMap<NodeId, Arc<[NodeId]>> = {
+            let started = profile_semantics.then(Instant::now);
+            let out = if self.view_cache_active() {
+                crate::declarative::with_window_frame(app, window, |window_frame| {
+                    window_frame.map(|w| w.children.clone()).unwrap_or_default()
+                })
+            } else {
+                HashMap::new()
+            };
+            if let Some(started) = started {
+                t_window_frame_children = Some(started.elapsed());
+            }
+            out
         };
 
         let mut barrier_index: Option<usize> = None;
@@ -5239,6 +5624,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut nodes: Vec<SemanticsNode> = Vec::with_capacity(self.nodes.len());
 
+        let traversal_started = profile_semantics.then(Instant::now);
         for root in roots.iter().map(|r| r.root) {
             let mut visited: HashSet<NodeId> = HashSet::new();
             // Stack entries carry the transform that maps this node's local bounds into
@@ -5299,10 +5685,12 @@ impl<H: UiHost> UiTree<H> {
                     let ui_children = node.children.clone();
                     let children = match window_frame_children.get(&id) {
                         None => ui_children,
-                        Some(frame_children) if ui_children.is_empty() => frame_children.clone(),
+                        Some(frame_children) if ui_children.is_empty() => {
+                            frame_children.as_ref().to_vec()
+                        }
                         Some(frame_children) => {
                             let mut out = ui_children;
-                            for &child in frame_children {
+                            for &child in frame_children.iter() {
                                 if !out.contains(&child) {
                                     out.push(child);
                                 }
@@ -5371,7 +5759,7 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         node: id,
                         window: Some(window),
-                        element_id_map: Some(&element_id_map),
+                        element_id_map: Some(element_id_map.as_ref()),
                         bounds,
                         children: children.as_slice(),
                         focus,
@@ -5435,11 +5823,15 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
+        if let Some(started) = traversal_started {
+            t_traversal = Some(started.elapsed());
+        }
 
         // Normalize relation edges: for some composite widgets, authoring only sets `labelled_by`
         // (e.g. TabPanel -> Tab) but the platform-facing semantics want the controller to also
         // advertise `controls` (e.g. Tab -> TabPanel). We derive that edge for the subset of
         // role pairs where this bidirectional link is expected.
+        let relations_started = profile_semantics.then(Instant::now);
         let mut index_by_id: HashMap<NodeId, usize> = HashMap::with_capacity(nodes.len());
         for (idx, node) in nodes.iter().enumerate() {
             index_by_id.insert(node.id, idx);
@@ -5470,7 +5862,11 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
+        if let Some(started) = relations_started {
+            t_relations = Some(started.elapsed());
+        }
 
+        let nodes_len = nodes.len();
         self.semantics = Some(Arc::new(SemanticsSnapshot {
             window,
             roots,
@@ -5483,6 +5879,21 @@ impl<H: UiHost> UiTree<H> {
 
         if let Some(snapshot) = self.semantics.as_deref() {
             semantics::validate_semantics_if_enabled(snapshot);
+        }
+
+        if let Some(started) = profile_started {
+            let total = started.elapsed();
+            tracing::info!(
+                window = ?window,
+                view_cache_active = self.view_cache_active(),
+                nodes = nodes_len,
+                total_ms = total.as_millis(),
+                element_id_map_ms = t_element_id_map.map(|d| d.as_millis()),
+                window_frame_children_ms = t_window_frame_children.map(|d| d.as_millis()),
+                traversal_ms = t_traversal.map(|d| d.as_millis()),
+                relations_ms = t_relations.map(|d| d.as_millis()),
+                "semantics snapshot built"
+            );
         }
     }
 

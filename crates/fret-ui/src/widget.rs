@@ -903,6 +903,10 @@ pub trait Widget<H: UiHost> {
     /// (ADR 0069).
     fn event_observer(&mut self, _cx: &mut ObserverCx<'_, H>, _event: &Event) {}
 
+    fn debug_type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
+
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false

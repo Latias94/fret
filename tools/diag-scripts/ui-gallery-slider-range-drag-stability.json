@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "slider" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-slider" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-slider" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-0" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-range-range" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
+      "delta_x": 240.0,
+      "delta_y": 0.0,
+      "steps": 16
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-0" },
+        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
+        "eps_px": 0.5
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
+        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
+        "eps_px": 0.5
+      }
+    },
+
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
+      "delta_x": -240.0,
+      "delta_y": 0.0,
+      "steps": 16
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-0" },
+        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
+        "eps_px": 0.5
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping_x",
+        "a": { "kind": "test_id", "id": "ui-gallery-slider-range-thumb-1" },
+        "b": { "kind": "test_id", "id": "ui-gallery-slider-range-range" },
+        "eps_px": 0.5
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-slider-range-drag-stability" }
+  ]
+}

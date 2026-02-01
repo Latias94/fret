@@ -40,6 +40,7 @@
       },
       "timeout_frames": 60
     },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-wheel-scroll-before" },
     {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-select-item-apple" }
@@ -62,6 +63,7 @@
       "delta_y": 120.0
     },
     { "type": "wait_frames", "n": 5 },
-    { "type": "capture_bundle", "label": "ui-gallery-select-wheel-scroll" }
+    { "type": "capture_screenshot", "label": "ui-gallery-select-wheel-scroll-after" },
+    { "type": "capture_bundle", "label": "ui-gallery-select-wheel-scroll-screenshots" }
   ]
 }

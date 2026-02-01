@@ -2116,7 +2116,7 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
             &mut self.parley_shaper,
             TextInputRef::plain(text, style),
             constraints,
@@ -2164,7 +2164,7 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
             &mut self.parley_shaper,
             TextInputRef::Attributed {
                 text: rich.text.as_ref(),

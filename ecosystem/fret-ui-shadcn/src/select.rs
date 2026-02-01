@@ -2,6 +2,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
+use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
@@ -63,10 +64,12 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
+    predicted_has_scroll: bool,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
+    consume_pending_active_scroll_into_view: impl Fn() -> bool + Clone + 'static,
     should_align_active_to_top: impl Fn() -> bool + Clone + 'static,
     on_aligned_active_to_top: impl Fn() + Clone + 'static,
     set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
@@ -110,7 +113,7 @@ where
             // Guard against fractional max offsets (layout rounding) causing scroll affordances to
             // appear when content visually fits.
             let scroll_epsilon = Px(0.5);
-            let has_scroll = max.y.0 > scroll_epsilon.0;
+            let has_scroll = predicted_has_scroll || max.y.0 > scroll_epsilon.0;
             let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
             // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
             let show_down = has_scroll && offset.y.0.ceil() < max.y.0;
@@ -132,7 +135,8 @@ where
                                  test_id: &'static str,
                                  dir: f32,
                                  visible: bool| {
-                let handle = handle.clone();
+                let handle_for_pressable = handle.clone();
+                let handle_for_wheel = handle.clone();
                 let theme = theme.clone();
                 let pressable = cx.pressable(
                     PressableProps {
@@ -152,6 +156,7 @@ where
                         ..Default::default()
                     },
                     move |cx, _st| {
+                        let handle = handle_for_pressable.clone();
                         let on_scroll = Arc::new(move |host: &mut dyn fret_ui::action::UiActionHost,
                                                   action_cx: ActionCx| {
                             let prev = handle.offset();
@@ -232,6 +237,23 @@ where
                     },
                 )
                 ;
+
+                // In the DOM, wheel events scroll the nearest scrollable ancestor even if the
+                // pointer is over non-scrollable affordances (like Radix's scroll buttons).
+                // Our buttons are siblings of the scroll viewport, so explicitly forward wheel
+                // scrolling to the same handle to avoid "stuck" scrolling when the pointer lands
+                // over the button strip.
+                let pressable = cx.pointer_region(PointerRegionProps::default(), move |cx| {
+                    cx.pointer_region_on_wheel(Arc::new(move |host, action_cx, wheel| {
+                        let prev = handle_for_wheel.offset();
+                        let next = Point::new(prev.x, Px(prev.y.0 - wheel.delta.y.0));
+                        handle_for_wheel.set_offset(next);
+                        host.invalidate(Invalidation::HitTestOnly);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }));
+                    vec![pressable]
+                });
 
                 let gated = cx.interactivity_gate(true, visible, |_cx| vec![pressable]);
                 cx.opacity(if visible { 1.0 } else { 0.0 }, |_cx| vec![gated])
@@ -349,12 +371,17 @@ where
                             }
                             on_focused_selected_item();
                         } else {
-                            let _ = active_desc::scroll_active_element_into_view_y(
-                                cx,
-                                &handle_for_stack,
-                                scroll.id,
-                                active_element,
-                            );
+                            // Match Radix Select: only keep the active option in view when the
+                            // active row changes via keyboard/typeahead. Do not continuously
+                            // "chase" the active row during wheel scrolling.
+                            if consume_pending_active_scroll_into_view() {
+                                let _ = active_desc::scroll_active_element_into_view_y(
+                                    cx,
+                                    &handle_for_stack,
+                                    scroll.id,
+                                    active_element,
+                                );
+                            }
                         }
                     }
 
@@ -1089,6 +1116,7 @@ fn select_impl<H: UiHost>(
             did_item_aligned_focus_scroll: bool,
             item_aligned_scroll_up_visible: bool,
             pending_active_align_top_scroll: bool,
+            pending_active_scroll_into_view: bool,
         }
 
         impl SelectTriggerKeyState {
@@ -1116,6 +1144,7 @@ fn select_impl<H: UiHost>(
                     did_item_aligned_focus_scroll: false,
                     item_aligned_scroll_up_visible: false,
                     pending_active_align_top_scroll: false,
+                    pending_active_scroll_into_view: false,
                 }
             }
         }
@@ -1910,7 +1939,8 @@ fn select_impl<H: UiHost>(
                                                 let mut state = state_for_key
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
-                                                state.content.handle_key_down_when_open(
+                                                let before_active = state.content.active_row();
+                                                let handled = state.content.handle_key_down_when_open(
                                                     host,
                                                     action_cx.window,
                                                     &open_for_key,
@@ -1921,7 +1951,12 @@ fn select_impl<H: UiHost>(
                                                     it.key,
                                                     it.repeat,
                                                     loop_navigation_for_key,
-                                                )
+                                                );
+                                                let after_active = state.content.active_row();
+                                                if handled && before_active != after_active {
+                                                    state.pending_active_scroll_into_view = true;
+                                                }
+                                                handled
                                             }),
                                         );
 
@@ -1935,15 +1970,32 @@ fn select_impl<H: UiHost>(
                                             trigger_state_for_overlay_in_content.clone();
                                         let state_for_focused_selected_item =
                                             trigger_state_for_overlay_in_content.clone();
+                                        let state_for_consume_active_scroll_into_view =
+                                            trigger_state_for_overlay_in_content.clone();
 
                                         let scroll = select_scroll_with_buttons(
                                             cx,
                                             theme_for_overlay.clone(),
                                             item_h,
+                                            item_len > 0
+                                                && Px(item_h.0 * item_len as f32).0
+                                                    > desired_content_h.0 + 0.5,
                                             scroll_handle,
                                             initial_scroll_to_y,
                                             viewport_id_out,
                                             active_element_id_out,
+                                            move || {
+                                                let mut state =
+                                                    state_for_consume_active_scroll_into_view
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                if state.pending_active_scroll_into_view {
+                                                    state.pending_active_scroll_into_view = false;
+                                                    true
+                                                } else {
+                                                    false
+                                                }
+                                            },
                                             move || {
                                                 let state = state_for_align_check
                                                     .lock()
@@ -2366,32 +2418,25 @@ fn select_impl<H: UiHost>(
 
                                                                                             // Indicator slot matches upstream: absolute at the end, but reserve `pr-8`.
                                                                                             let indicator_size = Px(14.0);
-                                                                                            let indicator_top = Px(
-                                                                                                ((item_h.0 - indicator_size.0)
-                                                                                                    * 0.5)
-                                                                                                    .max(0.0),
-                                                                                            );
                                                                                                  let indicator = cx.container(
                                                                                                      ContainerProps {
                                                                                                          layout: LayoutStyle {
                                                                                                              position: PositionStyle::Absolute,
                                                                                                              inset: InsetStyle {
-                                                                                                                 top: Some(indicator_top),
-                                                                                                                 right: Some(Px(8.0)),
-                                                                                                                 bottom: None,
-                                                                                                                 left: None,
-                                                                                                             },
-                                                                                                             size: SizeStyle {
-                                                                                                                 width: Length::Px(
-                                                                                                                     indicator_size,
-                                                                                                                 ),
-                                                                                                                 height: Length::Px(
-                                                                                                                     indicator_size,
-                                                                                                                 ),
-                                                                                                                 ..Default::default()
-                                                                                                             },
-                                                                                                             ..Default::default()
-                                                                                                         },
+                                                                                                                  top: Some(Px(0.0)),
+                                                                                                                  right: Some(Px(8.0)),
+                                                                                                                  bottom: Some(Px(0.0)),
+                                                                                                                  left: None,
+                                                                                                              },
+                                                                                                              size: SizeStyle {
+                                                                                                                  width: Length::Px(
+                                                                                                                      indicator_size,
+                                                                                                                  ),
+                                                                                                                  height: Length::Fill,
+                                                                                                                  ..Default::default()
+                                                                                                              },
+                                                                                                              ..Default::default()
+                                                                                                          },
                                                                                                          padding: Edges::all(Px(0.0)),
                                                                                                          background: None,
                                                                                                          shadow: None,
@@ -2547,6 +2592,7 @@ fn select_impl<H: UiHost>(
                                 state.item_aligned_scroll_up_visible = false;
                                 state.last_item_aligned_scroll_to_y = None;
                                 state.item_aligned_user_scrolled = false;
+                                state.pending_active_scroll_into_view = false;
                             }
                         }
 

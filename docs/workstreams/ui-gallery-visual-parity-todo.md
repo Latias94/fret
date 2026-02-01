@@ -20,14 +20,15 @@ Tracking format:
 - [x] VP-ovl-010 Stabilize Select item-aligned placement under wheel scroll (prevent viewport collapse/jitter).
   - Repro: `tools/diag-scripts/ui-gallery-select-wheel-scroll.json` (use `FRET_UI_GALLERY_START_PAGE=select`)
   - Evidence: regression test + fix landed in commit `e9cc45b`.
-- [ ] VP-ovl-020 Add a UI Gallery script that repeats tooltip hover enter/leave N times and asserts arrow stays attached.
+- [x] VP-ovl-020 Add a UI Gallery script that repeats tooltip hover enter/leave N times and asserts arrow stays attached.
   - Pre-req: use `Tooltip::arrow_test_id(...)` + `Tooltip::panel_test_id(...)` so scripts can assert geometry.
-  - Suggested file: `tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json`
+  - Repro: `tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json`
 - [ ] VP-ovl-030 Add a “repeat hover” gate for HoverCard as well (same drift class).
 
 ## P1 — Controls
 
-- [ ] VP-ctl-010 Add Slider drag repro asserting handle stays within the fill rect during back-and-forth drag.
+- [x] VP-ctl-010 Add Slider drag repro asserting handle stays aligned with the fill rect during back-and-forth drag.
+  - Repro: `tools/diag-scripts/ui-gallery-slider-range-drag-stability.json`
 - [ ] VP-ctl-020 Add Toggle visual alignment repro across sizes (`sm`/`default`/`lg`) and states (checked/unchecked/disabled).
 - [ ] VP-ctl-030 Add Combobox menu height/padding repro across disabled/placeholder states.
 
@@ -39,4 +40,3 @@ Tracking format:
 
 - [ ] VP-tool-010 Extend diagnostics action library with a high-level `repeat_hover` recipe (optional).
   - Prefer compiling to v1 script steps for compatibility.
-

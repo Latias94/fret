@@ -2864,13 +2864,28 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let size = window.surface_size();
+        let surface_usage = {
+            let base = self.diag_bundle_screenshots.surface_usage();
+            #[cfg(feature = "diag-screenshots")]
+            {
+                if self.diag_screenshots.is_some() {
+                    base | wgpu::TextureUsages::COPY_SRC
+                } else {
+                    base
+                }
+            }
+            #[cfg(not(feature = "diag-screenshots"))]
+            {
+                base
+            }
+        };
         let surface = SurfaceState::new_with_usage(
             &context.adapter,
             &context.device,
             surface,
             size.width,
             size.height,
-            self.diag_bundle_screenshots.surface_usage(),
+            surface_usage,
         )?;
 
         let id = self.windows.insert_with_key(|id| {
@@ -4345,6 +4360,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 .window_created(&mut self.app, &create, new_window);
 
                             self.app.request_redraw(new_window);
+                        }
+                        WindowRequest::SetInnerSize { window, size } => {
+                            if let Some(state) = self.windows.get(window) {
+                                let _ = state.window.request_surface_size(
+                                    winit::dpi::LogicalSize::new(
+                                        size.width.0 as f64,
+                                        size.height.0 as f64,
+                                    )
+                                    .into(),
+                                );
+                                state.window.request_redraw();
+                            }
                         }
                         WindowRequest::Raise {
                             window,
