@@ -28,6 +28,14 @@ fn env_bool(name: &str, default: bool) -> bool {
     !(v == "0" || v == "false" || v == "no" || v == "off")
 }
 
+fn env_usize(name: &str) -> Option<usize> {
+    let Some(v) = std::env::var_os(name).filter(|v| !v.is_empty()) else {
+        return None;
+    };
+    let v = v.to_string_lossy();
+    v.trim().parse::<usize>().ok()
+}
+
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
@@ -173,6 +181,8 @@ impl WorkspaceShellDemoDriver {
                             Some(Arc::<str>::from("workspace-shell-file-tree-root"));
                         props.debug_row_test_id_prefix =
                             Some(Arc::<str>::from("workspace-shell-file-tree-node"));
+                        props.keep_alive = env_usize("FRET_WORKSPACE_SHELL_FILE_TREE_KEEP_ALIVE")
+                            .filter(|v| *v > 0);
 
                         cx.container(
                             ContainerProps {
