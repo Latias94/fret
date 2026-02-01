@@ -39,6 +39,12 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
+    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0192).
+    ///
+    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0191).
+    pub retained_keep_alive_roots_len: u32,
+    pub retained_keep_alive_roots_head: Vec<NodeId>,
+    pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
 }
 
@@ -876,6 +882,35 @@ impl WindowElementState {
                 })
                 .collect();
 
+        const KEEP_ALIVE_ROOT_SAMPLE: usize = 16;
+        let mut retained_keep_alive_roots: Vec<NodeId> = self
+            .retained_virtual_list_keep_alive_roots
+            .iter()
+            .copied()
+            .collect();
+        retained_keep_alive_roots.sort_by_key(|n| n.data().as_ffi());
+        let retained_keep_alive_roots_len =
+            retained_keep_alive_roots.len().min(u32::MAX as usize) as u32;
+        let retained_keep_alive_roots_head: Vec<NodeId> = retained_keep_alive_roots
+            .iter()
+            .take(KEEP_ALIVE_ROOT_SAMPLE)
+            .copied()
+            .collect();
+        let retained_keep_alive_roots_tail: Vec<NodeId> =
+            if retained_keep_alive_roots.len() > KEEP_ALIVE_ROOT_SAMPLE {
+                retained_keep_alive_roots
+                    .iter()
+                    .skip(
+                        retained_keep_alive_roots
+                            .len()
+                            .saturating_sub(KEEP_ALIVE_ROOT_SAMPLE),
+                    )
+                    .copied()
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
             focused_element_node: node_for(self.focused_element),
@@ -921,6 +956,9 @@ impl WindowElementState {
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
             view_cache_reuse_root_element_samples,
+            retained_keep_alive_roots_len,
+            retained_keep_alive_roots_head,
+            retained_keep_alive_roots_tail,
             node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
         }
     }

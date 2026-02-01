@@ -5594,6 +5594,15 @@ pub struct ElementDiagnosticsSnapshotV1 {
     pub view_cache_reuse_root_element_counts: Vec<(u64, u32)>,
     #[serde(default)]
     pub view_cache_reuse_root_element_samples: Vec<ElementViewCacheReuseRootElementsSampleV1>,
+    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0192).
+    ///
+    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0191).
+    #[serde(default)]
+    pub retained_keep_alive_roots_len: u32,
+    #[serde(default)]
+    pub retained_keep_alive_roots_head: Vec<u64>,
+    #[serde(default)]
+    pub retained_keep_alive_roots_tail: Vec<u64>,
     #[serde(default)]
     pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
 }
@@ -5731,6 +5740,17 @@ impl ElementDiagnosticsSnapshotV1 {
                     elements_head: s.elements_head.into_iter().map(|id| id.0).collect(),
                     elements_tail: s.elements_tail.into_iter().map(|id| id.0).collect(),
                 })
+                .collect(),
+            retained_keep_alive_roots_len: snapshot.retained_keep_alive_roots_len,
+            retained_keep_alive_roots_head: snapshot
+                .retained_keep_alive_roots_head
+                .into_iter()
+                .map(key_to_u64)
+                .collect(),
+            retained_keep_alive_roots_tail: snapshot
+                .retained_keep_alive_roots_tail
+                .into_iter()
+                .map(key_to_u64)
                 .collect(),
             node_entry_root_overwrites: snapshot
                 .node_entry_root_overwrites
