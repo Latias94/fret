@@ -12,7 +12,8 @@ Recent changes (2026-02-01):
 - Web IME: add textarea DOM metrics (client/scroll size + selectionStart/End) to debug snapshot to debug candidate UI jitter.
 - Web IME: widen the hidden textarea and align cursor-area to integer pixels to reduce candidate UI jitter.
 - View: add a minimal display map that supports column-based soft wrap (byte ↔ wrapped row/col mapping + tests).
-- Editor: route caret/selection mapping through the view display map (soft-wrap seam; rendering still line-based).
+- View: expose `DisplayMap::display_row_byte_range` to slice buffer text into wrapped display rows (tests included).
+- Editor: render wrapped display rows in the windowed surface (selection/caret/preedit/syntax spans operate in display-row space).
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
@@ -21,6 +22,7 @@ Recent changes (2026-02-01):
 - A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
 - A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
 - Web: enable a default CJK demo font bundle to avoid “tofu” squares in IME/editor harnesses.
+- UI Gallery: add a code-editor “Load fonts…” action (file dialog → `Effect::TextAddFonts`) and a soft-wrap toggle for wrap-boundary regression checks.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
@@ -90,12 +92,14 @@ P0 (correctness and contracts):
 P1 (robustness and testability):
 
 - Expand word-boundary + click-selection tests across widgets and scroll/transform cases.
+- Add a UI Gallery soft-wrap toggle + regression checks around wrap boundaries (caret, selection, preedit, syntax spans).
 - Add diagnostics counters + snapshots for windowed surfaces and caches (align with ADR 0190).
 
 P2 (features):
 
 - Improve the incremental syntax strategy (edits → visible-window invalidation) and document the tradeoffs.
-- Start a display-map growth spike (wrap → fold → inlay) while keeping buffer↔display↔pixel mapping stable.
+- Wrap: add a pixel-accurate wrapping mode (measure-driven) while preserving stable buffer ↔ display ↔ pixel mapping.
+- Grow the display-map surface (wrap → fold → inlay) without breaking caret/selection invariants.
 
 ---
 
@@ -381,6 +385,7 @@ Evidence anchors:
   - paint-driven windowed surface (stable tree, `Scroll` + `Canvas`), or
   - VirtualList-based rows (only if composability is required early).
 - [x] Implement a minimal editor surface vertical slice (fixed-height rows, no wrap):
+- [x] Implement a minimal editor surface vertical slice (fixed-height rows, optional column-based soft wrap):
   - per-row text paint via windowed surface,
   - caret + selection (mouse + keyboard),
   - clipboard copy/paste (best-effort),
@@ -455,7 +460,9 @@ Evidence anchors:
 
 ### 8) Display map expansion (wrap/fold/inlay) (optional v1 → v2)
 
-- [ ] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
+- [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
+  - Implemented: column-based wrapping + stable byte ↔ display row/col mapping.
+  - Known gaps: not pixel-accurate wrapping; cell-width heuristic still used for geometry.
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 

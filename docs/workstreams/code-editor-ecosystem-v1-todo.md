@@ -192,7 +192,7 @@ Evidence anchors:
 
 ## M8 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
 
-- [ ] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
+- [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels) (column-based; not pixel-accurate yet).
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 
