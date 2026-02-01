@@ -129,6 +129,12 @@ pub(crate) fn sidebar_view(
                                 }
                             });
                             host.request_redraw(action_cx.window);
+                            // `request_redraw()` may be coalesced or fail to wake the event loop on some
+                            // platforms/driver configurations. Ensure we get at least one follow-up turn
+                            // so the new page presents promptly after navigation.
+                            host.push_effect(fret_runtime::Effect::RequestAnimationFrame(
+                                action_cx.window,
+                            ));
                         });
                     button = button.on_activate(on_activate);
 
