@@ -1208,6 +1208,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             let is_components_gallery_table_suite =
                 rest.len() == 1 && rest[0] == "components-gallery-table";
             let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
+            let is_workspace_shell_demo_suite =
+                rest.len() == 1 && rest[0] == "workspace-shell-demo";
 
             let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
                 if is_ui_gallery_suite {
@@ -1516,6 +1518,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                                 ),
                             ),
                         ],
+                        None,
+                    )
+                } else if is_workspace_shell_demo_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json",
+                            ),
+                        )],
                         None,
                     )
                 } else if is_docking_arbitration_suite {
@@ -1941,6 +1953,27 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 if timeout_ms == 30_000 {
                     timeout_ms = 600_000;
                 }
+            }
+
+            if is_workspace_shell_demo_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+
+                for (key, value) in [
+                    ("FRET_EXAMPLES_VIEW_CACHE", "1"),
+                    ("FRET_EXAMPLES_VIEW_CACHE_SHELL", "1"),
+                ] {
+                    if !launch_env.iter().any(|(k, _)| k == key) {
+                        launch_env.push((key.to_string(), value.to_string()));
+                    }
+                }
+
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(1));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id
+                    .or(Some("workspace-shell-file-tree-node-0".to_string()));
+                check_stale_paint_test_id = check_stale_paint_test_id
+                    .or(Some("workspace-shell-file-tree-node-0".to_string()));
             }
 
             if is_components_gallery_table_suite {
