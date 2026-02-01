@@ -54,3 +54,9 @@ For performance investigations, see `docs/workstreams/ui-gallery-perf-scroll-mea
   - Code: `ecosystem/fret-ui-shadcn/src/slider.rs`.
 - Diagnostics gained axis-only overlap predicates (`bounds_overlapping_x`/`bounds_overlapping_y`) for cases where vertical offset is expected (commit `0fdea34`).
   - Code: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+
+## Notes (Branch-local)
+
+- Overlay anchoring: cherry-picked `fix(ui): reanchor overlays after scroll updates` (commit `6ce3c7a` on this branch).
+- Scripted screenshots: require `FRET_DIAG_SCREENSHOTS=1`, and the desktop surface must include `COPY_SRC` (commit `713e2d3` on this branch).
+  - New script: `tools/diag-scripts/ui-gallery-select-wheel-scroll-screenshots.json`.
