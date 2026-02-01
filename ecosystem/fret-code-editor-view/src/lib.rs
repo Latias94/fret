@@ -446,13 +446,18 @@ pub fn move_word_left(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
         return 0;
     }
 
+    // `i` currently points to the char boundary immediately after the first non-whitespace char we
+    // found while scanning left. Use the previous boundary as the anchor so we always query a
+    // position inside the word/token (otherwise `range_at` can return `None` at word ends).
+    let anchor = prev_char_boundary(text, i);
+
     match mode {
-        TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
+        TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, anchor)
             .map(|(start, _)| start)
-            .unwrap_or(i),
-        TextBoundaryMode::Identifier => identifier_range_at(text, i)
+            .unwrap_or(anchor),
+        TextBoundaryMode::Identifier => identifier_range_at(text, anchor)
             .map(|(start, _)| start)
-            .unwrap_or(i),
+            .unwrap_or(anchor),
     }
 }
 
@@ -562,6 +567,133 @@ mod tests {
         assert_eq!(
             select_word_range("a_b c", 1, TextBoundaryMode::Identifier),
             (0, "a_b".len())
+        );
+    }
+
+    #[test]
+    fn select_word_range_unicode_word_handles_cjk_runs() {
+        let text = "世界 hello";
+        assert_eq!(
+            select_word_range(text, 0, TextBoundaryMode::UnicodeWord),
+            (0, "世".len())
+        );
+        assert_eq!(
+            select_word_range(text, "世".len(), TextBoundaryMode::UnicodeWord),
+            ("世".len(), "世界".len())
+        );
+    }
+
+    #[test]
+    fn select_word_range_unicode_word_falls_back_to_single_char_on_emoji() {
+        let text = "hi😀there";
+        let emoji_start = "hi".len();
+        let emoji_end = emoji_start + "😀".len();
+        assert_eq!(
+            select_word_range(text, emoji_start, TextBoundaryMode::UnicodeWord),
+            (emoji_start, emoji_end)
+        );
+    }
+
+    #[test]
+    fn select_word_range_identifier_includes_digits_and_underscores() {
+        let text = "foo123_bar baz";
+        assert_eq!(
+            select_word_range(text, 2, TextBoundaryMode::Identifier),
+            (0, "foo123_bar".len())
+        );
+        assert_eq!(
+            select_word_range(text, "foo".len() + 1, TextBoundaryMode::Identifier),
+            (0, "foo123_bar".len())
+        );
+    }
+
+    #[test]
+    fn select_word_range_selects_whitespace_runs_when_not_preferring_previous_word() {
+        assert_eq!(
+            select_word_range("  hello", 1, TextBoundaryMode::UnicodeWord),
+            (0, 2)
+        );
+        assert_eq!(
+            select_word_range("  hello", 1, TextBoundaryMode::Identifier),
+            (0, 2)
+        );
+    }
+
+    #[test]
+    fn move_word_right_skips_whitespace_and_moves_to_word_end() {
+        let text = "hello   world";
+        assert_eq!(
+            move_word_right(text, 0, TextBoundaryMode::UnicodeWord),
+            "hello".len()
+        );
+        assert_eq!(
+            move_word_right(text, "hello".len(), TextBoundaryMode::UnicodeWord),
+            text.len()
+        );
+    }
+
+    #[test]
+    fn move_word_identifier_respects_token_boundaries() {
+        let text = "foo_bar baz";
+        assert_eq!(
+            move_word_right(text, 0, TextBoundaryMode::Identifier),
+            "foo_bar".len()
+        );
+        assert_eq!(
+            move_word_right(text, "foo_bar".len(), TextBoundaryMode::Identifier),
+            text.len()
+        );
+        assert_eq!(
+            move_word_left(text, text.len(), TextBoundaryMode::Identifier),
+            "foo_bar ".len()
+        );
+        assert_eq!(
+            move_word_left(text, "foo_bar ".len(), TextBoundaryMode::Identifier),
+            0
+        );
+    }
+
+    #[test]
+    fn move_word_unicode_word_left_moves_to_previous_word_start() {
+        let text = "hello   world";
+        assert_eq!(
+            move_word_left(text, text.len(), TextBoundaryMode::UnicodeWord),
+            "hello   ".len()
+        );
+        assert_eq!(
+            move_word_left(text, "hello   ".len(), TextBoundaryMode::UnicodeWord),
+            0
+        );
+    }
+
+    #[test]
+    fn move_word_identifier_treats_punctuation_as_delimiter() {
+        let text = "foo.bar";
+        assert_eq!(
+            move_word_right(text, 0, TextBoundaryMode::Identifier),
+            "foo".len()
+        );
+        assert_eq!(
+            move_word_right(text, "foo".len(), TextBoundaryMode::Identifier),
+            text.len()
+        );
+        assert_eq!(
+            move_word_left(text, text.len(), TextBoundaryMode::Identifier),
+            "foo.".len()
+        );
+    }
+
+    #[test]
+    fn select_word_range_falls_back_to_single_char_on_punctuation() {
+        let text = "foo.bar";
+        let dot = "foo".len();
+        assert_eq!(
+            select_word_range(text, dot, TextBoundaryMode::UnicodeWord),
+            (0, text.len())
+        );
+        assert_eq!(
+            select_word_range(text, dot, TextBoundaryMode::Identifier),
+            (dot, dot + 1)
         );
     }
 }
