@@ -62,7 +62,7 @@ impl fret_core::SvgService for FakeTextService {
 
 fn event_cx<'a>(
     app: &'a mut TestHost,
-    services: &'a mut FakeTextService,
+    services: &'a mut dyn fret_core::UiServices,
     node: fret_core::NodeId,
     window: fret_core::AppWindowId,
     bounds: Rect,
@@ -95,7 +95,7 @@ fn event_cx<'a>(
 
 fn command_cx<'a>(
     app: &'a mut TestHost,
-    services: &'a mut FakeTextService,
+    services: &'a mut dyn fret_core::UiServices,
     tree: &'a mut UiTree<TestHost>,
     node: fret_core::NodeId,
     window: fret_core::AppWindowId,
@@ -414,6 +414,10 @@ impl TextService for ImeTextService {
         Px(index as f32)
     }
 
+    fn hit_test_x(&mut self, _blob: fret_core::TextBlobId, x: Px) -> usize {
+        x.0.max(0.0).floor() as usize
+    }
+
     fn release(&mut self, _blob: fret_core::TextBlobId) {}
 }
 
@@ -514,5 +518,72 @@ fn ime_cursor_area_moves_with_preedit_cursor() {
     assert!(
         (x2 - x0 - 2.0).abs() < 0.001,
         "expected IME cursor x to move by preedit prefix width"
+    );
+}
+
+#[test]
+fn double_click_cancels_preedit_and_maps_hit_test_from_display_to_base_indices() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = ImeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut input = TextInput::new();
+    input.text = "hello world".to_string();
+    input.caret = 5;
+    input.selection_anchor = 5;
+    input.text_blob = Some(fret_core::TextBlobId::default());
+    input.last_bounds = bounds;
+    input.chrome_style.padding.left = Px(0.0);
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    input.event(
+        &mut cx,
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((0, 2)),
+        }),
+    );
+    assert!(input.is_ime_composing());
+    // The preedit event invalidates text blobs; restore a blob id so the pointer path uses
+    // hit-testing instead of the caret-stop fallback.
+    input.text_blob = Some(fret_core::TextBlobId::default());
+
+    // The composed display text would be: "helloyo world".
+    // Click after the inserted preedit; the display index should be shifted by the preedit length.
+    input.event(
+        &mut cx,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(8.0), Px(5.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        !input.is_ime_composing(),
+        "expected double-click selection to cancel inline preedit deterministically"
+    );
+    assert!(input.preedit.is_empty());
+    assert!(input.preedit_cursor.is_none());
+    assert_eq!(
+        (input.selection_anchor, input.caret),
+        (6, 11),
+        "expected display hit-test index to map to base indices after cancelling preedit"
     );
 }
