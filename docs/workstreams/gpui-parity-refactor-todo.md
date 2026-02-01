@@ -621,15 +621,20 @@ topics (if/when we implement them):
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
      row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
      (tracked in ADR 0192).
+  - Scope note: this item intentionally tracks **two** related tracks:
+    - **Retained host windowed surfaces (ADR 0192)**: prepaint derives window shifts, and a retained reconcile attaches/detaches rows without
+      dirtying the parent cache root. This track is now mostly about tuning and hardening (e.g. staged prefetch + budgets).
+    - **Non-retained `VirtualList` path**: today, window changes still imply a cache-root rerender to rebuild `visible_items`. This is the main
+      remaining gap to reach “GPUI-like scroll stays cheap even when the window shifts”.
   - Execution plan (v2 slices; keep incremental, avoid a big-bang rewrite):
     - [x] Pick one primary consumer surface (start with file tree, then inspector/table/tree).
       - Anchors: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`),
         `apps/fret-ui-gallery/src/ui.rs` (`preview_file_tree_torture`).
       - Note: retained-host consumers MUST provide a meaningful `VirtualListOptions.items_revision` so window updates and key caches are explainable.
         - Evidence: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` folds tree + state revisions into `items_revision`.
-    - [~] Move “window derivation” to prepaint (ADR 0190 / ADR 0193), keyed by: viewport + offset + overscan + items revision.
+    - [x] (Retained host) Move “window derivation” to prepaint (ADR 0190 / ADR 0193), keyed by: viewport + offset + overscan + items revision.
       - Current: prepaint updates `VirtualListState.window_range` from interaction records and scroll-handle state (no rerender required for retained hosts).
-      - Next: lift/standardize the derived window into explicit prepaint outputs where needed, and keep the “why did the window change?” story fully explainable from one bundle.
+      - Next (retained host): lift/standardize the derived window into explicit prepaint outputs where needed, and keep the “why did the window change?” story fully explainable from one bundle.
       - Diagnostics: `debug.virtual_list_windows[*]` now include `policy_key` / `inputs_key` and the policy inputs (`estimate_row_height`, `gap`, `scroll_margin`, `content_extent`) so “policy changed vs. scroll changed” is distinguishable.
         - Evidence: `target/fret-diag-vlist-window-keys/1769858602068-components-gallery-file-tree-window-boundary-bounce/bundle.json`
       - Perf story (baseline): window-boundary frames are still layout-dominated mainly because retained-host reconcile can attach/detach multiple row subtrees in one tick.
@@ -637,6 +642,16 @@ topics (if/when we implement them):
           - Worst layout frame: `frame_id=24` (`tick_id=25`) `layout_time_us=2560` with `retained_virtual_list_attached_items=9`, `detached_items=3` (delta=12) and `barrier_relayouts_performed=1`.
           - Worst attach/detach frame: `frame_id=28` (`tick_id=29`) `attached_items=10`, `detached_items=10` (delta=20) with `layout_time_us=1557`.
         - Takeaway: to reduce worst-tick layout time further, we either need to (a) reduce per-frame attach/detach delta (more frequent smaller shifts / staged prefetch), or (b) reduce the cost of attaching new rows (row recycling, cheaper row layout, or more effective keep-alive reuse).
+    - [~] (Non-retained `VirtualList`) Introduce an ephemeral/windowed boundary so a window shift does not necessarily imply a cache-root rerender.
+      - Target behavior: on `window_mismatch`, avoid rerendering the parent cache root solely to rebuild `visible_items`.
+      - Minimum viable slice (recommendation):
+        - Keep the public `VirtualList` API stable.
+        - Internally add a host/boundary that can attach/detach row subtrees on cache-hit frames (similar to ADR 0192 retained hosts), while leaving the parent cache root clean.
+        - Prefer leveraging existing `PrepaintOutputs` (ADR 0193) for “derived window” and “ephemeral item list” so the change remains explainable from one bundle.
+      - Closure harness: `apps/fret-ui-gallery` VirtualList window-boundary script(s), gated by:
+        - `--check-wheel-scroll` (prove scroll actually happened),
+        - `--check-stale-paint` (prove correctness under caching),
+        - a new “no rerender on window shift” gate for the chosen harness once implementable (see MVP5-perf-002 style gate design).
     - [x] Add staged prefetch (ADR 0190 v2 addendum): shift retained-host windows *before* `window_mismatch` and reconcile incrementally.
       - Idea: when the visible range approaches the prefetch boundary (but is still covered), shift the window by a small bounded step and request redraw.
       - Goal: turn “one big boundary tick” into a bounded stream of small reconciles, reducing worst-tick spikes.
