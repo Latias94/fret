@@ -1568,15 +1568,20 @@ fn calendar_range_day_cell<H: UiHost>(
                     wrap: false,
                 },
                 move |cx| {
-                    vec![
-                        ui::label(cx, day_text.clone())
-                            .text_size_px(text_sm_px)
-                            .line_height_px(text_sm_line_height)
-                            .font_medium()
-                            .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
-                            .nowrap()
-                            .into_element(cx),
-                    ]
+                    let label = ui::label(cx, day_text.clone())
+                        .text_size_px(text_sm_px)
+                        .line_height_px(text_sm_line_height)
+                        .font_medium()
+                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .nowrap();
+
+                    let label = if disabled {
+                        cx.opacity(0.5, |cx| vec![label.into_element(cx)])
+                    } else {
+                        label.into_element(cx)
+                    };
+
+                    vec![label]
                 },
             )]
         };

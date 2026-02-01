@@ -1,11 +1,15 @@
 use fret_app::App;
 use fret_core::{AppWindowId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
+use fret_core::{Scene, SceneOp, Transform2D};
 use fret_runtime::Model;
 use fret_ui::tree::UiTree;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+mod css_color;
+use css_color::{Rgba, color_to_rgba, parse_css_color};
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -295,6 +299,47 @@ fn render_calendar_in_bounds(
     run_fret_root_with_ui_and_services(bounds, &mut services, f)
 }
 
+fn render_calendar_in_bounds_with_scene(
+    bounds: Rect,
+    f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+) -> (fret_core::SemanticsSnapshot, Scene) {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-calendar-painted",
+        f,
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    (snap, scene)
+}
+
 fn find_semantics<'a>(
     snap: &'a fret_core::SemanticsSnapshot,
     role: SemanticsRole,
@@ -397,6 +442,185 @@ fn parse_calendar_day_aria_label(label: &str) -> Option<(time::Date, bool)> {
     let (month, year) = parse_calendar_title_label(&format!("{} {}", parts[2], parts[4]))?;
     let date = time::Date::from_calendar_date(year, month, day).ok()?;
     Some((date, selected))
+}
+
+fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {
+    let dr = (actual.r - expected.r).abs();
+    let dg = (actual.g - expected.g).abs();
+    let db = (actual.b - expected.b).abs();
+    let da = (actual.a - expected.a).abs();
+    assert!(
+        dr <= tol && dg <= tol && db <= tol && da <= tol,
+        "{label}: expected≈({:.3},{:.3},{:.3},{:.3}) got=({:.3},{:.3},{:.3},{:.3}) tol={tol}",
+        expected.r,
+        expected.g,
+        expected.b,
+        expected.a,
+        actual.r,
+        actual.g,
+        actual.b,
+        actual.a
+    );
+}
+
+#[derive(Clone, Copy)]
+struct SceneWalkState {
+    transform: Transform2D,
+    opacity: f32,
+}
+
+fn scene_walk(scene: &Scene, mut f: impl FnMut(SceneWalkState, &SceneOp)) {
+    let mut transform_stack: Vec<Transform2D> = Vec::new();
+    let mut opacity_stack: Vec<f32> = Vec::new();
+    let mut st = SceneWalkState {
+        transform: Transform2D::IDENTITY,
+        opacity: 1.0,
+    };
+
+    for op in scene.ops() {
+        match *op {
+            SceneOp::PushTransform { transform } => {
+                transform_stack.push(st.transform);
+                st.transform = st.transform.compose(transform);
+            }
+            SceneOp::PopTransform => {
+                st.transform = transform_stack.pop().unwrap_or(Transform2D::IDENTITY);
+            }
+            SceneOp::PushOpacity { opacity } => {
+                opacity_stack.push(st.opacity);
+                st.opacity *= opacity;
+            }
+            SceneOp::PopOpacity => {
+                st.opacity = opacity_stack.pop().unwrap_or(1.0);
+            }
+            _ => f(st, op),
+        }
+    }
+}
+
+fn color_with_opacity(color: fret_core::Color, opacity: f32) -> fret_core::Color {
+    fret_core::Color {
+        a: (color.a * opacity).clamp(0.0, 1.0),
+        ..color
+    }
+}
+
+fn apply_opacity(rgba: Rgba, opacity: f32) -> Rgba {
+    Rgba {
+        a: (rgba.a * opacity).clamp(0.0, 1.0),
+        ..rgba
+    }
+}
+
+fn find_best_text_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rgba> {
+    let mut best: Option<Rgba> = None;
+    let mut best_score = f32::INFINITY;
+
+    let center = Point::new(
+        Px(search_within.origin.x.0 + search_within.size.width.0 * 0.5),
+        Px(search_within.origin.y.0 + search_within.size.height.0 * 0.5),
+    );
+
+    scene_walk(scene, |st, op| {
+        let SceneOp::Text { origin, color, .. } = *op else {
+            return;
+        };
+        let origin = st.transform.apply_point(origin);
+        if !search_within.contains(origin) {
+            return;
+        }
+        let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
+        if rgba.a <= 0.01 {
+            return;
+        }
+        let score = (origin.x.0 - center.x.0).abs() + (origin.y.0 - center.y.0).abs();
+        if score < best_score {
+            best_score = score;
+            best = Some(rgba);
+        }
+    });
+
+    best
+}
+
+fn transform_rect_bounds(transform: Transform2D, rect: Rect) -> Rect {
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = x0 + rect.size.width.0;
+    let y1 = y0 + rect.size.height.0;
+
+    let p0 = transform.apply_point(Point::new(Px(x0), Px(y0)));
+    let p1 = transform.apply_point(Point::new(Px(x1), Px(y0)));
+    let p2 = transform.apply_point(Point::new(Px(x0), Px(y1)));
+    let p3 = transform.apply_point(Point::new(Px(x1), Px(y1)));
+
+    let min_x = p0.x.0.min(p1.x.0).min(p2.x.0).min(p3.x.0);
+    let max_x = p0.x.0.max(p1.x.0).max(p2.x.0).max(p3.x.0);
+    let min_y = p0.y.0.min(p1.y.0).min(p2.y.0).min(p3.y.0);
+    let max_y = p0.y.0.max(p1.y.0).max(p2.y.0).max(p3.y.0);
+
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        CoreSize::new(Px(max_x - min_x), Px(max_y - min_y)),
+    )
+}
+
+fn find_best_icon_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rgba> {
+    let mut best: Option<Rgba> = None;
+    let mut best_score = f32::INFINITY;
+
+    let center = Point::new(
+        Px(search_within.origin.x.0 + search_within.size.width.0 * 0.5),
+        Px(search_within.origin.y.0 + search_within.size.height.0 * 0.5),
+    );
+
+    scene_walk(scene, |st, op| match *op {
+        SceneOp::SvgMaskIcon {
+            rect,
+            color,
+            opacity,
+            ..
+        } => {
+            let rect = transform_rect_bounds(st.transform, rect);
+            let icon_center = Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            );
+            if !search_within.contains(icon_center) {
+                return;
+            }
+
+            let rgba = color_to_rgba(color_with_opacity(color, st.opacity * opacity));
+            if rgba.a <= 0.01 {
+                return;
+            }
+
+            let score = (icon_center.x.0 - center.x.0).abs() + (icon_center.y.0 - center.y.0).abs();
+            if score < best_score {
+                best_score = score;
+                best = Some(rgba);
+            }
+        }
+        SceneOp::Path { origin, color, .. } => {
+            let origin = st.transform.apply_point(origin);
+            if !search_within.contains(origin) {
+                return;
+            }
+            let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
+            if rgba.a <= 0.01 {
+                return;
+            }
+
+            let score = (origin.x.0 - center.x.0).abs() + (origin.y.0 - center.y.0).abs();
+            if score < best_score {
+                best_score = score;
+                best = Some(rgba);
+            }
+        }
+        _ => {}
+    });
+
+    best.or_else(|| find_best_text_color_in_rect(scene, search_within))
 }
 
 fn days_in_month(year: i32, month: time::Month) -> u8 {
@@ -1482,6 +1706,45 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
     })
     .expect("web next-month button");
 
+    let web_prev_icon = find_first(web_prev, &|n| n.tag == "svg")
+        .unwrap_or_else(|| panic!("web prev-month icon svg for {web_name}"));
+    let web_next_icon = find_first(web_next, &|n| n.tag == "svg")
+        .unwrap_or_else(|| panic!("web next-month icon svg for {web_name}"));
+
+    let web_prev_icon_color_css = web_prev_icon
+        .computed_style
+        .get("color")
+        .or_else(|| web_prev.computed_style.get("color"))
+        .map(String::as_str)
+        .expect("web prev icon color");
+    let web_next_icon_color_css = web_next_icon
+        .computed_style
+        .get("color")
+        .or_else(|| web_next.computed_style.get("color"))
+        .map(String::as_str)
+        .expect("web next icon color");
+
+    let web_prev_icon_color = parse_css_color(web_prev_icon_color_css)
+        .unwrap_or_else(|| panic!("invalid css color: {web_prev_icon_color_css}"));
+    let web_next_icon_color = parse_css_color(web_next_icon_color_css)
+        .unwrap_or_else(|| panic!("invalid css color: {web_next_icon_color_css}"));
+
+    let web_prev_icon_opacity = web_prev_icon
+        .computed_style
+        .get("opacity")
+        .or_else(|| web_prev.computed_style.get("opacity"))
+        .and_then(|v| v.parse::<f32>().ok())
+        .unwrap_or(1.0);
+    let web_next_icon_opacity = web_next_icon
+        .computed_style
+        .get("opacity")
+        .or_else(|| web_next.computed_style.get("opacity"))
+        .and_then(|v| v.parse::<f32>().ok())
+        .unwrap_or(1.0);
+
+    let expected_prev_icon = apply_opacity(web_prev_icon_color, web_prev_icon_opacity);
+    let expected_next_icon = apply_opacity(web_next_icon_color, web_next_icon_opacity);
+
     let web_prev_disabled = web_prev
         .attrs
         .get("aria-disabled")
@@ -1566,7 +1829,7 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
     let origin_x = web_rdp_root.rect.x;
     let origin_y = web_rdp_root.rect.y;
 
-    let (_ui, snap, _root) = render_calendar_in_bounds(
+    let (snap, scene) = render_calendar_in_bounds_with_scene(
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
@@ -1640,6 +1903,24 @@ fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) 
         fret_next.flags.disabled == web_next_disabled,
         "expected next-month semantics flags.disabled={web_next_disabled}"
     );
+
+    let fret_prev_icon = find_best_icon_color_in_rect(&scene, fret_prev.bounds)
+        .unwrap_or_else(|| panic!("painted prev icon for {web_name}"));
+    assert_rgba_close(
+        &format!("{web_name} prev icon color"),
+        fret_prev_icon,
+        expected_prev_icon,
+        0.02,
+    );
+
+    let fret_next_icon = find_best_icon_color_in_rect(&scene, fret_next.bounds)
+        .unwrap_or_else(|| panic!("painted next icon for {web_name}"));
+    assert_rgba_close(
+        &format!("{web_name} next icon color"),
+        fret_next_icon,
+        expected_next_icon,
+        0.02,
+    );
 }
 
 #[test]
@@ -1711,6 +1992,7 @@ fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
 
     let mut disabled_dates = std::collections::HashSet::<time::Date>::new();
     let mut disabled_labels: Vec<String> = Vec::new();
+    let mut disabled_button_node: Option<&WebNode> = None;
     for cell in web_disabled_cells {
         let Some(button) = find_first(cell, &|n| {
             n.tag == "button"
@@ -1732,6 +2014,9 @@ fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
         }
         if disabled_dates.insert(date) {
             disabled_labels.push(label.clone());
+            if disabled_button_node.is_none() {
+                disabled_button_node = Some(button);
+            }
         }
     }
     assert!(
@@ -1744,6 +2029,21 @@ fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
         .find(|l| !l.starts_with("Today, ") && !l.starts_with("Hoy, "))
         .cloned()
         .unwrap_or_else(|| disabled_labels[0].clone());
+
+    let disabled_button_node = disabled_button_node.expect("web disabled day button node");
+    let web_disabled_color_css = disabled_button_node
+        .computed_style
+        .get("color")
+        .map(String::as_str)
+        .expect("web disabled day color");
+    let web_disabled_color = parse_css_color(web_disabled_color_css)
+        .unwrap_or_else(|| panic!("invalid css color: {web_disabled_color_css}"));
+    let web_disabled_opacity = disabled_button_node
+        .computed_style
+        .get("opacity")
+        .and_then(|v| v.parse::<f32>().ok())
+        .unwrap_or(1.0);
+    let expected_disabled_fg = apply_opacity(web_disabled_color, web_disabled_opacity);
 
     let web_day_buttons = find_all(&theme.root, &|n| {
         n.tag == "button"
@@ -1774,7 +2074,7 @@ fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
         .expect("expected at least one enabled in-month day button in calendar-08");
 
     let disabled_dates = Arc::new(disabled_dates);
-    let (_ui, snap, _root) = render_calendar_in_bounds(
+    let (snap, scene) = render_calendar_in_bounds_with_scene(
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
@@ -1835,6 +2135,15 @@ fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
     assert!(
         fret_disabled.flags.disabled,
         "expected semantics flags.disabled=true for {disabled_label:?}"
+    );
+
+    let fret_disabled_fg = find_best_text_color_in_rect(&scene, fret_disabled.bounds)
+        .unwrap_or_else(|| panic!("painted disabled day text for {web_name}"));
+    assert_rgba_close(
+        &format!("{web_name} disabled day text color"),
+        fret_disabled_fg,
+        expected_disabled_fg,
+        0.02,
     );
 
     let fret_enabled = find_semantics(&snap, SemanticsRole::Button, Some(&enabled_label))
