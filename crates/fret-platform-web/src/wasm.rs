@@ -37,6 +37,7 @@ pub struct WebPlatformServices {
     ime_active_window: Option<AppWindowId>,
     ime: HashMap<AppWindowId, WebImeBridge>,
     last_ime_cursor_area: HashMap<AppWindowId, fret_core::Rect>,
+    ime_mounts: HashMap<AppWindowId, HtmlElement>,
     #[cfg(debug_assertions)]
     ime_debug: Rc<RefCell<WebImeDebugState>>,
     waker: Option<WebWaker>,
@@ -52,6 +53,7 @@ impl Default for WebPlatformServices {
             ime_active_window: None,
             ime: HashMap::new(),
             last_ime_cursor_area: HashMap::new(),
+            ime_mounts: HashMap::new(),
             #[cfg(debug_assertions)]
             ime_debug: Rc::new(RefCell::new(WebImeDebugState::default())),
             waker: None,
@@ -68,6 +70,7 @@ impl std::fmt::Debug for WebPlatformServices {
             .field("file_dialogs", &"<Rc<RefCell<WebFileDialogState>>>")
             .field("ime_active_window", &self.ime_active_window)
             .field("ime", &self.ime)
+            .field("ime_mounts", &self.ime_mounts.len())
             .finish()
     }
 }
@@ -96,6 +99,7 @@ fn debug_truncate(s: &str, max_chars: usize) -> String {
 
 struct WebImeBridge {
     textarea: HtmlTextAreaElement,
+    position_mode: WebImePositionMode,
     enabled: bool,
     composing: Rc<Cell<bool>>,
     suppress_next_input: Rc<Cell<bool>>,
@@ -107,6 +111,12 @@ struct WebImeBridge {
     debug: Rc<RefCell<WebImeDebugState>>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WebImePositionMode {
+    Fixed,
+    Absolute,
+}
+
 impl std::fmt::Debug for WebImeBridge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WebImeBridge")
@@ -114,6 +124,7 @@ impl std::fmt::Debug for WebImeBridge {
             .field("composing", &self.composing.get())
             .field("listeners", &self.listeners.len())
             .field("last_cursor_area", &self.last_cursor_area)
+            .field("position_mode", &self.position_mode)
             .finish()
     }
 }
@@ -121,6 +132,7 @@ impl std::fmt::Debug for WebImeBridge {
 impl WebImeBridge {
     fn ensure(
         document: &Document,
+        mount: Option<HtmlElement>,
         queued_events: Rc<RefCell<Vec<Event>>>,
         waker: Option<WebWaker>,
         #[cfg(debug_assertions)] debug: Rc<RefCell<WebImeDebugState>>,
@@ -144,7 +156,13 @@ impl WebImeBridge {
         let _ = textarea_el.set_attribute("autocomplete", "off");
         let _ = textarea_el.set_attribute("autocorrect", "off");
         let style = textarea_el.style();
-        let _ = style.set_property("position", "fixed");
+        let position_mode = if mount.is_some() {
+            let _ = style.set_property("position", "absolute");
+            WebImePositionMode::Absolute
+        } else {
+            let _ = style.set_property("position", "fixed");
+            WebImePositionMode::Fixed
+        };
         let _ = style.set_property("left", "0px");
         let _ = style.set_property("top", "0px");
         // Keep the element effectively invisible but still "layout-real" so browser IME can anchor
@@ -170,7 +188,18 @@ impl WebImeBridge {
         let _ = style.set_property("z-index", "2147483647");
         let _ = textarea_el.set_attribute("aria-hidden", "true");
 
-        if let Some(body) = document.body() {
+        if let Some(mount) = mount {
+            // Only mutate inline styles for mounts we own.
+            if mount.get_attribute("data-fret-ime-mount").as_deref() == Some("1") {
+                let mstyle = mount.style();
+                let _ = mstyle.set_property("position", "relative");
+                let _ = mstyle.set_property("margin", "0");
+                let _ = mstyle.set_property("padding", "0");
+                let _ = mstyle.set_property("border", "0");
+                let _ = mstyle.set_property("overflow", "hidden");
+            }
+            let _ = mount.append_child(&textarea_el);
+        } else if let Some(body) = document.body() {
             let _ = body.append_child(&textarea_el);
         }
 
@@ -188,6 +217,7 @@ impl WebImeBridge {
 
         let mut bridge = Self {
             textarea,
+            position_mode,
             enabled: false,
             composing,
             suppress_next_input,
@@ -661,6 +691,15 @@ impl WebFileDialogState {
 }
 
 impl WebPlatformServices {
+    /// Register a per-window DOM container used to mount the hidden IME textarea (ADR 0195).
+    pub fn register_ime_mount(&mut self, window: AppWindowId, mount: HtmlElement) {
+        self.ime_mounts.insert(window, mount);
+    }
+
+    pub fn unregister_ime_mount(&mut self, window: AppWindowId) {
+        self.ime_mounts.remove(&window);
+    }
+
     pub fn set_waker(&mut self, waker: impl Fn() + 'static) {
         self.waker = Some(Rc::new(waker));
     }
@@ -701,10 +740,12 @@ impl WebPlatformServices {
                     }
 
                     if !self.ime.contains_key(&window) {
+                        let mount = self.ime_mounts.get(&window).cloned();
                         #[cfg(not(debug_assertions))]
                         {
                             if let Some(bridge) = WebImeBridge::ensure(
                                 &document,
+                                mount,
                                 self.queued_events.clone(),
                                 self.waker.clone(),
                             ) {
@@ -715,6 +756,7 @@ impl WebPlatformServices {
                         {
                             if let Some(bridge) = WebImeBridge::ensure(
                                 &document,
+                                mount,
                                 self.queued_events.clone(),
                                 self.waker.clone(),
                                 self.ime_debug.clone(),

@@ -15,6 +15,7 @@ use fret_runtime::{
     FrameId, PlatformCapabilities, TickId, WindowRequest, apply_window_metrics_event,
 };
 use wasm_bindgen_futures::spawn_local;
+use web_sys::wasm_bindgen::JsCast as _;
 use winit::application::ApplicationHandler;
 use winit::cursor::Cursor;
 use winit::dpi::{LogicalSize, PhysicalSize};
@@ -32,6 +33,38 @@ use super::{
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use crate::RunnerError;
+
+fn ensure_canvas_ime_mount(canvas: &web_sys::HtmlCanvasElement) -> Option<web_sys::HtmlElement> {
+    let canvas_el: web_sys::HtmlElement = canvas.clone().unchecked_into();
+
+    if let Some(parent) = canvas_el.parent_element() {
+        if parent.get_attribute("data-fret-ime-mount").as_deref() == Some("1")
+            && let Ok(parent) = parent.dyn_into::<web_sys::HtmlElement>()
+        {
+            return Some(parent);
+        }
+    }
+
+    let document = canvas_el.owner_document()?;
+    let el = document.create_element("div").ok()?;
+    let mount: web_sys::HtmlElement = el.dyn_into().ok()?;
+    let _ = mount.set_attribute("data-fret-ime-mount", "1");
+
+    let style = mount.style();
+    let _ = style.set_property("position", "relative");
+    let _ = style.set_property("margin", "0");
+    let _ = style.set_property("padding", "0");
+    let _ = style.set_property("border", "0");
+    let _ = style.set_property("overflow", "hidden");
+
+    let parent = canvas_el.parent_node()?;
+    let mount_node: web_sys::Node = mount.clone().unchecked_into();
+    let canvas_node: web_sys::Node = canvas_el.clone().unchecked_into();
+
+    let _ = parent.replace_child(&mount_node, &canvas_node);
+    let _ = mount.append_child(&canvas_node);
+    Some(mount)
+}
 
 struct GfxState {
     ctx: WgpuContext,
@@ -1675,6 +1708,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             .map(|bytes| bytes.to_vec())
             .collect::<Vec<_>>();
         self.app.push_effect(Effect::TextAddFonts { fonts });
+
+        if let Some(canvas) = window.canvas().map(|c| c.clone())
+            && let Some(mount) = ensure_canvas_ime_mount(&canvas)
+        {
+            self.web_services.register_ime_mount(self.app_window, mount);
+        }
 
         if let Some(canvas) = window.canvas().map(|c| c.clone()) {
             let gfx_slot = self.pending_gfx.clone();
