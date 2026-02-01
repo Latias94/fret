@@ -128,6 +128,8 @@ struct UiGalleryWindowState {
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -147,6 +149,7 @@ struct UiGalleryWindowState {
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -223,7 +226,7 @@ impl UiGalleryDriver {
         ui: &UiTree<App>,
         window: AppWindowId,
         pointer: Option<fret_core::Point>,
-    ) -> (Arc<str>, Arc<str>, Arc<str>) {
+    ) -> (Arc<str>, Arc<str>, Arc<str>, Arc<str>) {
         let hit = pointer.map(|p| ui.debug_hit_test(p));
         let hit_node = hit.as_ref().and_then(|h| h.hit);
         let hit_layers = hit
@@ -292,7 +295,18 @@ impl UiGalleryDriver {
             focused_path.as_deref().unwrap_or(""),
         ));
 
-        (cursor, hit, focus)
+        let text = if let Some(node) = hit_node {
+            let bounds = ui.debug_node_bounds(node);
+            let constraints = ui.debug_text_constraints_snapshot(node);
+            Arc::<str>::from(format!(
+                "text node={:?} bounds={bounds:?} measured={:?} prepared={:?}",
+                node, constraints.measured, constraints.prepared,
+            ))
+        } else {
+            Arc::<str>::from("text node=<none>")
+        };
+
+        (cursor, hit, focus, text)
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
@@ -411,6 +425,8 @@ impl UiGalleryDriver {
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
         let switch = app.models_mut().insert(true);
+        let code_editor_syntax_rust = app.models_mut().insert(true);
+        let code_editor_boundary_identifier = app.models_mut().insert(true);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
@@ -430,6 +446,7 @@ impl UiGalleryDriver {
         let text_area = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
         let context_menu_open = app.models_mut().insert(false);
+        let context_menu_edge_open = app.models_mut().insert(false);
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
@@ -530,6 +547,8 @@ impl UiGalleryDriver {
             progress,
             checkbox,
             switch,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -549,6 +568,7 @@ impl UiGalleryDriver {
             text_area,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             cmdk_open,
             cmdk_query,
             last_action,
@@ -984,6 +1004,8 @@ impl UiGalleryDriver {
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
+        let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
+        let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
@@ -1004,6 +1026,7 @@ impl UiGalleryDriver {
         let text_area = state.text_area.clone();
         let dropdown_open = state.dropdown_open.clone();
         let context_menu_open = state.context_menu_open.clone();
+        let context_menu_edge_open = state.context_menu_edge_open.clone();
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
@@ -1100,7 +1123,7 @@ impl UiGalleryDriver {
         };
 
         let show_debug_hud = debug_on;
-        let debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
+        let mut debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
             let mut lines: Vec<Arc<str>> = Vec::new();
 
             lines.push(Arc::from(format!(
@@ -1203,6 +1226,13 @@ impl UiGalleryDriver {
         } else {
             None
         };
+        if show_debug_hud && let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
+            debug_hud_lines.push(Arc::from("--- inspector ---"));
+            debug_hud_lines.push(cursor.clone());
+            debug_hud_lines.push(hit.clone());
+            debug_hud_lines.push(focus.clone());
+            debug_hud_lines.push(text.clone());
+        }
 
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
@@ -1381,6 +1411,7 @@ impl UiGalleryDriver {
                                             text_area.clone(),
                                             dropdown_open.clone(),
                                             context_menu_open.clone(),
+                                            context_menu_edge_open.clone(),
                                             cmdk_open.clone(),
                                             cmdk_query.clone(),
                                             last_action.clone(),
@@ -1388,6 +1419,8 @@ impl UiGalleryDriver {
                                             virtual_list_torture_edit_row.clone(),
                                             virtual_list_torture_edit_text.clone(),
                                             virtual_list_torture_scroll.clone(),
+                                            code_editor_syntax_rust.clone(),
+                                            code_editor_boundary_identifier.clone(),
                                         )
                                     }
                                 })]
@@ -1469,6 +1502,7 @@ impl UiGalleryDriver {
                                         text_area.clone(),
                                         dropdown_open.clone(),
                                         context_menu_open.clone(),
+                                        context_menu_edge_open.clone(),
                                         cmdk_open.clone(),
                                         cmdk_query.clone(),
                                         last_action.clone(),
@@ -1476,6 +1510,8 @@ impl UiGalleryDriver {
                                         virtual_list_torture_edit_row.clone(),
                                         virtual_list_torture_edit_text.clone(),
                                         virtual_list_torture_scroll.clone(),
+                                        code_editor_syntax_rust.clone(),
+                                        code_editor_boundary_identifier.clone(),
                                     )
                                 }
                             })
@@ -1549,6 +1585,7 @@ impl UiGalleryDriver {
                         .center(vec![tab_strip])
                         .right(vec![
                             shadcn::Button::new("Command palette")
+                                .test_id("ui-gallery-command-palette")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
                                 .on_click(fret_app::core_commands::COMMAND_PALETTE)
@@ -1579,10 +1616,11 @@ impl UiGalleryDriver {
                             last_debug_stats.layout_time.as_micros(),
                             last_debug_stats.paint_time.as_micros()
                         ))];
-                        if let Some((cursor, hit, focus)) = inspector_status.as_ref() {
+                        if let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
                             right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
+                            right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
                         }
 
                         WorkspaceStatusBar::new()
@@ -2082,9 +2120,41 @@ pub fn build_app() -> App {
 }
 
 pub fn build_runner_config() -> WinitRunnerConfig {
+    fn parse_main_window_size_override() -> Option<winit::dpi::LogicalSize<f64>> {
+        let raw = std::env::var("FRET_UI_GALLERY_MAIN_WINDOW_SIZE").ok()?;
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        let mut parts = trimmed
+            .split(|c: char| c == 'x' || c == 'X' || c == ',' || c.is_whitespace())
+            .filter(|p| !p.trim().is_empty());
+
+        let w = parts.next()?.trim().parse::<f64>().ok()?;
+        let h = parts.next()?.trim().parse::<f64>().ok()?;
+        if w <= 0.0 || h <= 0.0 {
+            return None;
+        }
+
+        Some(winit::dpi::LogicalSize::new(w, h))
+    }
+
+    let main_window_size = match parse_main_window_size_override() {
+        Some(size) => {
+            tracing::info!(
+                w = size.width,
+                h = size.height,
+                "ui-gallery overriding main_window_size via FRET_UI_GALLERY_MAIN_WINDOW_SIZE"
+            );
+            size
+        }
+        None => winit::dpi::LogicalSize::new(1080.0, 720.0),
+    };
+
     WinitRunnerConfig {
         main_window_title: "fret-ui-gallery".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(1080.0, 720.0),
+        main_window_size,
         ..Default::default()
     }
 }
@@ -2610,11 +2680,12 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_DEFAULT => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Default toast",
-                    shadcn::ToastMessageOptions::new().description("Hello from fret-ui-gallery."),
+                    shadcn::ToastRequest::new("Default toast")
+                        .id(shadcn::ToastId(100))
+                        .description("Hello from fret-ui-gallery."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.default");
@@ -2623,11 +2694,13 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_SUCCESS => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_success_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Success",
-                    shadcn::ToastMessageOptions::new().description("Everything worked."),
+                    shadcn::ToastRequest::new("Success")
+                        .id(shadcn::ToastId(101))
+                        .variant(shadcn::ToastVariant::Success)
+                        .description("Everything worked."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.success");
@@ -2636,11 +2709,13 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_ERROR => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_error_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Error",
-                    shadcn::ToastMessageOptions::new().description("Something failed."),
+                    shadcn::ToastRequest::new("Error")
+                        .id(shadcn::ToastId(102))
+                        .variant(shadcn::ToastVariant::Error)
+                        .description("Something failed."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.error");
@@ -2649,15 +2724,21 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_SHOW_ACTION_CANCEL => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Action toast",
-                    shadcn::ToastMessageOptions::new()
+                    shadcn::ToastRequest::new("Action toast")
+                        .id(shadcn::ToastId(103))
                         .description("Try the action/cancel buttons.")
-                        .action("Undo", CMD_TOAST_ACTION)
-                        .cancel("Cancel", CMD_TOAST_CANCEL)
-                        .duration(Duration::from_secs(6)),
+                        .action(shadcn::ToastAction {
+                            label: Arc::from("Undo"),
+                            command: CommandId::new(CMD_TOAST_ACTION),
+                        })
+                        .cancel(shadcn::ToastAction {
+                            label: Arc::from("Cancel"),
+                            command: CommandId::new(CMD_TOAST_CANCEL),
+                        })
+                        .duration(Some(Duration::from_secs(6))),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.action_cancel");
@@ -2769,6 +2850,7 @@ impl WinitAppDriver for UiGalleryDriver {
                     app,
                     window,
                     bounds,
+                    scale_factor,
                     semantics_snapshot,
                     element_runtime,
                 )
@@ -2805,7 +2887,15 @@ impl WinitAppDriver for UiGalleryDriver {
                         match effect {
                             Effect::Command { window: w, command } => {
                                 if w.is_none() || w == Some(window) {
-                                    let _ = state.ui.dispatch_command(app, services, &command);
+                                    self.handle_command(
+                                        WinitCommandContext {
+                                            app,
+                                            services,
+                                            window,
+                                            state,
+                                        },
+                                        command,
+                                    );
                                     applied_any_command = true;
                                 } else {
                                     deferred_effects.push(Effect::Command { window: w, command });

@@ -1,3 +1,5 @@
+use std::panic::Location;
+
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::elements::ContinuousFrames;
@@ -16,36 +18,44 @@ struct TransitionDriverState {
     lease: Option<ContinuousFrames>,
 }
 
+#[track_caller]
 pub fn drive_transition<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
     ticks: u64,
 ) -> TransitionOutput {
-    drive_transition_with_durations_and_easing(
-        cx,
-        open,
-        ticks,
-        ticks,
-        crate::headless::easing::smoothstep,
-    )
+    let loc = Location::caller();
+    cx.keyed((loc.file(), loc.line(), loc.column(), "smoothstep"), |cx| {
+        drive_transition_with_durations_and_easing_impl(
+            cx,
+            open,
+            ticks,
+            ticks,
+            crate::headless::easing::smoothstep,
+        )
+    })
 }
 
+#[track_caller]
 pub fn drive_transition_with_durations<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
     open_ticks: u64,
     close_ticks: u64,
 ) -> TransitionOutput {
-    drive_transition_with_durations_and_easing(
-        cx,
-        open,
-        open_ticks,
-        close_ticks,
-        crate::headless::easing::smoothstep,
-    )
+    let loc = Location::caller();
+    cx.keyed((loc.file(), loc.line(), loc.column(), "smoothstep"), |cx| {
+        drive_transition_with_durations_and_easing_impl(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+            crate::headless::easing::smoothstep,
+        )
+    })
 }
 
-pub fn drive_transition_with_durations_and_easing<H: UiHost>(
+fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
     open_ticks: u64,
@@ -90,12 +100,29 @@ pub fn drive_transition_with_durations_and_easing<H: UiHost>(
     }
 
     if output.animating {
+        // Force paint-cache roots to rerun paint while animating (opacity/transform changes).
+        cx.notify_for_animation_frame();
         cx.request_frame();
     }
 
     output
 }
 
+#[track_caller]
+pub fn drive_transition_with_durations_and_easing<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    ease: fn(f32) -> f32,
+) -> TransitionOutput {
+    let loc = Location::caller();
+    cx.keyed((loc.file(), loc.line(), loc.column()), |cx| {
+        drive_transition_with_durations_and_easing_impl(cx, open, open_ticks, close_ticks, ease)
+    })
+}
+
+#[track_caller]
 pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -103,50 +130,61 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
     close_ticks: u64,
     bezier: CubicBezier,
 ) -> TransitionOutput {
-    let app_tick = cx.app.tick_id().0;
-    let frame_tick = cx.frame_id.0;
+    let loc = Location::caller();
+    cx.keyed(
+        (loc.file(), loc.line(), loc.column(), "cubic_bezier"),
+        |cx| {
+            let app_tick = cx.app.tick_id().0;
+            let frame_tick = cx.frame_id.0;
 
-    let (output, start_lease, stop_lease) = cx.with_state(TransitionDriverState::default, |st| {
-        if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
-            st.configured_open_ticks = open_ticks;
-            st.configured_close_ticks = close_ticks;
-            st.timeline.set_durations(open_ticks, close_ticks);
-        }
+            let (output, start_lease, stop_lease) =
+                cx.with_state(TransitionDriverState::default, |st| {
+                    if st.configured_open_ticks != open_ticks
+                        || st.configured_close_ticks != close_ticks
+                    {
+                        st.configured_open_ticks = open_ticks;
+                        st.configured_close_ticks = close_ticks;
+                        st.timeline.set_durations(open_ticks, close_ticks);
+                    }
 
-        if st.last_frame_tick != frame_tick {
-            st.last_frame_tick = frame_tick;
-            st.tick = st.tick.saturating_add(1);
-        } else if st.last_app_tick != app_tick {
-            st.last_app_tick = app_tick;
-            st.tick = st.tick.saturating_add(1);
-        } else {
-            st.tick = st.tick.saturating_add(1);
-        }
+                    if st.last_frame_tick != frame_tick {
+                        st.last_frame_tick = frame_tick;
+                        st.tick = st.tick.saturating_add(1);
+                    } else if st.last_app_tick != app_tick {
+                        st.last_app_tick = app_tick;
+                        st.tick = st.tick.saturating_add(1);
+                    } else {
+                        st.tick = st.tick.saturating_add(1);
+                    }
 
-        let output = st
-            .timeline
-            .update_with_cubic_bezier(open, st.tick, bezier.x1, bezier.y1, bezier.x2, bezier.y2);
-        let start_lease = output.animating && st.lease.is_none();
-        let stop_lease = !output.animating && st.lease.is_some();
-        (output, start_lease, stop_lease)
-    });
+                    let output = st.timeline.update_with_cubic_bezier(
+                        open, st.tick, bezier.x1, bezier.y1, bezier.x2, bezier.y2,
+                    );
+                    let start_lease = output.animating && st.lease.is_none();
+                    let stop_lease = !output.animating && st.lease.is_some();
+                    (output, start_lease, stop_lease)
+                });
 
-    if start_lease {
-        let lease = cx.begin_continuous_frames();
-        cx.with_state(TransitionDriverState::default, |st| {
-            st.lease = Some(lease);
-        });
-    } else if stop_lease {
-        cx.with_state(TransitionDriverState::default, |st| {
-            st.lease = None;
-        });
-    }
+            if start_lease {
+                let lease = cx.begin_continuous_frames();
+                cx.with_state(TransitionDriverState::default, |st| {
+                    st.lease = Some(lease);
+                });
+            } else if stop_lease {
+                cx.with_state(TransitionDriverState::default, |st| {
+                    st.lease = None;
+                });
+            }
 
-    if output.animating {
-        cx.request_frame();
-    }
+            if output.animating {
+                // Force paint-cache roots to rerun paint while animating (opacity/transform changes).
+                cx.notify_for_animation_frame();
+                cx.request_frame();
+            }
 
-    output
+            output
+        },
+    )
 }
 
 #[cfg(test)]
@@ -183,5 +221,28 @@ mod tests {
                 .any(|e| *e == Effect::RequestAnimationFrame(window))
         );
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
+    }
+
+    #[test]
+    fn multiple_transitions_in_one_element_do_not_share_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let (a, b) = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t1", |cx| {
+            let a = drive_transition_with_durations(cx, true, 6, 6);
+            let b = drive_transition_with_durations(cx, false, 6, 6);
+            (a, b)
+        });
+
+        assert!(a.present);
+        assert!(a.animating);
+        assert!(a.progress > 0.0 && a.progress < 1.0);
+
+        assert!(!b.present);
+        assert!(!b.animating);
+        assert_eq!(b.progress, 0.0);
     }
 }

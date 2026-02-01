@@ -16,6 +16,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 
 [features]
+default = ["cjk-lite-fonts"]
 emoji-fonts = ["fret-launch/wasm-emoji-fonts"]
 cjk-lite-fonts = ["fret-launch/wasm-cjk-lite-fonts"]
 

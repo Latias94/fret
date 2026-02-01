@@ -252,6 +252,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.app.request_redraw(self.window);
     }
 
+    /// Mark the nearest cache root as needing a paint notification on the next mount.
+    ///
+    /// This is a lightweight way to force paint-cache roots to rerun paint (e.g. while animating
+    /// opacity/transform) without necessarily requesting a new animation frame from the runner.
+    pub fn notify_for_animation_frame(&mut self) {
+        // Drive invalidation from the current element, letting propagation and cache-root
+        // truncation pick the appropriate boundary (e.g. nearest view-cache root when enabled).
+        self.window_state
+            .request_notify_for_animation_frame(self.root_id());
+    }
+
     /// Request the next animation frame for this window.
     ///
     /// Use this for frame-driven updates that must advance without input events.
@@ -259,13 +270,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a one-shot request. Prefer `begin_continuous_frames()` when driving animations from
     /// declarative UI code.
     pub fn request_animation_frame(&mut self) {
-        // Match GPUI: requesting an animation frame implies the current view's output may change
-        // on the next tick, so view-cache reuse must be disabled for the nearest cache root.
-        let root = self
-            .window_state
-            .current_view_cache_root()
-            .unwrap_or_else(|| self.stack[0]);
-        self.window_state.request_notify_for_animation_frame(root);
+        self.notify_for_animation_frame();
         self.app
             .push_effect(Effect::RequestAnimationFrame(self.window));
     }

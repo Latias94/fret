@@ -48,8 +48,13 @@ hash or query string:
 
 For Web/WASM, system fonts are not available. You can opt into extra bundled fonts:
 
+- `cjk-lite-fonts` (default): includes a small subset of `Noto Sans CJK SC` (see `fret-fonts` docs).
 - `emoji-fonts`: includes `Noto Color Emoji` (large).
-- `cjk-lite-fonts`: includes a small subset of `Noto Sans CJK SC` (see `fret-fonts` docs).
+
+Examples:
+
+- Minimal build (no bundled fonts): `trunk serve --no-default-features`
+- Add emoji fonts: `trunk serve --features emoji-fonts`
 
 ## Debug teardown
 

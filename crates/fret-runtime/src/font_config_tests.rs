@@ -6,6 +6,10 @@ fn text_font_family_config_json_roundtrips() {
         ui_sans: vec!["Inter".to_string(), "Segoe UI".to_string()],
         ui_serif: vec!["Noto Serif".to_string()],
         ui_mono: vec!["Cascadia Mono".to_string()],
+        common_fallback: vec![
+            "Noto Sans CJK SC".to_string(),
+            "Noto Color Emoji".to_string(),
+        ],
     };
 
     let json = serde_json::to_string(&config).expect("serialize");

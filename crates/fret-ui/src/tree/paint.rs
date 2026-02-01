@@ -103,6 +103,37 @@ impl<H: UiHost> UiTree<H> {
             self.paint(app, services, root, bounds, scene, scale_factor);
         }
 
+        // Publish a platform-facing text-input snapshot after paint so text widgets can update
+        // their IME cursor area in the same frame (ADR 0012).
+        if let Some(window) = self.window {
+            let mut next = if focus_is_text_input {
+                self.focus
+                    .and_then(|focus| self.nodes.get(focus))
+                    .and_then(|n| n.widget.as_ref())
+                    .and_then(|w| w.platform_text_input_snapshot())
+                    .unwrap_or_else(|| fret_runtime::WindowTextInputSnapshot {
+                        focus_is_text_input: true,
+                        ..Default::default()
+                    })
+            } else {
+                fret_runtime::WindowTextInputSnapshot::default()
+            };
+            next.focus_is_text_input = focus_is_text_input;
+
+            let needs_update = app
+                .global::<fret_runtime::WindowTextInputSnapshotService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &next);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowTextInputSnapshotService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, next);
+                    },
+                );
+            }
+        }
+
         if cache_enabled {
             self.paint_cache.finish_frame();
             if self.debug_enabled {

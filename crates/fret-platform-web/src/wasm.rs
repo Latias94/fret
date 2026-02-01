@@ -29,14 +29,32 @@ fn document() -> Option<Document> {
 /// Web-specific platform services for `fret-runtime::Effect`s that require browser APIs.
 ///
 /// This crate intentionally does *not* implement input/event mapping; use `winit` for that.
-#[derive(Default)]
 pub struct WebPlatformServices {
     queued_events: Rc<RefCell<Vec<Event>>>,
     fired_timeouts: Rc<RefCell<Vec<TimerToken>>>,
     timers: HashMap<TimerToken, WebTimer>,
     file_dialogs: Rc<RefCell<WebFileDialogState>>,
     ime: Option<WebImeBridge>,
+    last_ime_cursor_area: Option<fret_core::Rect>,
+    #[cfg(debug_assertions)]
+    ime_debug: Rc<RefCell<WebImeDebugState>>,
     waker: Option<WebWaker>,
+}
+
+impl Default for WebPlatformServices {
+    fn default() -> Self {
+        Self {
+            queued_events: Rc::new(RefCell::new(Vec::new())),
+            fired_timeouts: Rc::new(RefCell::new(Vec::new())),
+            timers: HashMap::new(),
+            file_dialogs: Rc::new(RefCell::new(WebFileDialogState::default())),
+            ime: None,
+            last_ime_cursor_area: None,
+            #[cfg(debug_assertions)]
+            ime_debug: Rc::new(RefCell::new(WebImeDebugState::default())),
+            waker: None,
+        }
+    }
 }
 
 impl std::fmt::Debug for WebPlatformServices {
@@ -58,6 +76,21 @@ struct WebTimer {
     callback: wasm_bindgen::closure::Closure<dyn FnMut()>,
 }
 
+#[cfg(debug_assertions)]
+#[derive(Debug, Default)]
+struct WebImeDebugState {
+    dirty: bool,
+    snapshot: fret_core::input::WebImeBridgeDebugSnapshot,
+}
+
+#[cfg(debug_assertions)]
+fn debug_truncate(s: &str, max_chars: usize) -> String {
+    if s.chars().count() <= max_chars {
+        return s.to_string();
+    }
+    s.chars().take(max_chars).collect()
+}
+
 struct WebImeBridge {
     textarea: HtmlTextAreaElement,
     enabled: bool,
@@ -67,6 +100,8 @@ struct WebImeBridge {
     waker: Option<WebWaker>,
     listeners: Vec<(String, WebChangeCallback)>,
     last_cursor_area: Option<fret_core::Rect>,
+    #[cfg(debug_assertions)]
+    debug: Rc<RefCell<WebImeDebugState>>,
 }
 
 impl std::fmt::Debug for WebImeBridge {
@@ -85,6 +120,7 @@ impl WebImeBridge {
         document: &Document,
         queued_events: Rc<RefCell<Vec<Event>>>,
         waker: Option<WebWaker>,
+        #[cfg(debug_assertions)] debug: Rc<RefCell<WebImeDebugState>>,
     ) -> Option<Self> {
         let Ok(el) = document.create_element("textarea") else {
             return None;
@@ -96,6 +132,9 @@ impl WebImeBridge {
         textarea.set_spellcheck(false);
         textarea.set_value("");
         textarea.set_tab_index(-1);
+        textarea.set_rows(1);
+        textarea.set_cols(1024);
+        textarea.set_wrap("off");
 
         let textarea_el: HtmlElement = textarea.clone().unchecked_into();
         let _ = textarea_el.set_attribute("autocapitalize", "off");
@@ -105,9 +144,25 @@ impl WebImeBridge {
         let _ = style.set_property("position", "fixed");
         let _ = style.set_property("left", "0px");
         let _ = style.set_property("top", "0px");
-        let _ = style.set_property("opacity", "0");
-        let _ = style.set_property("width", "1px");
-        let _ = style.set_property("height", "1px");
+        // Keep the element effectively invisible but still "layout-real" so browser IME can anchor
+        // composition UI reliably across platforms (ADR 0195).
+        let _ = style.set_property("opacity", "0.001");
+        // Avoid line wrapping during composition updates; some IMEs anchor their candidate UI to the
+        // textarea caret position, so wrapping causes vertical jitter as the preedit string grows.
+        let _ = style.set_property("width", "1000px");
+        let _ = style.set_property("height", "20px");
+        let _ = style.set_property("margin", "0");
+        let _ = style.set_property("padding", "0");
+        let _ = style.set_property("border", "0");
+        let _ = style.set_property("outline", "none");
+        let _ = style.set_property("resize", "none");
+        let _ = style.set_property("overflow", "hidden");
+        let _ = style.set_property("white-space", "pre");
+        let _ = style.set_property("background", "transparent");
+        let _ = style.set_property("color", "transparent");
+        let _ = style.set_property("caret-color", "transparent");
+        let _ = style.set_property("font-size", "16px");
+        let _ = style.set_property("line-height", "20px");
         let _ = style.set_property("pointer-events", "none");
         let _ = style.set_property("z-index", "2147483647");
         let _ = textarea_el.set_attribute("aria-hidden", "true");
@@ -119,6 +174,15 @@ impl WebImeBridge {
         let composing = Rc::new(Cell::new(false));
         let suppress_next_input = Rc::new(Cell::new(false));
 
+        #[cfg(debug_assertions)]
+        {
+            let mut st = debug.borrow_mut();
+            st.snapshot.enabled = false;
+            st.snapshot.composing = false;
+            st.snapshot.suppress_next_input = false;
+            st.dirty = true;
+        }
+
         let mut bridge = Self {
             textarea,
             enabled: false,
@@ -128,6 +192,8 @@ impl WebImeBridge {
             waker,
             listeners: Vec::new(),
             last_cursor_area: None,
+            #[cfg(debug_assertions)]
+            debug,
         };
         bridge.install_listeners();
         Some(bridge)
@@ -153,6 +219,8 @@ impl WebImeBridge {
             let suppress_next_input = self.suppress_next_input.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
+            #[cfg(debug_assertions)]
+            let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
                 let Ok(k) = e.dyn_into::<KeyboardEvent>() else {
                     return;
@@ -181,6 +249,13 @@ impl WebImeBridge {
                     .parse::<fret_core::KeyCode>()
                     .unwrap_or(fret_core::KeyCode::Unidentified);
 
+                #[cfg(debug_assertions)]
+                {
+                    let mut st = debug.borrow_mut();
+                    st.snapshot.last_key_code = Some(key);
+                    st.dirty = true;
+                }
+
                 // When IME is enabled we route editor shortcuts through the UI runtime. Prevent
                 // the browser from applying default text editing to the hidden textarea (notably
                 // paste), which would otherwise produce extra `input` events.
@@ -198,6 +273,12 @@ impl WebImeBridge {
                     k.prevent_default();
                     suppress_next_input.set(true);
                     textarea.set_value("");
+                    #[cfg(debug_assertions)]
+                    {
+                        let mut st = debug.borrow_mut();
+                        st.snapshot.suppress_next_input = true;
+                        st.dirty = true;
+                    }
                 }
 
                 let event = Event::KeyDown {
@@ -218,6 +299,8 @@ impl WebImeBridge {
         {
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
+            #[cfg(debug_assertions)]
+            let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
                 let Ok(k) = e.dyn_into::<KeyboardEvent>() else {
                     return;
@@ -241,6 +324,13 @@ impl WebImeBridge {
                     .parse::<fret_core::KeyCode>()
                     .unwrap_or(fret_core::KeyCode::Unidentified);
 
+                #[cfg(debug_assertions)]
+                {
+                    let mut st = debug.borrow_mut();
+                    st.snapshot.last_key_code = Some(key);
+                    st.dirty = true;
+                }
+
                 let event = Event::KeyUp { key, modifiers };
                 queue.borrow_mut().push(event);
                 if let Some(wake) = wake.as_ref() {
@@ -255,8 +345,18 @@ impl WebImeBridge {
         // Composition events → `Event::Ime`.
         {
             let composing = self.composing.clone();
+            #[cfg(debug_assertions)]
+            let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
                 composing.set(true);
+                #[cfg(debug_assertions)]
+                {
+                    let mut st = debug.borrow_mut();
+                    st.snapshot.composing = true;
+                    st.snapshot.composition_start_seen =
+                        st.snapshot.composition_start_seen.saturating_add(1);
+                    st.dirty = true;
+                }
             })
                 as Box<dyn FnMut(WebSysEvent)>);
             let _ = target
@@ -269,6 +369,8 @@ impl WebImeBridge {
             let composing = self.composing.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
+            #[cfg(debug_assertions)]
+            let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
                 if !composing.get() {
                     // Some browsers may fire update without start; treat as composing.
@@ -295,6 +397,15 @@ impl WebImeBridge {
                 if let Some(wake) = wake.as_ref() {
                     wake();
                 }
+
+                #[cfg(debug_assertions)]
+                {
+                    let mut st = debug.borrow_mut();
+                    st.snapshot.composing = true;
+                    st.snapshot.composition_update_seen =
+                        st.snapshot.composition_update_seen.saturating_add(1);
+                    st.dirty = true;
+                }
             })
                 as Box<dyn FnMut(WebSysEvent)>);
             let _ = target
@@ -308,6 +419,8 @@ impl WebImeBridge {
             let suppress_next_input = self.suppress_next_input.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
+            #[cfg(debug_assertions)]
+            let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
                 composing.set(false);
                 suppress_next_input.set(true);
@@ -329,6 +442,16 @@ impl WebImeBridge {
                 if let Some(wake) = wake.as_ref() {
                     wake();
                 }
+
+                #[cfg(debug_assertions)]
+                {
+                    let mut st = debug.borrow_mut();
+                    st.snapshot.composing = false;
+                    st.snapshot.suppress_next_input = true;
+                    st.snapshot.composition_end_seen =
+                        st.snapshot.composition_end_seen.saturating_add(1);
+                    st.dirty = true;
+                }
             })
                 as Box<dyn FnMut(WebSysEvent)>);
             let _ = target
@@ -343,18 +466,39 @@ impl WebImeBridge {
             let suppress_next_input = self.suppress_next_input.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
+            #[cfg(debug_assertions)]
+            let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
                 if composing.get() {
                     return;
                 }
                 if suppress_next_input.replace(false) {
                     textarea.set_value("");
+                    #[cfg(debug_assertions)]
+                    {
+                        let mut st = debug.borrow_mut();
+                        st.snapshot.suppress_next_input = false;
+                        st.snapshot.suppressed_input_seen =
+                            st.snapshot.suppressed_input_seen.saturating_add(1);
+                        st.dirty = true;
+                    }
                     return;
                 }
 
                 let Ok(input) = e.dyn_into::<InputEvent>() else {
                     return;
                 };
+
+                #[cfg(debug_assertions)]
+                {
+                    let mut st = debug.borrow_mut();
+                    st.snapshot.input_seen = st.snapshot.input_seen.saturating_add(1);
+                    st.snapshot.last_input_type = Some(input.input_type());
+                    let data = input.data().unwrap_or_default();
+                    st.snapshot.last_input_data =
+                        (!data.is_empty()).then(|| debug_truncate(&data, 64));
+                    st.dirty = true;
+                }
 
                 // Prefer the explicit data payload; fall back to reading the textarea value.
                 let mut text = input.data().unwrap_or_default();
@@ -383,12 +527,22 @@ impl WebImeBridge {
             let suppress_next_input = self.suppress_next_input.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
+            #[cfg(debug_assertions)]
+            let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
                 if composing.get() {
                     return;
                 }
                 if suppress_next_input.replace(false) {
                     textarea.set_value("");
+                    #[cfg(debug_assertions)]
+                    {
+                        let mut st = debug.borrow_mut();
+                        st.snapshot.suppress_next_input = false;
+                        st.snapshot.suppressed_input_seen =
+                            st.snapshot.suppressed_input_seen.saturating_add(1);
+                        st.dirty = true;
+                    }
                     return;
                 }
 
@@ -400,6 +554,16 @@ impl WebImeBridge {
                 }
 
                 let input_type = input.input_type();
+                #[cfg(debug_assertions)]
+                {
+                    let mut st = debug.borrow_mut();
+                    st.snapshot.beforeinput_seen = st.snapshot.beforeinput_seen.saturating_add(1);
+                    st.snapshot.last_input_type = Some(input_type.clone());
+                    let data = input.data().unwrap_or_default();
+                    st.snapshot.last_beforeinput_data =
+                        (!data.is_empty()).then(|| debug_truncate(&data, 64));
+                    st.dirty = true;
+                }
                 if !input_type.starts_with("insert") {
                     return;
                 }
@@ -431,6 +595,15 @@ impl WebImeBridge {
         }
         self.enabled = enabled;
 
+        #[cfg(debug_assertions)]
+        {
+            let mut st = self.debug.borrow_mut();
+            st.snapshot.enabled = enabled;
+            st.snapshot.composing = self.composing.get();
+            st.snapshot.suppress_next_input = self.suppress_next_input.get();
+            st.dirty = true;
+        }
+
         if enabled {
             let _ = self.textarea.focus();
             self.push_event(Event::Ime(fret_core::ImeEvent::Enabled));
@@ -441,11 +614,27 @@ impl WebImeBridge {
         self.textarea.set_value("");
         self.composing.set(false);
         self.suppress_next_input.set(false);
+
+        #[cfg(debug_assertions)]
+        {
+            let mut st = self.debug.borrow_mut();
+            st.snapshot.composing = false;
+            st.snapshot.suppress_next_input = false;
+            st.dirty = true;
+        }
+
         self.push_event(Event::Ime(fret_core::ImeEvent::Disabled));
     }
 
     fn set_cursor_area(&mut self, rect: fret_core::Rect) {
         self.last_cursor_area = Some(rect);
+        #[cfg(debug_assertions)]
+        {
+            let mut st = self.debug.borrow_mut();
+            st.snapshot.last_cursor_area = Some(rect);
+            st.snapshot.cursor_area_set_seen = st.snapshot.cursor_area_set_seen.saturating_add(1);
+            st.dirty = true;
+        }
         let textarea_el: HtmlElement = self.textarea.clone().unchecked_into();
         let style = textarea_el.style();
         let _ = style.set_property("left", &format!("{}px", rect.origin.x.0.max(0.0)));
@@ -497,17 +686,45 @@ impl WebPlatformServices {
                         continue;
                     };
                     if self.ime.is_none() {
-                        self.ime = WebImeBridge::ensure(
-                            &document,
-                            self.queued_events.clone(),
-                            self.waker.clone(),
-                        );
+                        #[cfg(not(debug_assertions))]
+                        {
+                            self.ime = WebImeBridge::ensure(
+                                &document,
+                                self.queued_events.clone(),
+                                self.waker.clone(),
+                            );
+                        }
+                        #[cfg(debug_assertions)]
+                        {
+                            self.ime = WebImeBridge::ensure(
+                                &document,
+                                self.queued_events.clone(),
+                                self.waker.clone(),
+                                self.ime_debug.clone(),
+                            );
+                        }
+                        if let Some(bridge) = self.ime.as_mut()
+                            && let Some(rect) = self.last_ime_cursor_area
+                        {
+                            bridge.set_cursor_area(rect);
+                        }
                     }
                     if let Some(bridge) = self.ime.as_mut() {
                         bridge.set_enabled(enabled);
                     }
                 }
                 Effect::ImeSetCursorArea { rect, .. } => {
+                    self.last_ime_cursor_area = Some(rect);
+                    #[cfg(debug_assertions)]
+                    {
+                        if self.ime.is_none() {
+                            let mut st = self.ime_debug.borrow_mut();
+                            st.snapshot.last_cursor_area = Some(rect);
+                            st.snapshot.cursor_area_set_seen =
+                                st.snapshot.cursor_area_set_seen.saturating_add(1);
+                            st.dirty = true;
+                        }
+                    }
                     if let Some(bridge) = self.ime.as_mut() {
                         bridge.set_cursor_area(rect);
                     }
@@ -786,6 +1003,20 @@ impl WebPlatformServices {
                 other => unhandled.push(other),
             }
         }
+
+        #[cfg(debug_assertions)]
+        {
+            let dirty = self.ime_debug.borrow().dirty;
+            if dirty {
+                let snapshot = {
+                    let mut st = self.ime_debug.borrow_mut();
+                    st.dirty = false;
+                    st.snapshot.clone()
+                };
+                app.set_global(snapshot);
+            }
+        }
+
         unhandled
     }
 

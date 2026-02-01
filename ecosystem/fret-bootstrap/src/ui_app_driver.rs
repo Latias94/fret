@@ -999,8 +999,8 @@ fn hotpatch_trace_log(line: &str) {
     }
 
     use std::io::Write as _;
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+    let ts = fret_core::time::SystemTime::now()
+        .duration_since(fret_core::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or_default();
     let thread_id = format!("{:?}", std::thread::current().id());
@@ -1512,8 +1512,8 @@ fn frame_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
 fn write_frame_hitch_log(line: &str) {
     use std::io::Write as _;
 
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+    let ts = fret_core::time::SystemTime::now()
+        .duration_since(fret_core::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or_default();
     let thread_id = format!("{:?}", std::thread::current().id());
@@ -1888,7 +1888,14 @@ fn ui_app_render<S>(
         let _diag_guard = diag_span.enter();
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.drive_script_for_window(app, window, bounds, semantics_snapshot, element_runtime)
+            svc.drive_script_for_window(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                semantics_snapshot,
+                element_runtime,
+            )
         });
         if drive.request_redraw {
             app.request_redraw(window);

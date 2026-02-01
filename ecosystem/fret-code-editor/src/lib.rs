@@ -12,11 +12,12 @@ use std::sync::Arc;
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
     DisplayPoint, byte_to_display_point, display_point_to_byte, move_word_left, move_word_right,
-    select_word_range,
+    next_char_boundary, prev_char_boundary, select_word_range,
 };
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp,
-    Size, TextOverflow, TextStyle, TextWrap,
+    AttributedText, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId, KeyCode,
+    Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow, TextPaintStyle, TextSpan,
+    TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
@@ -111,11 +112,20 @@ struct UndoGroup {
     coalesce_key: CoalesceKey,
 }
 
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SyntaxSpan {
+    /// Range within the row text (UTF-8 byte indices).
+    range: Range<usize>,
+    highlight: &'static str,
+}
+
 #[derive(Debug, Clone)]
 struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    text_boundary_mode: TextBoundaryMode,
     undo: UndoHistory<CodeEditorTx>,
     undo_group: Option<UndoGroup>,
     dragging: bool,
@@ -125,6 +135,18 @@ struct CodeEditorState {
     row_text_cache_tick: u64,
     row_text_cache: HashMap<usize, (Arc<str>, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
+    #[cfg(feature = "syntax")]
+    language: Option<Arc<str>>,
+    #[cfg(feature = "syntax")]
+    syntax_row_cache_rev: fret_code_editor_buffer::Revision,
+    #[cfg(feature = "syntax")]
+    syntax_row_cache_tick: u64,
+    #[cfg(feature = "syntax")]
+    syntax_row_cache_language: Option<Arc<str>>,
+    #[cfg(feature = "syntax")]
+    syntax_row_cache: HashMap<usize, (Arc<[SyntaxSpan]>, u64)>,
+    #[cfg(feature = "syntax")]
+    syntax_row_cache_queue: VecDeque<(usize, u64)>,
 }
 
 #[derive(Clone)]
@@ -143,6 +165,7 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                text_boundary_mode: TextBoundaryMode::Identifier,
                 undo: UndoHistory::with_limit(512),
                 undo_group: None,
                 dragging: false,
@@ -152,8 +175,49 @@ impl CodeEditorHandle {
                 row_text_cache_tick: 0,
                 row_text_cache: HashMap::new(),
                 row_text_cache_queue: VecDeque::new(),
+                #[cfg(feature = "syntax")]
+                language: None,
+                #[cfg(feature = "syntax")]
+                syntax_row_cache_rev: fret_code_editor_buffer::Revision(0),
+                #[cfg(feature = "syntax")]
+                syntax_row_cache_tick: 0,
+                #[cfg(feature = "syntax")]
+                syntax_row_cache_language: None,
+                #[cfg(feature = "syntax")]
+                syntax_row_cache: HashMap::new(),
+                #[cfg(feature = "syntax")]
+                syntax_row_cache_queue: VecDeque::new(),
             })),
         }
+    }
+
+    pub fn set_language(&self, language: Option<impl Into<Arc<str>>>) {
+        #[cfg(feature = "syntax")]
+        {
+            let mut st = self.state.borrow_mut();
+            st.language = language.map(Into::into);
+            st.syntax_row_cache_language = None;
+            st.syntax_row_cache_tick = 0;
+            st.syntax_row_cache.clear();
+            st.syntax_row_cache_queue.clear();
+        }
+        #[cfg(not(feature = "syntax"))]
+        {
+            let _ = language;
+        }
+    }
+
+    pub fn text_boundary_mode(&self) -> TextBoundaryMode {
+        self.state.borrow().text_boundary_mode
+    }
+
+    pub fn set_text_boundary_mode(&self, mode: TextBoundaryMode) {
+        let mut st = self.state.borrow_mut();
+        if st.text_boundary_mode == mode {
+            return;
+        }
+        st.text_boundary_mode = mode;
+        st.undo_group = None;
     }
 
     pub fn replace_buffer(&self, buffer: TextBuffer) {
@@ -170,6 +234,14 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        #[cfg(feature = "syntax")]
+        {
+            st.syntax_row_cache_rev = st.buffer.revision();
+            st.syntax_row_cache_language = st.language.clone();
+            st.syntax_row_cache_tick = 0;
+            st.syntax_row_cache.clear();
+            st.syntax_row_cache_queue.clear();
+        }
     }
 
     pub fn set_text(&self, text: impl Into<String>) {
@@ -257,6 +329,7 @@ impl CodeEditor {
             };
 
             let content_len = editor_state.borrow().buffer.line_count();
+            let boundary_mode = editor_state.borrow().text_boundary_mode;
 
             let mut region_layout = fret_ui::element::LayoutStyle::default();
             region_layout.size.width = Length::Fill;
@@ -266,7 +339,7 @@ impl CodeEditor {
             let region_props = TextInputRegionProps {
                 layout: region_layout,
                 enabled: true,
-                text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
+                text_boundary_mode_override: Some(boundary_mode),
             };
 
             let mut pointer_props = PointerRegionProps::default();
@@ -294,15 +367,13 @@ impl CodeEditor {
                     st.dragging = true;
                     st.drag_pointer = Some(down.pointer_id);
                     st.undo_group = None;
+                    st.preedit = None;
 
                     let caret = caret_for_pointer(&st.buffer, row, bounds, down.position, cell_w);
                     match down.click_count {
                         2 => {
-                            let (start, end) = select_word_range(
-                                st.buffer.text(),
-                                caret,
-                                TextBoundaryMode::Identifier,
-                            );
+                            let (start, end) =
+                                select_word_range(st.buffer.text(), caret, st.text_boundary_mode);
                             st.selection = Selection {
                                 anchor: start,
                                 focus: end,
@@ -327,11 +398,11 @@ impl CodeEditor {
                             }
                         }
                     }
-                    st.preedit = None;
 
                     let caret_rect = caret_rect_for_selection(
                         &st.buffer,
                         st.selection,
+                        st.preedit.as_ref(),
                         row_h,
                         cell_w,
                         bounds,
@@ -378,6 +449,7 @@ impl CodeEditor {
                     let caret_rect = caret_rect_for_selection(
                         &st.buffer,
                         st.selection,
+                        st.preedit.as_ref(),
                         row_h,
                         cell_w,
                         bounds,
@@ -497,15 +569,19 @@ impl CodeEditor {
                                 did = true;
                             }
                             "text.move_word_left" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, -1, false);
                             }
                             "text.move_word_right" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, 1, false);
                             }
                             "text.select_word_left" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, -1, true);
                             }
                             "text.select_word_right" => {
+                                st.preedit = None;
                                 did = move_word(&mut st, 1, true);
                             }
                             _ => return false,
@@ -642,6 +718,7 @@ impl CodeEditor {
                 cx.text_input_region_on_text_input(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, text: &str| {
                         let mut st = text_state.borrow_mut();
+                        st.preedit = None;
                         if insert_text(&mut st, text).is_some() {
                             push_caret_rect_effect(
                                 host,
@@ -688,6 +765,44 @@ impl CodeEditor {
                                         text: text.clone(),
                                         cursor: *cursor,
                                     });
+                                }
+                            }
+                            fret_core::ImeEvent::DeleteSurrounding {
+                                before_bytes,
+                                after_bytes,
+                            } => {
+                                let range = st.selection.normalized();
+                                let caret = st.selection.caret().min(st.buffer.len_bytes());
+                                let start = if range.is_empty() {
+                                    caret.saturating_sub(*before_bytes)
+                                } else {
+                                    range.start
+                                }
+                                .min(st.buffer.len_bytes());
+                                let end = if range.is_empty() {
+                                    caret.saturating_add(*after_bytes)
+                                } else {
+                                    range.end
+                                }
+                                .min(st.buffer.len_bytes());
+
+                                let start = prev_char_boundary(st.buffer.text(), start);
+                                let end = next_char_boundary(st.buffer.text(), end);
+                                if start < end {
+                                    let kind = if *before_bytes > 0 {
+                                        UndoGroupKind::Backspace
+                                    } else {
+                                        UndoGroupKind::DeleteForward
+                                    };
+                                    let _ = apply_and_record_edit(
+                                        &mut st,
+                                        kind,
+                                        Edit::Delete { range: start..end },
+                                        Selection {
+                                            anchor: start,
+                                            focus: start,
+                                        },
+                                    );
                                 }
                             }
                         }
@@ -805,6 +920,7 @@ fn caret_for_pointer(
 fn caret_rect_for_selection(
     buf: &TextBuffer,
     sel: Selection,
+    preedit: Option<&PreeditState>,
     row_h: Px,
     cell_w: Px,
     bounds: Rect,
@@ -818,7 +934,11 @@ fn caret_rect_for_selection(
     let pt = byte_to_display_point(buf, caret);
     let offset = scroll_handle.offset();
     let y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
-    let x = Px(bounds.origin.x.0 + pt.col as f32 * cell_w.0);
+    let mut col = pt.col;
+    if let Some(preedit) = preedit {
+        col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+    }
+    let x = Px(bounds.origin.x.0 + col as f32 * cell_w.0);
     Some(Rect::new(
         fret_core::Point::new(x, y),
         Size::new(Px(1.0), row_h),
@@ -840,6 +960,7 @@ fn push_caret_rect_effect(
     if let Some(rect) = caret_rect_for_selection(
         &st.buffer,
         st.selection,
+        st.preedit.as_ref(),
         row_h,
         cell_w,
         bounds,
@@ -850,6 +971,15 @@ fn push_caret_rect_effect(
             rect,
         });
     }
+}
+
+fn preedit_cursor_offset_cols(preedit: &PreeditState) -> usize {
+    let mut end = preedit
+        .cursor
+        .map(|(_, end)| end)
+        .unwrap_or_else(|| preedit.text.len());
+    end = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, end).min(preedit.text.len());
+    preedit.text[..end].chars().count()
 }
 
 fn insert_text(st: &mut CodeEditorState, text: &str) -> Option<()> {
@@ -879,30 +1009,6 @@ fn insert_text_with_kind(st: &mut CodeEditorState, text: &str, kind: UndoGroupKi
     Some(())
 }
 
-fn prev_char_boundary(text: &str, mut idx: usize) -> usize {
-    idx = idx.min(text.len());
-    if idx == 0 {
-        return 0;
-    }
-    idx = idx.saturating_sub(1);
-    while idx > 0 && !text.is_char_boundary(idx) {
-        idx = idx.saturating_sub(1);
-    }
-    idx
-}
-
-fn next_char_boundary(text: &str, mut idx: usize) -> usize {
-    idx = idx.min(text.len());
-    if idx >= text.len() {
-        return text.len();
-    }
-    idx = idx.saturating_add(1).min(text.len());
-    while idx < text.len() && !text.is_char_boundary(idx) {
-        idx = idx.saturating_add(1).min(text.len());
-    }
-    idx
-}
-
 #[allow(clippy::too_many_arguments)]
 fn handle_key_down(
     host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -915,6 +1021,21 @@ fn handle_key_down(
     modifiers: Modifiers,
 ) -> bool {
     let mut st = state.borrow_mut();
+    if st.preedit.is_some() {
+        match key {
+            KeyCode::ArrowLeft
+            | KeyCode::ArrowRight
+            | KeyCode::ArrowUp
+            | KeyCode::ArrowDown
+            | KeyCode::Backspace
+            | KeyCode::Delete
+            | KeyCode::Enter
+            | KeyCode::Tab => {
+                st.preedit = None;
+            }
+            _ => {}
+        }
+    }
     let cell_w_px = cell_w.get();
 
     let shift = modifiers.shift;
@@ -1119,15 +1240,30 @@ fn apply_and_record_edit(
     }
 
     st.preedit = None;
-    let group = st.undo_group.as_mut().expect("undo group must exist");
-    st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?;
+    let delta = {
+        let group = st.undo_group.as_mut().expect("undo group must exist");
+        st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?
+    };
+    #[cfg(feature = "syntax")]
+    invalidate_syntax_row_cache_for_delta(st, delta);
+    #[cfg(not(feature = "syntax"))]
+    let _ = delta;
     st.selection = next_selection;
+
+    let (buffer_tx, inverse_selection, coalesce_key) = {
+        let group = st.undo_group.as_ref().expect("undo group must exist");
+        (
+            group.tx.snapshot(),
+            group.before_selection,
+            group.coalesce_key.clone(),
+        )
+    };
     let record = UndoRecord::new(CodeEditorTx {
-        buffer_tx: group.tx.snapshot(),
+        buffer_tx,
         selection: next_selection,
-        inverse_selection: group.before_selection,
+        inverse_selection,
     })
-    .coalesce_key(group.coalesce_key.clone());
+    .coalesce_key(coalesce_key);
     st.undo.record_or_coalesce(record);
     Some(())
 }
@@ -1149,6 +1285,15 @@ fn undo(st: &mut CodeEditorState) -> bool {
         }
         Ok::<_, ()>(())
     });
+    #[cfg(feature = "syntax")]
+    {
+        if applied {
+            st.syntax_row_cache_rev = st.buffer.revision();
+            st.syntax_row_cache_tick = 0;
+            st.syntax_row_cache.clear();
+            st.syntax_row_cache_queue.clear();
+        }
+    }
     applied
 }
 
@@ -1169,12 +1314,21 @@ fn redo(st: &mut CodeEditorState) -> bool {
         }
         Ok::<_, ()>(())
     });
+    #[cfg(feature = "syntax")]
+    {
+        if applied {
+            st.syntax_row_cache_rev = st.buffer.revision();
+            st.syntax_row_cache_tick = 0;
+            st.syntax_row_cache.clear();
+            st.syntax_row_cache_queue.clear();
+        }
+    }
     applied
 }
 
 fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
     let text = st.buffer.text();
-    let mode = TextBoundaryMode::Identifier;
+    let mode = st.text_boundary_mode;
     st.undo_group = None;
 
     let (sel_start, sel_end) = {
@@ -1290,21 +1444,81 @@ fn paint_row(
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     };
-    let _ = painter.text(
-        key,
-        DrawOrder(2),
-        origin,
-        Arc::clone(&line),
-        text_style.clone(),
-        fg,
-        constraints,
-        painter.scale_factor(),
-    );
+    let mut drew_rich = false;
+
+    if let Some(preedit) = &st.preedit {
+        let caret = st.selection.caret().min(st.buffer.len_bytes());
+        let caret_pt = byte_to_display_point(&st.buffer, caret);
+        if caret_pt.row == row {
+            let line_start = st.buffer.line_start(row).unwrap_or(0);
+            let mut caret_in_line = caret.saturating_sub(line_start).min(line.len());
+            caret_in_line =
+                fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
+
+            let rich = materialize_preedit_rich_text(
+                Arc::clone(&line),
+                caret_in_line,
+                preedit,
+                fg,
+                selection_bg,
+            );
+            let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
+            let _ = painter.rich_text(
+                key,
+                DrawOrder(2),
+                origin,
+                rich,
+                text_style.clone(),
+                fg,
+                constraints,
+                painter.scale_factor(),
+            );
+            drew_rich = true;
+        }
+    }
+    #[cfg(feature = "syntax")]
+    {
+        if !drew_rich {
+            let spans = cached_row_syntax_spans(st, row, text_cache_max_entries);
+            if !spans.is_empty() {
+                let theme = painter.theme().clone();
+                let rich = materialize_row_rich_text(&theme, Arc::clone(&line), spans.as_ref());
+                let _ = painter.rich_text(
+                    key,
+                    DrawOrder(2),
+                    origin,
+                    rich,
+                    text_style.clone(),
+                    fg,
+                    constraints,
+                    painter.scale_factor(),
+                );
+                drew_rich = true;
+            }
+        }
+    }
+
+    if !drew_rich {
+        let _ = painter.text(
+            key,
+            DrawOrder(2),
+            origin,
+            Arc::clone(&line),
+            text_style.clone(),
+            fg,
+            constraints,
+            painter.scale_factor(),
+        );
+    }
 
     if st.selection.is_caret() {
         let caret_pt = byte_to_display_point(&st.buffer, st.selection.caret());
         if caret_pt.row == row {
-            let x = Px(rect.origin.x.0 + caret_pt.col as f32 * cell_w.0);
+            let mut col = caret_pt.col;
+            if let Some(preedit) = &st.preedit {
+                col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+            }
+            let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
             let caret_rect = Rect::new(
                 fret_core::Point::new(x, rect.origin.y),
                 Size::new(Px(1.0), row_h),
@@ -1317,26 +1531,6 @@ fn paint_row(
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(Px(0.0)),
             });
-        }
-    }
-
-    if let Some(preedit) = &st.preedit {
-        let caret_pt = byte_to_display_point(&st.buffer, st.selection.caret());
-        if caret_pt.row == row {
-            let x = Px(rect.origin.x.0 + caret_pt.col as f32 * cell_w.0);
-            let origin = fret_core::Point::new(x, rect.origin.y);
-            let scope = painter.key_scope(&"fret-code-editor-row-text");
-            let key: u64 = painter.child_key(scope, &(row, 1u8)).into();
-            let _ = painter.text(
-                key,
-                DrawOrder(4),
-                origin,
-                preedit.text.as_str(),
-                text_style.clone(),
-                fg,
-                constraints,
-                painter.scale_factor(),
-            );
         }
     }
 }
@@ -1379,6 +1573,391 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
     text
 }
 
+fn materialize_preedit_rich_text(
+    line: Arc<str>,
+    caret_in_line: usize,
+    preedit: &PreeditState,
+    fg: Color,
+    selection_bg: Color,
+) -> AttributedText {
+    let caret_in_line = caret_in_line.min(line.len());
+    let before = line.get(..caret_in_line).unwrap_or("");
+    let after = line.get(caret_in_line..).unwrap_or("");
+
+    let mut display = String::with_capacity(before.len() + preedit.text.len() + after.len());
+    display.push_str(before);
+    display.push_str(preedit.text.as_str());
+    display.push_str(after);
+
+    let before_len = before.len();
+    let preedit_len = preedit.text.len();
+    let after_len = after.len();
+
+    let underline = UnderlineStyle {
+        color: Some(fg),
+        style: DecorationLineStyle::Solid,
+    };
+
+    let cursor_range = preedit.cursor.and_then(|(a, b)| {
+        let a = fret_code_editor_view::clamp_to_char_boundary(preedit.text.as_str(), a)
+            .min(preedit.text.len());
+        let b = fret_code_editor_view::clamp_to_char_boundary(preedit.text.as_str(), b)
+            .min(preedit.text.len());
+        if a == b {
+            return None;
+        }
+        Some(if a <= b { a..b } else { b..a })
+    });
+
+    let mut spans: Vec<TextSpan> = Vec::new();
+    if before_len > 0 {
+        spans.push(TextSpan::new(before_len));
+    }
+
+    if let Some(cursor) = cursor_range {
+        let pre_a = cursor.start.min(preedit_len);
+        let pre_b = cursor.end.min(preedit_len);
+        if pre_a > 0 {
+            spans.push(TextSpan {
+                len: pre_a,
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    underline: Some(underline.clone()),
+                    ..Default::default()
+                },
+            });
+        }
+        spans.push(TextSpan {
+            len: pre_b.saturating_sub(pre_a),
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                bg: Some(selection_bg),
+                underline: Some(underline.clone()),
+                ..Default::default()
+            },
+        });
+        if pre_b < preedit_len {
+            spans.push(TextSpan {
+                len: preedit_len - pre_b,
+                shaping: Default::default(),
+                paint: TextPaintStyle {
+                    underline: Some(underline),
+                    ..Default::default()
+                },
+            });
+        }
+    } else {
+        spans.push(TextSpan {
+            len: preedit_len,
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                underline: Some(underline),
+                ..Default::default()
+            },
+        });
+    }
+
+    if after_len > 0 {
+        spans.push(TextSpan::new(after_len));
+    }
+
+    AttributedText::new(display, spans)
+}
+
+#[cfg(feature = "syntax")]
+const SYNTAX_CACHE_LOOKBACK_ROWS: usize = 64;
+
+#[cfg(feature = "syntax")]
+const SYNTAX_CACHE_LOOKAHEAD_ROWS: usize = 64;
+
+#[cfg(feature = "syntax")]
+fn invalidate_syntax_row_cache_for_delta(
+    st: &mut CodeEditorState,
+    delta: fret_code_editor_buffer::BufferDelta,
+) {
+    // Keep the revision in sync so cached-row requests don't force a full cache clear.
+    st.syntax_row_cache_rev = delta.after;
+    if st.syntax_row_cache.is_empty() {
+        return;
+    }
+
+    let start = delta.lines.start.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
+    let line_count = st.buffer.line_count();
+    let before_len = st.syntax_row_cache.len();
+
+    if delta.lines.old_count != delta.lines.new_count {
+        // Line count changed: row indices at/after the edit point may have shifted.
+        // Keep only entries that are strictly before the invalidation start.
+        st.syntax_row_cache.retain(|row, _| *row < start);
+    } else {
+        let affected_end = delta
+            .lines
+            .start
+            .saturating_add(delta.lines.new_count.saturating_sub(1));
+        let end = affected_end
+            .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
+            .min(line_count.saturating_sub(1));
+        st.syntax_row_cache
+            .retain(|row, _| *row < start || *row > end);
+    }
+
+    if st.syntax_row_cache.len() != before_len {
+        rebuild_syntax_row_cache_queue(st);
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn rebuild_syntax_row_cache_queue(st: &mut CodeEditorState) {
+    let mut entries: Vec<(usize, u64)> = st
+        .syntax_row_cache
+        .iter()
+        .map(|(row, (_, tick))| (*row, *tick))
+        .collect();
+    entries.sort_by_key(|(_, tick)| *tick);
+    st.syntax_row_cache_queue = entries.into();
+}
+
+#[cfg(feature = "syntax")]
+fn cached_row_syntax_spans(
+    st: &mut CodeEditorState,
+    row: usize,
+    max_entries: usize,
+) -> Arc<[SyntaxSpan]> {
+    let rev = st.buffer.revision();
+    if st.syntax_row_cache_rev != rev || st.syntax_row_cache_language != st.language {
+        st.syntax_row_cache_rev = rev;
+        st.syntax_row_cache_language = st.language.clone();
+        st.syntax_row_cache_tick = 0;
+        st.syntax_row_cache.clear();
+        st.syntax_row_cache_queue.clear();
+    }
+
+    st.syntax_row_cache_tick = st.syntax_row_cache_tick.saturating_add(1);
+    let tick = st.syntax_row_cache_tick;
+
+    if let Some((spans, last_used)) = st.syntax_row_cache.get_mut(&row) {
+        *last_used = tick;
+        st.syntax_row_cache_queue.push_back((row, tick));
+        return Arc::clone(spans);
+    }
+
+    let language = st.language.clone();
+    let Some(language) = language.as_deref() else {
+        return Arc::<[SyntaxSpan]>::from([]);
+    };
+
+    let line_count = st.buffer.line_count();
+    if line_count == 0 {
+        return Arc::<[SyntaxSpan]>::from([]);
+    }
+
+    let chunk_start = row.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
+    let chunk_end = row
+        .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
+        .min(line_count.saturating_sub(1));
+    populate_syntax_row_cache_for_chunk(st, chunk_start, chunk_end, language, max_entries, tick);
+
+    st.syntax_row_cache
+        .get(&row)
+        .map(|(spans, _)| Arc::clone(spans))
+        .unwrap_or_else(|| Arc::<[SyntaxSpan]>::from([]))
+}
+
+#[cfg(feature = "syntax")]
+fn populate_syntax_row_cache_for_chunk(
+    st: &mut CodeEditorState,
+    chunk_start: usize,
+    chunk_end: usize,
+    language: &str,
+    max_entries: usize,
+    tick: u64,
+) {
+    let line_count = st.buffer.line_count();
+    if line_count == 0 || chunk_start > chunk_end {
+        return;
+    }
+
+    let start_byte = st
+        .buffer
+        .line_start(chunk_start)
+        .unwrap_or(0)
+        .min(st.buffer.len_bytes());
+    let end_byte = if chunk_end.saturating_add(1) < line_count {
+        st.buffer
+            .line_start(chunk_end.saturating_add(1))
+            .unwrap_or(st.buffer.len_bytes())
+            .min(st.buffer.len_bytes())
+    } else {
+        st.buffer.len_bytes()
+    };
+
+    if start_byte >= end_byte {
+        return;
+    }
+
+    let Some(slice) = st.buffer.text().get(start_byte..end_byte) else {
+        return;
+    };
+
+    let Ok(spans) = fret_syntax::highlight(slice, language) else {
+        return;
+    };
+
+    let mut row_ranges = Vec::with_capacity(chunk_end - chunk_start + 1);
+    for row in chunk_start..=chunk_end {
+        row_ranges.push(st.buffer.line_byte_range(row).unwrap_or(0..0));
+    }
+
+    let mut per_row = vec![Vec::<SyntaxSpan>::new(); row_ranges.len()];
+    for span in spans {
+        let Some(highlight) = span.highlight else {
+            continue;
+        };
+
+        let global_start = start_byte.saturating_add(span.range.start);
+        let global_end = start_byte.saturating_add(span.range.end);
+        if global_start >= global_end {
+            continue;
+        }
+
+        let global_end_for_row = global_end.saturating_sub(1);
+        let start_row = st.buffer.line_index_at_byte(global_start);
+        let end_row = st.buffer.line_index_at_byte(global_end_for_row);
+
+        for row in start_row..=end_row {
+            if row < chunk_start || row > chunk_end {
+                continue;
+            }
+            let row_idx = row - chunk_start;
+            let row_range = &row_ranges[row_idx];
+            let inter_start = global_start.max(row_range.start);
+            let inter_end = global_end.min(row_range.end);
+            if inter_start >= inter_end {
+                continue;
+            }
+            per_row[row_idx].push(SyntaxSpan {
+                range: (inter_start - row_range.start)..(inter_end - row_range.start),
+                highlight,
+            });
+        }
+    }
+
+    for (i, spans) in per_row.into_iter().enumerate() {
+        let row = chunk_start + i;
+
+        let mut spans = spans;
+        spans.sort_by_key(|s| s.range.start);
+        spans.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
+
+        let mut merged: Vec<SyntaxSpan> = Vec::new();
+        for span in spans {
+            if let Some(last) = merged.last_mut()
+                && last.highlight == span.highlight
+                && last.range.end == span.range.start
+            {
+                last.range.end = span.range.end;
+                continue;
+            }
+            merged.push(span);
+        }
+
+        let spans: Arc<[SyntaxSpan]> = Arc::from(merged);
+        st.syntax_row_cache.insert(row, (Arc::clone(&spans), tick));
+        st.syntax_row_cache_queue.push_back((row, tick));
+
+        while st.syntax_row_cache.len() > max_entries {
+            let Some((victim, victim_tick)) = st.syntax_row_cache_queue.pop_front() else {
+                break;
+            };
+            let remove = st
+                .syntax_row_cache
+                .get(&victim)
+                .is_some_and(|(_, last_used)| *last_used == victim_tick);
+            if remove {
+                st.syntax_row_cache.remove(&victim);
+            }
+        }
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn syntax_color(theme: &fret_ui::Theme, highlight: &str) -> Option<Color> {
+    let mut key = String::with_capacity("color.syntax.".len() + highlight.len());
+    key.push_str("color.syntax.");
+    key.push_str(highlight);
+    if let Some(c) = theme.color_by_key(key.as_str()) {
+        return Some(c);
+    }
+
+    let fallback = highlight.split('.').next().unwrap_or(highlight);
+    if fallback != highlight {
+        let mut key = String::with_capacity("color.syntax.".len() + fallback.len());
+        key.push_str("color.syntax.");
+        key.push_str(fallback);
+        if let Some(c) = theme.color_by_key(key.as_str()) {
+            return Some(c);
+        }
+    }
+
+    match fallback {
+        "comment" => Some(theme.color_required("muted-foreground")),
+        "keyword" | "operator" => Some(theme.color_required("primary")),
+        "property" | "variable" => Some(theme.color_required("foreground")),
+        "punctuation" => Some(theme.color_required("muted-foreground")),
+
+        "string" => Some(theme.color_required("foreground")),
+        "number" | "boolean" | "constant" => Some(theme.color_required("primary")),
+        "type" | "constructor" | "function" => Some(theme.color_required("foreground")),
+        _ => None,
+    }
+}
+
+#[cfg(feature = "syntax")]
+fn materialize_row_rich_text(
+    theme: &fret_ui::Theme,
+    line: Arc<str>,
+    spans: &[SyntaxSpan],
+) -> AttributedText {
+    let mut out: Vec<TextSpan> = Vec::new();
+    let mut cursor = 0usize;
+    let max = line.len();
+
+    for span in spans {
+        let start = span.range.start.min(max);
+        let end = span.range.end.min(max);
+        if start >= end || start < cursor {
+            continue;
+        }
+
+        if start > cursor {
+            out.push(TextSpan {
+                len: start - cursor,
+                ..Default::default()
+            });
+        }
+
+        let fg = syntax_color(theme, span.highlight);
+        out.push(TextSpan {
+            len: end - start,
+            shaping: Default::default(),
+            paint: TextPaintStyle {
+                fg,
+                ..Default::default()
+            },
+        });
+        cursor = end;
+    }
+
+    if cursor < max {
+        out.push(TextSpan {
+            len: max - cursor,
+            ..Default::default()
+        });
+    }
+
+    AttributedText::new(line, out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1412,5 +1991,151 @@ mod tests {
         assert_eq!(st.drag_pointer, None);
         assert_eq!(st.row_text_cache.len(), 0);
         assert_eq!(st.row_text_cache_queue.len(), 0);
+    }
+
+    #[test]
+    fn replace_buffer_preserves_text_boundary_mode() {
+        let handle = CodeEditorHandle::new("hello");
+        handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+
+        let doc = DocId::new();
+        let buffer = TextBuffer::new(doc, "world".to_string()).unwrap();
+        handle.replace_buffer(buffer);
+
+        assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
+    }
+
+    #[test]
+    fn caret_rect_offsets_for_preedit_cursor() {
+        let doc = DocId::new();
+        let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
+        let sel = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        let preedit = PreeditState {
+            text: "ab".to_string(),
+            cursor: Some((0, 2)),
+        };
+
+        let scroll = fret_ui::scroll::ScrollHandle::default();
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(500.0), Px(500.0)),
+        );
+
+        let rect = caret_rect_for_selection(
+            &buffer,
+            sel,
+            Some(&preedit),
+            Px(20.0),
+            Px(10.0),
+            bounds,
+            &scroll,
+        )
+        .expect("caret rect");
+
+        assert_eq!(rect.origin.x, Px(20.0), "2 cols * 10px");
+        assert_eq!(rect.origin.y, Px(0.0));
+    }
+
+    #[test]
+    fn preedit_rich_text_inserts_and_underlines() {
+        let preedit = PreeditState {
+            text: "世界".to_string(),
+            cursor: Some((0, "世".len())),
+        };
+        let fg = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        };
+        let selection_bg = Color {
+            r: 0.2,
+            g: 0.2,
+            b: 0.2,
+            a: 1.0,
+        };
+
+        let rich = materialize_preedit_rich_text("hello".into(), 2, &preedit, fg, selection_bg);
+        assert_eq!(rich.text.as_ref(), "he世界llo");
+        assert!(rich.is_valid());
+        assert!(
+            rich.spans.iter().any(|s| s.paint.underline.is_some()),
+            "expected preedit spans to be underlined"
+        );
+        assert!(
+            rich.spans.iter().any(|s| s.paint.bg.is_some()),
+            "expected cursor range to be highlighted"
+        );
+    }
+
+    #[cfg(feature = "syntax-rust")]
+    #[test]
+    fn rust_syntax_spans_are_materialized_for_rows() {
+        let handle = CodeEditorHandle::new("fn main() {\n    let x = 1;\n}\n");
+        handle.set_language(Some(Arc::<str>::from("rust")));
+
+        let mut st = handle.state.borrow_mut();
+        let line_count = st.buffer.line_count();
+        assert!(line_count > 0);
+
+        let mut any_highlight = false;
+        for row in 0..line_count {
+            let spans = cached_row_syntax_spans(&mut st, row, 256);
+            if !spans.is_empty() {
+                any_highlight = true;
+                break;
+            }
+        }
+        assert!(
+            any_highlight,
+            "expected at least one highlighted span for rust"
+        );
+    }
+
+    #[cfg(feature = "syntax-rust")]
+    #[test]
+    fn syntax_cache_invalidation_preserves_far_rows_on_inline_edit() {
+        let mut text = String::new();
+        for _ in 0..200 {
+            text.push_str("fn main() {}\n");
+        }
+
+        let handle = CodeEditorHandle::new(text.as_str());
+        handle.set_language(Some(Arc::<str>::from("rust")));
+
+        let mut st = handle.state.borrow_mut();
+        let max_entries = 4096;
+        let _ = cached_row_syntax_spans(&mut st, 0, max_entries);
+        let _ = cached_row_syntax_spans(&mut st, 150, max_entries);
+        assert!(
+            st.syntax_row_cache.contains_key(&150),
+            "expected far-row cache entries to be populated"
+        );
+
+        apply_and_record_edit(
+            &mut st,
+            UndoGroupKind::Typing,
+            Edit::Insert {
+                at: 0,
+                text: "x".to_string(),
+            },
+            Selection {
+                anchor: 1,
+                focus: 1,
+            },
+        )
+        .expect("apply edit");
+
+        assert!(
+            st.syntax_row_cache.contains_key(&150),
+            "expected far-row cache entries to survive inline edit invalidation"
+        );
+        assert!(
+            !st.syntax_row_cache.contains_key(&0),
+            "expected near-row cache entries to be invalidated"
+        );
     }
 }

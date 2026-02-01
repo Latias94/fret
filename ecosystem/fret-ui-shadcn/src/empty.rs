@@ -1,35 +1,160 @@
 use std::sync::Arc;
 
-use fret_core::{TextOverflow, TextWrap};
-use fret_ui::element::AnyElement;
+use fret_core::{Edges, Px, TextOverflow, TextWrap};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space, ui,
-};
-
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 #[derive(Debug, Clone)]
 pub struct Empty {
-    title: Arc<str>,
-    description: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    children: Vec<AnyElement>,
 }
 
 impl Empty {
-    pub fn new(title: impl Into<Arc<str>>) -> Self {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
-            title: title.into(),
-            description: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            children: children.into_iter().collect(),
         }
     }
 
-    pub fn description(mut self, text: impl Into<Arc<str>>) -> Self {
-        self.description = Some(text.into());
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let border = theme.color_required("border");
+        let fg = theme.color_required("foreground");
+
+        // Tailwind `md:` breakpoints apply at the viewport level. For `new-york-v4` we mirror
+        // `p-6 md:p-12` by inspecting the root bounds.
+        let padding = if cx.bounds.size.width.0 >= 768.0 {
+            Space::N12
+        } else {
+            Space::N6
+        };
+
+        let chrome = ChromeRefinement::default()
+            .p(padding)
+            .rounded(Radius::Lg)
+            .border_1()
+            .border_color(ColorRef::Color(border))
+            .text_color(ColorRef::Color(fg))
+            .merge(self.chrome);
+
+        let layout = LayoutRefinement::default()
+            .min_w_0()
+            .w_full()
+            .merge(self.layout);
+
+        let props = decl_style::container_props(&theme, chrome, layout);
+        let children = self.children;
+
+        cx.container(props, move |cx| {
+            let layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
+            let gap = MetricRef::space(Space::N6).resolve(&theme);
+            vec![cx.flex(
+                FlexProps {
+                    layout,
+                    direction: fret_core::Axis::Vertical,
+                    gap,
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| children,
+            )]
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EmptyHeader {
+    layout: LayoutRefinement,
+    children: Vec<AnyElement>,
+}
+
+impl EmptyHeader {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            layout: LayoutRefinement::default(),
+            children: children.into_iter().collect(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N2).resolve(&theme);
+        let max_w = MetricRef::Px(Px(384.0));
+        let layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .max_w(max_w)
+                .min_w_0()
+                .merge(self.layout),
+        );
+        let children = self.children;
+        cx.flex(
+            FlexProps {
+                layout,
+                direction: fret_core::Axis::Vertical,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
+            },
+            move |_cx| children,
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EmptyMediaVariant {
+    #[default]
+    Default,
+    Icon,
+}
+
+#[derive(Debug, Clone)]
+pub struct EmptyMedia {
+    variant: EmptyMediaVariant,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    children: Vec<AnyElement>,
+}
+
+impl EmptyMedia {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            variant: EmptyMediaVariant::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            children: children.into_iter().collect(),
+        }
+    }
+
+    pub fn variant(mut self, variant: EmptyMediaVariant) -> Self {
+        self.variant = variant;
         self
     }
 
@@ -44,103 +169,156 @@ impl Empty {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        empty_with_patch(cx, self.title, self.description, self.chrome, self.layout)
+        let theme = Theme::global(&*cx.app).clone();
+
+        let mut layout = LayoutRefinement::default()
+            .mb(Space::N2)
+            .flex_shrink_0()
+            .merge(self.layout);
+        let mut chrome = ChromeRefinement::default().merge(self.chrome);
+
+        if self.variant == EmptyMediaVariant::Icon {
+            let bg = theme
+                .color_by_key("muted")
+                .unwrap_or_else(|| theme.color_required("muted.background"));
+            let fg = theme.color_required("foreground");
+            layout = layout
+                .w_px(MetricRef::space(Space::N10))
+                .h_px(MetricRef::space(Space::N10));
+            chrome = ChromeRefinement::default()
+                .rounded(Radius::Lg)
+                .bg(ColorRef::Color(bg))
+                .text_color(ColorRef::Color(fg))
+                .merge(chrome);
+        }
+
+        let props = decl_style::container_props(&theme, chrome, layout);
+        let children = self.children;
+        cx.container(props, move |cx| {
+            let layout = decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+            vec![cx.flex(
+                FlexProps {
+                    layout,
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| children,
+            )]
+        })
     }
 }
 
-pub fn empty<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    title: impl Into<Arc<str>>,
-    description: Option<Arc<str>>,
-) -> AnyElement {
-    empty_with_patch(
-        cx,
-        title,
-        description,
-        ChromeRefinement::default(),
-        LayoutRefinement::default(),
-    )
+#[derive(Debug, Clone)]
+pub struct EmptyTitle {
+    text: Arc<str>,
 }
 
-fn empty_with_patch<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    title: impl Into<Arc<str>>,
-    description: Option<Arc<str>>,
-    chrome_override: ChromeRefinement,
-    layout_override: LayoutRefinement,
-) -> AnyElement {
-    let title = title.into();
-    let theme = Theme::global(&*cx.app).clone();
+impl EmptyTitle {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
 
-    let bg = theme.color_required("card");
-    let border = theme.color_required("border");
-    let fg = theme.color_required("foreground");
-    let muted_fg = theme.color_required("muted-foreground");
-
-    let props = decl_style::container_props(
-        &theme,
-        ChromeRefinement::default()
-            .p(Space::N6)
-            .rounded(Radius::Lg)
-            .border_1()
-            .bg(ColorRef::Color(bg))
-            .border_color(ColorRef::Color(border))
-            .merge(chrome_override),
-        LayoutRefinement::default().merge(layout_override),
-    );
-
-    cx.container(props, |cx| {
-        let title_px = theme
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme.color_required("foreground");
+        let px = theme
             .metric_by_key("component.empty.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
             .unwrap_or_else(|| theme.metric_required("font.size"));
-        let title_lh = theme
+        let line_height = theme
             .metric_by_key("component.empty.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let desc_px = theme
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_medium()
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EmptyDescription {
+    text: Arc<str>,
+}
+
+impl EmptyDescription {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme.color_required("muted-foreground");
+        let px = theme
             .metric_by_key("component.empty.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
             .unwrap_or_else(|| theme.metric_required("font.size"));
-        let desc_lh = theme
+        let line_height = theme
             .metric_by_key("component.empty.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        vec![stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N1p5)
-                .justify(Justify::Start)
-                .items(Items::Start),
-            |cx| {
-                let mut out = Vec::new();
-                out.push(
-                    ui::text(cx, title)
-                        .text_size_px(title_px)
-                        .line_height_px(title_lh)
-                        .font_semibold()
-                        .nowrap()
-                        .text_color(ColorRef::Color(fg))
-                        .into_element(cx),
-                );
+        ui::text(cx, self.text)
+            .text_size_px(px)
+            .line_height_px(line_height)
+            .font_normal()
+            .wrap(TextWrap::Word)
+            .overflow(TextOverflow::Clip)
+            .text_color(ColorRef::Color(fg))
+            .into_element(cx)
+    }
+}
 
-                if let Some(desc) = description {
-                    out.push(
-                        ui::text(cx, desc)
-                            .text_size_px(desc_px)
-                            .line_height_px(desc_lh)
-                            .font_normal()
-                            .wrap(TextWrap::Word)
-                            .overflow(TextOverflow::Clip)
-                            .text_color(ColorRef::Color(muted_fg))
-                            .into_element(cx),
-                    );
-                }
+#[derive(Debug, Clone)]
+pub struct EmptyContent {
+    layout: LayoutRefinement,
+    children: Vec<AnyElement>,
+}
 
-                out
+impl EmptyContent {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            layout: LayoutRefinement::default(),
+            children: children.into_iter().collect(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let gap = MetricRef::space(Space::N4).resolve(&theme);
+        let max_w = MetricRef::Px(Px(384.0));
+        let layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w)
+                .min_w_0()
+                .merge(self.layout),
+        );
+        let children = self.children;
+        cx.flex(
+            FlexProps {
+                layout,
+                direction: fret_core::Axis::Vertical,
+                gap,
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Center,
+                wrap: false,
             },
-        )]
-    })
+            move |_cx| children,
+        )
+    }
 }

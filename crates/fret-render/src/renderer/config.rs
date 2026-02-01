@@ -1,5 +1,5 @@
 use super::*;
-use crate::text::TextFontFamilyConfig;
+use crate::text::{TextFontFamilyConfig, TextQualitySettings};
 
 impl Renderer {
     pub fn set_perf_enabled(&mut self, enabled: bool) {
@@ -272,6 +272,10 @@ impl Renderer {
 
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         self.text_system.set_font_families(config)
+    }
+
+    pub fn set_text_quality_settings(&mut self, settings: TextQualitySettings) -> bool {
+        self.text_system.set_text_quality_settings(settings)
     }
 
     /// Returns a sorted list of available font family names (best-effort).

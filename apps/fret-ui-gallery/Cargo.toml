@@ -16,7 +16,7 @@ anyhow.workspace = true
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-launch = { path = "../../crates/fret-launch" }
+fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-ai = { path = "../../ecosystem/fret-ui-ai" }
@@ -24,7 +24,6 @@ fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-code-view = { path = "../../ecosystem/fret-code-view" }
-fret-code-editor = { path = "../../ecosystem/fret-code-editor" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-kit = { path = "../../ecosystem/fret-kit" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }
@@ -48,7 +47,9 @@ wgpu.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown" }
+fret-code-editor = { path = "../../ecosystem/fret-code-editor" }
 web-sys = { version = "0.3", features = ["Window", "Location"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-all"] }
+fret-code-editor = { path = "../../ecosystem/fret-code-editor", features = ["syntax-rust"] }

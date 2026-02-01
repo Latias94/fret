@@ -12,6 +12,8 @@ pub struct BoundTextArea {
     model: Model<String>,
     last_revision: Option<u64>,
     dirty_since_sync: bool,
+    enabled: bool,
+    focusable: bool,
     area: TextArea,
 }
 
@@ -21,6 +23,8 @@ impl BoundTextArea {
             model,
             last_revision: None,
             dirty_since_sync: false,
+            enabled: true,
+            focusable: true,
             area: TextArea::default(),
         }
     }
@@ -69,6 +73,16 @@ impl BoundTextArea {
         self.area.last_theme_revision = None;
     }
 
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        self.area.set_enabled(enabled);
+    }
+
+    pub fn set_focusable(&mut self, focusable: bool) {
+        self.focusable = focusable;
+        self.area.set_focusable(focusable);
+    }
+
     pub fn model_id(&self) -> fret_runtime::ModelId {
         self.model.id()
     }
@@ -114,7 +128,7 @@ impl BoundTextArea {
 
 impl<H: UiHost> Widget<H> for BoundTextArea {
     fn is_focusable(&self) -> bool {
-        true
+        self.enabled && self.focusable
     }
 
     fn is_text_input(&self) -> bool {
@@ -122,6 +136,9 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
     }
 
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_runtime::CommandId) -> bool {
+        if !self.enabled {
+            return false;
+        }
         let before = self.area.text.clone();
         let handled = <TextArea as Widget<H>>::command(&mut self.area, cx, command);
         if handled && self.area.text != before {
@@ -139,6 +156,9 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         cx: &mut CommandAvailabilityCx<'_, H>,
         command: &fret_runtime::CommandId,
     ) -> CommandAvailability {
+        if !self.enabled {
+            return CommandAvailability::NotHandled;
+        }
         if cx.focus != Some(cx.node) {
             return CommandAvailability::NotHandled;
         }
@@ -190,6 +210,10 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         if cx.focus != Some(cx.node) {
             self.sync_from_model(cx.app, false);
+        }
+
+        if !self.enabled {
+            return;
         }
 
         let before = self.area.text.clone();

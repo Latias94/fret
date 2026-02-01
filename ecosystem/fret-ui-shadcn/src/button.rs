@@ -277,7 +277,6 @@ pub(crate) fn variant_colors(
         .foreground
         .resolve(WidgetStates::empty())
         .resolve(theme);
-
     (bg, bg_hover, bg_active, border, fg)
 }
 
@@ -498,6 +497,20 @@ impl Button {
                 base_layout = base_layout.w_px(icon).h_px(icon).min_w(icon).min_h(icon);
             } else {
                 let min_h = size.button_h(&theme);
+
+                // shadcn/ui v4 buttons use Tailwind `h-*` to pin the border-box height across
+                // variants (including `outline`). Using `min-height` alone allows chrome padding +
+                // border to grow the control, which diverges from web goldens under constrained
+                // viewports (available-height clamps depend on the trigger bounds).
+                let has_explicit_h = base_layout
+                    .size
+                    .as_ref()
+                    .and_then(|s| s.height.as_ref())
+                    .is_some();
+                if !has_explicit_h {
+                    base_layout = base_layout.h_px(min_h);
+                }
+
                 base_layout = base_layout.min_h(min_h);
             }
 

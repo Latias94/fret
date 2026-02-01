@@ -70,6 +70,7 @@ pub fn input_chrome_container_props(
         focus_border_color: None,
         focus_within: false,
         corner_radii: Corners::all(chrome.radius),
+        snap_to_device_pixels: false,
     }
 }
 

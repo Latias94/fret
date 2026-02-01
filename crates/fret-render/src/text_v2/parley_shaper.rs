@@ -28,6 +28,7 @@ pub(crate) struct ParleyGlyph {
     pub font: FontData,
     pub font_size: f32,
     pub text_range: Range<usize>,
+    pub is_rtl: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -101,6 +102,30 @@ impl ParleyShaper {
         self.fcx
             .collection
             .set_generic_families(generic, std::iter::once(id));
+        true
+    }
+
+    pub fn append_generic_family_name(
+        &mut self,
+        generic: parley::fontique::GenericFamily,
+        family_name: &str,
+    ) -> bool {
+        let Some(id) = self.fcx.collection.family_id(family_name) else {
+            return false;
+        };
+
+        if self
+            .fcx
+            .collection
+            .generic_families(generic)
+            .any(|existing| existing == id)
+        {
+            return false;
+        }
+
+        self.fcx
+            .collection
+            .append_generic_families(generic, std::iter::once(id));
         true
     }
 
@@ -194,6 +219,7 @@ impl ParleyShaper {
                         font: font_data.clone(),
                         font_size,
                         text_range: cluster_range.clone(),
+                        is_rtl: cluster.is_rtl(),
                     });
                 }
 

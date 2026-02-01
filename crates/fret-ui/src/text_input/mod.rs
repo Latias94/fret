@@ -12,6 +12,8 @@ pub use bound::BoundTextInput;
 #[derive(Debug)]
 pub struct TextInput {
     a11y_role: SemanticsRole,
+    enabled: bool,
+    focusable: bool,
     text: String,
     caret: usize,
     selection_anchor: usize,
@@ -38,6 +40,7 @@ pub struct TextInput {
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
     pending_clipboard_token: Option<fret_runtime::ClipboardToken>,
+    pending_primary_selection_token: Option<fret_runtime::ClipboardToken>,
 
     chrome_style: TextInputStyle,
     chrome_override: bool,

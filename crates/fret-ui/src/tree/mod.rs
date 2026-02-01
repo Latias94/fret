@@ -1,13 +1,16 @@
 use crate::{
     Theme, UiHost, declarative,
     elements::GlobalElementId,
-    widget::{CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, SemanticsCx, Widget},
+    widget::{
+        CommandCx, EventCx, Invalidation, LayoutCx, PaintCx, PlatformTextInputCx, SemanticsCx,
+        Widget,
+    },
 };
 use fret_core::time::{Duration, Instant};
 use fret_core::{
     AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
-    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, Transform2D,
-    UiServices, ViewId,
+    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextConstraints,
+    Transform2D, UiServices, ViewId,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
@@ -493,6 +496,12 @@ pub struct UiDebugHitTest {
     pub hit: Option<NodeId>,
     pub active_layer_roots: Vec<NodeId>,
     pub barrier_root: Option<NodeId>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct UiDebugTextConstraintsSnapshot {
+    pub measured: Option<TextConstraints>,
+    pub prepared: Option<TextConstraints>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1135,6 +1144,10 @@ pub struct UiTree<H: UiHost> {
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
     #[cfg(feature = "diagnostics")]
     debug_reachable_from_layer_roots: Option<(FrameId, HashSet<NodeId>)>,
+    #[cfg(feature = "diagnostics")]
+    debug_text_constraints_measured: HashMap<NodeId, TextConstraints>,
+    #[cfg(feature = "diagnostics")]
+    debug_text_constraints_prepared: HashMap<NodeId, TextConstraints>,
 
     view_cache_enabled: bool,
     paint_cache_policy: PaintCachePolicy,
@@ -1232,6 +1245,10 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_removed_subtrees: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_reachable_from_layer_roots: None,
+            #[cfg(feature = "diagnostics")]
+            debug_text_constraints_measured: HashMap::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_text_constraints_prepared: HashMap::new(),
             view_cache_enabled: false,
             paint_cache_policy: PaintCachePolicy::Auto,
             inspection_active: false,
@@ -1449,6 +1466,8 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         {
             self.debug_reachable_from_layer_roots = None;
+            self.debug_text_constraints_measured.clear();
+            self.debug_text_constraints_prepared.clear();
         }
         let mut dirty_roots: Vec<NodeId> = self.dirty_cache_roots.iter().copied().collect();
         dirty_roots.sort_by_key(|id| id.data().as_ffi());
@@ -1548,6 +1567,42 @@ impl<H: UiHost> UiTree<H> {
             .or_default();
         entry.total_time += elapsed;
         entry.calls = entry.calls.saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_text_constraints_measured(
+        &mut self,
+        node: NodeId,
+        constraints: TextConstraints,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if self.debug_enabled {
+                self.debug_text_constraints_measured
+                    .insert(node, constraints);
+            }
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (node, constraints);
+        }
+    }
+
+    pub(crate) fn debug_record_text_constraints_prepared(
+        &mut self,
+        node: NodeId,
+        constraints: TextConstraints,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if self.debug_enabled {
+                self.debug_text_constraints_prepared
+                    .insert(node, constraints);
+            }
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (node, constraints);
+        }
     }
 
     fn debug_take_top_measure_children(
@@ -1818,6 +1873,31 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).and_then(|n| n.element)
     }
 
+    pub(crate) fn sync_interactivity_gate_widget(
+        &mut self,
+        node: NodeId,
+        present: bool,
+        interactive: bool,
+    ) {
+        if self
+            .nodes
+            .get(node)
+            .and_then(|n| n.widget.as_ref())
+            .is_none()
+        {
+            return;
+        }
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_INTERACTIVITY_GATE_SYNC").is_some() {
+            eprintln!(
+                "sync_interactivity_gate_widget: node={node:?} present={present} interactive={interactive}"
+            );
+        }
+        self.with_widget_mut(node, |w, _ui| {
+            w.sync_interactivity_gate(present, interactive);
+        });
+    }
+
     pub(crate) fn should_reuse_view_cache_node(&self, node: NodeId) -> bool {
         if !self.view_cache_active() {
             return false;
@@ -2022,6 +2102,14 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    #[cfg(test)]
+    pub(crate) fn debug_measure_child_calls_for_parent(&self, parent: NodeId) -> u64 {
+        self.debug_measure_children
+            .get(&parent)
+            .map(|m| m.values().map(|r| r.calls).sum())
+            .unwrap_or(0)
     }
 
     pub fn debug_hover_declarative_invalidation_hotspots(
@@ -2416,6 +2504,23 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.nodes.get(node).map(|n| n.bounds)
+    }
+
+    pub fn debug_text_constraints_snapshot(&self, node: NodeId) -> UiDebugTextConstraintsSnapshot {
+        #[cfg(feature = "diagnostics")]
+        {
+            return UiDebugTextConstraintsSnapshot {
+                measured: self.debug_text_constraints_measured.get(&node).copied(),
+                prepared: self.debug_text_constraints_prepared.get(&node).copied(),
+            };
+        }
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = node;
+        }
+
+        #[allow(unreachable_code)]
+        UiDebugTextConstraintsSnapshot::default()
     }
 
     /// Returns the node bounds after applying the accumulated `render_transform` stack.
@@ -3772,6 +3877,13 @@ impl<H: UiHost> UiTree<H> {
                 return PointerDownOutsideOutcome::default();
             }
 
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_DOWN_OUTSIDE").is_some() {
+                eprintln!(
+                    "pointer_down_outside: layer={layer_id:?} root={root:?} consume={consume} focus_before={:?} hit={hit:?} hit_root={hit_root:?}",
+                    self.focus(),
+                );
+            }
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
@@ -3780,6 +3892,17 @@ impl<H: UiHost> UiTree<H> {
                 params.event,
                 invalidation_visited,
             );
+            // Match Radix/web outcomes: clicking outside a dismissible overlay should clear focus
+            // from the overlay subtree. If the event is click-through, the subsequent hit-tested
+            // dispatch can still assign focus to the underlay target.
+            self.set_focus(None);
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_DOWN_OUTSIDE").is_some() {
+                eprintln!(
+                    "pointer_down_outside: focus_after={:?} (suppress_hit_test_dispatch={consume})",
+                    self.focus(),
+                );
+            }
             return PointerDownOutsideOutcome {
                 dispatched: true,
                 suppress_hit_test_dispatch: consume,
@@ -3909,6 +4032,177 @@ impl<H: UiHost> UiTree<H> {
             return false;
         }
         self.with_widget_mut(focus, |widget, _tree| widget.is_text_input())
+    }
+
+    pub fn platform_text_input_query(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        query: &fret_runtime::PlatformTextInputQuery,
+    ) -> fret_runtime::PlatformTextInputQueryResult {
+        let focus_is_text_input = self.focus_is_text_input();
+        if !focus_is_text_input {
+            return match query {
+                fret_runtime::PlatformTextInputQuery::SelectedTextRange
+                | fret_runtime::PlatformTextInputQuery::MarkedTextRange => {
+                    fret_runtime::PlatformTextInputQueryResult::Range(None)
+                }
+                fret_runtime::PlatformTextInputQuery::TextForRange { .. } => {
+                    fret_runtime::PlatformTextInputQueryResult::Text(None)
+                }
+                fret_runtime::PlatformTextInputQuery::BoundsForRange { .. } => {
+                    fret_runtime::PlatformTextInputQueryResult::Bounds(None)
+                }
+                fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint { .. } => {
+                    fret_runtime::PlatformTextInputQueryResult::Index(None)
+                }
+            };
+        }
+
+        let Some(focus) = self.focus else {
+            return match query {
+                fret_runtime::PlatformTextInputQuery::SelectedTextRange
+                | fret_runtime::PlatformTextInputQuery::MarkedTextRange => {
+                    fret_runtime::PlatformTextInputQueryResult::Range(None)
+                }
+                fret_runtime::PlatformTextInputQuery::TextForRange { .. } => {
+                    fret_runtime::PlatformTextInputQueryResult::Text(None)
+                }
+                fret_runtime::PlatformTextInputQuery::BoundsForRange { .. } => {
+                    fret_runtime::PlatformTextInputQueryResult::Bounds(None)
+                }
+                fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint { .. } => {
+                    fret_runtime::PlatformTextInputQueryResult::Index(None)
+                }
+            };
+        };
+
+        let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
+
+        match query {
+            fret_runtime::PlatformTextInputQuery::SelectedTextRange => {
+                let range = self
+                    .nodes
+                    .get(focus)
+                    .and_then(|n| n.widget.as_ref())
+                    .and_then(|w| w.platform_text_input_selected_range_utf16());
+                fret_runtime::PlatformTextInputQueryResult::Range(range)
+            }
+            fret_runtime::PlatformTextInputQuery::MarkedTextRange => {
+                let range = self
+                    .nodes
+                    .get(focus)
+                    .and_then(|n| n.widget.as_ref())
+                    .and_then(|w| w.platform_text_input_marked_range_utf16());
+                fret_runtime::PlatformTextInputQueryResult::Range(range)
+            }
+            fret_runtime::PlatformTextInputQuery::TextForRange { range } => {
+                let text = self
+                    .nodes
+                    .get(focus)
+                    .and_then(|n| n.widget.as_ref())
+                    .and_then(|w| w.platform_text_input_text_for_range_utf16(*range));
+                fret_runtime::PlatformTextInputQueryResult::Text(text)
+            }
+            fret_runtime::PlatformTextInputQuery::BoundsForRange { range } => {
+                let out = self.with_widget_mut(focus, |w, _tree| {
+                    let mut cx = PlatformTextInputCx {
+                        app,
+                        services,
+                        window: _tree.window,
+                        node: focus,
+                        bounds,
+                        scale_factor,
+                    };
+                    w.platform_text_input_bounds_for_range_utf16(&mut cx, *range)
+                });
+                fret_runtime::PlatformTextInputQueryResult::Bounds(out)
+            }
+            fret_runtime::PlatformTextInputQuery::CharacterIndexForPoint { point } => {
+                let out = self.with_widget_mut(focus, |w, _tree| {
+                    let mut cx = PlatformTextInputCx {
+                        app,
+                        services,
+                        window: _tree.window,
+                        node: focus,
+                        bounds,
+                        scale_factor,
+                    };
+                    w.platform_text_input_character_index_for_point_utf16(&mut cx, *point)
+                });
+                fret_runtime::PlatformTextInputQueryResult::Index(out)
+            }
+        }
+    }
+
+    pub fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+    ) -> bool {
+        if !self.focus_is_text_input() {
+            return false;
+        }
+        let Some(focus) = self.focus else {
+            return false;
+        };
+        let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
+
+        let changed = self.with_widget_mut(focus, |w, _tree| {
+            let mut cx = PlatformTextInputCx {
+                app,
+                services,
+                window: _tree.window,
+                node: focus,
+                bounds,
+                scale_factor,
+            };
+            w.platform_text_input_replace_text_in_range_utf16(&mut cx, range, text)
+        });
+        if changed {
+            self.invalidate(focus, Invalidation::Layout);
+            self.request_redraw_coalesced(app);
+        }
+        changed
+    }
+
+    pub fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        scale_factor: f32,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+        marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        if !self.focus_is_text_input() {
+            return false;
+        }
+        let Some(focus) = self.focus else {
+            return false;
+        };
+        let bounds = self.nodes.get(focus).map(|n| n.bounds).unwrap_or_default();
+
+        let changed = self.with_widget_mut(focus, |w, _tree| {
+            let mut cx = PlatformTextInputCx {
+                app,
+                services,
+                window: _tree.window,
+                node: focus,
+                bounds,
+                scale_factor,
+            };
+            w.platform_text_input_replace_and_mark_text_in_range_utf16(&mut cx, range, text, marked)
+        });
+        if changed {
+            self.invalidate(focus, Invalidation::Layout);
+            self.request_redraw_coalesced(app);
+        }
+        changed
     }
 
     pub fn cleanup_subtree(&mut self, services: &mut dyn UiServices, root: NodeId) {
@@ -4968,6 +5262,26 @@ impl<H: UiHost> UiTree<H> {
                     let Some(node) = self.nodes.get(id) else {
                         continue;
                     };
+
+                    // Declarative `InteractivityGate(present=false)` subtrees behave like
+                    // `display: none`: they should not be exposed to the semantics snapshot even if
+                    // the underlying nodes remain mounted (e.g. during close animations / force-mount).
+                    //
+                    // We cannot rely solely on the widget-level `semantics_present()` cache here
+                    // because the layout engine may skip visiting display-none nodes in a frame,
+                    // leaving stale derived flags until the next layout pass.
+                    if node.element.is_some()
+                        && crate::declarative::frame::element_record_for_node(app, window, id)
+                            .is_some_and(|record| {
+                                matches!(
+                                    record.instance,
+                                    crate::declarative::frame::ElementInstance::InteractivityGate(p)
+                                        if !p.present
+                                )
+                            })
+                    {
+                        continue;
+                    }
                     let widget = node.widget.as_ref();
                     if widget.is_some_and(|w| !w.semantics_present()) {
                         continue;

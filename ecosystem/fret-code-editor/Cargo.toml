@@ -9,6 +9,13 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 
+[features]
+default = []
+
+syntax = ["dep:fret-syntax"]
+syntax-all = ["syntax", "fret-syntax/tree-sitter-languages"]
+syntax-rust = ["syntax", "fret-syntax/lang-rust"]
+
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
@@ -16,4 +23,5 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-code-editor-buffer = { path = "../fret-code-editor-buffer" }
 fret-code-editor-view = { path = "../fret-code-editor-view" }
+fret-syntax = { path = "../fret-syntax", default-features = false, optional = true }
 fret-undo = { path = "../fret-undo" }

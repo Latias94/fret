@@ -737,12 +737,16 @@ impl Tabs {
             // If the parent container happens to be a flex with `align-items: stretch`, opt out.
             list_props.layout.flex.align_self = Some(CrossAlign::Start);
         }
-        let tab_panel_layout = decl_style::layout_style(
-            &theme,
-            content_fill_remaining
-                .then_some(LayoutRefinement::default().flex_1())
-                .unwrap_or_default(),
-        );
+        let tab_panel_layout = {
+            // `TabsContent` should fill the available width by default. Without this, max-content
+            // descendants (long lines / unwrapped text) can force the tab panel wider than its
+            // parent, causing horizontal overflow in app shells like the UI gallery.
+            let mut refinement = LayoutRefinement::default().w_full().min_w_0();
+            if content_fill_remaining {
+                refinement = refinement.flex_1();
+            }
+            decl_style::layout_style(&theme, refinement)
+        };
 
         let active_label = active_idx
             .and_then(|active| items.get(active))

@@ -1,7 +1,15 @@
 # Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
 
 Status: Draft (workstream document; normative contracts live in ADRs)
-Last updated: 2026-01-27
+Last updated: 2026-01-30
+
+Recent changes (2026-01-30):
+
+- Web: avoid wasm panics from unsupported `std::time` usage; prefer `fret_core::time` / wasm-capable time sources.
+- Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
+- Web IME: improve hidden textarea styling to reduce IME activation flakiness.
+- Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
+- Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
 It is intentionally non-authoritative; the normative contracts are:
@@ -121,6 +129,7 @@ We need a stable seam for “word boundary mode”:
 
 - default: Unicode word boundaries for general UI text
 - override: identifier boundaries for code editor surfaces
+- triple-click selects a logical line, including the trailing newline when present
 
 This must be window-scoped and explainable (ADR 0194).
 
@@ -260,23 +269,31 @@ Legend:
 - [ ] Review ADR 0193 and confirm crate split and v1 baseline (windowed surface first).
 - [ ] Review ADR 0194 and confirm the preferred seam:
   - window-scoped `InputContext.text_boundary_mode` + override stack.
-- [ ] Review ADR 0195 and confirm web strategy:
+- [x] Review ADR 0195 and confirm web strategy:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation rules,
   - proxy mode (no full document mirroring).
 
 ### 1) Web runner IME bridge (ADR 0195)
 
-- [ ] Define DOM element strategy: textarea creation, attach layer, z-order and isolation.
-- [ ] Define focus lifecycle and mapping to `Effect::ImeAllow`.
-- [ ] Define caret anchoring mapping to `Effect::ImeSetCursorArea` (best-effort, mobile-leaning).
-- [ ] Define event translation and suppression rules:
+- [~] Define DOM element strategy: textarea creation, attach layer, z-order and isolation (global element today; per-window attachment TBD).
+- [x] Define focus lifecycle and mapping to `Effect::ImeAllow`.
+- [x] Define caret anchoring mapping to `Effect::ImeSetCursorArea` (best-effort, mobile-leaning).
+- [x] Define event translation and suppression rules:
   - `beforeinput` → `TextInput` (filtered),
   - `composition*` → `ImeEvent`,
   - command-dispatch suppression to avoid double insert.
-- [ ] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
-- [ ] Add debug-only counters/logging for bridge behavior (last inputType, suppression reason, focused state).
-- [ ] Add a web harness page (or demo mode) dedicated to IME conformance.
+- [x] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
+- [x] Add debug-only counters/logging for bridge behavior (snapshot published as a global for harness views).
+- [x] Add a web harness page (or demo mode) dedicated to IME conformance.
+
+Evidence anchors:
+
+- `crates/fret-platform-web/src/wasm.rs` (`WebImeBridge`, `WebPlatformServices::handle_effects`)
+- `crates/fret-core/src/input.rs` (`WebImeBridgeDebugSnapshot`)
+- `crates/fret-core/src/utf.rs` (`utf16_range_to_utf8_byte_range`)
+- `apps/fret-ui-gallery/src/spec.rs` (`PAGE_WEB_IME_HARNESS`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_web_ime_harness`)
 
 ### 2) Word boundaries seam (ADR 0194)
 
@@ -284,6 +301,7 @@ Legend:
 - [x] Add window-scoped snapshot for the mode (`InputContext`).
 - [x] Provide an override stack service (push/pop token) for overlays and focused surfaces.
 - [x] Allow focused text input regions to override `TextBoundaryMode` (mechanism-only).
+- [x] Allow code-editor-grade surfaces to select the mode explicitly (policy input), and expose a UI Gallery toggle.
 - [x] Ensure `TextInput`, `TextArea`, `SelectableText` consult the mode for:
   - word move/select commands,
   - double-click selection,
@@ -299,6 +317,8 @@ Evidence anchors:
 - `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
 ### 3) Windowed editor surface (ADR 0190/0193)
 
@@ -309,10 +329,12 @@ Evidence anchors:
   - per-row text paint via windowed surface,
   - caret + selection (mouse + keyboard),
   - clipboard copy/paste (best-effort),
-  - IME preedit (overlay) + cursor-area reporting (best-effort).
+  - IME preedit (inline underline) + cursor-area reporting (best-effort).
 - [~] Define row cache keys and budgets (text blobs + shaping caches + token spans).
 - [~] Define selection/caret painting layers (paint-only where possible).
-- [~] Define IME preedit rendering strategy (inline underline + caret anchoring).
+- [x] Implement inline IME preedit rendering (underline + optional range highlight).
+- [x] Ensure `ImeSetCursorArea` caret rect accounts for preedit cursor (best-effort).
+- [x] Cancel inline preedit deterministically on selection/navigation actions (v1 policy).
 - [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
 - [x] Add a “scroll stability / no stale paint” torture harness entry (reuse ui-gallery patterns).
 
@@ -327,6 +349,8 @@ Evidence anchors:
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
+- `ecosystem/fret-code-editor/src/lib.rs` (`caret_rect_for_selection` preedit cursor offset)
+- `ecosystem/fret-code-editor/src/lib.rs` (`paint_row`, `materialize_preedit_rich_text` underline)
 
 ### 4) Document model (buffer) and undo hooks (ADR 0193 / ADR 0136)
 
@@ -342,12 +366,18 @@ Evidence anchors:
 - `ecosystem/fret-code-editor-buffer/src/lib.rs` (`DocId`, `DocUri`, `TextBuffer::uri`, `TextBuffer::set_uri`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`UndoGroupKind`, `UndoGroup`, `apply_and_record_edit`, `UndoHistory::record_or_coalesce`)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::replace_buffer`, `CodeEditorHandle::set_text`)
+- `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_language`, `cached_row_syntax_spans`, `materialize_row_rich_text`)
+- `ecosystem/fret-code-editor/Cargo.toml` (`syntax` / `syntax-rust` / `syntax-all`)
+- `apps/fret-ui-gallery/Cargo.toml` (native enables `fret-code-editor` `syntax-rust`)
+- `apps/fret-ui-gallery/src/driver.rs` (`code_editor_syntax_rust` model)
+- `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` syntax toggle)
 
 ### 5) Syntax and highlighting (ADR 0193)
 
-- [ ] Define semantic token schema (independent of theme colors).
-- [ ] Define incremental update strategy (best-effort; visible-window prioritized).
-- [ ] Materialize spans only for visible rows; keep theme mapping paint-only.
+- [x] Define semantic token schema (independent of theme colors).
+- [~] Define incremental update strategy (best-effort; visible-window prioritized).
+- [x] Materialize spans only for visible rows; keep theme mapping paint-only.
+- [x] Expose a UI Gallery toggle for manual validation.
 
 ### 6) Semantics (a11y) and selection state
 

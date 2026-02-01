@@ -23,5 +23,6 @@ pub mod select_item_aligned;
 pub mod slider;
 pub mod table;
 pub mod tooltip_delay_group;
+pub mod tooltip_intent;
 pub mod transition;
 pub mod typeahead;

@@ -298,6 +298,7 @@ Script harness:
 
 Screenshot capture:
 
+- Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
 - `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
 - `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
 - `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
@@ -352,8 +353,10 @@ Supported selectors (v1 MVP):
 
 Notes:
 
-- `capture_bundle` always writes a new `bundle.json` directory. When `FRET_DIAG_SCREENSHOTS=1`, the step waits until the corresponding screenshot has been written (so downstream automation can rely on it deterministically).
-- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`). It also waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness will create one first.
+- `capture_bundle` always writes a new `bundle.json` directory.
+  - When `FRET_DIAG_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
+  - If you want an explicit screenshot step, follow with `capture_screenshot`.
+- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 - `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
 
 Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
@@ -416,7 +419,7 @@ Predicates (v1 MVP):
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
  - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
- - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}` (target bounds must be fully contained within the window, optionally padded inward)
+ - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

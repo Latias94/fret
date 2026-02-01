@@ -1473,6 +1473,46 @@ fn line_points(plot: Rect, values: &[f32], domain_max: f32) -> Vec<Pt> {
         .collect()
 }
 
+pub fn line_dot_rect(
+    plot: Rect,
+    values: &[f32],
+    domain_max: f32,
+    idx: usize,
+    dot_radius_px: f32,
+) -> Option<Rect> {
+    if values.is_empty()
+        || !is_valid_rect(plot)
+        || !domain_max.is_finite()
+        || domain_max <= 0.0
+        || !dot_radius_px.is_finite()
+        || dot_radius_px <= 0.0
+        || idx >= values.len()
+    {
+        return None;
+    }
+
+    let plot_w = plot.size.width.0;
+    let plot_h = plot.size.height.0;
+    let baseline_y = plot.origin.y.0 + plot_h;
+
+    let n = values.len();
+    let step_x = if n > 1 {
+        plot_w / (n as f32 - 1.0)
+    } else {
+        0.0
+    };
+
+    let raw = values[idx];
+    let value = if raw.is_finite() { raw } else { 0.0 };
+    let x = plot.origin.x.0 + (idx as f32) * step_x;
+    let y = baseline_y - (value / domain_max) * plot_h;
+
+    Some(Rect::new(
+        fret_core::Point::new(Px(x - dot_radius_px), Px(y - dot_radius_px)),
+        fret_core::Size::new(Px(2.0 * dot_radius_px), Px(2.0 * dot_radius_px)),
+    ))
+}
+
 fn points_bounds(points: &[Pt]) -> Option<(f32, f32, f32, f32)> {
     let mut it = points.iter();
     let first = it.next()?;

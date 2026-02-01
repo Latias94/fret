@@ -2,7 +2,8 @@ use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
 use fret_code_view as code_view;
 use fret_core::{
-    Color as CoreColor, Corners, DrawOrder, Edges, ImageId, Point, Px, Rect, SceneOp, Size,
+    AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
+    Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_markdown as markdown;
 use fret_ui::Theme;
@@ -11,8 +12,11 @@ use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
+use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::{Arc, OnceLock};
 use time::Date;
 
@@ -83,21 +87,21 @@ pub(crate) fn sidebar_view(
         },
     );
 
-    let query_input = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-nav-search")),
-            ..Default::default()
-        },
-        |cx| {
-            vec![
-                shadcn::Input::new(nav_query)
+    let query_input = {
+        let nav_query = nav_query.clone();
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::<str>::from("ui-gallery-nav-search")),
+                ..Default::default()
+            },
+            move |cx| {
+                [shadcn::Input::new(nav_query.clone())
                     .a11y_label("Search components")
                     .placeholder("Search (id / tag)")
-                    .into_element(cx),
-            ]
-        },
-    );
+                    .into_element(cx)]
+            },
+        )
+    };
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
     for group in PAGE_GROUPS {
@@ -276,6 +280,7 @@ pub(crate) fn content_view(
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -283,10 +288,14 @@ pub(crate) fn content_view(
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
     let (title, origin, docs_md, usage_md) = page_meta(selected);
+    let page_test_id: Arc<str> =
+        Arc::from(format!("ui-gallery-page-{}", selected.replace('_', "-")));
 
     let header = stack::hstack(
         cx,
@@ -303,7 +312,18 @@ pub(crate) fn content_view(
                     .items_start(),
                 |cx| {
                     vec![
-                        cx.text(title),
+                        cx.text_props(TextProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout
+                            },
+                            text: Arc::from(title),
+                            style: None,
+                            color: None,
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Ellipsis,
+                        }),
                         cx.text_props(TextProps {
                             layout: {
                                 let mut layout = fret_ui::element::LayoutStyle::default();
@@ -419,6 +439,7 @@ pub(crate) fn content_view(
         text_area,
         dropdown_open,
         context_menu_open,
+        context_menu_edge_open,
         cmdk_open,
         cmdk_query,
         last_action,
@@ -426,6 +447,8 @@ pub(crate) fn content_view(
         virtual_list_torture_edit_row,
         virtual_list_torture_edit_text,
         virtual_list_torture_scroll,
+        code_editor_syntax_rust,
+        code_editor_boundary_identifier,
     );
     let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
         cx.text(docs_md)
@@ -471,22 +494,38 @@ pub(crate) fn content_view(
         body
     } else {
         cx.keyed("ui_gallery.content_scroll_area", |cx| {
-            shadcn::ScrollArea::new([body])
+            let mut scroll = shadcn::ScrollArea::new([body])
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
-                .into_element(cx)
+                .viewport_test_id("ui-gallery-content-viewport");
+            if selected == PAGE_VIRTUAL_LIST_TORTURE {
+                scroll =
+                    scroll.viewport_test_id("ui-gallery-content-viewport-virtual_list_torture");
+                scroll = scroll.viewport_intrinsic_measure_mode(
+                    fret_ui::element::ScrollIntrinsicMeasureMode::Viewport,
+                );
+            }
+            scroll.into_element(cx)
         })
     };
 
     cx.named("ui_gallery.content_view_root", |cx| {
-        cx.container(
-            decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(theme.color_required("background")))
-                    .p(Space::N6),
-                LayoutRefinement::default().w_full().h_full(),
-            ),
-            |_cx| [content],
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(page_test_id),
+                ..Default::default()
+            },
+            move |cx| {
+                [cx.container(
+                    decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(theme.color_required("background")))
+                            .p(Space::N6),
+                        LayoutRefinement::default().w_full().h_full(),
+                    ),
+                    |_cx| [content],
+                )]
+            },
         )
     })
 }
@@ -543,6 +582,7 @@ fn page_preview(
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -550,6 +590,8 @@ fn page_preview(
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
     virtual_list_torture_scroll: VirtualListScrollHandle,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -574,8 +616,21 @@ fn page_preview(
             virtual_list_torture_scroll,
         ),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
-        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(cx, theme),
-        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(cx, theme),
+        PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(
+            cx,
+            theme,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+        ),
+        PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(
+            cx,
+            theme,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+        ),
+        PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
+        PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
+        PAGE_TEXT_MEASURE_OVERLAY => preview_text_measure_overlay(cx, theme),
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
@@ -589,6 +644,7 @@ fn page_preview(
             portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             last_action,
             text_input,
             text_area,
@@ -624,6 +680,7 @@ fn page_preview(
             portal_geometry_popover_open,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             last_action.clone(),
         ),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
@@ -824,11 +881,15 @@ fn material3_variant_toggle_row(
                 shadcn::Switch::new(material3_expressive.clone())
                     .a11y_label("Enable Material 3 Expressive variant")
                     .into_element(cx),
-                cx.text(if enabled {
-                    "Variant: Expressive"
-                } else {
-                    "Variant: Standard"
-                }),
+                ui::label(
+                    cx,
+                    if enabled {
+                        "Variant: Expressive"
+                    } else {
+                        "Variant: Standard"
+                    },
+                )
+                .into_element(cx),
             ]
         },
     )
@@ -839,7 +900,8 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
         shadcn::Card::new(vec![
             shadcn::CardHeader::new(vec![shadcn::CardTitle::new(title).into_element(cx)])
                 .into_element(cx),
-            shadcn::CardContent::new(vec![cx.text(desc)]).into_element(cx),
+            shadcn::CardContent::new(vec![ui::text_block(cx, desc).into_element(cx)])
+                .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
         .into_element(cx)
@@ -871,6 +933,14 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             ]
         },
     );
+    let grid = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-grid")),
+            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-grid")),
+            ..Default::default()
+        },
+        move |_cx| [grid],
+    );
 
     let note = {
         let props = decl_style::container_props(
@@ -882,9 +952,17 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             LayoutRefinement::default().w_full().min_w_0(),
         );
         cx.container(props, |cx| {
-            vec![cx.text("Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.")]
+            vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.").into_element(cx)]
         })
     };
+    let note = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-note")),
+            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-note")),
+            ..Default::default()
+        },
+        move |_cx| [note],
+    );
 
     vec![grid, note]
 }
@@ -1165,9 +1243,12 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
                     .bg(ColorRef::Color(color))
                     .rounded(Radius::Md)
                     .p(Space::N3),
-                LayoutRefinement::default().w_full(),
+                // In a horizontal flex row, we want "equal columns" semantics (`flex-1`), not
+                // `w-full` (percent sizing). Percent sizing is fragile under intrinsic sizing
+                // probes and can cause transient wrap widths (0px) to leak into final layout.
+                LayoutRefinement::default().flex_1().min_w_0(),
             ),
-            |cx| [cx.text(label)],
+            |cx| [ui::label(cx, label).w_full().into_element(cx)],
         )
     };
 
@@ -1187,7 +1268,11 @@ fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyEle
     );
 
     vec![
-        cx.text("Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing)."),
+        ui::text_block(
+            cx,
+            "Layout mental model: LayoutRefinement (constraints) + stack (composition) + Theme tokens (color/spacing).",
+        )
+        .into_element(cx),
         row,
     ]
 }
@@ -1565,7 +1650,7 @@ fn preview_virtual_list_torture(
                         .size(shadcn::ButtonSize::Sm)
                         .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
                         .on_activate(on_select_row.clone())
-                        .refine_layout(LayoutRefinement::default().flex_1())
+                        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
                         .into_element(cx);
 
                     let right = if is_editing {
@@ -1623,7 +1708,7 @@ fn preview_virtual_list_torture(
                 if row_cache {
                     cx.cached_subtree_with(
                         CachedSubtreeProps::default()
-                            .contained_layout(false)
+                            .contained_layout(true)
                             .cache_key(index_u64),
                         |cx| [row(cx)],
                     )
@@ -1683,7 +1768,7 @@ fn preview_virtual_list_torture(
                             .size(shadcn::ButtonSize::Sm)
                             .test_id(format!("ui-gallery-virtual-list-row-{index}-label"))
                             .on_activate(on_select_row.clone())
-                            .refine_layout(LayoutRefinement::default().flex_1())
+                            .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
                             .into_element(cx);
 
                         let right = if is_editing {
@@ -1745,7 +1830,7 @@ fn preview_virtual_list_torture(
                     if row_cache {
                         cx.cached_subtree_with(
                             CachedSubtreeProps::default()
-                                .contained_layout(false)
+                                .contained_layout(true)
                                 .cache_key(index_u64),
                             |cx| vec![row(cx)],
                         )
@@ -1768,7 +1853,24 @@ fn preview_virtual_list_torture(
         vec![list]
     });
 
-    vec![header, list]
+    let root = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |_cx| vec![header, list],
+    );
+
+    let root = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-torture-root")),
+            ..Default::default()
+        },
+        |_cx| [root],
+    );
+
+    vec![root]
 }
 
 fn code_view_torture_source() -> Arc<str> {
@@ -1884,16 +1986,59 @@ fn code_editor_torture_source() -> String {
         .clone()
 }
 
-fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+fn preview_code_editor_mvp(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    syntax_rust: Model<bool>,
+    boundary_identifier: Model<bool>,
+) -> Vec<AnyElement> {
+    let syntax_enabled = cx
+        .get_model_copied(&syntax_rust, Invalidation::Layout)
+        .unwrap_or(false);
+    let boundary_identifier_enabled = cx
+        .get_model_copied(&boundary_identifier, Invalidation::Layout)
+        .unwrap_or(true);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
-        |cx| {
+        move |cx| {
             vec![
                 cx.text("Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME)."),
                 cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(syntax_rust.clone())
+                                .a11y_label("Toggle Rust syntax highlighting")
+                                .into_element(cx),
+                            cx.text(if syntax_enabled {
+                                "Syntax: Rust (tree-sitter)"
+                            } else {
+                                "Syntax: disabled"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(boundary_identifier.clone())
+                                .a11y_label("Toggle identifier word boundaries")
+                                .into_element(cx),
+                            cx.text(if boundary_identifier_enabled {
+                                "Word boundaries: Identifier"
+                            } else {
+                                "Word boundaries: UnicodeWord"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -1902,6 +2047,20 @@ fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> V
         || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
         |h| h.clone(),
     );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(32)
@@ -1933,16 +2092,59 @@ fn preview_code_editor_mvp(cx: &mut ElementContext<'_, App>, theme: &Theme) -> V
     vec![header, panel]
 }
 
-fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+fn preview_code_editor_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    syntax_rust: Model<bool>,
+    boundary_identifier: Model<bool>,
+) -> Vec<AnyElement> {
+    let syntax_enabled = cx
+        .get_model_copied(&syntax_rust, Invalidation::Layout)
+        .unwrap_or(false);
+    let boundary_identifier_enabled = cx
+        .get_model_copied(&boundary_identifier, Invalidation::Layout)
+        .unwrap_or(true);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full())
             .gap(Space::N2),
-        |cx| {
+        move |cx| {
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(syntax_rust.clone())
+                                .a11y_label("Toggle Rust syntax highlighting")
+                                .into_element(cx),
+                            cx.text(if syntax_enabled {
+                                "Syntax: Rust (tree-sitter)"
+                            } else {
+                                "Syntax: disabled"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Switch::new(boundary_identifier.clone())
+                                .a11y_label("Toggle identifier word boundaries")
+                                .into_element(cx),
+                            cx.text(if boundary_identifier_enabled {
+                                "Word boundaries: Identifier"
+                            } else {
+                                "Word boundaries: UnicodeWord"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -1951,6 +2153,20 @@ fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
         || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
         |h| h.clone(),
     );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
@@ -1983,6 +2199,802 @@ fn preview_code_editor_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
     vec![header, panel]
 }
 
+fn selection_perf_source() -> Arc<str> {
+    static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
+    SOURCE
+        .get_or_init(|| {
+            use std::fmt::Write;
+
+            let mut out = String::with_capacity(320_000);
+            for i in 0..5000usize {
+                let _ = writeln!(
+                    &mut out,
+                    "{i:05}: The quick brown fox jumps over the lazy dog. 0123456789 ABC xyz"
+                );
+            }
+            Arc::<str>::from(out)
+        })
+        .clone()
+}
+
+fn preview_text_selection_perf(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    struct PreparedKey {
+        max_width_bits: u32,
+        scale_bits: u32,
+    }
+
+    #[derive(Default)]
+    struct SelectionPerfState {
+        scroll_y: Px,
+        content_height: Px,
+        viewport_height: Px,
+        last_clipped_rects: usize,
+        prepared_key: Option<PreparedKey>,
+        blob: Option<fret_core::TextBlobId>,
+        metrics: Option<fret_core::TextMetrics>,
+    }
+
+    let state = cx.with_state(
+        || std::rc::Rc::new(std::cell::RefCell::new(SelectionPerfState::default())),
+        |st| st.clone(),
+    );
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: track selection rect count for large selections."),
+                cx.text("Expectation: rect generation scales with visible lines when clipped to the viewport (not document length)."),
+                cx.text("Scroll with the mouse wheel over the demo surface."),
+            ]
+        },
+    );
+
+    let source = selection_perf_source();
+    let source_len = source.len();
+
+    let on_wheel_state = state.clone();
+    let on_wheel: fret_ui::action::OnWheel = Arc::new(move |host, action_cx, wheel| {
+        let mut st = on_wheel_state.borrow_mut();
+
+        let max_scroll = (st.content_height.0 - st.viewport_height.0).max(0.0);
+        if max_scroll <= 0.0 {
+            st.scroll_y = Px(0.0);
+        } else {
+            st.scroll_y = Px((st.scroll_y.0 - wheel.delta.y.0).clamp(0.0, max_scroll));
+        }
+
+        host.invalidate(fret_ui::Invalidation::Paint);
+        host.request_redraw(action_cx.window);
+        true
+    });
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(420.0))),
+        ),
+        move |cx| {
+            let mut pointer = fret_ui::element::PointerRegionProps::default();
+            pointer.layout.size.width = fret_ui::element::Length::Fill;
+            pointer.layout.size.height = fret_ui::element::Length::Fill;
+            pointer.layout.overflow = fret_ui::element::Overflow::Clip;
+
+            let paint_state = state.clone();
+            let paint_source = source.clone();
+
+            let content = cx.pointer_region(pointer, move |cx| {
+                cx.pointer_region_on_wheel(on_wheel.clone());
+
+                let mut canvas = CanvasProps::default();
+                canvas.layout.size.width = fret_ui::element::Length::Fill;
+                canvas.layout.size.height = fret_ui::element::Length::Fill;
+                canvas.layout.overflow = fret_ui::element::Overflow::Clip;
+                canvas.cache_policy = fret_ui::element::CanvasCachePolicy::smooth_default();
+
+                let canvas = cx.canvas(canvas, move |p| {
+                    let bounds = p.bounds();
+                    let pad = Px(12.0);
+
+                    let inner = Rect::new(
+                        Point::new(
+                            Px(bounds.origin.x.0 + pad.0),
+                            Px(bounds.origin.y.0 + pad.0),
+                        ),
+                        Size::new(
+                            Px((bounds.size.width.0 - 2.0 * pad.0).max(0.0)),
+                            Px((bounds.size.height.0 - 2.0 * pad.0).max(0.0)),
+                        ),
+                    );
+
+                    let max_width = inner.size.width;
+                    if max_width.0 <= 0.0 || inner.size.height.0 <= 0.0 {
+                        return;
+                    }
+
+                    let scale_factor = p.scale_factor();
+                    let selection_bg = p.theme().color_required("selection.background");
+                    let fg = p.theme().color_required("foreground");
+                    let muted = p.theme().color_required("muted-foreground");
+
+                    let key = PreparedKey {
+                        max_width_bits: max_width.0.to_bits(),
+                        scale_bits: scale_factor.to_bits(),
+                    };
+
+                    let (stats, stats_origin) = {
+                        let (services, scene) = p.services_and_scene();
+                        let mut st = paint_state.borrow_mut();
+
+                        let needs_prepare = st.blob.is_none()
+                            || st.metrics.is_none()
+                            || st.prepared_key != Some(key);
+                        if needs_prepare {
+                            if let Some(blob) = st.blob.take() {
+                                services.text().release(blob);
+                            }
+
+                            let style = fret_core::TextStyle {
+                                font: fret_core::FontId::monospace(),
+                                size: Px(12.0),
+                                ..Default::default()
+                            };
+
+                            let constraints = fret_core::TextConstraints {
+                                max_width: Some(max_width),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                                scale_factor,
+                            };
+
+                            let (blob, metrics) = services
+                                .text()
+                                .prepare_str(paint_source.as_ref(), &style, constraints);
+                            st.prepared_key = Some(key);
+                            st.blob = Some(blob);
+                            st.metrics = Some(metrics);
+                        }
+
+                        let Some(blob) = st.blob else {
+                            return;
+                        };
+                        let Some(metrics) = st.metrics else {
+                            return;
+                        };
+
+                        st.content_height = metrics.size.height;
+                        st.viewport_height = inner.size.height;
+                        let max_scroll = (st.content_height.0 - st.viewport_height.0).max(0.0);
+                        st.scroll_y = Px(st.scroll_y.0.clamp(0.0, max_scroll));
+
+                        let clip = Rect::new(
+                            Point::new(Px(0.0), st.scroll_y),
+                            Size::new(max_width, st.viewport_height),
+                        );
+
+                        let mut rects: Vec<Rect> = Vec::new();
+                        services.selection_rects_clipped(blob, (0, source_len), clip, &mut rects);
+                        st.last_clipped_rects = rects.len();
+
+                        scene.push(SceneOp::PushClipRect { rect: inner });
+                        for r in rects {
+                            let rect = Rect::new(
+                                Point::new(
+                                    Px(inner.origin.x.0 + r.origin.x.0),
+                                    Px(inner.origin.y.0 + r.origin.y.0 - st.scroll_y.0),
+                                ),
+                                r.size,
+                            );
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(0),
+                                rect,
+                                background: selection_bg,
+                                border: Edges::all(Px(0.0)),
+                                border_color: CoreColor::TRANSPARENT,
+                                corner_radii: Corners::all(Px(0.0)),
+                            });
+                        }
+
+                        let text_origin = Point::new(
+                            inner.origin.x,
+                            Px(inner.origin.y.0 + metrics.baseline.0 - st.scroll_y.0),
+                        );
+                        scene.push(SceneOp::Text {
+                            order: DrawOrder(1),
+                            origin: text_origin,
+                            text: blob,
+                            color: fg,
+                        });
+                        scene.push(SceneOp::PopClip);
+
+                        let stats = format!(
+                            "clipped rects: {} | scroll_y: {:.1}/{:.1} | content_h: {:.1} | viewport_h: {:.1}",
+                            st.last_clipped_rects,
+                            st.scroll_y.0,
+                            max_scroll,
+                            st.content_height.0,
+                            st.viewport_height.0
+                        );
+                        let stats_origin = Point::new(
+                            Px(bounds.origin.x.0 + 12.0),
+                            Px(bounds.origin.y.0 + 10.0),
+                        );
+                        (stats, stats_origin)
+                    };
+
+                    let stats_style = fret_core::TextStyle {
+                        font: fret_core::FontId::ui(),
+                        size: Px(12.0),
+                        ..Default::default()
+                    };
+                    let _ = p.text(
+                        p.key(&"text_selection_perf_stats"),
+                        DrawOrder(2),
+                        stats_origin,
+                        stats,
+                        stats_style,
+                        muted,
+                        fret_ui::canvas::CanvasTextConstraints::default(),
+                        scale_factor,
+                    );
+                });
+
+                vec![canvas]
+            });
+
+            vec![content]
+        },
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-text-selection-perf-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
+}
+
+fn preview_text_bidi_rtl_conformance(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    #[derive(Clone, Copy)]
+    struct BidiSample {
+        label: &'static str,
+        text: &'static str,
+    }
+
+    const SAMPLES: &[BidiSample] = &[
+        BidiSample {
+            label: "LTR baseline",
+            text: "The quick brown fox (123) jumps.",
+        },
+        BidiSample {
+            label: "Hebrew (RTL)",
+            text: "עברית (123) אבגדה",
+        },
+        BidiSample {
+            label: "Arabic (RTL)",
+            text: "مرحبا بالعالم (123) أهلاً",
+        },
+        BidiSample {
+            label: "Mixed LTR + Hebrew",
+            text: "abc אבג DEF 123",
+        },
+        BidiSample {
+            label: "Mixed punctuation + numbers",
+            text: "abc (אבג) - 12:34 - xyz",
+        },
+        BidiSample {
+            label: "Mixed LTR + Arabic",
+            text: "hello مرحبا (123) world",
+        },
+        BidiSample {
+            label: "Grapheme + RTL",
+            text: "emoji 😀 אבג café",
+        },
+        BidiSample {
+            label: "Controls (RLM)",
+            text: "RLM:\u{200F}abc אבג 123",
+        },
+    ];
+
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    struct PreparedKey {
+        sample: usize,
+        max_width_bits: u32,
+        scale_bits: u32,
+    }
+
+    struct BidiState {
+        selected_sample: usize,
+        prepared_key: Option<PreparedKey>,
+        blob: Option<fret_core::TextBlobId>,
+        metrics: Option<fret_core::TextMetrics>,
+        anchor: usize,
+        caret: usize,
+        affinity: CaretAffinity,
+        pending_down: Option<(Point, bool)>,
+        last_drag_pos: Option<Point>,
+        dragging: bool,
+    }
+
+    impl Default for BidiState {
+        fn default() -> Self {
+            Self {
+                selected_sample: 0,
+                prepared_key: None,
+                blob: None,
+                metrics: None,
+                anchor: 0,
+                caret: 0,
+                affinity: CaretAffinity::Downstream,
+                pending_down: None,
+                last_drag_pos: None,
+                dragging: false,
+            }
+        }
+    }
+
+    let state = cx.with_state(
+        || std::rc::Rc::new(std::cell::RefCell::new(BidiState::default())),
+        |st| st.clone(),
+    );
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: sanity-check BiDi/RTL geometry queries (hit-test, caret rects, selection rects)."),
+                cx.text("Use the selectable samples to validate editor-like selection behavior."),
+                cx.text("Use the diagnostic panel to verify `hit_test_point` → caret/selection rendering under mixed-direction strings."),
+            ]
+        },
+    );
+
+    let sample_buttons = {
+        let mut buttons: Vec<AnyElement> = Vec::new();
+        for (i, s) in SAMPLES.iter().enumerate() {
+            buttons.push(cx.keyed(format!("bidi-sample-btn-{i}"), |cx| {
+                let state_for_click = state.clone();
+                let is_selected = state.borrow().selected_sample == i;
+
+                let variant = if is_selected {
+                    shadcn::ButtonVariant::Secondary
+                } else {
+                    shadcn::ButtonVariant::Outline
+                };
+
+                let on_activate: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let mut st = state_for_click.borrow_mut();
+                        st.selected_sample = i;
+                        st.anchor = 0;
+                        st.caret = 0;
+                        st.affinity = CaretAffinity::Downstream;
+                        st.pending_down = None;
+                        st.last_drag_pos = None;
+                        st.dragging = false;
+                        host.request_redraw(action_cx.window);
+                    });
+
+                shadcn::Button::new(s.label)
+                    .variant(variant)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_activate)
+                    .into_element(cx)
+            }));
+        }
+
+        let mut props = fret_ui::element::FlexProps::default();
+        props.layout = fret_ui::element::LayoutStyle::default();
+        props.layout.size.width = fret_ui::element::Length::Fill;
+        props.direction = fret_core::Axis::Horizontal;
+        props.wrap = true;
+        props.gap = Px(8.0);
+        props.align = fret_ui::element::CrossAlign::Start;
+        props.justify = fret_ui::element::MainAlign::Start;
+
+        cx.flex(props, move |_cx| buttons)
+    };
+
+    let selectable_samples = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            let mut out: Vec<AnyElement> = Vec::new();
+            out.push(cx.text("SelectableText samples:"));
+
+            for (i, s) in SAMPLES.iter().enumerate() {
+                out.push(cx.keyed(format!("bidi-sample-row-{i}"), |cx| {
+                    let rich = AttributedText::new(
+                        Arc::<str>::from(s.text),
+                        Arc::<[TextSpan]>::from([TextSpan::new(s.text.len())]),
+                    );
+
+                    let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                    props.style = Some(TextStyle {
+                        font: FontId::ui(),
+                        size: Px(16.0),
+                        ..Default::default()
+                    });
+                    props.wrap = TextWrap::None;
+                    props.overflow = TextOverflow::Clip;
+                    props.layout.size.width = fret_ui::element::Length::Fill;
+
+                    let text = cx.selectable_text_props(props);
+
+                    let row = stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        |cx| {
+                            vec![
+                                cx.text_props(fret_ui::element::TextProps {
+                                    layout: Default::default(),
+                                    text: Arc::<str>::from(format!("{}:", s.label)),
+                                    style: None,
+                                    color: Some(theme.color_required("muted-foreground")),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                                cx.container(
+                                    decl_style::container_props(
+                                        theme,
+                                        ChromeRefinement::default()
+                                            .border_1()
+                                            .rounded(Radius::Md)
+                                            .p(Space::N2)
+                                            .bg(ColorRef::Color(
+                                                theme.color_required("background"),
+                                            )),
+                                        LayoutRefinement::default().w_full(),
+                                    ),
+                                    move |_cx| vec![text],
+                                ),
+                            ]
+                        },
+                    );
+
+                    row
+                }));
+            }
+
+            out
+        },
+    );
+
+    let diagnostic = {
+        let state_for_handlers = state.clone();
+        let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, action_cx, down| {
+            let mut st = state_for_handlers.borrow_mut();
+            st.pending_down = Some((down.position, down.modifiers.shift));
+            st.last_drag_pos = Some(down.position);
+            st.dragging = true;
+            host.invalidate(fret_ui::Invalidation::Paint);
+            host.request_redraw(action_cx.window);
+            true
+        });
+
+        let state_for_handlers = state.clone();
+        let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, action_cx, mv| {
+            let mut st = state_for_handlers.borrow_mut();
+            if st.dragging && mv.buttons.left {
+                st.last_drag_pos = Some(mv.position);
+                host.invalidate(fret_ui::Invalidation::Paint);
+                host.request_redraw(action_cx.window);
+            }
+            true
+        });
+
+        let state_for_handlers = state.clone();
+        let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, action_cx, _up| {
+            let mut st = state_for_handlers.borrow_mut();
+            st.dragging = false;
+            host.invalidate(fret_ui::Invalidation::Paint);
+            host.request_redraw(action_cx.window);
+            true
+        });
+
+        cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .border_1()
+                    .rounded(Radius::Md)
+                    .bg(ColorRef::Color(theme.color_required("background"))),
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_px(MetricRef::Px(Px(220.0))),
+            ),
+            move |cx| {
+                let mut pointer = fret_ui::element::PointerRegionProps::default();
+                pointer.layout.size.width = fret_ui::element::Length::Fill;
+                pointer.layout.size.height = fret_ui::element::Length::Fill;
+                pointer.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                let paint_state = state.clone();
+
+                let content = cx.pointer_region(pointer, move |cx| {
+                    cx.pointer_region_on_pointer_down(on_down.clone());
+                    cx.pointer_region_on_pointer_move(on_move.clone());
+                    cx.pointer_region_on_pointer_up(on_up.clone());
+
+                    let mut canvas = CanvasProps::default();
+                    canvas.layout.size.width = fret_ui::element::Length::Fill;
+                    canvas.layout.size.height = fret_ui::element::Length::Fill;
+                    canvas.layout.overflow = fret_ui::element::Overflow::Clip;
+                    canvas.cache_policy = fret_ui::element::CanvasCachePolicy::smooth_default();
+
+                    let canvas = cx.canvas(canvas, move |p| {
+                        fn format_utf8_context(text: &str, index: usize) -> String {
+                            let idx = index.min(text.len());
+                            let mut prev = 0usize;
+                            let mut next = text.len();
+
+                            for (i, _) in text.char_indices() {
+                                if i <= idx {
+                                    prev = i;
+                                }
+                                if i >= idx {
+                                    next = i;
+                                    break;
+                                }
+                            }
+
+                            let left = text[..prev].chars().rev().take(12).collect::<String>();
+                            let left = left.chars().rev().collect::<String>();
+                            let right = text[next..].chars().take(12).collect::<String>();
+                            format!("{left}|{right}")
+                        }
+
+                        let bounds = p.bounds();
+                        let pad = Px(12.0);
+
+                        let inner = Rect::new(
+                            Point::new(
+                                Px(bounds.origin.x.0 + pad.0),
+                                Px(bounds.origin.y.0 + pad.0),
+                            ),
+                            Size::new(
+                                Px((bounds.size.width.0 - 2.0 * pad.0).max(0.0)),
+                                Px((bounds.size.height.0 - 2.0 * pad.0).max(0.0)),
+                            ),
+                        );
+
+                        let max_width = inner.size.width;
+                        if max_width.0 <= 0.0 || inner.size.height.0 <= 0.0 {
+                            return;
+                        }
+
+                        let scale_factor = p.scale_factor();
+                        let selection_bg = p.theme().color_required("selection.background");
+                        let fg = p.theme().color_required("foreground");
+                        let muted = p.theme().color_required("muted-foreground");
+
+                        let (stats, stats_origin) = {
+                            let (services, scene) = p.services_and_scene();
+                            let mut st = paint_state.borrow_mut();
+
+                            let sample = SAMPLES
+                                .get(st.selected_sample)
+                                .copied()
+                                .unwrap_or(SAMPLES[0]);
+
+                            let key = PreparedKey {
+                                sample: st.selected_sample,
+                                max_width_bits: max_width.0.to_bits(),
+                                scale_bits: scale_factor.to_bits(),
+                            };
+
+                            let needs_prepare = st.blob.is_none()
+                                || st.metrics.is_none()
+                                || st.prepared_key != Some(key);
+                            if needs_prepare {
+                                if let Some(blob) = st.blob.take() {
+                                    services.text().release(blob);
+                                }
+
+                                let style = TextStyle {
+                                    font: FontId::ui(),
+                                    size: Px(18.0),
+                                    ..Default::default()
+                                };
+
+                                let constraints = TextConstraints {
+                                    max_width: Some(max_width),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    scale_factor,
+                                };
+
+                                let (blob, metrics) =
+                                    services.text().prepare_str(sample.text, &style, constraints);
+                                st.prepared_key = Some(key);
+                                st.blob = Some(blob);
+                                st.metrics = Some(metrics);
+                                st.anchor = 0;
+                                st.caret = 0;
+                                st.affinity = CaretAffinity::Downstream;
+                            }
+
+                            let Some(blob) = st.blob else {
+                                return;
+                            };
+                            let Some(metrics) = st.metrics else {
+                                return;
+                            };
+
+                            let click_to_local = |global: Point| -> Point {
+                                Point::new(
+                                    Px(global.x.0 - inner.origin.x.0),
+                                    Px(global.y.0 - inner.origin.y.0),
+                                )
+                            };
+
+                            if let Some((pos, extend)) = st.pending_down.take() {
+                                let local = click_to_local(pos);
+                                let hit = services.hit_test_point(blob, local);
+                                st.caret = hit.index;
+                                st.affinity = hit.affinity;
+                                if !extend {
+                                    st.anchor = st.caret;
+                                }
+                            }
+
+                            if st.dragging {
+                                if let Some(pos) = st.last_drag_pos {
+                                    let local = click_to_local(pos);
+                                    let hit = services.hit_test_point(blob, local);
+                                    st.caret = hit.index;
+                                    st.affinity = hit.affinity;
+                                }
+                            }
+
+                            let range = if st.anchor <= st.caret {
+                                (st.anchor, st.caret)
+                            } else {
+                                (st.caret, st.anchor)
+                            };
+
+                            let clip = Rect::new(Point::new(Px(0.0), Px(0.0)), inner.size);
+                            let mut rects: Vec<Rect> = Vec::new();
+                            services.selection_rects_clipped(blob, range, clip, &mut rects);
+
+                            scene.push(SceneOp::PushClipRect { rect: inner });
+                            for r in rects {
+                                let rect = Rect::new(
+                                    Point::new(
+                                        Px(inner.origin.x.0 + r.origin.x.0),
+                                        Px(inner.origin.y.0 + r.origin.y.0),
+                                    ),
+                                    r.size,
+                                );
+                                scene.push(SceneOp::Quad {
+                                    order: DrawOrder(0),
+                                    rect,
+                                    background: selection_bg,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: CoreColor::TRANSPARENT,
+                                    corner_radii: Corners::all(Px(0.0)),
+                                });
+                            }
+
+                            let text_origin = Point::new(inner.origin.x, Px(inner.origin.y.0 + metrics.baseline.0));
+                            scene.push(SceneOp::Text {
+                                order: DrawOrder(1),
+                                origin: text_origin,
+                                text: blob,
+                                color: fg,
+                            });
+
+                            let caret_rect = services.caret_rect(blob, st.caret, st.affinity);
+                            let caret_rect = Rect::new(
+                                Point::new(
+                                    Px(inner.origin.x.0 + caret_rect.origin.x.0),
+                                    Px(inner.origin.y.0 + caret_rect.origin.y.0),
+                                ),
+                                caret_rect.size,
+                            );
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(2),
+                                rect: caret_rect,
+                                background: fg,
+                                border: Edges::all(Px(0.0)),
+                                border_color: CoreColor::TRANSPARENT,
+                                corner_radii: Corners::all(Px(0.0)),
+                            });
+
+                            if let Some(pos) = st.last_drag_pos {
+                                let dot = Rect::new(
+                                    Point::new(Px(pos.x.0 - 2.0), Px(pos.y.0 - 2.0)),
+                                    Size::new(Px(4.0), Px(4.0)),
+                                );
+                                scene.push(SceneOp::Quad {
+                                    order: DrawOrder(3),
+                                    rect: dot,
+                                    background: fg,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: CoreColor::TRANSPARENT,
+                                    corner_radii: Corners::all(Px(2.0)),
+                                });
+                            }
+
+                            scene.push(SceneOp::PopClip);
+
+                            let sample_text: &str = sample.text;
+                            let context = format_utf8_context(sample_text, st.caret);
+
+                            let stats = format!(
+                                "sample: {} | caret: {} ({:?}) | anchor: {} | range: {:?} | context: {}",
+                                sample.label, st.caret, st.affinity, st.anchor, range, context
+                            );
+                            let stats_origin = Point::new(
+                                Px(bounds.origin.x.0 + 12.0),
+                                Px(bounds.origin.y.0 + 10.0),
+                            );
+                            (stats, stats_origin)
+                        };
+
+                        let stats_style = TextStyle {
+                            font: FontId::ui(),
+                            size: Px(12.0),
+                            ..Default::default()
+                        };
+                        let _ = p.text(
+                            p.key(&"text_bidi_rtl_conformance_stats"),
+                            DrawOrder(10),
+                            stats_origin,
+                            stats,
+                            stats_style,
+                            muted,
+                            fret_ui::canvas::CanvasTextConstraints::default(),
+                            scale_factor,
+                        );
+                    });
+
+                    vec![canvas]
+                });
+
+                vec![content]
+            },
+        )
+    };
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from(
+                "ui-gallery-text-bidi-rtl-conformance-root",
+            )),
+            ..Default::default()
+        },
+        |_cx| vec![sample_buttons, selectable_samples, diagnostic],
+    );
+
+    vec![header, panel]
+}
+
 fn preview_web_ime_harness(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -1997,6 +3009,7 @@ fn preview_web_ime_harness(
         text_input_count: u64,
         ime_commit_count: u64,
         ime_preedit_count: u64,
+        ime_delete_surrounding_count: u64,
         ime_enabled_count: u64,
         ime_disabled_count: u64,
         last: String,
@@ -2102,6 +3115,16 @@ fn preview_web_ime_harness(
                         st.last = format!("Ime(Preedit({:?}))", text);
                         st.preedit = (!text.is_empty()).then(|| text.clone());
                     }
+                    fret_core::ImeEvent::DeleteSurrounding {
+                        before_bytes,
+                        after_bytes,
+                    } => {
+                        st.ime_delete_surrounding_count =
+                            st.ime_delete_surrounding_count.saturating_add(1);
+                        st.last = format!(
+                            "Ime(DeleteSurrounding(before_bytes={before_bytes}, after_bytes={after_bytes}))"
+                        );
+                    }
                 }
 
                 host.notify(action_cx);
@@ -2150,20 +3173,65 @@ fn preview_web_ime_harness(
                         .layout(LayoutRefinement::default().w_full().h_full())
                         .gap(Space::N2),
                     |cx| {
-                        vec![
+                        let mut lines = vec![
                             cx.text(format!("ime_enabled={ime_enabled}")),
                             cx.text(format!("preedit={preedit:?}")),
                             cx.text(format!("committed_tail={committed_tail:?}")),
                             cx.text(format!("last_event={:?}", st.last)),
                             cx.text(format!(
-                                "counts: text_input={} ime_commit={} ime_preedit={} enabled={} disabled={}",
+                                "counts: text_input={} ime_commit={} ime_preedit={} ime_delete_surrounding={} enabled={} disabled={}",
                                 st.text_input_count,
                                 st.ime_commit_count,
                                 st.ime_preedit_count,
+                                st.ime_delete_surrounding_count,
                                 st.ime_enabled_count,
                                 st.ime_disabled_count
                             )),
-                        ]
+                        ];
+
+                        let snapshot = cx
+                            .app
+                            .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
+                            .cloned();
+                        if let Some(snapshot) = snapshot {
+                            lines.push(cx.text("bridge_debug_snapshot (wasm textarea):"));
+                            lines.push(cx.text(format!(
+                                "  enabled={} composing={} suppress_next_input={}",
+                                snapshot.enabled as u8,
+                                snapshot.composing as u8,
+                                snapshot.suppress_next_input as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_input_type={:?}",
+                                snapshot.last_input_type.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_beforeinput_data={:?}",
+                                snapshot.last_beforeinput_data.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_input_data={:?}",
+                                snapshot.last_input_data.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_key_code={:?} last_cursor_area={:?}",
+                                snapshot.last_key_code, snapshot.last_cursor_area
+                            )));
+                            lines.push(cx.text(format!(
+                                "  counts: beforeinput={} input={} suppressed={} comp_start={} comp_update={} comp_end={} cursor_area_set={}",
+                                snapshot.beforeinput_seen,
+                                snapshot.input_seen,
+                                snapshot.suppressed_input_seen,
+                                snapshot.composition_start_seen,
+                                snapshot.composition_update_seen,
+                                snapshot.composition_end_seen,
+                                snapshot.cursor_area_set_seen,
+                            )));
+                        } else {
+                            lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
+                        }
+
+                        lines
                     },
                 );
                 vec![body]
@@ -2174,6 +3242,275 @@ fn preview_web_ime_harness(
     });
 
     vec![header, inputs, region]
+}
+
+fn preview_text_measure_overlay(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    #[derive(Clone, Copy)]
+    struct Case {
+        label: &'static str,
+        text: &'static str,
+        wrap: TextWrap,
+        overflow: TextOverflow,
+        height: Px,
+    }
+
+    const CASES: &[Case] = &[
+        Case {
+            label: "Wrap=None, Overflow=Clip (expect overflow past measured width)",
+            text: "Left (fill) • A_very_long_token_without_spaces_that_should_not_wrap_but_can_overflow_the_box",
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            height: Px(56.0),
+        },
+        Case {
+            label: "Wrap=Word, Overflow=Clip (expect multi-line height growth)",
+            text: "Word wrap should break on spaces and increase measured height when max_width is tight.",
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            height: Px(88.0),
+        },
+        Case {
+            label: "Wrap=Grapheme, Overflow=Clip (expect long tokens to wrap)",
+            text: "GraphemeWrap: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (and emoji 😀😀😀) should wrap without whitespace.",
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Clip,
+            height: Px(88.0),
+        },
+        Case {
+            label: "Wrap=None, Overflow=Ellipsis (expect measured width ~= max_width)",
+            text: "Ellipsis overflow should clamp the visual width and replace the suffix…",
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            height: Px(56.0),
+        },
+    ];
+
+    #[derive(Default)]
+    struct MeasureOverlayState {
+        last_metrics: Vec<Option<fret_core::TextMetrics>>,
+    }
+
+    let state = cx.with_state(
+        || std::rc::Rc::new(std::cell::RefCell::new(MeasureOverlayState::default())),
+        |st| st.clone(),
+    );
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: visualize measured text bounds vs allocated container bounds."),
+                cx.text("Green = container bounds; Yellow = measured TextMetrics.size; Cyan = baseline."),
+            ]
+        },
+    );
+
+    let panel = cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .border_1()
+                .rounded(Radius::Md)
+                .bg(ColorRef::Color(theme.color_required("background"))),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(Px(440.0))),
+        ),
+        move |cx| {
+            let mut canvas = CanvasProps::default();
+            canvas.layout.size.width = fret_ui::element::Length::Fill;
+            canvas.layout.size.height = fret_ui::element::Length::Fill;
+            canvas.layout.overflow = fret_ui::element::Overflow::Clip;
+            canvas.cache_policy = fret_ui::element::CanvasCachePolicy::smooth_default();
+
+            let paint_state = state.clone();
+
+            let canvas = cx.canvas(canvas, move |p| {
+                let bounds = p.bounds();
+                let pad = Px(14.0);
+                let gap = Px(14.0);
+
+                let outer = Rect::new(
+                    Point::new(Px(bounds.origin.x.0 + pad.0), Px(bounds.origin.y.0 + pad.0)),
+                    Size::new(
+                        Px((bounds.size.width.0 - 2.0 * pad.0).max(0.0)),
+                        Px((bounds.size.height.0 - 2.0 * pad.0).max(0.0)),
+                    ),
+                );
+                if outer.size.width.0 <= 0.0 || outer.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                let green = fret_core::Color {
+                    r: 0.20,
+                    g: 0.85,
+                    b: 0.35,
+                    a: 1.0,
+                };
+                let yellow = fret_core::Color {
+                    r: 0.95,
+                    g: 0.85,
+                    b: 0.10,
+                    a: 1.0,
+                };
+                let cyan = fret_core::Color {
+                    r: 0.10,
+                    g: 0.80,
+                    b: 0.95,
+                    a: 1.0,
+                };
+
+                let fg = p.theme().color_required("foreground");
+                let muted = p.theme().color_required("muted-foreground");
+                let bg = p.theme().color_required("background");
+                let border = p.theme().color_required("border");
+
+                let scale = p.scale_factor();
+                let mut y = outer.origin.y;
+                let scope = p.key_scope(&"text_measure_overlay");
+
+                let mut st = paint_state.borrow_mut();
+                if st.last_metrics.len() < CASES.len() {
+                    st.last_metrics.resize(CASES.len(), None);
+                }
+
+                for (i, case) in CASES.iter().enumerate() {
+                    let case_rect = Rect::new(
+                        Point::new(outer.origin.x, y),
+                        Size::new(outer.size.width, case.height),
+                    );
+
+                    // Case chrome.
+                    p.scene().push(SceneOp::Quad {
+                        order: DrawOrder(0),
+                        rect: case_rect,
+                        background: bg,
+                        border: Edges::all(Px(1.0)),
+                        border_color: border,
+                        corner_radii: Corners::all(Px(8.0)),
+                    });
+
+                    let label_style = TextStyle {
+                        font: FontId::ui(),
+                        size: Px(12.0),
+                        ..Default::default()
+                    };
+                    let label_metrics = p.text(
+                        p.child_key(scope, &format!("label_{i}")).0,
+                        DrawOrder(1),
+                        Point::new(case_rect.origin.x + Px(10.0), case_rect.origin.y + Px(16.0)),
+                        case.label,
+                        label_style,
+                        muted,
+                        fret_ui::canvas::CanvasTextConstraints {
+                            max_width: Some(Px((case_rect.size.width.0 - 20.0).max(0.0))),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                        },
+                        scale,
+                    );
+
+                    let text_box = Rect::new(
+                        Point::new(
+                            case_rect.origin.x + Px(10.0),
+                            Px(case_rect.origin.y.0 + 16.0 + label_metrics.size.height.0 + 8.0),
+                        ),
+                        Size::new(
+                            Px((case_rect.size.width.0 - 20.0).max(0.0)),
+                            Px((case_rect.size.height.0
+                                - 16.0
+                                - label_metrics.size.height.0
+                                - 18.0)
+                                .max(0.0)),
+                        ),
+                    );
+
+                    p.scene().push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: text_box,
+                        background: CoreColor::TRANSPARENT,
+                        border: Edges::all(Px(1.0)),
+                        border_color: green,
+                        corner_radii: Corners::all(Px(6.0)),
+                    });
+
+                    let text_style = TextStyle {
+                        font: FontId::ui(),
+                        size: Px(16.0),
+                        ..Default::default()
+                    };
+
+                    let baseline_y = match st.last_metrics[i] {
+                        Some(m) => text_box.origin.y + m.baseline,
+                        None => text_box.origin.y + Px(text_style.size.0 * 0.8),
+                    };
+
+                    let metrics = p.text(
+                        p.child_key(scope, &format!("text_{i}")).0,
+                        DrawOrder(2),
+                        Point::new(text_box.origin.x, baseline_y),
+                        case.text,
+                        text_style,
+                        fg,
+                        fret_ui::canvas::CanvasTextConstraints {
+                            max_width: Some(text_box.size.width),
+                            wrap: case.wrap,
+                            overflow: case.overflow,
+                        },
+                        scale,
+                    );
+                    st.last_metrics[i] = Some(metrics);
+
+                    // Baseline.
+                    p.scene().push(SceneOp::Quad {
+                        order: DrawOrder(3),
+                        rect: Rect::new(
+                            Point::new(text_box.origin.x, text_box.origin.y + metrics.baseline),
+                            Size::new(text_box.size.width, Px(1.0)),
+                        ),
+                        background: cyan,
+                        border: Edges::all(Px(0.0)),
+                        border_color: CoreColor::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+
+                    // Measured text box.
+                    p.scene().push(SceneOp::Quad {
+                        order: DrawOrder(4),
+                        rect: Rect::new(text_box.origin, metrics.size),
+                        background: CoreColor::TRANSPARENT,
+                        border: Edges::all(Px(1.0)),
+                        border_color: yellow,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+
+                    y = Px(y.0 + case.height.0 + gap.0);
+                    if y.0 >= outer.origin.y.0 + outer.size.height.0 {
+                        break;
+                    }
+                }
+            });
+
+            vec![canvas]
+        },
+    );
+
+    let panel = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-text-measure-overlay-root")),
+            ..Default::default()
+        },
+        |_cx| vec![panel],
+    );
+
+    vec![header, panel]
 }
 
 fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
@@ -2532,6 +3869,7 @@ fn preview_chrome_torture(
     portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -2562,128 +3900,140 @@ fn preview_chrome_torture(
             ..Default::default()
         },
         |cx| {
-            let mut out = Vec::new();
-
-            out.extend(preview_overlay(
-                cx,
-                popover_open,
-                dialog_open,
-                alert_dialog_open,
-                sheet_open,
-                portal_geometry_popover_open,
-                dropdown_open,
-                context_menu_open,
-                last_action,
-            ));
-
-            let controls = stack::vstack(
+            let body = stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N3),
+                    .gap(Space::N4),
                 |cx| {
-                    let mut out: Vec<AnyElement> = Vec::new();
+                    let mut out = Vec::new();
 
-                    let row = stack::hstack(
+                    out.extend(preview_overlay(
                         cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Button::new("One")
-                                    .test_id("ui-gallery-chrome-btn-1")
-                                    .into_element(cx),
-                                shadcn::Button::new("Two")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .test_id("ui-gallery-chrome-btn-2")
-                                    .into_element(cx),
-                                shadcn::Button::new("Three")
-                                    .variant(shadcn::ButtonVariant::Outline)
-                                    .test_id("ui-gallery-chrome-btn-3")
-                                    .into_element(cx),
-                                shadcn::Button::new("Disabled")
-                                    .disabled(true)
-                                    .test_id("ui-gallery-chrome-btn-disabled")
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-                    out.push(row);
+                        popover_open,
+                        dialog_open,
+                        alert_dialog_open,
+                        sheet_open,
+                        portal_geometry_popover_open,
+                        dropdown_open,
+                        context_menu_open,
+                        context_menu_edge_open,
+                        last_action,
+                    ));
 
-                    let fields = stack::hstack(
+                    let controls = stack::vstack(
                         cx,
-                        stack::HStackProps::default().gap(Space::N2).items_start(),
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N3),
                         |cx| {
-                            vec![
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N1),
-                                    |cx| {
-                                        let input = shadcn::Input::new(text_input.clone())
-                                            .a11y_label("Chrome torture input")
-                                            .placeholder("Type")
-                                            .into_element(cx);
-                                        let input = cx.semantics(
-                                            SemanticsProps {
-                                                role: fret_core::SemanticsRole::TextField,
-                                                test_id: Some(Arc::<str>::from(
-                                                    "ui-gallery-chrome-text-input",
-                                                )),
-                                                ..Default::default()
+                            let mut out: Vec<AnyElement> = Vec::new();
+
+                            let row = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_center(),
+                                |cx| {
+                                    vec![
+                                        shadcn::Button::new("One")
+                                            .test_id("ui-gallery-chrome-btn-1")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Two")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("ui-gallery-chrome-btn-2")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Three")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-chrome-btn-3")
+                                            .into_element(cx),
+                                        shadcn::Button::new("Disabled")
+                                            .disabled(true)
+                                            .test_id("ui-gallery-chrome-btn-disabled")
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
+                            out.push(row);
+
+                            let fields = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N2).items_start(),
+                                |cx| {
+                                    vec![
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N1),
+                                            |cx| {
+                                                let input = shadcn::Input::new(text_input.clone())
+                                                    .a11y_label("Chrome torture input")
+                                                    .placeholder("Type")
+                                                    .into_element(cx);
+                                                let input = cx.semantics(
+                                                    SemanticsProps {
+                                                        role: fret_core::SemanticsRole::TextField,
+                                                        test_id: Some(Arc::<str>::from(
+                                                            "ui-gallery-chrome-text-input",
+                                                        )),
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| vec![input],
+                                                );
+                                                vec![cx.text("Text input"), input]
                                             },
-                                            |_cx| vec![input],
-                                        );
-                                        vec![cx.text("Text input"), input]
-                                    },
-                                ),
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N1),
-                                    |cx| {
-                                        let textarea = shadcn::Textarea::new(text_area.clone())
-                                            .a11y_label("Chrome torture textarea")
-                                            .into_element(cx);
-                                        let textarea = cx.semantics(
-                                            SemanticsProps {
-                                                role: fret_core::SemanticsRole::TextField,
-                                                test_id: Some(Arc::<str>::from(
-                                                    "ui-gallery-chrome-text-area",
-                                                )),
-                                                ..Default::default()
+                                        ),
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N1),
+                                            |cx| {
+                                                let textarea =
+                                                    shadcn::Textarea::new(text_area.clone())
+                                                        .a11y_label("Chrome torture textarea")
+                                                        .into_element(cx);
+                                                let textarea = cx.semantics(
+                                                    SemanticsProps {
+                                                        role: fret_core::SemanticsRole::TextField,
+                                                        test_id: Some(Arc::<str>::from(
+                                                            "ui-gallery-chrome-text-area",
+                                                        )),
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| vec![textarea],
+                                                );
+                                                vec![cx.text("Text area"), textarea]
                                             },
-                                            |_cx| vec![textarea],
-                                        );
-                                        vec![cx.text("Text area"), textarea]
-                                    },
-                                ),
-                            ]
-                        },
-                    );
-                    out.push(fields);
+                                        ),
+                                    ]
+                                },
+                            );
+                            out.push(fields);
 
-                    let toggles = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N3).items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Checkbox::new(checkbox.clone())
-                                    .a11y_label("Chrome torture checkbox")
-                                    .test_id("ui-gallery-chrome-checkbox")
-                                    .into_element(cx),
-                                shadcn::Switch::new(switch.clone())
-                                    .a11y_label("Chrome torture switch")
-                                    .test_id("ui-gallery-chrome-switch")
-                                    .into_element(cx),
-                            ]
+                            let toggles = stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N3).items_center(),
+                                |cx| {
+                                    vec![
+                                        shadcn::Checkbox::new(checkbox.clone())
+                                            .a11y_label("Chrome torture checkbox")
+                                            .test_id("ui-gallery-chrome-checkbox")
+                                            .into_element(cx),
+                                        shadcn::Switch::new(switch.clone())
+                                            .a11y_label("Chrome torture switch")
+                                            .test_id("ui-gallery-chrome-switch")
+                                            .into_element(cx),
+                                    ]
+                                },
+                            );
+                            out.push(toggles);
+
+                            out
                         },
                     );
-                    out.push(toggles);
+                    out.push(controls);
 
                     out
                 },
             );
-            out.push(controls);
 
-            out
+            vec![body]
         },
     );
 
@@ -3483,6 +4833,12 @@ fn material3_state_matrix_content(
     out.push(cx.text("— Buttons —"));
     out.extend(preview_material3_button(cx));
 
+    out.push(cx.text("— Chips —"));
+    out.extend(preview_material3_chip(cx, last_action.clone()));
+
+    out.push(cx.text("— Cards —"));
+    out.extend(preview_material3_card(cx, last_action.clone()));
+
     out.push(cx.text("— Icon Buttons —"));
     out.extend(preview_material3_icon_button(cx));
 
@@ -3516,6 +4872,451 @@ fn material3_state_matrix_content(
     out.extend(preview_material3_menu(cx, material3_menu_open, last_action));
 
     out
+}
+
+fn preview_material3_chip(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+    use fret_ui::action::OnActivate;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct ChipPageModels {
+        filter_selected: Option<Model<bool>>,
+        filter_unselected: Option<Model<bool>>,
+        input_selected: Option<Model<bool>>,
+        input_unselected: Option<Model<bool>>,
+    }
+
+    let filter_selected = cx.with_state(ChipPageModels::default, |st| st.filter_selected.clone());
+    let filter_selected = match filter_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.filter_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let filter_unselected =
+        cx.with_state(ChipPageModels::default, |st| st.filter_unselected.clone());
+    let filter_unselected = match filter_unselected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.filter_unselected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let input_selected = cx.with_state(ChipPageModels::default, |st| st.input_selected.clone());
+    let input_selected = match input_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.input_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let input_unselected = cx.with_state(ChipPageModels::default, |st| st.input_unselected.clone());
+    let input_unselected = match input_unselected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.input_unselected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let last_action_for_activate = last_action.clone();
+    let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host.models_mut().update(&last_action_for_activate, |v| {
+            *v = Arc::<str>::from("material3.assist_chip.activated");
+        });
+    });
+
+    let hover_container = theme.color_required("md.sys.color.tertiary-container");
+    let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
+    let accent = fret_core::Color {
+        r: 0.9,
+        g: 0.2,
+        b: 0.9,
+        a: 1.0,
+    };
+
+    let override_style = material3::AssistChipStyle::default()
+        .label_color(WidgetStateProperty::new(Some(ColorRef::Color(accent))))
+        .state_layer_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+        )
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+        )
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(hover_container)),
+        ));
+
+    let hover_style = material3::AssistChipStyle::default()
+        .label_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_label))),
+        )
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(hover_container)),
+        ));
+
+    let filter_override_style = material3::FilterChipStyle::default()
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::SELECTED,
+            Some(ColorRef::Color(hover_container)),
+        ))
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+        );
+
+    let activate_row1 = activate.clone();
+    let activate_row2 = activate.clone();
+    let activate_row3 = activate.clone();
+    let _activate_row4 = activate.clone();
+
+    let last_action_for_input_selected = last_action.clone();
+    let activate_input_selected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_input_selected, |v| {
+                *v = Arc::<str>::from("material3.input_chip.primary.activated");
+            });
+    });
+
+    let last_action_for_input_unselected = last_action.clone();
+    let activate_input_unselected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_input_unselected, |v| {
+                *v = Arc::<str>::from("material3.input_chip.primary.activated");
+            });
+    });
+
+    let last_action_for_input_unselected_trailing = last_action.clone();
+    let activate_input_unselected_trailing: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_input_unselected_trailing, |v| {
+                *v = Arc::<str>::from("material3.input_chip.trailing_icon.activated");
+            });
+    });
+
+    let override_style_row1 = override_style.clone();
+    let override_style_row2 = override_style.clone();
+    let hover_style_row1 = hover_style.clone();
+    let hover_style_row2 = hover_style.clone();
+    let filter_override_style_row = filter_override_style.clone();
+
+    let last_action_for_filter_primary = last_action.clone();
+    let activate_filter_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_filter_primary, |v| {
+                *v = Arc::<str>::from("material3.filter_chip.primary.activated");
+            });
+    });
+
+    let last_action_for_filter_trailing = last_action.clone();
+    let activate_filter_trailing: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_filter_trailing, |v| {
+                *v = Arc::<str>::from("material3.filter_chip.trailing_icon.activated");
+            });
+    });
+
+    let filter_selected_row1 = filter_selected.clone();
+    let filter_unselected_row1 = filter_unselected.clone();
+    let filter_selected_row2 = filter_selected.clone();
+    let filter_unselected_row2 = filter_unselected.clone();
+    let input_selected_row1 = input_selected.clone();
+    let input_unselected_row1 = input_unselected.clone();
+    let input_unselected_row2 = input_unselected.clone();
+
+    vec![
+        cx.text("Material 3 AssistChip: token-driven shape/colors + state layer + bounded ripple."),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::AssistChip::new("Flat")
+                        .on_activate(activate_row1.clone())
+                        .test_id("ui-gallery-material3-chip-flat")
+                        .into_element(cx),
+                    material3::AssistChip::new("Override")
+                        .on_activate(activate_row1.clone())
+                        .style(override_style_row1.clone())
+                        .test_id("ui-gallery-material3-chip-flat-override")
+                        .into_element(cx),
+                    material3::AssistChip::new("Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-chip-flat-disabled")
+                        .into_element(cx),
+                    material3::AssistChip::new("Hover Override")
+                        .on_activate(activate_row1.clone())
+                        .style(hover_style_row1.clone())
+                        .test_id("ui-gallery-material3-chip-flat-hover-override")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::AssistChip::new("Elevated")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_row2.clone())
+                        .test_id("ui-gallery-material3-chip-elevated")
+                        .into_element(cx),
+                    material3::AssistChip::new("Override")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_row2.clone())
+                        .style(override_style_row2.clone())
+                        .test_id("ui-gallery-material3-chip-elevated-override")
+                        .into_element(cx),
+                    material3::AssistChip::new("Disabled")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SLASH)
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-chip-elevated-disabled")
+                        .into_element(cx),
+                    material3::AssistChip::new("Hover Override")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_row2.clone())
+                        .style(hover_style_row2.clone())
+                        .test_id("ui-gallery-material3-chip-elevated-hover-override")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::SuggestionChip::new("Suggestion")
+                        .on_activate(activate_row3.clone())
+                        .test_id("ui-gallery-material3-suggestion-chip-flat")
+                        .into_element(cx),
+                    material3::SuggestionChip::new("Suggestion (icon)")
+                        .leading_icon(ids::ui::SEARCH)
+                        .variant(material3::SuggestionChipVariant::Elevated)
+                        .on_activate(activate_row3.clone())
+                        .test_id("ui-gallery-material3-suggestion-chip-elevated")
+                        .into_element(cx),
+                    material3::SuggestionChip::new("Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-suggestion-chip-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::FilterChip::new(filter_selected_row1.clone(), "Filter")
+                        .trailing_icon(ids::ui::CLOSE)
+                        .on_activate(activate_filter_primary.clone())
+                        .on_trailing_icon_activate(activate_filter_trailing.clone())
+                        .test_id("ui-gallery-material3-filter-chip-selected")
+                        .into_element(cx),
+                    material3::FilterChip::new(filter_unselected_row1.clone(), "Filter")
+                        .on_activate(activate_filter_primary.clone())
+                        .test_id("ui-gallery-material3-filter-chip-unselected")
+                        .into_element(cx),
+                    material3::FilterChip::new(filter_selected_row2.clone(), "Override")
+                        .variant(material3::FilterChipVariant::Elevated)
+                        .style(filter_override_style_row.clone())
+                        .on_activate(activate_filter_primary.clone())
+                        .test_id("ui-gallery-material3-filter-chip-override")
+                        .into_element(cx),
+                    material3::FilterChip::new(filter_unselected_row2.clone(), "Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-filter-chip-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::InputChip::new(input_selected_row1.clone(), "Input")
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_input_selected_primary.clone())
+                        .test_id("ui-gallery-material3-input-chip-selected")
+                        .into_element(cx),
+                    material3::InputChip::new(input_unselected_row1.clone(), "Input")
+                        .trailing_icon(ids::ui::CLOSE)
+                        .on_activate(activate_input_unselected_primary.clone())
+                        .on_trailing_icon_activate(activate_input_unselected_trailing.clone())
+                        .test_id("ui-gallery-material3-input-chip-unselected")
+                        .into_element(cx),
+                    material3::InputChip::new(input_unselected_row2.clone(), "Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-input-chip-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+    ]
+}
+
+fn preview_material3_card(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui::element::{ContainerProps, Length, TextProps};
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host.models_mut().update(&last_action, |v| {
+            *v = Arc::<str>::from("material3.card.activated");
+        });
+    });
+
+    let body_style = theme
+        .text_style_by_key("md.sys.typescale.body-medium")
+        .unwrap_or_else(|| fret_core::TextStyle::default());
+    let body_color = theme.color_required("md.sys.color.on-surface");
+
+    let hover_container = theme.color_required("md.sys.color.tertiary-container");
+    let hover_outline = theme.color_required("md.sys.color.tertiary");
+
+    let override_style = material3::CardStyle::default()
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(hover_container)),
+        ))
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_outline))),
+        );
+
+    let activate_row1 = activate.clone();
+    let activate_row2 = activate.clone();
+    let override_style_row1 = override_style.clone();
+    let override_style_row2 = override_style.clone();
+
+    let card_content_row1 = {
+        let body_style = body_style.clone();
+        let body_color = body_color;
+        move |cx: &mut ElementContext<'_, App>, label: &'static str| {
+            let mut container = ContainerProps::default();
+            container.layout.size.width = Length::Px(Px(280.0));
+            container.layout.size.height = Length::Px(Px(72.0));
+            container.padding = Edges::all(Px(12.0));
+
+            let mut text = TextProps::new(Arc::<str>::from(label));
+            text.style = Some(body_style.clone());
+            text.color = Some(body_color);
+            cx.container(container, move |cx| vec![cx.text_props(text)])
+        }
+    };
+
+    let card_content_row2 = {
+        let body_style = body_style.clone();
+        let body_color = body_color;
+        move |cx: &mut ElementContext<'_, App>, label: &'static str| {
+            let mut container = ContainerProps::default();
+            container.layout.size.width = Length::Px(Px(280.0));
+            container.layout.size.height = Length::Px(Px(72.0));
+            container.padding = Edges::all(Px(12.0));
+
+            let mut text = TextProps::new(Arc::<str>::from(label));
+            text.style = Some(body_style.clone());
+            text.color = Some(body_color);
+            cx.container(container, move |cx| vec![cx.text_props(text)])
+        }
+    };
+
+    vec![
+        cx.text("Material 3 Card: token-driven surface + outline + ink (interactive only when on_activate is set)."),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Filled)
+                        .on_activate(activate_row1.clone())
+                        .test_id("ui-gallery-material3-card-filled")
+                        .into_element(cx, |cx| vec![card_content_row1(cx, "Filled")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Filled)
+                        .on_activate(activate_row1.clone())
+                        .style(override_style_row1.clone())
+                        .test_id("ui-gallery-material3-card-filled-override")
+                        .into_element(cx, |cx| vec![card_content_row1(cx, "Override")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Filled)
+                        .on_activate(activate_row1.clone())
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-card-filled-disabled")
+                        .into_element(cx, |cx| vec![card_content_row1(cx, "Disabled")]),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Elevated)
+                        .on_activate(activate_row2.clone())
+                        .test_id("ui-gallery-material3-card-elevated")
+                        .into_element(cx, |cx| vec![card_content_row2(cx, "Elevated")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Outlined)
+                        .on_activate(activate_row2.clone())
+                        .test_id("ui-gallery-material3-card-outlined")
+                        .into_element(cx, |cx| vec![card_content_row2(cx, "Outlined")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Outlined)
+                        .on_activate(activate_row2.clone())
+                        .style(override_style_row2.clone())
+                        .test_id("ui-gallery-material3-card-outlined-override")
+                        .into_element(cx, |cx| vec![card_content_row2(cx, "Outline override")]),
+                ]
+            },
+        ),
+    ]
 }
 
 fn preview_material3_touch_targets(
@@ -4648,15 +6449,38 @@ fn preview_material3_dialog(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnActivate;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+
+    #[derive(Default)]
+    struct DialogPageModels {
+        override_open: Option<Model<bool>>,
+    }
+
+    let override_open = cx.with_state(DialogPageModels::default, |st| st.override_open.clone());
+    let override_open = match override_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(DialogPageModels::default, |st| {
+                st.override_open = Some(model.clone())
+            });
+            model
+        }
+    };
 
     let is_open = cx
         .get_model_copied(&open, Invalidation::Layout)
         .unwrap_or(false);
+    let override_is_open = cx
+        .get_model_copied(&override_open, Invalidation::Layout)
+        .unwrap_or(false);
 
     let open_dialog: OnActivate = {
         let open = open.clone();
+        let override_open = override_open.clone();
         Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&open, |v| *v = true);
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
             host.request_redraw(action_cx.window);
         })
     };
@@ -4679,19 +6503,72 @@ fn preview_material3_dialog(
         })
     };
 
-    let dialog = material3::Dialog::new(open.clone())
-        .headline("Discard draft?")
-        .supporting_text("This action cannot be undone.")
-        .actions(vec![
-            material3::DialogAction::new("Cancel")
-                .test_id("ui-gallery-material3-dialog-action-cancel")
-                .on_activate(close_dialog.clone()),
-            material3::DialogAction::new("Discard")
-                .test_id("ui-gallery-material3-dialog-action-discard")
-                .on_activate(confirm_action.clone()),
-        ])
-        .test_id("ui-gallery-material3-dialog")
-        .into_element(
+    let theme = cx.theme().clone();
+    let override_style = material3::DialogStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.secondary-container"),
+        ))))
+        .headline_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))))
+        .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))));
+
+    let open_dialog_override: OnActivate = {
+        let open = open.clone();
+        let override_open = override_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            let _ = host.models_mut().update(&override_open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let close_dialog_override: OnActivate = {
+        let override_open = override_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let confirm_action_override: OnActivate = {
+        let override_open = override_open.clone();
+        let last_action = last_action.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&last_action, |v| {
+                *v = Arc::<str>::from("material3.dialog.confirm.override")
+            });
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let build_dialog = |cx: &mut ElementContext<'_, App>,
+                        open_model: Model<bool>,
+                        style: Option<material3::DialogStyle>,
+                        id_prefix: &'static str,
+                        open_action: OnActivate,
+                        close_action: OnActivate,
+                        confirm_action: OnActivate|
+     -> AnyElement {
+        let mut dialog = material3::Dialog::new(open_model.clone())
+            .headline("Discard draft?")
+            .supporting_text("This action cannot be undone.")
+            .actions(vec![
+                material3::DialogAction::new("Cancel")
+                    .test_id(format!("{id_prefix}-action-cancel"))
+                    .on_activate(close_action.clone()),
+                material3::DialogAction::new("Discard")
+                    .test_id(format!("{id_prefix}-action-discard"))
+                    .on_activate(confirm_action.clone()),
+            ])
+            .test_id(format!("{id_prefix}"));
+
+        if let Some(style) = style {
+            dialog = dialog.style(style);
+        }
+
+        dialog.into_element(
             cx,
             move |cx| {
                 stack::vstack(
@@ -4703,12 +6580,12 @@ fn preview_material3_dialog(
                         vec![
                             material3::Button::new("Open dialog")
                                 .variant(material3::ButtonVariant::Filled)
-                                .on_activate(open_dialog.clone())
-                                .test_id("ui-gallery-material3-dialog-open")
+                                .on_activate(open_action.clone())
+                                .test_id(format!("{id_prefix}-open"))
                                 .into_element(cx),
                             material3::Button::new("Underlay focus probe")
                                 .variant(material3::ButtonVariant::Outlined)
-                                .test_id("ui-gallery-material3-dialog-underlay-probe")
+                                .test_id(format!("{id_prefix}-underlay-probe"))
                                 .into_element(cx),
                             cx.text("Tip: press Esc or click the scrim to close; Tab should stay inside the dialog while open."),
                         ]
@@ -4716,7 +6593,27 @@ fn preview_material3_dialog(
                 )
             },
             |_cx| std::iter::empty::<AnyElement>(),
-        );
+        )
+    };
+
+    let default_dialog = build_dialog(
+        cx,
+        open.clone(),
+        None,
+        "ui-gallery-material3-dialog",
+        open_dialog.clone(),
+        close_dialog.clone(),
+        confirm_action.clone(),
+    );
+    let override_dialog = build_dialog(
+        cx,
+        override_open.clone(),
+        Some(override_style),
+        "ui-gallery-material3-dialog-override",
+        open_dialog_override.clone(),
+        close_dialog_override.clone(),
+        confirm_action_override.clone(),
+    );
 
     let last = cx
         .app
@@ -4724,26 +6621,39 @@ fn preview_material3_dialog(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.size.width = fret_ui::element::Length::Fill;
-    layout.size.height = fret_ui::element::Length::Px(Px(360.0));
+    let build_container = |cx: &mut ElementContext<'_, App>, dialog: AnyElement| -> AnyElement {
+        let mut layout = fret_ui::element::LayoutStyle::default();
+        layout.size.width = fret_ui::element::Length::Fill;
+        layout.size.height = fret_ui::element::Length::Px(Px(360.0));
+        cx.container(
+            fret_ui::element::ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            move |_cx| [dialog],
+        )
+    };
 
-    let container = cx.container(
-        fret_ui::element::ContainerProps {
-            layout,
-            ..Default::default()
+    let containers = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                build_container(cx, default_dialog),
+                build_container(cx, override_dialog),
+            ]
         },
-        move |_cx| [dialog],
     );
 
     vec![
         cx.text(
             "Material 3 Dialog: modal barrier + focus trap/restore + token-shaped dialog actions.",
         ),
-        container,
+        containers,
         cx.text(format!(
-            "open={} last_action={}",
+            "open={} override_open={} last_action={}",
             is_open as u8,
+            override_is_open as u8,
             last.as_ref()
         )),
     ]
@@ -4755,6 +6665,24 @@ fn preview_material3_menu(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnActivate;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+
+    #[derive(Default)]
+    struct MenuPageModels {
+        override_open: Option<Model<bool>>,
+    }
+
+    let override_open = cx.with_state(MenuPageModels::default, |st| st.override_open.clone());
+    let override_open = match override_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(MenuPageModels::default, |st| {
+                st.override_open = Some(model.clone())
+            });
+            model
+        }
+    };
 
     fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, action_cx, _reason| {
@@ -4767,8 +6695,19 @@ fn preview_material3_menu(
 
     let toggle_open: OnActivate = {
         let open = open.clone();
+        let override_open = override_open.clone();
         Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&open, |v| *v = !*v);
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let toggle_open_override: OnActivate = {
+        let open = open.clone();
+        let override_open = override_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            let _ = host.models_mut().update(&override_open, |v| *v = !*v);
             host.request_redraw(action_cx.window);
         })
     };
@@ -4822,29 +6761,103 @@ fn preview_material3_menu(
             },
         );
 
+    let theme = cx.theme().clone();
+    let override_style = material3::MenuStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.secondary-container"),
+        ))))
+        .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))))
+        .item_state_layer_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))));
+
+    let last_action_for_override_entries = last_action.clone();
+    let dropdown_override = material3::DropdownMenu::new(override_open.clone())
+        .a11y_label("Material 3 Menu (override)")
+        .test_id("ui-gallery-material3-menu-override")
+        .menu_style(override_style)
+        .into_element(
+            cx,
+            move |cx| {
+                material3::Button::new("Open menu (override)")
+                    .variant(material3::ButtonVariant::Outlined)
+                    .on_activate(toggle_open_override.clone())
+                    .test_id("ui-gallery-material3-menu-trigger-override")
+                    .into_element(cx)
+            },
+            move |_cx| {
+                vec![
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Cut")
+                            .test_id("ui-gallery-material3-menu-item-cut-override")
+                            .on_select(on_select(
+                                "material3.menu.cut.override",
+                                last_action_for_override_entries.clone(),
+                            )),
+                    ),
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Copy")
+                            .test_id("ui-gallery-material3-menu-item-copy-override")
+                            .on_select(on_select(
+                                "material3.menu.copy.override",
+                                last_action_for_override_entries.clone(),
+                            )),
+                    ),
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Paste")
+                            .test_id("ui-gallery-material3-menu-item-paste-override")
+                            .disabled(true),
+                    ),
+                    material3::MenuEntry::Separator,
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Settings")
+                            .test_id("ui-gallery-material3-menu-item-settings-override")
+                            .on_select(on_select(
+                                "material3.menu.settings.override",
+                                last_action_for_override_entries.clone(),
+                            )),
+                    ),
+                ]
+            },
+        );
+
     let last = cx
         .app
         .models()
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let card = shadcn::Card::new(vec![
+    let card_default = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Default").into_element(cx)])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![dropdown]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+    .into_element(cx);
+
+    let card_override = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Menu").into_element(cx),
+            shadcn::CardTitle::new("Override").into_element(cx),
             shadcn::CardDescription::new(
-                "Overlay MVP (dismissible, anchored) using the Menu list surface.",
+                "ADR 1159: MenuStyle overrides (container + item colors).",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![dropdown]).into_element(cx),
+        shadcn::CardContent::new(vec![dropdown_override]).into_element(cx),
     ])
-    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
     vec![
         cx.text("Tip: Arrow keys / Home / End navigate; type to jump by prefix; Esc/outside press closes."),
-        card,
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |_cx| vec![card_default, card_override],
+        ),
         cx.text(format!("last action: {last}")),
     ]
 }
@@ -5149,7 +7162,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         ])
         .into_element(cx),
     ])
-    .refine_layout(LayoutRefinement::default().flex_1())
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
     let right = shadcn::Card::new(vec![
@@ -5167,7 +7180,7 @@ fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         ])
         .into_element(cx),
     ])
-    .refine_layout(LayoutRefinement::default().flex_1())
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
     vec![stack::hstack(
@@ -5550,7 +7563,7 @@ fn preview_forms(
                             shadcn::Checkbox::new(checkbox)
                                 .a11y_label("Accept terms")
                                 .into_element(cx),
-                            cx.text("Accept terms"),
+                            ui::label(cx, "Accept terms").into_element(cx),
                         ]
                     },
                 ),
@@ -5562,7 +7575,7 @@ fn preview_forms(
                             shadcn::Switch::new(switch)
                                 .a11y_label("Enable feature")
                                 .into_element(cx),
-                            cx.text("Enable feature"),
+                            ui::label(cx, "Enable feature").into_element(cx),
                         ]
                     },
                 ),
@@ -5570,18 +7583,20 @@ fn preview_forms(
         },
     );
 
-    vec![
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N3),
-            |_cx| [input, textarea, toggles],
-        ),
-        cx.text(
-            "Tip: these are model-bound controls; values persist while you stay in the window.",
-        ),
-    ]
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |cx| {
+            let tip = ui::text_block(
+                cx,
+                "Tip: these are model-bound controls; values persist while you stay in the window.",
+            )
+            .into_element(cx);
+            [input, textarea, toggles, tip]
+        },
+    )]
 }
 
 fn preview_select(
@@ -5710,19 +7725,30 @@ fn preview_resizable(
         ])
         .into_element(cx);
 
-    let root = shadcn::ResizablePanelGroup::new(h_fractions)
-        .axis(fret_core::Axis::Horizontal)
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
-        .entries(vec![
-            shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
-                .min_px(Px(140.0))
-                .into(),
-            shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new(vec![nested_vertical])
-                .min_px(Px(240.0))
-                .into(),
-        ])
-        .into_element(cx);
+    let root = {
+        let root = shadcn::ResizablePanelGroup::new(h_fractions)
+            .axis(fret_core::Axis::Horizontal)
+            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
+            .entries(vec![
+                shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
+                    .min_px(Px(140.0))
+                    .into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new(vec![nested_vertical])
+                    .min_px(Px(240.0))
+                    .into(),
+            ])
+            .into_element(cx);
+
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                label: Some(Arc::<str>::from("Debug:ui-gallery:resizable-panels")),
+                test_id: Some(Arc::<str>::from("ui-gallery-resizable-panels")),
+                ..Default::default()
+            },
+            move |_cx| [root],
+        )
+    };
 
     vec![cx.text("Drag the handles to resize panels."), root]
 }
@@ -7071,17 +9097,21 @@ fn preview_toast(
         |cx| {
             vec![
                 shadcn::Button::new("Default")
+                    .test_id("ui-gallery-toast-default")
                     .on_click(CMD_TOAST_DEFAULT)
                     .into_element(cx),
                 shadcn::Button::new("Success")
+                    .test_id("ui-gallery-toast-success")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_SUCCESS)
                     .into_element(cx),
                 shadcn::Button::new("Error")
+                    .test_id("ui-gallery-toast-error")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_ERROR)
                     .into_element(cx),
                 shadcn::Button::new("Action + Cancel")
+                    .test_id("ui-gallery-toast-action-cancel")
                     .variant(shadcn::ButtonVariant::Outline)
                     .on_click(CMD_TOAST_SHOW_ACTION_CANCEL)
                     .into_element(cx),
@@ -7101,6 +9131,7 @@ fn preview_overlay(
     portal_geometry_popover_open: Model<bool>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnDismissRequest;
@@ -7128,6 +9159,7 @@ fn preview_overlay(
 
                 let dropdown_open = dropdown_open.clone();
                 let context_menu_open = context_menu_open.clone();
+                let context_menu_edge_open = context_menu_edge_open.clone();
                 let popover_open = popover_open.clone();
                 let dialog_open = dialog_open.clone();
                 let alert_dialog_open = alert_dialog_open.clone();
@@ -7138,6 +9170,9 @@ fn preview_overlay(
                 let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
                     let _ = host.models_mut().update(&dropdown_open, |v| *v = false);
                     let _ = host.models_mut().update(&context_menu_open, |v| *v = false);
+                    let _ = host
+                        .models_mut()
+                        .update(&context_menu_edge_open, |v| *v = false);
                     let _ = host.models_mut().update(&popover_open, |v| *v = false);
                     let _ = host.models_mut().update(&dialog_open, |v| *v = false);
                     let _ = host.models_mut().update(&alert_dialog_open, |v| *v = false);
@@ -7226,6 +9261,30 @@ fn preview_overlay(
                     ]
                 },
             );
+
+            let context_menu_edge = shadcn::ContextMenu::new(context_menu_edge_open.clone())
+                .into_element(
+                    cx,
+                    |cx| {
+                        shadcn::Button::new("ContextMenu (edge, right click)")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-context-trigger-edge")
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Action")
+                                    .test_id("ui-gallery-context-edge-item-action")
+                                    .on_select(CMD_MENU_CONTEXT_ACTION),
+                            ),
+                            shadcn::ContextMenuEntry::Separator,
+                            shadcn::ContextMenuEntry::Item(
+                                shadcn::ContextMenuItem::new("Disabled").disabled(true),
+                            ),
+                        ]
+                    },
+                );
 
             let underlay = shadcn::Button::new("Underlay (outside-press target)")
                 .variant(shadcn::ButtonVariant::Secondary)
@@ -7320,12 +9379,22 @@ fn preview_overlay(
                             .toggle_model(popover_open.clone())
                             .into_element(cx);
 
-                        shadcn::PopoverContent::new(vec![
-                            cx.text("Popover content"),
-                            open_dialog,
-                            close,
-                        ])
-                        .into_element(cx)
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::from("ui-gallery-popover-content")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    shadcn::PopoverContent::new(vec![
+                                        cx.text("Popover content"),
+                                        open_dialog,
+                                        close,
+                                    ])
+                                    .into_element(cx),
+                                ]
+                            },
+                        )
                     },
                 );
 
@@ -7339,27 +9408,71 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::DialogContent::new(vec![
-                        shadcn::DialogHeader::new(vec![
-                            shadcn::DialogTitle::new("Dialog").into_element(cx),
-                            shadcn::DialogDescription::new("Escape / overlay click closes")
+                    cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            test_id: Some(Arc::from("ui-gallery-dialog-content")),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                shadcn::DialogContent::new(vec![
+                                    shadcn::DialogHeader::new(vec![
+                                        shadcn::DialogTitle::new("Dialog").into_element(cx),
+                                        shadcn::DialogDescription::new(
+                                            "Escape / overlay click closes",
+                                        )
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    {
+                                        let body = stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N2).layout(
+                                                LayoutRefinement::default()
+                                                    .w_full()
+                                                    .min_w_0()
+                                                    .min_h_0(),
+                                            ),
+                                            |cx| {
+                                                (0..64)
+                                                    .map(|i| {
+                                                        cx.text(format!(
+                                                            "Scrollable content line {}",
+                                                            i + 1
+                                                        ))
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                            },
+                                        );
+
+                                        shadcn::ScrollArea::new([body])
+                                            .refine_layout(
+                                                LayoutRefinement::default()
+                                                    .w_full()
+                                                    .h_px(Px(240.0))
+                                                    .min_w_0()
+                                                    .min_h_0(),
+                                            )
+                                            .viewport_test_id("ui-gallery-dialog-scroll-viewport")
+                                            .into_element(cx)
+                                    },
+                                    shadcn::DialogFooter::new(vec![
+                                        shadcn::Button::new("Close")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .test_id("ui-gallery-dialog-close")
+                                            .toggle_model(dialog_open.clone())
+                                            .into_element(cx),
+                                        shadcn::Button::new("Confirm")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("ui-gallery-dialog-confirm")
+                                            .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
                                 .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::DialogFooter::new(vec![
-                            shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .test_id("ui-gallery-dialog-close")
-                                .toggle_model(dialog_open.clone())
-                                .into_element(cx),
-                            shadcn::Button::new("Confirm")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .test_id("ui-gallery-dialog-confirm")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx)
+                            ]
+                        },
+                    )
                 },
             );
 
@@ -7373,27 +9486,43 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    shadcn::AlertDialogContent::new(vec![
-                        shadcn::AlertDialogHeader::new(vec![
-                            shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                    cx.semantics(
+                        fret_ui::element::SemanticsProps {
+                            test_id: Some(Arc::from("ui-gallery-alert-dialog-content")),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![
+                                shadcn::AlertDialogContent::new(vec![
+                                    shadcn::AlertDialogHeader::new(vec![
+                                        shadcn::AlertDialogTitle::new("Are you absolutely sure?")
+                                            .into_element(cx),
+                                        shadcn::AlertDialogDescription::new(
+                                            "This is non-closable by overlay click.",
+                                        )
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    shadcn::AlertDialogFooter::new(vec![
+                                        shadcn::AlertDialogCancel::new(
+                                            "Cancel",
+                                            alert_dialog_open.clone(),
+                                        )
+                                        .test_id("ui-gallery-alert-dialog-cancel")
+                                        .into_element(cx),
+                                        shadcn::AlertDialogAction::new(
+                                            "Continue",
+                                            alert_dialog_open.clone(),
+                                        )
+                                        .test_id("ui-gallery-alert-dialog-action")
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                ])
                                 .into_element(cx),
-                            shadcn::AlertDialogDescription::new(
-                                "This is non-closable by overlay click.",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::AlertDialogFooter::new(vec![
-                            shadcn::AlertDialogCancel::new("Cancel", alert_dialog_open.clone())
-                                .test_id("ui-gallery-alert-dialog-cancel")
-                                .into_element(cx),
-                            shadcn::AlertDialogAction::new("Continue", alert_dialog_open.clone())
-                                .test_id("ui-gallery-alert-dialog-action")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx)
+                            ]
+                        },
+                    )
                 },
             );
 
@@ -7405,26 +9534,74 @@ fn preview_overlay(
                     |cx| {
                         shadcn::Button::new("Sheet")
                             .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-sheet-trigger")
                             .toggle_model(sheet_open.clone())
                             .into_element(cx)
                     },
                     |cx| {
-                        shadcn::SheetContent::new(vec![
-                            shadcn::SheetHeader::new(vec![
-                                shadcn::SheetTitle::new("Sheet").into_element(cx),
-                                shadcn::SheetDescription::new("A modal side panel.")
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::from("ui-gallery-sheet-content")),
+                                ..Default::default()
+                            },
+                            |cx| {
+                                vec![
+                                    shadcn::SheetContent::new(vec![
+                                        shadcn::SheetHeader::new(vec![
+                                            shadcn::SheetTitle::new("Sheet").into_element(cx),
+                                            shadcn::SheetDescription::new("A modal side panel.")
+                                                .into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                        {
+                                            let body = stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default()
+                                                    .gap(Space::N2)
+                                                    .layout(
+                                                        LayoutRefinement::default()
+                                                            .w_full()
+                                                            .min_w_0()
+                                                            .min_h_0(),
+                                                    ),
+                                                |cx| {
+                                                    (0..96)
+                                                        .map(|i| {
+                                                            cx.text(format!(
+                                                                "Sheet body line {}",
+                                                                i + 1
+                                                            ))
+                                                        })
+                                                        .collect::<Vec<_>>()
+                                                },
+                                            );
+
+                                            shadcn::ScrollArea::new([body])
+                                                .refine_layout(
+                                                    LayoutRefinement::default()
+                                                        .flex_1()
+                                                        .w_full()
+                                                        .min_w_0()
+                                                        .min_h_0(),
+                                                )
+                                                .viewport_test_id(
+                                                    "ui-gallery-sheet-scroll-viewport",
+                                                )
+                                                .into_element(cx)
+                                        },
+                                        shadcn::SheetFooter::new(vec![
+                                            shadcn::Button::new("Close")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .test_id("ui-gallery-sheet-close")
+                                                .toggle_model(sheet_open.clone())
+                                                .into_element(cx),
+                                        ])
+                                        .into_element(cx),
+                                    ])
                                     .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::SheetFooter::new(vec![
-                                shadcn::Button::new("Close")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .toggle_model(sheet_open.clone())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
+                                ]
+                            },
+                        )
                     },
                 );
 
@@ -7519,22 +9696,52 @@ fn preview_overlay(
                 cx,
                 stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
                 |cx| {
+                    let theme = Theme::global(&*cx.app).clone();
+                    let gap = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);
+
+                    let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
+                        let layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.flex(
+                            fret_ui::element::FlexProps {
+                                layout,
+                                direction: fret_core::Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::Start,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: true,
+                            },
+                            |_cx| children,
+                        )
+                    };
+
+                    let row_end = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
+                        let layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        );
+                        cx.flex(
+                            fret_ui::element::FlexProps {
+                                layout,
+                                direction: fret_core::Axis::Horizontal,
+                                gap,
+                                padding: Edges::all(Px(0.0)),
+                                justify: fret_ui::element::MainAlign::End,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            |_cx| children,
+                        )
+                    };
+
                     vec![
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [dropdown, context_menu, overlay_reset],
-                        ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [tooltip, hover_card, popover, underlay, dialog],
-                        ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default().gap(Space::N2).items_center(),
-                            |_cx| [alert_dialog, sheet],
-                        ),
+                        row(cx, vec![dropdown, context_menu, overlay_reset]),
+                        row_end(cx, vec![context_menu_edge]),
+                        row(cx, vec![tooltip, hover_card, popover, underlay, dialog]),
+                        row(cx, vec![alert_dialog, sheet]),
                         portal_geometry,
                     ]
                 },

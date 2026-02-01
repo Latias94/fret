@@ -41,6 +41,10 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
 - `FieldDescription` expands to full width by default to match upstream wrapping behavior (`w-full`).
 - `FieldDescription` negative-margin detail for “description before final sibling” is supported
   (upstream uses `nth-last-2:-mt-1`).
+- `FieldGroup` supports upstream `orientation="responsive"` behavior:
+  - Approximates the `@md/field-group` container query via a viewport breakpoint (`>=768px`).
+  - Applies `w-auto` to direct children when in row layout; for `<input>/<textarea>`, approximates
+    the browser default `cols=20` intrinsic width (so the input does not expand to the widest sibling).
 
 ## Validation
 
@@ -50,4 +54,5 @@ This audit compares Fret’s shadcn-aligned Field primitives against the upstrea
   `web_vs_fret_layout_field_group_geometry`, `web_vs_fret_layout_field_fieldset_geometry`,
   `web_vs_fret_layout_field_choice_card_geometry`,
   `web_vs_fret_layout_field_switch_geometry`, `web_vs_fret_layout_field_select_geometry`,
-  `web_vs_fret_layout_field_radio_geometry`, `web_vs_fret_layout_field_textarea_geometry`).
+  `web_vs_fret_layout_field_radio_geometry`, `web_vs_fret_layout_field_textarea_geometry`,
+  `web_vs_fret_layout_field_responsive_orientation_places_input_beside_content`).
