@@ -145,6 +145,7 @@ Recent fixes:
 - Trigger chrome/content width now tracks the trigger width mode (auto vs fixed), preventing “ellipsis even when there is space” cases.
 - `fret-icons-radix` now vendors `chevron-up.svg`, so Radix-backed semantic `ui.chevron.up` resolves correctly.
 - Trigger `aria-invalid` border + focus ring (including shadcn's invalid ring override colors) now match shadcn-web (`select-demo.invalid`, `select-demo.invalid-focus`).
+- `SelectPosition::Popper` now derives the default listbox max-height from Radix/Floating-style “available height” metrics computed against the effective collision boundary (padding/boundary aware), matching constrained-viewport goldens like `date-picker-with-presets.select-open-vp375x160`.
 
 Conformance gates:
 

@@ -11444,7 +11444,40 @@ fn web_vs_fret_select_demo_overlay_placement_matches() {
 }
 
 #[test]
-fn web_vs_fret_select_demo_open_option_metrics_match() {
+fn web_vs_fret_select_demo_vp375x160_overlay_placement_matches() {
+    assert_overlay_placement_matches(
+        "select-demo.vp375x160",
+        Some("listbox"),
+        |cx, open| {
+            use fret_ui_shadcn::{SelectEntry, SelectGroup, SelectItem, SelectLabel};
+
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let entries: Vec<SelectEntry> = vec![
+                SelectGroup::new(vec![
+                    SelectLabel::new("Fruits").into(),
+                    SelectItem::new("apple", "Apple").into(),
+                    SelectItem::new("banana", "Banana").into(),
+                    SelectItem::new("blueberry", "Blueberry").into(),
+                    SelectItem::new("grapes", "Grapes").into(),
+                    SelectItem::new("pineapple", "Pineapple").into(),
+                ])
+                .into(),
+            ];
+
+            fret_ui_shadcn::Select::new(value, open.clone())
+                .a11y_label("Select")
+                .placeholder("Select a fruit")
+                .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
+                .entries(entries)
+                .into_element(cx)
+        },
+        SemanticsRole::ComboBox,
+        Some("Select"),
+        SemanticsRole::ListBox,
+    );
+}
+
+fn assert_select_demo_open_option_metrics_match(web_name: &str) {
     fn collect_nodes_with_role<'a>(node: &'a WebNode, role: &str, out: &mut Vec<&'a WebNode>) {
         if node.attrs.get("role").is_some_and(|v| v.as_str() == role) {
             out.push(node);
@@ -11454,7 +11487,7 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
         }
     }
 
-    let web = read_web_golden_open("select-demo");
+    let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let web_listbox = theme
         .portals
@@ -11476,16 +11509,33 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
     web_options.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
 
     if web_options.is_empty() {
-        panic!("missing web options");
+        panic!("missing web options for {web_name}");
     }
 
-    let expected_left_inset = web_options[0].x - web_listbox.rect.x;
-    let expected_right_inset =
-        (web_listbox.rect.x + web_listbox.rect.w) - (web_options[0].x + web_options[0].w);
-    let expected_row_h = web_options[0].h;
-    let expected_top_to_first = web_options[0].y - web_listbox.rect.y;
+    // Under constrained viewports the Select listbox can become scrollable; only assert metrics
+    // for the options that are fully visible in the portal bounds.
+    let mut web_visible_options: Vec<WebRect> = web_options
+        .into_iter()
+        .filter(|r| {
+            r.x >= web_listbox.rect.x
+                && r.y >= web_listbox.rect.y
+                && (r.x + r.w) <= (web_listbox.rect.x + web_listbox.rect.w)
+                && (r.y + r.h) <= (web_listbox.rect.y + web_listbox.rect.h)
+        })
+        .collect();
+    web_visible_options.sort_by(|a, b| a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal));
+    if web_visible_options.is_empty() {
+        panic!("missing web visible options for {web_name}");
+    }
+
+    let expected_left_inset = web_visible_options[0].x - web_listbox.rect.x;
+    let expected_right_inset = (web_listbox.rect.x + web_listbox.rect.w)
+        - (web_visible_options[0].x + web_visible_options[0].w);
+    let expected_row_h = web_visible_options[0].h;
+    let expected_top_to_first = web_visible_options[0].y - web_listbox.rect.y;
     let expected_bottom_from_last = (web_listbox.rect.y + web_listbox.rect.h)
-        - (web_options[web_options.len() - 1].y + web_options[web_options.len() - 1].h);
+        - (web_visible_options[web_visible_options.len() - 1].y
+            + web_visible_options[web_visible_options.len() - 1].h);
 
     let window = AppWindowId::default();
     let mut app = App::new();
@@ -11590,7 +11640,7 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
                 .partial_cmp(&score_b)
                 .unwrap_or(std::cmp::Ordering::Equal)
         })
-        .expect("fret listbox portal");
+        .unwrap_or_else(|| panic!("fret listbox portal for {web_name}"));
 
     let listbox_bounds = fret_listbox.bounds;
     let mut fret_options: Vec<_> = snap
@@ -11616,10 +11666,10 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    if fret_options.len() != web_options.len() {
+    if fret_options.len() != web_visible_options.len() {
         panic!(
-            "option count mismatch: web={} fret={}",
-            web_options.len(),
+            "option count mismatch for {web_name}: web={} fret={}",
+            web_visible_options.len(),
             fret_options.len()
         );
     }
@@ -11630,7 +11680,7 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
         let got_row_h = b.size.height.0;
         if (got_row_h - expected_row_h).abs() > tol {
             panic!(
-                "row height mismatch idx={idx}: got={} expected={}",
+                "row height mismatch for {web_name} idx={idx}: got={} expected={}",
                 got_row_h, expected_row_h
             );
         }
@@ -11638,7 +11688,7 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
         let got_left_inset = b.origin.x.0 - listbox_bounds.origin.x.0;
         if (got_left_inset - expected_left_inset).abs() > tol {
             panic!(
-                "left inset mismatch idx={idx}: got={} expected={}",
+                "left inset mismatch for {web_name} idx={idx}: got={} expected={}",
                 got_left_inset, expected_left_inset
             );
         }
@@ -11646,16 +11696,16 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
             - (b.origin.x.0 + b.size.width.0);
         if (got_right_inset - expected_right_inset).abs() > tol {
             panic!(
-                "right inset mismatch idx={idx}: got={} expected={}",
+                "right inset mismatch for {web_name} idx={idx}: got={} expected={}",
                 got_right_inset, expected_right_inset
             );
         }
 
-        let expected_y = web_options[idx].y - web_listbox.rect.y;
+        let expected_y = web_visible_options[idx].y - web_listbox.rect.y;
         let got_y = b.origin.y.0 - listbox_bounds.origin.y.0;
         if (got_y - expected_y).abs() > 2.0 {
             panic!(
-                "option y mismatch idx={idx}: got={} expected={}",
+                "option y mismatch for {web_name} idx={idx}: got={} expected={}",
                 got_y, expected_y
             );
         }
@@ -11669,16 +11719,26 @@ fn web_vs_fret_select_demo_open_option_metrics_match() {
 
     if (got_top_to_first - expected_top_to_first).abs() > 2.0 {
         panic!(
-            "top-to-first mismatch: got={} expected={}",
+            "top-to-first mismatch for {web_name}: got={} expected={}",
             got_top_to_first, expected_top_to_first
         );
     }
     if (got_bottom_from_last - expected_bottom_from_last).abs() > 2.0 {
         panic!(
-            "bottom-from-last mismatch: got={} expected={}",
+            "bottom-from-last mismatch for {web_name}: got={} expected={}",
             got_bottom_from_last, expected_bottom_from_last
         );
     }
+}
+
+#[test]
+fn web_vs_fret_select_demo_open_option_metrics_match() {
+    assert_select_demo_open_option_metrics_match("select-demo");
+}
+
+#[test]
+fn web_vs_fret_select_demo_vp375x160_open_option_metrics_match() {
+    assert_select_demo_open_option_metrics_match("select-demo.vp375x160");
 }
 
 #[test]

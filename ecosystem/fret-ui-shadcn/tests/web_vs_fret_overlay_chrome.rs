@@ -3442,11 +3442,32 @@ fn assert_overlay_panel_size_matches_by_portal_slot_theme(
     }
 
     let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
-    let _overlay = largest_semantics_node(&snap, fret_role)
+    let overlay = largest_semantics_node(&snap, fret_role)
         .unwrap_or_else(|| panic!("missing fret semantics node: {fret_role:?}"));
 
-    let quad = find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border)
+    let quad = find_best_chrome_quad(&scene, overlay.bounds)
+        .or_else(|| find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border))
         .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    if std::env::var("FRET_DEBUG_WEB_VS_FRET_OVERLAY_CHROME")
+        .ok()
+        .is_some_and(|v| v == "1")
+    {
+        eprintln!(
+            "overlay chrome debug: web_name={web_name} role={:?} overlay_bounds=({}, {}, {}, {}) quad=({}, {}, {}, {}) web=({}, {})",
+            fret_role,
+            overlay.bounds.origin.x.0,
+            overlay.bounds.origin.y.0,
+            overlay.bounds.size.width.0,
+            overlay.bounds.size.height.0,
+            quad.rect.origin.x.0,
+            quad.rect.origin.y.0,
+            quad.rect.size.width.0,
+            quad.rect.size.height.0,
+            web_w,
+            web_h
+        );
+    }
 
     assert_close(
         &format!("{web_name} {web_theme_name} panel.w"),

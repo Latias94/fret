@@ -53,6 +53,8 @@ Tracking format:
 - [~] SWG-cal-010 Add selection/hover/disabled state chrome gates on month grids across a constrained viewport.
 - [x] SWG-cal-020 Add nested overlay “stacking order + clamp + scroll” gates (Select inside DatePicker popover).
   - Evidence: `date-picker-with-presets.select-open-vp375x160.open` + `date-picker-with-presets.select-open-vp375x160-scrolled-80.open` + placement + listbox panel-size gate + paint-order gate + scroll parity gate.
+- 2026-02-01: fixed Radix popper “size()” available-height metrics to apply collision padding/boundary when computing `--radix-*-content-available-height` equivalents (unblocks strict max-height parity for `SelectPosition::Popper` under constrained viewports).
+- 2026-02-01: hardened the overlay-chrome panel-size matcher to prefer semantics-bounded chrome quads (then fallback by size) to avoid nested-overlay ambiguity (Popover + ListBox in the same scene).
 - 2026-01-31: added `date-picker-with-presets.preset-tomorrow-vp375x240` open golden + placement gate (Select interaction + deterministic date selection).
 - 2026-02-01: added a selected-day background gate (`calendar-14`) and fixed calendar chrome margins so row gaps don't inflate the selected background quad.
 - 2026-02-01: added a range-middle background gate (`calendar-04`) using the web golden’s computed `backgroundColor` and a scene quad matcher that prefers opaque backgrounds.
