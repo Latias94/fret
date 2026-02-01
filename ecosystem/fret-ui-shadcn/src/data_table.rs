@@ -58,6 +58,7 @@ fn mixed_revision(a: u64, b: u64) -> u64 {
 #[derive(Debug, Clone)]
 pub struct DataTable {
     overscan: usize,
+    keep_alive: Option<usize>,
     row_height: Option<Px>,
     measure_rows: bool,
     chrome: ChromeRefinement,
@@ -69,6 +70,7 @@ impl Default for DataTable {
     fn default() -> Self {
         Self {
             overscan: 4,
+            keep_alive: None,
             row_height: None,
             measure_rows: false,
             chrome: ChromeRefinement::default(),
@@ -85,6 +87,11 @@ impl DataTable {
 
     pub fn overscan(mut self, overscan: usize) -> Self {
         self.overscan = overscan;
+        self
+    }
+
+    pub fn keep_alive(mut self, keep_alive: usize) -> Self {
+        self.keep_alive = Some(keep_alive);
         self
     }
 
@@ -141,6 +148,7 @@ impl DataTable {
     {
         let DataTable {
             overscan,
+            keep_alive,
             row_height,
             measure_rows,
             chrome,
@@ -173,6 +181,7 @@ impl DataTable {
 
             let mut view_props = TableViewProps::default();
             view_props.overscan = overscan;
+            view_props.keep_alive = keep_alive;
             view_props.row_height = row_height;
             view_props.row_measure_mode = if measure_rows {
                 TableRowMeasureMode::Measured
@@ -221,6 +230,7 @@ impl DataTable {
     {
         let DataTable {
             overscan,
+            keep_alive,
             row_height,
             measure_rows,
             chrome,
@@ -261,6 +271,7 @@ impl DataTable {
 
             let mut view_props = TableViewProps::default();
             view_props.overscan = overscan;
+            view_props.keep_alive = keep_alive;
             view_props.row_height = row_height;
             view_props.row_measure_mode = if measure_rows {
                 TableRowMeasureMode::Measured
