@@ -376,7 +376,7 @@ Legend:
 - 2026-01-13: ADR 0157 added (design locked), worktree created.
 - 2026-01-13: ADR 0158 added (layout cache boundary + glyph residency direction).
 - 2026-01-13: M0 contract landed (commit `3bb0fc8`).
-- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype in `crates/fret-render/src/text_v2/mod.rs`.
+- 2026-01-13: M1 started: add Parley dependency + single-line shaper prototype (now in `crates/fret-render/src/text/parley_shaper.rs`).
 - 2026-01-13: M1.1: split shaping/paint caches in the current text backend (`TextShapeKey` + per-span palette; theme-only changes no longer force reshaping).
 - 2026-01-13: M1.2: add `text_v2` wrapper prototype for `wrap=None + Ellipsis` with cluster-based hit-test mapping (unit tests only; not integrated yet).
 - 2026-01-13: M1.3: wire Parley `wrap=None + Ellipsis` through `TextSystem::prepare_*` (renders via swash into the existing atlases; still missing fractional positioning + font config integration).
