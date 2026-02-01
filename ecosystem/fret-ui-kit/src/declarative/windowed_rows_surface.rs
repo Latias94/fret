@@ -17,7 +17,12 @@
 //! If you need fully composable rows with per-item semantics/focus, prefer `VirtualList`-based
 //! helpers (e.g. `list_virtualized`) and keep the “window jump” cost low via overscan.
 
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::panic::Location;
+
 use fret_core::{Point, Px, Rect, Size};
+use fret_runtime::FrameId;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, UiPointerActionHost};
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
@@ -37,6 +42,70 @@ pub struct WindowedRowsPaintFrame {
 
 pub type OnWindowedRowsPaintFrame =
     std::sync::Arc<dyn for<'p> Fn(&mut CanvasPainter<'p>, WindowedRowsPaintFrame) + 'static>;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WindowedRowsSurfaceWindowTelemetry {
+    pub callsite_id: u64,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+
+    pub len: u64,
+    pub row_height: Px,
+    pub overscan: u64,
+    pub gap: Px,
+    pub scroll_margin: Px,
+
+    pub viewport_height: Px,
+    pub offset_y: Px,
+    pub content_height: Px,
+
+    pub visible_start: Option<u64>,
+    pub visible_end: Option<u64>,
+    pub visible_count: u64,
+}
+
+#[derive(Default)]
+pub struct WindowedRowsSurfaceDiagnosticsStore {
+    per_window: HashMap<fret_core::AppWindowId, WindowedRowsSurfaceDiagnosticsFrame>,
+}
+
+#[derive(Default)]
+struct WindowedRowsSurfaceDiagnosticsFrame {
+    frame_id: FrameId,
+    windows: Vec<WindowedRowsSurfaceWindowTelemetry>,
+}
+
+impl WindowedRowsSurfaceDiagnosticsStore {
+    pub fn begin_frame(&mut self, window: fret_core::AppWindowId, frame_id: FrameId) {
+        let w = self.per_window.entry(window).or_default();
+        if w.frame_id != frame_id {
+            w.frame_id = frame_id;
+            w.windows.clear();
+        }
+    }
+
+    pub fn record_window(
+        &mut self,
+        window: fret_core::AppWindowId,
+        frame_id: FrameId,
+        telemetry: WindowedRowsSurfaceWindowTelemetry,
+    ) {
+        self.begin_frame(window, frame_id);
+        let w = self.per_window.entry(window).or_default();
+        w.windows.push(telemetry);
+    }
+
+    #[allow(dead_code)]
+    pub fn windows_for_window(
+        &self,
+        window: fret_core::AppWindowId,
+        frame_id: FrameId,
+    ) -> Option<&[WindowedRowsSurfaceWindowTelemetry]> {
+        let w = self.per_window.get(&window)?;
+        (w.frame_id == frame_id).then_some(w.windows.as_slice())
+    }
+}
 
 /// Props for [`windowed_rows_surface`].
 ///
@@ -90,6 +159,7 @@ pub fn windowed_rows_surface<H: UiHost>(
     props: WindowedRowsSurfaceProps,
     paint_row: impl for<'p> Fn(&mut CanvasPainter<'p>, usize, Rect) + 'static,
 ) -> AnyElement {
+    let caller = Location::caller();
     let WindowedRowsSurfaceProps {
         mut scroll,
         mut canvas,
@@ -111,6 +181,59 @@ pub fn windowed_rows_surface<H: UiHost>(
         scroll_margin,
     );
     let content_h = metrics.total_height();
+
+    let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
+    let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
+    let offset_y = metrics.clamp_offset(offset_y, viewport_h);
+    let visible = metrics.visible_range(offset_y, viewport_h, overscan);
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    caller.file().hash(&mut hasher);
+    caller.line().hash(&mut hasher);
+    caller.column().hash(&mut hasher);
+    let callsite_id = hasher.finish();
+
+    cx.app.with_global_mut_untracked(
+        WindowedRowsSurfaceDiagnosticsStore::default,
+        |store, _app| {
+            let (visible_start, visible_end, visible_count) = visible
+                .map(|visible| {
+                    let count = visible.count;
+                    if count == 0 {
+                        return (None, None, 0u64);
+                    }
+                    let start = visible.start_index.saturating_sub(visible.overscan);
+                    let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
+                    (
+                        Some(start as u64),
+                        Some(end as u64),
+                        (end.saturating_sub(start) as u64).saturating_add(1),
+                    )
+                })
+                .unwrap_or((None, None, 0));
+            store.record_window(
+                cx.window,
+                cx.frame_id,
+                WindowedRowsSurfaceWindowTelemetry {
+                    callsite_id,
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                    len: len as u64,
+                    row_height,
+                    overscan: overscan as u64,
+                    gap,
+                    scroll_margin,
+                    viewport_height: viewport_h,
+                    offset_y,
+                    content_height: content_h,
+                    visible_start,
+                    visible_end,
+                    visible_count,
+                },
+            );
+        },
+    );
 
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
@@ -234,6 +357,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
     content_semantics: Option<fret_ui::element::SemanticsProps>,
     paint_row: impl for<'p> Fn(&mut CanvasPainter<'p>, usize, Rect) + 'static,
 ) -> AnyElement {
+    let caller = Location::caller();
     let WindowedRowsSurfacePointerHandlers {
         on_pointer_down,
         on_pointer_move,
@@ -262,6 +386,59 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         scroll_margin,
     );
     let content_h = metrics.total_height();
+
+    let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
+    let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
+    let offset_y = metrics.clamp_offset(offset_y, viewport_h);
+    let visible = metrics.visible_range(offset_y, viewport_h, overscan);
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    caller.file().hash(&mut hasher);
+    caller.line().hash(&mut hasher);
+    caller.column().hash(&mut hasher);
+    let callsite_id = hasher.finish();
+
+    cx.app.with_global_mut_untracked(
+        WindowedRowsSurfaceDiagnosticsStore::default,
+        |store, _app| {
+            let (visible_start, visible_end, visible_count) = visible
+                .map(|visible| {
+                    let count = visible.count;
+                    if count == 0 {
+                        return (None, None, 0u64);
+                    }
+                    let start = visible.start_index.saturating_sub(visible.overscan);
+                    let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
+                    (
+                        Some(start as u64),
+                        Some(end as u64),
+                        (end.saturating_sub(start) as u64).saturating_add(1),
+                    )
+                })
+                .unwrap_or((None, None, 0));
+            store.record_window(
+                cx.window,
+                cx.frame_id,
+                WindowedRowsSurfaceWindowTelemetry {
+                    callsite_id,
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                    len: len as u64,
+                    row_height,
+                    overscan: overscan as u64,
+                    gap,
+                    scroll_margin,
+                    viewport_height: viewport_h,
+                    offset_y,
+                    content_height: content_h,
+                    visible_start,
+                    visible_end,
+                    visible_count,
+                },
+            );
+        },
+    );
 
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());

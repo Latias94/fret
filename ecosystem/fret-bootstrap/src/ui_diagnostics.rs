@@ -2925,6 +2925,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
     #[serde(default)]
+    pub windowed_rows_surfaces: Vec<UiWindowedRowsSurfaceWindowV1>,
+    #[serde(default)]
     pub retained_virtual_list_reconciles: Vec<UiRetainedVirtualListReconcileV1>,
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
@@ -3016,6 +3018,17 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiVirtualListWindowV1::from_window)
                 .collect(),
+            windowed_rows_surfaces: app
+                .global::<fret_ui_kit::declarative::windowed_rows_surface::WindowedRowsSurfaceDiagnosticsStore>(
+                )
+                .and_then(|store| store.windows_for_window(window, app.frame_id()))
+                .map(|windows| {
+                    windows
+                        .iter()
+                        .map(UiWindowedRowsSurfaceWindowV1::from_telemetry)
+                        .collect()
+                })
+                .unwrap_or_default(),
             retained_virtual_list_reconciles: ui
                 .debug_retained_virtual_list_reconciles()
                 .iter()
@@ -3418,6 +3431,54 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWindowedRowsSurfaceWindowV1 {
+    pub callsite_id: u64,
+    pub location: UiSourceLocationV1,
+
+    pub len: u64,
+    pub row_height: f32,
+    pub overscan: u64,
+    pub gap: f32,
+    pub scroll_margin: f32,
+
+    pub viewport_height: f32,
+    pub offset_y: f32,
+    pub content_height: f32,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible_start: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible_end: Option<u64>,
+    pub visible_count: u64,
+}
+
+impl UiWindowedRowsSurfaceWindowV1 {
+    fn from_telemetry(
+        telemetry: &fret_ui_kit::declarative::windowed_rows_surface::WindowedRowsSurfaceWindowTelemetry,
+    ) -> Self {
+        Self {
+            callsite_id: telemetry.callsite_id,
+            location: UiSourceLocationV1 {
+                file: telemetry.file.to_string(),
+                line: telemetry.line,
+                column: telemetry.column,
+            },
+            len: telemetry.len,
+            row_height: telemetry.row_height.0,
+            overscan: telemetry.overscan,
+            gap: telemetry.gap.0,
+            scroll_margin: telemetry.scroll_margin.0,
+            viewport_height: telemetry.viewport_height.0,
+            offset_y: telemetry.offset_y.0,
+            content_height: telemetry.content_height.0,
+            visible_start: telemetry.visible_start,
+            visible_end: telemetry.visible_end,
+            visible_count: telemetry.visible_count,
         }
     }
 }
