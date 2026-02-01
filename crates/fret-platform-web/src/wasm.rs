@@ -170,7 +170,7 @@ impl WebImeBridge {
         let _ = style.set_property("opacity", "0.001");
         // Avoid line wrapping during composition updates; some IMEs anchor their candidate UI to the
         // textarea caret position, so wrapping causes vertical jitter as the preedit string grows.
-        let _ = style.set_property("width", "1000px");
+        let _ = style.set_property("width", "5000px");
         let _ = style.set_property("height", "20px");
         let _ = style.set_property("margin", "0");
         let _ = style.set_property("padding", "0");
@@ -179,6 +179,8 @@ impl WebImeBridge {
         let _ = style.set_property("resize", "none");
         let _ = style.set_property("overflow", "hidden");
         let _ = style.set_property("white-space", "pre");
+        let _ = style.set_property("overflow-wrap", "normal");
+        let _ = style.set_property("word-break", "keep-all");
         let _ = style.set_property("background", "transparent");
         let _ = style.set_property("color", "transparent");
         let _ = style.set_property("caret-color", "transparent");
@@ -192,11 +194,24 @@ impl WebImeBridge {
             // Only mutate inline styles for mounts we own.
             if mount.get_attribute("data-fret-ime-mount").as_deref() == Some("1") {
                 let mstyle = mount.style();
-                let _ = mstyle.set_property("position", "relative");
-                let _ = mstyle.set_property("margin", "0");
-                let _ = mstyle.set_property("padding", "0");
-                let _ = mstyle.set_property("border", "0");
-                let _ = mstyle.set_property("overflow", "hidden");
+                // If the runner provides a dedicated overlay element, keep it as an absolutely
+                // positioned layer (sized to the canvas wrapper). Otherwise fall back to the older
+                // "parent is the mount" strategy.
+                if mount.get_attribute("data-fret-ime-overlay").as_deref() == Some("1") {
+                    let _ = mstyle.set_property("position", "absolute");
+                    let _ = mstyle.set_property("left", "0");
+                    let _ = mstyle.set_property("top", "0");
+                    let _ = mstyle.set_property("width", "100%");
+                    let _ = mstyle.set_property("height", "100%");
+                    let _ = mstyle.set_property("pointer-events", "none");
+                    let _ = mstyle.set_property("overflow", "hidden");
+                } else {
+                    let _ = mstyle.set_property("position", "relative");
+                    let _ = mstyle.set_property("margin", "0");
+                    let _ = mstyle.set_property("padding", "0");
+                    let _ = mstyle.set_property("border", "0");
+                    let _ = mstyle.set_property("overflow", "hidden");
+                }
             }
             let _ = mount.append_child(&textarea_el);
         } else if let Some(body) = document.body() {

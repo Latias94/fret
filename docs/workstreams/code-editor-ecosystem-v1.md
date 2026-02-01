@@ -11,6 +11,7 @@ Recent changes (2026-02-01):
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
 - Web IME: mount the hidden textarea into a per-canvas overlay layer (wrapper + overlay; no longer appended directly to `document.body`).
+- Web IME: treat the mount element as either wrapper or overlay; do not clobber overlay positioning when applying “mount-owned” styles.
 - A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
 - A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
 - Web: enable a default CJK demo font bundle to avoid “tofu” squares in IME/editor harnesses.
