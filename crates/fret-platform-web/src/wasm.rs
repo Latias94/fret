@@ -178,7 +178,9 @@ impl WebImeBridge {
         textarea.set_value("");
         textarea.set_tab_index(-1);
         textarea.set_rows(1);
-        textarea.set_cols(1024);
+        // Make the textarea extremely wide to reduce the chance of internal line wrapping during
+        // IME composition updates (candidate UI jitter).
+        textarea.set_cols(4096);
         textarea.set_wrap("off");
 
         let textarea_el: HtmlElement = textarea.clone().unchecked_into();
@@ -200,7 +202,7 @@ impl WebImeBridge {
         let _ = style.set_property("opacity", "0.001");
         // Avoid line wrapping during composition updates; some IMEs anchor their candidate UI to the
         // textarea caret position, so wrapping causes vertical jitter as the preedit string grows.
-        let _ = style.set_property("width", "5000px");
+        let _ = style.set_property("width", "20000px");
         let _ = style.set_property("height", "20px");
         let _ = style.set_property("margin", "0");
         let _ = style.set_property("padding", "0");
@@ -818,15 +820,17 @@ impl WebImeBridge {
         debug_update_textarea_metrics(&self.textarea, &self.debug);
         let textarea_el: HtmlElement = self.textarea.clone().unchecked_into();
         let style = textarea_el.style();
-        let _ = style.set_property("left", &format!("{}px", rect.origin.x.0.max(0.0)));
-        let _ = style.set_property("top", &format!("{}px", rect.origin.y.0.max(0.0)));
+        let left_px = rect.origin.x.0.max(0.0).round();
+        let top_px = rect.origin.y.0.max(0.0).round();
+        let _ = style.set_property("left", &format!("{left_px}px"));
+        let _ = style.set_property("top", &format!("{top_px}px"));
 
         #[cfg(debug_assertions)]
         if let Some(overlay) = self.cursor_overlay.as_ref() {
             let style = overlay.style();
             let _ = style.set_property("display", "block");
-            let _ = style.set_property("left", &format!("{}px", rect.origin.x.0.max(0.0)));
-            let _ = style.set_property("top", &format!("{}px", rect.origin.y.0.max(0.0)));
+            let _ = style.set_property("left", &format!("{left_px}px"));
+            let _ = style.set_property("top", &format!("{top_px}px"));
             let _ = style.set_property("width", &format!("{}px", rect.size.width.0.max(0.0)));
             let _ = style.set_property("height", &format!("{}px", rect.size.height.0.max(0.0)));
         }

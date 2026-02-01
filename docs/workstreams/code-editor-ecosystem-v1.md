@@ -9,6 +9,7 @@ Recent changes (2026-02-01):
 - Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
 - Web IME: add a cursor-area debug overlay and include mount/DPR fields in the debug snapshot for faster triage.
 - Web IME: add textarea DOM metrics (client/scroll size + selectionStart/End) to debug snapshot to debug candidate UI jitter.
+- Web IME: widen the hidden textarea and align cursor-area to integer pixels to reduce candidate UI jitter.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
