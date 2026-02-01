@@ -144,6 +144,7 @@ impl<H: UiHost> UiTree<H> {
             )
         });
 
+        let view_cache_active = self.view_cache_active();
         let update = crate::elements::with_element_state(
             &mut *app,
             window,
@@ -233,7 +234,7 @@ impl<H: UiHost> UiTree<H> {
                     } else {
                         ideal_window_range
                     }
-                } else if retained_host && inputs.overscan > 0 && !deferred_scroll_to_item {
+                } else if inputs.overscan > 0 && !deferred_scroll_to_item {
                     match (render_window_range, visible_range) {
                         (Some(rendered), Some(visible))
                             if rendered.count == inputs.len
@@ -266,6 +267,14 @@ impl<H: UiHost> UiTree<H> {
                             ) {
                                 window_shift_kind =
                                     crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch;
+                                // For the non-retained VirtualList path, we will schedule a cache
+                                // root rerender on prefetch so the next frame can rebuild
+                                // `visible_items` against the prefetched window. Clear the
+                                // render-derived window to ensure the rerender consumes the
+                                // prepaint-derived window.
+                                if !retained_host && view_cache_active {
+                                    state.render_window_range = None;
+                                }
                                 Some(prefetch)
                             } else {
                                 ideal_window_range
@@ -390,13 +399,22 @@ impl<H: UiHost> UiTree<H> {
                     window_state.mark_retained_virtual_list_needs_reconcile(inputs.element, kind);
                 });
                 self.request_redraw_coalesced(app);
-            } else if update.window_shift_kind
-                == crate::tree::UiDebugVirtualListWindowShiftKind::Escape
-            {
+            } else {
+                let detail = match update.window_shift_kind {
+                    crate::tree::UiDebugVirtualListWindowShiftKind::None => {
+                        unreachable!("window_shift_kind checked above")
+                    }
+                    crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch => {
+                        UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
+                    }
+                    crate::tree::UiDebugVirtualListWindowShiftKind::Escape => {
+                        UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                    }
+                };
                 self.mark_nearest_view_cache_root_needs_rerender(
                     record.node,
                     UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                    detail,
                 );
                 self.request_redraw_coalesced(app);
             }

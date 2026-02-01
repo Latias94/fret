@@ -73,6 +73,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_vlist_policy_key_stable: bool = false;
     let mut check_vlist_window_mismatch_min: Option<u64> = None;
+    let mut check_vlist_window_prefetch_min: Option<u64> = None;
     let mut check_overlay_synthesis_min: Option<u64> = None;
     let mut check_viewport_input_min: Option<u64> = None;
     let mut check_dock_drag_min: Option<u64> = None;
@@ -86,6 +87,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
     let mut check_retained_vlist_scroll_window_dirty_max: Option<u64> = None;
     let mut check_vlist_scroll_window_dirty_max: Option<u64> = None;
+    let mut check_vlist_prefetch_window_dirty_max: Option<u64> = None;
     let mut compare_eps_px: f32 = 0.5;
     let mut compare_ignore_bounds: bool = false;
     let mut compare_ignore_scene_fingerprint: bool = false;
@@ -431,6 +433,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })?);
                 i += 1;
             }
+            "--check-vlist-window-prefetch-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-vlist-window-prefetch-min".to_string());
+                };
+                check_vlist_window_prefetch_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-vlist-window-prefetch-min".to_string()
+                })?);
+                i += 1;
+            }
             "--check-overlay-synthesis-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -593,6 +605,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 check_vlist_scroll_window_dirty_max = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --check-vlist-scroll-window-dirty-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-vlist-prefetch-window-dirty-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-vlist-prefetch-window-dirty-max".to_string()
+                    );
+                };
+                check_vlist_prefetch_window_dirty_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-vlist-prefetch-window-dirty-max".to_string()
                 })?);
                 i += 1;
             }
@@ -1034,6 +1058,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_layout_fast_path_min.is_some()
                     || check_vlist_policy_key_stable
                     || check_vlist_window_mismatch_min.is_some()
+                    || check_vlist_window_prefetch_min.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -1047,6 +1072,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_retained_vlist_attach_detach_max.is_some()
                     || check_retained_vlist_scroll_window_dirty_max.is_some()
                     || check_vlist_scroll_window_dirty_max.is_some()
+                    || check_vlist_prefetch_window_dirty_max.is_some()
                 {
                     let Some(bundle_path) = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -1076,6 +1102,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_layout_fast_path_min,
                         check_vlist_policy_key_stable,
                         check_vlist_window_mismatch_min,
+                        check_vlist_window_prefetch_min,
                         check_overlay_synthesis_min,
                         check_viewport_input_min,
                         check_dock_drag_min,
@@ -1089,6 +1116,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_retained_vlist_attach_detach_max,
                         check_retained_vlist_scroll_window_dirty_max,
                         check_vlist_scroll_window_dirty_max,
+                        check_vlist_prefetch_window_dirty_max,
                         warmup_frames,
                     ) {
                         stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
@@ -2198,9 +2226,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 }
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
                 check_vlist_policy_key_stable = true;
-                check_vlist_window_mismatch_min = check_vlist_window_mismatch_min.or(Some(1));
+                // Prefer exercising the prefetch path (virt-001 v2 slice) rather than requiring a
+                // window mismatch escape.
+                check_vlist_window_prefetch_min = check_vlist_window_prefetch_min.or(Some(1));
+                // Avoid rerendering cache roots due to *escape* window updates.
                 check_vlist_scroll_window_dirty_max =
-                    check_vlist_scroll_window_dirty_max.or(Some(2));
+                    check_vlist_scroll_window_dirty_max.or(Some(0));
+                // Bound prefetch-driven rerenders to catch runaway steady-state overhead.
+                check_vlist_prefetch_window_dirty_max =
+                    check_vlist_prefetch_window_dirty_max.or(Some(30));
                 check_wheel_scroll_test_id = check_wheel_scroll_test_id
                     .or(Some("ui-gallery-virtual-list-row-0-label".to_string()));
                 check_stale_paint_test_id = check_stale_paint_test_id
@@ -2437,6 +2471,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         .filter(|_| should_gate_retained_vlist_for_script);
                 let vlist_scroll_window_dirty_max_for_script = check_vlist_scroll_window_dirty_max
                     .filter(|_| ui_gallery_script_requires_vlist_window_boundary_gate(&src));
+                let vlist_window_prefetch_min_for_script = check_vlist_window_prefetch_min
+                    .filter(|_| ui_gallery_script_requires_vlist_window_boundary_gate(&src));
+                let vlist_prefetch_window_dirty_max_for_script =
+                    check_vlist_prefetch_window_dirty_max
+                        .filter(|_| ui_gallery_script_requires_vlist_window_boundary_gate(&src));
                 let vlist_policy_key_stable_for_script = check_vlist_policy_key_stable
                     && script_requires_vlist_policy_key_stability_gate(&src);
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
@@ -2449,6 +2488,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_layout_fast_path_min.is_some()
                     || vlist_policy_key_stable_for_script
                     || check_vlist_window_mismatch_min.is_some()
+                    || vlist_window_prefetch_min_for_script.is_some()
                     || check_overlay_synthesis_min.is_some()
                     || check_viewport_input_min.is_some()
                     || check_dock_drag_min.is_some()
@@ -2461,7 +2501,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || retained_vlist_attach_detach_min_for_script.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some()
                     || retained_vlist_scroll_window_dirty_max_for_script.is_some()
-                    || vlist_scroll_window_dirty_max_for_script.is_some();
+                    || vlist_scroll_window_dirty_max_for_script.is_some()
+                    || vlist_prefetch_window_dirty_max_for_script.is_some();
 
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration);
@@ -2501,6 +2542,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_layout_fast_path_min,
                         vlist_policy_key_stable_for_script,
                         check_vlist_window_mismatch_min,
+                        vlist_window_prefetch_min_for_script,
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
                         check_dock_drag_min.or(suite_dock_drag_min),
@@ -2514,6 +2556,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         retained_vlist_attach_detach_max_for_script,
                         retained_vlist_scroll_window_dirty_max_for_script,
                         vlist_scroll_window_dirty_max_for_script,
+                        vlist_prefetch_window_dirty_max_for_script,
                         warmup_frames,
                     )
                     .map_err(|e| {
@@ -4369,6 +4412,7 @@ fn apply_post_run_checks(
     check_layout_fast_path_min: Option<u64>,
     check_vlist_policy_key_stable: bool,
     check_vlist_window_mismatch_min: Option<u64>,
+    check_vlist_window_prefetch_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
     check_viewport_input_min: Option<u64>,
     check_dock_drag_min: Option<u64>,
@@ -4382,6 +4426,7 @@ fn apply_post_run_checks(
     check_retained_vlist_attach_detach_max: Option<u64>,
     check_retained_vlist_scroll_window_dirty_max: Option<u64>,
     check_vlist_scroll_window_dirty_max: Option<u64>,
+    check_vlist_prefetch_window_dirty_max: Option<u64>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -4427,6 +4472,11 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_vlist_window_mismatch_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(min) = check_vlist_window_prefetch_min
+        && min > 0
+    {
+        check_bundle_for_vlist_window_prefetch_min(bundle_path, min, warmup_frames)?;
     }
     if let Some(min) = check_overlay_synthesis_min
         && min > 0
@@ -4484,6 +4534,9 @@ fn apply_post_run_checks(
     }
     if let Some(max) = check_vlist_scroll_window_dirty_max {
         check_bundle_for_vlist_scroll_window_dirty_max(bundle_path, max, warmup_frames)?;
+    }
+    if let Some(max) = check_vlist_prefetch_window_dirty_max {
+        check_bundle_for_vlist_prefetch_window_dirty_max(bundle_path, max, warmup_frames)?;
     }
     if check_gc_sweep_liveness {
         check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
@@ -7770,6 +7823,93 @@ in bundle: {}",
     ))
 }
 
+fn check_bundle_for_vlist_window_prefetch_min(
+    bundle_path: &Path,
+    min_prefetch_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_prefetch_min_json(
+        &bundle,
+        bundle_path,
+        min_prefetch_frames,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_vlist_window_prefetch_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_prefetch_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut prefetch_frames: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut any_view_cache_active = false;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let view_cache_active = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("view_cache_active"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            any_view_cache_active |= view_cache_active;
+            if !view_cache_active {
+                continue;
+            }
+
+            let windows = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            let any_prefetch = windows.iter().any(|entry| {
+                entry
+                    .get("window_shift_kind")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|k| k == "prefetch")
+            });
+
+            if any_prefetch {
+                prefetch_frames = prefetch_frames.saturating_add(1);
+                if prefetch_frames >= min_prefetch_frames {
+                    return Ok(());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "expected at least {min_prefetch_frames} snapshots with at least one virtual-list prefetch window shift, got {prefetch_frames} \
+(any_view_cache_active={any_view_cache_active}, warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots}) \
+in bundle: {}",
+        bundle_path.display()
+    ))
+}
+
 fn check_bundle_for_vlist_policy_key_stable(
     bundle_path: &Path,
     warmup_frames: u64,
@@ -8987,6 +9127,97 @@ fn check_bundle_for_vlist_scroll_window_dirty_max_json(
         msg.push_str(
             "virtual list window boundary should not require frequent cache-root rerenders\n",
         );
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        msg.push_str(&format!(
+            "max_offenders={max_offenders} offenders={offenders} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
+        ));
+        for line in offender_lines.into_iter().take(10) {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    Ok(())
+}
+
+fn check_bundle_for_vlist_prefetch_window_dirty_max(
+    bundle_path: &Path,
+    max_offenders: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_prefetch_window_dirty_max_json(
+        &bundle,
+        bundle_path,
+        max_offenders,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_vlist_prefetch_window_dirty_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    max_offenders: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut offenders: u64 = 0;
+    let mut examined_snapshots: u64 = 0;
+    let mut offender_lines: Vec<String> = Vec::new();
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let dirty_views = s
+                .get("debug")
+                .and_then(|v| v.get("dirty_views"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            for dv in dirty_views {
+                let detail = dv
+                    .get("detail")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default();
+                if detail == "scroll_handle_prefetch_window_update" {
+                    offenders = offenders.saturating_add(1);
+                    let root_node = dv.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0);
+                    let source = dv
+                        .get("source")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or_default();
+                    offender_lines.push(format!(
+                        "frame_id={frame_id} dirty_view_root_node={root_node} source={source} detail={detail}"
+                    ));
+                    break;
+                }
+            }
+        }
+    }
+
+    if offenders > max_offenders {
+        let mut msg = String::new();
+        msg.push_str("virtual list prefetch window rerenders exceeded budget\n");
         msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
         msg.push_str(&format!(
             "max_offenders={max_offenders} offenders={offenders} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
