@@ -301,6 +301,47 @@ where
                     );
 
                     if let Some(active_element) = active_element_ref.get() {
+                        let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
+                            let (Some(viewport), Some(child)) = (
+                                cx.last_bounds_for_element(scroll.id),
+                                cx.last_bounds_for_element(active_element),
+                            ) else {
+                                return false;
+                            };
+
+                            // Compute positions in scroll-content coordinates (stable even when we don't
+                            // have paint-space bounds for scrolled children).
+                            let child_top = Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
+                            let child_h = Px(child.size.height.0.max(0.0));
+                            let child_bottom = Px(child_top.0 + child_h.0);
+                            let viewport_h = Px(viewport.size.height.0.max(0.0));
+                            if viewport_h.0 <= 0.01 {
+                                return false;
+                            }
+
+                            let prev = handle_for_stack.offset();
+                            let view_top = prev.y;
+                            let view_bottom = Px(prev.y.0 + viewport_h.0);
+
+                            // If the active row is taller than the viewport, we can't make it fully visible;
+                            // match "nearest" semantics by aligning the top edge.
+                            let target_y = if child_h.0 >= viewport_h.0 - 0.01 {
+                                child_top
+                            } else if child_top.0 < view_top.0 {
+                                child_top
+                            } else if child_bottom.0 > view_bottom.0 {
+                                Px(child_bottom.0 - viewport_h.0)
+                            } else {
+                                view_top
+                            };
+
+                            if (target_y.0 - prev.y.0).abs() <= 0.01 {
+                                return false;
+                            }
+                            handle_for_stack.set_offset(Point::new(prev.x, target_y));
+                            true
+                        };
+
                         if has_scroll && !did_initial_scroll && should_align_active_to_top() {
                             let did = active_desc::scroll_active_element_align_top_y(
                                 cx,
@@ -321,40 +362,10 @@ where
                             }
 
                         } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
-                            // Match Radix `focusSelectedItem`'s `scrollIntoView({ block: 'nearest' })`
-                            // behavior using scroll-content coordinates (stable even when we don't
-                            // have paint-space bounds for scrolled children).
-                            if let (Some(viewport), Some(child)) = (
-                                cx.last_bounds_for_element(scroll.id),
-                                cx.last_bounds_for_element(active_element),
-                            ) {
-                                let child_top =
-                                    Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
-                                let child_h = Px(child.size.height.0.max(0.0));
-                                let child_bottom = Px(child_top.0 + child_h.0);
-                                let viewport_h = Px(viewport.size.height.0.max(0.0));
-
-                                let prev = handle_for_stack.offset();
-                                let view_top = prev.y;
-                                let view_bottom = Px(prev.y.0 + viewport_h.0);
-
-                                let target_y = if child_top.0 < view_top.0 {
-                                    child_top
-                                } else if child_bottom.0 > view_bottom.0 {
-                                    Px(child_bottom.0 - viewport_h.0)
-                                } else {
-                                    view_top
-                                };
-                                handle_for_stack.set_offset(Point::new(prev.x, target_y));
-                            }
+                            let _ = scroll_active_nearest(cx);
                             on_focused_selected_item();
                         } else {
-                            let _ = active_desc::scroll_active_element_into_view_y(
-                                cx,
-                                &handle_for_stack,
-                                scroll.id,
-                                active_element,
-                            );
+                            let _ = scroll_active_nearest(cx);
                         }
                     }
 
@@ -1935,6 +1946,8 @@ fn select_impl<H: UiHost>(
                                             trigger_state_for_overlay_in_content.clone();
                                         let state_for_focused_selected_item =
                                             trigger_state_for_overlay_in_content.clone();
+                                        let allow_align_active_to_top =
+                                            position == SelectPosition::ItemAligned;
 
                                         let scroll = select_scroll_with_buttons(
                                             cx,
@@ -1948,7 +1961,8 @@ fn select_impl<H: UiHost>(
                                                 let state = state_for_align_check
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
-                                                state.pending_active_align_top_scroll
+                                                allow_align_active_to_top
+                                                    && state.pending_active_align_top_scroll
                                                     && !state.did_item_aligned_scroll_initial
                                                     && !state.did_item_aligned_scroll_reposition
                                             },

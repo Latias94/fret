@@ -43,7 +43,24 @@ pub fn scroll_handle_into_view_y(handle: &ScrollHandle, viewport: Rect, child: R
     let view_top = viewport.origin.y.0;
     let view_bottom = view_top + viewport_h;
     let child_top = child.origin.y.0;
-    let child_bottom = child_top + child.size.height.0.max(0.0);
+    let child_h = child.size.height.0.max(0.0);
+    let child_bottom = child_top + child_h;
+
+    // If the child is taller than the viewport, we cannot make it fully visible. Match the
+    // common DOM `scrollIntoView({ block: "nearest" })` outcome: only ensure the top edge is
+    // visible, and avoid runaway scrolling that would try to "fit" the bottom edge.
+    if child_h >= viewport_h - 0.01 {
+        let delta = child_top - view_top;
+        if delta.abs() <= 0.01 {
+            return false;
+        }
+
+        let prev = handle.offset();
+        handle.set_offset(Point::new(prev.x, Px(prev.y.0 + delta)));
+
+        let next = handle.offset();
+        return (prev.y.0 - next.y.0).abs() > 0.01;
+    }
 
     let delta = if child_top < view_top {
         child_top - view_top
