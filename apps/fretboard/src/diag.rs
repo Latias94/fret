@@ -78,6 +78,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_retained_vlist_reconcile_cache_reuse_min: Option<u64> = None;
     let mut check_retained_vlist_keep_alive_reuse_min: Option<u64> = None;
     let mut check_retained_vlist_prefetch_reconciles_min: Option<u64> = None;
+    let mut check_retained_vlist_prefetch_reconciles_max: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
     let mut check_retained_vlist_scroll_window_dirty_max: Option<u64> = None;
@@ -503,6 +504,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_retained_vlist_prefetch_reconciles_min =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-retained-vlist-prefetch-reconciles-min"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--check-retained-vlist-prefetch-reconciles-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-retained-vlist-prefetch-reconciles-max"
+                            .to_string(),
+                    );
+                };
+                check_retained_vlist_prefetch_reconciles_max =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-retained-vlist-prefetch-reconciles-max"
                             .to_string()
                     })?);
                 i += 1;
@@ -1003,6 +1019,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_retained_vlist_reconcile_cache_reuse_min.is_some()
                     || check_retained_vlist_keep_alive_reuse_min.is_some()
                     || check_retained_vlist_prefetch_reconciles_min.is_some()
+                    || check_retained_vlist_prefetch_reconciles_max.is_some()
                     || check_retained_vlist_attach_detach_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
                     || check_retained_vlist_scroll_window_dirty_max.is_some()
@@ -1042,6 +1059,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_retained_vlist_reconcile_cache_reuse_min,
                         check_retained_vlist_keep_alive_reuse_min,
                         check_retained_vlist_prefetch_reconciles_min,
+                        check_retained_vlist_prefetch_reconciles_max,
                         check_retained_vlist_attach_detach_min,
                         check_retained_vlist_attach_detach_max,
                         check_retained_vlist_scroll_window_dirty_max,
@@ -1531,6 +1549,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(64));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(30));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
@@ -1858,6 +1878,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 // window shifting or range extraction.
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(64));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(30));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 // Applied only to scripts that opt into the keep-alive gate.
@@ -1899,6 +1921,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(64));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(30));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_wheel_scroll_test_id = check_wheel_scroll_test_id
@@ -2302,6 +2326,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         should_gate_retained_vlist_for_script
                             && script_requires_retained_vlist_window_boundary_gate(&src)
                     });
+                let retained_vlist_prefetch_reconciles_max_for_script =
+                    check_retained_vlist_prefetch_reconciles_max.filter(|_| {
+                        should_gate_retained_vlist_for_script
+                            && script_requires_retained_vlist_window_boundary_gate(&src)
+                    });
                 let retained_vlist_attach_detach_min_for_script =
                     check_retained_vlist_attach_detach_min
                         .filter(|_| should_gate_retained_vlist_for_script);
@@ -2333,6 +2362,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || retained_vlist_reconcile_cache_reuse_min_for_script.is_some()
                     || retained_vlist_keep_alive_reuse_min_for_script.is_some()
                     || retained_vlist_prefetch_reconciles_min_for_script.is_some()
+                    || retained_vlist_prefetch_reconciles_max_for_script.is_some()
                     || retained_vlist_attach_detach_min_for_script.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some()
                     || retained_vlist_scroll_window_dirty_max_for_script.is_some()
@@ -2382,6 +2412,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         retained_vlist_reconcile_cache_reuse_min_for_script,
                         retained_vlist_keep_alive_reuse_min_for_script,
                         retained_vlist_prefetch_reconciles_min_for_script,
+                        retained_vlist_prefetch_reconciles_max_for_script,
                         retained_vlist_attach_detach_min_for_script,
                         retained_vlist_attach_detach_max_for_script,
                         retained_vlist_scroll_window_dirty_max_for_script,
@@ -4231,6 +4262,7 @@ fn apply_post_run_checks(
     check_retained_vlist_reconcile_cache_reuse_min: Option<u64>,
     check_retained_vlist_keep_alive_reuse_min: Option<u64>,
     check_retained_vlist_prefetch_reconciles_min: Option<u64>,
+    check_retained_vlist_prefetch_reconciles_max: Option<u64>,
     check_retained_vlist_attach_detach_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
     check_retained_vlist_scroll_window_dirty_max: Option<u64>,
@@ -4317,6 +4349,9 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_retained_vlist_prefetch_reconciles_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some(max) = check_retained_vlist_prefetch_reconciles_max {
+        check_bundle_for_retained_vlist_prefetch_reconciles_max(bundle_path, max, warmup_frames)?;
     }
     if let Some(min) = check_retained_vlist_attach_detach_min
         && min > 0
@@ -8129,6 +8164,84 @@ fn check_bundle_for_retained_vlist_prefetch_reconciles_min_json(
     Ok(())
 }
 
+fn check_bundle_for_retained_vlist_prefetch_reconciles_max(
+    bundle_path: &Path,
+    max_prefetch_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_retained_vlist_prefetch_reconciles_max_json(
+        &bundle,
+        bundle_path,
+        max_prefetch_frames,
+        warmup_frames,
+    )
+}
+
+fn check_bundle_for_retained_vlist_prefetch_reconciles_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    max_prefetch_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut prefetch_frames: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let reconciles = s
+                .get("debug")
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if reconciles.is_empty() {
+                continue;
+            }
+
+            let any_prefetch = reconciles.iter().any(|r| {
+                r.get("reconcile_kind")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|k| k == "prefetch")
+            });
+            if any_prefetch {
+                prefetch_frames = prefetch_frames.saturating_add(1);
+            }
+        }
+    }
+
+    if prefetch_frames > max_prefetch_frames {
+        let mut msg = String::new();
+        msg.push_str("retained virtual-list staged prefetch ran too frequently\n");
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        msg.push_str(&format!(
+            "max_prefetch_frames={max_prefetch_frames} prefetch_frames={prefetch_frames} warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
+        ));
+        return Err(msg);
+    }
+
+    Ok(())
+}
+
 fn check_bundle_for_retained_vlist_attach_detach_max(
     bundle_path: &Path,
     max_delta: u64,
@@ -11611,6 +11724,54 @@ mod tests {
         )
         .expect_err("expected missing reconcile events");
         assert!(err.contains("expected at least 1 retained virtual-list reconcile event"));
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_prefetch_reconciles_max_passes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 10, "debug": { "retained_virtual_list_reconciles": [{ "reconcile_kind": "prefetch" }] } },
+                    { "frame_id": 11, "debug": { "retained_virtual_list_reconciles": [{ "reconcile_kind": "prefetch" }] } },
+                    { "frame_id": 12, "debug": { "retained_virtual_list_reconciles": [{ "reconcile_kind": "escape" }] } }
+                ]
+            }]
+        });
+
+        check_bundle_for_retained_vlist_prefetch_reconciles_max_json(
+            &bundle,
+            Path::new("bundle.json"),
+            2,
+            0,
+        )
+        .expect("expected prefetch_frames<=2");
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_prefetch_reconciles_max_fails_when_exceeded() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 10, "debug": { "retained_virtual_list_reconciles": [{ "reconcile_kind": "prefetch" }] } },
+                    { "frame_id": 11, "debug": { "retained_virtual_list_reconciles": [{ "reconcile_kind": "prefetch" }] } },
+                    { "frame_id": 12, "debug": { "retained_virtual_list_reconciles": [{ "reconcile_kind": "prefetch" }] } }
+                ]
+            }]
+        });
+
+        let err = check_bundle_for_retained_vlist_prefetch_reconciles_max_json(
+            &bundle,
+            Path::new("bundle.json"),
+            2,
+            0,
+        )
+        .expect_err("expected prefetch_frames>2 to fail");
+        assert!(err.contains("staged prefetch ran too frequently"));
+        assert!(err.contains("prefetch_frames=3"));
     }
 
     #[test]
