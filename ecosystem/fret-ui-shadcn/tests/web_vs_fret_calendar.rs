@@ -1424,9 +1424,8 @@ fn web_vs_fret_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web_target
     }
 }
 
-#[test]
-fn web_vs_fret_calendar_11_disabled_navigation_semantics_matches_web() {
-    let web = read_web_golden("calendar-11");
+fn assert_calendar_11_disabled_navigation_semantics_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
     let web_month_grids = find_all(&theme.root, &|n| {
@@ -1435,7 +1434,7 @@ fn web_vs_fret_calendar_11_disabled_navigation_semantics_matches_web() {
     assert_eq!(
         web_month_grids.len(),
         2,
-        "expected two month grids for calendar-11"
+        "expected two month grids for {web_name}"
     );
 
     let month_labels: Vec<(time::Month, i32)> = web_month_grids
@@ -1521,7 +1520,7 @@ fn web_vs_fret_calendar_11_disabled_navigation_semantics_matches_web() {
     });
     assert!(
         !web_day_buttons.is_empty(),
-        "expected calendar day buttons for calendar-11"
+        "expected calendar day buttons for {web_name}"
     );
 
     let web_today = web_day_buttons
@@ -1644,8 +1643,17 @@ fn web_vs_fret_calendar_11_disabled_navigation_semantics_matches_web() {
 }
 
 #[test]
-fn web_vs_fret_calendar_08_disabled_day_semantics_matches_web() {
-    let web = read_web_golden("calendar-08");
+fn web_vs_fret_calendar_11_disabled_navigation_semantics_matches_web() {
+    assert_calendar_11_disabled_navigation_semantics_matches_web("calendar-11");
+}
+
+#[test]
+fn web_vs_fret_calendar_11_vp375x320_disabled_navigation_semantics_matches_web() {
+    assert_calendar_11_disabled_navigation_semantics_matches_web("calendar-11.vp375x320");
+}
+
+fn assert_calendar_08_disabled_day_semantics_matches_web(web_name: &str) {
+    let web = read_web_golden(web_name);
     let theme = web_theme(&web);
 
     let web_month_grid =
@@ -1745,7 +1753,7 @@ fn web_vs_fret_calendar_08_disabled_day_semantics_matches_web() {
     });
     assert!(
         !web_day_buttons.is_empty(),
-        "expected calendar day buttons for calendar-08"
+        "expected calendar day buttons for {web_name}"
     );
 
     let enabled_label = web_day_buttons
@@ -1837,6 +1845,16 @@ fn web_vs_fret_calendar_08_disabled_day_semantics_matches_web() {
     );
 }
 
+#[test]
+fn web_vs_fret_calendar_08_disabled_day_semantics_matches_web() {
+    assert_calendar_08_disabled_day_semantics_matches_web("calendar-08");
+}
+
+#[test]
+fn web_vs_fret_calendar_08_vp375x320_disabled_day_semantics_matches_web() {
+    assert_calendar_08_disabled_day_semantics_matches_web("calendar-08.vp375x320");
+}
+
 macro_rules! calendar_single_month_geometry_test {
     ($test_name:ident, $web_name:expr) => {
         #[test]
@@ -1871,6 +1889,10 @@ calendar_single_month_geometry_test!(
     web_vs_fret_calendar_04_geometry_matches_web_targeted,
     "calendar-04"
 );
+calendar_single_month_geometry_test!(
+    web_vs_fret_calendar_04_vp375x320_geometry_matches_web_targeted,
+    "calendar-04.vp375x320"
+);
 calendar_multi_month_geometry_test!(
     web_vs_fret_calendar_05_geometry_matches_web_targeted,
     "calendar-05"
@@ -1887,6 +1909,10 @@ calendar_single_month_geometry_test!(
     web_vs_fret_calendar_08_geometry_matches_web_targeted,
     "calendar-08"
 );
+calendar_single_month_geometry_test!(
+    web_vs_fret_calendar_08_vp375x320_geometry_matches_web_targeted,
+    "calendar-08.vp375x320"
+);
 calendar_multi_month_geometry_test!(
     web_vs_fret_calendar_09_geometry_matches_web_targeted,
     "calendar-09"
@@ -1900,6 +1926,10 @@ calendar_multi_month_geometry_test!(
     "calendar-11"
 );
 calendar_multi_month_geometry_test!(
+    web_vs_fret_calendar_11_vp375x320_geometry_matches_web_targeted,
+    "calendar-11.vp375x320"
+);
+calendar_multi_month_geometry_test!(
     web_vs_fret_calendar_12_geometry_matches_web_targeted,
     "calendar-12"
 );
@@ -1910,6 +1940,18 @@ calendar_single_month_geometry_test!(
 calendar_single_month_geometry_test!(
     web_vs_fret_calendar_14_geometry_matches_web_targeted,
     "calendar-14"
+);
+calendar_single_month_geometry_test!(
+    web_vs_fret_calendar_14_vp375x320_geometry_matches_web_targeted,
+    "calendar-14.vp375x320"
+);
+calendar_single_month_geometry_test!(
+    web_vs_fret_calendar_14_hover_day_13_geometry_matches_web_targeted,
+    "calendar-14.hover-day-13"
+);
+calendar_single_month_geometry_test!(
+    web_vs_fret_calendar_14_hover_day_13_vp375x320_geometry_matches_web_targeted,
+    "calendar-14.hover-day-13-vp375x320"
 );
 calendar_single_month_geometry_test!(
     web_vs_fret_calendar_15_geometry_matches_web_targeted,

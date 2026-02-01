@@ -23508,6 +23508,69 @@ fn web_vs_fret_layout_calendar_04_range_end_day_background_matches_web() {
 }
 
 #[test]
+fn web_vs_fret_layout_calendar_04_vp375x320_range_middle_day_background_matches_web() {
+    let web = read_web_golden("calendar-04.vp375x320");
+    let theme = web_theme(&web);
+    let cell = find_first(&theme.root, &|n| class_has_token(n, "rdp-range_middle"))
+        .expect("web range-middle day cell");
+    let button = find_first(cell, &|n| {
+        n.tag == "button" && n.attrs.contains_key("aria-label")
+    })
+    .expect("web range-middle day button");
+    let label = button
+        .attrs
+        .get("aria-label")
+        .expect("web range-middle day aria-label");
+    assert_calendar_range_day_background_matches_web(
+        "calendar-04.vp375x320",
+        "rdp-range_middle",
+        label,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_04_vp375x320_range_start_day_background_matches_web() {
+    let web = read_web_golden("calendar-04.vp375x320");
+    let theme = web_theme(&web);
+    let cell = find_first(&theme.root, &|n| class_has_token(n, "rdp-range_start"))
+        .expect("web range-start day cell");
+    let button = find_first(cell, &|n| {
+        n.tag == "button" && n.attrs.contains_key("aria-label")
+    })
+    .expect("web range-start day button");
+    let label = button
+        .attrs
+        .get("aria-label")
+        .expect("web range-start day aria-label");
+    assert_calendar_range_day_background_matches_web(
+        "calendar-04.vp375x320",
+        "rdp-range_start",
+        label,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_04_vp375x320_range_end_day_background_matches_web() {
+    let web = read_web_golden("calendar-04.vp375x320");
+    let theme = web_theme(&web);
+    let cell = find_first(&theme.root, &|n| class_has_token(n, "rdp-range_end"))
+        .expect("web range-end day cell");
+    let button = find_first(cell, &|n| {
+        n.tag == "button" && n.attrs.contains_key("aria-label")
+    })
+    .expect("web range-end day button");
+    let label = button
+        .attrs
+        .get("aria-label")
+        .expect("web range-end day aria-label");
+    assert_calendar_range_day_background_matches_web(
+        "calendar-04.vp375x320",
+        "rdp-range_end",
+        label,
+    );
+}
+
+#[test]
 fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
     let web = read_web_golden("calendar-22.open");
     let theme = web_theme(&web);
