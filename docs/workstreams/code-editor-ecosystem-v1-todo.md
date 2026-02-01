@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-01-30
+Last updated: 2026-02-01
 
 This is the checkbox tracker companion to:
 
@@ -67,7 +67,7 @@ Legend:
   - commit,
   - backspace/arrows,
   - no double-insert on `compositionend`.
-- [ ] Add a validation note for glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
+- [x] Validate glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
 
 ---
 
@@ -119,7 +119,7 @@ Evidence anchors:
 ### Text preparation + caching
 
 - [x] Prepare text per visible display row only (no monolithic document blob).
-- [x] Define row cache keys and budgets (viewport-bounded, LRU-ish).
+- [~] Define row cache keys and budgets (viewport-bounded, LRU-ish) (row text + syntax spans are bounded; text system cache/telemetry alignment pending).
 - [x] Ensure theme-only changes remain paint-only (no reshaping).
 
 ### Input/IME integration
@@ -174,7 +174,23 @@ Evidence anchors:
 
 ---
 
-## M6 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
+## M6 — Semantics (a11y) and selection state
+
+- [ ] Define semantics role for the editor surface (likely `SemanticsRole::TextField` or a dedicated editor role).
+- [ ] Ensure selection and composition ranges follow ADR 0071 rules (display text indices).
+- [ ] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (document the tradeoff).
+
+---
+
+## M7 — Diagnostics and perf attribution
+
+- [ ] Add bundle-friendly counters:
+  - visible rows, overscan, cache hits/misses, text blob churn, glyph atlas pressure.
+- [ ] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+
+---
+
+## M8 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
 
 - [ ] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
 - [ ] Fold regions + placeholders without breaking caret/selection.
@@ -182,7 +198,7 @@ Evidence anchors:
 
 ---
 
-## M7 — Retained Host / Composable Rows (only if required)
+## M9 — Retained Host / Composable Rows (only if required)
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.

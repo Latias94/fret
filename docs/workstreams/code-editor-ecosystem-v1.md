@@ -1,14 +1,15 @@
 # Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
 
-Status: Draft (workstream document; normative contracts live in ADRs)
-Last updated: 2026-01-30
+Status: Active (workstream document; normative contracts live in ADRs)
+Last updated: 2026-02-01
 
-Recent changes (2026-01-30):
+Recent changes (2026-02-01):
 
 - Web: avoid wasm panics from unsupported `std::time` usage; prefer `fret_core::time` / wasm-capable time sources.
 - Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
+- Web: enable a default CJK demo font bundle to avoid “tofu” squares in IME/editor harnesses.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
@@ -63,6 +64,26 @@ We are **not** building “the editor app”; we are building reusable ecosystem
 - Collaboration/CRDT/OT.
 - Full VSCode-class feature parity.
 - Cross-element text selection (still out of baseline; see ADR 0152).
+
+---
+
+## Next Up (recommended priority)
+
+P0 (correctness and contracts):
+
+- Semantics role + semantics projection strategy for a windowed editor surface (a11y).
+- Selection + composition range invariants: ensure ADR 0071 “display text indices” rules are followed end-to-end.
+- Web: move the hidden textarea from a global singleton to a per-window attachment (multi-window + docking safe).
+
+P1 (robustness and testability):
+
+- Expand word-boundary + click-selection tests across widgets and scroll/transform cases.
+- Add diagnostics counters + snapshots for windowed surfaces and caches (align with ADR 0190).
+
+P2 (features):
+
+- Improve the incremental syntax strategy (edits → visible-window invalidation) and document the tradeoffs.
+- Start a display-map growth spike (wrap → fold → inlay) while keeping buffer↔display↔pixel mapping stable.
 
 ---
 
@@ -230,7 +251,15 @@ Implemented (evidence):
   - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
   - `apps/fret-ui-gallery/src/docs.rs`
 
-### M4 — Incremental highlighting (visible-window materialization)
+### M4 — Buffer model + undo hooks
+
+Exit criteria:
+
+- A v1 text buffer structure is selected (rope / piece table / hybrid) with stated tradeoffs.
+- Edit ops remain UTF-8 byte indexed and transaction hooks remain compatible with ADR 0136.
+- Document identity (URI-like) is locked for multi-document workflows (workspace shells).
+
+### M5 — Incremental highlighting (visible-window materialization)
 
 Exit criteria:
 
@@ -238,7 +267,21 @@ Exit criteria:
 - Only visible rows are materialized into spans for paint.
 - Theme changes do not trigger reshaping; only paint changes.
 
-### M5 — Display map growth (wrap/fold/inlay) (optional for v1)
+### M6 — Semantics (a11y) + selection/composition invariants
+
+Exit criteria:
+
+- The editor surface exports a stable semantics role and a documented projection strategy for windowed content.
+- Selection and IME composition ranges follow ADR 0071 rules (display text indices) consistently.
+
+### M7 — Diagnostics and perf attribution
+
+Exit criteria:
+
+- Bundle-friendly counters exist for windowed surfaces and editor caches (hits/misses/churn/pressure).
+- Diagnostics snapshots expose window telemetry for windowed surfaces (ADR 0190 alignment).
+
+### M8 — Display map growth (wrap/fold/inlay) (optional for v1)
 
 Exit criteria:
 
@@ -246,7 +289,7 @@ Exit criteria:
 - Fold regions and placeholders (if adopted) do not break caret/selection semantics.
 - Inlays (if adopted) are represented without mutating the underlying buffer.
 
-### M6 — Composable rows / retained host (only if needed)
+### M9 — Composable rows / retained host (only if needed)
 
 Exit criteria:
 
@@ -390,6 +433,17 @@ Evidence anchors:
 - [ ] Add bundle-friendly counters:
   - visible rows, overscan, cache hits/misses, text blob churn, glyph atlas pressure.
 - [ ] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+
+### 8) Display map expansion (wrap/fold/inlay) (optional v1 → v2)
+
+- [ ] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
+- [ ] Fold regions + placeholders without breaking caret/selection.
+- [ ] Inlays (injected display fragments) without mutating the underlying buffer.
+
+### 9) Retained host / composable rows (only if required)
+
+- [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
+- [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
 
 ---
 
