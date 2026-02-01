@@ -67,8 +67,7 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
-    consume_wheel_guard: impl Fn() -> bool + Clone + 'static,
-    mark_wheel_guard: impl Fn() + Clone + 'static,
+    consume_pending_active_scroll_into_view: impl Fn() -> bool + Clone + 'static,
     should_align_active_to_top: impl Fn() -> bool + Clone + 'static,
     on_aligned_active_to_top: impl Fn() + Clone + 'static,
     set_scroll_up_visible: impl Fn(bool) + Clone + 'static,
@@ -302,18 +301,6 @@ where
                         |_cx| vec![scroll],
                     );
 
-                    let mark_wheel_guard_for_region = mark_wheel_guard.clone();
-                    let scroll = cx.pointer_region(PointerRegionProps::default(), move |cx| {
-                        cx.pointer_region_add_on_wheel(Arc::new(
-                            move |host, action_cx, _wheel| {
-                                mark_wheel_guard_for_region();
-                                host.request_redraw(action_cx.window);
-                                false
-                            },
-                        ));
-                        vec![scroll]
-                    });
-
                     if let Some(active_element) = active_element_ref.get() {
                         if has_scroll && !did_initial_scroll && should_align_active_to_top() {
                             let did = active_desc::scroll_active_element_align_top_y(
@@ -363,10 +350,10 @@ where
                             }
                             on_focused_selected_item();
                         } else {
-                            // Avoid fighting the user's wheel scroll: when a wheel event happens
-                            // over the listbox, do not immediately "chase" the previously active
-                            // row back into view.
-                            if !consume_wheel_guard() {
+                            // Match Radix Select: only keep the active option in view when the
+                            // active row changes via keyboard/typeahead. Do not continuously
+                            // "chase" the active row during wheel scrolling.
+                            if consume_pending_active_scroll_into_view() {
                                 let _ = active_desc::scroll_active_element_into_view_y(
                                     cx,
                                     &handle_for_stack,
@@ -1108,7 +1095,7 @@ fn select_impl<H: UiHost>(
             did_item_aligned_focus_scroll: bool,
             item_aligned_scroll_up_visible: bool,
             pending_active_align_top_scroll: bool,
-            wheel_scrolled_since_last_layout: bool,
+            pending_active_scroll_into_view: bool,
         }
 
         impl SelectTriggerKeyState {
@@ -1136,7 +1123,7 @@ fn select_impl<H: UiHost>(
                     did_item_aligned_focus_scroll: false,
                     item_aligned_scroll_up_visible: false,
                     pending_active_align_top_scroll: false,
-                    wheel_scrolled_since_last_layout: false,
+                    pending_active_scroll_into_view: false,
                 }
             }
         }
@@ -1931,7 +1918,8 @@ fn select_impl<H: UiHost>(
                                                 let mut state = state_for_key
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
-                                                state.content.handle_key_down_when_open(
+                                                let before_active = state.content.active_row();
+                                                let handled = state.content.handle_key_down_when_open(
                                                     host,
                                                     action_cx.window,
                                                     &open_for_key,
@@ -1942,7 +1930,12 @@ fn select_impl<H: UiHost>(
                                                     it.key,
                                                     it.repeat,
                                                     loop_navigation_for_key,
-                                                )
+                                                );
+                                                let after_active = state.content.active_row();
+                                                if handled && before_active != after_active {
+                                                    state.pending_active_scroll_into_view = true;
+                                                }
+                                                handled
                                             }),
                                         );
 
@@ -1956,9 +1949,7 @@ fn select_impl<H: UiHost>(
                                             trigger_state_for_overlay_in_content.clone();
                                         let state_for_focused_selected_item =
                                             trigger_state_for_overlay_in_content.clone();
-                                        let state_for_consume_wheel_guard =
-                                            trigger_state_for_overlay_in_content.clone();
-                                        let state_for_mark_wheel_guard =
+                                        let state_for_consume_active_scroll_into_view =
                                             trigger_state_for_overlay_in_content.clone();
 
                                         let scroll = select_scroll_with_buttons(
@@ -1970,22 +1961,16 @@ fn select_impl<H: UiHost>(
                                             viewport_id_out,
                                             active_element_id_out,
                                             move || {
-                                                let mut state = state_for_consume_wheel_guard
+                                                let mut state =
+                                                    state_for_consume_active_scroll_into_view
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
-                                                if state.wheel_scrolled_since_last_layout {
-                                                    state.wheel_scrolled_since_last_layout = false;
+                                                if state.pending_active_scroll_into_view {
+                                                    state.pending_active_scroll_into_view = false;
                                                     true
                                                 } else {
                                                     false
                                                 }
-                                            },
-                                            move || {
-                                                let mut state = state_for_mark_wheel_guard
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                state.wheel_scrolled_since_last_layout = true;
-                                                state.item_aligned_user_scrolled = true;
                                             },
                                             move || {
                                                 let state = state_for_align_check
@@ -2590,6 +2575,7 @@ fn select_impl<H: UiHost>(
                                 state.item_aligned_scroll_up_visible = false;
                                 state.last_item_aligned_scroll_to_y = None;
                                 state.item_aligned_user_scrolled = false;
+                                state.pending_active_scroll_into_view = false;
                             }
                         }
 
