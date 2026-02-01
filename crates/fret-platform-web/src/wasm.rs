@@ -4,8 +4,8 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use fret_core::{
-    Event, ExternalDragFile, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
-    FileDialogDataEvent, FileDialogSelection, TimerToken,
+    AppWindowId, Event, ExternalDragFile, ExternalDropFileData, ExternalDropReadError,
+    ExternalDropReadLimits, FileDialogDataEvent, FileDialogSelection, TimerToken,
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 use wasm_bindgen::JsCast as _;
@@ -34,8 +34,9 @@ pub struct WebPlatformServices {
     fired_timeouts: Rc<RefCell<Vec<TimerToken>>>,
     timers: HashMap<TimerToken, WebTimer>,
     file_dialogs: Rc<RefCell<WebFileDialogState>>,
-    ime: Option<WebImeBridge>,
-    last_ime_cursor_area: Option<fret_core::Rect>,
+    ime_active_window: Option<AppWindowId>,
+    ime: HashMap<AppWindowId, WebImeBridge>,
+    last_ime_cursor_area: HashMap<AppWindowId, fret_core::Rect>,
     #[cfg(debug_assertions)]
     ime_debug: Rc<RefCell<WebImeDebugState>>,
     waker: Option<WebWaker>,
@@ -48,8 +49,9 @@ impl Default for WebPlatformServices {
             fired_timeouts: Rc::new(RefCell::new(Vec::new())),
             timers: HashMap::new(),
             file_dialogs: Rc::new(RefCell::new(WebFileDialogState::default())),
-            ime: None,
-            last_ime_cursor_area: None,
+            ime_active_window: None,
+            ime: HashMap::new(),
+            last_ime_cursor_area: HashMap::new(),
             #[cfg(debug_assertions)]
             ime_debug: Rc::new(RefCell::new(WebImeDebugState::default())),
             waker: None,
@@ -64,6 +66,7 @@ impl std::fmt::Debug for WebPlatformServices {
             .field("fired_timeouts", &"<Rc<RefCell<Vec<TimerToken>>>>")
             .field("timers", &self.timers)
             .field("file_dialogs", &"<Rc<RefCell<WebFileDialogState>>>")
+            .field("ime_active_window", &self.ime_active_window)
             .field("ime", &self.ime)
             .finish()
     }
@@ -681,43 +684,61 @@ impl WebPlatformServices {
         let mut unhandled: Vec<Effect> = Vec::new();
         for effect in effects {
             match effect {
-                Effect::ImeAllow { enabled, .. } => {
+                Effect::ImeAllow { window, enabled } => {
                     let Some(document) = document() else {
                         continue;
                     };
-                    if self.ime.is_none() {
+                    if enabled {
+                        if let Some(active) = self.ime_active_window
+                            && active != window
+                            && let Some(bridge) = self.ime.get_mut(&active)
+                        {
+                            bridge.set_enabled(false);
+                        }
+                        self.ime_active_window = Some(window);
+                    } else if self.ime_active_window == Some(window) {
+                        self.ime_active_window = None;
+                    }
+
+                    if !self.ime.contains_key(&window) {
                         #[cfg(not(debug_assertions))]
                         {
-                            self.ime = WebImeBridge::ensure(
+                            if let Some(bridge) = WebImeBridge::ensure(
                                 &document,
                                 self.queued_events.clone(),
                                 self.waker.clone(),
-                            );
+                            ) {
+                                self.ime.insert(window, bridge);
+                            }
                         }
                         #[cfg(debug_assertions)]
                         {
-                            self.ime = WebImeBridge::ensure(
+                            if let Some(bridge) = WebImeBridge::ensure(
                                 &document,
                                 self.queued_events.clone(),
                                 self.waker.clone(),
                                 self.ime_debug.clone(),
-                            );
+                            ) {
+                                self.ime.insert(window, bridge);
+                            }
                         }
-                        if let Some(bridge) = self.ime.as_mut()
-                            && let Some(rect) = self.last_ime_cursor_area
+
+                        if let Some(bridge) = self.ime.get_mut(&window)
+                            && let Some(rect) = self.last_ime_cursor_area.get(&window).copied()
                         {
                             bridge.set_cursor_area(rect);
                         }
                     }
-                    if let Some(bridge) = self.ime.as_mut() {
+
+                    if let Some(bridge) = self.ime.get_mut(&window) {
                         bridge.set_enabled(enabled);
                     }
                 }
-                Effect::ImeSetCursorArea { rect, .. } => {
-                    self.last_ime_cursor_area = Some(rect);
+                Effect::ImeSetCursorArea { window, rect } => {
+                    self.last_ime_cursor_area.insert(window, rect);
                     #[cfg(debug_assertions)]
                     {
-                        if self.ime.is_none() {
+                        if self.ime_active_window.is_none() {
                             let mut st = self.ime_debug.borrow_mut();
                             st.snapshot.last_cursor_area = Some(rect);
                             st.snapshot.cursor_area_set_seen =
@@ -725,7 +746,10 @@ impl WebPlatformServices {
                             st.dirty = true;
                         }
                     }
-                    if let Some(bridge) = self.ime.as_mut() {
+
+                    if self.ime_active_window == Some(window)
+                        && let Some(bridge) = self.ime.get_mut(&window)
+                    {
                         bridge.set_cursor_area(rect);
                     }
                 }
