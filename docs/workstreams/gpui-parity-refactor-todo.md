@@ -621,6 +621,16 @@ topics (if/when we implement them):
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
      row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
      (tracked in ADR 0192).
+  - Stopgap (non-retained path; implemented): prefetch window shifts before `window_mismatch` so boundary work happens earlier / more often,
+    reducing the likelihood of a single large “escape” tick.
+    - This is intentionally *not* the final GPUI parity answer: it still relies on cache-root rerenders to rebuild `visible_items`.
+    - Anchors:
+      - `crates/fret-ui/src/tree/prepaint.rs` (non-retained prefetch; `window_shift_kind=prefetch`)
+      - `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate`)
+      - `apps/fretboard/src/diag.rs` (new gates: `--check-vlist-window-prefetch-min`, `--check-vlist-prefetch-window-dirty-max`)
+      - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (tuned to trigger prefetch reliably)
+    - Evidence (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
+      - `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
   - Scope note: this item intentionally tracks **two** related tracks:
     - **Retained host windowed surfaces (ADR 0192)**: prepaint derives window shifts, and a retained reconcile attaches/detaches rows without
       dirtying the parent cache root. This track is now mostly about tuning and hardening (e.g. staged prefetch + budgets).
