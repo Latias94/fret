@@ -92,6 +92,7 @@ Legend:
 - [~] Unicode word boundaries: Latin/CJK/emoji (seed tests added; expand coverage).
 - [~] Identifier boundaries: underscores, digits, mixed scripts, punctuation (seed tests added; expand coverage).
 - [~] Double/triple click selection under scroll offsets and transforms (existing SelectableText tests; add mode coverage and TextInput/TextArea click selection).
+  - Done: selectable text double-click respects `WindowTextBoundaryModeService` under `render_transform` and `Scroll` offset.
 
 Evidence anchors:
 
