@@ -3172,6 +3172,16 @@ fn preview_web_ime_harness(
                                 snapshot.composition_end_seen,
                                 snapshot.cursor_area_set_seen,
                             )));
+                            lines.push(cx.text(format!(
+                                "  textarea: chars={:?} sel_utf16={:?}..{:?} client={:?}x{:?} scroll={:?}x{:?}",
+                                snapshot.textarea_value_chars,
+                                snapshot.textarea_selection_start_utf16,
+                                snapshot.textarea_selection_end_utf16,
+                                snapshot.textarea_client_width_px,
+                                snapshot.textarea_client_height_px,
+                                snapshot.textarea_scroll_width_px,
+                                snapshot.textarea_scroll_height_px,
+                            )));
                         } else {
                             lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
                         }
