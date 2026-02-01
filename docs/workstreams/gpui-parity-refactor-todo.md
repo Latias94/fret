@@ -1159,10 +1159,23 @@ topics (if/when we implement them):
         - Pane tree + split resize + tab drag/drop: `ecosystem/fret-workspace/src/panes.rs` (`workspace_pane_tree_element_with_resize`)
         - Tab strip (potentially large; needs stable cache roots + paint-only chrome for hover/drag indicators): `ecosystem/fret-workspace/src/tab_strip.rs` (`WorkspaceTabStrip::into_element`)
         - Tab MRU/dirty state model (feeds the tab strip): `ecosystem/fret-workspace/src/tabs.rs` (`WorkspaceTabs`)
-      - Inspector/properties surfaces (future; `apps/fret-editor` currently only has protocol/services):
-        - Property edit plumbing: `apps/fret-editor/src/property_edit.rs` (`PropertyEditService`), `apps/fret-editor/src/inspector_edit.rs` (`InspectorEditService`)
-        - Policy recommendation when a real inspector UI lands: adopt retained-host windowed rows by default (ADR 0190/0192),
-          and keep row hover/selection chrome paint-only (ADR 0181) so cache-hit frames remain correct.
+        - Inspector/properties surfaces (future; `apps/fret-editor` currently only has protocol/services):
+          - Property edit plumbing: `apps/fret-editor/src/property_edit.rs` (`PropertyEditService`), `apps/fret-editor/src/inspector_edit.rs` (`InspectorEditService`)
+          - Policy recommendation when a real inspector UI lands: adopt retained-host windowed rows by default (ADR 0190/0192),
+            and keep row hover/selection chrome paint-only (ADR 0181) so cache-hit frames remain correct.
+    - [ ] Add a “workspace shell” scripted demo that exercises real surfaces (pane tree + tab strip) rather than staying UI-Gallery-only.
+      - Goal: an end-to-end `diag` bundle proves “cache-hit frames stay correct” (no stale paint) while still allowing paint-only chrome and retained windowed surfaces to update.
+      - Implementation sketch:
+        - New demo: `apps/fret-examples/src/workspace_shell_demo.rs` (wired through `fret-demo` like `docking_demo`).
+        - Use real workspace surfaces: `ecosystem/fret-workspace/src/panes.rs` + `ecosystem/fret-workspace/src/tab_strip.rs`.
+        - Script recording: drive + record via `UiDiagnosticsService` (see `apps/fret-examples/src/docking_demo.rs`).
+        - Stable semantics anchors: tab drag handles + pane roots should expose `test_id` values for scripts.
+      - Script: `tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json`
+      - Gate: `fretboard diag run ... --check-view-cache-reuse-min 1 --check-stale-paint <anchor> --check-wheel-scroll <anchor> ...`
+    - [ ] Adopt the ui-kit retained file tree component in the workspace shell (or a thin adapter), so eco-009 directly validates workspace integration.
+      - Component: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`).
+      - Expectation: toggling nodes + scrolling should be handled by retained-host reconcile + paint-only chrome (no parent cache-root rerender).
+    - [ ] Capture and link evidence bundles for the workspace shell script under `cache+shell` (release), and mark eco-009 `[x]` when the gate stays green.
     - [x] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
       - Target (v0): `apps/fret-examples/src/components_gallery.rs` (file-tree panel).
       - Scripts:
