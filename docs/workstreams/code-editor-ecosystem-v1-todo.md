@@ -184,9 +184,12 @@ Evidence anchors:
 
 ## M7 — Diagnostics and perf attribution
 
-- [ ] Add bundle-friendly counters:
-  - visible rows, overscan, cache hits/misses, text blob churn, glyph atlas pressure.
-- [ ] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+- [x] Add bundle-friendly counters (v1 baseline):
+  - visible rows + overscan (windowed surfaces),
+  - editor-local cache hits/misses (row text + syntax).
+- [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+- [ ] Add renderer-level churn counters (next):
+  - text blob churn and glyph atlas pressure (likely from renderer/canvas caches).
 
 ---
 

@@ -5,6 +5,7 @@ Last updated: 2026-02-01
 
 Recent changes (2026-02-01):
 
+- Branch sync: merge local `main` into `code-editor-ecosystem-v1` to stay aligned with the text/diagnostics baselines.
 - Web: avoid wasm panics from unsupported `std::time` usage; prefer `fret_core::time` / wasm-capable time sources.
 - Buffer: update `TextBuffer` line index incrementally on edits (avoid full rescans); add newline-boundary tests.
 - Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
@@ -32,7 +33,7 @@ Recent changes (2026-02-01):
 - Web IME: treat the mount element as either wrapper or overlay; do not clobber overlay positioning when applying “mount-owned” styles.
 - A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
 - A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
-- Web: enable a default CJK demo font bundle to avoid “tofu” squares in IME/editor harnesses.
+- Web: enable a default CJK demo font bundle (`cjk-lite` subset) to reduce “tofu” in IME/editor harnesses (still limited; use “Load fonts…” for full coverage).
 - UI Gallery: add a code-editor “Load fonts…” action (file dialog → `Effect::TextAddFonts`) and a soft-wrap toggle for wrap-boundary regression checks.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
@@ -98,13 +99,13 @@ P0 (correctness and contracts):
 - Web IME: stabilize caret anchoring and reduce candidate UI jitter across browsers (textarea style + cursor-area mapping).
 - Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
 - Selection + composition range invariants: expand ADR 0071 coverage across TextInput/TextArea/CodeEditor (including a11y selection actions).
-- Web: ensure editor surfaces have a robust default CJK fallback (avoid tofu when using monospace stacks).
+- Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji), and make “tofu” reproducible (cjk-lite subset limitations + “Load fonts…” escape hatch).
 
 P1 (robustness and testability):
 
 - Expand word-boundary + click-selection tests across widgets and scroll/transform cases.
-- Add a UI Gallery soft-wrap toggle + regression checks around wrap boundaries (caret, selection, preedit, syntax spans).
-- Add diagnostics counters + snapshots for windowed surfaces and caches (align with ADR 0190).
+- Export editor/IME harness state into diagnostics snapshots for “single artifact” repros (bundle JSON includes harness config + bridge snapshot + windowed-surface telemetry).
+- Add regression checks around wrap boundaries (caret, selection, preedit, syntax spans) using the existing UI Gallery soft-wrap toggle.
 
 P2 (features):
 
