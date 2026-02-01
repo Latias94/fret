@@ -4880,8 +4880,9 @@ fn preview_material3_chip(
 
     let theme = Theme::global(&*cx.app).clone();
 
+    let last_action_for_activate = last_action.clone();
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
-        let _ = host.models_mut().update(&last_action, |v| {
+        let _ = host.models_mut().update(&last_action_for_activate, |v| {
             *v = Arc::<str>::from("material3.assist_chip.activated");
         });
     });
@@ -4933,7 +4934,7 @@ fn preview_material3_chip(
     let activate_row1 = activate.clone();
     let activate_row2 = activate.clone();
     let activate_row3 = activate.clone();
-    let activate_row4 = activate.clone();
+    let _activate_row4 = activate.clone();
 
     let last_action_for_input_selected = last_action.clone();
     let activate_input_selected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
@@ -8659,6 +8660,8 @@ fn preview_overlay(
                 ),
             )
             .arrow(true)
+            .arrow_test_id("ui-gallery-tooltip-arrow")
+            .panel_test_id("ui-gallery-tooltip-panel")
             .open_delay_frames(10)
             .close_delay_frames(10)
             .side(shadcn::TooltipSide::Top)
