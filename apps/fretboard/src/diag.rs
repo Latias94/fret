@@ -1640,6 +1640,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
+                // The retained-measured suite includes the tree retained window-boundary harness,
+                // which currently requires a slightly higher prefetch reconcile budget.
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(40));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
@@ -1684,6 +1688,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
+                // This harness currently triggers more staged prefetch frames than other retained
+                // surfaces; keep the default gate loose enough to avoid false positives while still
+                // catching runaway steady-state prefetch regressions.
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(40));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
@@ -1733,6 +1742,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(40));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
@@ -1776,6 +1787,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(30));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
@@ -1828,6 +1841,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_attach_detach_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(30));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
@@ -1960,6 +1975,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(30));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
@@ -2005,6 +2022,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
                     check_retained_vlist_attach_detach_max.or(Some(128));
+                check_retained_vlist_prefetch_reconciles_max =
+                    check_retained_vlist_prefetch_reconciles_max.or(Some(30));
                 check_retained_vlist_scroll_window_dirty_max =
                     check_retained_vlist_scroll_window_dirty_max.or(Some(0));
                 check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(10));
