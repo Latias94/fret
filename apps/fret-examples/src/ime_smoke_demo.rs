@@ -195,6 +195,12 @@ impl WinitAppDriver for ImeSmokeDriver {
                 fret_core::ImeEvent::Preedit { text, cursor } => {
                     Arc::from(format!("IME: Preedit(text={text:?}, cursor={cursor:?})"))
                 }
+                fret_core::ImeEvent::DeleteSurrounding {
+                    before_bytes,
+                    after_bytes,
+                } => Arc::from(format!(
+                    "IME: DeleteSurrounding(before_bytes={before_bytes}, after_bytes={after_bytes})"
+                )),
             };
             let _ = app.models_mut().update(&state.last_ime, |v| *v = msg);
         }
