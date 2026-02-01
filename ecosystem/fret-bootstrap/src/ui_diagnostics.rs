@@ -19,7 +19,9 @@ pub struct UiDiagnosticsConfig {
     pub exit_path: PathBuf,
     pub max_events: usize,
     pub max_snapshots: usize,
+    pub max_semantics_nodes: usize,
     pub capture_semantics: bool,
+    pub semantics_test_ids_only: bool,
     pub screenshots_enabled: bool,
     pub screenshot_request_path: PathBuf,
     pub screenshot_trigger_path: PathBuf,
@@ -71,7 +73,12 @@ impl Default for UiDiagnosticsConfig {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(300);
+        let max_semantics_nodes = std::env::var("FRET_DIAG_MAX_SEMANTICS_NODES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(50_000);
         let capture_semantics = env_flag_default_true("FRET_DIAG_SEMANTICS");
+        let semantics_test_ids_only = env_flag_default_false("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY");
         let screenshots_enabled = env_flag_default_false("FRET_DIAG_SCREENSHOTS");
         let screenshot_request_path = std::env::var_os("FRET_DIAG_SCREENSHOT_REQUEST_PATH")
             .filter(|v| !v.is_empty())
@@ -148,7 +155,9 @@ impl Default for UiDiagnosticsConfig {
             exit_path,
             max_events,
             max_snapshots,
+            max_semantics_nodes,
             capture_semantics,
+            semantics_test_ids_only,
             screenshots_enabled,
             screenshot_request_path,
             screenshot_trigger_path,
@@ -688,8 +697,12 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
             }
             UiActionStepV1::CaptureBundle { label } => {
-                force_dump_label =
-                    Some(label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture")));
+                let label = label.unwrap_or_else(|| format!("script-step-{step_index:04}-capture"));
+                let label = sanitize_label(&label);
+                if self.dump_bundle(Some(&label)).is_none() {
+                    stop_script = true;
+                    failure_reason = Some("dump_failed".to_string());
+                }
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
@@ -1710,6 +1723,8 @@ impl UiDiagnosticsService {
                     snap,
                     self.cfg.redact_text,
                     self.cfg.max_debug_string_bytes,
+                    self.cfg.max_semantics_nodes,
+                    self.cfg.semantics_test_ids_only,
                 )
             });
 
@@ -2194,6 +2209,10 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub max_events: usize,
     pub max_snapshots: usize,
     pub capture_semantics: bool,
+    #[serde(default)]
+    pub max_semantics_nodes: usize,
+    #[serde(default)]
+    pub semantics_test_ids_only: bool,
     pub script_path: String,
     pub script_trigger_path: String,
     pub script_result_path: String,
@@ -2229,6 +2248,8 @@ impl UiDiagnosticsBundleV1 {
                 max_events: svc.cfg.max_events,
                 max_snapshots: svc.cfg.max_snapshots,
                 capture_semantics: svc.cfg.capture_semantics,
+                max_semantics_nodes: svc.cfg.max_semantics_nodes,
+                semantics_test_ids_only: svc.cfg.semantics_test_ids_only,
                 script_path: sanitize_path_for_bundle(&svc.cfg.out_dir, &svc.cfg.script_path),
                 script_trigger_path: sanitize_path_for_bundle(
                     &svc.cfg.out_dir,
@@ -4987,6 +5008,10 @@ pub struct UiSemanticsSnapshotV1 {
     pub focus_barrier_root: Option<u64>,
     pub focus: Option<u64>,
     pub captured: Option<u64>,
+    #[serde(default)]
+    pub nodes_total: usize,
+    #[serde(default)]
+    pub nodes_truncated: bool,
     pub nodes: Vec<UiSemanticsNodeV1>,
 }
 
@@ -5043,7 +5068,27 @@ impl UiSemanticsSnapshotV1 {
         snapshot: &fret_core::SemanticsSnapshot,
         redact_text: bool,
         max_string_bytes: usize,
+        max_nodes: usize,
+        test_ids_only: bool,
     ) -> Self {
+        let nodes_total = if test_ids_only {
+            snapshot
+                .nodes
+                .iter()
+                .filter(|n| n.test_id.is_some())
+                .count()
+        } else {
+            snapshot.nodes.len()
+        };
+
+        let nodes: Vec<UiSemanticsNodeV1> = snapshot
+            .nodes
+            .iter()
+            .filter(|n| !test_ids_only || n.test_id.is_some())
+            .take(max_nodes)
+            .map(|n| UiSemanticsNodeV1::from_node(n, redact_text, max_string_bytes))
+            .collect();
+
         Self {
             window: snapshot.window.data().as_ffi(),
             roots: snapshot
@@ -5061,11 +5106,9 @@ impl UiSemanticsSnapshotV1 {
             focus_barrier_root: snapshot.focus_barrier_root.map(key_to_u64),
             focus: snapshot.focus.map(key_to_u64),
             captured: snapshot.captured.map(key_to_u64),
-            nodes: snapshot
-                .nodes
-                .iter()
-                .map(|n| UiSemanticsNodeV1::from_node(n, redact_text, max_string_bytes))
-                .collect(),
+            nodes_total,
+            nodes_truncated: nodes.len() != nodes_total,
+            nodes,
         }
     }
 }
