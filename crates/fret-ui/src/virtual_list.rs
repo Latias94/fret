@@ -103,6 +103,7 @@ pub(crate) fn prefetch_virtual_range_step(
     visible: VirtualRange,
     prefetch_margin: usize,
     prefetch_step: usize,
+    prefer_forward: Option<bool>,
 ) -> Option<VirtualRange> {
     let overscan = rendered.overscan;
     let count = rendered.count;
@@ -126,16 +127,18 @@ pub(crate) fn prefetch_virtual_range_step(
         return None;
     }
 
-    let slack_start = visible.start_index.saturating_sub(rendered_outer_start);
-    let slack_end = rendered_outer_end.saturating_sub(visible.end_index);
     let want_forward = if near_end && !near_start {
         true
     } else if near_start && !near_end {
         false
     } else {
         // Both sides are "near" (small windows, small overscan, or being close to the list start/end).
-        // Prefer shifting toward the tighter edge so prefetch doesn't get stuck.
-        slack_end < slack_start
+        // Prefer the caller's scroll direction hint to avoid prefetch oscillation during slow scroll.
+        // If we don't have a direction hint, skip prefetch (the caller can fall back to escape logic).
+        let Some(prefer_forward) = prefer_forward else {
+            return None;
+        };
+        prefer_forward
     };
 
     let mut start = rendered.start_index;

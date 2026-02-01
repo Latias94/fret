@@ -241,16 +241,28 @@ impl<H: UiHost> UiTree<H> {
                                 && rendered.start_index <= rendered.end_index
                                 && rendered.end_index < rendered.count =>
                         {
-                            let prefetch_margin = (inputs.overscan / 4).max(1);
+                            let prefetch_margin = (inputs.overscan / 6).max(1);
                             // Shift by a slightly larger step than the “near-edge” margin so we
                             // don’t prefetch on every frame during slow scroll, while still keeping
                             // each prefetch reconcile bounded.
-                            let prefetch_step = (inputs.overscan / 2).max(prefetch_margin).max(1);
+                            let prefetch_step = (inputs.overscan.saturating_mul(3) / 2)
+                                .max(prefetch_margin)
+                                .max(1);
+                            let prefer_forward = if offset_axis.0 > prev_offset.0 + 0.01 {
+                                state.last_scroll_direction_forward = Some(true);
+                                Some(true)
+                            } else if offset_axis.0 + 0.01 < prev_offset.0 {
+                                state.last_scroll_direction_forward = Some(false);
+                                Some(false)
+                            } else {
+                                state.last_scroll_direction_forward
+                            };
                             if let Some(prefetch) = crate::virtual_list::prefetch_virtual_range_step(
                                 rendered,
                                 visible,
                                 prefetch_margin,
                                 prefetch_step,
+                                prefer_forward,
                             ) {
                                 window_shift_kind =
                                     crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch;

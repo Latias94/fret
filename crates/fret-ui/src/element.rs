@@ -1543,6 +1543,7 @@ pub struct VirtualListState {
     pub viewport_h: Px,
     pub(crate) window_range: Option<crate::virtual_list::VirtualRange>,
     pub(crate) render_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub(crate) last_scroll_direction_forward: Option<bool>,
     pub(crate) has_final_viewport: bool,
     pub(crate) deferred_scroll_offset_hint: Option<Px>,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
