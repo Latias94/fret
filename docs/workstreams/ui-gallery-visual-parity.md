@@ -37,8 +37,8 @@ For performance investigations, see `docs/workstreams/ui-gallery-perf-scroll-mea
 | ID | Severity | Surface | Symptom | Repro | Status |
 |---|---:|---|---|---|---|
 | VP-001 | P0 | Select | Wheel scroll after opening causes menu rect/viewport to jitter or collapse. | `tools/diag-scripts/ui-gallery-select-wheel-scroll.json` (set `FRET_UI_GALLERY_START_PAGE=select`) | Fixed (commit `e9cc45b`) |
-| VP-002 | P0 | Tooltip | After repeated hover cycles, arrow/diamond visually separates from the tooltip panel. | Needs a new script (repeat hover enter/leave) | Open |
-| VP-003 | P1 | Slider | Dragging can visually desync handle vs fill. | Needs a new script | Open |
+| VP-002 | P0 | Tooltip | After repeated hover cycles, arrow/diamond visually separates from the tooltip panel. | `tools/diag-scripts/ui-gallery-tooltip-repeat-hover.json` (set `FRET_UI_GALLERY_START_PAGE=overlay`) | Investigating (repro script landed in `7ac4088`) |
+| VP-003 | P1 | Slider | Dragging can visually desync handle vs fill. | `tools/diag-scripts/ui-gallery-slider-range-drag-stability.json` (set `FRET_UI_GALLERY_START_PAGE=slider`) | Gated (script + anchors in `d56128f` / `9062e00`) |
 | VP-004 | P2 | Toggle | Knob appears slightly misaligned (right/down) relative to track. | Needs a new script | Open |
 | VP-005 | P1 | Combobox | Dropdown height/padding differs; disabled text baseline too tight. | Needs a new script | Open |
 | VP-006 | P1 | Tabs | Visual styling differs from upstream (indicator/spacing). | Needs a new script | Open |
@@ -50,4 +50,7 @@ For performance investigations, see `docs/workstreams/ui-gallery-perf-scroll-mea
   - Code: `ecosystem/fret-ui-shadcn/src/tooltip.rs`.
 - Select trigger in UI Gallery exposes a stable automation id: `ui-gallery-select-trigger` (commit `e9cc45b`).
   - Code: `apps/fret-ui-gallery/src/ui.rs`.
-
+- Slider now exposes `test_id`-derived internals: `{id}-track`, `{id}-range`, `{id}-thumb-{i}` (commit `d56128f`).
+  - Code: `ecosystem/fret-ui-shadcn/src/slider.rs`.
+- Diagnostics gained axis-only overlap predicates (`bounds_overlapping_x`/`bounds_overlapping_y`) for cases where vertical offset is expected (commit `0fdea34`).
+  - Code: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
