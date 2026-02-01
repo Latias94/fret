@@ -4880,8 +4880,9 @@ fn preview_material3_chip(
 
     let theme = Theme::global(&*cx.app).clone();
 
+    let last_action_for_activate = last_action.clone();
     let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
-        let _ = host.models_mut().update(&last_action, |v| {
+        let _ = host.models_mut().update(&last_action_for_activate, |v| {
             *v = Arc::<str>::from("material3.assist_chip.activated");
         });
     });
