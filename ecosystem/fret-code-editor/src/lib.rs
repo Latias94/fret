@@ -1249,6 +1249,8 @@ fn handle_key_down(
             | KeyCode::ArrowDown
             | KeyCode::Home
             | KeyCode::End
+            | KeyCode::PageUp
+            | KeyCode::PageDown
             | KeyCode::Backspace
             | KeyCode::Delete
             | KeyCode::Enter
@@ -1310,6 +1312,14 @@ fn handle_key_down(
             move_caret_home_end(&mut st, false, ctrl_or_meta, shift);
             st.undo_group = None;
         }
+        KeyCode::PageUp => {
+            move_caret_page(&mut st, -1, shift, row_h, scroll_handle);
+            st.undo_group = None;
+        }
+        KeyCode::PageDown => {
+            move_caret_page(&mut st, 1, shift, row_h, scroll_handle);
+            st.undo_group = None;
+        }
         KeyCode::Backspace => {
             if word {
                 delete_word_backward(&mut st);
@@ -1340,6 +1350,38 @@ fn handle_key_down(
     host.notify(action_cx);
     host.request_redraw(action_cx.window);
     true
+}
+
+fn page_rows(row_h: Px, scroll_handle: &fret_ui::scroll::ScrollHandle) -> usize {
+    if row_h.0 <= 0.0 {
+        return 1;
+    }
+    let viewport = scroll_handle.viewport_size();
+    ((viewport.height.0 / row_h.0).floor() as usize).max(1)
+}
+
+fn move_caret_page(
+    st: &mut CodeEditorState,
+    pages: i32,
+    extend: bool,
+    row_h: Px,
+    scroll_handle: &fret_ui::scroll::ScrollHandle,
+) {
+    let rows = page_rows(row_h, scroll_handle);
+    let delta = pages.saturating_mul(rows as i32);
+    if delta != 0 {
+        move_caret_vertical(st, delta, extend);
+    }
+
+    // Keep the viewport moving with the caret for page navigation.
+    let offset = scroll_handle.offset();
+    let dy = row_h.0 * rows as f32;
+    let next_y = if pages < 0 {
+        offset.y.0 - dy * pages.unsigned_abs() as f32
+    } else {
+        offset.y.0 + dy * pages as f32
+    };
+    scroll_handle.scroll_to_offset(fret_core::Point::new(offset.x, Px(next_y)));
 }
 
 fn move_caret_home_end(st: &mut CodeEditorState, home: bool, ctrl_or_meta: bool, extend: bool) {
@@ -2651,6 +2693,31 @@ mod tests {
         };
         move_caret_home_end(&mut st, false, true, false);
         assert_eq!(st.selection.caret(), st.buffer.len_bytes());
+    }
+
+    #[test]
+    fn page_down_moves_by_viewport_rows_and_scrolls() {
+        let handle = CodeEditorHandle::new("abcd\nefgh\nijkl\nmnop\nqrst\n");
+        handle.set_soft_wrap_cols(Some(2));
+
+        let scroll = fret_ui::scroll::ScrollHandle::default();
+        let row_h = Px(10.0);
+        scroll.set_viewport_size(Size::new(Px(100.0), Px(25.0))); // 2 rows
+        scroll.set_content_size(Size::new(Px(100.0), Px(10_000.0)));
+
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+
+        move_caret_page(&mut st, 1, false, row_h, &scroll);
+
+        let expected = st
+            .display_map
+            .display_point_to_byte(&st.buffer, DisplayPoint::new(2, 0));
+        assert_eq!(st.selection.caret(), expected);
+        assert_eq!(scroll.offset().y, Px(20.0));
     }
 
     #[test]
