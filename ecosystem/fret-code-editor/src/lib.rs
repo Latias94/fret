@@ -66,6 +66,9 @@ pub struct PreeditState {
     pub cursor: Option<(usize, usize)>,
 }
 
+const A11Y_WINDOW_BYTES_BEFORE: usize = 4096;
+const A11Y_WINDOW_BYTES_AFTER: usize = 4096;
+
 #[derive(Debug, Clone)]
 struct CodeEditorTx {
     buffer_tx: TextBufferTx,
@@ -310,10 +313,12 @@ impl CodeEditor {
         let editor_state = self.handle.state.clone();
         let overscan = self.overscan;
         let torture = self.torture;
+        let a11y_label: Arc<str> = Arc::from("Code editor");
 
         cx.keyed("code-editor", move |cx| {
             let theme = cx.theme().clone();
             let region_id = cx.root_id();
+            let is_focused = cx.is_focused_element(region_id);
 
             let row_h = theme.metric_required("metric.font.mono_line_height");
             let font_size = theme.metric_required("metric.font.mono_size");
@@ -328,8 +333,29 @@ impl CodeEditor {
                 ..Default::default()
             };
 
-            let content_len = editor_state.borrow().buffer.line_count();
-            let boundary_mode = editor_state.borrow().text_boundary_mode;
+            let (
+                content_len,
+                boundary_mode,
+                a11y_value,
+                a11y_text_selection,
+                a11y_text_composition,
+            ) = {
+                let st = editor_state.borrow();
+                let content_len = st.buffer.line_count();
+                let boundary_mode = st.text_boundary_mode;
+                if !is_focused {
+                    (content_len, boundary_mode, None, None, None)
+                } else {
+                    let (value, selection, composition) = a11y_composed_text_window(&st);
+                    (
+                        content_len,
+                        boundary_mode,
+                        Some(Arc::<str>::from(value)),
+                        selection,
+                        composition,
+                    )
+                }
+            };
 
             let mut region_layout = fret_ui::element::LayoutStyle::default();
             region_layout.size.width = Length::Fill;
@@ -340,6 +366,10 @@ impl CodeEditor {
                 layout: region_layout,
                 enabled: true,
                 text_boundary_mode_override: Some(boundary_mode),
+                a11y_label: Some(Arc::clone(&a11y_label)),
+                a11y_value,
+                a11y_text_selection,
+                a11y_text_composition,
             };
 
             let mut pointer_props = PointerRegionProps::default();
@@ -892,6 +922,69 @@ impl CodeEditor {
             })
         })
     }
+}
+
+fn a11y_composed_text_window(
+    st: &CodeEditorState,
+) -> (String, Option<(u32, u32)>, Option<(u32, u32)>) {
+    let text = st.buffer.text();
+    let caret =
+        fret_code_editor_view::clamp_to_char_boundary(text, st.selection.caret().min(text.len()));
+
+    let start = fret_code_editor_view::clamp_to_char_boundary(
+        text,
+        caret.saturating_sub(A11Y_WINDOW_BYTES_BEFORE),
+    );
+    let end = fret_code_editor_view::clamp_to_char_boundary(
+        text,
+        caret
+            .saturating_add(A11Y_WINDOW_BYTES_AFTER)
+            .min(text.len()),
+    );
+
+    let before = text.get(start..caret).unwrap_or("");
+    let after = text.get(caret..end).unwrap_or("");
+
+    if let Some(preedit) = st.preedit.as_ref() {
+        let mut display = String::with_capacity(before.len() + preedit.text.len() + after.len());
+        display.push_str(before);
+        display.push_str(preedit.text.as_str());
+        display.push_str(after);
+
+        let before_len: u32 = before.len().try_into().unwrap_or(u32::MAX);
+        let preedit_len: u32 = preedit.text.len().try_into().unwrap_or(u32::MAX);
+
+        let composition = Some((before_len, before_len.saturating_add(preedit_len)));
+
+        let (mut a, mut b) = preedit
+            .cursor
+            .unwrap_or_else(|| (preedit.text.len(), preedit.text.len()));
+        a = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, a).min(preedit.text.len());
+        b = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, b).min(preedit.text.len());
+        if a > b {
+            std::mem::swap(&mut a, &mut b);
+        }
+
+        let selection = Some((
+            before_len.saturating_add(a as u32),
+            before_len.saturating_add(b as u32),
+        ));
+
+        return (display, selection, composition);
+    }
+
+    let mut display = String::with_capacity(before.len() + after.len());
+    display.push_str(before);
+    display.push_str(after);
+
+    let map = |offset: usize| -> u32 {
+        let offset = offset.min(end).max(start);
+        let offset = fret_code_editor_view::clamp_to_char_boundary(text, offset);
+        u32::try_from(offset.saturating_sub(start)).unwrap_or(u32::MAX)
+    };
+    let selection = Some((map(st.selection.anchor), map(st.selection.focus)));
+
+    (display, selection, None)
 }
 
 fn line_len_cols(line: &str) -> usize {
