@@ -1194,7 +1194,7 @@ topics (if/when we implement them):
           - `--check-retained-vlist-scroll-window-dirty-max 0`
           - `--check-wheel-scroll workspace-shell-file-tree-node-0`
           - `--check-stale-paint workspace-shell-file-tree-node-0`
-      - Evidence bundle (cache+shell, release): `target/fret-diag/1769929575549-workspace-shell-demo-tab-drag-and-scroll/bundle.json`
+      - Evidence bundle (cache+shell, release): `target/fret-diag-workspace-shell-demo-tighten2/1769932026789-workspace-shell-demo-tab-drag-and-scroll/bundle.json`
     - [x] Adopt the ui-kit retained file tree component in the workspace shell (or a thin adapter), so eco-009 directly validates workspace integration.
       - Component: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`).
       - Expectation: toggling nodes + scrolling should be handled by retained-host reconcile + paint-only chrome (no parent cache-root rerender).
