@@ -359,6 +359,9 @@ Legend:
 - [x] Integration demo: mixed-script + emoji + IME preedit smoke (deterministic snapshot).
   - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
     (`snapshot_reports_composed_utf16_ranges_for_mixed_script_text_during_ime_preedit`).
+- [x] Integration demo: emoji sequences (ZWJ/VS16/keycaps) + IME preedit smoke (deterministic snapshot).
+  - Evidence: `crates/fret-ui/src/tree/tests/window_text_input_snapshot.rs`
+    (`snapshot_reports_composed_utf16_ranges_for_emoji_sequences_during_ime_preedit`).
 
 ## Risks / Open Questions
 
