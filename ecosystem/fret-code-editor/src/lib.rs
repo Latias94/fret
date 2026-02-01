@@ -1,7 +1,7 @@
 //! Code editor surface (UI integration) for Fret.
 //!
-//! This is a v1 MVP: fixed row height, no soft wrap, and a monospace "cell width" heuristic for
-//! caret/selection geometry.
+//! This is a v1 MVP: fixed row height and a monospace "cell width" heuristic for caret/selection
+//! geometry. Optional soft-wrap is supported via the view-layer `DisplayMap`.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
-    DisplayMap, DisplayPoint, display_point_to_byte, move_word_left, move_word_right,
-    next_char_boundary, prev_char_boundary, select_word_range,
+    DisplayMap, DisplayPoint, move_word_left, move_word_right, next_char_boundary,
+    prev_char_boundary, select_word_range,
 };
 use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId, KeyCode,
@@ -137,6 +137,7 @@ struct CodeEditorState {
     drag_pointer: Option<fret_core::PointerId>,
     last_bounds: Option<Rect>,
     row_text_cache_rev: fret_code_editor_buffer::Revision,
+    row_text_cache_wrap_cols: Option<usize>,
     row_text_cache_tick: u64,
     row_text_cache: HashMap<usize, (Arc<str>, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
@@ -186,6 +187,7 @@ impl CodeEditorHandle {
                 drag_pointer: None,
                 last_bounds: None,
                 row_text_cache_rev: fret_code_editor_buffer::Revision(0),
+                row_text_cache_wrap_cols: None,
                 row_text_cache_tick: 0,
                 row_text_cache: HashMap::new(),
                 row_text_cache_queue: VecDeque::new(),
@@ -272,10 +274,11 @@ impl CodeEditorHandle {
         f(&st.buffer)
     }
 
-    /// v1 soft-wrap seam (view-layer only).
+    /// v1 soft-wrap seam.
     ///
-    /// This currently affects editor mapping utilities (byte ↔ display point) but does not yet
-    /// change the rendered row splitting in the UI surface.
+    /// This controls the view-layer `DisplayMap` and therefore affects:
+    /// - rendered row splitting (logical lines -> display rows),
+    /// - caret/selection geometry (byte ↔ display point).
     pub fn set_soft_wrap_cols(&self, cols: Option<usize>) {
         let mut st = self.state.borrow_mut();
         let cols = cols.filter(|v| *v > 0);
@@ -291,6 +294,7 @@ pub struct CodeEditor {
     handle: CodeEditorHandle,
     overscan: usize,
     torture: Option<CodeEditorTorture>,
+    soft_wrap_cols: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -318,11 +322,17 @@ impl CodeEditor {
             handle,
             overscan: 16,
             torture: None,
+            soft_wrap_cols: None,
         }
     }
 
     pub fn overscan(mut self, overscan: usize) -> Self {
         self.overscan = overscan.max(1);
+        self
+    }
+
+    pub fn soft_wrap_cols(mut self, cols: Option<usize>) -> Self {
+        self.soft_wrap_cols = cols.filter(|v| *v > 0);
         self
     }
 
@@ -339,6 +349,7 @@ impl CodeEditor {
         let editor_state = self.handle.state.clone();
         let overscan = self.overscan;
         let torture = self.torture;
+        let soft_wrap_cols = self.soft_wrap_cols;
         let a11y_label: Arc<str> = Arc::from("Code editor");
 
         cx.keyed("code-editor", move |cx| {
@@ -366,8 +377,12 @@ impl CodeEditor {
                 a11y_text_selection,
                 a11y_text_composition,
             ) = {
-                let st = editor_state.borrow();
-                let content_len = st.buffer.line_count();
+                let mut st = editor_state.borrow_mut();
+                if st.display_wrap_cols != soft_wrap_cols {
+                    st.display_wrap_cols = soft_wrap_cols;
+                    st.refresh_display_map();
+                }
+                let content_len = st.display_map.row_count();
                 let boundary_mode = st.text_boundary_mode;
                 if !is_focused {
                     (content_len, boundary_mode, None, None, None)
@@ -425,7 +440,14 @@ impl CodeEditor {
                     st.undo_group = None;
                     st.preedit = None;
 
-                    let caret = caret_for_pointer(&st.buffer, row, bounds, down.position, cell_w);
+                    let caret = caret_for_pointer(
+                        &st.buffer,
+                        &st.display_map,
+                        row,
+                        bounds,
+                        down.position,
+                        cell_w,
+                    );
                     match down.click_count {
                         2 => {
                             let (start, end) =
@@ -436,7 +458,11 @@ impl CodeEditor {
                             };
                         }
                         3 => {
-                            if let Some(range) = st.buffer.line_byte_range_including_newline(row) {
+                            let start = st
+                                .display_map
+                                .display_point_to_byte(&st.buffer, DisplayPoint::new(row, 0));
+                            let line = st.buffer.line_index_at_byte(start);
+                            if let Some(range) = st.buffer.line_byte_range_including_newline(line) {
                                 st.selection = Selection {
                                     anchor: range.start,
                                     focus: range.end,
@@ -500,7 +526,14 @@ impl CodeEditor {
 
                     let cell_w = on_pointer_move_cell_w.get();
                     let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                    let caret = caret_for_pointer(&st.buffer, row, bounds, mv.position, cell_w);
+                    let caret = caret_for_pointer(
+                        &st.buffer,
+                        &st.display_map,
+                        row,
+                        bounds,
+                        mv.position,
+                        cell_w,
+                    );
                     st.selection.focus = caret;
 
                     let caret_rect = caret_rect_for_selection(
@@ -1087,21 +1120,19 @@ fn line_len_cols(line: &str) -> usize {
 
 fn caret_for_pointer(
     buf: &TextBuffer,
+    map: &DisplayMap,
     row: usize,
     bounds: Rect,
     position: fret_core::Point,
     cell_w: Px,
 ) -> usize {
-    let line = buf.line_text(row).unwrap_or("");
-    let col_max = line_len_cols(line);
     let local_x = Px(position.x.0 - bounds.origin.x.0);
     let col = if cell_w.0 > 0.0 {
         (local_x.0 / cell_w.0).floor().max(0.0) as usize
     } else {
         0
     };
-    let col = col.min(col_max);
-    display_point_to_byte(buf, DisplayPoint::new(row, col))
+    map.display_point_to_byte(buf, DisplayPoint::new(row, col))
 }
 
 fn caret_rect_for_selection(
@@ -1593,6 +1624,7 @@ fn paint_row(
     selection_bg: Color,
     caret_color: Color,
 ) {
+    let row_range = st.display_map.display_row_byte_range(&st.buffer, row);
     let line = cached_row_text(st, row, text_cache_max_entries);
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
@@ -1648,8 +1680,7 @@ fn paint_row(
         let caret = st.selection.caret().min(st.buffer.len_bytes());
         let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
         if caret_pt.row == row {
-            let line_start = st.buffer.line_start(row).unwrap_or(0);
-            let mut caret_in_line = caret.saturating_sub(line_start).min(line.len());
+            let mut caret_in_line = caret.saturating_sub(row_range.start).min(line.len());
             caret_in_line =
                 fret_code_editor_view::clamp_to_char_boundary(line.as_ref(), caret_in_line);
 
@@ -1677,21 +1708,57 @@ fn paint_row(
     #[cfg(feature = "syntax")]
     {
         if !drew_rich {
-            let spans = cached_row_syntax_spans(st, row, text_cache_max_entries);
+            let line_idx = st.display_map.display_row_line(row);
+            let spans = cached_row_syntax_spans(st, line_idx, text_cache_max_entries);
             if !spans.is_empty() {
-                let theme = painter.theme().clone();
-                let rich = materialize_row_rich_text(&theme, Arc::clone(&line), spans.as_ref());
-                let _ = painter.rich_text(
-                    key,
-                    DrawOrder(2),
-                    origin,
-                    rich,
-                    text_style.clone(),
-                    fg,
-                    constraints,
-                    painter.scale_factor(),
-                );
-                drew_rich = true;
+                let seg_start_in_line = row_range
+                    .start
+                    .saturating_sub(st.buffer.line_start(line_idx).unwrap_or(row_range.start));
+                let seg_end_in_line = seg_start_in_line.saturating_add(line.len());
+
+                let mut clipped: Vec<SyntaxSpan> = Vec::new();
+                for span in spans.as_ref() {
+                    let start = span.range.start.max(seg_start_in_line);
+                    let end = span.range.end.min(seg_end_in_line);
+                    if start >= end {
+                        continue;
+                    }
+                    clipped.push(SyntaxSpan {
+                        range: (start - seg_start_in_line)..(end - seg_start_in_line),
+                        highlight: span.highlight,
+                    });
+                }
+
+                if !clipped.is_empty() {
+                    clipped.sort_by_key(|s| s.range.start);
+                    clipped.dedup_by(|a, b| a.range == b.range && a.highlight == b.highlight);
+                    let mut merged: Vec<SyntaxSpan> = Vec::new();
+                    for span in clipped {
+                        if let Some(last) = merged.last_mut()
+                            && last.highlight == span.highlight
+                            && last.range.end == span.range.start
+                        {
+                            last.range.end = span.range.end;
+                            continue;
+                        }
+                        merged.push(span);
+                    }
+
+                    let theme = painter.theme().clone();
+                    let rich =
+                        materialize_row_rich_text(&theme, Arc::clone(&line), merged.as_ref());
+                    let _ = painter.rich_text(
+                        key,
+                        DrawOrder(2),
+                        origin,
+                        rich,
+                        text_style.clone(),
+                        fg,
+                        constraints,
+                        painter.scale_factor(),
+                    );
+                    drew_rich = true;
+                }
             }
         }
     }
@@ -1737,8 +1804,10 @@ fn paint_row(
 
 fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> Arc<str> {
     let rev = st.buffer.revision();
-    if st.row_text_cache_rev != rev {
+    let wrap_cols = st.display_wrap_cols;
+    if st.row_text_cache_rev != rev || st.row_text_cache_wrap_cols != wrap_cols {
         st.row_text_cache_rev = rev;
+        st.row_text_cache_wrap_cols = wrap_cols;
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
@@ -1753,7 +1822,8 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
         return Arc::clone(text);
     }
 
-    let text = st.buffer.line_text(row).unwrap_or("").to_string().into();
+    let range = st.display_map.display_row_byte_range(&st.buffer, row);
+    let text = st.buffer.text().get(range).unwrap_or("").to_string().into();
     st.row_text_cache.insert(row, (Arc::clone(&text), tick));
     st.row_text_cache_queue.push_back((row, tick));
 
