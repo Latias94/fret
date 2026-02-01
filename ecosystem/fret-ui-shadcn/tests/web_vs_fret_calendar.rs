@@ -5,6 +5,7 @@ use fret_ui::tree::UiTree;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Deserialize)]
 struct WebGolden {
@@ -1639,6 +1640,200 @@ fn web_vs_fret_calendar_11_disabled_navigation_semantics_matches_web() {
     assert!(
         fret_next.flags.disabled == web_next_disabled,
         "expected next-month semantics flags.disabled={web_next_disabled}"
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_08_disabled_day_semantics_matches_web() {
+    let web = read_web_golden("calendar-08");
+    let theme = web_theme(&web);
+
+    let web_month_grid =
+        web_find_by_class_token_in_theme(theme, "rdp-month_grid").expect("web month grid");
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let locale = web_month_label
+        .chars()
+        .next()
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                fret_ui_shadcn::calendar::CalendarLocale::En
+            } else {
+                fret_ui_shadcn::calendar::CalendarLocale::Es
+            }
+        })
+        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+
+    let web_weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = web_weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let web_show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+    let web_show_outside_days =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-outside")).is_some();
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let origin_x = web_rdp_root.rect.x;
+    let origin_y = web_rdp_root.rect.y;
+
+    let web_disabled_cells: Vec<&WebNode> = find_all(&theme.root, &|n| {
+        n.tag == "td"
+            && (class_has_token(n, "rdp-disabled")
+                || n.attrs.get("data-disabled").is_some_and(|v| v == "true"))
+    });
+    assert!(
+        !web_disabled_cells.is_empty(),
+        "expected at least one disabled day cell in calendar-08"
+    );
+
+    let mut disabled_dates = std::collections::HashSet::<time::Date>::new();
+    let mut disabled_labels: Vec<String> = Vec::new();
+    for cell in web_disabled_cells {
+        let Some(button) = find_first(cell, &|n| {
+            n.tag == "button"
+                && n.attrs
+                    .get("aria-label")
+                    .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+        }) else {
+            continue;
+        };
+        let label = button
+            .attrs
+            .get("aria-label")
+            .expect("web disabled day button aria-label");
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            continue;
+        };
+        if date.month() != month || date.year() != year {
+            continue;
+        }
+        if disabled_dates.insert(date) {
+            disabled_labels.push(label.clone());
+        }
+    }
+    assert!(
+        !disabled_labels.is_empty(),
+        "expected disabled day labels within the primary month for calendar-08"
+    );
+
+    let disabled_label = disabled_labels
+        .iter()
+        .find(|l| !l.starts_with("Today, ") && !l.starts_with("Hoy, "))
+        .cloned()
+        .unwrap_or_else(|| disabled_labels[0].clone());
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(
+        !web_day_buttons.is_empty(),
+        "expected calendar day buttons for calendar-08"
+    );
+
+    let enabled_label = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .filter(|label| !label.starts_with("Today, ") && !label.starts_with("Hoy, "))
+        .filter_map(|label| {
+            let (date, _selected) = parse_calendar_day_aria_label(label)?;
+            if date.month() != month || date.year() != year {
+                return None;
+            }
+            if disabled_dates.contains(&date) {
+                return None;
+            }
+            Some(label.clone())
+        })
+        .next()
+        .expect("expected at least one enabled in-month day button in calendar-08");
+
+    let disabled_dates = Arc::new(disabled_dates);
+    let (_ui, snap, _root) = render_calendar_in_bounds(
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+        ),
+        move |cx| {
+            use fret_ui_headless::calendar::CalendarMonth;
+
+            let month_model: Model<CalendarMonth> =
+                cx.app.models_mut().insert(CalendarMonth::new(year, month));
+            let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+
+            let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                .locale(locale)
+                .week_start(week_start)
+                .show_outside_days(web_show_outside_days)
+                .show_week_number(web_show_week_number)
+                .disabled_by({
+                    let disabled_dates = Arc::clone(&disabled_dates);
+                    move |d| disabled_dates.contains(&d)
+                });
+
+            let web_today = web_day_buttons
+                .iter()
+                .filter_map(|n| n.attrs.get("aria-label"))
+                .find(|label| label.starts_with("Today, ") || label.starts_with("Hoy, "))
+                .and_then(|label| parse_calendar_day_aria_label(label))
+                .map(|(d, _)| d);
+            if let Some(today) = web_today {
+                calendar = calendar.today(today);
+            }
+
+            let calendar = calendar.into_element(cx);
+            let calendar = cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        layout
+                    },
+                    padding: fret_core::Edges {
+                        left: Px(origin_x),
+                        top: Px(origin_y),
+                        right: Px(0.0),
+                        bottom: Px(0.0),
+                    },
+                    ..Default::default()
+                },
+                move |_cx| vec![calendar],
+            );
+
+            vec![calendar]
+        },
+    );
+
+    let fret_disabled = find_semantics(&snap, SemanticsRole::Button, Some(&disabled_label))
+        .unwrap_or_else(|| panic!("missing fret disabled day button label={disabled_label:?}"));
+    assert!(
+        fret_disabled.flags.disabled,
+        "expected semantics flags.disabled=true for {disabled_label:?}"
+    );
+
+    let fret_enabled = find_semantics(&snap, SemanticsRole::Button, Some(&enabled_label))
+        .unwrap_or_else(|| panic!("missing fret enabled day button label={enabled_label:?}"));
+    assert!(
+        !fret_enabled.flags.disabled,
+        "expected semantics flags.disabled=false for {enabled_label:?}"
     );
 }
 
