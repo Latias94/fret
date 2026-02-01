@@ -30,6 +30,7 @@ Tracking format:
 
 - [ ] SWG-ovl-010 Expand menu/listbox “height as styling” gates to any remaining overlay families not yet covered.
   - Target families: Popover-like list surfaces, nested listboxes, anything that clamps under low height.
+- 2026-02-01: gated NavigationMenu underlay scroll anchor stability and fixed paint-cache replay to keep last-frame visual bounds in sync (prevents scroll-induced anchor drift).
 - [ ] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
 - [ ] SWG-ovl-030 Add “constrained height” variants for remaining overlay pages that currently only gate default viewport.
@@ -57,10 +58,11 @@ Tracking format:
 
 ## P2 — Tooling (avoid doc drift)
 
-- [ ] SWG-tool-010 Extend `tools/golden_coverage.ps1` to report coverage in explicit dimensions:
+- [x] SWG-tool-010 Extend `tools/golden_coverage.ps1` to report coverage in explicit dimensions:
   - smoke-parse coverage (dynamic traversal),
   - referenced-by-tests coverage (string-literal heuristic),
   - high-signal targeted gates (excluding broad files).
+- 2026-02-01: `tools/golden_coverage.ps1` reports `Gated`, `Targeted`, and `Smoke` coverage for `shadcn-web/v4/new-york-v4`.
 
 ---
 
