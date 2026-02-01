@@ -22,6 +22,7 @@ Recent changes (2026-02-01):
 - Editor: bubble Ctrl/Meta+PageUp/PageDown to workspace keymaps (do not cancel preedit for these chords).
 - Editor: add bundle-friendly cache counters (row text + syntax) and expose them via `CodeEditorHandle::cache_stats()`.
 - UI Gallery: show code-editor cache counters (total + per-frame deltas) in the torture overlay.
+- UI Gallery: add a word-boundary harness (fixture + char/word stepping + apply caret/selection into the editor).
 - UI Kit/Diagnostics: record and export windowed-rows-surface visible-window telemetry in UI diagnostics snapshots.
 - View: expand word-boundary conformance tests (UnicodeWord vs Identifier) for selection and movement; fix `move_word_left` at token boundaries.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
