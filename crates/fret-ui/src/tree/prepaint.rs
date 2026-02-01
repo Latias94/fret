@@ -245,10 +245,16 @@ impl<H: UiHost> UiTree<H> {
                             let prefetch_margin = (inputs.overscan / 6).max(1);
                             // Shift by a slightly larger step than the “near-edge” margin so we
                             // don’t prefetch on every frame during slow scroll, while still keeping
-                            // each prefetch reconcile bounded.
-                            let prefetch_step = (inputs.overscan.saturating_mul(3) / 2)
-                                .max(prefetch_margin)
-                                .max(1);
+                            // each prefetch rerender bounded.
+                            let prefetch_step = if retained_host {
+                                inputs.overscan.saturating_mul(3) / 2
+                            } else {
+                                // Non-retained VirtualList pays a full cache-root rerender per shift,
+                                // so prefer fewer, larger shifts while we still have overscan coverage.
+                                inputs.overscan.saturating_mul(3)
+                            }
+                            .max(prefetch_margin)
+                            .max(1);
                             let prefer_forward = if offset_axis.0 > prev_offset.0 + 0.01 {
                                 state.last_scroll_direction_forward = Some(true);
                                 Some(true)
