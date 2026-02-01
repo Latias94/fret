@@ -24,7 +24,7 @@ use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::AnyElement;
 use fret_ui::element::{
-    CanvasCachePolicy, CanvasCacheTuning, Length, Overflow, PointerRegionProps,
+    CanvasCachePolicy, CanvasCacheTuning, Length, Overflow, PointerRegionProps, SemanticsProps,
     TextInputRegionProps,
 };
 use fret_ui::{ElementContext, UiHost};
@@ -920,7 +920,11 @@ impl CodeEditor {
                     surface_props,
                     pointer_props,
                     handlers,
-                    None,
+                    Some(SemanticsProps {
+                        role: fret_core::SemanticsRole::Viewport,
+                        label: Some(Arc::<str>::from("Editor viewport")),
+                        ..Default::default()
+                    }),
                     move |painter, row, rect| {
                         if cell_w.get().0 <= 0.0 {
                             let scope = painter.key_scope(&"fret-code-editor-cell-width");
