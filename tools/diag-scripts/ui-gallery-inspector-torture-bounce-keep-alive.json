@@ -44,6 +44,8 @@
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-inspector-row-0-label" }
     },
+    { "type": "wait_frames", "n": 4 },
+
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": -240.0 },
     { "type": "wait_frames", "n": 2 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": -240.0 },
@@ -51,14 +53,20 @@
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": -240.0 },
     { "type": "wait_frames", "n": 2 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 6 },
+
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": 240.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": 240.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": -240.0 },
-    { "type": "wait_frames", "n": 5 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-inspector-root" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 8 },
+
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-inspector-torture-scroll"
+      "label": "ui-gallery-inspector-torture-bounce-keep-alive"
     }
   ]
 }

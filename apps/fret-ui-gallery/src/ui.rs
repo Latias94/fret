@@ -8472,9 +8472,18 @@ fn preview_ai_transcript_torture(
 }
 
 fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
-    let len: usize = 50_000;
+    let len: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(50_000)
+        .clamp(16, 200_000);
     let row_height = Px(28.0);
     let overscan = 12;
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(0)
+        .clamp(0, 4096);
 
     let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
 
@@ -8489,7 +8498,8 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
     };
 
     let options =
-        fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height);
+        fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height)
+            .keep_alive(keep_alive);
 
     let theme = theme.clone();
     let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
