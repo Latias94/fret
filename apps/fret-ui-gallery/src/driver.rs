@@ -32,6 +32,8 @@ use fret_workspace::commands::{
 use fret_workspace::{
     WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use time::Date;
@@ -46,6 +48,23 @@ use crate::ui;
 struct DebugHudState {
     last_tick: Option<fret_core::time::Instant>,
     ema_frame_time_us: Option<f64>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Default)]
+struct UiGalleryHarnessDiagnosticsStore {
+    per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone)]
+struct UiGalleryHarnessModelIds {
+    selected_page: Model<Arc<str>>,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
+    text_input: Model<String>,
+    text_area: Model<String>,
 }
 
 impl DebugHudState {
@@ -497,7 +516,7 @@ impl UiGalleryDriver {
 
         Self::sync_undo_availability(app, window, &undo_doc);
 
-        UiGalleryWindowState {
+        let state = UiGalleryWindowState {
             ui,
             root: None,
             debug_hud: DebugHudState::default(),
@@ -580,7 +599,24 @@ impl UiGalleryDriver {
             virtual_list_torture_edit_text,
             virtual_list_torture_scroll,
             last_config_files_status_seq: 0,
-        }
+        };
+
+        #[cfg(not(target_arch = "wasm32"))]
+        app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
+            store.per_window.insert(
+                window,
+                UiGalleryHarnessModelIds {
+                    selected_page: state.selected_page.clone(),
+                    code_editor_syntax_rust: state.code_editor_syntax_rust.clone(),
+                    code_editor_boundary_identifier: state.code_editor_boundary_identifier.clone(),
+                    code_editor_soft_wrap: state.code_editor_soft_wrap.clone(),
+                    text_input: state.text_input.clone(),
+                    text_area: state.text_area.clone(),
+                },
+            );
+        });
+
+        state
     }
 
     fn handle_nav_command(
@@ -2142,6 +2178,48 @@ pub fn build_app() -> App {
         window: None,
         menu_bar,
     });
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.set_app_snapshot_provider(Some(Arc::new(|app, window| {
+                let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
+                let ids = store.per_window.get(&window)?;
+
+                let selected_page = app.models().get_cloned(&ids.selected_page)?;
+                let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
+                let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
+                let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
+                let text_input = app.models().get_cloned(&ids.text_input)?;
+                let text_area = app.models().get_cloned(&ids.text_area)?;
+
+                let mut out = serde_json::Map::new();
+                out.insert("schema_version".to_string(), serde_json::json!(1));
+                out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
+                out.insert(
+                    "selected_page".to_string(),
+                    serde_json::Value::String(selected_page.to_string()),
+                );
+                out.insert(
+                    "code_editor".to_string(),
+                    serde_json::json!({
+                        "syntax_rust": syntax_rust,
+                        "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
+                        "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                    }),
+                );
+                out.insert(
+                    "text_widgets".to_string(),
+                    serde_json::json!({
+                        "text_input_chars": text_input.chars().count(),
+                        "text_area_chars": text_area.chars().count(),
+                    }),
+                );
+
+                Some(serde_json::Value::Object(out))
+            })));
+        });
+    }
 
     app
 }
