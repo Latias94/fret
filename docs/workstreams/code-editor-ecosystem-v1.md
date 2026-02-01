@@ -25,6 +25,7 @@ Recent changes (2026-02-01):
 - UI Gallery: show code-editor cache counters (total + per-frame deltas) in the torture overlay.
 - UI Gallery: add a word-boundary harness (fixture + char/word stepping + apply caret/selection into the editor).
 - UI Kit/Diagnostics: record and export windowed-rows-surface visible-window telemetry in UI diagnostics snapshots.
+- UI Kit/Diagnostics: include a best-effort app/harness snapshot blob in UI diagnostics bundles (ui-gallery exports page + code-editor toggles; includes web IME bridge snapshot when available).
 - View: expand word-boundary conformance tests (UnicodeWord vs Identifier) for selection and movement; fix `move_word_left` at token boundaries.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
@@ -104,7 +105,6 @@ P0 (correctness and contracts):
 P1 (robustness and testability):
 
 - Expand word-boundary + click-selection tests across widgets and scroll/transform cases.
-- Export editor/IME harness state into diagnostics snapshots for “single artifact” repros (bundle JSON includes harness config + bridge snapshot + windowed-surface telemetry).
 - Add regression checks around wrap boundaries (caret, selection, preedit, syntax spans) using the existing UI Gallery soft-wrap toggle.
 
 P2 (features):

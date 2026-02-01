@@ -188,6 +188,7 @@ Evidence anchors:
   - visible rows + overscan (windowed surfaces),
   - editor-local cache hits/misses (row text + syntax).
 - [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+- [x] Export editor/IME harness state into diagnostics snapshots (ui-gallery app snapshot + web IME bridge snapshot; enables “single artifact” repros).
 - [ ] Add renderer-level churn counters (next):
   - text blob churn and glyph atlas pressure (likely from renderer/canvas caches).
 
