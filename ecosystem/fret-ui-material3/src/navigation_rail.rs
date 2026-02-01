@@ -26,6 +26,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
     material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
@@ -648,14 +649,11 @@ fn interaction_state(
     hovered: bool,
     focused: bool,
 ) -> rail_tokens::NavigationRailItemInteraction {
-    if pressed {
-        rail_tokens::NavigationRailItemInteraction::Pressed
-    } else if focused {
-        rail_tokens::NavigationRailItemInteraction::Focused
-    } else if hovered {
-        rail_tokens::NavigationRailItemInteraction::Hovered
-    } else {
-        rail_tokens::NavigationRailItemInteraction::Default
+    match pressable_interaction(pressed, hovered, focused) {
+        Some(PressableInteraction::Pressed) => rail_tokens::NavigationRailItemInteraction::Pressed,
+        Some(PressableInteraction::Focused) => rail_tokens::NavigationRailItemInteraction::Focused,
+        Some(PressableInteraction::Hovered) => rail_tokens::NavigationRailItemInteraction::Hovered,
+        None => rail_tokens::NavigationRailItemInteraction::Default,
     }
 }
 

@@ -19,7 +19,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::OverlayPresence;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
-use fret_ui_kit::declarative::transition;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dismissable_layer as dismissable_layer_prim;
 use fret_ui_kit::primitives::popper;
@@ -27,6 +26,7 @@ use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::tooltip as tooltip_prim;
 use fret_ui_kit::tooltip_provider;
 
+use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::motion::ms_to_frames;
 use crate::tokens::tooltip as tooltip_tokens;
@@ -627,21 +627,9 @@ impl PlainTooltip {
                 vec![trigger]
             });
 
-            let opening = update.open;
-            let open_ticks = ms_to_frames(
-                tooltip_tokens::open_duration_ms(&theme),
-            );
-            let close_ticks = ms_to_frames(
-                tooltip_tokens::close_duration_ms(&theme),
-            );
-            let easing = tooltip_tokens::easing(&theme);
-            let motion = transition::drive_transition_with_durations_and_cubic_bezier(
-                cx,
-                opening,
-                open_ticks,
-                close_ticks,
-                easing,
-            );
+            let close_grace_frames = Some(ms_to_frames(tooltip_tokens::close_duration_ms(&theme)));
+            let motion =
+                drive_overlay_open_close_motion(cx, &theme, update.open, close_grace_frames);
 
             let overlay_presence = OverlayPresence {
                 present: motion.present,
@@ -655,8 +643,8 @@ impl PlainTooltip {
 
             let tooltip_id = cx.root_id();
             let overlay_root_name = tooltip_prim::tooltip_root_name(tooltip_id);
-            let opacity = motion.progress;
-            let scale = 0.92 + 0.08 * motion.progress;
+            let opacity = motion.alpha;
+            let scale = motion.scale;
             let direction = direction_prim::use_direction_in_scope(cx, None);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {

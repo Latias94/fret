@@ -20,6 +20,10 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{Theme, UiHost};
+use fret_ui_kit::{
+    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, merge_override_slot,
+    resolve_override_slot_with,
+};
 
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
@@ -27,6 +31,77 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::surface::material_surface_style;
 use crate::tokens::menu as menu_tokens;
+
+#[derive(Debug, Clone, Default)]
+pub struct MenuStyle {
+    pub container_background: OverrideSlot<ColorRef>,
+    pub container_corner_radii: OverrideSlot<Corners>,
+    pub container_elevation: OverrideSlot<Px>,
+    pub item_label_color: OverrideSlot<ColorRef>,
+    pub item_state_layer_color: OverrideSlot<ColorRef>,
+    pub item_label_text_style: OverrideSlot<TextStyle>,
+}
+
+impl MenuStyle {
+    pub fn container_background(
+        mut self,
+        background: WidgetStateProperty<Option<ColorRef>>,
+    ) -> Self {
+        self.container_background = Some(background);
+        self
+    }
+
+    pub fn container_corner_radii(mut self, corners: WidgetStateProperty<Option<Corners>>) -> Self {
+        self.container_corner_radii = Some(corners);
+        self
+    }
+
+    pub fn container_elevation(mut self, elevation: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_elevation = Some(elevation);
+        self
+    }
+
+    pub fn item_label_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.item_label_color = Some(color);
+        self
+    }
+
+    pub fn item_state_layer_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.item_state_layer_color = Some(color);
+        self
+    }
+
+    pub fn item_label_text_style(mut self, style: WidgetStateProperty<Option<TextStyle>>) -> Self {
+        self.item_label_text_style = Some(style);
+        self
+    }
+
+    pub fn merged(self, other: Self) -> Self {
+        Self {
+            container_background: merge_override_slot(
+                self.container_background,
+                other.container_background,
+            ),
+            container_corner_radii: merge_override_slot(
+                self.container_corner_radii,
+                other.container_corner_radii,
+            ),
+            container_elevation: merge_override_slot(
+                self.container_elevation,
+                other.container_elevation,
+            ),
+            item_label_color: merge_override_slot(self.item_label_color, other.item_label_color),
+            item_state_layer_color: merge_override_slot(
+                self.item_state_layer_color,
+                other.item_state_layer_color,
+            ),
+            item_label_text_style: merge_override_slot(
+                self.item_label_text_style,
+                other.item_label_text_style,
+            ),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
@@ -93,6 +168,7 @@ pub struct Menu {
     entries: Vec<MenuEntry>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    style: MenuStyle,
 }
 
 impl Menu {
@@ -101,11 +177,17 @@ impl Menu {
             entries: Vec::new(),
             a11y_label: None,
             test_id: None,
+            style: MenuStyle::default(),
         }
     }
 
     pub fn entries(mut self, entries: Vec<MenuEntry>) -> Self {
         self.entries = entries;
+        self
+    }
+
+    pub fn style(mut self, style: MenuStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 
@@ -170,14 +252,30 @@ impl Menu {
                 disabled: disabled.clone(),
             };
 
-            let container_bg = menu_tokens::container_background(&theme);
-            let elevation = menu_tokens::container_elevation(&theme);
+            let container_bg = resolve_override_slot_with(
+                self.style.container_background.as_ref(),
+                WidgetStates::empty(),
+                |color| color.resolve(&theme),
+                || menu_tokens::container_background(&theme),
+            );
+            let elevation = resolve_override_slot_with(
+                self.style.container_elevation.as_ref(),
+                WidgetStates::empty(),
+                |v| *v,
+                || menu_tokens::container_elevation(&theme),
+            );
             let shadow_color = menu_tokens::container_shadow_color(&theme);
-            let corner = menu_tokens::container_shape(&theme);
+            let corner = resolve_override_slot_with(
+                self.style.container_corner_radii.as_ref(),
+                WidgetStates::empty(),
+                |v| *v,
+                || menu_tokens::container_shape(&theme),
+            );
             let surface =
                 material_surface_style(&theme, container_bg, elevation, Some(shadow_color), corner);
             let container_bg = surface.background;
             let shadow = surface.shadow;
+            let style = self.style.clone();
 
             cx.semantics(sem, move |cx| {
                 vec![cx.container(
@@ -281,6 +379,7 @@ impl Menu {
                                             &theme,
                                             it.clone(),
                                             height,
+                                            style.clone(),
                                             tab_stop,
                                             item_idx,
                                             count,
@@ -317,6 +416,7 @@ fn material_menu_item<H: UiHost>(
     theme: &Theme,
     item: MenuItem,
     height: Px,
+    style: MenuStyle,
     tab_stop: bool,
     idx: usize,
     set_size: usize,
@@ -384,8 +484,22 @@ fn material_menu_item<H: UiHost>(
                     menu_tokens::MenuItemInteraction::Default
                 };
 
-                let (label_color, state_layer_color, state_layer_target) =
+                let states = WidgetStates::from_pressable(cx, st, enabled);
+
+                let (token_label_color, token_state_layer_color, state_layer_target) =
                     menu_tokens::item_outcomes(theme, enabled, interaction);
+                let label_color = resolve_override_slot_with(
+                    style.item_label_color.as_ref(),
+                    states,
+                    |color| color.resolve(theme),
+                    || token_label_color,
+                );
+                let state_layer_color = resolve_override_slot_with(
+                    style.item_state_layer_color.as_ref(),
+                    states,
+                    |color| color.resolve(theme),
+                    || token_state_layer_color,
+                );
 
                 let ripple_base_opacity = menu_tokens::pressed_state_layer_opacity(theme);
                 let config = material_pressable_indication_config(theme, None);
@@ -403,7 +517,16 @@ fn material_menu_item<H: UiHost>(
                     false,
                 );
 
-                let label_el = menu_item_label(cx, theme, &item.label, label_color);
+                let default_label_style = theme
+                    .text_style_by_key("md.sys.typescale.label-large")
+                    .unwrap_or_else(|| TextStyle::default());
+                let label_style = resolve_override_slot_with(
+                    style.item_label_text_style.as_ref(),
+                    states,
+                    |s| s.clone(),
+                    || default_label_style,
+                );
+                let label_el = menu_item_label(cx, &item.label, label_style, label_color);
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
@@ -429,14 +552,10 @@ fn material_menu_item<H: UiHost>(
 
 fn menu_item_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
     text: &Arc<str>,
+    style: TextStyle,
     color: Color,
 ) -> AnyElement {
-    let style = theme
-        .text_style_by_key("md.sys.typescale.label-large")
-        .unwrap_or_else(|| TextStyle::default());
-
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);

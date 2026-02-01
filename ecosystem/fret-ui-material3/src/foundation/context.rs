@@ -7,7 +7,7 @@
 
 #![allow(dead_code)]
 
-use fret_core::{Color, Px, TextStyle};
+use fret_core::{Color, LayoutDirection, Px, TextStyle};
 use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::elements::ElementContext;
@@ -61,6 +61,14 @@ pub enum MaterialDesignVariantOverride {
     Custom(MaterialDesignVariant),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaterialLayoutDirectionOverride {
+    /// Mask any inherited layout direction and fall back to component defaults.
+    UseDefault,
+    /// Override the layout direction for the subtree.
+    Custom(LayoutDirection),
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum MaterialTextStyleOverride {
     /// Mask any inherited style and fall back to component defaults.
@@ -83,6 +91,7 @@ struct MaterialContextState {
     ripple: Option<MaterialRippleConfiguration>,
     motion_scheme: Option<MaterialMotionSchemeOverride>,
     design_variant: Option<MaterialDesignVariantOverride>,
+    layout_direction: Option<MaterialLayoutDirectionOverride>,
     text_style: Option<MaterialTextStyleOverride>,
     icon_size: Option<MaterialIconSizeOverride>,
 }
@@ -120,6 +129,13 @@ pub fn inherited_design_variant_override<H: UiHost>(
 ) -> Option<MaterialDesignVariantOverride> {
     cx.inherited_state_where::<MaterialContextState>(|st| st.design_variant.is_some())
         .and_then(|st| st.design_variant)
+}
+
+pub fn inherited_layout_direction_override<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<MaterialLayoutDirectionOverride> {
+    cx.inherited_state_where::<MaterialContextState>(|st| st.layout_direction.is_some())
+        .and_then(|st| st.layout_direction)
 }
 
 pub fn inherited_text_style_override<H: UiHost>(
@@ -176,6 +192,31 @@ pub fn theme_default_design_variant(theme: &Theme) -> MaterialDesignVariant {
     }
 }
 
+pub fn theme_default_motion_scheme(theme: &Theme) -> MaterialMotionScheme {
+    match theme_default_design_variant(theme) {
+        MaterialDesignVariant::Standard => MaterialMotionScheme::Standard,
+        MaterialDesignVariant::Expressive => MaterialMotionScheme::Expressive,
+    }
+}
+
+pub fn theme_default_layout_direction(theme: &Theme) -> LayoutDirection {
+    // Fret-owned token for UI layout direction.
+    //
+    // This is intentionally not a Material Web token. It represents app-level directionality
+    // that can be applied across design systems, but is currently plumbed via Material context
+    // to keep the initial change local.
+    let rtl = theme
+        .number_by_key("md.sys.fret.layout.is-rtl")
+        .unwrap_or(0.0)
+        > 0.5;
+
+    if rtl {
+        LayoutDirection::Rtl
+    } else {
+        LayoutDirection::Ltr
+    }
+}
+
 pub fn resolved_design_variant<H: UiHost>(
     cx: &ElementContext<'_, H>,
     fallback: MaterialDesignVariant,
@@ -183,6 +224,16 @@ pub fn resolved_design_variant<H: UiHost>(
     match inherited_design_variant_override(cx) {
         Some(MaterialDesignVariantOverride::Custom(variant)) => variant,
         Some(MaterialDesignVariantOverride::UseDefault) | None => fallback,
+    }
+}
+
+pub fn resolved_layout_direction<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    fallback: LayoutDirection,
+) -> LayoutDirection {
+    match inherited_layout_direction_override(cx) {
+        Some(MaterialLayoutDirectionOverride::Custom(direction)) => direction,
+        Some(MaterialLayoutDirectionOverride::UseDefault) | None => fallback,
     }
 }
 
@@ -300,6 +351,45 @@ pub fn with_default_material_design_variant<H: UiHost, R>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
 ) -> R {
     with_material_design_variant_override(cx, MaterialDesignVariantOverride::UseDefault, f)
+}
+
+#[track_caller]
+pub fn with_material_layout_direction<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    direction: LayoutDirection,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_layout_direction_override(
+        cx,
+        MaterialLayoutDirectionOverride::Custom(direction),
+        f,
+    )
+}
+
+#[track_caller]
+pub fn with_default_material_layout_direction<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    with_material_layout_direction_override(cx, MaterialLayoutDirectionOverride::UseDefault, f)
+}
+
+#[track_caller]
+pub fn with_material_layout_direction_override<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    override_policy: MaterialLayoutDirectionOverride,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(MaterialContextState::default, |st| {
+        let prev = st.layout_direction;
+        st.layout_direction = Some(override_policy);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(MaterialContextState::default, |st| {
+        st.layout_direction = prev;
+    });
+    out
 }
 
 #[track_caller]
@@ -594,6 +684,57 @@ mod tests {
                     resolved_design_variant(cx, MaterialDesignVariant::Standard),
                     MaterialDesignVariant::Standard
                 );
+            },
+        );
+    }
+
+    #[test]
+    fn layout_direction_inherits_masks_and_restores() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-context-layout-direction",
+            |cx| {
+                assert_eq!(inherited_layout_direction_override(cx), None);
+                assert_eq!(
+                    resolved_layout_direction(cx, LayoutDirection::Ltr),
+                    LayoutDirection::Ltr
+                );
+
+                with_material_layout_direction(cx, LayoutDirection::Rtl, |cx| {
+                    assert_eq!(
+                        inherited_layout_direction_override(cx),
+                        Some(MaterialLayoutDirectionOverride::Custom(
+                            LayoutDirection::Rtl
+                        ))
+                    );
+                    assert_eq!(
+                        resolved_layout_direction(cx, LayoutDirection::Ltr),
+                        LayoutDirection::Rtl
+                    );
+
+                    with_default_material_layout_direction(cx, |cx| {
+                        assert_eq!(
+                            inherited_layout_direction_override(cx),
+                            Some(MaterialLayoutDirectionOverride::UseDefault)
+                        );
+                        assert_eq!(
+                            resolved_layout_direction(cx, LayoutDirection::Rtl),
+                            LayoutDirection::Rtl
+                        );
+                    });
+
+                    assert_eq!(
+                        resolved_layout_direction(cx, LayoutDirection::Ltr),
+                        LayoutDirection::Rtl
+                    );
+                });
+
+                assert_eq!(inherited_layout_direction_override(cx), None);
             },
         );
     }

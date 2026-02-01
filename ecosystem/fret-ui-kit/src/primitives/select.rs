@@ -478,11 +478,23 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
 ) -> Option<SelectItemAlignedLayout> {
     let value_node = overlay::anchor_bounds_for_element(cx, inputs.value_node)?;
     let viewport = overlay::anchor_bounds_for_element(cx, inputs.viewport)?;
-    let listbox = overlay::anchor_bounds_for_element(cx, inputs.listbox)?;
-    let mut content = overlay::anchor_bounds_for_element(cx, inputs.content_panel)?;
+    // Item-aligned select positioning uses `offsetTop`-like measurements that must remain stable
+    // as the viewport scrolls. Prefer layout bounds for scrolled descendants (they do not include
+    // the scroll render transform) so wheel scrolling cannot cause the overlay to "chase" the
+    // selected item and drift off-screen.
+    let listbox = cx
+        .last_bounds_for_element(inputs.listbox)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.listbox))?;
+    let mut content = cx
+        .last_bounds_for_element(inputs.content_panel)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.content_panel))?;
     content.size.width = Px(content.size.width.0.max(inputs.content_min_width.0));
-    let selected_item = overlay::anchor_bounds_for_element(cx, inputs.selected_item)?;
-    let selected_item_text = overlay::anchor_bounds_for_element(cx, inputs.selected_item_text)?;
+    let selected_item = cx
+        .last_bounds_for_element(inputs.selected_item)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.selected_item))?;
+    let selected_item_text = cx
+        .last_bounds_for_element(inputs.selected_item_text)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.selected_item_text))?;
     // The headless solver expects `items_height` to match Radix `viewport.scrollHeight`.
     //
     // In our shadcn ports `inputs.listbox` typically points at the element that lays out the full

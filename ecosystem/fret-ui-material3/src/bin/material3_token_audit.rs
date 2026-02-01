@@ -19,6 +19,8 @@ fn allowlisted_non_material_web_tokens() -> BTreeSet<&'static str> {
     BTreeSet::from([
         // Fret-specific: enforced minimum touch target policy.
         "md.sys.layout.minimum-touch-target.size",
+        // Fret-specific: layout direction marker (0 = LTR, 1 = RTL).
+        "md.sys.fret.layout.is-rtl",
         // Fret-specific: opt into using expressive component token variants when configured.
         "md.sys.fret.material.is-expressive",
         // Fret-specific escape hatch: allow overriding shadow color without forking the elevation logic.
@@ -159,7 +161,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let allowlisted = allowlisted_non_material_web_tokens();
             unknown_vs_material_web = used_expanded
                 .difference(&material_web)
-                .filter(|k| !allowlisted.contains(k.as_str()))
+                .filter(|k| {
+                    !allowlisted.contains(k.as_str()) && !k.starts_with("md.sys.fret.material.")
+                })
                 .cloned()
                 .collect::<BTreeSet<_>>();
             if !unknown_vs_material_web.is_empty() {

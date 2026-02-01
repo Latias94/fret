@@ -2840,6 +2840,108 @@ fn roving_flex_arrow_keys_move_focus_and_update_selection() {
 }
 
 #[test]
+fn roving_flex_treats_descendant_focus_as_active_item() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "roving-flex-focus-within",
+        |cx| {
+            let props = crate::element::RovingFlexProps {
+                flex: crate::element::FlexProps {
+                    direction: fret_core::Axis::Vertical,
+                    ..Default::default()
+                },
+                roving: crate::element::RovingFocusProps {
+                    enabled: true,
+                    wrap: true,
+                    disabled: Arc::from([false, false]),
+                },
+            };
+
+            vec![cx.roving_flex(props, |cx| {
+                cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
+                    use crate::action::RovingNavigateResult;
+                    use fret_core::KeyCode;
+
+                    let Some(current) = it.current else {
+                        return RovingNavigateResult::NotHandled;
+                    };
+
+                    let forward = match it.key {
+                        KeyCode::ArrowDown => true,
+                        KeyCode::ArrowUp => false,
+                        _ => return RovingNavigateResult::NotHandled,
+                    };
+
+                    let len = it.len;
+                    let target = if forward {
+                        (current + 1) % len
+                    } else {
+                        (current + len - 1) % len
+                    };
+
+                    RovingNavigateResult::Handled {
+                        target: Some(target),
+                    }
+                }));
+
+                let mut make = |label: &'static str| {
+                    cx.pressable(
+                        crate::element::PressableProps::default(),
+                        move |child_cx, _st| {
+                            vec![child_cx.pressable(
+                                crate::element::PressableProps::default(),
+                                |inner_cx, _st| vec![inner_cx.text(label)],
+                            )]
+                        },
+                    )
+                };
+
+                vec![make("a"), make("b")]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let roving = ui.children(root)[0];
+    let a = ui.children(roving)[0];
+    let a_inner = ui.children(a)[0];
+    let b = ui.children(roving)[1];
+
+    ui.set_focus(Some(a_inner));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(b),
+        "expected roving to treat descendant focus as within the active item",
+    );
+}
+
+#[test]
 fn roving_flex_typeahead_hook_can_choose_target_index() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

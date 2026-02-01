@@ -26,6 +26,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::{SpringAnimator, SpringSpec};
@@ -219,11 +220,17 @@ impl Button {
                         let is_hovered = enabled && st.hovered;
                         let is_focused = enabled && st.focused && focus_visible;
 
-                        let interaction = interaction_state(is_pressed, is_hovered, is_focused);
+                        let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
                         let token_interaction = interaction.map(|s| match s {
-                            InteractionState::Hovered => button_tokens::ButtonInteraction::Hovered,
-                            InteractionState::Focused => button_tokens::ButtonInteraction::Focused,
-                            InteractionState::Pressed => button_tokens::ButtonInteraction::Pressed,
+                            PressableInteraction::Hovered => {
+                                button_tokens::ButtonInteraction::Hovered
+                            }
+                            PressableInteraction::Focused => {
+                                button_tokens::ButtonInteraction::Focused
+                            }
+                            PressableInteraction::Pressed => {
+                                button_tokens::ButtonInteraction::Pressed
+                            }
                         });
 
                         let states = WidgetStates::from_pressable(cx, st, enabled);
@@ -468,26 +475,6 @@ fn button_size_tokens(theme: &Theme, size: ButtonSize) -> ButtonSizeTokens {
 struct ButtonOutline {
     width: Px,
     color: Color,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum InteractionState {
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Option<InteractionState> {
-    if pressed {
-        return Some(InteractionState::Pressed);
-    }
-    if focused {
-        return Some(InteractionState::Focused);
-    }
-    if hovered {
-        return Some(InteractionState::Hovered);
-    }
-    None
 }
 
 fn button_outline(theme: &Theme, variant: ButtonVariant, enabled: bool) -> Option<ButtonOutline> {
