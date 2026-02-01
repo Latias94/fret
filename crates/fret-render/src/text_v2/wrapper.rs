@@ -320,6 +320,8 @@ fn wrap_word_range(
     max_width_px: f32,
     scale: f32,
 ) -> (Vec<Range<usize>>, Vec<ShapedLineLayout>) {
+    const WRAP_WORD_PROBE_MIN_BYTES: usize = 256;
+
     let start = range.start.min(text.len());
     let end = range.end.min(text.len());
 
@@ -335,20 +337,51 @@ fn wrap_word_range(
 
     let mut offset = start;
     while offset < end {
-        let slice = &text[offset..end];
-        let full = shape_slice(shaper, text, base, spans, offset..end, scale);
+        // Avoid shaping the full remaining paragraph on each line (O(n^2) behavior for long text).
+        // Instead, shape a prefix probe that is large enough to exceed `max_width_px`, then cut.
+        let slice_all = &text[offset..end];
 
-        if full.width <= max_width_px + 0.5 {
-            lines.push(full);
+        let mut probe_rel = WRAP_WORD_PROBE_MIN_BYTES.min(slice_all.len());
+        probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
+        if probe_rel == 0 {
+            let first = slice_all.chars().next().map(|c| c.len_utf8()).unwrap_or(0);
+            probe_rel = first.max(1).min(slice_all.len());
+            probe_rel = clamp_to_char_boundary(slice_all, probe_rel);
+        }
+
+        let (probe_end, probe) = loop {
+            let probe_end = offset.saturating_add(probe_rel).min(end);
+            let shaped = shape_slice(shaper, text, base, spans, offset..probe_end, scale);
+
+            // If the shaped prefix doesn't exceed the width yet, grow the probe (up to the end).
+            if shaped.width <= max_width_px + 0.5 && probe_end < end {
+                let next_rel = (probe_rel.saturating_mul(2)).min(slice_all.len());
+                if next_rel == probe_rel {
+                    return (line_ranges, lines);
+                }
+                probe_rel = clamp_to_char_boundary(slice_all, next_rel);
+                if probe_rel == 0 || probe_rel == next_rel {
+                    probe_rel = next_rel;
+                }
+                continue;
+            }
+
+            break (probe_end, shaped);
+        };
+
+        // If the remaining text fits in a single line, we're done.
+        if probe.width <= max_width_px + 0.5 && probe_end == end {
+            lines.push(probe);
             line_ranges.push(offset..end);
             break;
         }
 
-        let mut cut_end = wrap_word_cut_end(slice, &full.clusters, max_width_px);
+        let slice = &text[offset..probe_end];
+        let mut cut_end = wrap_word_cut_end(slice, &probe.clusters, max_width_px);
         cut_end = clamp_to_char_boundary(slice, cut_end);
 
         if cut_end == 0 {
-            cut_end = first_cluster_end(slice, &full.clusters);
+            cut_end = first_cluster_end(slice, &probe.clusters);
             cut_end = clamp_to_char_boundary(slice, cut_end);
         }
         if cut_end == 0 {
