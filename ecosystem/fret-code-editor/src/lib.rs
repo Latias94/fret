@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
-    DisplayPoint, byte_to_display_point, display_point_to_byte, move_word_left, move_word_right,
+    DisplayMap, DisplayPoint, display_point_to_byte, move_word_left, move_word_right,
     next_char_boundary, prev_char_boundary, select_word_range,
 };
 use fret_core::{
@@ -129,6 +129,8 @@ struct CodeEditorState {
     selection: Selection,
     preedit: Option<PreeditState>,
     text_boundary_mode: TextBoundaryMode,
+    display_wrap_cols: Option<usize>,
+    display_map: DisplayMap,
     undo: UndoHistory<CodeEditorTx>,
     undo_group: Option<UndoGroup>,
     dragging: bool,
@@ -152,6 +154,12 @@ struct CodeEditorState {
     syntax_row_cache_queue: VecDeque<(usize, u64)>,
 }
 
+impl CodeEditorState {
+    fn refresh_display_map(&mut self) {
+        self.display_map = DisplayMap::new(&self.buffer, self.display_wrap_cols);
+    }
+}
+
 #[derive(Clone)]
 pub struct CodeEditorHandle {
     state: Rc<RefCell<CodeEditorState>>,
@@ -163,12 +171,15 @@ impl CodeEditorHandle {
         let buffer = TextBuffer::new(doc, text.into()).unwrap_or_else(|_| {
             TextBuffer::new(doc, String::new()).expect("empty buffer must be valid")
         });
+        let display_map = DisplayMap::new(&buffer, None);
         Self {
             state: Rc::new(RefCell::new(CodeEditorState {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
                 text_boundary_mode: TextBoundaryMode::Identifier,
+                display_wrap_cols: None,
+                display_map,
                 undo: UndoHistory::with_limit(512),
                 undo_group: None,
                 dragging: false,
@@ -233,6 +244,7 @@ impl CodeEditorHandle {
         st.dragging = false;
         st.drag_pointer = None;
         st.last_bounds = None;
+        st.refresh_display_map();
         st.row_text_cache_rev = st.buffer.revision();
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
@@ -258,6 +270,20 @@ impl CodeEditorHandle {
     pub fn with_buffer<R>(&self, f: impl FnOnce(&TextBuffer) -> R) -> R {
         let st = self.state.borrow();
         f(&st.buffer)
+    }
+
+    /// v1 soft-wrap seam (view-layer only).
+    ///
+    /// This currently affects editor mapping utilities (byte ↔ display point) but does not yet
+    /// change the rendered row splitting in the UI surface.
+    pub fn set_soft_wrap_cols(&self, cols: Option<usize>) {
+        let mut st = self.state.borrow_mut();
+        let cols = cols.filter(|v| *v > 0);
+        if st.display_wrap_cols == cols {
+            return;
+        }
+        st.display_wrap_cols = cols;
+        st.refresh_display_map();
     }
 }
 
@@ -431,6 +457,7 @@ impl CodeEditor {
 
                     let caret_rect = caret_rect_for_selection(
                         &st.buffer,
+                        &st.display_map,
                         st.selection,
                         st.preedit.as_ref(),
                         row_h,
@@ -478,6 +505,7 @@ impl CodeEditor {
 
                     let caret_rect = caret_rect_for_selection(
                         &st.buffer,
+                        &st.display_map,
                         st.selection,
                         st.preedit.as_ref(),
                         row_h,
@@ -1078,6 +1106,7 @@ fn caret_for_pointer(
 
 fn caret_rect_for_selection(
     buf: &TextBuffer,
+    map: &DisplayMap,
     sel: Selection,
     preedit: Option<&PreeditState>,
     row_h: Px,
@@ -1090,7 +1119,7 @@ fn caret_rect_for_selection(
     }
 
     let caret = sel.caret().min(buf.len_bytes());
-    let pt = byte_to_display_point(buf, caret);
+    let pt = map.byte_to_display_point(buf, caret);
     let offset = scroll_handle.offset();
     let y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
     let mut col = pt.col;
@@ -1118,6 +1147,7 @@ fn push_caret_rect_effect(
     let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
     if let Some(rect) = caret_rect_for_selection(
         &st.buffer,
+        &st.display_map,
         st.selection,
         st.preedit.as_ref(),
         row_h,
@@ -1362,14 +1392,16 @@ fn move_caret_right(st: &mut CodeEditorState, extend: bool) {
 
 fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let pt = byte_to_display_point(&st.buffer, caret);
+    let pt = st.display_map.byte_to_display_point(&st.buffer, caret);
     let next_row = if delta < 0 {
         pt.row.saturating_sub(delta.unsigned_abs() as usize)
     } else {
         pt.row.saturating_add(delta as usize)
     };
     let next_row = next_row.min(st.buffer.line_count().saturating_sub(1));
-    let next = display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col));
+    let next = st
+        .display_map
+        .display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col));
     if extend {
         st.selection.focus = next;
     } else {
@@ -1403,6 +1435,7 @@ fn apply_and_record_edit(
         let group = st.undo_group.as_mut().expect("undo group must exist");
         st.buffer.apply_in_transaction(&mut group.tx, edit).ok()?
     };
+    st.refresh_display_map();
     #[cfg(feature = "syntax")]
     invalidate_syntax_row_cache_for_delta(st, delta);
     #[cfg(not(feature = "syntax"))]
@@ -1444,6 +1477,9 @@ fn undo(st: &mut CodeEditorState) -> bool {
         }
         Ok::<_, ()>(())
     });
+    if applied {
+        st.refresh_display_map();
+    }
     #[cfg(feature = "syntax")]
     {
         if applied {
@@ -1473,6 +1509,9 @@ fn redo(st: &mut CodeEditorState) -> bool {
         }
         Ok::<_, ()>(())
     });
+    if applied {
+        st.refresh_display_map();
+    }
     #[cfg(feature = "syntax")]
     {
         if applied {
@@ -1566,8 +1605,8 @@ fn paint_row(
 
     let sel = st.selection.normalized();
     if !sel.is_empty() {
-        let start_pt = byte_to_display_point(&st.buffer, sel.start);
-        let end_pt = byte_to_display_point(&st.buffer, sel.end);
+        let start_pt = st.display_map.byte_to_display_point(&st.buffer, sel.start);
+        let end_pt = st.display_map.byte_to_display_point(&st.buffer, sel.end);
         if row >= start_pt.row && row <= end_pt.row {
             let line_cols = line_len_cols(&line);
             let start_col = if row == start_pt.row { start_pt.col } else { 0 };
@@ -1607,7 +1646,7 @@ fn paint_row(
 
     if let Some(preedit) = &st.preedit {
         let caret = st.selection.caret().min(st.buffer.len_bytes());
-        let caret_pt = byte_to_display_point(&st.buffer, caret);
+        let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
         if caret_pt.row == row {
             let line_start = st.buffer.line_start(row).unwrap_or(0);
             let mut caret_in_line = caret.saturating_sub(line_start).min(line.len());
@@ -1671,7 +1710,9 @@ fn paint_row(
     }
 
     if st.selection.is_caret() {
-        let caret_pt = byte_to_display_point(&st.buffer, st.selection.caret());
+        let caret_pt = st
+            .display_map
+            .byte_to_display_point(&st.buffer, st.selection.caret());
         if caret_pt.row == row {
             let mut col = caret_pt.col;
             if let Some(preedit) = &st.preedit {
@@ -2183,8 +2224,10 @@ mod tests {
             Size::new(Px(500.0), Px(500.0)),
         );
 
+        let map = DisplayMap::new(&buffer, None);
         let rect = caret_rect_for_selection(
             &buffer,
+            &map,
             sel,
             Some(&preedit),
             Px(20.0),
