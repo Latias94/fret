@@ -134,6 +134,18 @@ pub struct WebImeBridgeDebugSnapshot {
     /// Device pixel ratio at the time the bridge was initialized or last updated.
     pub device_pixel_ratio: Option<f64>,
 
+    /// Debug-only textarea metrics (DOM-reported).
+    ///
+    /// These help diagnose candidate UI jitter and unexpected wrapping/scrolling behaviors across
+    /// browsers and IMEs. Units are CSS pixels unless otherwise noted.
+    pub textarea_value_chars: Option<usize>,
+    pub textarea_selection_start_utf16: Option<u32>,
+    pub textarea_selection_end_utf16: Option<u32>,
+    pub textarea_client_width_px: Option<i32>,
+    pub textarea_client_height_px: Option<i32>,
+    pub textarea_scroll_width_px: Option<i32>,
+    pub textarea_scroll_height_px: Option<i32>,
+
     pub last_input_type: Option<String>,
     pub last_beforeinput_data: Option<String>,
     pub last_input_data: Option<String>,
