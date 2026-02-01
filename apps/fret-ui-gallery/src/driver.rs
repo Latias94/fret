@@ -3,8 +3,8 @@ use fret_app::{
     MenuItem, Model, Platform, SettingsFileV1, WindowRequest, load_layered_settings,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, Event, ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole,
-    UiServices,
+    AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
+    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, UiServices,
 };
 use fret_kit::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
@@ -130,6 +130,7 @@ struct UiGalleryWindowState {
     switch: Model<bool>,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -427,6 +428,7 @@ impl UiGalleryDriver {
         let switch = app.models_mut().insert(true);
         let code_editor_syntax_rust = app.models_mut().insert(true);
         let code_editor_boundary_identifier = app.models_mut().insert(true);
+        let code_editor_soft_wrap = app.models_mut().insert(false);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
@@ -549,6 +551,7 @@ impl UiGalleryDriver {
             switch,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -706,6 +709,27 @@ impl UiGalleryDriver {
         command: &CommandId,
     ) -> bool {
         match command.as_str() {
+            CMD_CODE_EDITOR_LOAD_FONTS => {
+                app.push_effect(Effect::FileDialogOpen {
+                    window,
+                    options: FileDialogOptions {
+                        title: Some("Load fonts".to_string()),
+                        multiple: true,
+                        filters: vec![FileDialogFilter {
+                            name: "Font files".to_string(),
+                            extensions: vec![
+                                "ttf".to_string(),
+                                "otf".to_string(),
+                                "ttc".to_string(),
+                            ],
+                        }],
+                    },
+                });
+
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("code_editor.load_fonts");
+                });
+            }
             CMD_APP_TOGGLE_PREFERENCES_ENABLED => {
                 let preferences = CommandId::new(fret_app::core_commands::APP_PREFERENCES);
                 let is_disabled = app
@@ -1006,6 +1030,7 @@ impl UiGalleryDriver {
         let switch = state.switch.clone();
         let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
         let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
+        let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
@@ -1421,6 +1446,7 @@ impl UiGalleryDriver {
                                             virtual_list_torture_scroll.clone(),
                                             code_editor_syntax_rust.clone(),
                                             code_editor_boundary_identifier.clone(),
+                                            code_editor_soft_wrap.clone(),
                                         )
                                     }
                                 })]
@@ -1512,6 +1538,7 @@ impl UiGalleryDriver {
                                         virtual_list_torture_scroll.clone(),
                                         code_editor_syntax_rust.clone(),
                                         code_editor_boundary_identifier.clone(),
+                                        code_editor_soft_wrap.clone(),
                                     )
                                 }
                             })
@@ -2787,6 +2814,85 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match event {
+            Event::FileDialogSelection(selection) => {
+                app.push_effect(Effect::FileDialogReadAllWithLimits {
+                    window,
+                    token: selection.token,
+                    limits: ExternalDropReadLimits {
+                        max_total_bytes: 128 * 1024 * 1024,
+                        max_file_bytes: 128 * 1024 * 1024,
+                        max_files: 8,
+                    },
+                });
+            }
+            Event::FileDialogData(data) => {
+                let is_font_blob = |bytes: &[u8]| -> bool {
+                    bytes.starts_with(b"OTTO")
+                        || bytes.starts_with(b"ttcf")
+                        || bytes
+                            .get(0..4)
+                            .is_some_and(|b| b == [0x00, 0x01, 0x00, 0x00])
+                };
+
+                let mut fonts: Vec<Vec<u8>> = Vec::new();
+                for file in &data.files {
+                    let name = file.name.to_ascii_lowercase();
+                    let looks_like_font = name.ends_with(".ttf")
+                        || name.ends_with(".otf")
+                        || name.ends_with(".ttc")
+                        || is_font_blob(&file.bytes);
+                    if looks_like_font {
+                        fonts.push(file.bytes.clone());
+                    }
+                }
+
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+
+                if fonts.is_empty() {
+                    let description = if data.errors.is_empty() {
+                        "No font files found in selection.".to_string()
+                    } else {
+                        format!("No fonts loaded ({} read errors).", data.errors.len())
+                    };
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Load fonts failed",
+                        shadcn::ToastMessageOptions::new().description(description),
+                    );
+                } else {
+                    host.push_effect(Effect::TextAddFonts { fonts });
+                    let description = if data.errors.is_empty() {
+                        "Fonts added to TextSystem.".to_string()
+                    } else {
+                        format!(
+                            "Fonts added to TextSystem ({} read errors).",
+                            data.errors.len()
+                        )
+                    };
+                    sonner.toast_success_message(
+                        &mut host,
+                        window,
+                        "Fonts loaded",
+                        shadcn::ToastMessageOptions::new().description(description),
+                    );
+                }
+
+                host.push_effect(Effect::FileDialogRelease { token: data.token });
+                host.request_redraw(window);
+            }
+            Event::FileDialogCanceled => {
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_message(
+                    &mut host,
+                    window,
+                    "Load fonts canceled",
+                    shadcn::ToastMessageOptions::new()
+                        .description("The file dialog completed without a selection."),
+                );
+            }
             Event::ImageRegistered { token, image, .. } => {
                 if state.avatar_demo_image_token == Some(*token) {
                     state.avatar_demo_image_token = None;

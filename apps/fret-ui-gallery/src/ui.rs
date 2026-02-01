@@ -272,6 +272,7 @@ pub(crate) fn content_view(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -431,6 +432,7 @@ pub(crate) fn content_view(
         virtual_list_torture_scroll,
         code_editor_syntax_rust,
         code_editor_boundary_identifier,
+        code_editor_soft_wrap,
     );
     let docs_panel = if (bisect & BISECT_DISABLE_MARKDOWN) != 0 {
         cx.text(docs_md)
@@ -574,6 +576,7 @@ fn page_preview(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -603,12 +606,14 @@ fn page_preview(
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(
             cx,
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
@@ -1930,6 +1935,7 @@ fn preview_code_editor_mvp(
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -1937,6 +1943,9 @@ fn preview_code_editor_mvp(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -1978,6 +1987,27 @@ fn preview_code_editor_mvp(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -2003,6 +2033,7 @@ fn preview_code_editor_mvp(
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(32)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
         .into_element(cx);
 
     let panel = cx.container(
@@ -2036,6 +2067,7 @@ fn preview_code_editor_torture(
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -2043,6 +2075,9 @@ fn preview_code_editor_torture(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2084,6 +2119,27 @@ fn preview_code_editor_torture(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -2109,6 +2165,7 @@ fn preview_code_editor_torture(
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
         .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
         .into_element(cx);
 
