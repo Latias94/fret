@@ -23,6 +23,7 @@ fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-code-view = { path = "../../ecosystem/fret-code-view" }
+fret-code-editor-view = { path = "../../ecosystem/fret-code-editor-view" }
 fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-kit = { path = "../../ecosystem/fret-kit" }
 fret-ui-headless = { path = "../../ecosystem/fret-ui-headless" }

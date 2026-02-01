@@ -1,5 +1,6 @@
 use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
+use fret_code_editor_view as code_editor_view;
 use fret_code_view as code_view;
 use fret_core::{
     AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
@@ -1930,6 +1931,66 @@ fn code_editor_torture_source() -> String {
         .clone()
 }
 
+fn code_editor_word_boundary_fixture() -> String {
+    [
+        "// Word boundary fixture (UI Gallery)\n",
+        "\n",
+        "世界 hello 😀 foo123_bar baz foo.bar\n",
+        "a_b c\t  hello   world\n",
+        "αβγ δ\n",
+    ]
+    .concat()
+}
+
+fn format_word_boundary_debug(text: &str, idx: usize) -> String {
+    let idx = code_editor_view::clamp_to_char_boundary(text, idx).min(text.len());
+
+    fn insert_marker(text: &str, idx: usize) -> String {
+        let idx = code_editor_view::clamp_to_char_boundary(text, idx).min(text.len());
+        let before = text.get(..idx).unwrap_or("");
+        let after = text.get(idx..).unwrap_or("");
+        format!("{before}|{after}")
+    }
+
+    fn insert_brackets(text: &str, range: (usize, usize)) -> String {
+        let (mut a, mut b) = range;
+        if a > b {
+            std::mem::swap(&mut a, &mut b);
+        }
+        a = code_editor_view::clamp_to_char_boundary(text, a).min(text.len());
+        b = code_editor_view::clamp_to_char_boundary(text, b).min(text.len());
+        let before = text.get(..a).unwrap_or("");
+        let mid = text.get(a..b).unwrap_or("");
+        let after = text.get(b..).unwrap_or("");
+        format!("{before}[{mid}]{after}")
+    }
+
+    let unicode = fret_runtime::TextBoundaryMode::UnicodeWord;
+    let ident = fret_runtime::TextBoundaryMode::Identifier;
+
+    let (u_a, u_b) = code_editor_view::select_word_range(text, idx, unicode);
+    let (i_a, i_b) = code_editor_view::select_word_range(text, idx, ident);
+
+    let u_l = code_editor_view::move_word_left(text, idx, unicode);
+    let u_r = code_editor_view::move_word_right(text, idx, unicode);
+    let i_l = code_editor_view::move_word_left(text, idx, ident);
+    let i_r = code_editor_view::move_word_right(text, idx, ident);
+
+    let caret = insert_marker(text, idx);
+    let u_sel = insert_brackets(text, (u_a, u_b));
+    let i_sel = insert_brackets(text, (i_a, i_b));
+
+    [
+        format!("idx={idx}"),
+        format!("caret: {caret}"),
+        format!("UnicodeWord: select={u_a}..{u_b} left={u_l} right={u_r}"),
+        format!("  {u_sel}"),
+        format!("Identifier: select={i_a}..{i_b} left={i_l} right={i_r}"),
+        format!("  {i_sel}"),
+    ]
+    .join("\n")
+}
+
 fn preview_code_editor_mvp(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -1946,6 +2007,40 @@ fn preview_code_editor_mvp(
     let soft_wrap_enabled = cx
         .get_model_copied(&soft_wrap, Invalidation::Layout)
         .unwrap_or(false);
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+        |h| h.clone(),
+    );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
+
+    let word_fixture_loaded = cx.with_state(|| Rc::new(Cell::new(false)), |v| v.clone());
+    let word_idx = cx.with_state(|| Rc::new(Cell::new(0usize)), |v| v.clone());
+    let word_debug = cx.with_state(
+        || Rc::new(std::cell::RefCell::new(String::new())),
+        |v| v.clone(),
+    );
+
+    let syntax_rust_switch = syntax_rust.clone();
+    let boundary_identifier_switch = boundary_identifier.clone();
+    let boundary_identifier_for_harness = boundary_identifier.clone();
+    let soft_wrap_switch = soft_wrap.clone();
+    let handle_for_harness = handle.clone();
+    let word_debug_for_harness = word_debug.clone();
+    let word_debug_for_render = word_debug.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -1960,7 +2055,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(syntax_rust.clone())
+                            shadcn::Switch::new(syntax_rust_switch.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
                                 .into_element(cx),
                             cx.text(if syntax_enabled {
@@ -1976,7 +2071,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(boundary_identifier.clone())
+                            shadcn::Switch::new(boundary_identifier_switch.clone())
                                 .a11y_label("Toggle identifier word boundaries")
                                 .into_element(cx),
                             cx.text(if boundary_identifier_enabled {
@@ -1997,7 +2092,7 @@ fn preview_code_editor_mvp(
                                 .size(shadcn::ButtonSize::Sm)
                                 .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
                                 .into_element(cx),
-                            shadcn::Switch::new(soft_wrap.clone())
+                            shadcn::Switch::new(soft_wrap_switch.clone())
                                 .a11y_label("Toggle soft wrap at 80 columns")
                                 .into_element(cx),
                             cx.text(if soft_wrap_enabled {
@@ -2008,28 +2103,235 @@ fn preview_code_editor_mvp(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        let fixture = code_editor_word_boundary_fixture();
+                        let text_len = fixture.len();
+                        let idx = word_idx.get().min(text_len);
+                        if word_debug_for_harness.borrow().is_empty() {
+                            *word_debug_for_harness.borrow_mut() =
+                                format_word_boundary_debug(&fixture, idx);
+                        }
+
+                        let apply_fixture_handle = handle_for_harness.clone();
+                        let apply_fixture_loaded = word_fixture_loaded.clone();
+                        let apply_fixture_idx = word_idx.clone();
+                        let apply_fixture_debug = word_debug_for_harness.clone();
+                        let apply_fixture: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let fixture = code_editor_word_boundary_fixture();
+                                apply_fixture_handle.set_text(fixture.clone());
+                                apply_fixture_handle.set_caret(0);
+                                apply_fixture_loaded.set(true);
+                                apply_fixture_idx.set(0);
+                                *apply_fixture_debug.borrow_mut() =
+                                    format_word_boundary_debug(&fixture, 0);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_char_loaded = word_fixture_loaded.clone();
+                        let prev_char_idx = word_idx.clone();
+                        let prev_char_debug = word_debug_for_harness.clone();
+                        let prev_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_char_loaded.get() {
+                                    return;
+                                }
+                                let text = code_editor_word_boundary_fixture();
+                                let cur = prev_char_idx.get().min(text.len());
+                                let next = code_editor_view::prev_char_boundary(&text, cur);
+                                prev_char_idx.set(next);
+                                *prev_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(&text, next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_char_loaded = word_fixture_loaded.clone();
+                        let next_char_idx = word_idx.clone();
+                        let next_char_debug = word_debug_for_harness.clone();
+                        let next_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_char_loaded.get() {
+                                    return;
+                                }
+                                let text = code_editor_word_boundary_fixture();
+                                let cur = next_char_idx.get().min(text.len());
+                                let next = code_editor_view::next_char_boundary(&text, cur);
+                                next_char_idx.set(next);
+                                *next_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(&text, next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_word_loaded = word_fixture_loaded.clone();
+                        let prev_word_idx = word_idx.clone();
+                        let prev_word_debug = word_debug_for_harness.clone();
+                        let prev_word_mode = boundary_identifier_for_harness.clone();
+                        let prev_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_word_loaded.get() {
+                                    return;
+                                }
+                                let text = code_editor_word_boundary_fixture();
+                                let cur = prev_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&prev_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_left(&text, cur, mode);
+                                prev_word_idx.set(next);
+                                *prev_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(&text, next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_word_loaded = word_fixture_loaded.clone();
+                        let next_word_idx = word_idx.clone();
+                        let next_word_debug = word_debug_for_harness.clone();
+                        let next_word_mode = boundary_identifier_for_harness.clone();
+                        let next_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_word_loaded.get() {
+                                    return;
+                                }
+                                let text = code_editor_word_boundary_fixture();
+                                let cur = next_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&next_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_right(&text, cur, mode);
+                                next_word_idx.set(next);
+                                *next_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(&text, next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_caret_loaded = word_fixture_loaded.clone();
+                        let apply_caret_idx = word_idx.clone();
+                        let apply_caret_handle = handle_for_harness.clone();
+                        let apply_caret: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_caret_loaded.get() {
+                                    return;
+                                }
+                                let text = code_editor_word_boundary_fixture();
+                                let idx = apply_caret_idx.get().min(text.len());
+                                apply_caret_handle.set_caret(idx);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_word_loaded = word_fixture_loaded.clone();
+                        let apply_word_idx = word_idx.clone();
+                        let apply_word_handle = handle_for_harness.clone();
+                        let apply_word_mode = boundary_identifier_for_harness.clone();
+                        let apply_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_word_loaded.get() {
+                                    return;
+                                }
+                                let text = code_editor_word_boundary_fixture();
+                                let idx = apply_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&apply_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let (a, b) = code_editor_view::select_word_range(&text, idx, mode);
+                                apply_word_handle.set_selection(code_editor::Selection {
+                                    anchor: a,
+                                    focus: b,
+                                });
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        vec![
+                            shadcn::Button::new("Load word-boundary fixture")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_fixture)
+                                .into_element(cx),
+                            shadcn::Button::new("Prev char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Prev word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply caret")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_caret)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply selection")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                        ]
+                    },
+                ),
+                cx.keyed("word-boundary-debug", |cx| {
+                    let debug = word_debug_for_render.borrow().clone();
+                    let rich = AttributedText::new(
+                        Arc::<str>::from(debug.clone()),
+                        [TextSpan::new(debug.len())],
+                    );
+                    let mut props = fret_ui::element::StyledTextProps::new(rich);
+                    props.style = Some(TextStyle {
+                        font: FontId::monospace(),
+                        size: Px(12.0),
+                        ..Default::default()
+                    });
+                    props.wrap = TextWrap::None;
+                    props.overflow = TextOverflow::Clip;
+                    cx.styled_text_props(props)
+                }),
             ]
         },
     );
-
-    let handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
-        |h| h.clone(),
-    );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_applied.get() != Some(syntax_enabled) {
-        handle.set_language(if syntax_enabled { Some("rust") } else { None });
-        last_applied.set(Some(syntax_enabled));
-    }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_boundaries.get() != Some(boundary_identifier_enabled) {
-        handle.set_text_boundary_mode(if boundary_identifier_enabled {
-            fret_runtime::TextBoundaryMode::Identifier
-        } else {
-            fret_runtime::TextBoundaryMode::UnicodeWord
-        });
-        last_boundaries.set(Some(boundary_identifier_enabled));
-    }
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(32)

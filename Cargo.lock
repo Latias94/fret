@@ -1528,6 +1528,7 @@ dependencies = [
  "fret-canvas",
  "fret-chart",
  "fret-code-editor",
+ "fret-code-editor-view",
  "fret-code-view",
  "fret-core",
  "fret-icons",
