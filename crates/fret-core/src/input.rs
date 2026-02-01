@@ -122,6 +122,18 @@ pub struct WebImeBridgeDebugSnapshot {
     pub composing: bool,
     pub suppress_next_input: bool,
 
+    /// Where the hidden textarea is positioned.
+    ///
+    /// This is intentionally stringly-typed to keep the snapshot portable across runners.
+    /// Expected values: `"absolute"`, `"fixed"`, or `None` if not initialized.
+    pub position_mode: Option<String>,
+    /// Describes what the textarea is mounted into.
+    ///
+    /// Expected values: `"overlay"`, `"mount"`, `"body"`, or `None` if not initialized.
+    pub mount_kind: Option<String>,
+    /// Device pixel ratio at the time the bridge was initialized or last updated.
+    pub device_pixel_ratio: Option<f64>,
+
     pub last_input_type: Option<String>,
     pub last_beforeinput_data: Option<String>,
     pub last_input_data: Option<String>,
