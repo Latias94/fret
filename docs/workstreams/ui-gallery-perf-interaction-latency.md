@@ -48,8 +48,34 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/<script>.json `
 cargo run -p fretboard -- diag stats <bundle.json> --sort time --top 1 --json
 ```
 
+## Repro: Sidebar “Card” click
+
+Script:
+
+- `tools/diag-scripts/ui-gallery-nav-card-click-latency.json`
+
+Run (debug build):
+
+```powershell
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-nav-card-click-latency.json `
+  --env FRET_UI_GALLERY_START_PAGE=button `
+  --launch -- cargo run -p fret-ui-gallery
+```
+
+Then summarize the “second click” bundle (look for `*-ui-gallery-nav-card-click-latency-second/bundle.json`):
+
+```powershell
+cargo run -p fretboard -- diag stats target/fret-diag/<dir>/bundle.json --sort time --top 1
+```
+
+Notes:
+
+- Prefer `diag run` + `diag stats` for interaction latency triage: `diag perf` can attribute work to the click step that
+  injected input, but the slow frame may be the *next* render/present.
+- When the UI “feels stuck”, check `frame delta (ms)` in `diag stats` output. A large `dt_ms` on the top row indicates a
+  long delay between frames (not just an expensive frame).
+
 ## Notes
 
 - If the perf report cannot attribute time to a meaningful region, add minimal `test_id` anchors at the demo surface
   (UI Gallery first) or the component layer (shadcn) so `diag stats` nested children become actionable.
-
