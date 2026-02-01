@@ -5,6 +5,7 @@
 
 use fret_code_editor_buffer::TextBuffer;
 use fret_runtime::TextBoundaryMode;
+use std::ops::Range;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -82,6 +83,45 @@ impl DisplayMap {
 
     pub fn wrap_cols(&self) -> Option<usize> {
         self.wrap_cols
+    }
+
+    pub fn display_row_line(&self, display_row: usize) -> usize {
+        if self.row_to_line.is_empty() {
+            return 0;
+        }
+        let row = display_row.min(self.row_to_line.len().saturating_sub(1));
+        self.row_to_line[row]
+    }
+
+    pub fn display_row_byte_range(&self, buf: &TextBuffer, display_row: usize) -> Range<usize> {
+        if self.row_to_line.is_empty() {
+            return 0..0;
+        }
+
+        let row = display_row.min(self.row_to_line.len().saturating_sub(1));
+        let line = self.row_to_line[row];
+        let Some(line_range) = buf.line_byte_range(line) else {
+            return buf.len_bytes()..buf.len_bytes();
+        };
+
+        let start = self.display_point_to_byte(buf, DisplayPoint::new(row, 0));
+        let start = start.min(line_range.end).max(line_range.start);
+
+        let end = match self.wrap_cols {
+            None => line_range.end,
+            Some(_) => {
+                if row.saturating_add(1) < self.row_to_line.len()
+                    && self.row_to_line[row + 1] == line
+                {
+                    let next = self.display_point_to_byte(buf, DisplayPoint::new(row + 1, 0));
+                    next.min(line_range.end).max(start)
+                } else {
+                    line_range.end.max(start)
+                }
+            }
+        };
+
+        start..end
     }
 
     /// Map a UTF-8 byte index in the buffer to a wrapped display coordinate.
@@ -563,5 +603,39 @@ mod display_map_tests {
             let back = map.display_point_to_byte(&buf, pt);
             assert_eq!(back, byte);
         }
+    }
+
+    #[test]
+    fn display_row_byte_range_matches_logical_line_without_wrap() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "ab\nc".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, None);
+
+        assert_eq!(map.display_row_byte_range(&buf, 0), 0..2);
+        assert_eq!(map.display_row_byte_range(&buf, 1), 3..4);
+    }
+
+    #[test]
+    fn display_row_byte_range_slices_wrapped_rows() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "abcd\nef".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, Some(2));
+
+        assert_eq!(map.display_row_byte_range(&buf, 0), 0..2);
+        assert_eq!(map.display_row_byte_range(&buf, 1), 2..4);
+        assert_eq!(map.display_row_byte_range(&buf, 2), 5..7);
+    }
+
+    #[test]
+    fn display_row_byte_range_handles_multibyte_chars() {
+        let doc = DocId::new();
+        let buf = TextBuffer::new(doc, "a😃b".to_string()).unwrap();
+        let map = DisplayMap::new(&buf, Some(2));
+
+        assert_eq!(map.display_row_byte_range(&buf, 0), 0..(1 + "😃".len()));
+        assert_eq!(
+            map.display_row_byte_range(&buf, 1),
+            (1 + "😃".len())..buf.len_bytes()
+        );
     }
 }
