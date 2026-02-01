@@ -615,6 +615,36 @@ fn find_best_background_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad>
     best
 }
 
+fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
+    let mut best: Option<PaintedQuad> = None;
+    let mut best_score = f32::INFINITY;
+
+    for op in scene.ops() {
+        let SceneOp::Quad {
+            rect, background, ..
+        } = *op
+        else {
+            continue;
+        };
+
+        if background.a <= 0.001 {
+            continue;
+        }
+
+        let score = (rect.origin.x.0 - target.origin.x.0).abs()
+            + (rect.origin.y.0 - target.origin.y.0).abs()
+            + (rect.size.width.0 - target.size.width.0).abs()
+            + (rect.size.height.0 - target.size.height.0).abs();
+
+        if score < best_score {
+            best_score = score;
+            best = Some(PaintedQuad { rect, background });
+        }
+    }
+
+    best
+}
+
 fn assert_rect_xwh_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) {
     assert_close_px(&format!("{label} x"), actual.origin.x, expected.x, tol);
     assert_close_px(&format!("{label} w"), actual.size.width, expected.w, tol);
@@ -22054,36 +22084,8 @@ fn web_vs_fret_layout_calendar_14_selected_day_background_matches_web() {
             Px(web_selected_button.rect.h),
         ),
     );
-    // Prefer an opaque quad so focus rings / transparent chrome don't win the "closest rect" match.
-    let quad = {
-        let mut best: Option<PaintedQuad> = None;
-        let mut best_score = f32::INFINITY;
-
-        for op in scene.ops() {
-            let SceneOp::Quad {
-                rect, background, ..
-            } = *op
-            else {
-                continue;
-            };
-
-            if background.a <= 0.001 {
-                continue;
-            }
-
-            let score = (rect.origin.x.0 - target.origin.x.0).abs()
-                + (rect.origin.y.0 - target.origin.y.0).abs()
-                + (rect.size.width.0 - target.size.width.0).abs()
-                + (rect.size.height.0 - target.size.height.0).abs();
-
-            if score < best_score {
-                best_score = score;
-                best = Some(PaintedQuad { rect, background });
-            }
-        }
-
-        best.expect("painted opaque selected day background quad")
-    };
+    let quad = find_best_opaque_background_quad(&scene, target)
+        .expect("painted opaque selected day background quad");
 
     assert_rect_xwh_close_px(
         "calendar-14 selected day quad",
@@ -22093,6 +22095,205 @@ fn web_vs_fret_layout_calendar_14_selected_day_background_matches_web() {
     );
     assert_rgba_close(
         "calendar-14 selected day background",
+        color_to_rgba(quad.background),
+        expected_bg,
+        0.02,
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_calendar_04_range_middle_day_background_matches_web() {
+    let web = read_web_golden("calendar-04");
+    let theme = web_theme(&web);
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+
+    let web_padding_left = web_css_px(web_rdp_root, "paddingLeft");
+    let web_border_left = web_css_px(web_rdp_root, "borderLeftWidth");
+
+    let web_month_grid = find_first_in_theme(theme, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    })
+    .expect("web month grid");
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(!web_day_buttons.is_empty(), "expected calendar day buttons");
+
+    let web_selected_dates: Vec<time::Date> = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .filter_map(|label| parse_calendar_day_aria_label(label).filter(|(_, sel)| *sel))
+        .map(|(d, _)| d)
+        .collect();
+    assert!(
+        web_selected_dates.len() >= 3,
+        "expected at least 3 selected dates for calendar-04 (range mode)"
+    );
+
+    let (range_min, range_max) = web_selected_dates.iter().copied().fold(
+        (web_selected_dates[0], web_selected_dates[0]),
+        |(min, max), d| (min.min(d), max.max(d)),
+    );
+
+    let web_range_middle_cell =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-range_middle"))
+            .expect("web range-middle day cell");
+    let web_range_middle_button = find_first(web_range_middle_cell, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    })
+    .expect("web range-middle day button");
+
+    let web_bg_css = web_range_middle_button
+        .computed_style
+        .get("backgroundColor")
+        .expect("web range-middle day backgroundColor");
+    let expected_bg =
+        parse_css_color(web_bg_css).unwrap_or_else(|| panic!("invalid css color: {web_bg_css}"));
+
+    let web_weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = web_weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let web_today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let web_show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+    let web_show_outside_days =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-outside")).is_some();
+
+    let web_disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let cell_size =
+        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_range_middle_button.rect.w));
+
+    let chrome_override = {
+        let mut chrome = ChromeRefinement::default();
+        if (web_padding_left.0 - 0.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N0);
+        } else if (web_padding_left.0 - 12.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N3);
+        } else if (web_padding_left.0 - 8.0).abs() < 0.5 {
+            chrome = chrome.p(Space::N2);
+        }
+        if web_border_left.0 >= 0.5 {
+            chrome = chrome.border_1();
+        }
+        chrome
+    };
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let (_snap, scene) = render_and_paint_in_bounds(bounds, |cx| {
+        use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
+
+        let month_model: Model<CalendarMonth> =
+            cx.app.models_mut().insert(CalendarMonth::new(year, month));
+        let selected: Model<DateRangeSelection> = cx.app.models_mut().insert(DateRangeSelection {
+            from: Some(range_min),
+            to: Some(range_max),
+        });
+
+        let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+            .week_start(week_start)
+            .show_outside_days(web_show_outside_days)
+            .disable_outside_days(web_disable_outside_days)
+            .show_week_number(web_show_week_number)
+            .refine_style(chrome_override)
+            .cell_size(cell_size);
+
+        if let Some(today) = web_today {
+            calendar = calendar.today(today);
+        }
+
+        let calendar = calendar.into_element(cx);
+        let calendar = cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                padding: fret_core::Edges {
+                    left: Px(web_origin_x),
+                    top: Px(web_origin_y),
+                    right: Px(0.0),
+                    bottom: Px(0.0),
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![calendar],
+        );
+
+        vec![calendar]
+    });
+
+    let target = Rect::new(
+        Point::new(
+            Px(web_range_middle_button.rect.x),
+            Px(web_range_middle_button.rect.y),
+        ),
+        CoreSize::new(
+            Px(web_range_middle_button.rect.w),
+            Px(web_range_middle_button.rect.h),
+        ),
+    );
+    let quad = find_best_opaque_background_quad(&scene, target)
+        .expect("painted opaque range-middle day background quad");
+
+    assert_rect_xwh_close_px(
+        "calendar-04 range-middle day quad",
+        quad.rect,
+        web_range_middle_button.rect,
+        3.0,
+    );
+    assert_rgba_close(
+        "calendar-04 range-middle day background",
         color_to_rgba(quad.background),
         expected_bg,
         0.02,
