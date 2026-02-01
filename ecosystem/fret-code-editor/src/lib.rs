@@ -242,6 +242,30 @@ impl CodeEditorHandle {
         }
     }
 
+    pub fn selection(&self) -> Selection {
+        self.state.borrow().selection
+    }
+
+    pub fn set_selection(&self, selection: Selection) {
+        let mut st = self.state.borrow_mut();
+        let max = st.buffer.len_bytes();
+        let anchor = selection.anchor.min(max);
+        let focus = selection.focus.min(max);
+        st.selection = Selection { anchor, focus };
+        st.preedit = None;
+        st.undo_group = None;
+        st.dragging = false;
+        st.drag_pointer = None;
+    }
+
+    pub fn set_caret(&self, caret: usize) {
+        let caret = caret.min(self.state.borrow().buffer.len_bytes());
+        self.set_selection(Selection {
+            anchor: caret,
+            focus: caret,
+        });
+    }
+
     pub fn text_boundary_mode(&self) -> TextBoundaryMode {
         self.state.borrow().text_boundary_mode
     }
