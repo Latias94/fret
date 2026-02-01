@@ -1429,7 +1429,8 @@ fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool) {
     } else {
         pt.row.saturating_add(delta as usize)
     };
-    let next_row = next_row.min(st.buffer.line_count().saturating_sub(1));
+    let max_row = st.display_map.row_count().saturating_sub(1);
+    let next_row = next_row.min(max_row);
     let next = st
         .display_map
         .display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col));
@@ -2379,6 +2380,30 @@ mod tests {
         let new_focus = map_a11y_offset_to_buffer(text, start, end, focus);
         assert_eq!(new_anchor, 0);
         assert_eq!(new_focus, "hello".len());
+    }
+
+    #[test]
+    fn move_caret_vertical_clamps_in_display_row_space_when_wrapped() {
+        let handle = CodeEditorHandle::new("abcd\nef");
+        handle.set_soft_wrap_cols(Some(2));
+
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+
+        // Row 0 col 0 -> Down => row 1 col 0 (within the wrapped "abcd").
+        move_caret_vertical(&mut st, 1, false);
+        assert_eq!(st.selection.caret(), 2);
+
+        // Row 1 col 0 -> Down => row 2 col 0 (next logical line "ef").
+        move_caret_vertical(&mut st, 1, false);
+        assert_eq!(st.selection.caret(), 5);
+
+        // Row 2 is the last display row; another Down should clamp.
+        move_caret_vertical(&mut st, 1, false);
+        assert_eq!(st.selection.caret(), 5);
     }
 
     #[cfg(feature = "syntax-rust")]
