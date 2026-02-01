@@ -123,6 +123,22 @@ struct SyntaxSpan {
     highlight: &'static str,
 }
 
+/// Lightweight counters for editor-local caches (bundle-friendly, no allocations).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CodeEditorCacheStats {
+    pub row_text_get_calls: u64,
+    pub row_text_hits: u64,
+    pub row_text_misses: u64,
+    pub row_text_evictions: u64,
+    pub row_text_resets: u64,
+
+    pub syntax_get_calls: u64,
+    pub syntax_hits: u64,
+    pub syntax_misses: u64,
+    pub syntax_evictions: u64,
+    pub syntax_resets: u64,
+}
+
 #[derive(Debug, Clone)]
 struct CodeEditorState {
     buffer: TextBuffer,
@@ -136,6 +152,7 @@ struct CodeEditorState {
     dragging: bool,
     drag_pointer: Option<fret_core::PointerId>,
     last_bounds: Option<Rect>,
+    cache_stats: CodeEditorCacheStats,
     row_text_cache_rev: fret_code_editor_buffer::Revision,
     row_text_cache_wrap_cols: Option<usize>,
     row_text_cache_tick: u64,
@@ -186,6 +203,7 @@ impl CodeEditorHandle {
                 dragging: false,
                 drag_pointer: None,
                 last_bounds: None,
+                cache_stats: CodeEditorCacheStats::default(),
                 row_text_cache_rev: fret_code_editor_buffer::Revision(0),
                 row_text_cache_wrap_cols: None,
                 row_text_cache_tick: 0,
@@ -212,6 +230,7 @@ impl CodeEditorHandle {
         {
             let mut st = self.state.borrow_mut();
             st.language = language.map(Into::into);
+            st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
             st.syntax_row_cache_language = None;
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
@@ -225,6 +244,14 @@ impl CodeEditorHandle {
 
     pub fn text_boundary_mode(&self) -> TextBoundaryMode {
         self.state.borrow().text_boundary_mode
+    }
+
+    pub fn cache_stats(&self) -> CodeEditorCacheStats {
+        self.state.borrow().cache_stats
+    }
+
+    pub fn reset_cache_stats(&self) {
+        self.state.borrow_mut().cache_stats = CodeEditorCacheStats::default();
     }
 
     pub fn set_text_boundary_mode(&self, mode: TextBoundaryMode) {
@@ -246,6 +273,7 @@ impl CodeEditorHandle {
         st.dragging = false;
         st.drag_pointer = None;
         st.last_bounds = None;
+        st.cache_stats = CodeEditorCacheStats::default();
         st.refresh_display_map();
         st.row_text_cache_rev = st.buffer.revision();
         st.row_text_cache_tick = 0;
@@ -1992,6 +2020,7 @@ fn paint_row(
 }
 
 fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> Arc<str> {
+    st.cache_stats.row_text_get_calls = st.cache_stats.row_text_get_calls.saturating_add(1);
     let rev = st.buffer.revision();
     let wrap_cols = st.display_wrap_cols;
     if st.row_text_cache_rev != rev || st.row_text_cache_wrap_cols != wrap_cols {
@@ -2000,6 +2029,7 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
     }
 
     st.row_text_cache_tick = st.row_text_cache_tick.saturating_add(1);
@@ -2008,8 +2038,10 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
     if let Some((text, last_used)) = st.row_text_cache.get_mut(&row) {
         *last_used = tick;
         st.row_text_cache_queue.push_back((row, tick));
+        st.cache_stats.row_text_hits = st.cache_stats.row_text_hits.saturating_add(1);
         return Arc::clone(text);
     }
+    st.cache_stats.row_text_misses = st.cache_stats.row_text_misses.saturating_add(1);
 
     let range = st.display_map.display_row_byte_range(&st.buffer, row);
     let text = st.buffer.text().get(range).unwrap_or("").to_string().into();
@@ -2026,6 +2058,7 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
             .is_some_and(|(_, last_used)| *last_used == victim_tick);
         if remove {
             st.row_text_cache.remove(&victim);
+            st.cache_stats.row_text_evictions = st.cache_stats.row_text_evictions.saturating_add(1);
         }
     }
 
@@ -2160,7 +2193,13 @@ fn invalidate_syntax_row_cache_for_delta(
             .retain(|row, _| *row < start || *row > end);
     }
 
-    if st.syntax_row_cache.len() != before_len {
+    let after_len = st.syntax_row_cache.len();
+    if after_len != before_len {
+        let removed = before_len.saturating_sub(after_len);
+        st.cache_stats.syntax_evictions = st
+            .cache_stats
+            .syntax_evictions
+            .saturating_add(removed as u64);
         rebuild_syntax_row_cache_queue(st);
     }
 }
@@ -2182,6 +2221,7 @@ fn cached_row_syntax_spans(
     row: usize,
     max_entries: usize,
 ) -> Arc<[SyntaxSpan]> {
+    st.cache_stats.syntax_get_calls = st.cache_stats.syntax_get_calls.saturating_add(1);
     let rev = st.buffer.revision();
     if st.syntax_row_cache_rev != rev || st.syntax_row_cache_language != st.language {
         st.syntax_row_cache_rev = rev;
@@ -2189,6 +2229,7 @@ fn cached_row_syntax_spans(
         st.syntax_row_cache_tick = 0;
         st.syntax_row_cache.clear();
         st.syntax_row_cache_queue.clear();
+        st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
     }
 
     st.syntax_row_cache_tick = st.syntax_row_cache_tick.saturating_add(1);
@@ -2197,8 +2238,10 @@ fn cached_row_syntax_spans(
     if let Some((spans, last_used)) = st.syntax_row_cache.get_mut(&row) {
         *last_used = tick;
         st.syntax_row_cache_queue.push_back((row, tick));
+        st.cache_stats.syntax_hits = st.cache_stats.syntax_hits.saturating_add(1);
         return Arc::clone(spans);
     }
+    st.cache_stats.syntax_misses = st.cache_stats.syntax_misses.saturating_add(1);
 
     let language = st.language.clone();
     let Some(language) = language.as_deref() else {
@@ -2334,6 +2377,7 @@ fn populate_syntax_row_cache_for_chunk(
                 .is_some_and(|(_, last_used)| *last_used == victim_tick);
             if remove {
                 st.syntax_row_cache.remove(&victim);
+                st.cache_stats.syntax_evictions = st.cache_stats.syntax_evictions.saturating_add(1);
             }
         }
     }
@@ -2493,6 +2537,28 @@ mod tests {
         handle.replace_buffer(buffer);
 
         assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
+    }
+
+    #[test]
+    fn row_text_cache_stats_tracks_hits_and_misses() {
+        let handle = CodeEditorHandle::new("hello\nworld");
+        handle.reset_cache_stats();
+
+        {
+            let mut st = handle.state.borrow_mut();
+            assert_eq!(st.cache_stats.row_text_get_calls, 0);
+            assert_eq!(st.cache_stats.row_text_hits, 0);
+            assert_eq!(st.cache_stats.row_text_misses, 0);
+
+            let a = cached_row_text(&mut st, 0, 8);
+            let b = cached_row_text(&mut st, 0, 8);
+
+            assert_eq!(a.as_ref(), "hello");
+            assert_eq!(b.as_ref(), "hello");
+            assert_eq!(st.cache_stats.row_text_get_calls, 2);
+            assert_eq!(st.cache_stats.row_text_hits, 1);
+            assert_eq!(st.cache_stats.row_text_misses, 1);
+        }
     }
 
     #[test]
