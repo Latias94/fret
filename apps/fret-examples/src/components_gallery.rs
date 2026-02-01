@@ -349,6 +349,11 @@ impl ComponentsGalleryDriver {
                                     props.row_height = Some(Px(28.0));
                                     props.row_measure_mode =
                                         fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed;
+                                    props.keep_alive = std::env::var(
+                                        "FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE",
+                                    )
+                                    .ok()
+                                    .and_then(|v| v.parse().ok());
                                     props.enable_column_grouping = false;
                                     props.enable_column_resizing = false;
 
