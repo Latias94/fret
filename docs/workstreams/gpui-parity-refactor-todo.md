@@ -652,6 +652,7 @@ topics (if/when we implement them):
         - `debug.retained_virtual_list_reconciles[*].reconcile_time_us` provides coarse wall-time attribution for the retained-host reconcile work.
         - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` exports these fields to bundles.
         - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-min <n>` (use on `*window-boundary*` scripts).
+        - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-max <n>` (guards against runaway steady-state prefetch).
       - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (v2 addendum; staged prefetch + budgets).
     - [~] Tune staged prefetch thresholds so steady-state overhead stays low.
       - Goal: avoid prefetching too early/often; prefetch should trigger mainly when approaching escape (or when predicted escape deltas would be large).
