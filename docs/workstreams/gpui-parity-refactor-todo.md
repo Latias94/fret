@@ -654,11 +654,15 @@ topics (if/when we implement them):
         - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-min <n>` (use on `*window-boundary*` scripts).
         - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-max <n>` (guards against runaway steady-state prefetch).
       - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (v2 addendum; staged prefetch + budgets).
-    - [~] Tune staged prefetch thresholds so steady-state overhead stays low.
+    - [x] Tune staged prefetch thresholds so steady-state overhead stays low.
       - Goal: avoid prefetching too early/often; prefetch should trigger mainly when approaching escape (or when predicted escape deltas would be large).
       - Evidence should show: fewer `window_shift_kind=prefetch` frames under slow scroll, while still bounding `attached_items+detached_items` deltas on boundary ticks.
-      - Current tuning: `prefetch_margin = (overscan / 4).max(1)` and `prefetch_step = prefetch_margin`.
-      - Next: bring the tree retained window-boundary harness down to a `prefetch_reconciles_max=30` budget if possible (it currently needs ~40).
+      - Current tuning:
+        - `prefetch_margin = (overscan / 6).max(1)`
+        - `prefetch_step = (overscan * 3 / 2).max(prefetch_margin).max(1)`
+        - Direction hint: when both ends are "near", prefer the last observed scroll direction to avoid prefetch oscillation.
+      - Tree retained harness now fits a `prefetch_reconciles_max=30` budget.
+        - Evidence: `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch30-directionState/1769921894057-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
     - [x] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
       - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (marks retained hosts for reconcile),
         `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
@@ -717,8 +721,8 @@ topics (if/when we implement them):
               - PASS: `fretboard diag suite ui-gallery-virt-retained --check-retained-vlist-prefetch-reconciles-min 1`
               - Evidence: `target/fret-diag-perf-ui-gallery-virt-retained-suite-prefetch7/1769911980127-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
       - Additional retained-host consumers (staged prefetch evidence + budgets):
-        - Tree (default budget `--check-retained-vlist-prefetch-reconciles-max 40`):
-          - `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch9/1769913766043-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - Tree (default budget `--check-retained-vlist-prefetch-reconciles-max 30`):
+          - `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch30-directionState/1769921894057-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
         - DataTable (default budget `--check-retained-vlist-prefetch-reconciles-max 30`):
           - `target/fret-diag-perf-ui-gallery-data-table-retained-suite-prefetch10/1769913856566-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
   - Definition of done (v2; mark `[x]` when all are true):
