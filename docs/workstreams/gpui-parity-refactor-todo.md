@@ -681,7 +681,7 @@ topics (if/when we implement them):
         - `tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json`
       - Note: retained-vlist *window-boundary* gates are applied only to scripts named `*window-boundary*` when running multi-script suites
         (toggle/sort scripts still run, but are gated by stale-paint / wheel-scroll / view-cache reuse, etc.).
-    - [~] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
+    - [x] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
       - Note: the window-boundary scripts use `wait_until` to assert a row is mounted; the stable test id is
         `components-gallery-file-tree-node-<TreeItemId>` (e.g. `...-node-1`), not `...-node-0`.
       - Baseline recorded (warmup=5; prefetch not implemented / not enabled; attach/detach deltas are larger per shift):
@@ -1154,8 +1154,15 @@ topics (if/when we implement them):
       - Closure gate (must stay green):
         - `fretboard diag suite ui-gallery-file-tree-torture --launch -- cargo run -p fret-ui-gallery --release`
         - `fretboard diag suite ui-gallery-file-tree-torture-interactive --launch -- cargo run -p fret-ui-gallery --release`
-    - [ ] Add a short “candidate surface list” with anchors to real code (as it appears) once `ecosystem/fret-workspace` / `apps/fret-editor` contains
-      concrete outline/file-tree/property-list UI surfaces (not just protocols).
+    - [x] Add a short “candidate surface list” with anchors to real code (as it appears).
+      - Workspace shell surfaces (today):
+        - Pane tree + split resize + tab drag/drop: `ecosystem/fret-workspace/src/panes.rs` (`workspace_pane_tree_element_with_resize`)
+        - Tab strip (potentially large; needs stable cache roots + paint-only chrome for hover/drag indicators): `ecosystem/fret-workspace/src/tab_strip.rs` (`WorkspaceTabStrip::into_element`)
+        - Tab MRU/dirty state model (feeds the tab strip): `ecosystem/fret-workspace/src/tabs.rs` (`WorkspaceTabs`)
+      - Inspector/properties surfaces (future; `apps/fret-editor` currently only has protocol/services):
+        - Property edit plumbing: `apps/fret-editor/src/property_edit.rs` (`PropertyEditService`), `apps/fret-editor/src/inspector_edit.rs` (`InspectorEditService`)
+        - Policy recommendation when a real inspector UI lands: adopt retained-host windowed rows by default (ADR 0190/0192),
+          and keep row hover/selection chrome paint-only (ADR 0181) so cache-hit frames remain correct.
     - [x] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
       - Target (v0): `apps/fret-examples/src/components_gallery.rs` (file-tree panel).
       - Scripts:
