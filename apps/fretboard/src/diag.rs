@@ -1225,6 +1225,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
             let is_ui_gallery_vlist_window_boundary_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
+            let is_ui_gallery_ui_kit_list_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
             let is_ui_gallery_inspector_torture_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture";
             let is_ui_gallery_file_tree_torture_suite =
@@ -1472,6 +1474,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_ui_kit_list_retained_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -2242,6 +2254,40 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .or(Some("ui-gallery-virtual-list-row-0-label".to_string()));
             }
 
+            if is_ui_gallery_ui_kit_list_retained_suite {
+                if warmup_frames == 0 {
+                    warmup_frames = 5;
+                }
+                for (k, v) in [
+                    ("FRET_UI_GALLERY_VIEW_CACHE", "1"),
+                    ("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1"),
+                    // Keep this harness bounded; the suite only needs enough history to validate
+                    // scroll-window stability and stale-paint correctness.
+                    ("FRET_DIAG_MAX_EVENTS", "5000"),
+                    ("FRET_DIAG_MAX_SNAPSHOTS", "80"),
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "2000"),
+                    // We only gate on stable test IDs (not full semantics trees); keep bundles small.
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    // Keep the list length large enough to cross multiple window boundaries, but
+                    // avoid unbounded semantics snapshots if something regresses.
+                    ("FRET_UI_GALLERY_UI_KIT_LIST_LEN", "2000"),
+                    // Disable per-step dumps; this suite relies on explicit `capture_bundle` in the script.
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
+
+                check_retained_vlist_scroll_window_dirty_max =
+                    check_retained_vlist_scroll_window_dirty_max.or(Some(0));
+                check_view_cache_reuse_min = check_view_cache_reuse_min.or(Some(5));
+                check_wheel_scroll_test_id = check_wheel_scroll_test_id
+                    .or(Some("ui-gallery-ui-kit-list-row-0-label".to_string()));
+                check_stale_paint_test_id = check_stale_paint_test_id
+                    .or(Some("ui-gallery-ui-kit-list-row-0-label".to_string()));
+            }
+
             if is_ui_gallery_inspector_torture_suite {
                 if warmup_frames == 0 {
                     warmup_frames = 5;
@@ -2707,15 +2753,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         }
                     }
 
-                    let bundle_dir = result
-                        .last_bundle_dir
-                        .as_deref()
-                        .filter(|s| !s.trim().is_empty())
-                        .map(PathBuf::from);
-
-                    if let Some(bundle_dir) = bundle_dir {
-                        let bundle_path =
-                            resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
+                    if let Some(bundle_path) = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    ) {
                         let mut report = bundle_stats_from_path(
                             &bundle_path,
                             stats_top.max(1),
@@ -2901,13 +2944,12 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         }
                     }
 
-                    let bundle_dir = result
-                        .last_bundle_dir
-                        .as_deref()
-                        .filter(|s| !s.trim().is_empty())
-                        .map(PathBuf::from);
-
-                    let Some(bundle_dir) = bundle_dir else {
+                    let Some(bundle_path) = wait_for_bundle_json_from_script_result(
+                        &resolved_out_dir,
+                        &result,
+                        timeout_ms,
+                        poll_ms,
+                    ) else {
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
                                 "script": src.display().to_string(),
@@ -2929,8 +2971,6 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         break;
                     };
 
-                    let bundle_path =
-                        resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir.clone()));
                     let mut report =
                         bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
                     if warmup_frames > 0 && report.top.is_empty() {
