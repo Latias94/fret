@@ -20,6 +20,8 @@ Recent changes (2026-02-01):
 - Editor: add word navigation/deletion shortcuts (`Ctrl/Alt+Arrow`, `Ctrl/Alt+Backspace/Delete`) using the shared text-boundary mode.
 - Editor: add PageUp/PageDown navigation based on the scroll viewport height (moves caret + scrolls).
 - Editor: bubble Ctrl/Meta+PageUp/PageDown to workspace keymaps (do not cancel preedit for these chords).
+- Editor: add bundle-friendly cache counters (row text + syntax) and expose them via `CodeEditorHandle::cache_stats()`.
+- UI Kit/Diagnostics: record and export windowed-rows-surface visible-window telemetry in UI diagnostics snapshots.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
@@ -460,9 +462,10 @@ Evidence anchors:
 
 ### 7) Diagnostics and perf attribution
 
-- [ ] Add bundle-friendly counters:
-  - visible rows, overscan, cache hits/misses, text blob churn, glyph atlas pressure.
-- [ ] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+- [~] Add bundle-friendly counters:
+  - Done: visible window + overscan (windowed surfaces), editor-local cache hits/misses (row text + syntax).
+  - TODO: text blob churn + glyph atlas pressure (likely from renderer/canvas caches).
+- [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
 
 ### 8) Display map expansion (wrap/fold/inlay) (optional v1 → v2)
 
