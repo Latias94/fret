@@ -3,7 +3,7 @@
 This document tracks **coverage**, not deep conformance details:
 
 - Which shadcn-web goldens exist for `new-york-v4`
-- Which golden keys are referenced by `ecosystem/fret-ui-shadcn/tests`
+- Which golden keys are **gated** by `ecosystem/fret-ui-shadcn/tests`
 - Where to focus next to increase “1:1” confidence efficiently
 
 For deep, high-impact alignment notes and “gaps to check” per component, see:
@@ -29,10 +29,35 @@ Practical rule:
 
 This is a **snapshot** from running `tools/golden_coverage.ps1` in this repo.
 
-- Golden files: `510`
-- Golden keys (normalized `.open` suffix): `471`
-- Keys referenced by tests: `471` (`100%`)
-- Keys not referenced by tests: `0`
+Notes:
+
+- `tools/golden_coverage.ps1` currently counts a key as “gated” if the key appears as a
+  **string literal** somewhere under `ecosystem/fret-ui-shadcn/tests`, excluding `*_goldens_smoke.rs`.
+- This is a reasonable proxy for “this golden is exercised by some dedicated test”, but it is not
+  a perfect proxy for “high-signal behavior is gated”.
+- `shadcn_web_goldens_smoke.rs` provides a separate, *dynamic* “smoke-parse” pass that ensures we
+  can parse the JSON and that the exported rectangles are finite.
+- `tools/golden_coverage.ps1` reports “smoke-parse coverage” only when it can infer that the smoke
+  test targets the requested `-Style` (otherwise it prints `n/a` to avoid false confidence).
+- To avoid local, uncommitted goldens skewing the counts, prefer `-TrackedOnly`.
+- In addition to the “any gate” percentage, `tools/golden_coverage.ps1` reports a **targeted**
+  percentage that excludes the broad “catch-all” layout file(s) (`web_vs_fret_layout.rs` and
+  `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
+  checks” rather than “is every page referenced somewhere”.
+
+- Golden files (tracked): `518`
+- Golden keys (tracked, normalized `.open` suffix): `476`
+- Gated keys (string-literal heuristic): `476` (`100%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `476` (`100%`)
+- Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
+
+As of 2026-01-31 (tracked-only).
+
+Note on “targeted” gates:
+
+- Most targeted keys have purpose-built assertions, but a small number are still *contract-only* checks
+  (e.g. “golden contains expected tags”) while the deeper paint/layout assertions remain in the
+  broad `web_vs_fret_layout.rs` file (notably `typography-table`).
 
 Top missing prefixes (heuristic grouping by the substring before the first `.` or `-`):
 
@@ -40,40 +65,56 @@ Top missing prefixes (heuristic grouping by the substring before the first `.` o
 pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -AsMarkdown -GroupMissingByPrefix -TopGroups 20
 ```
 
-At the time of writing, there are no missing groups (all keys are referenced by tests).
+At the time of writing, there are no missing groups (all keys are gated by tests).
 
-The largest referenced groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
+The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
 
 - `chart` (84)
 - `calendar` (34)
+- `button` (29)
 - `input` (27)
-- `button` (26)
 - `form` (19)
 - `navigation` (17)
 - `sidebar` (16)
-- `typography` (14)
+- `typography` (15)
 - `toggle` (13)
 - `field` (12)
-- `dropdown` (11)
+- `dropdown` (12)
+- `select` (11)
+- `menubar` (11)
 - `spinner` (10)
 - `sheet` (10)
 - `scroll` (10)
-- `menubar` (10)
+- `context` (10)
 - `item` (10)
+- `combobox` (9)
 - `breadcrumb` (9)
 - `textarea` (8)
-- `select` (9)
-- `combobox` (8)
-- `context` (8)
+- `empty` (7)
+- `carousel` (6)
+- `otp` (5)
+- `login` (5)
+
+Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
+
+```powershell
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUntargetedByPrefix -TopGroups 20
+```
+
+At the time of writing, there are no untargeted groups (all keys are referenced by purpose-built
+gate tests outside the broad catch-all files).
 
 Recompute locally:
 
 ```powershell
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowMissing -TopMissing 50
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -ShowUsed
-pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -GroupUsedByPrefix -TopGroups 20
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowMissing -TopMissing 50
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowTargetedMissing -TopMissing 50
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowUsed
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUsedByPrefix -TopGroups 20
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -ShowGateBreakdown
+pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-york-v4 -TrackedOnly -GroupUntargetedByPrefix -TopGroups 20
 ```
 
 To drill into a specific family:
@@ -95,7 +136,7 @@ pwsh -NoProfile -File tools/golden_coverage.ps1 -Kind shadcn-web -Style v4/new-y
 
 ## Common “coverage smells”
 
-- Many goldens exist, but none are referenced by tests (coverage drift).
+- Many goldens exist, but none are gated by tests (coverage drift).
 - A component is gated only at one viewport size, but it changes behavior at others (false confidence).
 - A gate checks only placement while ignoring geometry (panel width/height), allowing “menu height”
   regressions to slip through.

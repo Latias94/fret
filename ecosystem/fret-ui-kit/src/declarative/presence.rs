@@ -10,6 +10,7 @@ use crate::headless::presence::{PresenceOutput, ScaleFadePresenceOutput};
 /// - it is driven by runner monotonic clocks,
 /// - it holds a continuous-frames lease while animating,
 /// - and it requests redraws while animating.
+#[track_caller]
 pub fn fade_presence<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -18,6 +19,7 @@ pub fn fade_presence<H: UiHost>(
     fade_presence_with_durations(cx, open, fade_ticks, fade_ticks)
 }
 
+#[track_caller]
 pub fn fade_presence_with_durations<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -39,6 +41,7 @@ pub fn fade_presence_with_durations<H: UiHost>(
 }
 
 /// Drive a scale+fade presence transition using the UI runtime's monotonic frame clock.
+#[track_caller]
 pub fn scale_fade_presence<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -50,6 +53,7 @@ pub fn scale_fade_presence<H: UiHost>(
 }
 
 /// Drive a scale+fade presence transition with separate open/close durations.
+#[track_caller]
 pub fn scale_fade_presence_with_durations<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,
@@ -69,6 +73,7 @@ pub fn scale_fade_presence_with_durations<H: UiHost>(
     )
 }
 
+#[track_caller]
 pub fn scale_fade_presence_with_durations_and_easing<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     open: bool,

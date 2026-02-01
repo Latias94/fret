@@ -999,8 +999,8 @@ fn hotpatch_trace_log(line: &str) {
     }
 
     use std::io::Write as _;
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+    let ts = fret_core::time::SystemTime::now()
+        .duration_since(fret_core::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or_default();
     let thread_id = format!("{:?}", std::thread::current().id());
@@ -1571,8 +1571,8 @@ impl FrameHitchLogState {
 }
 
 fn write_frame_hitch_log(line: &str) {
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+    let ts = fret_core::time::SystemTime::now()
+        .duration_since(fret_core::time::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or_default();
     let thread_id = format!("{:?}", std::thread::current().id());

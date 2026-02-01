@@ -1,15 +1,30 @@
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, Px};
+use fret_core::{Corners, Edges, Px, SemanticsRole};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, SizeStyle,
-    SpacerProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    SemanticsProps, SizeStyle, SpacerProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+
+fn wrap_panel_semantics<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    child: AnyElement,
+) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Panel,
+            label: Some(label),
+            ..Default::default()
+        },
+        move |_cx| vec![child],
+    )
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChartTooltipIndicator {
@@ -73,6 +88,7 @@ pub struct ChartTooltipContent {
     fixed_width_border_box: Option<Px>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    test_id_prefix: Option<Arc<str>>,
 }
 
 impl Default for ChartTooltipContent {
@@ -93,6 +109,7 @@ impl ChartTooltipContent {
             fixed_width_border_box: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            test_id_prefix: None,
         }
     }
 
@@ -141,6 +158,11 @@ impl ChartTooltipContent {
         self
     }
 
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let text_xs_px = theme
@@ -155,6 +177,8 @@ impl ChartTooltipContent {
             .color_by_key("border/50")
             .or_else(|| theme.color_by_key("border"))
             .unwrap_or_else(|| theme.color_required("border"));
+
+        let test_id_prefix = self.test_id_prefix.clone();
 
         let chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
@@ -264,7 +288,11 @@ impl ChartTooltipContent {
 
                     children.push(cx.flex(
                         FlexProps {
-                            layout: LayoutStyle::default(),
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout
+                            },
                             direction: fret_core::Axis::Horizontal,
                             gap: row_gap,
                             padding: Edges::all(Px(0.0)),
@@ -368,7 +396,11 @@ impl ChartTooltipContent {
 
                     let line = cx.flex(
                         FlexProps {
-                            layout: LayoutStyle::default(),
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout
+                            },
                             direction: fret_core::Axis::Horizontal,
                             gap: row_gap,
                             padding: Edges::all(Px(0.0)),
@@ -386,6 +418,14 @@ impl ChartTooltipContent {
                             ]
                         },
                     );
+
+                    let line = if index == 1 {
+                        line
+                    } else if let Some(prefix) = test_id_prefix.as_ref() {
+                        wrap_panel_semantics(cx, Arc::from(format!("{prefix}:item-{index}")), line)
+                    } else {
+                        line
+                    };
 
                     if index == 1 {
                         let total_label = ui::text(cx, "Total")
@@ -414,7 +454,6 @@ impl ChartTooltipContent {
                                     layout.size.width = Length::Fill;
                                     layout.size.height =
                                         Length::Px(Px(text_xs_line_height.0 + 7.0));
-                                    layout.margin.top = fret_ui::element::MarginEdge::Px(Px(6.0));
                                     layout
                                 },
                                 padding: Edges {
@@ -455,11 +494,36 @@ impl ChartTooltipContent {
                             },
                         );
 
-                        children.push(stack::vstack(
+                        let total_row = if let Some(prefix) = test_id_prefix.as_ref() {
+                            wrap_panel_semantics(
+                                cx,
+                                Arc::from(format!("{prefix}:total-row")),
+                                total_row,
+                            )
+                        } else {
+                            total_row
+                        };
+
+                        let group = stack::vstack(
                             cx,
-                            stack::VStackProps::default().gap(Space::N2).items_start(),
+                            stack::VStackProps::default()
+                                .gap(Space::N3p5)
+                                .items_stretch()
+                                .layout(LayoutRefinement::default().w_full()),
                             move |_cx| vec![line, total_row],
-                        ));
+                        );
+
+                        let group = if let Some(prefix) = test_id_prefix.as_ref() {
+                            wrap_panel_semantics(
+                                cx,
+                                Arc::from(format!("{prefix}:item-{index}")),
+                                group,
+                            )
+                        } else {
+                            group
+                        };
+
+                        children.push(group);
                     } else {
                         children.push(line);
                     }
@@ -490,11 +554,18 @@ impl ChartTooltipContent {
 
             let body = stack::vstack(
                 cx,
-                stack::VStackProps::default().gap(Space::N1p5).items_start(),
+                stack::VStackProps::default()
+                    .gap(Space::N1p5)
+                    .items_stretch()
+                    .layout(LayoutRefinement::default().w_full()),
                 move |_cx| children,
             );
 
-            vec![ui::stack(cx, move |_cx| vec![sentinel, body]).into_element(cx)]
+            vec![
+                ui::stack(cx, move |_cx| vec![sentinel, body])
+                    .w_full()
+                    .into_element(cx),
+            ]
         })
     }
 }

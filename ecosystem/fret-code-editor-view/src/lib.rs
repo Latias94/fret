@@ -93,11 +93,13 @@ pub fn prev_char_boundary(text: &str, idx: usize) -> usize {
     if idx == 0 {
         return 0;
     }
-    text[..idx]
-        .char_indices()
-        .last()
-        .map(|(i, _)| i)
-        .unwrap_or(0)
+
+    // Avoid scanning from the start (which is O(n)). Back up to the previous UTF-8 char boundary.
+    let mut i = idx.saturating_sub(1);
+    while i > 0 && !text.is_char_boundary(i) {
+        i = i.saturating_sub(1);
+    }
+    i
 }
 
 pub fn next_char_boundary(text: &str, idx: usize) -> usize {
@@ -232,7 +234,7 @@ pub fn select_line_range(text: &str, idx: usize) -> (usize, usize) {
         .unwrap_or(0);
     let end = text[idx..]
         .find('\n')
-        .map(|i| (idx + i).min(text.len()))
+        .map(|i| (idx + i + 1).min(text.len()))
         .unwrap_or(text.len());
     (start, end)
 }
@@ -331,6 +333,20 @@ mod tests {
             display_point_to_byte(&buf, DisplayPoint::new(1, 1)),
             buf.len_bytes()
         );
+    }
+
+    #[test]
+    fn prev_char_boundary_handles_multibyte_chars() {
+        let text = "a😃b";
+        let after_emoji = 1 + "😃".len();
+        assert_eq!(prev_char_boundary(text, after_emoji), 1);
+    }
+
+    #[test]
+    fn select_line_range_includes_trailing_newline() {
+        assert_eq!(select_line_range("hello\nworld", 0), (0, 6));
+        assert_eq!(select_line_range("hello\nworld", 5), (0, 6));
+        assert_eq!(select_line_range("hello\nworld", 6), (6, 11));
     }
 
     #[test]

@@ -79,6 +79,8 @@ _None tracked at this time._
 - Interaction test: `menubar_hover_switches_open_menu`
 - Interaction test: `menubar_triggers_roving_moves_focus_with_arrow_keys`
 - Contract test: `menubar_items_have_collection_position_metadata_excluding_separators`
+- Submenu openSteps parity (web-vs-fret): `menubar-demo.submenu-kbd*` follows the extractor semantics (`scrollIntoView({ block: "center" })` + focus + ArrowRight),
+  while `menubar-demo.submenu` opens via hover after driving the submenu open-delay timer from effects.
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_menubar_open_geometry_matches_fret`).
 - shadcn-web chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
@@ -95,6 +97,12 @@ _None tracked at this time._
 - shadcn-web shadow gate (`shadow-md`, Profiles menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_demo_profiles_shadow_matches_web`, `web_vs_fret_menubar_demo_profiles_shadow_matches_web_dark`;
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
+- shadcn-web shadow gate (`shadow-md`, constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_small_viewport_shadow_matches_web`, `web_vs_fret_menubar_demo_small_viewport_shadow_matches_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x320.open.json`).
+- shadcn-web shadow gate (`shadow-md`, tiny viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_tiny_viewport_shadow_matches_web`, `web_vs_fret_menubar_demo_tiny_viewport_shadow_matches_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x240.open.json`).
 - shadcn-web surface colors gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_demo_surface_colors_match_web`, `web_vs_fret_menubar_demo_surface_colors_match_web_dark`;
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
@@ -104,6 +112,12 @@ _None tracked at this time._
 - shadcn-web surface colors gate (Profiles menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_demo_profiles_surface_colors_match_web`, `web_vs_fret_menubar_demo_profiles_surface_colors_match_web_dark`;
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.profiles.open.json`).
+- shadcn-web surface colors gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_small_viewport_surface_colors_match_web`, `web_vs_fret_menubar_demo_small_viewport_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x320.open.json`).
+- shadcn-web surface colors gate (tiny viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_tiny_viewport_surface_colors_match_web`, `web_vs_fret_menubar_demo_tiny_viewport_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.vp1440x240.open.json`).
 - shadcn-web placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_overlay_placement_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.open.json`).
 - shadcn-web placement gate (View menu): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
@@ -143,6 +157,21 @@ _None tracked at this time._
 - shadcn-web submenu shadow gate (`shadow-lg`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   (`web_vs_fret_menubar_demo_submenu_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_shadow_matches_web_dark`;
   consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd.open.json`).
+- shadcn-web submenu surface colors gate (hover): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_submenu_surface_colors_match_web`, `web_vs_fret_menubar_demo_submenu_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu.open.json`).
+- shadcn-web submenu shadow gate (kbd, constrained viewport, `shadow-lg`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_submenu_kbd_small_viewport_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_kbd_small_viewport_shadow_matches_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd-vp1440x320.open.json`).
+- shadcn-web submenu surface colors gate (kbd, constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_submenu_kbd_small_viewport_surface_colors_match_web`, `web_vs_fret_menubar_demo_submenu_kbd_small_viewport_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd-vp1440x320.open.json`).
+- shadcn-web submenu shadow gate (kbd, tiny viewport, `shadow-lg`): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_shadow_matches_web`, `web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_shadow_matches_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd-vp1440x240.open.json`).
+- shadcn-web submenu surface colors gate (kbd, tiny viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  (`web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_surface_colors_match_web`, `web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_surface_colors_match_web_dark`;
+  consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd-vp1440x240.open.json`).
 - shadcn-web submenu first visible item gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   (`web_vs_fret_menubar_demo_submenu_first_visible_matches`; consumes `goldens/shadcn-web/v4/new-york-v4/menubar-demo.submenu-kbd.open.json`).
 - shadcn-web submenu first visible item gate (constrained viewport): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`

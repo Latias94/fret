@@ -8,8 +8,8 @@ use std::{
 };
 
 use fret_core::{
-    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, PointerId,
-    PointerType, Px, Rect, Scene, Size, UiServices,
+    AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
+    PointerId, PointerType, Px, Rect, Scene, Size, UiServices,
 };
 use fret_runtime::{
     CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, DragSessionId, Effect,
@@ -331,6 +331,21 @@ fn pointer_down(pointer_id: PointerId, position: Point) -> Event {
         click_count: 1,
         pointer_type: PointerType::Mouse,
     })
+}
+
+fn key_down(key: KeyCode) -> Event {
+    Event::KeyDown {
+        key,
+        modifiers: Modifiers::default(),
+        repeat: false,
+    }
+}
+
+fn key_up(key: KeyCode) -> Event {
+    Event::KeyUp {
+        key,
+        modifiers: Modifiers::default(),
+    }
 }
 
 fn find_filled_text_field_container(quads: &[QuadSig]) -> Option<QuadSig> {
@@ -717,17 +732,31 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
         );
         let value = app.models_mut().insert(String::new());
 
-        let scene0 = build_scene_for_text_field(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            value.clone(),
-            fret_ui_material3::TextFieldVariant::Filled,
-            false,
-            false,
-        );
+        let value_model = value.clone();
+        let render =
+            |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let field = fret_ui_material3::TextField::new(value_model.clone())
+                        .variant(fret_ui_material3::TextFieldVariant::Filled)
+                        .label("Email")
+                        .placeholder("name@example.com")
+                        .test_id("tf")
+                        .into_element(cx);
+
+                    let mut fixed = ContainerProps::default();
+                    fixed.layout.size.width = Length::Px(Px(240.0));
+                    fixed.layout.size.height = Length::Px(Px(56.0));
+                    vec![cx.container(fixed, move |_cx| vec![field])]
+                })
+            };
+
+        let root0 = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root0);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene0 = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene0, 1.0);
         let quads0 = scene_quad_signature(&scene0);
         let container0 = find_filled_text_field_container(&quads0)
             .expect("expected filled text field container");
@@ -736,25 +765,51 @@ fn filled_text_field_focus_uses_focus_indicator_thickness() {
             "expected idle indicator thickness ({label})"
         );
 
-        dispatch_focus_click(&mut ui, &mut app, &mut services);
-        app.advance_frame();
+        let text_field_node: NodeId = ui
+            .semantics_snapshot()
+            .and_then(|snapshot| {
+                snapshot
+                    .nodes
+                    .iter()
+                    .find_map(|node| (node.test_id.as_deref() == Some("tf")).then_some(node.id))
+            })
+            .unwrap_or_else(|| panic!("expected tf in semantics snapshot ({label})"));
+        ui.set_focus(Some(text_field_node));
+        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
 
-        let scene1 = build_scene_for_text_field(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            value,
-            fret_ui_material3::TextFieldVariant::Filled,
-            false,
-            false,
-        );
-        let quads1 = scene_quad_signature(&scene1);
-        let container1 = find_filled_text_field_container(&quads1)
-            .expect("expected filled text field container");
+        let mut settled: Option<i32> = None;
+        for frame in 0..64 {
+            app.advance_frame();
+
+            let root1 = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root1);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene1 = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene1, 1.0);
+
+            let quads1 = scene_quad_signature(&scene1);
+            let container1 = find_filled_text_field_container(&quads1)
+                .expect("expected filled text field container");
+
+            if frame < 28 {
+                continue;
+            }
+
+            if let Some(prev) = settled {
+                assert_eq!(
+                    container1.border.bottom, prev,
+                    "expected focused indicator thickness to be stable after animations settle ({label})"
+                );
+            } else {
+                settled = Some(container1.border.bottom);
+            }
+        }
+
         assert_eq!(
-            container1.border.bottom, 20,
+            settled.expect("expected focused indicator thickness after animations settle"),
+            20,
             "expected focused indicator thickness ({label})"
         );
     }
@@ -879,36 +934,63 @@ fn filled_text_field_hover_overlay_survives_focus_transition() {
     .expect("expected hover overlay");
 
     dispatch_focus_click(&mut ui, &mut app, &mut services);
-    app.advance_frame();
+    let mut settled_container: Option<QuadSig> = None;
+    let mut settled_overlay_count: Option<usize> = None;
 
-    let scene1 = build_scene_for_text_field(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        value,
-        fret_ui_material3::TextFieldVariant::Filled,
-        false,
-        false,
-    );
-    let quads1 = scene_quad_signature(&scene1);
-    let container1 =
-        find_filled_text_field_container(&quads1).expect("expected filled text field container");
+    for frame in 0..64 {
+        app.advance_frame();
+        let scene1 = build_scene_for_text_field(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            value.clone(),
+            fret_ui_material3::TextFieldVariant::Filled,
+            false,
+            false,
+        );
+        let quads1 = scene_quad_signature(&scene1);
+        let container1 = find_filled_text_field_container(&quads1)
+            .expect("expected filled text field container");
+
+        let overlays: Vec<_> = quads1
+            .iter()
+            .copied()
+            .filter(|q| {
+                is_zero_edges(q.border)
+                    && q.background.a > 0
+                    && q.corner_radii == container1.corner_radii
+                    && q.rect == rect_inset_by_edges(container1.rect, container1.border)
+            })
+            .collect();
+
+        if frame < 28 {
+            continue;
+        }
+
+        if let (Some(prev_container), Some(prev_overlays)) =
+            (settled_container.as_ref(), settled_overlay_count.as_ref())
+        {
+            assert_eq!(
+                container1, *prev_container,
+                "expected focused container to be stable after animations settle"
+            );
+            assert_eq!(
+                overlays.len(),
+                *prev_overlays,
+                "expected hover overlay count to be stable after animations settle"
+            );
+        } else {
+            settled_container = Some(container1);
+            settled_overlay_count = Some(overlays.len());
+        }
+    }
+
+    let container1 = settled_container.expect("expected a settled focused container");
     assert_eq!(container0.background, container1.background);
-
-    let overlays: Vec<_> = quads1
-        .iter()
-        .copied()
-        .filter(|q| {
-            is_zero_edges(q.border)
-                && q.background.a > 0
-                && q.corner_radii == container1.corner_radii
-                && q.rect == rect_inset_by_edges(container1.rect, container1.border)
-        })
-        .collect();
     assert_eq!(
-        overlays.len(),
+        settled_overlay_count.expect("expected settled hover overlay count"),
         1,
         "expected a single hover overlay after focus"
     );

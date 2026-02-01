@@ -37,6 +37,7 @@ use crate::foundation::floating_label;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::motion::ms_to_frames;
@@ -325,16 +326,10 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             opening
         });
 
-        let open_ticks = ms_to_frames(dropdown_menu_tokens::open_duration_ms(&theme));
-        let close_ticks = ms_to_frames(dropdown_menu_tokens::close_duration_ms(&theme));
-        let easing = dropdown_menu_tokens::easing(&theme);
-        let motion = OverlayController::transition_with_durations_and_cubic_bezier(
-            cx,
-            is_open,
-            open_ticks,
-            close_ticks,
-            easing,
-        );
+        let close_grace_frames = Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(
+            &theme,
+        )));
+        let motion = drive_overlay_open_close_motion(cx, &theme, is_open, close_grace_frames);
         let overlay_presence = OverlayPresence {
             present: motion.present,
             interactive: is_open,
@@ -452,8 +447,8 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                 },
             );
 
-            let opacity = motion.progress;
-            let scale = 0.95 + 0.05 * motion.progress;
+            let opacity = motion.alpha;
+            let scale = motion.scale;
             let origin = popper::popper_content_transform_origin(&layout, anchor, None);
             let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
             let transform = fret_core::Transform2D::translation(origin)

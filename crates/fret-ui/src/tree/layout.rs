@@ -591,6 +591,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let started_phase = profile_layout_all.then(Instant::now);
+        if pass_kind == LayoutPassKind::Final {
+            self.repair_focus_node_from_focused_element_if_needed(app);
+        }
         self.flush_deferred_cleanup(services);
         if let Some(started) = started_phase {
             t_flush_deferred_cleanup = Some(started.elapsed());
@@ -789,6 +792,41 @@ impl<H: UiHost> UiTree<H> {
                 avail_h = ?entry.constraints.available.height,
                 "measure_node profile"
             );
+        }
+    }
+
+    fn repair_focus_node_from_focused_element_if_needed(&mut self, app: &mut H) {
+        let Some(window) = self.window else {
+            return;
+        };
+        let Some(focused) = self.focus() else {
+            return;
+        };
+        let Some(element) = self.node_element(focused) else {
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+                eprintln!("focus_repair: focused={focused:?} has no element");
+            }
+            return;
+        };
+        let Some(canonical) = crate::elements::node_for_element(app, window, element) else {
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+                eprintln!(
+                    "focus_repair: focused={focused:?} element={element:?} has no canonical node",
+                );
+            }
+            return;
+        };
+        #[cfg(debug_assertions)]
+        if std::env::var_os("FRET_DEBUG_FOCUS_REPAIR").is_some() {
+            eprintln!(
+                "focus_repair: focused={focused:?} element={element:?} canonical={canonical:?} canonical_exists={}",
+                self.node_exists(canonical)
+            );
+        }
+        if canonical != focused && self.node_exists(canonical) {
+            self.set_focus(Some(canonical));
         }
     }
 

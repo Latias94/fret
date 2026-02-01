@@ -78,6 +78,7 @@ impl Renderer {
             render_targets_generation: self.render_targets_generation,
             images_generation: self.images_generation,
             text_atlas_revision: self.text_system.atlas_revision(),
+            text_quality_key: self.text_system.text_quality_key(),
         };
 
         let cache_hit = self.scene_encoding_cache_key == Some(key);

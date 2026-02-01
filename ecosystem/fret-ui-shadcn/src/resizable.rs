@@ -1,6 +1,6 @@
 use fret_core::{Corners, Edges, Px};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ContainerProps, Length, ResizablePanelGroupProps, SizeStyle};
+use fret_ui::element::{AnyElement, ContainerProps, ResizablePanelGroupProps};
 use fret_ui::{ElementContext, ResizablePanelGroupStyle, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
@@ -212,18 +212,42 @@ fn resizable_panel_group_with_entries<H: UiHost>(
     let min_px: Vec<Px> = panels.iter().map(|p| p.min_px).collect();
     let children: Vec<AnyElement> = panels.into_iter().map(|p| p.into_element(cx)).collect();
 
-    let root_layout = decl_style::layout_style(&theme, layout.relative().w_full().h_full());
+    let root_layout = {
+        let mut root_layout = layout;
+
+        // Default sizing should be Fill, but MUST NOT override caller-provided constraints.
+        // In particular, a Fill height behaves like a percentage height and can resolve to 0 when
+        // the parent height is indefinite (a common pattern in the gallery demos).
+        if root_layout.position.is_none() {
+            root_layout = root_layout.relative();
+        }
+
+        let has_width = root_layout
+            .size
+            .as_ref()
+            .and_then(|s| s.width.as_ref())
+            .is_some();
+        let has_height = root_layout
+            .size
+            .as_ref()
+            .and_then(|s| s.height.as_ref())
+            .is_some();
+
+        if !has_width {
+            root_layout = root_layout.w_full();
+        }
+        if !has_height {
+            root_layout = root_layout.h_full();
+        }
+
+        decl_style::layout_style(&theme, root_layout)
+    };
 
     let mut props = ResizablePanelGroupProps::new(axis, model);
     props.enabled = !disabled;
     props.min_px = min_px;
     props.chrome = style;
     props.layout = root_layout;
-    props.layout.size = SizeStyle {
-        width: Length::Fill,
-        height: Length::Fill,
-        ..Default::default()
-    };
 
     cx.resizable_panel_group(props, |_cx| children)
 }

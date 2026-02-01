@@ -11,6 +11,69 @@ For the capability-by-capability parity map, see:
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - Contracts: `docs/adr/0135-node-graph-editor-and-typed-connections.md`
 
+## Operating mode (refactor-friendly)
+
+This repo is intentionally demo- and conformance-test-driven. For large refactors, keep the loop:
+
+1) lock semantics via **docs + conformance tests**
+2) refactor aggressively behind those gates
+3) update docs to reflect the new reality (code pointers + exit criteria)
+
+Practical rules for this workstream:
+
+- Prefer “mechanism-first” primitives that can be shared across retained canvas widgets.
+- Keep headless-safe layers (`core`/`ops`/`runtime`) free of `fret-ui` dependencies.
+- Each milestone should be shippable on its own (tests + demo evidence).
+- When a shared mechanism emerges (drag thresholds, auto-pan math, viewport transforms),
+  consider extracting it to `ecosystem/fret-canvas` and updating the docs here accordingly.
+
+## Milestone detail format (what to write down)
+
+For each milestone we want a PR reviewer (or future us) to be able to answer:
+
+- **Scope**: what is in / out.
+- **Non-goals**: what we explicitly refuse to tackle in this milestone.
+- **Risks**: what is likely to go wrong (semantic drift, perf cliffs, a11y regressions).
+- **Rollback plan**: how we can unwind or feature-gate safely if reality disagrees.
+- **Exit criteria**: what “done” means (tests + demo + evidence anchors).
+
+## Quality gates (definition of done)
+
+Minimum gates per milestone:
+
+- `cargo fmt`
+- `cargo nextest run -p fret-node`
+- `cargo nextest run -p fret-canvas` (only when touching canvas substrate)
+
+Optional (repo-wide) gates:
+
+- `cargo clippy --workspace --all-targets -- -D warnings`
+
+Note: the workspace currently has pre-existing clippy warnings that may prevent using `-D warnings`
+as a hard gate. When that is the case, treat “no new warnings in touched crates” as the pragmatic
+rule and keep the strict gate as a longer-term repo hygiene task.
+
+## Conformance test index (fast, refactor-safe)
+
+This is the “must not regress” suite for fearless refactors. Prefer keeping this suite fast and
+deterministic, and run it before/after large moves.
+
+Recommended commands:
+
+- Full crate (baseline): `cargo nextest run -p fret-node`
+- Focused (when touching internals/geometry): `cargo nextest run -p fret-node internals invalidation hit_testing`
+
+Core suites (code pointers):
+
+- Internals + derived geometry: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+- Invalidation ordering discipline: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+- Hit-testing determinism: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+- Interaction semantics (drag/connect thresholds, reconnect flows): `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+- Viewport helpers + setViewport semantics: `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs`
+- Fit-view invariants: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
+- Portal safety (pointer/keyboard passthrough): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_keyboard_conformance.rs`
+- Paint cache/perf guardrails: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+
 ## Scope (what “parity” means here)
 
 - `xyflow` encodes most behavior as component props, store actions, and hook callbacks.
@@ -80,6 +143,57 @@ Each milestone should be considered “done” only when:
 1) there is a stable public API surface,
 2) conformance tests exist for the hard-to-change semantics,
 3) at least one demo showcases the feature without bespoke glue code.
+
+### M0 — Refactor harness + baseline invariants (P0)
+
+Goal: ensure we can refactor fearlessly without “semantic drift” or unbounded churn.
+
+Scope:
+
+- Stabilize and document the “derived internals” pipeline invariants (what changes trigger
+  derived geometry rebuilds; what changes must not).
+- Keep the existing public APIs working while refactoring internals (prefer additive adapters).
+
+Non-goals:
+
+- No new end-user features (demos/add-ons) unless required to validate invariants.
+- No policy changes (e.g. changing default shortcuts, changing selection semantics) unless the
+  current behavior is demonstrably inconsistent or non-deterministic.
+
+Risks:
+
+- Accidental semantic drift in hit-testing (especially under zoom + render transforms).
+- Over-invalidation causing perf cliffs (rebuilding geometry every frame).
+- Under-invalidation causing stale geometry (hover/select/overlay placement drift).
+
+Rollback plan:
+
+- Keep refactors behind local adapter layers (e.g. `NodeGraphInternalsStore` internal shape can
+  change while preserving its public query surface).
+- Prefer incremental moves that can be reverted file-by-file without changing the public API.
+
+Exit criteria:
+
+- The parity matrix pointers in `docs/node-graph-xyflow-parity.md` remain accurate after moves.
+- There is at least one “must not regress” conformance suite that runs fast and covers:
+  - click vs drag thresholds,
+  - connect/reconnect determinism,
+  - undo/redo granularity (one transaction per gesture),
+  - derived geometry invalidation invariants.
+
+Evidence anchors (expected):
+
+- `docs/node-graph-xyflow-parity.md`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/*_conformance.rs`
+
+Work items (initial):
+
+- [ ] Add “derived geometry invalidation” conformance tests that explicitly assert:
+  - pan-only does not rebuild geometry (or only rebuilds the strictly necessary cache),
+  - zoom-only rebuilds the necessary geometry (semantic zoom discipline),
+  - graph edit commits bump the correct derived revisions.
+- [ ] Add a short “refactor guide” section to `docs/node-graph-xyflow-parity.md` explaining which
+  invariants are locked and where to find the tests.
 
 ### M1 — Headless substrate ergonomics (A-layer + runtime)
 
@@ -174,6 +288,31 @@ Work items:
   - store-driven integration (recommended),
   - controlled mode integration (advanced),
   - extension points: presenter vs nodeTypes/edgeTypes vs middleware.
+
+### M5 — Canvas substrate extraction (fret-canvas) (P1)
+
+Goal: reduce duplication across canvas-like widgets (node graphs, plots, editors) by extracting
+policy-light mechanisms into `ecosystem/fret-canvas`.
+
+Exit criteria:
+
+- Shared interaction math lives in `fret-canvas` (with unit tests) and is consumed by `fret-node`.
+- The extracted APIs are clearly documented as “mechanism” (not editor policy).
+
+Work items:
+
+- [x] Extract “screen px threshold under render_transform” helper:
+  - `ecosystem/fret-canvas/src/drag/threshold.rs` (`exceeds_drag_threshold_in_canvas_space`)
+  - consumed by `ecosystem/fret-node/src/ui/canvas/widget/*`
+- [ ] Extract auto-pan delta computation (XyFlow `calcAutoPan`-style) with tests.
+- [ ] Consolidate viewport transform helpers (screen↔canvas mapping) where it reduces duplication.
+
+Perf/scale targets (placeholders; make these measurable as we add instrumentation):
+
+- Target graph sizes: 5k nodes (P2), 20k nodes (P3).
+- Interaction frame time budget: TBD (document per platform; start with “no visible hitching” + measured numbers).
+- Derived geometry rebuild budget: “no per-frame rebuild while panning” (expressed as counters once available).
+- Spatial index rebuild budget: “no rebuild on pan; rebuild on graph edits only” (unless explicitly forced).
 
 ## Tracking policy
 

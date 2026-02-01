@@ -44,3 +44,21 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   - `web_vs_fret_breadcrumb_dropdown_small_viewport_overlay_placement_matches`
   - `web_vs_fret_breadcrumb_responsive_overlay_placement_matches`
   - `web_vs_fret_breadcrumb_responsive_mobile_drawer_overlay_insets_match`
+
+- Web overlay chrome gates (menu panel border/background/shadow): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+  - `web_vs_fret_breadcrumb_dropdown_surface_colors_match_web`
+  - `web_vs_fret_breadcrumb_dropdown_surface_colors_match_web_dark`
+  - `web_vs_fret_breadcrumb_dropdown_shadow_matches_web`
+  - `web_vs_fret_breadcrumb_dropdown_shadow_matches_web_dark`
+  - `web_vs_fret_breadcrumb_dropdown_small_viewport_surface_colors_match_web`
+  - `web_vs_fret_breadcrumb_dropdown_small_viewport_surface_colors_match_web_dark`
+  - `web_vs_fret_breadcrumb_dropdown_small_viewport_shadow_matches_web`
+  - `web_vs_fret_breadcrumb_dropdown_small_viewport_shadow_matches_web_dark`
+  - `web_vs_fret_breadcrumb_demo_surface_colors_match_web`
+  - `web_vs_fret_breadcrumb_demo_surface_colors_match_web_dark`
+  - `web_vs_fret_breadcrumb_demo_shadow_matches_web`
+  - `web_vs_fret_breadcrumb_demo_shadow_matches_web_dark`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_surface_colors_match_web`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_surface_colors_match_web_dark`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web`
+  - `web_vs_fret_breadcrumb_demo_small_viewport_shadow_matches_web_dark`

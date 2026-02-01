@@ -68,7 +68,10 @@ struct ShadcnCssVars {
 
 /// Load a shadcn v4 "new-york-v4" theme preset.
 ///
-/// Theme source: `repo-ref/ui/apps/v4/public/r/styles/new-york-v4/theme-*.json` (vendored).
+/// Theme source:
+/// - Base palette: `repo-ref/ui/apps/v4/public/r/styles/new-york-v4/theme-*.json` (vendored).
+/// - App default overrides: `repo-ref/ui/apps/v4/styles/globals.css` (the web golden harness uses
+///   these as the effective runtime values).
 pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) -> ThemeConfig {
     let raw = match base {
         ShadcnBaseColor::Neutral => {
@@ -106,6 +109,31 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
             ShadcnColorScheme::Light => "oklch(0.97 0.01 17)".to_string(),
             ShadcnColorScheme::Dark => "oklch(0.58 0.22 27)".to_string(),
         });
+
+    // Menu rows use `data-[variant=destructive]:focus:bg-destructive/10` (and `/20` on dark) in the
+    // upstream shadcn v4 recipes.
+    if let Some(destructive) = colors.get("destructive").cloned() {
+        let alpha = match scheme {
+            ShadcnColorScheme::Light => 0.1,
+            ShadcnColorScheme::Dark => 0.2,
+        };
+        let destructive_focus_bg = with_oklch_alpha(&destructive, alpha)
+            .expect("shadcn new-york-v4 destructive token is oklch");
+        colors.insert(
+            "component.menu.destructive_focus_bg".to_string(),
+            destructive_focus_bg,
+        );
+    }
+
+    // The upstream v4 registry theme JSONs do not fully match the values used by the upstream
+    // web app's `styles/globals.css`. Our web-vs-fret goldens are generated from that app, so we
+    // patch the delta here to keep the Rust runtime aligned.
+    if base == ShadcnBaseColor::Neutral && scheme == ShadcnColorScheme::Dark {
+        // Source: `repo-ref/ui/apps/v4/styles/globals.css`.
+        colors.insert("popover".to_string(), "oklch(0.269 0 0)".to_string());
+        colors.insert("accent".to_string(), "oklch(0.371 0 0)".to_string());
+        colors.insert("sidebar-ring".to_string(), "oklch(0.439 0 0)".to_string());
+    }
 
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius") {
@@ -154,6 +182,12 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     // Default typography scales used across shadcn recipes (via fret-ui-kit helpers).
     // These are also accessed directly by some components (e.g. Calendar) via `metric_required`.
     metrics
+        .entry(theme_tokens::metric::COMPONENT_TEXT_XS_PX.to_string())
+        .or_insert(12.0);
+    metrics
+        .entry(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT.to_string())
+        .or_insert(16.0);
+    metrics
         .entry(theme_tokens::metric::COMPONENT_TEXT_SM_PX.to_string())
         .or_insert(14.0);
     metrics
@@ -171,6 +205,14 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     metrics
         .entry(theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT.to_string())
         .or_insert(24.0);
+
+    // Calendar (shadcn `Calendar` uses `h-8 w-8` day cells with `space-y-2` between week rows).
+    metrics
+        .entry("component.calendar.day_size".to_string())
+        .or_insert(32.0);
+    metrics
+        .entry("component.calendar.week_row_gap".to_string())
+        .or_insert(8.0);
 
     metrics
         .entry("component.ring.width".to_string())
@@ -242,6 +284,28 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.label.line_height".to_string())
         .or_insert(14.0);
 
+    // new-york-v4 `Empty` defaults:
+    // - Title uses `text-lg` (18px) and Tailwind default leading (28px).
+    // - Description uses `text-sm/relaxed` (14px, 22.75px line-height).
+    metrics
+        .entry("component.empty.title_px".to_string())
+        .or_insert(18.0);
+    metrics
+        .entry("component.empty.title_line_height".to_string())
+        .or_insert(28.0);
+    metrics
+        .entry("component.empty.description_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.empty.description_line_height".to_string())
+        .or_insert(22.75);
+
+    // new-york-v4 `Resizable` defaults:
+    // - Handle uses `w-px` / `h-px` (1px layout gap), with a larger hit area.
+    metrics
+        .entry("component.resizable.gap".to_string())
+        .or_insert(1.0);
+
     // new-york-v4 `Field` defaults:
     // - `FieldGroup` uses `gap-7` (28px).
     // - `FieldLabel` uses `text-sm` with `leading-snug` (14px * 1.375 = 19.25px).
@@ -275,6 +339,11 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     if let Some(ring) = colors.get("ring").cloned() {
         if let Some(ring_50) = with_oklch_alpha(&ring, 0.5) {
             colors.insert("ring/50".to_string(), ring_50);
+        }
+    }
+    if let Some(border) = colors.get("border").cloned() {
+        if let Some(border_50) = with_oklch_alpha(&border, 0.5) {
+            colors.insert("border/50".to_string(), border_50);
         }
     }
     if let Some(destructive) = colors.get("destructive").cloned() {

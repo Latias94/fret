@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use fret_core::geometry::{Corners, Edges, Point, Rect, Size};
 use fret_core::scene::SceneOp;
+use fret_core::time::Instant;
 use fret_core::{Color, DrawOrder, FontId, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::canvas::CanvasTextConstraints;
@@ -24,7 +25,6 @@ use fret_ui_headless::grid_viewport::{
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
-use std::time::Instant;
 
 fn border_color(theme: &Theme) -> Color {
     theme.color_required("border")

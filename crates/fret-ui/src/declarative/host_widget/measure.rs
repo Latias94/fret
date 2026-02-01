@@ -3,15 +3,7 @@ use super::super::prelude::*;
 use super::ElementHostWidget;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::widget::MeasureCx;
-use fret_core::{FrameId, TextStyle, TextWrap};
-
-fn default_text_style(theme: crate::ThemeSnapshot) -> TextStyle {
-    TextStyle {
-        size: theme.metrics.font_size,
-        line_height: Some(theme.metrics.font_line_height),
-        ..Default::default()
-    }
-}
+use fret_core::{FrameId, TextWrap};
 
 fn available_px_or_zero(constraints: LayoutConstraints) -> Size {
     let w = constraints
@@ -97,7 +89,7 @@ fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap
             // Model `TextWrap::Word` as "break when needed" for min-content sizing. This keeps the
             // layout engine honest when it probes intrinsic sizes and later assigns a smaller
             // definite width (e.g. flex/grid shrink), avoiding multi-line paint overflows.
-            TextWrap::Word => Some(Px(0.0)),
+            TextWrap::Word | TextWrap::Grapheme => Some(Px(0.0)),
             TextWrap::None => None,
         },
     }
@@ -181,6 +173,14 @@ impl ElementHostWidget {
 
         match instance {
             ElementInstance::InteractivityGate(props) if !props.present => {
+                // When `present == false`, this subtree is treated like `display: none`. The layout
+                // engine may skip calling `layout_impl`, so we must eagerly update the widget-level
+                // gates here to avoid stale semantics / hit-test behavior.
+                self.hit_testable = false;
+                self.hit_test_children = false;
+                self.focus_traversal_children = false;
+                self.semantics_present = false;
+                self.semantics_children = false;
                 Size::new(Px(0.0), Px(0.0))
             }
             ElementInstance::Container(props) => self.measure_container(cx, window, props),
@@ -337,7 +337,7 @@ impl ElementHostWidget {
 
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| default_text_style(theme));
+        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -345,10 +345,9 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx
-            .services
-            .text()
-            .measure_str(props.text.as_ref(), &style, constraints);
+        cx.tree
+            .debug_record_text_constraints_measured(cx.node, constraints);
+        let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -358,7 +357,7 @@ impl ElementHostWidget {
         props: crate::element::StyledTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| default_text_style(theme));
+        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -366,11 +365,8 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let input = fret_core::TextInput::attributed(
-            props.rich.text.clone(),
-            style.clone(),
-            props.rich.spans.clone(),
-        );
+        cx.tree
+            .debug_record_text_constraints_measured(cx.node, constraints);
         let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
@@ -381,7 +377,7 @@ impl ElementHostWidget {
         props: crate::element::SelectableTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| default_text_style(theme));
+        let input = props.build_text_input(theme);
         let max_width = text_max_width_for_constraints(cx.constraints, props.wrap);
         let constraints = TextConstraints {
             max_width,
@@ -389,11 +385,8 @@ impl ElementHostWidget {
             overflow: props.overflow,
             scale_factor: cx.scale_factor,
         };
-        let input = fret_core::TextInput::attributed(
-            props.rich.text.clone(),
-            style.clone(),
-            props.rich.spans.clone(),
-        );
+        cx.tree
+            .debug_record_text_constraints_measured(cx.node, constraints);
         let metrics = cx.services.text().measure(&input, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
@@ -471,6 +464,27 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
+        let _span = tracing::trace_span!(
+            "fret_ui.measure_scroll",
+            node = ?cx.node,
+            axis = ?props.axis,
+            probe_unbounded = props.probe_unbounded,
+            child_count = cx.children.len(),
+            known_w = ?cx.constraints.known.width,
+            known_h = ?cx.constraints.known.height,
+            avail_w = ?cx.constraints.available.width,
+            avail_h = ?cx.constraints.available.height,
+        )
+        .entered();
+
+        if props.intrinsic_measure_mode == crate::element::ScrollIntrinsicMeasureMode::Viewport {
+            return clamp_to_constraints_in_measure(
+                available_px_or_zero(cx.constraints),
+                props.layout,
+                cx.constraints,
+            );
+        }
+
         let width_determined = match props.layout.size.width {
             Length::Px(_) => true,
             Length::Fill => {
@@ -546,9 +560,16 @@ impl ElementHostWidget {
             },
         );
         let max_child = if let Some(cached) = cached {
+            tracing::trace!(cache_hit = true, "scroll probe cached");
             cached
         } else {
+            let started = fret_core::time::Instant::now();
             let measured = max_non_absolute_children(cx, window, child_constraints);
+            tracing::trace!(
+                cache_hit = false,
+                probe_time_us = started.elapsed().as_micros() as u64,
+                "scroll probe measured"
+            );
             crate::elements::with_element_state(
                 &mut *cx.app,
                 window,

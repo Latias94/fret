@@ -18,6 +18,7 @@ use fret_ui::element::{
     PressableProps,
 };
 use fret_ui::elements::ElementContext;
+use fret_ui::pixel_snap;
 use fret_ui::{Invalidation, Theme, UiHost};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
@@ -27,6 +28,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::tokens::radio as radio_tokens;
@@ -759,13 +761,19 @@ impl Radio {
                         let is_pressed = enabled && st.pressed;
                         let is_hovered = enabled && st.hovered;
                         let is_focused = enabled && st.focused && focus_visible;
-                        let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-                        let tokens_interaction = match interaction {
-                            Interaction::None => radio_tokens::RadioInteraction::None,
-                            Interaction::Hovered => radio_tokens::RadioInteraction::Hovered,
-                            Interaction::Focused => radio_tokens::RadioInteraction::Focused,
-                            Interaction::Pressed => radio_tokens::RadioInteraction::Pressed,
-                        };
+                        let tokens_interaction =
+                            match pressable_interaction(is_pressed, is_hovered, is_focused) {
+                                Some(PressableInteraction::Pressed) => {
+                                    radio_tokens::RadioInteraction::Pressed
+                                }
+                                Some(PressableInteraction::Focused) => {
+                                    radio_tokens::RadioInteraction::Focused
+                                }
+                                Some(PressableInteraction::Hovered) => {
+                                    radio_tokens::RadioInteraction::Hovered
+                                }
+                                None => radio_tokens::RadioInteraction::None,
+                            };
 
                         let checked = match &self.selection {
                             RadioSelectionModel::Bool(m) => {
@@ -870,26 +878,6 @@ impl Radio {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Interaction {
-    None,
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Interaction {
-    if pressed {
-        Interaction::Pressed
-    } else if focused {
-        Interaction::Focused
-    } else if hovered {
-        Interaction::Hovered
-    } else {
-        Interaction::None
-    }
-}
-
 fn material_radio_chrome<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     size: RadioSizeTokens,
@@ -925,13 +913,17 @@ fn radio_icon<H: UiHost>(
     props.layout.inset.left = Some(Px(0.0));
 
     cx.canvas(props, move |p| {
+        let scale_factor = p.scale_factor();
         let bounds = p.bounds();
 
         let icon_left = Px(bounds.origin.x.0 + (bounds.size.width.0 - size.icon.0) * 0.5);
         let icon_top = Px(bounds.origin.y.0 + (bounds.size.height.0 - size.icon.0) * 0.5);
-        let icon_rect = Rect::new(
-            Point::new(icon_left, icon_top),
-            Size::new(size.icon, size.icon),
+        let icon_rect = pixel_snap::snap_rect_edges_round(
+            Rect::new(
+                Point::new(icon_left, icon_top),
+                Size::new(size.icon, size.icon),
+            ),
+            scale_factor,
         );
         let icon_radius = Px(size.icon.0 * 0.5);
 
@@ -947,6 +939,8 @@ fn radio_icon<H: UiHost>(
         if checked || dot_size.0 > 0.1 {
             let dot_left = Px(icon_rect.origin.x.0 + (icon_rect.size.width.0 - dot_size.0) * 0.5);
             let dot_top = Px(icon_rect.origin.y.0 + (icon_rect.size.height.0 - dot_size.0) * 0.5);
+            let dot_left = pixel_snap::snap_px_round(dot_left, scale_factor);
+            let dot_top = pixel_snap::snap_px_round(dot_top, scale_factor);
             let dot_rect = Rect::new(Point::new(dot_left, dot_top), Size::new(dot_size, dot_size));
             p.scene().push(SceneOp::Quad {
                 order: DrawOrder(1),

@@ -39,7 +39,11 @@ Quickstart (PowerShell):
 Important: `pnpm -C repo-ref/ui/apps/v4 build` currently defaults to Turbopack and may fail to
 resolve some transitive Radix deps under pnpm on Windows. Prefer a webpack production build:
 
-`cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
+If your environment cannot reach Google Fonts during `next build`, you can still build shadcn v4
+offline by using Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` hook (maps requested families to local
+Windows font files):
+
+`cd repo-ref/ui/apps/v4; $env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES=(Resolve-Path ../../../../goldens/shadcn-web/scripts/next-font-google-mock.cjs).Path; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
 
 `$env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; pnpm -C repo-ref/ui/apps/v4 exec next start -p 4020`
 

@@ -453,29 +453,40 @@ pub fn navigation_menu_indicator_rect(
     anchor: Rect,
     viewport_rect: Rect,
     side: Side,
-    indicator_size: Px,
+    indicator_thickness: Px,
 ) -> Rect {
-    let half = indicator_size.0 * 0.5;
-    let anchor_center_x = anchor.origin.x.0 + anchor.size.width.0 * 0.5;
-    let anchor_center_y = anchor.origin.y.0 + anchor.size.height.0 * 0.5;
+    let thickness = indicator_thickness.0.max(0.0);
 
-    let (x, y) = match side {
-        Side::Bottom => (anchor_center_x - half, viewport_rect.origin.y.0 - half),
-        Side::Top => (
-            anchor_center_x - half,
-            viewport_rect.origin.y.0 + viewport_rect.size.height.0 - half,
+    match side {
+        // Match Radix/shadcn behavior:
+        // - width tracks the active trigger width,
+        // - offset tracks the active trigger edge aligned to the viewport panel,
+        // - thickness fills the gap between trigger row and viewport panel.
+        Side::Bottom => Rect::new(
+            Point::new(anchor.origin.x, Px(viewport_rect.origin.y.0 - thickness)),
+            Size::new(anchor.size.width, Px(thickness)),
         ),
-        Side::Right => (viewport_rect.origin.x.0 - half, anchor_center_y - half),
-        Side::Left => (
-            viewport_rect.origin.x.0 + viewport_rect.size.width.0 - half,
-            anchor_center_y - half,
+        Side::Top => Rect::new(
+            Point::new(
+                anchor.origin.x,
+                Px(viewport_rect.origin.y.0 + viewport_rect.size.height.0),
+            ),
+            Size::new(anchor.size.width, Px(thickness)),
         ),
-    };
-
-    Rect::new(
-        Point::new(Px(x), Px(y)),
-        Size::new(indicator_size, indicator_size),
-    )
+        // Vertical orientation (rare in shadcn skins): treat thickness as the gutter width and
+        // track the active trigger height.
+        Side::Right => Rect::new(
+            Point::new(Px(viewport_rect.origin.x.0 - thickness), anchor.origin.y),
+            Size::new(Px(thickness), anchor.size.height),
+        ),
+        Side::Left => Rect::new(
+            Point::new(
+                Px(viewport_rect.origin.x.0 + viewport_rect.size.width.0),
+                anchor.origin.y,
+            ),
+            Size::new(Px(thickness), anchor.size.height),
+        ),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1967,10 +1978,10 @@ mod tests {
             Point::new(Px(0.0), Px(100.0)),
             Size::new(Px(200.0), Px(80.0)),
         );
-        let out = navigation_menu_indicator_rect(anchor, viewport, Side::Bottom, Px(14.0));
-        assert_eq!(out.origin.x, Px(60.0 - 7.0));
-        assert_eq!(out.origin.y, Px(100.0 - 7.0));
-        assert_eq!(out.size, Size::new(Px(14.0), Px(14.0)));
+        let out = navigation_menu_indicator_rect(anchor, viewport, Side::Bottom, Px(6.0));
+        assert_eq!(out.origin.x, Px(10.0));
+        assert_eq!(out.origin.y, Px(100.0 - 6.0));
+        assert_eq!(out.size, Size::new(Px(100.0), Px(6.0)));
     }
 
     #[test]

@@ -102,9 +102,18 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     cfg.metrics
         .insert("md.sys.layout.minimum-touch-target.size".to_string(), 48.0);
 
+    // Fret-owned layout direction marker (0 = LTR, 1 = RTL).
+    //
+    // This is not a Material Web token. It represents app-level directionality and can be
+    // overridden at the theme or subtree level.
+    cfg.numbers
+        .entry("md.sys.fret.layout.is-rtl".to_string())
+        .or_insert(0.0);
+
     material_web_v30::inject_sys_state(cfg);
     material_web_v30::inject_sys_state_focus_indicator(cfg);
     material_web_v30::inject_sys_motion(cfg);
+    inject_fret_sys_motion_expressive(cfg);
     material_web_v30::inject_sys_shape(cfg);
     material_web_v30::inject_sys_typescale(cfg, typography);
     inject_comp_button_text_styles(cfg);
@@ -128,11 +137,80 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_snackbar_scalars(cfg);
     inject_comp_dialog_scalars(cfg);
     inject_comp_full_screen_dialog_scalars(cfg);
+    inject_comp_divider_scalars(cfg);
+    inject_comp_progress_indicator_scalars(cfg);
+    inject_comp_slider_scalars(cfg);
+    inject_comp_assist_chip_scalars(cfg);
+    inject_comp_filter_chip_scalars(cfg);
+    inject_comp_input_chip_scalars(cfg);
+    inject_comp_suggestion_chip_scalars(cfg);
+    inject_comp_filled_card_scalars(cfg);
+    inject_comp_elevated_card_scalars(cfg);
+    inject_comp_outlined_card_scalars(cfg);
 
     // Material Web v30 notes that the navigation drawer scrim tokens are deprecated and do not
     // represent the intended M3 defaults. Prefer Neutral-Variant10 at 50% opacity for scrims.
     cfg.numbers
         .insert("md.comp.navigation-drawer.scrim.opacity".to_string(), 0.5);
+}
+
+fn inject_fret_sys_motion_expressive(cfg: &mut ThemeConfig) {
+    // Compose baseline: ExpressiveMotionTokens (v0_14_0).
+    //
+    // We keep these as Fret-owned tokens so:
+    // - The component layer can converge on a stable `MotionScheme` API.
+    // - Downstream apps can override values at the theme level.
+    //
+    // Material Web v30 currently provides only a single `md.sys.motion.spring.*` set.
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.default.spatial.damping".to_string(),
+        0.8,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.default.spatial.stiffness".to_string(),
+        380.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.fast.spatial.damping".to_string(),
+        0.6,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.fast.spatial.stiffness".to_string(),
+        800.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.slow.spatial.damping".to_string(),
+        0.8,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.slow.spatial.stiffness".to_string(),
+        200.0,
+    );
+
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.default.effects.damping".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.default.effects.stiffness".to_string(),
+        1600.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.fast.effects.damping".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.fast.effects.stiffness".to_string(),
+        3800.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.slow.effects.damping".to_string(),
+        1.0,
+    );
+    cfg.numbers.insert(
+        "md.sys.fret.material.motion.spring.slow.effects.stiffness".to_string(),
+        800.0,
+    );
 }
 
 fn inject_comp_button_text_styles(cfg: &mut ThemeConfig) {
@@ -389,6 +467,16 @@ pub fn theme_config_with_colors(
     inject_comp_snackbar_colors_from_sys(&mut cfg);
     inject_comp_dialog_colors_from_sys(&mut cfg);
     inject_comp_full_screen_dialog_colors_from_sys(&mut cfg);
+    inject_comp_divider_colors_from_sys(&mut cfg);
+    inject_comp_progress_indicator_colors_from_sys(&mut cfg);
+    inject_comp_slider_colors_from_sys(&mut cfg);
+    inject_comp_assist_chip_colors_from_sys(&mut cfg);
+    inject_comp_filter_chip_colors_from_sys(&mut cfg);
+    inject_comp_input_chip_colors_from_sys(&mut cfg);
+    inject_comp_suggestion_chip_colors_from_sys(&mut cfg);
+    inject_comp_filled_card_colors_from_sys(&mut cfg);
+    inject_comp_elevated_card_colors_from_sys(&mut cfg);
+    inject_comp_outlined_card_colors_from_sys(&mut cfg);
     cfg
 }
 
@@ -1534,6 +1622,46 @@ fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_full_screen_dialog_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_full_screen_dialog_scalars(cfg);
+}
+
+fn inject_comp_divider_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_divider_scalars(cfg);
+}
+
+fn inject_comp_progress_indicator_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_progress_indicator_scalars(cfg);
+}
+
+fn inject_comp_slider_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_slider_scalars(cfg);
+}
+
+fn inject_comp_assist_chip_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_assist_chip_scalars(cfg);
+}
+
+fn inject_comp_filter_chip_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filter_chip_scalars(cfg);
+}
+
+fn inject_comp_input_chip_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_input_chip_scalars(cfg);
+}
+
+fn inject_comp_suggestion_chip_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_suggestion_chip_scalars(cfg);
+}
+
+fn inject_comp_filled_card_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_card_scalars(cfg);
+}
+
+fn inject_comp_elevated_card_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_elevated_card_scalars(cfg);
+}
+
+fn inject_comp_outlined_card_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_card_scalars(cfg);
 }
 
 fn inject_comp_outlined_text_field_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -3061,6 +3189,46 @@ fn inject_comp_full_screen_dialog_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.color.surface-variant",
     );
     material_web_v30::inject_comp_full_screen_dialog_colors_from_sys(cfg);
+}
+
+fn inject_comp_divider_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_divider_colors_from_sys(cfg);
+}
+
+fn inject_comp_progress_indicator_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_progress_indicator_colors_from_sys(cfg);
+}
+
+fn inject_comp_slider_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_slider_colors_from_sys(cfg);
+}
+
+fn inject_comp_assist_chip_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_assist_chip_colors_from_sys(cfg);
+}
+
+fn inject_comp_filter_chip_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filter_chip_colors_from_sys(cfg);
+}
+
+fn inject_comp_input_chip_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_input_chip_colors_from_sys(cfg);
+}
+
+fn inject_comp_suggestion_chip_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_suggestion_chip_colors_from_sys(cfg);
+}
+
+fn inject_comp_filled_card_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_card_colors_from_sys(cfg);
+}
+
+fn inject_comp_elevated_card_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_elevated_card_colors_from_sys(cfg);
+}
+
+fn inject_comp_outlined_card_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_card_colors_from_sys(cfg);
 }
 
 #[cfg(test)]

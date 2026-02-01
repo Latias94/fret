@@ -169,6 +169,68 @@ let editor = CodeEditor::new(handle)
 ```
 "#;
 
+pub(crate) const DOC_TEXT_SELECTION_PERF: &str = r#"
+## Text selection (perf diagnostics)
+
+This page is a small diagnostic harness for **large selection highlight** behavior:
+
+- A long multi-line text blob is selected end-to-end.
+- The paint path queries selection rects **clipped to the current viewport**.
+
+The goal is to track the number of generated selection rectangles and ensure it scales with
+visible lines (viewport height), not total document length.
+"#;
+
+pub(crate) const USAGE_TEXT_SELECTION_PERF: &str = r#"
+```rust
+// Scroll with the mouse wheel over the demo surface.
+// The overlay shows the current clipped selection-rect count.
+```
+"#;
+
+pub(crate) const DOC_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
+## Text BiDi / RTL (conformance harness)
+
+This page exists to sanity-check text geometry queries under BiDi/RTL strings:
+
+- `TextService::hit_test_point` (mouse → caret)
+- `TextService::caret_rect` (caret → rect)
+- `TextService::selection_rects*` (selection highlight)
+
+It is intentionally a **diagnostic surface**, not a component demo.
+"#;
+
+pub(crate) const USAGE_TEXT_BIDI_RTL_CONFORMANCE: &str = r#"
+```rust
+// Click or drag in the diagnostic panel:
+// - normal click: set caret + anchor (collapsed selection)
+// - shift-click / drag: extend selection from the current anchor
+//
+// Try the selectable samples above to validate editor-like text selection on BiDi strings.
+```
+"#;
+
+pub(crate) const DOC_TEXT_MEASURE_OVERLAY: &str = r#"
+## Text measurement overlay (diagnostic)
+
+This page visualizes text measurement vs the allocated layout box:
+
+- the **container bounds** (what layout assigned),
+- and the **measured text box** (what `TextMetrics` reports for the same constraints).
+
+It helps debug mismatches where text appears to overflow its chrome/background or where
+layout sizing and paint sizing disagree.
+"#;
+
+pub(crate) const USAGE_TEXT_MEASURE_OVERLAY: &str = r#"
+```rust
+// The panel draws:
+// - green border: container bounds
+// - yellow border: measured bounds (TextMetrics.size)
+// - cyan line: baseline
+```
+"#;
+
 pub(crate) const DOC_WEB_IME_HARNESS: &str = r#"
 ## Web IME (harness)
 

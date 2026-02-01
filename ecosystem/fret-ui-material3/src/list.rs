@@ -28,6 +28,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::tokens::list as list_tokens;
 
@@ -485,14 +486,11 @@ fn interaction_state(
     hovered: bool,
     focused: bool,
 ) -> list_tokens::ListItemInteraction {
-    if pressed {
-        list_tokens::ListItemInteraction::Pressed
-    } else if focused {
-        list_tokens::ListItemInteraction::Focused
-    } else if hovered {
-        list_tokens::ListItemInteraction::Hovered
-    } else {
-        list_tokens::ListItemInteraction::Default
+    match pressable_interaction(pressed, hovered, focused) {
+        Some(PressableInteraction::Pressed) => list_tokens::ListItemInteraction::Pressed,
+        Some(PressableInteraction::Focused) => list_tokens::ListItemInteraction::Focused,
+        Some(PressableInteraction::Hovered) => list_tokens::ListItemInteraction::Hovered,
+        None => list_tokens::ListItemInteraction::Default,
     }
 }
 

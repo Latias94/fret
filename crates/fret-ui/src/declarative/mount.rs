@@ -1138,6 +1138,10 @@ fn mount_element<H: UiHost>(
     };
 
     collect_scroll_handle_bindings(id, &instance, scroll_bindings);
+    let interactivity_gate_state = match &instance {
+        ElementInstance::InteractivityGate(p) => Some((p.present, p.interactive)),
+        _ => None,
+    };
     let use_barrier_set_children = matches!(
         &instance,
         ElementInstance::VirtualList(props) if virtual_list_can_be_layout_barrier(props)
@@ -1160,6 +1164,9 @@ fn mount_element<H: UiHost>(
         }
     }
 
+    if let Some((present, interactive)) = interactivity_gate_state {
+        ui.sync_interactivity_gate_widget(node, present, interactive);
+    }
     let inserted = window_frame
         .instances
         .insert(

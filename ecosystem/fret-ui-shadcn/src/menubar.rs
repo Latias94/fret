@@ -1710,8 +1710,7 @@ impl MenubarMenuEntries {
                                                                         );
                                                                     states.set(WidgetState::Open, false);
 
-                                                                    let highlight_bg =
-                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let highlight_bg = bg_hover;
                                                                     let bg_prop = WidgetStateProperty::new(
                                                                         Color::TRANSPARENT,
                                                                     )
@@ -1889,8 +1888,7 @@ impl MenubarMenuEntries {
                                                                         );
                                                                     states.set(WidgetState::Open, false);
 
-                                                                    let highlight_bg =
-                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let highlight_bg = bg_hover;
                                                                     let bg_prop = WidgetStateProperty::new(
                                                                         Color::TRANSPARENT,
                                                                     )
@@ -2124,7 +2122,7 @@ impl MenubarMenuEntries {
                                                                         if variant == MenubarItemVariant::Destructive {
                                                                             destructive_bg
                                                                         } else {
-                                                                            alpha_mul(bg_hover, 0.9)
+                                                                            bg_hover
                                                                         };
                                                                     let base_fg =
                                                                         if variant == MenubarItemVariant::Destructive {
@@ -2280,8 +2278,7 @@ impl MenubarMenuEntries {
                                                                         );
                                                                     states.set(WidgetState::Open, false);
 
-                                                                    let highlight_bg =
-                                                                        alpha_mul(bg_hover, 0.9);
+                                                                    let highlight_bg = bg_hover;
                                                                     let bg_prop = WidgetStateProperty::new(
                                                                         Color::TRANSPARENT,
                                                                     )
@@ -2786,10 +2783,8 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 states.set(WidgetState::Open, false);
 
-                                                                                let highlight_bg = alpha_mul(
-                                                                                    theme.color_required("accent"),
-                                                                                    0.9,
-                                                                                );
+                                                                                let highlight_bg =
+                                                                                    theme.color_required("accent");
                                                                                 let bg_prop =
                                                                                     WidgetStateProperty::new(Color::TRANSPARENT)
                                                                                         .when(WidgetStates::HOVERED, highlight_bg)
@@ -2941,10 +2936,8 @@ impl MenubarMenuEntries {
                                                                                     );
                                                                                 states.set(WidgetState::Open, false);
 
-                                                                                let highlight_bg = alpha_mul(
-                                                                                    theme.color_required("accent"),
-                                                                                    0.9,
-                                                                                );
+                                                                                let highlight_bg =
+                                                                                    theme.color_required("accent");
                                                                                 let bg_prop =
                                                                                     WidgetStateProperty::new(Color::TRANSPARENT)
                                                                                         .when(WidgetStates::HOVERED, highlight_bg)
@@ -3090,10 +3083,7 @@ impl MenubarMenuEntries {
                                                                                     if variant == MenubarItemVariant::Destructive {
                                                                                         destructive_bg
                                                                                     } else {
-                                                                                        alpha_mul(
-                                                                                            theme.color_required("accent"),
-                                                                                            0.9,
-                                                                                        )
+                                                                                        theme.color_required("accent")
                                                                                     };
                                                                                 let base_fg =
                                                                                     if variant == MenubarItemVariant::Destructive {

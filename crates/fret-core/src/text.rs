@@ -16,7 +16,8 @@ use crate::scene::Color;
 /// Notes:
 /// - Entries are treated as ordered "try this first" candidates; backends will pick the first
 ///   installed family name and ignore unknown ones.
-/// - This does not attempt to model per-script fallback chains yet (ADR 0029).
+/// - This does not attempt to model per-script fallback chains yet (ADR 0029); for now, we expose
+///   a single `common_fallback` list for cross-script "no tofu" baseline behavior.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextFontFamilyConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -25,6 +26,12 @@ pub struct TextFontFamilyConfig {
     pub ui_serif: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ui_mono: Vec<String>,
+    /// Additional family candidates appended to the framework fallback stack.
+    ///
+    /// This list is intended to cover "missing glyph" cases for mixed-script UIs (CJK + emoji +
+    /// RTL) without requiring per-span font selection.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub common_fallback: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -47,6 +54,11 @@ impl FontWeight {
 pub enum TextWrap {
     None,
     Word,
+    /// Break between grapheme clusters when needed.
+    ///
+    /// This is intended for editor surfaces (CJK, file paths/URLs, code identifiers) where long
+    /// "tokens" must still wrap without relying on whitespace or word boundaries.
+    Grapheme,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -274,8 +286,82 @@ impl AttributedText {
         Self { text, spans }
     }
 
+    /// Returns true if `self` and `other` have identical shaping-relevant content.
+    ///
+    /// This intentionally ignores paint-only fields (e.g. colors, underlines). It is useful for
+    /// caching/layout decisions where theme-driven paint changes should not force reshaping.
+    pub fn shaping_eq(&self, other: &Self) -> bool {
+        if self.text != other.text {
+            return false;
+        }
+        if self.spans.len() != other.spans.len() {
+            return false;
+        }
+        self.spans
+            .iter()
+            .zip(other.spans.iter())
+            .all(|(a, b)| a.len == b.len && a.shaping == b.shaping)
+    }
+
     pub fn is_valid(&self) -> bool {
         spans_are_valid(self.text.as_ref(), self.spans.as_ref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn attributed_text_shaping_eq_ignores_paint() {
+        let text: Arc<str> = Arc::<str>::from("hello");
+        let base = TextSpan {
+            len: text.len(),
+            shaping: Default::default(),
+            paint: Default::default(),
+        };
+
+        let mut spans_a = vec![base.clone()];
+        spans_a[0].paint.fg = Some(Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        });
+        let mut spans_b = vec![base];
+        spans_b[0].paint.fg = Some(Color {
+            r: 0.0,
+            g: 1.0,
+            b: 0.0,
+            a: 1.0,
+        });
+
+        let a = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_a));
+        let b = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_b));
+        assert_ne!(a, b, "full equality should include paint");
+        assert!(
+            a.shaping_eq(&b),
+            "shaping_eq should ignore paint-only changes"
+        );
+    }
+
+    #[test]
+    fn attributed_text_shaping_eq_detects_shaping_changes() {
+        let text: Arc<str> = Arc::<str>::from("hello");
+        let spans_a = vec![TextSpan {
+            len: text.len(),
+            shaping: Default::default(),
+            paint: Default::default(),
+        }];
+        let mut spans_b = spans_a.clone();
+        spans_b[0].shaping.weight = Some(FontWeight(700));
+
+        let a = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_a));
+        let b = AttributedText::new(Arc::clone(&text), Arc::<[TextSpan]>::from(spans_b));
+        assert!(
+            !a.shaping_eq(&b),
+            "shaping_eq must treat shaping changes as unequal"
+        );
     }
 }
 
@@ -424,6 +510,23 @@ pub trait TextService {
     fn selection_rects(&mut self, _blob: TextBlobId, _range: (usize, usize), _out: &mut Vec<Rect>) {
     }
 
+    /// Computes selection rectangles and clips them to `clip` in the same coordinate space.
+    ///
+    /// This is intended for large multi-line selections where generating rectangles for off-screen
+    /// lines is wasteful. Implementations may override this to cull work earlier.
+    ///
+    /// Coordinate space: rects and `clip` are relative to the text origin (x=0, y=0 at top of text box).
+    fn selection_rects_clipped(
+        &mut self,
+        blob: TextBlobId,
+        range: (usize, usize),
+        clip: Rect,
+        out: &mut Vec<Rect>,
+    ) {
+        self.selection_rects(blob, range, out);
+        clip_rects_in_place(clip, out);
+    }
+
     /// Extracts the precomputed caret stop table (byte index -> x offset) for a single-line blob.
     ///
     /// This is primarily intended for UI hit-testing in event handlers, which do not have access
@@ -452,4 +555,38 @@ pub trait TextService {
     }
 
     fn release(&mut self, blob: TextBlobId);
+}
+
+fn clip_rects_in_place(clip: Rect, out: &mut Vec<Rect>) {
+    let clip_x0 = clip.origin.x.0;
+    let clip_y0 = clip.origin.y.0;
+    let clip_x1 = clip_x0 + clip.size.width.0;
+    let clip_y1 = clip_y0 + clip.size.height.0;
+
+    if clip_x1 <= clip_x0 || clip_y1 <= clip_y0 {
+        out.clear();
+        return;
+    }
+
+    out.retain_mut(|r| {
+        let x0 = r.origin.x.0;
+        let y0 = r.origin.y.0;
+        let x1 = x0 + r.size.width.0;
+        let y1 = y0 + r.size.height.0;
+
+        let ix0 = x0.max(clip_x0);
+        let iy0 = y0.max(clip_y0);
+        let ix1 = x1.min(clip_x1);
+        let iy1 = y1.min(clip_y1);
+
+        if ix1 <= ix0 || iy1 <= iy0 {
+            return false;
+        }
+
+        r.origin.x = Px(ix0);
+        r.origin.y = Px(iy0);
+        r.size.width = Px(ix1 - ix0);
+        r.size.height = Px(iy1 - iy0);
+        true
+    });
 }

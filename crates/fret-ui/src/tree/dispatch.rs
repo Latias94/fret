@@ -405,6 +405,7 @@ impl<H: UiHost> UiTree<H> {
             fret_core::ImeEvent::Commit(_) | fret_core::ImeEvent::Disabled => {
                 self.ime_composing = false;
             }
+            fret_core::ImeEvent::DeleteSurrounding { .. } => {}
             fret_core::ImeEvent::Enabled => {}
         }
     }

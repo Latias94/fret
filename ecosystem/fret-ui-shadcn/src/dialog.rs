@@ -14,6 +14,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
@@ -391,6 +392,8 @@ impl DialogContent {
         let layout = LayoutRefinement::default()
             .w_full()
             .max_w(Px(512.0))
+            .min_w_0()
+            .min_h_0()
             .merge(self.layout);
 
         if let Some(max_w) = layout
@@ -404,7 +407,14 @@ impl DialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
-        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
+        let container = shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
+            children,
+        );
 
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);

@@ -70,6 +70,7 @@ pub struct Input {
     a11y_role: Option<SemanticsRole>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
+    disabled: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
     submit_command: Option<CommandId>,
@@ -90,6 +91,7 @@ impl Input {
             a11y_role: None,
             placeholder: None,
             aria_invalid: false,
+            disabled: false,
             active_descendant: None,
             expanded: None,
             submit_command: None,
@@ -121,6 +123,12 @@ impl Input {
     /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
     pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
         self.aria_invalid = aria_invalid;
+        self
+    }
+
+    /// Apply the upstream `disabled` interaction + chrome outcome.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -204,6 +212,7 @@ impl Input {
             self.a11y_role,
             self.placeholder,
             self.aria_invalid,
+            self.disabled,
             self.active_descendant,
             self.expanded,
             self.submit_command,
@@ -236,6 +245,7 @@ pub fn input<H: UiHost>(
         a11y_role,
         placeholder,
         false,
+        false,
         active_descendant,
         expanded,
         submit_command,
@@ -256,6 +266,7 @@ fn input_with_style<H: UiHost>(
     a11y_role: Option<SemanticsRole>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
+    disabled: bool,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
     submit_command: Option<CommandId>,
@@ -361,6 +372,8 @@ fn input_with_style<H: UiHost>(
     };
 
     let mut props = TextInputProps::new(model);
+    props.enabled = !disabled;
+    props.focusable = !disabled;
     props.a11y_label = a11y_label;
     props.a11y_role = a11y_role;
     props.placeholder = placeholder;
@@ -372,12 +385,16 @@ fn input_with_style<H: UiHost>(
     props.text_style = text_style;
     props.layout.size = SizeStyle {
         width: Length::Fill,
+        height: Length::Px(resolved.min_height),
         min_width: Some(fret_core::Px(0.0)),
-        min_height: Some(resolved.min_height),
         ..Default::default()
     };
     props.layout.overflow = Overflow::Clip;
     decl_style::apply_layout_refinement(&theme, layout_override, &mut props.layout);
 
-    cx.text_input(props)
+    if disabled {
+        cx.opacity(0.5, move |cx| vec![cx.text_input(props)])
+    } else {
+        cx.text_input(props)
+    }
 }

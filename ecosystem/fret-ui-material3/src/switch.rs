@@ -24,6 +24,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
     material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
@@ -209,14 +210,19 @@ impl Switch {
                             states |= WidgetStates::SELECTED;
                         }
 
-                        let interaction = interaction_state(is_pressed, is_hovered, is_focused);
-
-                        let tokens_interaction = match interaction {
-                            Interaction::None => switch_tokens::SwitchInteraction::None,
-                            Interaction::Hovered => switch_tokens::SwitchInteraction::Hovered,
-                            Interaction::Focused => switch_tokens::SwitchInteraction::Focused,
-                            Interaction::Pressed => switch_tokens::SwitchInteraction::Pressed,
-                        };
+                        let tokens_interaction =
+                            match pressable_interaction(is_pressed, is_hovered, is_focused) {
+                                Some(PressableInteraction::Pressed) => {
+                                    switch_tokens::SwitchInteraction::Pressed
+                                }
+                                Some(PressableInteraction::Focused) => {
+                                    switch_tokens::SwitchInteraction::Focused
+                                }
+                                Some(PressableInteraction::Hovered) => {
+                                    switch_tokens::SwitchInteraction::Hovered
+                                }
+                                None => switch_tokens::SwitchInteraction::None,
+                            };
 
                         let state_layer_target = switch_tokens::state_layer_target_opacity(
                             &theme,
@@ -341,26 +347,6 @@ impl Switch {
                 (pressable_props, vec![pointer_region])
             })
         })
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Interaction {
-    None,
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Interaction {
-    if pressed {
-        Interaction::Pressed
-    } else if focused {
-        Interaction::Focused
-    } else if hovered {
-        Interaction::Hovered
-    } else {
-        Interaction::None
     }
 }
 

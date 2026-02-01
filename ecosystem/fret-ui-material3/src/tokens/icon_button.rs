@@ -5,10 +5,15 @@
 //! - fallback chains (component token -> sys token -> required sys token),
 //! - derived values like disabled alpha application.
 
-use fret_core::Color;
+use fret_core::{Color, Px};
 use fret_ui::Theme;
 
+use crate::foundation::token_resolver::MaterialTokenResolver;
+use crate::icon_button::IconButtonSize;
 use crate::icon_button::IconButtonVariant;
+use crate::motion::SpringSpec;
+
+pub(crate) const COMPONENT_PREFIX: &str = "md.comp.icon-button";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum IconButtonInteraction {
@@ -177,6 +182,72 @@ pub(crate) fn outlined_outline_color(theme: &Theme, enabled: bool) -> Color {
 
     color.a = 1.0;
     color
+}
+
+pub(crate) fn container_shape_radius(theme: &Theme) -> f32 {
+    theme
+        .metric_by_key("md.comp.icon-button.container.shape.round")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
+        .unwrap_or(Px(9999.0))
+        .0
+}
+
+pub(crate) fn pressed_container_shape_radius(theme: &Theme) -> f32 {
+    theme
+        .metric_by_key("md.comp.icon-button.pressed.container.shape")
+        .or_else(|| theme.metric_by_key("md.sys.shape.corner.small"))
+        .unwrap_or(Px(8.0))
+        .0
+}
+
+pub(crate) fn pressed_container_corner_spring(
+    theme: &Theme,
+    scheme_fallback: SpringSpec,
+) -> SpringSpec {
+    let tokens = MaterialTokenResolver::new(theme);
+    SpringSpec {
+        damping: tokens.number_comp_or_sys(
+            "md.comp.icon-button.pressed.container.corner-size.motion.spring.damping",
+            "md.sys.motion.spring.fast.spatial.damping",
+            scheme_fallback.damping,
+        ),
+        stiffness: tokens.number_comp_or_sys(
+            "md.comp.icon-button.pressed.container.corner-size.motion.spring.stiffness",
+            "md.sys.motion.spring.fast.spatial.stiffness",
+            scheme_fallback.stiffness,
+        ),
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct IconButtonSizeTokens {
+    pub container: Px,
+    pub pad_left: Px,
+    pub pad_right: Px,
+    pub icon_size: Px,
+    pub outline_width: Px,
+}
+
+pub(crate) fn size_tokens(theme: &Theme, size: IconButtonSize) -> IconButtonSizeTokens {
+    match size {
+        IconButtonSize::Small => IconButtonSizeTokens {
+            container: theme
+                .metric_by_key("md.comp.icon-button.small.container.height")
+                .unwrap_or(Px(40.0)),
+            pad_left: theme
+                .metric_by_key("md.comp.icon-button.small.default.leading-space")
+                .unwrap_or(Px(8.0)),
+            pad_right: theme
+                .metric_by_key("md.comp.icon-button.small.default.trailing-space")
+                .unwrap_or(Px(8.0)),
+            icon_size: theme
+                .metric_by_key("md.comp.icon-button.small.icon.size")
+                .unwrap_or(Px(24.0)),
+            outline_width: theme
+                .metric_by_key("md.comp.icon-button.small.outlined.outline.width")
+                .unwrap_or(Px(1.0)),
+        },
+    }
 }
 
 fn state_layer_opacity_key(

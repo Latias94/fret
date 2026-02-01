@@ -324,6 +324,8 @@ pub struct ContainerProps {
     /// When true, focus state is derived from any focused descendant (focus-within).
     pub focus_within: bool,
     pub corner_radii: Corners,
+    /// When true, snap paint bounds to device pixels (policy-only).
+    pub snap_to_device_pixels: bool,
 }
 
 impl Default for ContainerProps {
@@ -339,6 +341,7 @@ impl Default for ContainerProps {
             focus_border_color: None,
             focus_within: false,
             corner_radii: Corners::all(Px(0.0)),
+            snap_to_device_pixels: false,
         }
     }
 }
@@ -910,6 +913,7 @@ pub struct SelectableTextState {
     pub selection_anchor: usize,
     pub caret: usize,
     pub affinity: CaretAffinity,
+    pub preferred_x: Option<Px>,
     pub dragging: bool,
     pub last_pointer_pos: Option<fret_core::Point>,
 }
@@ -920,6 +924,7 @@ impl Default for SelectableTextState {
             selection_anchor: 0,
             caret: 0,
             affinity: CaretAffinity::Downstream,
+            preferred_x: None,
             dragging: false,
             last_pointer_pos: None,
         }
@@ -929,6 +934,8 @@ impl Default for SelectableTextState {
 #[derive(Clone)]
 pub struct TextInputProps {
     pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
@@ -946,6 +953,8 @@ impl TextInputProps {
     pub fn new(model: Model<String>) -> Self {
         Self {
             layout: LayoutStyle::default(),
+            enabled: true,
+            focusable: true,
             model,
             a11y_label: None,
             a11y_role: None,
@@ -965,6 +974,8 @@ impl std::fmt::Debug for TextInputProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextInputProps")
             .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("a11y_role", &self.a11y_role)
@@ -985,6 +996,8 @@ impl std::fmt::Debug for TextInputProps {
 #[derive(Clone)]
 pub struct TextAreaProps {
     pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
@@ -997,6 +1010,8 @@ impl TextAreaProps {
     pub fn new(model: Model<String>) -> Self {
         Self {
             layout: LayoutStyle::default(),
+            enabled: true,
+            focusable: true,
             model,
             a11y_label: None,
             test_id: None,
@@ -1011,6 +1026,8 @@ impl std::fmt::Debug for TextAreaProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextAreaProps")
             .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
@@ -1278,6 +1295,18 @@ impl TextProps {
             overflow: TextOverflow::Clip,
         }
     }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_plain(self.text.clone(), style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
+    }
 }
 
 impl StyledTextProps {
@@ -1291,6 +1320,18 @@ impl StyledTextProps {
             overflow: TextOverflow::Clip,
         }
     }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_attributed(&self.rich, style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
+    }
 }
 
 impl SelectableTextProps {
@@ -1303,6 +1344,18 @@ impl SelectableTextProps {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         }
+    }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_attributed(&self.rich, style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
     }
 }
 
@@ -1490,6 +1543,7 @@ pub struct ScrollProps {
     pub layout: LayoutStyle,
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
+    pub intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
     /// When true (default), scroll containers probe their content with a very large available size
     /// along the scroll axis to measure the full scrollable extent.
     ///
@@ -1508,9 +1562,25 @@ impl Default for ScrollProps {
             layout,
             axis: ScrollAxis::Y,
             scroll_handle: None,
+            intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
             probe_unbounded: true,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollIntrinsicMeasureMode {
+    /// Default behavior: scroll measurement probes children (potentially using MaxContent on the
+    /// scroll axis when `probe_unbounded` is true).
+    Content,
+    /// Treat the scroll container as a viewport-sized barrier in intrinsic measurement contexts.
+    ///
+    /// This avoids recursively measuring large scrollable subtrees (virtualized surfaces, large
+    /// tables, code views) during Min/MaxContent measurement passes.
+    ///
+    /// Note: this affects only `measure()` / intrinsic sizing; final layout under definite
+    /// available space is unchanged.
+    Viewport,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

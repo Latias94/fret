@@ -122,6 +122,8 @@ pub enum CodeBlockWrap {
     ScrollX,
     /// Wrap at word boundaries (best-effort, depends on the text system).
     Word,
+    /// Wrap between grapheme clusters when needed (recommended for long identifiers/paths).
+    Grapheme,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -637,8 +639,8 @@ fn render_code_block_body<H: UiHost>(
     cx.container(props, |cx| {
         let wrap = if prepared.show_line_numbers {
             debug_assert!(
-                !matches!(wrap, CodeBlockWrap::Word),
-                "word wrap with line numbers is not supported yet"
+                !matches!(wrap, CodeBlockWrap::Word | CodeBlockWrap::Grapheme),
+                "wrapping with line numbers is not supported yet"
             );
             CodeBlockWrap::ScrollX
         } else {
@@ -963,6 +965,7 @@ fn render_code_block_windowed_lines<H: UiHost>(
             axis: ScrollAxis::X,
             scroll_handle: Some(scroll_x_handle.clone()),
             probe_unbounded: true,
+            ..Default::default()
         },
         |_cx| vec![list],
     );
@@ -1160,10 +1163,8 @@ fn render_code_block_text<H: UiHost>(
     };
     let fg = theme.color_required("foreground");
 
-    let (text_wrap, overflow) = match wrap {
-        CodeBlockWrap::ScrollX => (TextWrap::None, TextOverflow::Clip),
-        CodeBlockWrap::Word => (TextWrap::Word, TextOverflow::Clip),
-    };
+    let text_wrap = text_wrap_for_code_block_wrap(wrap);
+    let overflow = TextOverflow::Clip;
 
     let mut scroll_layout = LayoutStyle::default();
     scroll_layout.size.width = Length::Fill;
@@ -1173,7 +1174,7 @@ fn render_code_block_text<H: UiHost>(
             let lines = line_count.max(1) as f32;
             Length::Px(Px(line_height.0 * lines))
         }
-        TextWrap::Word => Length::Auto,
+        TextWrap::Word | TextWrap::Grapheme => Length::Auto,
     };
     scroll_layout.overflow = Overflow::Clip;
 
@@ -1181,7 +1182,7 @@ fn render_code_block_text<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.size.width = match text_wrap {
             TextWrap::None => Length::Auto,
-            TextWrap::Word => Length::Fill,
+            TextWrap::Word | TextWrap::Grapheme => Length::Fill,
         };
         layout
     };
@@ -1193,6 +1194,7 @@ fn render_code_block_text<H: UiHost>(
             axis: ScrollAxis::X,
             scroll_handle: Some(handle.clone()),
             probe_unbounded: matches!(text_wrap, TextWrap::None),
+            ..Default::default()
         },
         |cx| {
             vec![cx.selectable_text_props(SelectableTextProps {
@@ -1257,4 +1259,33 @@ fn render_code_block_text<H: UiHost>(
             ]
         },
     )
+}
+
+fn text_wrap_for_code_block_wrap(wrap: CodeBlockWrap) -> TextWrap {
+    match wrap {
+        CodeBlockWrap::ScrollX => TextWrap::None,
+        CodeBlockWrap::Word => TextWrap::Word,
+        CodeBlockWrap::Grapheme => TextWrap::Grapheme,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn code_block_wrap_maps_to_text_wrap() {
+        assert_eq!(
+            text_wrap_for_code_block_wrap(CodeBlockWrap::ScrollX),
+            TextWrap::None
+        );
+        assert_eq!(
+            text_wrap_for_code_block_wrap(CodeBlockWrap::Word),
+            TextWrap::Word
+        );
+        assert_eq!(
+            text_wrap_for_code_block_wrap(CodeBlockWrap::Grapheme),
+            TextWrap::Grapheme
+        );
+    }
 }

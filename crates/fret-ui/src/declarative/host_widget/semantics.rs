@@ -28,6 +28,13 @@ impl ElementHostWidget {
                         crate::element::SelectableTextState::default,
                         |state| (state.selection_anchor, state.caret),
                     );
+                    let mut anchor = anchor.min(props.rich.text.len());
+                    let mut caret = caret.min(props.rich.text.len());
+                    crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                        &props.rich.text,
+                        &mut anchor,
+                        &mut caret,
+                    );
                     cx.set_text_selection(anchor as u32, caret as u32);
                 } else {
                     cx.clear_text_selection();
@@ -91,6 +98,8 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_enabled(props.enabled);
+                input.set_focusable(props.focusable);
                 input.set_a11y_role(props.a11y_role.unwrap_or(SemanticsRole::TextField));
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
@@ -119,6 +128,8 @@ impl ElementHostWidget {
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
+                area.set_enabled(props.enabled);
+                area.set_focusable(props.focusable);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);

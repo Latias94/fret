@@ -205,6 +205,14 @@ impl<'a> CanvasPainter<'a> {
         self.host.scene()
     }
 
+    /// Access the underlying UI services and scene for advanced canvas paint handlers.
+    ///
+    /// This is primarily intended for diagnostics/profiling overlays and experimental paint
+    /// surfaces that need text geometry queries (selection rects, hit-testing, etc.).
+    pub fn services_and_scene(&mut self) -> (&mut dyn fret_core::UiServices, &mut Scene) {
+        self.host.services_and_scene()
+    }
+
     pub fn with_clip_rect<R>(&mut self, rect: Rect, f: impl FnOnce(&mut Self) -> R) -> R {
         {
             let scene = self.host.scene();

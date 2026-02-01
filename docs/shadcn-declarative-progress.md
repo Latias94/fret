@@ -19,14 +19,19 @@ Related trackers:
 
 Current golden parity snapshot (new-york-v4):
 
-- Keys referenced by tests: `471/471` (`100%`)
-- Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
+- Keys referenced by tests: `476/476` (`100%`, tracked-only, normalized `.open`)
+  - Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
   viewports, DPIs, fonts, and interaction state machines.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 
 Strategy: fill **breadth first** (one canonical viewport per page), then add a small set of targeted
 viewport/DPI stress variants for the highest-risk families (menus, listboxes, calendars, typography).
+
+Workstream notes (implementation-oriented; not contracts):
+
+- `docs/workstreams/shadcn-web-goldens-v4.md`
+- `docs/workstreams/shadcn-web-goldens-v4-todo.md`
 
 Decision note (scope + sequencing):
 
