@@ -23,6 +23,7 @@ Recent changes (2026-02-01):
 - Editor: add bundle-friendly cache counters (row text + syntax) and expose them via `CodeEditorHandle::cache_stats()`.
 - UI Gallery: show code-editor cache counters (total + per-frame deltas) in the torture overlay.
 - UI Kit/Diagnostics: record and export windowed-rows-surface visible-window telemetry in UI diagnostics snapshots.
+- View: expand word-boundary conformance tests (UnicodeWord vs Identifier) for selection and movement; fix `move_word_left` at token boundaries.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
 - Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
