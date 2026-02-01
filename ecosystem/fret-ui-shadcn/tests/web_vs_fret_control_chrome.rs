@@ -13,6 +13,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use time::{Date, Month};
 
 mod css_color;
 
@@ -120,6 +121,49 @@ fn parse_px(s: &str) -> Option<f32> {
     let s = s.trim();
     let v = s.strip_suffix("px").unwrap_or(s);
     v.parse::<f32>().ok()
+}
+
+fn parse_calendar_day_aria_label(label: &str) -> Option<(Date, bool)> {
+    let selected = label.ends_with(", selected");
+    let label = label.strip_suffix(", selected").unwrap_or(label);
+    let label = label.strip_prefix("Today, ").unwrap_or(label);
+
+    let (prefix, year) = label.rsplit_once(", ")?;
+    if year.len() != 4 || !year.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let year: i32 = year.parse().ok()?;
+
+    let (_weekday, month_and_day) = prefix.split_once(", ")?;
+    let (month, day_with_suffix) = month_and_day.split_once(' ')?;
+    let month_lower = month.to_lowercase();
+    let month = match month_lower.as_str() {
+        "january" => Month::January,
+        "february" => Month::February,
+        "march" => Month::March,
+        "april" => Month::April,
+        "may" => Month::May,
+        "june" => Month::June,
+        "july" => Month::July,
+        "august" => Month::August,
+        "september" => Month::September,
+        "october" => Month::October,
+        "november" => Month::November,
+        "december" => Month::December,
+        _ => return None,
+    };
+
+    let day_digits: String = day_with_suffix
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    if day_digits.is_empty() {
+        return None;
+    }
+    let day: u8 = day_digits.parse().ok()?;
+
+    let date = Date::from_calendar_date(year, month, day).ok()?;
+    Some((date, selected))
 }
 
 fn web_border_width_px(node: &WebNode) -> Option<f32> {
@@ -4549,6 +4593,96 @@ fn web_vs_fret_select_demo_focus_ring_matches() {
         find_focus_ring_quad(&scene, select.bounds, expected_ring_spread).expect("focus ring quad");
     assert_color_close(
         "select-demo focus ring color",
+        ring_quad.border_color,
+        &expected_ring_color,
+        0.06,
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_14_focus_ring_matches_web() {
+    let web = read_web_golden("calendar-14.focus-kbd-selected");
+    let theme = web
+        .themes
+        .get("light")
+        .or_else(|| web.themes.get("dark"))
+        .expect("missing theme in web golden");
+
+    let web_focused_button = find_first(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs.contains_key("aria-label")
+            && web_box_shadow_focus_ring(n).is_some()
+    })
+    .expect("web focused calendar day button");
+
+    let web_label = web_focused_button
+        .attrs
+        .get("aria-label")
+        .expect("web focused day aria-label");
+    let (selected_date, _selected) =
+        parse_calendar_day_aria_label(web_label).expect("parse web focused day aria-label");
+
+    let (expected_ring_color, expected_ring_spread) =
+        web_box_shadow_focus_ring(web_focused_button).expect("web focus ring");
+
+    let (snap, scene) = render_and_paint_with_focus_in_bounds(
+        CoreSize::new(Px(1024.0), Px(768.0)),
+        |cx| {
+            use fret_ui_headless::calendar::CalendarMonth;
+
+            let theme = fret_ui::Theme::global(&*cx.app).clone();
+            let border = theme.color_required("border");
+
+            let month_model: fret_runtime::Model<CalendarMonth> = cx.app.models_mut().insert(
+                CalendarMonth::new(selected_date.year(), selected_date.month()),
+            );
+            let selected: fret_runtime::Model<Option<Date>> =
+                cx.app.models_mut().insert(Some(selected_date));
+
+            let calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                .cell_size(Px(web_focused_button.rect.w))
+                .refine_style(
+                    ChromeRefinement::default()
+                        .rounded(fret_ui_kit::Radius::Lg)
+                        .border_1()
+                        .border_color(fret_ui_kit::ColorRef::Color(border))
+                        .shadow_sm(),
+                )
+                .into_element(cx);
+
+            vec![cx.container(
+                fret_ui::element::ContainerProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout.size.height = fret_ui::element::Length::Fill;
+                        layout
+                    },
+                    padding: fret_core::Edges::all(Px(64.0)),
+                    ..Default::default()
+                },
+                move |_cx| vec![calendar],
+            )]
+        },
+        |snap| {
+            snap.nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(web_label))
+                .map(|n| n.id)
+                .expect("missing fret focused day semantics node")
+        },
+    );
+
+    let button = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(web_label))
+        .expect("missing semantics for focused day button");
+
+    let ring_quad =
+        find_focus_ring_quad(&scene, button.bounds, expected_ring_spread).expect("focus ring quad");
+    assert_color_close(
+        "calendar-14 focus ring color",
         ring_quad.border_color,
         &expected_ring_color,
         0.06,

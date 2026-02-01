@@ -58,6 +58,8 @@ Tracking format:
 - 2026-02-01: added range-start/range-end background gates (`calendar-04`) and a semantics gate for disabled navigation buttons (`calendar-11`).
 - 2026-02-01: added a disabled-day semantics gate (`calendar-08`, `rdp-disabled` / `data-disabled=true`).
 - 2026-02-01: fixed calendar day number alignment (centered text within day cells) and added a selected-day text-centering gate (`calendar-14`).
+- 2026-02-01: added a hover-day background gate using deterministic hover goldens (`calendar-14.hover-day-13`).
+- 2026-02-01: added a focus-visible ring gate using deterministic keyboard-focus goldens (`calendar-14.focus-kbd-selected`).
 
 ---
 
