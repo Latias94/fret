@@ -9,6 +9,8 @@ Recent changes (2026-02-01):
 - Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
+- Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
+- A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
 - Web: enable a default CJK demo font bundle to avoid “tofu” squares in IME/editor harnesses.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
@@ -424,8 +426,8 @@ Evidence anchors:
 
 ### 6) Semantics (a11y) and selection state
 
-- [ ] Define semantics role for the editor surface (likely `SemanticsRole::TextField` or a dedicated editor role).
-- [ ] Ensure selection and composition ranges follow ADR 0071 rules (display text indices).
+- [~] Define semantics role for the editor surface (currently: `TextInputRegion` emits `SemanticsRole::TextField`).
+- [~] Ensure selection and composition ranges follow ADR 0071 rules (partial: `TextInputRegion` can publish UTF-8 ranges within an app-provided value).
 - [ ] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (document the tradeoff).
 
 ### 7) Diagnostics and perf attribution

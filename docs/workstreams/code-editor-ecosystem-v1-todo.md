@@ -39,7 +39,7 @@ Legend:
 
 ### DOM element lifecycle
 
-- [~] Create the hidden textarea element (currently global; TODO per-window + canvas overlay attachment).
+- [~] Create the hidden textarea element (now tracked per `AppWindowId`; canvas overlay attachment still TBD).
 - [x] Define focus/blur rules and map them to `Effect::ImeAllow`.
 - [x] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
 
@@ -176,8 +176,8 @@ Evidence anchors:
 
 ## M6 — Semantics (a11y) and selection state
 
-- [ ] Define semantics role for the editor surface (likely `SemanticsRole::TextField` or a dedicated editor role).
-- [ ] Ensure selection and composition ranges follow ADR 0071 rules (display text indices).
+- [~] Define semantics role for the editor surface (current baseline: `TextInputRegion` emits `SemanticsRole::TextField`).
+- [~] Ensure selection and composition ranges follow ADR 0071 rules (baseline: app-provided UTF-8 ranges within an app-provided value).
 - [ ] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (document the tradeoff).
 
 ---
