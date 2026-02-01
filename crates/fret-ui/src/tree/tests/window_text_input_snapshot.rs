@@ -338,3 +338,64 @@ fn snapshot_reports_composed_utf16_ranges_for_mixed_script_text_during_ime_preed
     );
     assert!(snapshot.ime_cursor_area.is_some());
 }
+
+#[test]
+fn snapshot_reports_composed_utf16_ranges_for_emoji_sequences_during_ime_preedit() {
+    let base = "abc العربية ✈️ 1️⃣";
+    let preedit = "👨‍👩‍👧‍👦😀";
+
+    let base_utf16_len: u32 = base.encode_utf16().count().try_into().unwrap();
+    let preedit_utf16_len: u32 = preedit.encode_utf16().count().try_into().unwrap();
+    let composed_utf16_len = base_utf16_len + preedit_utf16_len;
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let text = ui.create_node(crate::text_input::TextInput::new().with_text(base));
+    ui.add_child(root, text);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.set_focus(Some(text));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Ime(fret_core::ImeEvent::Preedit {
+            text: preedit.to_string(),
+            cursor: Some((0, preedit.len())),
+        }),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot");
+
+    assert!(snapshot.focus_is_text_input);
+    assert!(snapshot.is_composing);
+    assert_eq!(snapshot.text_len_utf16, composed_utf16_len);
+    assert_eq!(
+        snapshot.marked_utf16,
+        Some((base_utf16_len, base_utf16_len + preedit_utf16_len))
+    );
+    assert_eq!(
+        snapshot.selection_utf16,
+        Some((composed_utf16_len, composed_utf16_len))
+    );
+    assert!(snapshot.ime_cursor_area.is_some());
+}
