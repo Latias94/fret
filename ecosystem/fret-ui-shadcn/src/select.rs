@@ -64,6 +64,7 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
+    predicted_has_scroll: bool,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
@@ -112,7 +113,7 @@ where
             // Guard against fractional max offsets (layout rounding) causing scroll affordances to
             // appear when content visually fits.
             let scroll_epsilon = Px(0.5);
-            let has_scroll = max.y.0 > scroll_epsilon.0;
+            let has_scroll = predicted_has_scroll || max.y.0 > scroll_epsilon.0;
             let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
             // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
             let show_down = has_scroll && offset.y.0.ceil() < max.y.0;
@@ -1976,6 +1977,9 @@ fn select_impl<H: UiHost>(
                                             cx,
                                             theme_for_overlay.clone(),
                                             item_h,
+                                            item_len > 0
+                                                && Px(item_h.0 * item_len as f32).0
+                                                    > desired_content_h.0 + 0.5,
                                             scroll_handle,
                                             initial_scroll_to_y,
                                             viewport_id_out,
@@ -2414,32 +2418,25 @@ fn select_impl<H: UiHost>(
 
                                                                                             // Indicator slot matches upstream: absolute at the end, but reserve `pr-8`.
                                                                                             let indicator_size = Px(14.0);
-                                                                                            let indicator_top = Px(
-                                                                                                ((item_h.0 - indicator_size.0)
-                                                                                                    * 0.5)
-                                                                                                    .max(0.0),
-                                                                                            );
                                                                                                  let indicator = cx.container(
                                                                                                      ContainerProps {
                                                                                                          layout: LayoutStyle {
                                                                                                              position: PositionStyle::Absolute,
                                                                                                              inset: InsetStyle {
-                                                                                                                 top: Some(indicator_top),
-                                                                                                                 right: Some(Px(8.0)),
-                                                                                                                 bottom: None,
-                                                                                                                 left: None,
-                                                                                                             },
-                                                                                                             size: SizeStyle {
-                                                                                                                 width: Length::Px(
-                                                                                                                     indicator_size,
-                                                                                                                 ),
-                                                                                                                 height: Length::Px(
-                                                                                                                     indicator_size,
-                                                                                                                 ),
-                                                                                                                 ..Default::default()
-                                                                                                             },
-                                                                                                             ..Default::default()
-                                                                                                         },
+                                                                                                                  top: Some(Px(0.0)),
+                                                                                                                  right: Some(Px(8.0)),
+                                                                                                                  bottom: Some(Px(0.0)),
+                                                                                                                  left: None,
+                                                                                                              },
+                                                                                                              size: SizeStyle {
+                                                                                                                  width: Length::Px(
+                                                                                                                      indicator_size,
+                                                                                                                  ),
+                                                                                                                  height: Length::Fill,
+                                                                                                                  ..Default::default()
+                                                                                                              },
+                                                                                                              ..Default::default()
+                                                                                                          },
                                                                                                          padding: Edges::all(Px(0.0)),
                                                                                                          background: None,
                                                                                                          shadow: None,
