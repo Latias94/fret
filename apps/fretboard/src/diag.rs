@@ -2124,6 +2124,9 @@ See: `docs/tracy.md`.\n";
                     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
                     "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
                     "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
+                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
+                    "tools/diag-scripts/ui-gallery-window-resize-stress.json",
                 ]
                 .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -11317,6 +11320,8 @@ fn snapshot_layout_engine_solves(
         return Vec::new();
     }
 
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+
     let mut out: Vec<BundleStatsLayoutEngineSolve> = solves
         .iter()
         .map(|s| {
@@ -11356,7 +11361,8 @@ fn snapshot_layout_engine_solves(
                             .collect();
 
                     for item in &mut top_children {
-                        let (role, test_id) = snapshot_lookup_semantics(snapshot, item.child);
+                        let (role, test_id) =
+                            semantics_index.lookup_for_node_or_ancestor_test_id(item.child);
                         item.role = role;
                         item.test_id = test_id;
                     }
@@ -11382,7 +11388,8 @@ fn snapshot_layout_engine_solves(
                 .collect();
 
             for item in &mut top_measures {
-                let (role, test_id) = snapshot_lookup_semantics(snapshot, item.node);
+                let (role, test_id) =
+                    semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
                 item.role = role;
                 item.test_id = test_id;
             }
@@ -11410,7 +11417,7 @@ fn snapshot_layout_engine_solves(
     out.truncate(max);
 
     for item in &mut out {
-        let (role, test_id) = snapshot_lookup_semantics(snapshot, item.root_node);
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.root_node);
         item.root_role = role;
         item.root_test_id = test_id;
     }
@@ -11687,6 +11694,33 @@ impl SemanticsIndex {
         }
 
         (None, None)
+    }
+
+    fn lookup_for_node_or_ancestor_test_id(
+        &self,
+        node_id: u64,
+    ) -> (Option<String>, Option<String>) {
+        const MAX_PARENT_HOPS: usize = 16;
+
+        let mut role: Option<String> = None;
+        let mut current: Option<u64> = Some(node_id);
+        for _ in 0..MAX_PARENT_HOPS {
+            let Some(id) = current else {
+                break;
+            };
+            let Some(node) = self.by_id.get(&id) else {
+                break;
+            };
+            if role.is_none() {
+                role = node.role.clone();
+            }
+            if node.test_id.as_ref().is_some_and(|s| !s.is_empty()) {
+                return (role, node.test_id.clone());
+            }
+            current = node.parent;
+        }
+
+        (role, None)
     }
 }
 

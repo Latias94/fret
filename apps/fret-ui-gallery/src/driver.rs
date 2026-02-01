@@ -2776,6 +2776,10 @@ impl WinitAppDriver for UiGalleryDriver {
                 )
             });
 
+            for effect in drive.effects {
+                app.push_effect(effect);
+            }
+
             if drive.request_redraw {
                 app.request_redraw(window);
                 // Script-driven `wait_frames` needs a reliable way to advance frames even when the

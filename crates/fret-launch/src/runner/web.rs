@@ -1328,7 +1328,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         event_loop.exit();
                         return true;
                     }
-                    WindowRequest::Create(_) | WindowRequest::Raise { .. } => {}
+                    WindowRequest::Create(_)
+                    | WindowRequest::Raise { .. }
+                    | WindowRequest::SetInnerSize { .. } => {}
                 },
                 Effect::QuitApp => {
                     self.exiting = true;

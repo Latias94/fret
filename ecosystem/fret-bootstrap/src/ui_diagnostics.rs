@@ -686,6 +686,22 @@ impl UiDiagnosticsService {
         }
 
         match step {
+            UiActionStepV2::SetWindowInnerSize {
+                width_px,
+                height_px,
+            } => {
+                let size = fret_core::Size::new(fret_core::Px(width_px), fret_core::Px(height_px));
+                output
+                    .effects
+                    .push(Effect::Window(fret_app::WindowRequest::SetInnerSize {
+                        window,
+                        size,
+                    }));
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            }
             UiActionStepV2::WaitFrames { n } => {
                 active.wait_frames_remaining = n;
                 active.wait_until = None;
@@ -3291,6 +3307,14 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_drag_steps")]
         drag_steps: u32,
     },
+    /// Request a resize of the active window's inner size (logical px).
+    ///
+    /// This is intended for deterministic “resize stress” repro scripts and is best-effort:
+    /// runners may ignore it on platforms where programmatic resizing is not supported.
+    SetWindowInnerSize {
+        width_px: f32,
+        height_px: f32,
+    },
 }
 
 impl From<UiActionStepV1> for UiActionStepV2 {
@@ -3516,6 +3540,7 @@ pub struct UiRoleAndNameV1 {
 #[derive(Debug, Default)]
 pub struct UiScriptFrameOutput {
     pub events: Vec<Event>,
+    pub effects: Vec<Effect>,
     pub request_redraw: bool,
 }
 

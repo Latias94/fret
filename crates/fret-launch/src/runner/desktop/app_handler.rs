@@ -30,6 +30,20 @@ fn redraw_hitch_config() -> Option<RedrawHitchConfig> {
 
 fn redraw_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     let mut paths = Vec::new();
+
+    if let Some(custom) = std::env::var_os("FRET_REDRAW_HITCH_LOG_PATH")
+        && !custom.is_empty()
+    {
+        let mut path = std::path::PathBuf::from(custom);
+        if path.is_relative()
+            && let Some(diag_dir) = std::env::var_os("FRET_DIAG_DIR")
+            && !diag_dir.is_empty()
+        {
+            path = std::path::Path::new(&diag_dir).join(path);
+        }
+        paths.push(path);
+    }
+
     paths.push(std::path::Path::new(".fret").join("redraw_hitches.log"));
 
     let tmp = std::env::temp_dir();

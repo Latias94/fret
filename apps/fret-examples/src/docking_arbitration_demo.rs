@@ -1472,6 +1472,10 @@ impl WinitAppDriver for DockingArbitrationDriver {
             )
         });
 
+        for effect in drive.effects {
+            app.push_effect(effect);
+        }
+
         if drive.request_redraw {
             app.request_redraw(window);
             app.push_effect(Effect::RequestAnimationFrame(window));
