@@ -389,8 +389,8 @@ where
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SelectAlign {
-    Start,
     #[default]
+    Start,
     Center,
     End,
 }
@@ -4596,6 +4596,144 @@ mod tests {
             last_bottom > list_top + 0.01 && last_top < list_bottom - 0.01,
             "expected last item to remain visible after wheel scrolling; list={list_bounds:?} last={last_bounds:?}"
         );
+    }
+
+    #[test]
+    fn select_item_aligned_viewport_bounds_do_not_drift_after_wheel_scroll() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..60)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Render a couple frames so scroll geometry and overlay placement are fully realized.
+        for _ in 0..2 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("list node");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node");
+
+        let viewport_bounds_before = ui.debug_node_bounds(viewport.id).expect("viewport bounds");
+        assert!(
+            viewport_bounds_before.size.height.0 > 1.0,
+            "expected non-zero viewport height before wheel; bounds={viewport_bounds_before:?}"
+        );
+
+        let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
+        let wheel_pos = Point::new(
+            Px(list_bounds.origin.x.0 + list_bounds.size.width.0 * 0.5),
+            Px(list_bounds.origin.y.0 + list_bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId(0),
+                position: wheel_pos,
+                delta: fret_core::Point::new(Px(0.0), Px(-120.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel");
+        let viewport = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+            .expect("select viewport node after wheel");
+        let viewport_bounds_anchor = ui
+            .debug_node_bounds(viewport.id)
+            .expect("viewport bounds after wheel");
+
+        for step in 0..8 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let viewport = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("select-scroll-viewport"))
+                .expect("select viewport node");
+            let viewport_bounds = ui.debug_node_bounds(viewport.id).expect("viewport bounds");
+
+            assert!(
+                viewport_bounds.size.height.0 > 1.0,
+                "expected non-zero viewport height after wheel (step={step}); bounds={viewport_bounds:?}"
+            );
+
+            let drift_y = (viewport_bounds.origin.y.0 - viewport_bounds_anchor.origin.y.0).abs();
+            assert!(
+                drift_y <= 1.0,
+                "expected item-aligned select viewport not to drift after wheel (step={step}); drift_y={drift_y} bounds={viewport_bounds:?} base={viewport_bounds_anchor:?}"
+            );
+        }
     }
 
     #[test]
