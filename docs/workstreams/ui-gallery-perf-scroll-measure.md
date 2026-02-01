@@ -86,6 +86,36 @@ Finding (2026-02-01, debug build):
   (`SemanticsProps.test_id = ui-gallery-content-viewport`), matching the perceived stall.
 - layout engine solve time is typically small; the time is in the host/widget `measure()` traversal.
 
+#### 1.1.1 Mitigation: defer unbounded scroll probe after layout invalidation (experimental)
+
+An experiment gate delays the expensive unbounded scroll probe by one frame when the scroll content subtree has
+layout invalidation in the current frame.
+
+This makes the “first frame after click” responsive (use last-frame measured sizes as an estimate), and schedules a
+follow-up frame to compute accurate extents.
+
+Enable:
+
+```powershell
+$env:FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1
+```
+
+Evidence bundles (same script; “second click”):
+
+- Baseline: `target/fret-diag/1769937482628-ui-gallery-nav-card-click-latency-second/bundle.json`
+  - `dt_ms max = 173`
+  - `layout_time_us max = 150376`
+- Gate on: `target/fret-diag/1769939246388-ui-gallery-nav-card-click-latency-second/bundle.json`
+  - `dt_ms max = 48`
+  - `layout_time_us max = 5908`
+
+Notes:
+
+- This is a mitigation, not the long-term solution: correct scroll extents should come from post-layout geometry
+  (tracked in `docs/workstreams/scroll-extents-dom-parity.md`).
+- If the follow-up “accurate extents” frame clamps offsets, it can introduce a 1-frame visual adjustment. This should
+  be measured and addressed as we move toward a DOM/GPUI-like extent model.
+
 ## 2) Observability (what to turn on)
 
 ### 2.1 Bundle-based triage (default)

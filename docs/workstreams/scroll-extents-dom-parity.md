@@ -24,6 +24,11 @@ In debug/dev builds, this can cause noticeable stalls on page switches (e.g. UI 
 because the frame is blocked inside recursive measurement rather than only doing a single final
 layout pass.
 
+Short-term mitigation (experimental; evidence tracked in `docs/workstreams/ui-gallery-perf-scroll-measure.md`):
+
+- defer the unbounded probe by one frame when the scroll content subtree is layout-invalidated, using last-frame
+  `measured_size` as an estimate for the first post-click frame.
+
 ## Reference Direction (GPUI / DOM)
 
 The DOM model (and GPUI’s implementation style) treats scroll extent as a property that can be
@@ -66,4 +71,3 @@ Key constraints:
 Track concrete tasks and “done criteria” in:
 
 - `docs/workstreams/scroll-extents-dom-parity-todo.md`
-
