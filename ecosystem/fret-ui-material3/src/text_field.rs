@@ -20,7 +20,8 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::floating_label;
-use crate::interaction::state_layer::StateLayerAnimator;
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::motion::SpringAnimator;
 use crate::tokens::text_field as text_field_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -109,7 +110,66 @@ impl TextFieldStyle {
 #[derive(Debug, Default)]
 struct TextFieldRuntime {
     float_target: bool,
-    float: StateLayerAnimator,
+    float: SpringAnimator,
+    last_phase: TextFieldInputPhase,
+    placeholder_opacity: SpringAnimator,
+    border_top: SpringAnimator,
+    border_right: SpringAnimator,
+    border_bottom: SpringAnimator,
+    border_left: SpringAnimator,
+    border_color: AnimatedColor,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum TextFieldInputPhase {
+    Focused,
+    #[default]
+    UnfocusedEmpty,
+    UnfocusedNotEmpty,
+}
+
+#[derive(Debug, Default)]
+struct AnimatedColor {
+    r: SpringAnimator,
+    g: SpringAnimator,
+    b: SpringAnimator,
+    a: SpringAnimator,
+}
+
+impl AnimatedColor {
+    fn reset(&mut self, now_frame: u64, color: Color) {
+        self.r.reset(now_frame, color.r);
+        self.g.reset(now_frame, color.g);
+        self.b.reset(now_frame, color.b);
+        self.a.reset(now_frame, color.a);
+    }
+
+    fn set_target(&mut self, now_frame: u64, color: Color, spec: crate::motion::SpringSpec) {
+        self.r.set_target(now_frame, color.r, spec);
+        self.g.set_target(now_frame, color.g, spec);
+        self.b.set_target(now_frame, color.b, spec);
+        self.a.set_target(now_frame, color.a, spec);
+    }
+
+    fn advance(&mut self, now_frame: u64) {
+        self.r.advance(now_frame);
+        self.g.advance(now_frame);
+        self.b.advance(now_frame);
+        self.a.advance(now_frame);
+    }
+
+    fn is_active(&self) -> bool {
+        self.r.is_active() || self.g.is_active() || self.b.is_active() || self.a.is_active()
+    }
+
+    fn value(&self) -> Color {
+        Color {
+            r: self.r.value().clamp(0.0, 1.0),
+            g: self.g.value().clamp(0.0, 1.0),
+            b: self.b.value().clamp(0.0, 1.0),
+            a: self.a.value().clamp(0.0, 1.0),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -259,6 +319,7 @@ impl TextField {
                     },
                     move |cx| {
                         let mut children: Vec<AnyElement> = Vec::new();
+                        let mut float_progress = 0.0f32;
 
                         let input = cx.named("text_input", |cx| {
                             let populated = cx
@@ -307,28 +368,177 @@ impl TextField {
                                     &mut chrome,
                                 );
 
+                                let should_float = focused || populated;
+                                let input_phase = if focused {
+                                    TextFieldInputPhase::Focused
+                                } else if populated {
+                                    TextFieldInputPhase::UnfocusedNotEmpty
+                                } else {
+                                    TextFieldInputPhase::UnfocusedEmpty
+                                };
+
+                                let placeholder_target_opacity = if label.is_some() {
+                                    if focused && !populated { 1.0 } else { 0.0 }
+                                } else {
+                                    1.0
+                                };
+
+                                let now_frame = cx.frame_id.0;
+                                let spatial =
+                                    sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::FastSpatial);
+                                let fast_effects =
+                                    sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::FastEffects);
+                                let slow_effects =
+                                    sys_spring_in_scope(&*cx, &theme, MotionSchemeKey::SlowEffects);
+
+                                let target_border = chrome.border;
+                                let target_border_color = chrome.border_color;
+
+                                let (
+                                    want_frames,
+                                    next_float_progress,
+                                    animated_border,
+                                    animated_border_color,
+                                    placeholder_opacity,
+                                ) = cx.with_state(TextFieldRuntime::default, |rt| {
+                                    if disabled {
+                                        rt.float_target = should_float;
+                                        rt.float
+                                            .reset(now_frame, if should_float { 1.0 } else { 0.0 });
+                                        rt.last_phase = input_phase;
+                                        rt.placeholder_opacity
+                                            .reset(now_frame, placeholder_target_opacity);
+                                        rt.border_top.reset(now_frame, target_border.top.0);
+                                        rt.border_right.reset(now_frame, target_border.right.0);
+                                        rt.border_bottom.reset(now_frame, target_border.bottom.0);
+                                        rt.border_left.reset(now_frame, target_border.left.0);
+                                        rt.border_color.reset(now_frame, target_border_color);
+
+                                        return (
+                                            false,
+                                            rt.float.value(),
+                                            target_border,
+                                            target_border_color,
+                                            rt.placeholder_opacity.value(),
+                                        );
+                                    }
+
+                                    if rt.float_target != should_float {
+                                        rt.float_target = should_float;
+                                        rt.float.set_target(
+                                            now_frame,
+                                            if should_float { 1.0 } else { 0.0 },
+                                            spatial,
+                                        );
+                                    }
+
+                                    let placeholder_effects = match (rt.last_phase, input_phase) {
+                                        (
+                                            TextFieldInputPhase::Focused,
+                                            TextFieldInputPhase::UnfocusedEmpty,
+                                        ) => fast_effects,
+                                        (
+                                            TextFieldInputPhase::UnfocusedEmpty,
+                                            TextFieldInputPhase::Focused,
+                                        )
+                                        | (
+                                            TextFieldInputPhase::UnfocusedNotEmpty,
+                                            TextFieldInputPhase::UnfocusedEmpty,
+                                        ) => slow_effects,
+                                        _ => fast_effects,
+                                    };
+                                    rt.last_phase = input_phase;
+
+                                    rt.placeholder_opacity.set_target(
+                                        now_frame,
+                                        placeholder_target_opacity,
+                                        placeholder_effects,
+                                    );
+
+                                    rt.border_top.set_target(
+                                        now_frame,
+                                        target_border.top.0,
+                                        spatial,
+                                    );
+                                    rt.border_right.set_target(
+                                        now_frame,
+                                        target_border.right.0,
+                                        spatial,
+                                    );
+                                    rt.border_bottom.set_target(
+                                        now_frame,
+                                        target_border.bottom.0,
+                                        spatial,
+                                    );
+                                    rt.border_left.set_target(
+                                        now_frame,
+                                        target_border.left.0,
+                                        spatial,
+                                    );
+
+                                    rt.border_color.set_target(
+                                        now_frame,
+                                        target_border_color,
+                                        fast_effects,
+                                    );
+
+                                    rt.float.advance(now_frame);
+                                    rt.placeholder_opacity.advance(now_frame);
+                                    rt.border_top.advance(now_frame);
+                                    rt.border_right.advance(now_frame);
+                                    rt.border_bottom.advance(now_frame);
+                                    rt.border_left.advance(now_frame);
+                                    rt.border_color.advance(now_frame);
+
+                                    let want_frames = rt.float.is_active()
+                                        || rt.placeholder_opacity.is_active()
+                                        || rt.border_top.is_active()
+                                        || rt.border_right.is_active()
+                                        || rt.border_bottom.is_active()
+                                        || rt.border_left.is_active()
+                                        || rt.border_color.is_active();
+
+                                    (
+                                        want_frames,
+                                        rt.float.value(),
+                                        Edges {
+                                            top: Px(rt.border_top.value().max(0.0)),
+                                            right: Px(rt.border_right.value().max(0.0)),
+                                            bottom: Px(rt.border_bottom.value().max(0.0)),
+                                            left: Px(rt.border_left.value().max(0.0)),
+                                        },
+                                        rt.border_color.value(),
+                                        rt.placeholder_opacity.value(),
+                                    )
+                                });
+
+                                float_progress = next_float_progress.clamp(0.0, 1.0);
+
+                                if want_frames {
+                                    cx.request_animation_frame();
+                                }
+
                                 input_bg = chrome.background;
                                 outline_width_for_notch = match variant_for_children {
-                                    TextFieldVariant::Outlined => chrome.border.top,
+                                    TextFieldVariant::Outlined => animated_border.top,
                                     TextFieldVariant::Filled => Px(0.0),
                                 };
 
                                 container.background =
                                     (chrome.background.a > 0.0).then_some(chrome.background);
                                 container.corner_radii = chrome.corner_radii;
-                                container.border = chrome.border;
-                                container.border_color = Some(chrome.border_color);
+                                container.border = animated_border;
+                                container.border_color = Some(animated_border_color);
 
                                 chrome.background = Color::TRANSPARENT;
                                 chrome.border = Edges::all(Px(0.0));
                                 chrome.border_color = Color::TRANSPARENT;
                                 chrome.border_color_focused = Color::TRANSPARENT;
 
-                                let show_placeholder = if label.is_some() {
-                                    focused && !populated
-                                } else {
-                                    true
-                                };
+                                chrome.placeholder_color = alpha_mul(
+                                    chrome.placeholder_color,
+                                    placeholder_opacity.clamp(0.0, 1.0),
+                                );
 
                                 let mut props = TextInputProps::new(model.clone());
                                 props.layout.size.width = Length::Fill;
@@ -336,11 +546,7 @@ impl TextField {
                                 props.a11y_label = a11y_label.clone();
                                 props.a11y_role = Some(SemanticsRole::TextField);
                                 props.test_id = test_id.clone();
-                                props.placeholder = if show_placeholder {
-                                    placeholder.clone()
-                                } else {
-                                    None
-                                };
+                                props.placeholder = placeholder.clone();
                                 props.chrome = chrome;
                                 props.text_style =
                                     crate::foundation::context::inherited_text_style(cx)
@@ -376,44 +582,6 @@ impl TextField {
                             }
                         });
 
-                        let populated = cx
-                            .get_model_cloned(&model, Invalidation::Layout)
-                            .map(|v| !v.is_empty())
-                            .unwrap_or(false);
-                        let should_float = focused || populated;
-
-                        let now_frame = cx.frame_id.0;
-                        let duration_ms = theme
-                            .duration_ms_by_key("md.sys.motion.duration.short4")
-                            .unwrap_or(200);
-                        let easing = theme
-                            .easing_by_key("md.sys.motion.easing.standard")
-                            .unwrap_or(fret_ui::theme::CubicBezier {
-                                x1: 0.0,
-                                y1: 0.0,
-                                x2: 1.0,
-                                y2: 1.0,
-                            });
-
-                        let (progress, want_frames) =
-                            cx.with_state(TextFieldRuntime::default, |rt| {
-                                if rt.float_target != should_float {
-                                    rt.float_target = should_float;
-                                    rt.float.set_target(
-                                        now_frame,
-                                        if should_float { 1.0 } else { 0.0 },
-                                        duration_ms,
-                                        easing,
-                                    );
-                                }
-                                rt.float.advance(now_frame);
-                                (rt.float.value(), rt.float.is_active())
-                            });
-
-                        if want_frames {
-                            cx.request_animation_frame();
-                        }
-
                         children.push(input);
 
                         if let Some(label) = label.as_ref() {
@@ -422,7 +590,7 @@ impl TextField {
                                 &theme,
                                 variant_for_children,
                                 label.clone(),
-                                progress,
+                                float_progress,
                                 states,
                                 &style_override,
                                 hovered,
@@ -590,6 +758,11 @@ fn text_field_widget_states<H: UiHost>(
         focused && !disabled && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window)),
     );
     states
+}
+
+fn alpha_mul(mut color: Color, opacity: f32) -> Color {
+    color.a = (color.a * opacity).clamp(0.0, 1.0);
+    color
 }
 
 fn apply_text_field_input_overrides(

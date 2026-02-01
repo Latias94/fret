@@ -6,19 +6,27 @@
 pub mod v30;
 
 pub(crate) mod button;
+pub(crate) mod card;
 pub(crate) mod checkbox;
+pub(crate) mod chip;
 pub(crate) mod dialog;
+pub(crate) mod divider;
 pub(crate) mod dropdown_menu;
+pub(crate) mod filter_chip;
 pub(crate) mod icon_button;
+pub(crate) mod input_chip;
 pub(crate) mod list;
 pub(crate) mod material_web_v30;
 pub(crate) mod menu;
 pub(crate) mod navigation_bar;
 pub(crate) mod navigation_drawer;
 pub(crate) mod navigation_rail;
+pub(crate) mod progress_indicator;
 pub(crate) mod radio;
 pub(crate) mod select;
+pub(crate) mod slider;
 pub(crate) mod snackbar;
+pub(crate) mod suggestion_chip;
 pub(crate) mod switch;
 pub(crate) mod tabs;
 pub(crate) mod text_field;

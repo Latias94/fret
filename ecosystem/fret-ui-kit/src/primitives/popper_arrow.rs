@@ -145,6 +145,7 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
                     focus_border_color: None,
                     focus_within: false,
                     corner_radii: Corners::all(corner_radius),
+                    snap_to_device_pixels: false,
                 },
                 |_cx| Vec::new(),
             )]

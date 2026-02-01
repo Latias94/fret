@@ -4772,6 +4772,12 @@ fn material3_state_matrix_content(
     out.push(cx.text("— Buttons —"));
     out.extend(preview_material3_button(cx));
 
+    out.push(cx.text("— Chips —"));
+    out.extend(preview_material3_chip(cx, last_action.clone()));
+
+    out.push(cx.text("— Cards —"));
+    out.extend(preview_material3_card(cx, last_action.clone()));
+
     out.push(cx.text("— Icon Buttons —"));
     out.extend(preview_material3_icon_button(cx));
 
@@ -4805,6 +4811,450 @@ fn material3_state_matrix_content(
     out.extend(preview_material3_menu(cx, material3_menu_open, last_action));
 
     out
+}
+
+fn preview_material3_chip(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+    use fret_ui::action::OnActivate;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    #[derive(Default)]
+    struct ChipPageModels {
+        filter_selected: Option<Model<bool>>,
+        filter_unselected: Option<Model<bool>>,
+        input_selected: Option<Model<bool>>,
+        input_unselected: Option<Model<bool>>,
+    }
+
+    let filter_selected = cx.with_state(ChipPageModels::default, |st| st.filter_selected.clone());
+    let filter_selected = match filter_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.filter_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let filter_unselected =
+        cx.with_state(ChipPageModels::default, |st| st.filter_unselected.clone());
+    let filter_unselected = match filter_unselected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.filter_unselected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let input_selected = cx.with_state(ChipPageModels::default, |st| st.input_selected.clone());
+    let input_selected = match input_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.input_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let input_unselected = cx.with_state(ChipPageModels::default, |st| st.input_unselected.clone());
+    let input_unselected = match input_unselected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ChipPageModels::default, |st| {
+                st.input_unselected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host.models_mut().update(&last_action, |v| {
+            *v = Arc::<str>::from("material3.assist_chip.activated");
+        });
+    });
+
+    let hover_container = theme.color_required("md.sys.color.tertiary-container");
+    let hover_label = theme.color_required("md.sys.color.on-tertiary-container");
+    let accent = fret_core::Color {
+        r: 0.9,
+        g: 0.2,
+        b: 0.9,
+        a: 1.0,
+    };
+
+    let override_style = material3::AssistChipStyle::default()
+        .label_color(WidgetStateProperty::new(Some(ColorRef::Color(accent))))
+        .state_layer_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+        )
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+        )
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(hover_container)),
+        ));
+
+    let hover_style = material3::AssistChipStyle::default()
+        .label_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_label))),
+        )
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(hover_container)),
+        ));
+
+    let filter_override_style = material3::FilterChipStyle::default()
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::SELECTED,
+            Some(ColorRef::Color(hover_container)),
+        ))
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(accent))),
+        );
+
+    let activate_row1 = activate.clone();
+    let activate_row2 = activate.clone();
+    let activate_row3 = activate.clone();
+    let activate_row4 = activate.clone();
+
+    let last_action_for_input_selected = last_action.clone();
+    let activate_input_selected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_input_selected, |v| {
+                *v = Arc::<str>::from("material3.input_chip.primary.activated");
+            });
+    });
+
+    let last_action_for_input_unselected = last_action.clone();
+    let activate_input_unselected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_input_unselected, |v| {
+                *v = Arc::<str>::from("material3.input_chip.primary.activated");
+            });
+    });
+
+    let last_action_for_input_unselected_trailing = last_action.clone();
+    let activate_input_unselected_trailing: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_input_unselected_trailing, |v| {
+                *v = Arc::<str>::from("material3.input_chip.trailing_icon.activated");
+            });
+    });
+
+    let override_style_row1 = override_style.clone();
+    let override_style_row2 = override_style.clone();
+    let hover_style_row1 = hover_style.clone();
+    let hover_style_row2 = hover_style.clone();
+    let filter_override_style_row = filter_override_style.clone();
+
+    let last_action_for_filter_primary = last_action.clone();
+    let activate_filter_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_filter_primary, |v| {
+                *v = Arc::<str>::from("material3.filter_chip.primary.activated");
+            });
+    });
+
+    let last_action_for_filter_trailing = last_action.clone();
+    let activate_filter_trailing: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&last_action_for_filter_trailing, |v| {
+                *v = Arc::<str>::from("material3.filter_chip.trailing_icon.activated");
+            });
+    });
+
+    let filter_selected_row1 = filter_selected.clone();
+    let filter_unselected_row1 = filter_unselected.clone();
+    let filter_selected_row2 = filter_selected.clone();
+    let filter_unselected_row2 = filter_unselected.clone();
+    let input_selected_row1 = input_selected.clone();
+    let input_unselected_row1 = input_unselected.clone();
+    let input_unselected_row2 = input_unselected.clone();
+
+    vec![
+        cx.text("Material 3 AssistChip: token-driven shape/colors + state layer + bounded ripple."),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::AssistChip::new("Flat")
+                        .on_activate(activate_row1.clone())
+                        .test_id("ui-gallery-material3-chip-flat")
+                        .into_element(cx),
+                    material3::AssistChip::new("Override")
+                        .on_activate(activate_row1.clone())
+                        .style(override_style_row1.clone())
+                        .test_id("ui-gallery-material3-chip-flat-override")
+                        .into_element(cx),
+                    material3::AssistChip::new("Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-chip-flat-disabled")
+                        .into_element(cx),
+                    material3::AssistChip::new("Hover Override")
+                        .on_activate(activate_row1.clone())
+                        .style(hover_style_row1.clone())
+                        .test_id("ui-gallery-material3-chip-flat-hover-override")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::AssistChip::new("Elevated")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_row2.clone())
+                        .test_id("ui-gallery-material3-chip-elevated")
+                        .into_element(cx),
+                    material3::AssistChip::new("Override")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_row2.clone())
+                        .style(override_style_row2.clone())
+                        .test_id("ui-gallery-material3-chip-elevated-override")
+                        .into_element(cx),
+                    material3::AssistChip::new("Disabled")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SLASH)
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-chip-elevated-disabled")
+                        .into_element(cx),
+                    material3::AssistChip::new("Hover Override")
+                        .variant(material3::AssistChipVariant::Elevated)
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_row2.clone())
+                        .style(hover_style_row2.clone())
+                        .test_id("ui-gallery-material3-chip-elevated-hover-override")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::SuggestionChip::new("Suggestion")
+                        .on_activate(activate_row3.clone())
+                        .test_id("ui-gallery-material3-suggestion-chip-flat")
+                        .into_element(cx),
+                    material3::SuggestionChip::new("Suggestion (icon)")
+                        .leading_icon(ids::ui::SEARCH)
+                        .variant(material3::SuggestionChipVariant::Elevated)
+                        .on_activate(activate_row3.clone())
+                        .test_id("ui-gallery-material3-suggestion-chip-elevated")
+                        .into_element(cx),
+                    material3::SuggestionChip::new("Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-suggestion-chip-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::FilterChip::new(filter_selected_row1.clone(), "Filter")
+                        .trailing_icon(ids::ui::CLOSE)
+                        .on_activate(activate_filter_primary.clone())
+                        .on_trailing_icon_activate(activate_filter_trailing.clone())
+                        .test_id("ui-gallery-material3-filter-chip-selected")
+                        .into_element(cx),
+                    material3::FilterChip::new(filter_unselected_row1.clone(), "Filter")
+                        .on_activate(activate_filter_primary.clone())
+                        .test_id("ui-gallery-material3-filter-chip-unselected")
+                        .into_element(cx),
+                    material3::FilterChip::new(filter_selected_row2.clone(), "Override")
+                        .variant(material3::FilterChipVariant::Elevated)
+                        .style(filter_override_style_row.clone())
+                        .on_activate(activate_filter_primary.clone())
+                        .test_id("ui-gallery-material3-filter-chip-override")
+                        .into_element(cx),
+                    material3::FilterChip::new(filter_unselected_row2.clone(), "Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-filter-chip-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::InputChip::new(input_selected_row1.clone(), "Input")
+                        .leading_icon(ids::ui::SETTINGS)
+                        .on_activate(activate_input_selected_primary.clone())
+                        .test_id("ui-gallery-material3-input-chip-selected")
+                        .into_element(cx),
+                    material3::InputChip::new(input_unselected_row1.clone(), "Input")
+                        .trailing_icon(ids::ui::CLOSE)
+                        .on_activate(activate_input_unselected_primary.clone())
+                        .on_trailing_icon_activate(activate_input_unselected_trailing.clone())
+                        .test_id("ui-gallery-material3-input-chip-unselected")
+                        .into_element(cx),
+                    material3::InputChip::new(input_unselected_row2.clone(), "Disabled")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-input-chip-disabled")
+                        .into_element(cx),
+                ]
+            },
+        ),
+    ]
+}
+
+fn preview_material3_card(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui::element::{ContainerProps, Length, TextProps};
+    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    let activate: OnActivate = Arc::new(move |host, _acx, _reason| {
+        let _ = host.models_mut().update(&last_action, |v| {
+            *v = Arc::<str>::from("material3.card.activated");
+        });
+    });
+
+    let body_style = theme
+        .text_style_by_key("md.sys.typescale.body-medium")
+        .unwrap_or_else(|| fret_core::TextStyle::default());
+    let body_color = theme.color_required("md.sys.color.on-surface");
+
+    let hover_container = theme.color_required("md.sys.color.tertiary-container");
+    let hover_outline = theme.color_required("md.sys.color.tertiary");
+
+    let override_style = material3::CardStyle::default()
+        .container_background(WidgetStateProperty::new(None).when(
+            WidgetStates::HOVERED,
+            Some(ColorRef::Color(hover_container)),
+        ))
+        .outline_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_outline))),
+        );
+
+    let activate_row1 = activate.clone();
+    let activate_row2 = activate.clone();
+    let override_style_row1 = override_style.clone();
+    let override_style_row2 = override_style.clone();
+
+    let card_content_row1 = {
+        let body_style = body_style.clone();
+        let body_color = body_color;
+        move |cx: &mut ElementContext<'_, App>, label: &'static str| {
+            let mut container = ContainerProps::default();
+            container.layout.size.width = Length::Px(Px(280.0));
+            container.layout.size.height = Length::Px(Px(72.0));
+            container.padding = Edges::all(Px(12.0));
+
+            let mut text = TextProps::new(Arc::<str>::from(label));
+            text.style = Some(body_style.clone());
+            text.color = Some(body_color);
+            cx.container(container, move |cx| vec![cx.text_props(text)])
+        }
+    };
+
+    let card_content_row2 = {
+        let body_style = body_style.clone();
+        let body_color = body_color;
+        move |cx: &mut ElementContext<'_, App>, label: &'static str| {
+            let mut container = ContainerProps::default();
+            container.layout.size.width = Length::Px(Px(280.0));
+            container.layout.size.height = Length::Px(Px(72.0));
+            container.padding = Edges::all(Px(12.0));
+
+            let mut text = TextProps::new(Arc::<str>::from(label));
+            text.style = Some(body_style.clone());
+            text.color = Some(body_color);
+            cx.container(container, move |cx| vec![cx.text_props(text)])
+        }
+    };
+
+    vec![
+        cx.text("Material 3 Card: token-driven surface + outline + ink (interactive only when on_activate is set)."),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Filled)
+                        .on_activate(activate_row1.clone())
+                        .test_id("ui-gallery-material3-card-filled")
+                        .into_element(cx, |cx| vec![card_content_row1(cx, "Filled")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Filled)
+                        .on_activate(activate_row1.clone())
+                        .style(override_style_row1.clone())
+                        .test_id("ui-gallery-material3-card-filled-override")
+                        .into_element(cx, |cx| vec![card_content_row1(cx, "Override")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Filled)
+                        .on_activate(activate_row1.clone())
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-card-filled-disabled")
+                        .into_element(cx, |cx| vec![card_content_row1(cx, "Disabled")]),
+                ]
+            },
+        ),
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Elevated)
+                        .on_activate(activate_row2.clone())
+                        .test_id("ui-gallery-material3-card-elevated")
+                        .into_element(cx, |cx| vec![card_content_row2(cx, "Elevated")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Outlined)
+                        .on_activate(activate_row2.clone())
+                        .test_id("ui-gallery-material3-card-outlined")
+                        .into_element(cx, |cx| vec![card_content_row2(cx, "Outlined")]),
+                    material3::Card::new()
+                        .variant(material3::CardVariant::Outlined)
+                        .on_activate(activate_row2.clone())
+                        .style(override_style_row2.clone())
+                        .test_id("ui-gallery-material3-card-outlined-override")
+                        .into_element(cx, |cx| vec![card_content_row2(cx, "Outline override")]),
+                ]
+            },
+        ),
+    ]
 }
 
 fn preview_material3_touch_targets(
@@ -5937,15 +6387,38 @@ fn preview_material3_dialog(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnActivate;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+
+    #[derive(Default)]
+    struct DialogPageModels {
+        override_open: Option<Model<bool>>,
+    }
+
+    let override_open = cx.with_state(DialogPageModels::default, |st| st.override_open.clone());
+    let override_open = match override_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(DialogPageModels::default, |st| {
+                st.override_open = Some(model.clone())
+            });
+            model
+        }
+    };
 
     let is_open = cx
         .get_model_copied(&open, Invalidation::Layout)
         .unwrap_or(false);
+    let override_is_open = cx
+        .get_model_copied(&override_open, Invalidation::Layout)
+        .unwrap_or(false);
 
     let open_dialog: OnActivate = {
         let open = open.clone();
+        let override_open = override_open.clone();
         Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&open, |v| *v = true);
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
             host.request_redraw(action_cx.window);
         })
     };
@@ -5968,19 +6441,72 @@ fn preview_material3_dialog(
         })
     };
 
-    let dialog = material3::Dialog::new(open.clone())
-        .headline("Discard draft?")
-        .supporting_text("This action cannot be undone.")
-        .actions(vec![
-            material3::DialogAction::new("Cancel")
-                .test_id("ui-gallery-material3-dialog-action-cancel")
-                .on_activate(close_dialog.clone()),
-            material3::DialogAction::new("Discard")
-                .test_id("ui-gallery-material3-dialog-action-discard")
-                .on_activate(confirm_action.clone()),
-        ])
-        .test_id("ui-gallery-material3-dialog")
-        .into_element(
+    let theme = cx.theme().clone();
+    let override_style = material3::DialogStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.secondary-container"),
+        ))))
+        .headline_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))))
+        .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))));
+
+    let open_dialog_override: OnActivate = {
+        let open = open.clone();
+        let override_open = override_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            let _ = host.models_mut().update(&override_open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let close_dialog_override: OnActivate = {
+        let override_open = override_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let confirm_action_override: OnActivate = {
+        let override_open = override_open.clone();
+        let last_action = last_action.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&last_action, |v| {
+                *v = Arc::<str>::from("material3.dialog.confirm.override")
+            });
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let build_dialog = |cx: &mut ElementContext<'_, App>,
+                        open_model: Model<bool>,
+                        style: Option<material3::DialogStyle>,
+                        id_prefix: &'static str,
+                        open_action: OnActivate,
+                        close_action: OnActivate,
+                        confirm_action: OnActivate|
+     -> AnyElement {
+        let mut dialog = material3::Dialog::new(open_model.clone())
+            .headline("Discard draft?")
+            .supporting_text("This action cannot be undone.")
+            .actions(vec![
+                material3::DialogAction::new("Cancel")
+                    .test_id(format!("{id_prefix}-action-cancel"))
+                    .on_activate(close_action.clone()),
+                material3::DialogAction::new("Discard")
+                    .test_id(format!("{id_prefix}-action-discard"))
+                    .on_activate(confirm_action.clone()),
+            ])
+            .test_id(format!("{id_prefix}"));
+
+        if let Some(style) = style {
+            dialog = dialog.style(style);
+        }
+
+        dialog.into_element(
             cx,
             move |cx| {
                 stack::vstack(
@@ -5992,12 +6518,12 @@ fn preview_material3_dialog(
                         vec![
                             material3::Button::new("Open dialog")
                                 .variant(material3::ButtonVariant::Filled)
-                                .on_activate(open_dialog.clone())
-                                .test_id("ui-gallery-material3-dialog-open")
+                                .on_activate(open_action.clone())
+                                .test_id(format!("{id_prefix}-open"))
                                 .into_element(cx),
                             material3::Button::new("Underlay focus probe")
                                 .variant(material3::ButtonVariant::Outlined)
-                                .test_id("ui-gallery-material3-dialog-underlay-probe")
+                                .test_id(format!("{id_prefix}-underlay-probe"))
                                 .into_element(cx),
                             cx.text("Tip: press Esc or click the scrim to close; Tab should stay inside the dialog while open."),
                         ]
@@ -6005,7 +6531,27 @@ fn preview_material3_dialog(
                 )
             },
             |_cx| std::iter::empty::<AnyElement>(),
-        );
+        )
+    };
+
+    let default_dialog = build_dialog(
+        cx,
+        open.clone(),
+        None,
+        "ui-gallery-material3-dialog",
+        open_dialog.clone(),
+        close_dialog.clone(),
+        confirm_action.clone(),
+    );
+    let override_dialog = build_dialog(
+        cx,
+        override_open.clone(),
+        Some(override_style),
+        "ui-gallery-material3-dialog-override",
+        open_dialog_override.clone(),
+        close_dialog_override.clone(),
+        confirm_action_override.clone(),
+    );
 
     let last = cx
         .app
@@ -6013,26 +6559,39 @@ fn preview_material3_dialog(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let mut layout = fret_ui::element::LayoutStyle::default();
-    layout.size.width = fret_ui::element::Length::Fill;
-    layout.size.height = fret_ui::element::Length::Px(Px(360.0));
+    let build_container = |cx: &mut ElementContext<'_, App>, dialog: AnyElement| -> AnyElement {
+        let mut layout = fret_ui::element::LayoutStyle::default();
+        layout.size.width = fret_ui::element::Length::Fill;
+        layout.size.height = fret_ui::element::Length::Px(Px(360.0));
+        cx.container(
+            fret_ui::element::ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            move |_cx| [dialog],
+        )
+    };
 
-    let container = cx.container(
-        fret_ui::element::ContainerProps {
-            layout,
-            ..Default::default()
+    let containers = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                build_container(cx, default_dialog),
+                build_container(cx, override_dialog),
+            ]
         },
-        move |_cx| [dialog],
     );
 
     vec![
         cx.text(
             "Material 3 Dialog: modal barrier + focus trap/restore + token-shaped dialog actions.",
         ),
-        container,
+        containers,
         cx.text(format!(
-            "open={} last_action={}",
+            "open={} override_open={} last_action={}",
             is_open as u8,
+            override_is_open as u8,
             last.as_ref()
         )),
     ]
@@ -6044,6 +6603,24 @@ fn preview_material3_menu(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     use fret_ui::action::OnActivate;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+
+    #[derive(Default)]
+    struct MenuPageModels {
+        override_open: Option<Model<bool>>,
+    }
+
+    let override_open = cx.with_state(MenuPageModels::default, |st| st.override_open.clone());
+    let override_open = match override_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(MenuPageModels::default, |st| {
+                st.override_open = Some(model.clone())
+            });
+            model
+        }
+    };
 
     fn on_select(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
         Arc::new(move |host, action_cx, _reason| {
@@ -6056,8 +6633,19 @@ fn preview_material3_menu(
 
     let toggle_open: OnActivate = {
         let open = open.clone();
+        let override_open = override_open.clone();
         Arc::new(move |host, action_cx, _reason| {
             let _ = host.models_mut().update(&open, |v| *v = !*v);
+            let _ = host.models_mut().update(&override_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let toggle_open_override: OnActivate = {
+        let open = open.clone();
+        let override_open = override_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            let _ = host.models_mut().update(&override_open, |v| *v = !*v);
             host.request_redraw(action_cx.window);
         })
     };
@@ -6111,29 +6699,103 @@ fn preview_material3_menu(
             },
         );
 
+    let theme = cx.theme().clone();
+    let override_style = material3::MenuStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.secondary-container"),
+        ))))
+        .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))))
+        .item_state_layer_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            theme.color_required("md.sys.color.on-secondary-container"),
+        ))));
+
+    let last_action_for_override_entries = last_action.clone();
+    let dropdown_override = material3::DropdownMenu::new(override_open.clone())
+        .a11y_label("Material 3 Menu (override)")
+        .test_id("ui-gallery-material3-menu-override")
+        .menu_style(override_style)
+        .into_element(
+            cx,
+            move |cx| {
+                material3::Button::new("Open menu (override)")
+                    .variant(material3::ButtonVariant::Outlined)
+                    .on_activate(toggle_open_override.clone())
+                    .test_id("ui-gallery-material3-menu-trigger-override")
+                    .into_element(cx)
+            },
+            move |_cx| {
+                vec![
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Cut")
+                            .test_id("ui-gallery-material3-menu-item-cut-override")
+                            .on_select(on_select(
+                                "material3.menu.cut.override",
+                                last_action_for_override_entries.clone(),
+                            )),
+                    ),
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Copy")
+                            .test_id("ui-gallery-material3-menu-item-copy-override")
+                            .on_select(on_select(
+                                "material3.menu.copy.override",
+                                last_action_for_override_entries.clone(),
+                            )),
+                    ),
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Paste")
+                            .test_id("ui-gallery-material3-menu-item-paste-override")
+                            .disabled(true),
+                    ),
+                    material3::MenuEntry::Separator,
+                    material3::MenuEntry::Item(
+                        material3::MenuItem::new("Settings")
+                            .test_id("ui-gallery-material3-menu-item-settings-override")
+                            .on_select(on_select(
+                                "material3.menu.settings.override",
+                                last_action_for_override_entries.clone(),
+                            )),
+                    ),
+                ]
+            },
+        );
+
     let last = cx
         .app
         .models()
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let card = shadcn::Card::new(vec![
+    let card_default = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Default").into_element(cx)])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![dropdown]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+    .into_element(cx);
+
+    let card_override = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Menu").into_element(cx),
+            shadcn::CardTitle::new("Override").into_element(cx),
             shadcn::CardDescription::new(
-                "Overlay MVP (dismissible, anchored) using the Menu list surface.",
+                "ADR 1159: MenuStyle overrides (container + item colors).",
             )
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![dropdown]).into_element(cx),
+        shadcn::CardContent::new(vec![dropdown_override]).into_element(cx),
     ])
-    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
     vec![
         cx.text("Tip: Arrow keys / Home / End navigate; type to jump by prefix; Esc/outside press closes."),
-        card,
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            move |_cx| vec![card_default, card_override],
+        ),
         cx.text(format!("last action: {last}")),
     ]
 }

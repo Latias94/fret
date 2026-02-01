@@ -24,9 +24,9 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
-use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::icon_button as icon_button_tokens;
 
@@ -220,7 +220,7 @@ impl IconButton {
                     },
                     focus_ring: Some(material_focus_ring_for_component(
                         &theme,
-                        "md.comp.icon-button",
+                        icon_button_tokens::COMPONENT_PREFIX,
                         corner_radii,
                     )),
                     focus_ring_bounds: None,
@@ -241,7 +241,7 @@ impl IconButton {
                         let is_hovered = enabled && st.hovered;
                         let is_focused = enabled && st.focused && focus_visible;
 
-                        let interaction = interaction_state(is_pressed, is_hovered, is_focused);
+                        let interaction = pressable_interaction(is_pressed, is_hovered, is_focused);
 
                         let colors = icon_button_colors(
                             &theme,
@@ -313,35 +313,15 @@ struct IconButtonCornerRuntime {
 }
 
 fn icon_button_shape_radius(theme: &Theme) -> f32 {
-    theme
-        .metric_by_key("md.comp.icon-button.container.shape.round")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.full"))
-        .unwrap_or(Px(9999.0))
-        .0
+    icon_button_tokens::container_shape_radius(theme)
 }
 
 fn icon_button_pressed_shape_radius(theme: &Theme) -> f32 {
-    theme
-        .metric_by_key("md.comp.icon-button.pressed.container.shape")
-        .or_else(|| theme.metric_by_key("md.sys.shape.corner.small"))
-        .unwrap_or(Px(8.0))
-        .0
+    icon_button_tokens::pressed_container_shape_radius(theme)
 }
 
 fn icon_button_pressed_corner_spring(theme: &Theme, scheme_fallback: SpringSpec) -> SpringSpec {
-    let tokens = MaterialTokenResolver::new(theme);
-    SpringSpec {
-        damping: tokens.number_comp_or_sys(
-            "md.comp.icon-button.pressed.container.corner-size.motion.spring.damping",
-            "md.sys.motion.spring.fast.spatial.damping",
-            scheme_fallback.damping,
-        ),
-        stiffness: tokens.number_comp_or_sys(
-            "md.comp.icon-button.pressed.container.corner-size.motion.spring.stiffness",
-            "md.sys.motion.spring.fast.spatial.stiffness",
-            scheme_fallback.stiffness,
-        ),
-    }
+    icon_button_tokens::pressed_container_corner_spring(theme, scheme_fallback)
 }
 
 fn animated_icon_button_corner_radii<H: UiHost>(
@@ -379,24 +359,13 @@ struct IconButtonSizeTokens {
 }
 
 fn icon_button_size_tokens(theme: &Theme, size: IconButtonSize) -> IconButtonSizeTokens {
-    match size {
-        IconButtonSize::Small => IconButtonSizeTokens {
-            container: theme
-                .metric_by_key("md.comp.icon-button.small.container.height")
-                .unwrap_or(Px(40.0)),
-            pad_left: theme
-                .metric_by_key("md.comp.icon-button.small.default.leading-space")
-                .unwrap_or(Px(8.0)),
-            pad_right: theme
-                .metric_by_key("md.comp.icon-button.small.default.trailing-space")
-                .unwrap_or(Px(8.0)),
-            icon_size: theme
-                .metric_by_key("md.comp.icon-button.small.icon.size")
-                .unwrap_or(Px(24.0)),
-            outline_width: theme
-                .metric_by_key("md.comp.icon-button.small.outlined.outline.width")
-                .unwrap_or(Px(1.0)),
-        },
+    let t = icon_button_tokens::size_tokens(theme, size);
+    IconButtonSizeTokens {
+        container: t.container,
+        pad_left: t.pad_left,
+        pad_right: t.pad_right,
+        icon_size: t.icon_size,
+        outline_width: t.outline_width,
     }
 }
 
@@ -421,12 +390,12 @@ fn icon_button_colors(
     toggle: bool,
     selected: bool,
     enabled: bool,
-    interaction: Option<InteractionState>,
+    interaction: Option<PressableInteraction>,
 ) -> IconButtonColors {
     let tokens_interaction = interaction.map(|s| match s {
-        InteractionState::Hovered => icon_button_tokens::IconButtonInteraction::Hovered,
-        InteractionState::Focused => icon_button_tokens::IconButtonInteraction::Focused,
-        InteractionState::Pressed => icon_button_tokens::IconButtonInteraction::Pressed,
+        PressableInteraction::Hovered => icon_button_tokens::IconButtonInteraction::Hovered,
+        PressableInteraction::Focused => icon_button_tokens::IconButtonInteraction::Focused,
+        PressableInteraction::Pressed => icon_button_tokens::IconButtonInteraction::Pressed,
     });
 
     let icon_color = icon_button_tokens::icon_color(
@@ -576,26 +545,6 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum InteractionState {
-    Hovered,
-    Focused,
-    Pressed,
-}
-
-fn interaction_state(pressed: bool, hovered: bool, focused: bool) -> Option<InteractionState> {
-    if pressed {
-        return Some(InteractionState::Pressed);
-    }
-    if focused {
-        return Some(InteractionState::Focused);
-    }
-    if hovered {
-        return Some(InteractionState::Hovered);
-    }
-    None
-}
-
 fn state_layer_target_opacity(
     theme: &Theme,
     variant: IconButtonVariant,
@@ -608,26 +557,12 @@ fn state_layer_target_opacity(
         return 0.0;
     }
 
-    if pressed {
-        return icon_button_tokens::state_layer_opacity(
-            theme,
-            variant,
-            icon_button_tokens::IconButtonInteraction::Pressed,
-        );
-    }
-    if focused {
-        return icon_button_tokens::state_layer_opacity(
-            theme,
-            variant,
-            icon_button_tokens::IconButtonInteraction::Focused,
-        );
-    }
-    if hovered {
-        return icon_button_tokens::state_layer_opacity(
-            theme,
-            variant,
-            icon_button_tokens::IconButtonInteraction::Hovered,
-        );
-    }
-    0.0
+    let interaction = match pressable_interaction(pressed, hovered, focused) {
+        Some(PressableInteraction::Pressed) => icon_button_tokens::IconButtonInteraction::Pressed,
+        Some(PressableInteraction::Focused) => icon_button_tokens::IconButtonInteraction::Focused,
+        Some(PressableInteraction::Hovered) => icon_button_tokens::IconButtonInteraction::Hovered,
+        None => return 0.0,
+    };
+
+    icon_button_tokens::state_layer_opacity(theme, variant, interaction)
 }

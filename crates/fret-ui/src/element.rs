@@ -324,6 +324,8 @@ pub struct ContainerProps {
     /// When true, focus state is derived from any focused descendant (focus-within).
     pub focus_within: bool,
     pub corner_radii: Corners,
+    /// When true, snap paint bounds to device pixels (policy-only).
+    pub snap_to_device_pixels: bool,
 }
 
 impl Default for ContainerProps {
@@ -339,6 +341,7 @@ impl Default for ContainerProps {
             focus_border_color: None,
             focus_within: false,
             corner_radii: Corners::all(Px(0.0)),
+            snap_to_device_pixels: false,
         }
     }
 }

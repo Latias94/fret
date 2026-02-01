@@ -26,6 +26,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
@@ -640,14 +641,11 @@ fn interaction_state(
     hovered: bool,
     focused: bool,
 ) -> nav_tokens::NavigationBarItemInteraction {
-    if pressed {
-        nav_tokens::NavigationBarItemInteraction::Pressed
-    } else if focused {
-        nav_tokens::NavigationBarItemInteraction::Focused
-    } else if hovered {
-        nav_tokens::NavigationBarItemInteraction::Hovered
-    } else {
-        nav_tokens::NavigationBarItemInteraction::Default
+    match pressable_interaction(pressed, hovered, focused) {
+        Some(PressableInteraction::Pressed) => nav_tokens::NavigationBarItemInteraction::Pressed,
+        Some(PressableInteraction::Focused) => nav_tokens::NavigationBarItemInteraction::Focused,
+        Some(PressableInteraction::Hovered) => nav_tokens::NavigationBarItemInteraction::Hovered,
+        None => nav_tokens::NavigationBarItemInteraction::Default,
     }
 }
 

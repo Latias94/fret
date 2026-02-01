@@ -28,6 +28,12 @@ impl ElementHostWidget {
 
         match instance {
             ElementInstance::Container(props) => {
+                let bounds = if props.snap_to_device_pixels {
+                    crate::pixel_snap::snap_rect_edges_round(cx.bounds, cx.scale_factor)
+                } else {
+                    cx.bounds
+                };
+
                 let should_draw = props.shadow.is_some()
                     || props.background.is_some()
                     || props.border_color.is_some()
@@ -35,11 +41,11 @@ impl ElementHostWidget {
 
                 if should_draw {
                     if let Some(shadow) = props.shadow {
-                        crate::paint::paint_shadow(cx.scene, DrawOrder(0), cx.bounds, shadow);
+                        crate::paint::paint_shadow(cx.scene, DrawOrder(0), bounds, shadow);
                     }
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
-                        rect: cx.bounds,
+                        rect: bounds,
                         background: props.background.unwrap_or(Color::TRANSPARENT),
                         border: props.border,
                         border_color: props.border_color.unwrap_or(Color::TRANSPARENT),
@@ -65,7 +71,7 @@ impl ElementHostWidget {
                     if let Some(border_color) = props.focus_border_color {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(1),
-                            rect: cx.bounds,
+                            rect: bounds,
                             background: Color::TRANSPARENT,
                             border: props.border,
                             border_color,
@@ -74,7 +80,7 @@ impl ElementHostWidget {
                     }
 
                     if let Some(ring) = props.focus_ring {
-                        crate::paint::paint_focus_ring(cx.scene, DrawOrder(2), cx.bounds, ring);
+                        crate::paint::paint_focus_ring(cx.scene, DrawOrder(2), bounds, ring);
                     }
                 }
             }
