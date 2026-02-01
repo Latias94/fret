@@ -31,7 +31,26 @@ impl ElementHostWidget {
             max_child.height = Px(max_child.height.0.max(child_size.height.0));
         }
 
-        let desired = clamp_to_constraints(max_child, layout, cx.available);
+        // `clamp_to_constraints()` treats `available` as a hard maximum. During intrinsic sizing,
+        // parent layouts may pass `available.{width,height} = 0` as a placeholder for "unknown",
+        // which would incorrectly collapse auto-sized positioned containers to zero even when
+        // children measure non-zero.
+        //
+        // When the container is `Auto` on an axis and `available` is zero, use the measured child
+        // size as the effective available upper bound so the container can shrink-wrap.
+        let mut clamp_available = cx.available;
+        if matches!(layout.size.width, crate::element::Length::Auto)
+            && clamp_available.width.0 <= 0.0
+        {
+            clamp_available.width = Px(max_child.width.0.max(0.0));
+        }
+        if matches!(layout.size.height, crate::element::Length::Auto)
+            && clamp_available.height.0 <= 0.0
+        {
+            clamp_available.height = Px(max_child.height.0.max(0.0));
+        }
+
+        let desired = clamp_to_constraints(max_child, layout, clamp_available);
         let base = Rect::new(cx.bounds.origin, desired);
 
         for &child in cx.children {
@@ -101,7 +120,19 @@ impl ElementHostWidget {
             max_child.height = Px(max_child.height.0.max(required.height.0));
         }
 
-        let desired = clamp_to_constraints(max_child, layout, cx.available);
+        let mut clamp_available = cx.available;
+        if matches!(layout.size.width, crate::element::Length::Auto)
+            && clamp_available.width.0 <= 0.0
+        {
+            clamp_available.width = Px(max_child.width.0.max(0.0));
+        }
+        if matches!(layout.size.height, crate::element::Length::Auto)
+            && clamp_available.height.0 <= 0.0
+        {
+            clamp_available.height = Px(max_child.height.0.max(0.0));
+        }
+
+        let desired = clamp_to_constraints(max_child, layout, clamp_available);
         let base = Rect::new(cx.bounds.origin, desired);
 
         for &child in cx.children {

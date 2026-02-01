@@ -477,35 +477,55 @@ impl ElementHostWidget {
         )
         .entered();
 
+        // During intrinsic sizing, parents may pass `available.{width,height} = 0` as a
+        // placeholder for "unknown". When scroll probing is enabled, treat that as non-definite
+        // so the scroll node can report its measured content size and participate in
+        // shrink-wrapping layouts.
+        let mut constraints = cx.constraints;
+        if props.probe_unbounded {
+            if props.axis.scroll_x()
+                && constraints.known.width.is_none()
+                && constraints.available.width.definite() == Some(Px(0.0))
+            {
+                constraints.available.width = AvailableSpace::MaxContent;
+            }
+            if props.axis.scroll_y()
+                && constraints.known.height.is_none()
+                && constraints.available.height.definite() == Some(Px(0.0))
+            {
+                constraints.available.height = AvailableSpace::MaxContent;
+            }
+        }
+
         if props.intrinsic_measure_mode == crate::element::ScrollIntrinsicMeasureMode::Viewport {
             return clamp_to_constraints_in_measure(
-                available_px_or_zero(cx.constraints),
+                available_px_or_zero(constraints),
                 props.layout,
-                cx.constraints,
+                constraints,
             );
         }
 
         let width_determined = match props.layout.size.width {
             Length::Px(_) => true,
             Length::Fill => {
-                cx.constraints.known.width.is_some()
-                    || cx.constraints.available.width.definite().is_some()
+                constraints.known.width.is_some()
+                    || constraints.available.width.definite().is_some()
             }
             Length::Auto => false,
         };
         let height_determined = match props.layout.size.height {
             Length::Px(_) => true,
             Length::Fill => {
-                cx.constraints.known.height.is_some()
-                    || cx.constraints.available.height.definite().is_some()
+                constraints.known.height.is_some()
+                    || constraints.available.height.definite().is_some()
             }
             Length::Auto => false,
         };
         if width_determined && height_determined {
             return clamp_to_constraints_in_measure(
-                available_px_or_zero(cx.constraints),
+                available_px_or_zero(constraints),
                 props.layout,
-                cx.constraints,
+                constraints,
             );
         }
 
@@ -515,12 +535,12 @@ impl ElementHostWidget {
                 if props.axis.scroll_x() && props.probe_unbounded {
                     AvailableSpace::MaxContent
                 } else {
-                    cx.constraints.available.width
+                    constraints.available.width
                 },
                 if props.axis.scroll_y() && props.probe_unbounded {
                     AvailableSpace::MaxContent
                 } else {
-                    cx.constraints.available.height
+                    constraints.available.height
                 },
             ),
         );
@@ -593,7 +613,7 @@ impl ElementHostWidget {
             measured
         };
 
-        clamp_to_constraints_in_measure(max_child, props.layout, cx.constraints)
+        clamp_to_constraints_in_measure(max_child, props.layout, constraints)
     }
 
     fn measure_virtual_list<H: UiHost>(
