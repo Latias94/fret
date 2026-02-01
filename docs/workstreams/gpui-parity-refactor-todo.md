@@ -945,6 +945,15 @@ topics (if/when we implement them):
       - (With staged prefetch max gate) `target/fret-diag-perf-ui-gallery-data-table-retained-suite-prefetch10/1769913891537-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
       - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679828598-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
       - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679856618-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
+  - UI kit list harness (retained host consumer; ADR 0192):
+    - Page: `apps/fret-ui-gallery/src/ui.rs` (`preview_ui_kit_list_torture`), `apps/fret-ui-gallery/src/spec.rs` (`PAGE_UI_KIT_LIST_TORTURE`).
+    - Script: `tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json`
+      - Note: the script targets `ui-gallery-ui-kit-list-row-0-label` for wheel events to ensure the wheel position remains within the visible viewport.
+    - Suite: `fretboard diag suite ui-gallery-ui-kit-list-retained`
+      - Defaults: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_UI_KIT_LIST_LEN=2000`,
+        `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`, and gates `--check-retained-vlist-scroll-window-dirty-max 0`, `--check-view-cache-reuse-min 5`,
+        `--check-wheel-scroll ui-gallery-ui-kit-list-row-0-label`, `--check-stale-paint ui-gallery-ui-kit-list-row-0-label`.
+    - Evidence bundle (smoke; cache+shell, release): `target/fret-diag-ui-kit-list-retained-smoke6/1769945002526-ui-gallery-ui-kit-list-window-boundary-scroll/bundle.json`
   - Implementation summary (v1):
     - A runtime-owned `WindowedSurfaceHost` boundary can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
     - The opt-in authoring API stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
