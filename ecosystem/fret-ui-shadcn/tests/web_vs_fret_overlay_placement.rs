@@ -3960,6 +3960,293 @@ fn fret_hover_card_tracks_trigger_when_underlay_scrolls() {
     );
 }
 
+#[test]
+fn fret_navigation_menu_tracks_trigger_when_underlay_scrolls() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let mut services = StyleAwareServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(480.0), Px(400.0)),
+    );
+
+    let open_value = "components";
+    let model: Model<Option<Arc<str>>> = app.models_mut().insert(None);
+    let root_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+    let scroll_handle = ScrollHandle::default();
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        let scroll_handle = scroll_handle.clone();
+        let root_id_out = root_id_out.clone();
+        let model = model.clone();
+
+        let mut scroll_layout = LayoutStyle::default();
+        scroll_layout.size.width = Length::Fill;
+        scroll_layout.size.height = Length::Fill;
+        scroll_layout.overflow = fret_ui::element::Overflow::Clip;
+
+        vec![cx.scroll(
+            fret_ui::element::ScrollProps {
+                layout: scroll_layout,
+                axis: fret_ui::element::ScrollAxis::Y,
+                scroll_handle: Some(scroll_handle),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Px(Px(1200.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let nav = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.position = fret_ui::element::PositionStyle::Absolute;
+                                    layout.inset.left = Some(Px(16.0));
+                                    layout.inset.top = Some(Px(160.0));
+                                    layout.size.width = Length::Px(Px(360.0));
+                                    layout.size.height = Length::Px(Px(32.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let items = vec![
+                                    fret_ui_shadcn::NavigationMenuItem::new(
+                                        "home",
+                                        "Home",
+                                        vec![cx.text("Home")],
+                                    ),
+                                    fret_ui_shadcn::NavigationMenuItem::new(
+                                        "components",
+                                        "Components",
+                                        vec![cx.text("Components Panel")],
+                                    ),
+                                ];
+                                let el = fret_ui_shadcn::NavigationMenu::new(model.clone())
+                                    .viewport(false)
+                                    .indicator(false)
+                                    .items(items)
+                                    .into_element(cx);
+                                root_id_out.set(Some(el.id));
+                                vec![el]
+                            },
+                        );
+
+                        vec![nav]
+                    },
+                )]
+            },
+        )]
+    };
+
+    // Frame 1: mount closed.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        render,
+    );
+
+    let _ = app
+        .models_mut()
+        .update(&model, |v| *v = Some(Arc::from(open_value)));
+
+    // Frame 2+: open and settle motion.
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            false,
+            render,
+        );
+    }
+
+    // Paint once so last-frame visual bounds caches are populated (used by anchored overlay placement).
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+    let _ = app.flush_effects();
+
+    let root_id = root_id_out.get().expect("navigation menu root id");
+    let trigger_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "nav-menu-underlay-scroll-trigger-query",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_trigger_id(
+                cx, root_id, open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu trigger id for {open_value}"));
+    let content_id = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "nav-menu-underlay-scroll-content-query",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_content_id(
+                cx, root_id, open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu content id for {open_value}"));
+
+    let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_id)
+        .expect("nav menu trigger node");
+    let content_node = fret_ui::elements::node_for_element(&mut app, window, content_id)
+        .expect("nav menu content node");
+
+    let trigger_before = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("nav menu trigger visual bounds");
+    let content_before = ui
+        .debug_node_visual_bounds(content_node)
+        .expect("nav menu content visual bounds");
+
+    let dx_before = content_before.origin.x.0 - trigger_before.origin.x.0;
+    let dy_before = content_before.origin.y.0 - trigger_before.origin.y.0;
+
+    // Scroll the underlay (wheel over the scroll viewport, not over the navigation menu viewport).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(10.0), Px(10.0)),
+            delta: Point::new(Px(0.0), Px(-80.0)),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected scroll handle offset to update after wheel; y={}",
+        scroll_handle.offset().y.0
+    );
+
+    // Frame N: apply the scroll and paint so visual bounds caches update.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2 + settle_frames),
+        false,
+        render,
+    );
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    let effects = app.flush_effects();
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Redraw(w) if *w == window)),
+        "expected a follow-up redraw after scroll to re-anchor overlays; effects={effects:?}",
+    );
+    for effect in effects {
+        match effect {
+            Effect::Redraw(_) => {}
+            other => app.push_effect(other),
+        }
+    }
+
+    // Frame N+1: expected to re-anchor the open content to the scrolled trigger.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(3 + settle_frames),
+        false,
+        render,
+    );
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+    let _ = app.flush_effects();
+
+    let content_id_after = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "nav-menu-underlay-scroll-content-query-after",
+        |cx| {
+            fret_ui_kit::primitives::navigation_menu::navigation_menu_viewport_content_id(
+                cx, root_id, open_value,
+            )
+        },
+    )
+    .unwrap_or_else(|| panic!("fret navigation-menu content id for {open_value} (after scroll)"));
+
+    let trigger_after_node = fret_ui::elements::node_for_element(&mut app, window, trigger_id)
+        .expect("nav menu trigger node (after scroll)");
+    let content_after_node =
+        fret_ui::elements::node_for_element(&mut app, window, content_id_after)
+            .expect("nav menu content node (after scroll)");
+
+    let trigger_after = ui
+        .debug_node_visual_bounds(trigger_after_node)
+        .expect("nav menu trigger visual bounds (after scroll)");
+    let content_after = ui
+        .debug_node_visual_bounds(content_after_node)
+        .expect("nav menu content visual bounds (after scroll)");
+
+    assert!(
+        (trigger_after.origin.y.0 - trigger_before.origin.y.0).abs() > 1.0,
+        "expected trigger to move under scroll (before_y={} after_y={})",
+        trigger_before.origin.y.0,
+        trigger_after.origin.y.0
+    );
+
+    let dx_after = content_after.origin.x.0 - trigger_after.origin.x.0;
+    let dy_after = content_after.origin.y.0 - trigger_after.origin.y.0;
+
+    assert_close(
+        "navigation menu anchor dx stable under scroll",
+        dx_after,
+        dx_before,
+        1.0,
+    );
+    assert_close(
+        "navigation menu anchor dy stable under scroll",
+        dy_after,
+        dy_before,
+        1.0,
+    );
+}
+
 fn assert_overlay_placement_matches(
     web_name: &str,
     web_portal_role: Option<&str>,

@@ -552,8 +552,8 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         };
         let trigger_anchor_id = navigation_menu_trigger_id(cx, root_id, value);
         let trigger_anchor = trigger_anchor_id.and_then(|id| {
-            cx.last_bounds_for_element(id)
-                .or_else(|| cx.last_visual_bounds_for_element(id))
+            cx.last_visual_bounds_for_element(id)
+                .or_else(|| cx.last_bounds_for_element(id))
         });
         let Some(trigger_anchor) = trigger_anchor else {
             return Vec::new();
@@ -562,8 +562,8 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         let placement_anchor = args
             .placement_anchor_override
             .and_then(|id| {
-                cx.last_bounds_for_element(id)
-                    .or_else(|| cx.last_visual_bounds_for_element(id))
+                cx.last_visual_bounds_for_element(id)
+                    .or_else(|| cx.last_bounds_for_element(id))
             })
             .map(|override_anchor| match args.placement.side {
                 Side::Top | Side::Bottom => Rect::new(
