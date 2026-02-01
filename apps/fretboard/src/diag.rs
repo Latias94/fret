@@ -1630,6 +1630,16 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "1".to_string(),
                     ));
                 }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    // Scripts use explicit `capture_bundle`; avoid per-step auto dumps.
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(2));
                 check_retained_vlist_attach_detach_min =
@@ -1686,6 +1696,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "1".to_string(),
                     ));
                 }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(2));
                 check_retained_vlist_attach_detach_min =
@@ -1717,6 +1736,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     ("FRET_UI_GALLERY_DATA_TABLE_RETAINED", "1"),
                     ("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT", "1"),
                     ("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT", "1"),
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
                 ] {
                     if !launch_env.iter().any(|(k, _)| k == key) {
                         launch_env.push((key.to_string(), value.to_string()));
@@ -1767,6 +1789,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     .any(|(k, _)| k == "FRET_UI_GALLERY_TREE_RETAINED")
                 {
                     launch_env.push(("FRET_UI_GALLERY_TREE_RETAINED".to_string(), "1".to_string()));
+                }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
                 }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(2));
@@ -1821,6 +1852,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "1".to_string(),
                     ));
                 }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(2));
                 check_retained_vlist_attach_detach_min =
@@ -1865,6 +1905,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "FRET_UI_GALLERY_DATA_TABLE_RETAINED".to_string(),
                         "1".to_string(),
                     ));
+                }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
                 }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(2));
@@ -1919,6 +1968,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT".to_string(),
                         "1".to_string(),
                     ));
+                }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
                 }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(2));
@@ -2083,6 +2141,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "1".to_string(),
                     ));
                 }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
@@ -2130,6 +2197,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "1".to_string(),
                     ));
                 }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
+                }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
                 check_retained_vlist_attach_detach_max =
@@ -2176,6 +2252,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT".to_string(),
                         "1".to_string(),
                     ));
+                }
+                for (k, v) in [
+                    ("FRET_DIAG_MAX_SEMANTICS_NODES", "10000"),
+                    ("FRET_DIAG_SEMANTICS_TEST_IDS_ONLY", "1"),
+                    ("FRET_DIAG_SCRIPT_AUTO_DUMP", "0"),
+                ] {
+                    if !launch_env.iter().any(|(key, _)| key == k) {
+                        launch_env.push((k.to_string(), v.to_string()));
+                    }
                 }
                 check_retained_vlist_reconcile_no_notify_min =
                     check_retained_vlist_reconcile_no_notify_min.or(Some(1));
