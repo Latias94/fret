@@ -21,6 +21,7 @@ Recent changes (2026-02-01):
 - Editor: add PageUp/PageDown navigation based on the scroll viewport height (moves caret + scrolls).
 - Editor: bubble Ctrl/Meta+PageUp/PageDown to workspace keymaps (do not cancel preedit for these chords).
 - Editor: add bundle-friendly cache counters (row text + syntax) and expose them via `CodeEditorHandle::cache_stats()`.
+- UI Gallery: show code-editor cache counters (total + per-frame deltas) in the torture overlay.
 - UI Kit/Diagnostics: record and export windowed-rows-surface visible-window telemetry in UI diagnostics snapshots.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
