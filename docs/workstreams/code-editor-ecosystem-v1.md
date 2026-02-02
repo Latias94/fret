@@ -8,6 +8,7 @@ Recent changes (2026-02-02):
 - Branch sync: merge local `main` into `code-editor-ecosystem-v1` to stay aligned with the latest runner/text/diagnostics baselines.
 - Buffer: move `TextBuffer` to rope-backed storage (`ropey`) while preserving the UTF-8 byte-index contract; adapt view/editor consumers to slice-based APIs.
 - Editor geometry: start migrating caret/selection/pointer hit-testing from the monospace "cell width" heuristic to renderer-provided caret stops (per-row cached); add `CanvasPainter::{text_with_blob, rich_text_with_blob}` to support geometry queries.
+- Editor navigation: preserve a pixel `preferred_x` for caret up/down navigation (via caret stops), not the last display column.
 
 Recent changes (2026-02-01):
 

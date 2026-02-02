@@ -1925,6 +1925,7 @@ fn apply_and_record_edit(
     #[cfg(not(feature = "syntax"))]
     let _ = delta;
     st.selection = next_selection;
+    st.caret_preferred_x = None;
     st.row_geom_cache_rev = st.buffer.revision();
     st.row_geom_cache_wrap_cols = st.display_wrap_cols;
     st.row_geom_cache_tick = 0;
@@ -1951,6 +1952,7 @@ fn apply_and_record_edit(
 
 fn undo(st: &mut CodeEditorState) -> bool {
     st.undo_group = None;
+    st.caret_preferred_x = None;
     let (buffer, selection, preedit, history) = (
         &mut st.buffer,
         &mut st.selection,
@@ -1988,6 +1990,7 @@ fn undo(st: &mut CodeEditorState) -> bool {
 
 fn redo(st: &mut CodeEditorState) -> bool {
     st.undo_group = None;
+    st.caret_preferred_x = None;
     let (buffer, selection, preedit, history) = (
         &mut st.buffer,
         &mut st.selection,
