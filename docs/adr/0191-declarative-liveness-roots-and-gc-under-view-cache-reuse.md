@@ -109,6 +109,10 @@ The overlay torture regression (when the global stopgap is disabled) demonstrate
 
 In other words, the GC is correctly acting on the reachable graph it sees; the bug is that the ownership/attachment bookkeeping allowed a still-needed subtree to become structurally detached.
 
+Important clarification for triage:
+
+- When a failing bundle shows `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false` (and/or `unreachable_from_liveness_roots=true`), treat it as a **liveness/ownership/membership bookkeeping regression** (a true island), not primarily as a “parent pointer broke” story. The edge graph can be internally consistent while the root set or bookkeeping drift makes the subtree unreachable.
+
 In practice, the most common way for this to happen in a cache-hit system is **incomplete liveness bookkeeping under reuse**:
 
 - a cache root swaps or re-parents its child subtree (e.g. a content slot changes pages),
@@ -117,6 +121,31 @@ In practice, the most common way for this to happen in a cache-hit system is **i
 - and once the lag window expires, the GC is allowed to sweep an otherwise interactive subtree.
 
 The best-practice implication (seen in Flutter/React/Compose/GPUI) is that optimizations must not create implicit structural detaches, and root membership must be explicit and diagnosable.
+
+### Failure taxonomy (normative for triage)
+
+This taxonomy is intentionally operational: it tells us what to do when a `bundle.json` fails a cache-005 harness.
+
+1. **True island under reuse (bookkeeping regression)**
+   - Symptom: the removed subtree record shows `unreachable_from_liveness_roots=true` (and typically `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false`).
+   - Likely causes: missing liveness roots for the frame, ownership drift, or stale/incomplete subtree membership list under the active reuse roots.
+   - Expected remediation surface: liveness root set construction, ownership invariants (`NodeEntry.root`), membership list refresh/touch logic.
+2. **Swept while still reachable (reachability computation bug)**
+   - Symptom: the removed record suggests it was still reachable (e.g. `reachable_from_layer_roots=true`), yet it was removed.
+   - Likely causes: reachability traversal did not use the union of authoritative edge sources, or used a stale/staged graph incorrectly.
+   - Expected remediation surface: reachability walk implementation and edge-source union (UiTree + WindowFrame children).
+3. **Implicit structural detach under reuse (illegal mutation)**
+   - Symptom: the record attributes a detach to a structural write (e.g. a parent children write location), and the detached parent/root is part of (or adjacent to) a reuse root.
+   - Likely causes: a cache-hit path calling `set_children(..)` with an incomplete list, or interpreting “empty children” as authoritative while reuse is active.
+   - Expected remediation surface: enforce the cache-hit invariants (no structural mutation without full child knowledge).
+4. **Ownership corruption / cross-root identity collision**
+   - Symptom: ownership overwrite samples exist, or an element appears under a different element runtime root than its established owner.
+   - Likely causes: implicit “repair” in touch paths, or accidental reuse of a `GlobalElementId` across roots.
+   - Expected remediation surface: hard ownership invariant enforcement + diagnostics; forbid implicit ownership reassignment.
+5. **Keep-alive liveness root omission**
+   - Symptom: a kept-alive subtree becomes unreachable while keep-alive buckets should be present.
+   - Likely causes: keep-alive roots not included in the liveness root set, or membership lists not covering kept-alive descendants.
+   - Expected remediation surface: keep-alive root enumeration + membership list completeness under nesting.
 
 ### Derived best practices (applicable to Fret)
 
@@ -284,6 +313,35 @@ When diagnostics are enabled and a subtree is removed during GC, a single `bundl
 
 Diagnostics SHOULD prefer capturing debug paths at the time of removal/attribution (when the identity
 is still available), rather than trying to resolve paths after the fact from a pruned identity map.
+
+### Minimum required evidence fields (normative)
+
+For each removed subtree record in `bundle.json` (see `debug.removed_subtrees[*]`), diagnostics MUST provide:
+
+- Reachability classification:
+  - `reachable_from_layer_roots` (required)
+  - `reachable_from_view_cache_roots` (required when reuse roots exist)
+  - `unreachable_from_liveness_roots` (required)
+  - `liveness_layer_roots_len`, `view_cache_reuse_roots_len`, `view_cache_reuse_root_nodes_len` (required when available)
+- Structural context:
+  - `root`, `root_element`, `root_parent`, `root_root`, `root_layer`, `root_layer_visible`
+  - Edge sanity samples: `root_path`, `root_path_edge_ui_contains_child`, `root_path_edge_frame_contains_child`
+- Attribution:
+  - `trigger_element`, `trigger_element_root` and best-effort debug paths when available
+  - Best-effort detach attribution: `root_root_parent_sever_*` and/or `root_parent_children_last_set_*` when available
+- Bookkeeping probes:
+  - `trigger_element_in_view_cache_keep_alive`, `trigger_element_listed_under_reuse_root` when available (bounded probes are acceptable)
+
+In addition, when a failure matches the **True island under reuse** category above, bundles MUST include enough evidence to distinguish:
+
+- “root set omission” vs “membership list omission” vs “ownership drift”.
+
+This is intentionally satisfied today via existing bounded diagnostics:
+
+- `debug.element_runtime.view_cache_reuse_root_element_samples`
+- `debug.element_runtime.node_entry_root_overwrites`
+
+Post-run gates (e.g. `fretboard diag stats --check-gc-sweep-liveness`) SHOULD fail fast and write an evidence JSON payload whenever these required fields are missing or inconsistent.
 
 ## Additional invariants (nested cache roots + ownership)
 
