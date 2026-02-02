@@ -656,13 +656,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 .global::<WindowMetricsService>()
                 .and_then(|svc| svc.scale_factor(cx.window))
                 .unwrap_or(1.0);
-            let key = stable_hash(&(
-                theme_revision,
-                scale_factor.to_bits(),
-                cx.bounds.size.width.0.to_bits(),
-                cx.bounds.size.height.0.to_bits(),
-                props.cache_key,
-            ));
+            let key = stable_hash(&(theme_revision, scale_factor.to_bits(), props.cache_key));
 
             let key_matches = if should_reuse {
                 let matches = cx.window_state.view_cache_key_matches_and_touch(id, key);
