@@ -45,13 +45,13 @@ Notes:
   `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
   checks” rather than “is every page referenced somewhere”.
 
-- Golden files (tracked): `570`
-- Golden keys (tracked, normalized `.open` suffix): `526`
-- Gated keys (string-literal heuristic): `526` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `526` (`100%`)
+- Golden files (tracked): `571`
+- Golden keys (tracked, normalized `.open` suffix): `527`
+- Gated keys (string-literal heuristic): `527` (`100%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `527` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
-As of 2026-02-01 (tracked-only).
+As of 2026-02-02 (tracked-only).
 
 Note on “targeted” gates:
 
@@ -70,31 +70,46 @@ At the time of writing, there are no missing groups (all keys are gated by tests
 The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
 
-- `chart` (84)
-- `calendar` (34)
+- `chart` (92)
+- `calendar` (44)
 - `button` (29)
 - `input` (27)
+- `navigation` (20)
 - `form` (19)
-- `navigation` (17)
-- `sidebar` (16)
 - `typography` (16)
+- `sidebar` (16)
+- `sonner` (15)
+- `dropdown` (14)
 - `toggle` (13)
+- `menubar` (13)
 - `field` (12)
-- `dropdown` (12)
-- `select` (11)
-- `menubar` (11)
-- `spinner` (10)
-- `sheet` (10)
-- `scroll` (10)
-- `context` (10)
+- `date` (12)
+- `select` (12)
+- `context` (12)
 - `item` (10)
-- `combobox` (9)
+- `sheet` (10)
+- `spinner` (10)
+- `scroll` (10)
 - `breadcrumb` (9)
+- `combobox` (9)
 - `textarea` (8)
 - `empty` (7)
 - `carousel` (6)
 - `otp` (5)
+- `signup` (5)
 - `login` (5)
+- `kbd` (5)
+- `badge` (4)
+- `drawer` (4)
+- `alert` (4)
+- `native` (4)
+- `checkbox` (4)
+- `resizable` (4)
+- `command` (4)
+- `dialog` (3)
+- `popover` (3)
+- `tooltip` (3)
+- `skeleton` (2)
 
 Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
 

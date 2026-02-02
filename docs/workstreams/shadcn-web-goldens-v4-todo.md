@@ -31,6 +31,7 @@ Tracking format:
 - [ ] SWG-ovl-010 Expand menu/listbox “height as styling” gates to any remaining overlay families not yet covered.
   - Target families: Popover-like list surfaces, nested listboxes, anything that clamps under low height.
 - 2026-02-01: gated NavigationMenu underlay scroll anchor stability and fixed paint-cache replay to keep last-frame visual bounds in sync (prevents scroll-induced anchor drift).
+- 2026-02-02: added `context-menu-demo.vp375x240` + `menubar-demo.vp375x240` panel-size gates (light/dark) to treat constrained viewport menu height as a styling outcome.
 - [ ] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
 - [ ] SWG-ovl-030 Add “constrained height” variants for remaining overlay pages that currently only gate default viewport.
