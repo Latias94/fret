@@ -34,7 +34,8 @@ use stats::{
     check_bundle_for_viewport_input_min, check_bundle_for_vlist_visible_range_refreshes_max,
     check_bundle_for_vlist_visible_range_refreshes_min,
     check_bundle_for_vlist_window_shifts_explainable,
-    check_bundle_for_vlist_window_shifts_have_prepaint_actions, check_bundle_for_wheel_scroll,
+    check_bundle_for_vlist_window_shifts_have_prepaint_actions,
+    check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
     check_report_for_hover_layout_invalidations, clear_script_result_files,
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
@@ -109,6 +110,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
     let mut check_vlist_window_shifts_explainable: bool = false;
     let mut check_vlist_window_shifts_have_prepaint_actions: bool = false;
+    let mut check_vlist_window_shifts_non_retained_max: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_view_cache_reuse_stable_min: Option<u64> = None;
@@ -548,6 +550,20 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-vlist-window-shifts-have-prepaint-actions" => {
                 check_vlist_window_shifts_have_prepaint_actions = true;
+                i += 1;
+            }
+            "--check-vlist-window-shifts-non-retained-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-vlist-window-shifts-non-retained-max"
+                            .to_string(),
+                    );
+                };
+                check_vlist_window_shifts_non_retained_max =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-vlist-window-shifts-non-retained-max".to_string()
+                    })?);
                 i += 1;
             }
             "--check-prepaint-actions-min" => {
@@ -1221,6 +1237,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
                     || check_vlist_window_shifts_have_prepaint_actions
+                    || check_vlist_window_shifts_non_retained_max.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -1262,6 +1279,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_vlist_visible_range_refreshes_max,
                         check_vlist_window_shifts_explainable,
                         check_vlist_window_shifts_have_prepaint_actions,
+                        check_vlist_window_shifts_non_retained_max,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
@@ -1550,6 +1568,7 @@ See: `docs/tracy.md`.\n";
                         || check_vlist_visible_range_refreshes_max.is_some()
                         || check_vlist_window_shifts_explainable
                         || check_vlist_window_shifts_have_prepaint_actions
+                        || check_vlist_window_shifts_non_retained_max.is_some()
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
                         || check_gc_sweep_liveness
@@ -1589,6 +1608,7 @@ See: `docs/tracy.md`.\n";
                             check_vlist_visible_range_refreshes_max,
                             check_vlist_window_shifts_explainable,
                             check_vlist_window_shifts_have_prepaint_actions,
+                            check_vlist_window_shifts_non_retained_max,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
                             check_gc_sweep_liveness,
@@ -2533,6 +2553,9 @@ See: `docs/tracy.md`.\n";
                     check_retained_vlist_keep_alive_reuse_min.filter(|_| {
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
                     });
+                let vlist_window_shifts_non_retained_max_for_script =
+                    check_vlist_window_shifts_non_retained_max
+                        .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
@@ -2553,7 +2576,9 @@ See: `docs/tracy.md`.\n";
                     || check_viewport_capture_min.is_some()
                     || retained_vlist_gate_for_script.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some()
-                    || retained_vlist_keep_alive_reuse_min_for_script.is_some();
+                    || retained_vlist_keep_alive_reuse_min_for_script.is_some()
+                    || vlist_window_shifts_non_retained_max_for_script.is_some()
+                    || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
                 let is_gc_liveness_script =
                     src.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
@@ -2607,6 +2632,10 @@ See: `docs/tracy.md`.\n";
                     let suite_vlist_window_shifts_have_prepaint_actions =
                         vlist_window_boundary_suite
                             && !check_vlist_window_shifts_have_prepaint_actions;
+                    let suite_vlist_window_shifts_non_retained_max =
+                        ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
+                            .then_some(0u64)
+                            .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
                     let suite_gc_sweep_liveness =
                         builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
                     apply_post_run_checks(
@@ -2632,6 +2661,8 @@ See: `docs/tracy.md`.\n";
                             || suite_vlist_window_shifts_explainable,
                         check_vlist_window_shifts_have_prepaint_actions
                             || suite_vlist_window_shifts_have_prepaint_actions,
+                        vlist_window_shifts_non_retained_max_for_script
+                            .or(suite_vlist_window_shifts_non_retained_max),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
@@ -5229,6 +5260,7 @@ fn apply_post_run_checks(
     check_vlist_visible_range_refreshes_max: Option<u64>,
     check_vlist_window_shifts_explainable: bool,
     check_vlist_window_shifts_have_prepaint_actions: bool,
+    check_vlist_window_shifts_non_retained_max: Option<u64>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     check_gc_sweep_liveness: bool,
@@ -5291,6 +5323,14 @@ fn apply_post_run_checks(
         check_bundle_for_vlist_window_shifts_have_prepaint_actions(
             bundle_path,
             out_dir,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max_total_non_retained_shifts) = check_vlist_window_shifts_non_retained_max {
+        check_bundle_for_vlist_window_shifts_non_retained_max(
+            bundle_path,
+            out_dir,
+            max_total_non_retained_shifts,
             warmup_frames,
         )?;
     }
@@ -7066,6 +7106,69 @@ mod tests {
                 .and_then(|v| v.as_array())
                 .is_some_and(|a| !a.is_empty()),
             "expected samples to be populated"
+        );
+    }
+
+    #[test]
+    fn vlist_window_shifts_non_retained_max_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("vlist_window_shifts_non_retained_max_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "stats": {
+                            "virtual_list_window_shifts_total": 1,
+                            "virtual_list_window_shifts_non_retained": 1
+                        },
+                        "virtual_list_window_shift_samples": [{
+                            "frame_id": 1,
+                            "source": "prepaint",
+                            "node": 10,
+                            "element": 1,
+                            "window_shift_kind": "escape",
+                            "window_shift_reason": "scroll_offset",
+                            "window_shift_apply_mode": "non_retained_rerender",
+                            "window_shift_invalidation_detail": "scroll_handle_escape_window_update"
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_vlist_window_shifts_non_retained_max(&bundle_path, &bundle_dir, 0, 0)
+                .unwrap_err();
+        assert!(err.contains("vlist non-retained window-shift gate failed"));
+
+        let evidence_path = bundle_dir.join("check.vlist_window_shifts_non_retained_max.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected vlist non-retained window-shift evidence JSON to be written"
+        );
+
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("vlist_window_shifts_non_retained_max")
+        );
+        assert_eq!(
+            evidence
+                .get("total_non_retained_shifts")
+                .and_then(|v| v.as_u64()),
+            Some(1)
         );
     }
 

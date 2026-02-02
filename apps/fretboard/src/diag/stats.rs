@@ -2543,6 +2543,23 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable(
     )
 }
 
+pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max(
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_non_retained_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_non_retained_max_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        max_total_non_retained_shifts,
+        warmup_frames,
+    )
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
     bundle_path: &Path,
     out_dir: &Path,
@@ -2939,6 +2956,105 @@ pub(super) fn check_bundle_for_prepaint_actions_min_json(
     if min_snapshots > 0 && snapshots_with_actions < min_snapshots {
         return Err(format!(
             "expected prepaint actions to be recorded in at least min_snapshots={min_snapshots}, but snapshots_with_actions={snapshots_with_actions} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_non_retained_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut snapshots_examined: u64 = 0;
+    let mut total_non_retained_shifts: u64 = 0;
+    let mut total_shifts: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            snapshots_examined = snapshots_examined.saturating_add(1);
+
+            let debug_stats = s.get("debug").and_then(|v| v.get("stats"));
+            let window_shifts_total = debug_stats
+                .and_then(|v| v.get("virtual_list_window_shifts_total"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let window_shifts_non_retained = debug_stats
+                .and_then(|v| v.get("virtual_list_window_shifts_non_retained"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            total_shifts = total_shifts.saturating_add(window_shifts_total);
+            if window_shifts_non_retained == 0 {
+                continue;
+            }
+            total_non_retained_shifts =
+                total_non_retained_shifts.saturating_add(window_shifts_non_retained);
+
+            if samples.len() < 64 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let shift_samples = s
+                    .get("debug")
+                    .and_then(|v| v.get("virtual_list_window_shift_samples"))
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().take(8).cloned().collect::<Vec<_>>())
+                    .unwrap_or_default();
+
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "non_retained_shifts": window_shifts_non_retained,
+                    "window_shifts_total": window_shifts_total,
+                    "shift_samples": shift_samples,
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_window_shifts_non_retained_max.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_window_shifts_non_retained_max",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "max_total_non_retained_shifts": max_total_non_retained_shifts,
+        "snapshots_examined": snapshots_examined,
+        "total_window_shifts": total_shifts,
+        "total_non_retained_shifts": total_non_retained_shifts,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if total_non_retained_shifts > max_total_non_retained_shifts {
+        return Err(format!(
+            "vlist non-retained window-shift gate failed: total_non_retained_shifts={total_non_retained_shifts} exceeded max_total_non_retained_shifts={max_total_non_retained_shifts} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
             bundle_path.display(),
             out_path.display()
         ));
