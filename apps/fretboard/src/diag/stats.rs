@@ -2720,10 +2720,14 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
                     .and_then(|v| v.as_str());
                 if reason.is_some() && mode.is_some() {
                     if mode == Some("non_retained_rerender") {
-                        let expected_detail = match kind {
-                            "escape" => Some("scroll_handle_window_update"),
-                            "prefetch" => Some("scroll_handle_prefetch_window_update"),
-                            _ => None,
+                        let expected_detail = if reason == Some("scroll_to_item") {
+                            Some("scroll_handle_scroll_to_item_window_update")
+                        } else {
+                            match kind {
+                                "escape" => Some("scroll_handle_window_update"),
+                                "prefetch" => Some("scroll_handle_prefetch_window_update"),
+                                _ => None,
+                            }
                         };
                         if invalidation_detail.is_none() {
                             offenders = offenders.saturating_add(1);
