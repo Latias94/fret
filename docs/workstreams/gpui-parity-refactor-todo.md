@@ -733,7 +733,6 @@ topics (if/when we implement them):
     - Next (v1):
       - First migration target: `ecosystem/fret-code-view` “CodeBlock -> windowed lines” (visible line window + overscan), with regression enforced by the harness above.
       - Run A/B: `FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0|1` toggles the `code_view_torture` page path (default: `1`).
-      - Optional: `FRET_UI_GALLERY_CODE_VIEW_WINDOWED_RETAINED=1` uses the retained-host windowed-lines path (ADR 0192) for the gallery harness.
     - Evidence:
       - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_VIEW_TORTURE`)
       - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_view_torture`, `ui-gallery-code-view-root`)
