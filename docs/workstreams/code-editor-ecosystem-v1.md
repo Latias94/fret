@@ -7,6 +7,7 @@ Recent changes (2026-02-02):
 
 - Branch sync: merge local `main` into `code-editor-ecosystem-v1` to stay aligned with the latest runner/text/diagnostics baselines.
 - Buffer: move `TextBuffer` to rope-backed storage (`ropey`) while preserving the UTF-8 byte-index contract; adapt view/editor consumers to slice-based APIs.
+- Editor geometry: start migrating caret/selection/pointer hit-testing from the monospace "cell width" heuristic to renderer-provided caret stops (per-row cached); add `CanvasPainter::{text_with_blob, rich_text_with_blob}` to support geometry queries.
 
 Recent changes (2026-02-01):
 
@@ -105,6 +106,7 @@ P0 (correctness and contracts):
 - Web IME: stabilize caret anchoring and reduce candidate UI jitter across browsers (textarea style + cursor-area mapping).
 - Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
 - Selection + composition range invariants: expand ADR 0071 coverage across TextInput/TextArea/CodeEditor (including a11y selection actions).
+- Code editor: replace the monospace "cell width" heuristic with cached renderer caret stops for pointer hit-testing, caret, and selection geometry (keep the heuristic as a fallback until every backend implements caret stops).
 - Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji).
   - Baseline: `TextFontFamilyConfig` + `common_fallback` seeded via `FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates`.
   - Web default: ship a small `cjk-lite` subset + optional emoji bundle; accept that glyph coverage is limited and "tofu" is expected outside the subset.

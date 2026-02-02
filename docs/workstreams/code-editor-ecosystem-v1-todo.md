@@ -129,6 +129,7 @@ Evidence anchors:
 
 - [x] Prepare text per visible display row only (no monolithic document blob).
 - [~] Define row cache keys and budgets (viewport-bounded, LRU-ish) (row text + syntax spans are bounded; text system cache/telemetry alignment pending).
+- [~] Replace the code editor monospace "cell width" heuristic with cached renderer caret stops for pointer hit-testing, caret, and selection geometry (keep the heuristic as a fallback until every backend implements caret stops).
 - [x] Ensure theme-only changes remain paint-only (no reshaping).
 
 ### Input/IME integration
@@ -205,7 +206,7 @@ Evidence anchors:
 
 ## M8 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
 
-- [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels) (column-based; not pixel-accurate yet).
+- [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels) (column-based baseline; pixel-accurate caret/selection/hit-test is migrating to renderer caret stops).
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 
