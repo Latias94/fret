@@ -904,6 +904,9 @@ topics (if/when we implement them):
         - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
         `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - Evidence bundle (suite; cache+shell, release; prefetch_step=overscan*8 for non-retained):
+        `target/fret-diag-suite-ui-gallery-vlist-window-boundary-after-prefetch-step/1770047603074-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+        - Observed: `prefetch_shifts=20`, `escape_shifts=3`, `visible_range_refreshes=26` (budgeted by suite defaults).
       - Gate tightening ladder (post-warmup):
         - Current: `--check-vlist-visible-range-refreshes-max 35` (catches “too much window churn” regressions after wheel events, while allowing prefetch).
         - Next: aim for `10` once v2 window derivation reduces boundary work in a single tick and/or staged prefetch budgets are tightened.

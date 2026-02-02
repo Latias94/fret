@@ -257,7 +257,15 @@ impl<H: UiHost> UiTree<H> {
                             } else {
                                 // Non-retained VirtualList pays a full cache-root rerender per shift,
                                 // so prefer fewer, larger shifts while we still have overscan coverage.
-                                inputs.overscan.saturating_mul(3)
+                                //
+                                // This is a deliberate trade-off:
+                                // - larger steps reduce how often we schedule a rerender during smooth scroll,
+                                // - but each rerender may rebuild more rows.
+                                //
+                                // For v1 (non-retained), reducing rerender frequency generally wins because
+                                // we cannot attach/detach rows on cache-hit frames without a retained host
+                                // boundary (ADR 0192).
+                                inputs.overscan.saturating_mul(8)
                             }
                             .max(prefetch_margin)
                             .max(1);
