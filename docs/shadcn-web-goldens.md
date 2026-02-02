@@ -362,14 +362,15 @@ Current layout gates include:
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--openKeys=<chord>` (optional; only used when `openAction=keys`; e.g. `Control+KeyJ` or `Meta+KeyJ`; env: `OPEN_KEYS`)
-- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
-- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
+- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll|scrollTo`)
+- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll|scrollTo`)
   - `keys=<selector>` uses `--openKeys` / `OPEN_KEYS`.
   - `keys=<selector>@<keys>` uses an inline key spec. `<keys>` supports a chord (`Shift+F10`) or a sequence (`ArrowDown ArrowRight` or `ArrowDown,ArrowRight`).
   - `type=<selector>@<text>` sets a controlled `<input>/<textarea>` value and dispatches `input`/`change` (React-friendly).
   - `waitFor=<selector>` waits for a selector to appear (useful for hover-gated ScrollArea scrollbars).
   - `move=<x>,<y>` moves the mouse to an absolute viewport position (useful to force pointerenter/leave).
   - `scroll=<selector>@<dx>,<dy>` scrolls an element via `scrollBy(dx, dy)`.
+  - `scrollTo=<selector>@<left>,<top>` sets `scrollLeft/scrollTop` via `scrollTo(left, top)` (useful when a component re-syncs scroll on open).
 - `--baseUrl=http://localhost:4000`
 - `--startServer` (env: `START_SERVER=1`)
 - `--nextDir=<path>` (env: `NEXT_DIR=...`; default: `repo-ref/ui/apps/v4`)
