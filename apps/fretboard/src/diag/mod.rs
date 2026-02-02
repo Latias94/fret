@@ -2559,6 +2559,7 @@ See: `docs/tracy.md`.\n";
                     "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
                     "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
                     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+                    "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
                     "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
                     "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
                     "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
