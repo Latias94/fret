@@ -904,7 +904,12 @@ topics (if/when we implement them):
         `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Gate tightening ladder (post-warmup):
         - Current: `--check-vlist-visible-range-refreshes-max 10` (catches “too much window churn” regressions after wheel events).
-        - Next: aim for `5` once v2 window derivation reduces boundary work in a single tick.
+        - Next: aim for `5` once the boundary harness is stable under the *default suite env* (cache+shell+known heights) and we have
+          repeatable evidence that the prepaint-driven scheduling path no longer causes “extra settle refreshes” after the first wheel event.
+          - Definition of done to tighten to `5` (run locally at least 3 times):
+            - `fretboard diag suite ui-gallery-vlist-window-boundary --launch -- cargo run -p fret-ui-gallery --release` passes with `--check-vlist-visible-range-refreshes-max 5`,
+            - `--check-stale-paint ui-gallery-virtual-list-root` still passes,
+            - and the bundle shows at least one cache-hit tail streak (`--check-view-cache-reuse-min 1` stays meaningful).
         - Target: split budgets by cause once “window shift reasons” are exported (e.g. `prefetch` vs `escape`) and can be gated independently.
 
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
