@@ -225,7 +225,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - a true structural detach (authoring/runtime edge drop) that must be attributed to a callsite.
   - Done when:
     - The `view_cache_has_reuse_roots` stopgap is removed and both overlay regression harnesses remain green under cache+shell reuse.
-    - `fretboard diag suite ui-gallery` runs the sidebar scroll refresh harness and defaults `--check-gc-sweep-liveness` for the cache-005 harness scripts (overlay torture + sidebar scroll refresh), so island regressions are caught without manual inspection.
+    - `fretboard diag suite ui-gallery-cache005` defaults `--check-gc-sweep-liveness` for the cache-005 harness scripts (overlay torture + sidebar scroll refresh), so island regressions are caught without manual inspection (without bloating the main `ui-gallery` suite).
   - Diagnostics:
     - `removed_subtrees` include `root_element_path` (when the element debug identity is still retained within the diagnostics lag window).
     - `removed_subtrees` include `root_parent_children_last_set_location` (when the parent has a recorded `set_children(..)` write in this run).

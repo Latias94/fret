@@ -2036,6 +2036,7 @@ See: `docs/tracy.md`.\n";
                 rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture";
             let is_ui_gallery_file_tree_torture_interactive_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture-interactive";
+            let is_ui_gallery_cache005_suite = rest.len() == 1 && rest[0] == "ui-gallery-cache005";
             let is_components_gallery_file_tree_suite =
                 rest.len() == 1 && rest[0] == "components-gallery-file-tree";
             let is_components_gallery_table_suite =
@@ -2289,6 +2290,22 @@ See: `docs/tracy.md`.\n";
                                 "tools/diag-scripts/ui-gallery-file-tree-torture-toggle.json",
                             ),
                         )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_cache005_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from("tools/diag-scripts/ui-gallery-overlay-torture.json"),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json",
+                                ),
+                            ),
+                        ],
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_components_gallery_file_tree_suite {
@@ -4848,10 +4865,9 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 17] {
+fn ui_gallery_suite_scripts() -> [&'static str; 16] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
-        "tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
         "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
         "tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json",
