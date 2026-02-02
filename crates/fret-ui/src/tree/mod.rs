@@ -16,7 +16,7 @@ use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
     ModelCreatedDebugInfo, ModelId, Platform, PlatformCapabilities, TickId,
 };
-use slotmap::{Key, SlotMap};
+use slotmap::{Key, SecondaryMap, SlotMap};
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
@@ -1038,6 +1038,77 @@ impl GlobalObservationIndex {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct PropagationDepthCacheEntry {
+    generation: u32,
+    depth: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct InvalidationDedupEntry {
+    generation: u32,
+    mask: u8,
+}
+
+#[derive(Debug, Default)]
+struct InvalidationDedupTable {
+    generation: u32,
+    entries: SecondaryMap<NodeId, InvalidationDedupEntry>,
+}
+
+impl InvalidationDedupTable {
+    fn begin(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
+        if self.generation == 0 {
+            self.generation = 1;
+            self.entries.clear();
+        }
+    }
+
+    fn get(&self, node: NodeId) -> u8 {
+        self.entries
+            .get(node)
+            .filter(|e| e.generation == self.generation)
+            .map(|e| e.mask)
+            .unwrap_or_default()
+    }
+
+    fn insert(&mut self, node: NodeId, mask: u8) {
+        self.entries.insert(
+            node,
+            InvalidationDedupEntry {
+                generation: self.generation,
+                mask,
+            },
+        );
+    }
+}
+
+trait InvalidationVisited {
+    fn mask(&self, node: NodeId) -> u8;
+    fn set_mask(&mut self, node: NodeId, mask: u8);
+}
+
+impl InvalidationVisited for HashMap<NodeId, u8> {
+    fn mask(&self, node: NodeId) -> u8 {
+        self.get(&node).copied().unwrap_or_default()
+    }
+
+    fn set_mask(&mut self, node: NodeId, mask: u8) {
+        self.insert(node, mask);
+    }
+}
+
+impl InvalidationVisited for InvalidationDedupTable {
+    fn mask(&self, node: NodeId) -> u8 {
+        self.get(node)
+    }
+
+    fn set_mask(&mut self, node: NodeId, mask: u8) {
+        self.insert(node, mask);
+    }
+}
+
 pub struct UiTree<H: UiHost> {
     nodes: SlotMap<NodeId, Node<H>>,
     layers: SlotMap<UiLayerId, UiLayer>,
@@ -1121,10 +1192,11 @@ pub struct UiTree<H: UiHost> {
         HashMap<NodeId, (UiDebugInvalidationSource, UiDebugInvalidationDetail)>,
     last_redraw_request_tick: Option<TickId>,
 
-    propagation_depth_cache: HashMap<NodeId, u32>,
+    propagation_depth_generation: u32,
+    propagation_depth_cache: SecondaryMap<NodeId, PropagationDepthCacheEntry>,
     propagation_chain: Vec<NodeId>,
     propagation_entries: Vec<(u8, u32, u64, NodeId, Invalidation)>,
-    propagation_visited: HashMap<NodeId, u8>,
+    invalidation_dedup: InvalidationDedupTable,
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
@@ -1486,10 +1558,11 @@ impl<H: UiHost> Default for UiTree<H> {
             dirty_cache_roots: HashSet::new(),
             dirty_cache_root_reasons: HashMap::new(),
             last_redraw_request_tick: None,
-            propagation_depth_cache: HashMap::new(),
+            propagation_depth_generation: 0,
+            propagation_depth_cache: SecondaryMap::new(),
             propagation_chain: Vec::new(),
             propagation_entries: Vec::new(),
-            propagation_visited: HashMap::new(),
+            invalidation_dedup: InvalidationDedupTable::default(),
             semantics: None,
             semantics_requested: false,
             layout_node_profile: None,
@@ -4762,32 +4835,28 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn mark_invalidation_dedup_with_source(
+    fn mark_invalidation_dedup_with_source<V: InvalidationVisited>(
         &mut self,
         node: NodeId,
         inv: Invalidation,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut V,
         source: UiDebugInvalidationSource,
     ) {
         let detail = UiDebugInvalidationDetail::from_source(source);
         self.mark_invalidation_dedup_with_detail(node, inv, visited, source, detail);
     }
 
-    fn mark_invalidation_dedup_with_detail(
+    fn mark_invalidation_dedup_with_detail<V: InvalidationVisited>(
         &mut self,
         node: NodeId,
         inv: Invalidation,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut V,
         source: UiDebugInvalidationSource,
         detail: UiDebugInvalidationDetail,
     ) {
         let stop_at_view_cache = self.view_cache_active();
         let needed = Self::invalidation_mask(inv);
-        if source != UiDebugInvalidationSource::Notify
-            && visited
-                .get(&node)
-                .is_some_and(|already| (*already & needed) == needed)
-        {
+        if source != UiDebugInvalidationSource::Notify && (visited.mask(node) & needed) == needed {
             return;
         }
         self.record_invalidation_walk_call(source);
@@ -4797,7 +4866,7 @@ impl<H: UiHost> UiTree<H> {
         let root_element = self.nodes.get(node).and_then(|n| n.element);
         let mut walked_nodes: u32 = 0;
         while let Some(id) = current {
-            let already = visited.get(&id).copied().unwrap_or_default();
+            let already = visited.mask(id);
             if source != UiDebugInvalidationSource::Notify
                 && (already & needed) == needed
                 && !(stop_at_view_cache && Self::invalidation_marks_view_dirty(source, inv, detail))
@@ -4815,7 +4884,7 @@ impl<H: UiHost> UiTree<H> {
             if let Some(n) = self.nodes.get_mut(id) {
                 if source == UiDebugInvalidationSource::Notify || (already & needed) != needed {
                     n.invalidation.mark(inv);
-                    visited.insert(id, already | needed);
+                    visited.set_mask(id, already | needed);
                 }
 
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
@@ -4873,7 +4942,7 @@ impl<H: UiHost> UiTree<H> {
             let mut parent = self.nodes.get(cache_root).and_then(|n| n.parent);
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
-                let already = visited.get(&id).copied().unwrap_or_default();
+                let already = visited.mask(id);
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
                     if let Some(n) = self.nodes.get_mut(id) {
@@ -4888,7 +4957,7 @@ impl<H: UiHost> UiTree<H> {
                     if mark_dirty {
                         self.mark_cache_root_dirty(id, source, detail);
                     }
-                    visited.insert(id, already | needed);
+                    visited.set_mask(id, already | needed);
                 }
                 parent = next_parent;
             }
@@ -4929,24 +4998,35 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn propagation_depth_for(&mut self, start: NodeId) -> u32 {
-        if let Some(depth) = self.propagation_depth_cache.get(&start) {
-            return *depth;
+        let generation = self.propagation_depth_generation;
+        if let Some(entry) = self.propagation_depth_cache.get(start)
+            && entry.generation == generation
+        {
+            return entry.depth;
         }
 
         self.propagation_chain.clear();
 
         let mut current = Some(start);
         while let Some(node) = current {
-            if let Some(depth) = self.propagation_depth_cache.get(&node) {
-                let mut d = *depth;
+            if let Some(entry) = self.propagation_depth_cache.get(node)
+                && entry.generation == generation
+            {
+                let mut d = entry.depth;
                 for id in self.propagation_chain.drain(..).rev() {
                     d = d.saturating_add(1);
-                    self.propagation_depth_cache.insert(id, d);
+                    self.propagation_depth_cache.insert(
+                        id,
+                        PropagationDepthCacheEntry {
+                            generation,
+                            depth: d,
+                        },
+                    );
                 }
                 return self
                     .propagation_depth_cache
-                    .get(&start)
-                    .copied()
+                    .get(start)
+                    .and_then(|e| (e.generation == generation).then_some(e.depth))
                     .unwrap_or_default();
             }
 
@@ -4956,13 +5036,19 @@ impl<H: UiHost> UiTree<H> {
 
         let mut d = 0u32;
         for id in self.propagation_chain.drain(..).rev() {
-            self.propagation_depth_cache.insert(id, d);
+            self.propagation_depth_cache.insert(
+                id,
+                PropagationDepthCacheEntry {
+                    generation,
+                    depth: d,
+                },
+            );
             d = d.saturating_add(1);
         }
 
         self.propagation_depth_cache
-            .get(&start)
-            .copied()
+            .get(start)
+            .and_then(|e| (e.generation == generation).then_some(e.depth))
             .unwrap_or_default()
     }
 
@@ -4972,7 +5058,11 @@ impl<H: UiHost> UiTree<H> {
         masks: impl IntoIterator<Item = (NodeId, ObservationMask)>,
         source: UiDebugInvalidationSource,
     ) -> bool {
-        self.propagation_depth_cache.clear();
+        self.propagation_depth_generation = self.propagation_depth_generation.wrapping_add(1);
+        if self.propagation_depth_generation == 0 {
+            self.propagation_depth_generation = 1;
+            self.propagation_depth_cache.clear();
+        }
         self.propagation_chain.clear();
         self.propagation_entries.clear();
 
@@ -5010,15 +5100,15 @@ impl<H: UiHost> UiTree<H> {
                 .then(a.2.cmp(&b.2))
         });
 
-        self.propagation_visited.clear();
         let mut did_invalidate = false;
-        let mut visited = std::mem::take(&mut self.propagation_visited);
+        let mut visited = std::mem::take(&mut self.invalidation_dedup);
+        visited.begin();
         let mut entries = std::mem::take(&mut self.propagation_entries);
         for (_, _, _, node, inv) in entries.drain(..) {
             self.mark_invalidation_dedup_with_source(node, inv, &mut visited, source);
             did_invalidate = true;
         }
-        self.propagation_visited = visited;
+        self.invalidation_dedup = visited;
         self.propagation_entries = entries;
 
         if did_invalidate {
