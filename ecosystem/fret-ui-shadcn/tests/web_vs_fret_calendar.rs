@@ -1,7 +1,11 @@
 use fret_app::App;
-use fret_core::{AppWindowId, NodeId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
+use fret_core::{
+    AppWindowId, Event, FrameId, Modifiers, MouseButtons, NodeId, Point, PointerEvent, PointerId,
+    PointerType, Px, Rect, SemanticsRole, Size as CoreSize,
+};
 use fret_core::{Scene, SceneOp, Transform2D};
 use fret_runtime::Model;
+use fret_ui::Theme;
 use fret_ui::tree::UiTree;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -463,6 +467,49 @@ fn assert_rgba_close(label: &str, actual: Rgba, expected: Rgba, tol: f32) {
     );
 }
 
+fn assert_rect_xwh_close_px(label: &str, actual: Rect, expected: WebRect, tol: f32) {
+    assert_close_px(&format!("{label} x"), actual.origin.x, expected.x, tol);
+    assert_close_px(&format!("{label} y"), actual.origin.y, expected.y, tol);
+    assert_close_px(&format!("{label} w"), actual.size.width, expected.w, tol);
+    assert_close_px(&format!("{label} h"), actual.size.height, expected.h, tol);
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PaintedQuad {
+    rect: Rect,
+    background: fret_core::Color,
+}
+
+fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
+    let mut best: Option<PaintedQuad> = None;
+    let mut best_score = f32::INFINITY;
+
+    for op in scene.ops() {
+        let SceneOp::Quad {
+            rect, background, ..
+        } = *op
+        else {
+            continue;
+        };
+
+        if background.a <= 0.001 {
+            continue;
+        }
+
+        let score = (rect.origin.x.0 - target.origin.x.0).abs()
+            + (rect.origin.y.0 - target.origin.y.0).abs()
+            + (rect.size.width.0 - target.size.width.0).abs()
+            + (rect.size.height.0 - target.size.height.0).abs();
+
+        if score < best_score {
+            best_score = score;
+            best = Some(PaintedQuad { rect, background });
+        }
+    }
+
+    best
+}
+
 #[derive(Clone, Copy)]
 struct SceneWalkState {
     transform: Transform2D,
@@ -641,6 +688,78 @@ fn days_in_month(year: i32, month: time::Month) -> u8 {
         time::Month::November => 30,
         time::Month::December => 31,
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CalendarChromeConfig {
+    locale: fret_ui_shadcn::calendar::CalendarLocale,
+    month: time::Month,
+    year: i32,
+    origin_x: f32,
+    origin_y: f32,
+    cell_size: Px,
+    week_start: time::Weekday,
+    today: Option<time::Date>,
+    show_week_number: bool,
+    show_outside_days: bool,
+    disable_outside_days: bool,
+    selected: time::Date,
+}
+
+fn render_calendar_chrome_from_config(
+    cx: &mut fret_ui::ElementContext<'_, App>,
+    config: CalendarChromeConfig,
+) -> Vec<fret_ui::element::AnyElement> {
+    use fret_ui_headless::calendar::CalendarMonth;
+
+    let theme = Theme::global(&*cx.app).clone();
+    let border = theme.color_required("border");
+
+    let month_model: Model<CalendarMonth> = cx
+        .app
+        .models_mut()
+        .insert(CalendarMonth::new(config.year, config.month));
+    let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(config.selected));
+
+    let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+        .locale(config.locale)
+        .week_start(config.week_start)
+        .show_outside_days(config.show_outside_days)
+        .disable_outside_days(config.disable_outside_days)
+        .show_week_number(config.show_week_number)
+        .refine_style(
+            fret_ui_kit::ChromeRefinement::default()
+                .rounded(fret_ui_kit::Radius::Lg)
+                .border_1()
+                .border_color(fret_ui_kit::ColorRef::Color(border))
+                .shadow_sm(),
+        )
+        .cell_size(config.cell_size);
+    if let Some(today) = config.today {
+        calendar = calendar.today(today);
+    }
+
+    let calendar = calendar.into_element(cx);
+    let calendar = cx.container(
+        fret_ui::element::ContainerProps {
+            layout: {
+                let mut layout = fret_ui::element::LayoutStyle::default();
+                layout.size.width = fret_ui::element::Length::Fill;
+                layout.size.height = fret_ui::element::Length::Fill;
+                layout
+            },
+            padding: fret_core::Edges {
+                left: Px(config.origin_x),
+                top: Px(config.origin_y),
+                right: Px(0.0),
+                bottom: Px(0.0),
+            },
+            ..Default::default()
+        },
+        move |_cx| vec![calendar],
+    );
+
+    vec![calendar]
 }
 
 fn parse_calendar_cell_size_px(theme: &WebGoldenTheme) -> Option<Px> {
@@ -2344,3 +2463,621 @@ calendar_single_month_geometry_test!(
     web_vs_fret_calendar_31_geometry_matches_web_targeted,
     "calendar-31"
 );
+
+fn assert_calendar_selected_day_background_matches_web(
+    web_name: &str,
+    quad_label: &str,
+    bg_label: &str,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+
+    let web_month_grid = find_first(&theme.root, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    })
+    .expect("web month grid");
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let locale = web_month_label
+        .chars()
+        .next()
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                fret_ui_shadcn::calendar::CalendarLocale::En
+            } else {
+                fret_ui_shadcn::calendar::CalendarLocale::Es
+            }
+        })
+        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(!web_day_buttons.is_empty(), "expected calendar day buttons");
+
+    let web_selected_cell = find_first(&theme.root, &|n| {
+        n.attrs.get("aria-selected").is_some_and(|v| v == "true")
+    })
+    .expect("web selected calendar cell (aria-selected=true)");
+    let web_selected_button = find_first(web_selected_cell, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    })
+    .expect("web selected day button");
+    let web_selected_label = web_selected_button
+        .attrs
+        .get("aria-label")
+        .expect("web selected day aria-label");
+    let (selected_date, _selected_suffix) = parse_calendar_day_aria_label(web_selected_label)
+        .unwrap_or_else(|| panic!("invalid web selected day aria-label: {web_selected_label}"));
+
+    let web_bg_css = web_selected_button
+        .computed_style
+        .get("backgroundColor")
+        .expect("web selected day backgroundColor");
+    let expected_bg =
+        parse_css_color(web_bg_css).unwrap_or_else(|| panic!("invalid css color: {web_bg_css}"));
+
+    let weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, ") || label.starts_with("Hoy, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+    let show_outside_days = web_day_buttons.len() != (days_in_month(year, month) as usize);
+    let disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let cell_size =
+        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+    let config = CalendarChromeConfig {
+        locale,
+        month,
+        year,
+        origin_x: web_origin_x,
+        origin_y: web_origin_y,
+        cell_size,
+        week_start,
+        today,
+        show_week_number,
+        show_outside_days,
+        disable_outside_days,
+        selected: selected_date,
+    };
+    let (_snap, scene) = render_calendar_in_bounds_with_scene(bounds, move |cx| {
+        render_calendar_chrome_from_config(cx, config)
+    });
+
+    let target = Rect::new(
+        Point::new(
+            Px(web_selected_button.rect.x),
+            Px(web_selected_button.rect.y),
+        ),
+        CoreSize::new(
+            Px(web_selected_button.rect.w),
+            Px(web_selected_button.rect.h),
+        ),
+    );
+    let quad = find_best_opaque_background_quad(&scene, target)
+        .expect("painted opaque selected day background quad");
+
+    assert_rect_xwh_close_px(quad_label, quad.rect, web_selected_button.rect, 3.0);
+    assert_rgba_close(bg_label, color_to_rgba(quad.background), expected_bg, 0.02);
+}
+
+#[test]
+fn web_vs_fret_calendar_14_selected_day_background_matches_web() {
+    assert_calendar_selected_day_background_matches_web(
+        "calendar-14",
+        "calendar-14 selected day quad",
+        "calendar-14 selected day background",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_14_vp375x320_selected_day_background_matches_web() {
+    assert_calendar_selected_day_background_matches_web(
+        "calendar-14.vp375x320",
+        "calendar-14.vp375x320 selected day quad",
+        "calendar-14.vp375x320 selected day background",
+    );
+}
+
+fn assert_calendar_hover_day_background_matches_web(
+    web_name: &str,
+    quad_label: &str,
+    bg_label: &str,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+
+    let web_month_grid = find_first(&theme.root, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    })
+    .expect("web month grid");
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let locale = web_month_label
+        .chars()
+        .next()
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                fret_ui_shadcn::calendar::CalendarLocale::En
+            } else {
+                fret_ui_shadcn::calendar::CalendarLocale::Es
+            }
+        })
+        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(!web_day_buttons.is_empty(), "expected calendar day buttons");
+
+    let web_selected_cell = find_first(&theme.root, &|n| {
+        n.attrs.get("aria-selected").is_some_and(|v| v == "true")
+    })
+    .expect("web selected calendar cell (aria-selected=true)");
+    let web_selected_button = find_first(web_selected_cell, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    })
+    .expect("web selected day button");
+    let web_selected_label = web_selected_button
+        .attrs
+        .get("aria-label")
+        .expect("web selected day aria-label");
+    let (selected_date, _selected_suffix) = parse_calendar_day_aria_label(web_selected_label)
+        .unwrap_or_else(|| panic!("invalid web selected day aria-label: {web_selected_label}"));
+
+    let web_hovered_button = web_day_buttons
+        .iter()
+        .filter(|n| {
+            n.computed_style
+                .get("backgroundColor")
+                .is_some_and(|v| v != "rgba(0, 0, 0, 0)")
+        })
+        .find(|n| {
+            n.attrs
+                .get("aria-label")
+                .is_some_and(|label| label != web_selected_label)
+        })
+        .copied()
+        .expect("web hovered day button (non-transparent backgroundColor)");
+    let web_hovered_label = web_hovered_button
+        .attrs
+        .get("aria-label")
+        .expect("web hovered day aria-label")
+        .to_string();
+
+    let web_bg_css = web_hovered_button
+        .computed_style
+        .get("backgroundColor")
+        .expect("web hovered day backgroundColor");
+    let expected_bg =
+        parse_css_color(web_bg_css).unwrap_or_else(|| panic!("invalid css color: {web_bg_css}"));
+
+    let weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, ") || label.starts_with("Hoy, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+    let show_outside_days = web_day_buttons.len() != (days_in_month(year, month) as usize);
+    let disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let cell_size =
+        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+    let config = CalendarChromeConfig {
+        locale,
+        month,
+        year,
+        origin_x: web_origin_x,
+        origin_y: web_origin_y,
+        cell_size,
+        week_start,
+        today,
+        show_week_number,
+        show_outside_days,
+        disable_outside_days,
+        selected: selected_date,
+    };
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-calendar-hover",
+        move |cx| render_calendar_chrome_from_config(cx, config),
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap1 = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot (pre-hover)");
+    let hover_button1 = find_semantics(&snap1, SemanticsRole::Button, Some(&web_hovered_label))
+        .expect("fret hovered day button semantics node (pre-hover)");
+    let hover_pos = Point::new(
+        Px(hover_button1.bounds.origin.x.0 + hover_button1.bounds.size.width.0 * 0.5),
+        Px(hover_button1.bounds.origin.y.0 + hover_button1.bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            position: hover_pos,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: PointerId(0),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    let config2 = config;
+    let root_node = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "web-vs-fret-calendar-hover",
+        move |cx| render_calendar_chrome_from_config(cx, config2),
+    );
+    ui.set_root(root_node);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let target = Rect::new(
+        Point::new(Px(web_hovered_button.rect.x), Px(web_hovered_button.rect.y)),
+        CoreSize::new(Px(web_hovered_button.rect.w), Px(web_hovered_button.rect.h)),
+    );
+    let quad = find_best_opaque_background_quad(&scene, target)
+        .expect("painted opaque hovered day background quad");
+
+    assert_rect_xwh_close_px(quad_label, quad.rect, web_hovered_button.rect, 3.0);
+    assert_rgba_close(bg_label, color_to_rgba(quad.background), expected_bg, 0.02);
+}
+
+#[test]
+fn web_vs_fret_calendar_14_hover_day_background_matches_web() {
+    assert_calendar_hover_day_background_matches_web(
+        "calendar-14.hover-day-13",
+        "calendar-14 hover day quad",
+        "calendar-14 hover day background",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_14_vp375x320_hover_day_background_matches_web() {
+    assert_calendar_hover_day_background_matches_web(
+        "calendar-14.hover-day-13-vp375x320",
+        "calendar-14.vp375x320 hover day quad",
+        "calendar-14.vp375x320 hover day background",
+    );
+}
+
+fn assert_calendar_selected_day_text_centered_in_button(
+    web_name: &str,
+    x_label: &str,
+    y_label: &str,
+) {
+    let web = read_web_golden(web_name);
+    let theme = web_theme(&web);
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let web_origin_x = web_rdp_root.rect.x;
+    let web_origin_y = web_rdp_root.rect.y;
+
+    let web_month_grid = find_first(&theme.root, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    })
+    .expect("web month grid");
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let locale = web_month_label
+        .chars()
+        .next()
+        .map(|c| {
+            if c.is_ascii_uppercase() {
+                fret_ui_shadcn::calendar::CalendarLocale::En
+            } else {
+                fret_ui_shadcn::calendar::CalendarLocale::Es
+            }
+        })
+        .unwrap_or(fret_ui_shadcn::calendar::CalendarLocale::En);
+
+    let web_day_buttons = find_all(&theme.root, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(!web_day_buttons.is_empty(), "expected calendar day buttons");
+
+    let web_selected_cell = find_first(&theme.root, &|n| {
+        n.attrs.get("aria-selected").is_some_and(|v| v == "true")
+    })
+    .expect("web selected calendar cell (aria-selected=true)");
+    let web_selected_button = find_first(web_selected_cell, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    })
+    .expect("web selected day button");
+    let web_selected_label = web_selected_button
+        .attrs
+        .get("aria-label")
+        .expect("web selected day aria-label");
+    let (selected_date, _selected_suffix) = parse_calendar_day_aria_label(web_selected_label)
+        .unwrap_or_else(|| panic!("invalid web selected day aria-label: {web_selected_label}"));
+
+    let web_day_number = {
+        let mut stack = vec![web_selected_button];
+        let mut best: Option<&WebNode> = None;
+        while let Some(node) = stack.pop() {
+            for child in &node.children {
+                stack.push(child);
+            }
+
+            let Some(text) = node.text.as_deref() else {
+                continue;
+            };
+            let text = text.trim();
+            if text.is_empty() || text.len() > 2 || !text.chars().all(|c| c.is_ascii_digit()) {
+                continue;
+            }
+            best = Some(node);
+        }
+        best.expect("web selected day number text node")
+    };
+
+    let weekday_headers = find_all(&theme.root, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let today = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .find(|label| label.starts_with("Today, ") || label.starts_with("Hoy, "))
+        .and_then(|label| parse_calendar_day_aria_label(label))
+        .map(|(d, _)| d);
+
+    let show_week_number =
+        find_first(&theme.root, &|n| class_has_token(n, "rdp-week_number")).is_some();
+    let show_outside_days = web_day_buttons.len() != (days_in_month(year, month) as usize);
+    let disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let cell_size =
+        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+    let config = CalendarChromeConfig {
+        locale,
+        month,
+        year,
+        origin_x: web_origin_x,
+        origin_y: web_origin_y,
+        cell_size,
+        week_start,
+        today,
+        show_week_number,
+        show_outside_days,
+        disable_outside_days,
+        selected: selected_date,
+    };
+
+    let (_ui, snap, _root) = render_calendar_in_bounds(bounds, move |cx| {
+        render_calendar_chrome_from_config(cx, config)
+    });
+
+    let fret_selected_button =
+        find_semantics(&snap, SemanticsRole::Button, Some(web_selected_label))
+            .expect("fret selected day button semantics node");
+
+    let fret_day_number_text = {
+        let want = web_day_number.text.as_deref().unwrap_or("").trim();
+        assert!(!want.is_empty(), "expected web day number text");
+
+        let mut candidates: Vec<&fret_core::SemanticsNode> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Text)
+            .filter(|n| n.label.as_deref() == Some(want))
+            .filter(|n| {
+                let eps = 0.01;
+                let outer = fret_selected_button.bounds;
+                let inner = n.bounds;
+                inner.origin.x.0 + eps >= outer.origin.x.0
+                    && inner.origin.y.0 + eps >= outer.origin.y.0
+                    && inner.origin.x.0 + inner.size.width.0
+                        <= outer.origin.x.0 + outer.size.width.0 + eps
+                    && inner.origin.y.0 + inner.size.height.0
+                        <= outer.origin.y.0 + outer.size.height.0 + eps
+            })
+            .collect();
+
+        candidates.sort_by(|a, b| {
+            let aw = a.bounds.size.width.0;
+            let bw = b.bounds.size.width.0;
+            bw.total_cmp(&aw)
+        });
+        candidates
+            .first()
+            .copied()
+            .unwrap_or_else(|| panic!("missing fret selected day number text node label={want:?}"))
+    };
+
+    let fret_button_cx =
+        fret_selected_button.bounds.origin.x.0 + fret_selected_button.bounds.size.width.0 / 2.0;
+    let fret_button_cy =
+        fret_selected_button.bounds.origin.y.0 + fret_selected_button.bounds.size.height.0 / 2.0;
+    let fret_text_cx =
+        fret_day_number_text.bounds.origin.x.0 + fret_day_number_text.bounds.size.width.0 / 2.0;
+    let fret_text_cy =
+        fret_day_number_text.bounds.origin.y.0 + fret_day_number_text.bounds.size.height.0 / 2.0;
+
+    assert_close_px(x_label, Px(fret_text_cx), fret_button_cx, 2.5);
+    assert_close_px(y_label, Px(fret_text_cy), fret_button_cy, 2.5);
+}
+
+#[test]
+fn web_vs_fret_calendar_14_selected_day_text_centered_in_button() {
+    assert_calendar_selected_day_text_centered_in_button(
+        "calendar-14",
+        "calendar-14 day number center x ~= button center x",
+        "calendar-14 day number center y ~= button center y",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_14_vp375x320_selected_day_text_centered_in_button() {
+    assert_calendar_selected_day_text_centered_in_button(
+        "calendar-14.vp375x320",
+        "calendar-14.vp375x320 day number center x ~= button center x",
+        "calendar-14.vp375x320 day number center y ~= button center y",
+    );
+}
