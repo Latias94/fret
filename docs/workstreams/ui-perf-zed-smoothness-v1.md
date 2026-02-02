@@ -61,6 +61,8 @@ We treat a small set of scripts as “editor-relevant perf probes”. The suite 
   - `tools/diag-scripts/ui-gallery-overlay-torture.json`
   - `tools/diag-scripts/ui-gallery-dropdown-open-select.json`
   - `tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json`
+- hover / pointer move:
+  - `tools/diag-scripts/ui-gallery-hover-layout-torture.json`
 - scrolling + virtualization:
   - `tools/diag-scripts/ui-gallery-virtual-list-torture.json`
   - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`

@@ -624,3 +624,67 @@ Worst overall:
 Notes:
 - Baseline gate check passed (repeat=3):
   - evidence: `target/fret-diag-perf/ui-gallery-steady.after-mount-avoid-children-clone.check/check.perf_thresholds.json`
+
+## 2026-02-03 07:45:06 (commit `ac04f3dd`)
+
+Change:
+- Record macOS (Apple M4) ui-gallery-steady baseline v3 (adds hover layout steady script)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v3 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v3.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3198 | 3344 | 3344 | 2989 | 77 | 17 | 348 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3814 | 3884 | 3884 | 3116 | 205 | 20 | 767 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3595 | 4157 | 4157 | 3367 | 177 | 16 | 774 |
+| tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json | 1778 | 1808 | 1808 | 1257 | 16 | 12 | 544 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2921 | 3120 | 3120 | 2481 | 44 | 17 | 629 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1792 | 2127 | 2127 | 1593 | 53 | 13 | 525 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3925 | 6953 | 6953 | 4026 | 344 | 21 | 2906 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 11093 | 11440 | 11440 | 10384 | 393 | 55 | 1347 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6533 | 7575 | 7575 | 6189 | 833 | 29 | 1362 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13748 | 16940 | 16940 | 14381 | 2859 | 61 | 2768 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `16940`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.macos-m4.v3/1770075716969-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-03 07:50:39 (commit `d7e2c1db`)
+
+Change:
+- Record macOS (Apple M4) ui-gallery-steady baseline v4 (hover script cleanup)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v4 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v4.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3205 | 3297 | 3297 | 2936 | 83 | 18 | 348 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3825 | 3893 | 3893 | 3125 | 208 | 35 | 781 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3629 | 4067 | 4067 | 3255 | 178 | 17 | 795 |
+| tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json | 1788 | 1807 | 1807 | 1286 | 17 | 12 | 526 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2899 | 3115 | 3115 | 2467 | 47 | 18 | 645 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1787 | 2140 | 2140 | 1603 | 53 | 13 | 525 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3904 | 6858 | 6858 | 3970 | 374 | 23 | 2865 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10835 | 10930 | 10930 | 9588 | 381 | 54 | 1343 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6511 | 7503 | 7503 | 6140 | 845 | 30 | 1403 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13699 | 16051 | 16051 | 13410 | 2177 | 59 | 2711 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `16051`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.macos-m4.v4/1770076076714-ui-gallery-window-resize-stress-steady/bundle.json`
