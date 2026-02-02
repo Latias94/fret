@@ -86,6 +86,21 @@ We track **two** perf gates:
 To keep runs reproducible and to avoid stale-trigger timeouts, prefer passing an explicit `--dir` for every run.
 Treat the directory as part of the benchmark identity (it also makes bundle paths stable per run).
 
+To turn “perf regressions” into a contract, generate a baseline file once per machine profile and keep it committed
+under `docs/workstreams/perf-baselines/`. Then run future perf probes with `--perf-baseline` against that file.
+
+Example (steady-state suite baseline):
+
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady ^
+  --dir target/fret-diag-perf/ui-gallery-steady.<machine-tag> ^
+  --reuse-launch --repeat 7 --sort time --top 15 --json ^
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.<machine-tag>.v1.json ^
+  --perf-baseline-headroom-pct 20 ^
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 Run a single script and get the worst frame (**cold-start gate**):
 
 ```powershell

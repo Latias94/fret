@@ -433,3 +433,44 @@ Notes:
   p95 total `6974 -> 8164` (see the two entries above).
 - Bundle stats snapshots used for local comparison (not versioned): `target/fret-diag/stats.ui-gallery-window-resize-stress-steady.448c34ad.txt`,
   `target/fret-diag/stats.ui-gallery-window-resize-stress-steady.a540829e.txt`.
+
+## 2026-02-03 06:24:54 (commit `50bfcc54ff7d62d7b726dcce2ce126fad770b6d0`)
+
+Change:
+- Record macOS (Apple M4) ui-gallery-steady baseline (perf-baseline-out v1)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v1 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json --perf-baseline-headroom-pct 20 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3162 | 3248 | 3248 | 2898 | 76 | 17 | 349 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3820 | 3889 | 3889 | 3123 | 210 | 20 | 789 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3568 | 4066 | 4066 | 3270 | 185 | 19 | 777 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2850 | 3228 | 3228 | 2559 | 43 | 18 | 686 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1792 | 2187 | 2187 | 1649 | 53 | 13 | 525 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3882 | 6897 | 6897 | 3988 | 333 | 21 | 2888 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10757 | 10992 | 10992 | 9684 | 386 | 50 | 1331 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6569 | 7623 | 7623 | 6245 | 846 | 30 | 1605 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13811 | 13988 | 13988 | 11135 | 1977 | 58 | 2936 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `13988`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.macos-m4.v1/1770071057385-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- Baseline file written via `--perf-baseline-out`:
+  - `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json`
+- Quick triage comparison against the previously logged `ui-gallery-steady` run at commit `448c34ad`:
+  - `ui-gallery-window-resize-stress-steady` bundle stats show higher totals (sum `338183us -> 371826us`)
+    and higher invalidation counts (sum calls/nodes `321/2784 -> 357/3096`). Treat as “needs confirmation”
+    until we pin baselines and rerun under tighter noise control.
+  - `ui-gallery-virtual-list-bottom-steady` invalidation counts are identical (sum calls/nodes `760/2521`),
+    but layout/paint totals are higher (sum `24414us -> 26642us`).
