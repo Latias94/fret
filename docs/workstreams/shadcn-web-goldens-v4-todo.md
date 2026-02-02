@@ -32,6 +32,7 @@ Tracking format:
   - Target families: Popover-like list surfaces, nested listboxes, anything that clamps under low height.
 - 2026-02-01: gated NavigationMenu underlay scroll anchor stability and fixed paint-cache replay to keep last-frame visual bounds in sync (prevents scroll-induced anchor drift).
 - 2026-02-02: added `context-menu-demo.vp375x240` + `menubar-demo.vp375x240` panel-size gates (light/dark) to treat constrained viewport menu height as a styling outcome.
+- 2026-02-02: added `context-menu-demo.submenu-kbd-vp375x240` + `menubar-demo.submenu-kbd-vp375x240` submenu panel-size gates (light/dark) to lock in constrained viewport clamping behavior for nested menus.
 - [ ] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
 - [ ] SWG-ovl-030 Add “constrained height” variants for remaining overlay pages that currently only gate default viewport.
