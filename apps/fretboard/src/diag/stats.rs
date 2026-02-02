@@ -2852,6 +2852,254 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
     Err(msg)
 }
 
+pub(super) fn check_bundle_for_prepaint_actions_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_snapshots: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_prepaint_actions_min_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        min_snapshots,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_prepaint_actions_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_snapshots: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let after_frame = warmup_frames.saturating_add(1);
+    let mut snapshots_with_actions: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let actions = s
+                .get("debug")
+                .and_then(|v| v.get("prepaint_actions"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if actions.is_empty() {
+                continue;
+            }
+
+            snapshots_with_actions = snapshots_with_actions.saturating_add(1);
+            if samples.len() < 32 {
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "actions_len": actions.len(),
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.prepaint_actions_min.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "prepaint_actions_min",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_snapshots": min_snapshots,
+        "snapshots_with_actions": snapshots_with_actions,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if min_snapshots > 0 && snapshots_with_actions < min_snapshots {
+        return Err(format!(
+            "expected prepaint actions to be recorded in at least min_snapshots={min_snapshots}, but snapshots_with_actions={snapshots_with_actions} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions(
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let after_frame = warmup_frames.saturating_add(1);
+    let mut offenders: u64 = 0;
+    let mut failures: Vec<String> = Vec::new();
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let debug = s.get("debug").unwrap_or(&serde_json::Value::Null);
+            let vlist = debug
+                .get("virtual_list_windows")
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if vlist.is_empty() {
+                continue;
+            }
+            let actions = debug
+                .get("prepaint_actions")
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            let shift_actions: Vec<&serde_json::Value> = actions
+                .iter()
+                .filter(|a| {
+                    a.get("kind").and_then(|v| v.as_str()) == Some("virtual_list_window_shift")
+                })
+                .collect();
+
+            for win in vlist {
+                let source = win.get("source").and_then(|v| v.as_str());
+                if source != Some("prepaint") {
+                    continue;
+                }
+                let shift_kind = win
+                    .get("window_shift_kind")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("none");
+                if shift_kind == "none" {
+                    continue;
+                }
+
+                let node = win.get("node").and_then(|v| v.as_u64());
+                let element = win.get("element").and_then(|v| v.as_u64());
+                let shift_reason = win.get("window_shift_reason").and_then(|v| v.as_str());
+
+                let found = shift_actions.iter().any(|a| {
+                    let a_node = a.get("node").and_then(|v| v.as_u64());
+                    let a_element = a.get("element").and_then(|v| v.as_u64());
+                    let a_kind = a
+                        .get("virtual_list_window_shift_kind")
+                        .and_then(|v| v.as_str());
+                    let a_reason = a
+                        .get("virtual_list_window_shift_reason")
+                        .and_then(|v| v.as_str());
+
+                    a_node == node
+                        && a_element == element
+                        && a_kind == Some(shift_kind)
+                        && (shift_reason.is_none() || a_reason == shift_reason)
+                });
+
+                if !found {
+                    offenders = offenders.saturating_add(1);
+                    failures.push(format!(
+                        "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_vlist_window_shift_prepaint_action node={node:?} element={element:?} shift_kind={shift_kind} shift_reason={shift_reason:?}"
+                    ));
+                    if samples.len() < 64 {
+                        samples.push(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "node": node,
+                            "element": element,
+                            "shift_kind": shift_kind,
+                            "shift_reason": shift_reason,
+                            "available_shift_actions": shift_actions.iter().take(8).map(|a| serde_json::json!({
+                                "node": a.get("node").and_then(|v| v.as_u64()),
+                                "element": a.get("element").and_then(|v| v.as_u64()),
+                                "shift_kind": a.get("virtual_list_window_shift_kind").and_then(|v| v.as_str()),
+                                "shift_reason": a.get("virtual_list_window_shift_reason").and_then(|v| v.as_str()),
+                            })).collect::<Vec<_>>(),
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_window_shifts_have_prepaint_actions.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_window_shifts_have_prepaint_actions",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "offenders": offenders,
+        "failures": failures,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if offenders > 0 {
+        return Err(format!(
+            "vlist window-shift prepaint-action gate failed: offenders={offenders} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,

@@ -24,7 +24,8 @@ use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_overlay_synthesis_min, check_bundle_for_retained_vlist_attach_detach_max,
+    check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
+    check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
@@ -32,7 +33,8 @@ use stats::{
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
     check_bundle_for_viewport_input_min, check_bundle_for_vlist_visible_range_refreshes_max,
     check_bundle_for_vlist_visible_range_refreshes_min,
-    check_bundle_for_vlist_window_shifts_explainable, check_bundle_for_wheel_scroll,
+    check_bundle_for_vlist_window_shifts_explainable,
+    check_bundle_for_vlist_window_shifts_have_prepaint_actions, check_bundle_for_wheel_scroll,
     check_report_for_hover_layout_invalidations, clear_script_result_files,
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
@@ -102,9 +104,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_prepaint_actions_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
     let mut check_vlist_window_shifts_explainable: bool = false;
+    let mut check_vlist_window_shifts_have_prepaint_actions: bool = false;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_view_cache_reuse_stable_min: Option<u64> = None;
@@ -540,6 +544,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-vlist-window-shifts-explainable" => {
                 check_vlist_window_shifts_explainable = true;
+                i += 1;
+            }
+            "--check-vlist-window-shifts-have-prepaint-actions" => {
+                check_vlist_window_shifts_have_prepaint_actions = true;
+                i += 1;
+            }
+            "--check-prepaint-actions-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-prepaint-actions-min".to_string());
+                };
+                check_prepaint_actions_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-prepaint-actions-min".to_string()
+                    })?);
                 i += 1;
             }
             "--check-drag-cache-root-paint-only" => {
@@ -1197,9 +1216,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_pixels_changed_test_id.is_some()
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
+                    || check_prepaint_actions_min.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
+                    || check_vlist_window_shifts_have_prepaint_actions
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -1236,9 +1257,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_prepaint_actions_min,
                         check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
                         check_vlist_window_shifts_explainable,
+                        check_vlist_window_shifts_have_prepaint_actions,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
@@ -1522,9 +1545,11 @@ See: `docs/tracy.md`.\n";
                         || check_pixels_changed_test_id.is_some()
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
+                        || check_prepaint_actions_min.is_some()
                         || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
                         || check_vlist_window_shifts_explainable
+                        || check_vlist_window_shifts_have_prepaint_actions
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
                         || check_gc_sweep_liveness
@@ -1559,9 +1584,11 @@ See: `docs/tracy.md`.\n";
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
+                            check_prepaint_actions_min,
                             check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
                             check_vlist_window_shifts_explainable,
+                            check_vlist_window_shifts_have_prepaint_actions,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
                             check_gc_sweep_liveness,
@@ -2574,6 +2601,12 @@ See: `docs/tracy.md`.\n";
                         .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
                     let suite_vlist_window_shifts_explainable =
                         vlist_window_boundary_suite && !check_vlist_window_shifts_explainable;
+                    let suite_prepaint_actions_min = vlist_window_boundary_suite
+                        .then_some(1u64)
+                        .filter(|_| check_prepaint_actions_min.is_none());
+                    let suite_vlist_window_shifts_have_prepaint_actions =
+                        vlist_window_boundary_suite
+                            && !check_vlist_window_shifts_have_prepaint_actions;
                     let suite_gc_sweep_liveness =
                         builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
                     apply_post_run_checks(
@@ -2590,12 +2623,15 @@ See: `docs/tracy.md`.\n";
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_prepaint_actions_min.or(suite_prepaint_actions_min),
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
                             .or(suite_vlist_visible_range_refreshes_max),
                         check_vlist_window_shifts_explainable
                             || suite_vlist_window_shifts_explainable,
+                        check_vlist_window_shifts_have_prepaint_actions
+                            || suite_vlist_window_shifts_have_prepaint_actions,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
@@ -5188,9 +5224,11 @@ fn apply_post_run_checks(
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
+    check_prepaint_actions_min: Option<u64>,
     check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
     check_vlist_window_shifts_explainable: bool,
+    check_vlist_window_shifts_have_prepaint_actions: bool,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     check_gc_sweep_liveness: bool,
@@ -5227,6 +5265,9 @@ fn apply_post_run_checks(
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
     }
+    if let Some(min) = check_prepaint_actions_min {
+        check_bundle_for_prepaint_actions_min(bundle_path, out_dir, min, warmup_frames)?;
+    }
     if let Some(min_total_refreshes) = check_vlist_visible_range_refreshes_min {
         check_bundle_for_vlist_visible_range_refreshes_min(
             bundle_path,
@@ -5245,6 +5286,13 @@ fn apply_post_run_checks(
     }
     if check_vlist_window_shifts_explainable {
         check_bundle_for_vlist_window_shifts_explainable(bundle_path, out_dir, warmup_frames)?;
+    }
+    if check_vlist_window_shifts_have_prepaint_actions {
+        check_bundle_for_vlist_window_shifts_have_prepaint_actions(
+            bundle_path,
+            out_dir,
+            warmup_frames,
+        )?;
     }
     if let Some(test_id) = check_drag_cache_root_paint_only_test_id {
         check_bundle_for_drag_cache_root_paint_only(bundle_path, test_id, warmup_frames)?;
@@ -7093,6 +7141,144 @@ mod tests {
 
         check_bundle_for_vlist_window_shifts_explainable(&bundle_path, &bundle_dir, 0)
             .expect("expected gate to accept items revision mapping");
+    }
+
+    #[test]
+    fn prepaint_actions_min_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("prepaint_actions_min_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": []
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_prepaint_actions_min(&bundle_path, &bundle_dir, 1, 0).unwrap_err();
+        assert!(err.contains("prepaint actions"));
+
+        let evidence_path = bundle_dir.join("check.prepaint_actions_min.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected prepaint actions min evidence JSON to be written"
+        );
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("prepaint_actions_min")
+        );
+    }
+
+    #[test]
+    fn vlist_window_shifts_have_prepaint_actions_accepts_matching_action() {
+        let out_dir = tmp_out_dir("vlist_window_shifts_have_prepaint_actions_ok");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "virtual_list_windows": [{
+                            "node": 10,
+                            "element": 1,
+                            "source": "prepaint",
+                            "window_shift_kind": "escape",
+                            "window_shift_reason": "viewport_resize"
+                        }],
+                        "prepaint_actions": [{
+                            "kind": "virtual_list_window_shift",
+                            "node": 10,
+                            "element": 1,
+                            "virtual_list_window_shift_kind": "escape",
+                            "virtual_list_window_shift_reason": "viewport_resize",
+                            "frame_id": 1
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_vlist_window_shifts_have_prepaint_actions(&bundle_path, &bundle_dir, 0)
+            .expect("expected vlist shift prepaint-action gate to pass");
+    }
+
+    #[test]
+    fn vlist_window_shifts_have_prepaint_actions_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("vlist_window_shifts_have_prepaint_actions_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "virtual_list_windows": [{
+                            "node": 10,
+                            "element": 1,
+                            "source": "prepaint",
+                            "window_shift_kind": "escape",
+                            "window_shift_reason": "items_revision"
+                        }],
+                        "prepaint_actions": []
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_vlist_window_shifts_have_prepaint_actions(
+            &bundle_path,
+            &bundle_dir,
+            0,
+        )
+        .unwrap_err();
+        assert!(err.contains("vlist window-shift prepaint-action gate failed"));
+
+        let evidence_path = bundle_dir.join("check.vlist_window_shifts_have_prepaint_actions.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected vlist shift prepaint-action evidence JSON to be written"
+        );
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("vlist_window_shifts_have_prepaint_actions")
+        );
     }
 
     #[test]
