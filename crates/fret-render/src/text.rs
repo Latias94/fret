@@ -1046,7 +1046,13 @@ struct TextMeasureKey {
 
 impl TextMeasureKey {
     fn new(style: &TextStyle, constraints: TextConstraints, font_stack_key: u64) -> Self {
-        let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
+        let max_width_bits = match constraints.wrap {
+            // `TextWrap::None` does not change shaping results based on width; callers clamp or
+            // apply overflow policy at higher levels. Normalize away width so repeated measurements
+            // (e.g. layout engine intrinsic probes) can reuse cached metrics.
+            TextWrap::None => None,
+            TextWrap::Word | TextWrap::Grapheme => constraints.max_width.map(|w| w.0.to_bits()),
+        };
         Self {
             font: style.font.clone(),
             font_stack_key,
@@ -2105,21 +2111,33 @@ impl TextSystem {
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
 
-        let key = TextMeasureKey::new(style, constraints, self.font_stack_key);
+        let mut normalized_constraints = constraints;
+        if normalized_constraints.wrap == TextWrap::None {
+            normalized_constraints.max_width = None;
+        }
+
+        let key = TextMeasureKey::new(style, normalized_constraints, self.font_stack_key);
         let text_hash = hash_text(text);
         if let Some(bucket) = self.measure_cache.get_mut(&key)
             && let Some(hit) = bucket
                 .iter()
                 .find(|e| e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text)
         {
-            return hit.metrics;
+            let mut metrics = hit.metrics;
+            if constraints.wrap == TextWrap::None
+                && constraints.overflow == TextOverflow::Ellipsis
+                && let Some(max_width) = constraints.max_width
+            {
+                metrics.size.width = max_width;
+            }
+            return metrics;
         }
 
         let scale = constraints.scale_factor.max(1.0);
         let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
             &mut self.parley_shaper,
             TextInputRef::plain(text, style),
-            constraints,
+            normalized_constraints,
         );
         let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
 
@@ -2135,6 +2153,13 @@ impl TextSystem {
             bucket.pop_front();
         }
 
+        let mut metrics = metrics;
+        if constraints.wrap == TextWrap::None
+            && constraints.overflow == TextOverflow::Ellipsis
+            && let Some(max_width) = constraints.max_width
+        {
+            metrics.size.width = max_width;
+        }
         metrics
     }
 
@@ -2146,7 +2171,12 @@ impl TextSystem {
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
 
-        let key = TextMeasureKey::new(base_style, constraints, self.font_stack_key);
+        let mut normalized_constraints = constraints;
+        if normalized_constraints.wrap == TextWrap::None {
+            normalized_constraints.max_width = None;
+        }
+
+        let key = TextMeasureKey::new(base_style, normalized_constraints, self.font_stack_key);
         let text_hash = hash_text(rich.text.as_ref());
         let spans_hash = spans_shaping_fingerprint(rich.spans.as_ref());
 
@@ -2160,7 +2190,14 @@ impl TextSystem {
                     })
             })
         {
-            return hit.metrics;
+            let mut metrics = hit.metrics;
+            if constraints.wrap == TextWrap::None
+                && constraints.overflow == TextOverflow::Ellipsis
+                && let Some(max_width) = constraints.max_width
+            {
+                metrics.size.width = max_width;
+            }
+            return metrics;
         }
 
         let scale = constraints.scale_factor.max(1.0);
@@ -2171,7 +2208,7 @@ impl TextSystem {
                 base: base_style,
                 spans: rich.spans.as_ref(),
             },
-            constraints,
+            normalized_constraints,
         );
         let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
 
@@ -2187,6 +2224,13 @@ impl TextSystem {
             bucket.pop_front();
         }
 
+        let mut metrics = metrics;
+        if constraints.wrap == TextWrap::None
+            && constraints.overflow == TextOverflow::Ellipsis
+            && let Some(max_width) = constraints.max_width
+        {
+            metrics.size.width = max_width;
+        }
         metrics
     }
 
@@ -3221,9 +3265,9 @@ fn decorations_for_lines(
 #[cfg(test)]
 mod tests {
     use super::{
-        ResolvedSpan, TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names,
-        paint_span_for_text_range, spans_paint_fingerprint, spans_shaping_fingerprint,
-        subpixel_mask_to_alpha,
+        ResolvedSpan, TextBlobKey, TextDecorationKind, TextMeasureKey, TextShapeKey,
+        collect_font_names, paint_span_for_text_range, spans_paint_fingerprint,
+        spans_shaping_fingerprint, subpixel_mask_to_alpha,
     };
     use cosmic_text::Family;
     use fret_core::{
@@ -3568,6 +3612,52 @@ mod tests {
         let k0 = TextBlobKey::new("hello", &base, constraints, 1);
         let k1 = TextBlobKey::new("hello", &base, constraints, 2);
         assert_ne!(k0, k1);
+    }
+
+    #[test]
+    fn text_measure_key_ignores_width_for_wrap_none() {
+        let style = TextStyle::default();
+
+        let a = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let b = TextConstraints {
+            max_width: Some(Px(320.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        assert_eq!(
+            TextMeasureKey::new(&style, a, 7),
+            TextMeasureKey::new(&style, b, 7)
+        );
+    }
+
+    #[test]
+    fn text_measure_key_includes_width_for_wrap_word() {
+        let style = TextStyle::default();
+
+        let a = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let b = TextConstraints {
+            max_width: Some(Px(320.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        assert_ne!(
+            TextMeasureKey::new(&style, a, 7),
+            TextMeasureKey::new(&style, b, 7)
+        );
     }
 
     #[test]
