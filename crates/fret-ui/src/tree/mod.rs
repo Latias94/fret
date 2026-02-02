@@ -341,6 +341,10 @@ pub struct UiDebugFrameStats {
     /// How many VirtualList visible-range checks requested a refresh (range delta outside the
     /// currently mounted span).
     pub virtual_list_visible_range_refreshes: u32,
+    /// How many VirtualList window shifts were observed during the current frame.
+    pub virtual_list_window_shifts_total: u32,
+    /// How many VirtualList window shifts required a non-retained cache-root rerender.
+    pub virtual_list_window_shifts_non_retained: u32,
     /// How many retained VirtualList hosts were reconciled (attach/detach without rerendering the
     /// parent view-cache root).
     pub retained_virtual_list_reconciles: u32,
@@ -663,6 +667,21 @@ pub struct UiDebugPrepaintAction {
     pub virtual_list_window_shift_kind: Option<UiDebugVirtualListWindowShiftKind>,
     pub virtual_list_window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
     pub frame_id: FrameId,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugVirtualListWindowShiftSample {
+    pub frame_id: FrameId,
+    pub source: UiDebugVirtualListWindowSource,
+    pub node: NodeId,
+    pub element: GlobalElementId,
+    pub window_shift_kind: UiDebugVirtualListWindowShiftKind,
+    pub window_shift_reason: UiDebugVirtualListWindowShiftReason,
+    pub window_shift_apply_mode: UiDebugVirtualListWindowShiftApplyMode,
+    pub window_shift_invalidation_detail: Option<UiDebugInvalidationDetail>,
+    pub prev_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub window_range: Option<crate::virtual_list::VirtualRange>,
+    pub render_window_range: Option<crate::virtual_list::VirtualRange>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1220,6 +1239,7 @@ pub struct UiTree<H: UiHost> {
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
     debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
+    debug_virtual_list_window_shift_samples: Vec<UiDebugVirtualListWindowShiftSample>,
     debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
     debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
@@ -1592,6 +1612,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
             debug_virtual_list_windows: Vec::new(),
+            debug_virtual_list_window_shift_samples: Vec::new(),
             debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
             debug_prepaint_actions: Vec::new(),
@@ -1805,6 +1826,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.barrier_relayouts_performed = 0;
         self.debug_stats.virtual_list_visible_range_checks = 0;
         self.debug_stats.virtual_list_visible_range_refreshes = 0;
+        self.debug_stats.virtual_list_window_shifts_total = 0;
+        self.debug_stats.virtual_list_window_shifts_non_retained = 0;
         self.debug_stats.retained_virtual_list_reconciles = 0;
         self.debug_stats.retained_virtual_list_attached_items = 0;
         self.debug_stats.retained_virtual_list_detached_items = 0;
@@ -1827,6 +1850,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
         self.debug_virtual_list_windows.clear();
+        self.debug_virtual_list_window_shift_samples.clear();
         self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
         self.debug_prepaint_actions.clear();
@@ -2020,6 +2044,47 @@ impl<H: UiHost> UiTree<H> {
     pub(crate) fn debug_record_virtual_list_window(&mut self, record: UiDebugVirtualListWindow) {
         if !self.debug_enabled {
             return;
+        }
+        if record.window_shift_kind != UiDebugVirtualListWindowShiftKind::None {
+            self.debug_stats.virtual_list_window_shifts_total = self
+                .debug_stats
+                .virtual_list_window_shifts_total
+                .saturating_add(1);
+            if record.window_shift_apply_mode
+                == Some(UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender)
+            {
+                self.debug_stats.virtual_list_window_shifts_non_retained = self
+                    .debug_stats
+                    .virtual_list_window_shifts_non_retained
+                    .saturating_add(1);
+            }
+        }
+
+        if record.window_shift_apply_mode
+            == Some(UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender)
+            && record.window_shift_kind != UiDebugVirtualListWindowShiftKind::None
+            && let Some(reason) = record.window_shift_reason
+        {
+            // Keep bundles bounded: window shifts can occur frequently during scroll.
+            const MAX_SAMPLES: usize = 64;
+            if self.debug_virtual_list_window_shift_samples.len() < MAX_SAMPLES {
+                self.debug_virtual_list_window_shift_samples.push(
+                    UiDebugVirtualListWindowShiftSample {
+                        frame_id: self.debug_stats.frame_id,
+                        source: record.source,
+                        node: record.node,
+                        element: record.element,
+                        window_shift_kind: record.window_shift_kind,
+                        window_shift_reason: reason,
+                        window_shift_apply_mode:
+                            UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender,
+                        window_shift_invalidation_detail: record.window_shift_invalidation_detail,
+                        prev_window_range: record.prev_window_range,
+                        window_range: record.window_range,
+                        render_window_range: record.render_window_range,
+                    },
+                );
+            }
         }
         // Keep bundles bounded: real apps can have many virtual surfaces.
         const MAX_RECORDS: usize = 256;
@@ -2569,6 +2634,15 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_virtual_list_windows.as_slice()
+    }
+
+    pub fn debug_virtual_list_window_shift_samples(
+        &self,
+    ) -> &[UiDebugVirtualListWindowShiftSample] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_virtual_list_window_shift_samples.as_slice()
     }
 
     pub fn debug_retained_virtual_list_reconciles(&self) -> &[UiDebugRetainedVirtualListReconcile] {
