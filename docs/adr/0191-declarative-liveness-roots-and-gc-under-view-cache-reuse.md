@@ -147,6 +147,18 @@ This taxonomy is intentionally operational: it tells us what to do when a `bundl
    - Likely causes: keep-alive roots not included in the liveness root set, or membership lists not covering kept-alive descendants.
    - Expected remediation surface: keep-alive root enumeration + membership list completeness under nesting.
 
+#### Post-run gate taxonomy keys (non-normative; must remain aligned)
+
+`fretboard diag stats --check-gc-sweep-liveness` writes `check.gc_sweep_liveness.json` next to the bundle and classifies offenders using stable keys.
+These keys are designed to align with the categories above and speed up triage:
+
+- `swept_while_reachable`: category (2) “swept while still reachable”.
+- `missing_view_cache_reachability_evidence`: missing `reachable_from_view_cache_roots` / reuse-root counters while reuse is active (diagnostics gap).
+- `reuse_roots_unmapped`: reuse roots exist but cannot be mapped to node ids (`view_cache_reuse_root_nodes_len=0`), pointing to identity bookkeeping drift.
+- `missing_reuse_root_membership_samples`: reuse roots exist but membership list samples are missing (diagnostics gap; cache-005 not actionable from one bundle).
+- `keep_alive_liveness_mismatch`: category (5) “keep-alive liveness root omission/mismatch”.
+- `reuse_membership_mismatch`: category (1) “true island under reuse”, likely driven by stale/incomplete membership/touch logic.
+
 ### Derived best practices (applicable to Fret)
 
 1. **Separate lifetime from visibility.** A layer can be `visible=false` while still being live; lifetime changes only when a root is uninstalled.
@@ -342,6 +354,12 @@ This is intentionally satisfied today via existing bounded diagnostics:
 - `debug.element_runtime.node_entry_root_overwrites`
 
 Post-run gates (e.g. `fretboard diag stats --check-gc-sweep-liveness`) SHOULD fail fast and write an evidence JSON payload whenever these required fields are missing or inconsistent.
+
+For cache-005 triage, the gate evidence JSON (`check.gc_sweep_liveness.json`) SHOULD include:
+
+- `offender_taxonomy_counts` and `offender_samples[*].taxonomy` (see taxonomy keys above),
+- `offender_samples[*].taxonomy_flags` (optional, but recommended),
+- and a small `debug_summary` with counts of relevant bounded diagnostics (ownership overwrites, membership samples, keep-alive roots).
 
 ## Additional invariants (nested cache roots + ownership)
 
