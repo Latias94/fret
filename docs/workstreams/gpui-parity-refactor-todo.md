@@ -629,7 +629,13 @@ topics (if/when we implement them):
         - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
         - References: ADR 0190 §3A + §4 (v2 explainability) and ADR 0193 §2A (“window plans” vs structural mutation).
       - [ ] Make window shifts explainable from one bundle (kinds: `prefetch`/`escape`; reasons: `scroll_offset`/`viewport_resize`/`items_revision`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
-        - Add a per-frame debug counter + samples for non-retained window shifts (kind + old/new range + triggering invalidation detail), similar to retained-host reconcile samples.
+        - [x] Add a per-frame debug counter + samples for non-retained window shifts (kind + old/new range + triggering invalidation detail), similar to retained-host reconcile samples.
+          - Exports:
+            - `debug.stats.virtual_list_window_shifts_total` / `debug.stats.virtual_list_window_shifts_non_retained`
+            - `debug.virtual_list_window_shift_samples` (bounded; only records non-retained rerender shifts)
+          - Anchors:
+            - `crates/fret-ui/src/tree/mod.rs` (`UiDebugFrameStats.virtual_list_window_shifts_*`, `UiDebugVirtualListWindowShiftSample`)
+            - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.virtual_list_window_shift_samples`, `UiFrameStatsV1.virtual_list_window_shifts_*`)
         - [x] Ensure `debug.prepaint_actions` includes a `virtual_list_window_shift` action (kind + reason).
           - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (records window shift action), `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::VirtualListWindowShift`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
           - Gate: `--check-vlist-window-shifts-have-prepaint-actions` (emits `check.vlist_window_shifts_have_prepaint_actions.json`).
