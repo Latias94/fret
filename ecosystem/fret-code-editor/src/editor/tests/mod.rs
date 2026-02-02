@@ -1,4 +1,5 @@
 use super::*;
+use super::{input, paint};
 
 #[derive(Default)]
 struct TestHost {
@@ -221,11 +222,11 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             ),
         );
 
-        move_caret_vertical(&mut st, 1, false, Px(8.0));
+        input::move_caret_vertical(&mut st, 1, false, Px(8.0));
         assert_eq!(st.selection.caret(), 7, "row 1, local index 2");
         assert_eq!(st.caret_preferred_x, Some(Px(20.0)));
 
-        move_caret_vertical(&mut st, 1, false, Px(8.0));
+        input::move_caret_vertical(&mut st, 1, false, Px(8.0));
         assert_eq!(st.selection.caret(), 12, "row 2, local index 2");
         assert_eq!(st.caret_preferred_x, Some(Px(20.0)));
     }
@@ -242,8 +243,8 @@ fn row_text_cache_stats_tracks_hits_and_misses() {
         assert_eq!(st.cache_stats.row_text_hits, 0);
         assert_eq!(st.cache_stats.row_text_misses, 0);
 
-        let a = cached_row_text(&mut st, 0, 8);
-        let b = cached_row_text(&mut st, 0, 8);
+        let a = paint::cached_row_text(&mut st, 0, 8);
+        let b = paint::cached_row_text(&mut st, 0, 8);
 
         assert_eq!(a.as_ref(), "hello");
         assert_eq!(b.as_ref(), "hello");
@@ -277,7 +278,7 @@ fn ctrl_page_down_bubbles_and_keeps_preedit() {
     let scroll = fret_ui::scroll::ScrollHandle::default();
     let cell_w = Cell::new(Px(10.0));
 
-    let handled = handle_key_down(
+    let handled = input::handle_key_down(
         &mut host,
         action_cx,
         &handle.state,
@@ -352,7 +353,7 @@ fn preedit_rich_text_inserts_and_underlines() {
         a: 1.0,
     };
 
-    let rich = materialize_preedit_rich_text("hello".into(), 2, &preedit, fg, selection_bg);
+    let rich = paint::materialize_preedit_rich_text("hello".into(), 2, &preedit, fg, selection_bg);
     assert_eq!(rich.text.as_ref(), "he世界llo");
     assert!(rich.is_valid());
     assert!(
@@ -414,15 +415,15 @@ fn move_caret_vertical_clamps_in_display_row_space_when_wrapped() {
     };
 
     // Row 0 col 0 -> Down => row 1 col 0 (within the wrapped "abcd").
-    move_caret_vertical(&mut st, 1, false, Px(10.0));
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
     assert_eq!(st.selection.caret(), 2);
 
     // Row 1 col 0 -> Down => row 2 col 0 (next logical line "ef").
-    move_caret_vertical(&mut st, 1, false, Px(10.0));
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
     assert_eq!(st.selection.caret(), 5);
 
     // Row 2 is the last display row; another Down should clamp.
-    move_caret_vertical(&mut st, 1, false, Px(10.0));
+    input::move_caret_vertical(&mut st, 1, false, Px(10.0));
     assert_eq!(st.selection.caret(), 5);
 }
 
@@ -436,7 +437,7 @@ fn apply_and_record_edit_refreshes_display_map_only_when_needed() {
         assert_eq!(st.display_map.row_count(), 2);
 
         // No newline, no wrap => row_count should remain correct without forcing a refresh.
-        apply_and_record_edit(
+        input::apply_and_record_edit(
             &mut st,
             UndoGroupKind::Typing,
             Edit::Insert {
@@ -454,7 +455,7 @@ fn apply_and_record_edit_refreshes_display_map_only_when_needed() {
 
         // Newline => line count changes, so the map must refresh.
         let insert_at = st.buffer.text_string().find('\n').unwrap_or(0);
-        apply_and_record_edit(
+        input::apply_and_record_edit(
             &mut st,
             UndoGroupKind::Typing,
             Edit::Insert {
@@ -478,7 +479,7 @@ fn apply_and_record_edit_refreshes_display_map_only_when_needed() {
         let mut st = handle.state.borrow_mut();
         assert_eq!(st.display_map.row_count(), 1);
 
-        apply_and_record_edit(
+        input::apply_and_record_edit(
             &mut st,
             UndoGroupKind::Typing,
             Edit::Insert {
@@ -507,14 +508,14 @@ fn home_end_move_within_wrapped_display_rows() {
     };
 
     // caret at byte 3 is in the second wrapped row ("cd"): row start is byte 2, end is byte 4.
-    move_caret_home_end(&mut st, true, false, false);
+    input::move_caret_home_end(&mut st, true, false, false);
     assert_eq!(st.selection.caret(), 2);
 
     st.selection = Selection {
         anchor: 3,
         focus: 3,
     };
-    move_caret_home_end(&mut st, false, false, false);
+    input::move_caret_home_end(&mut st, false, false, false);
     assert_eq!(st.selection.caret(), 4);
 
     // Ctrl+Home/End should clamp to document bounds.
@@ -522,14 +523,14 @@ fn home_end_move_within_wrapped_display_rows() {
         anchor: 3,
         focus: 3,
     };
-    move_caret_home_end(&mut st, true, true, false);
+    input::move_caret_home_end(&mut st, true, true, false);
     assert_eq!(st.selection.caret(), 0);
 
     st.selection = Selection {
         anchor: 3,
         focus: 3,
     };
-    move_caret_home_end(&mut st, false, true, false);
+    input::move_caret_home_end(&mut st, false, true, false);
     assert_eq!(st.selection.caret(), st.buffer.len_bytes());
 }
 
@@ -549,7 +550,7 @@ fn page_down_moves_by_viewport_rows_and_scrolls() {
         focus: 0,
     };
 
-    move_caret_page(&mut st, 1, false, row_h, &scroll, Px(10.0));
+    input::move_caret_page(&mut st, 1, false, row_h, &scroll, Px(10.0));
 
     let expected = st
         .display_map
@@ -570,7 +571,7 @@ fn delete_word_backward_removes_previous_word() {
         focus: end,
     };
 
-    delete_word_backward(&mut st);
+    input::delete_word_backward(&mut st);
     assert_eq!(st.buffer.text_string(), "hello ");
     assert_eq!(st.selection.caret(), "hello ".len());
 }
@@ -586,7 +587,7 @@ fn delete_word_forward_removes_next_word() {
         focus: 0,
     };
 
-    delete_word_forward(&mut st);
+    input::delete_word_forward(&mut st);
     assert_eq!(st.buffer.text_string(), " world");
     assert_eq!(st.selection.caret(), 0);
 }
@@ -603,7 +604,7 @@ fn rust_syntax_spans_are_materialized_for_rows() {
 
     let mut any_highlight = false;
     for row in 0..line_count {
-        let spans = cached_row_syntax_spans(&mut st, row, 256);
+        let spans = paint::cached_row_syntax_spans(&mut st, row, 256);
         if !spans.is_empty() {
             any_highlight = true;
             break;
@@ -628,14 +629,14 @@ fn syntax_cache_invalidation_preserves_far_rows_on_inline_edit() {
 
     let mut st = handle.state.borrow_mut();
     let max_entries = 4096;
-    let _ = cached_row_syntax_spans(&mut st, 0, max_entries);
-    let _ = cached_row_syntax_spans(&mut st, 150, max_entries);
+    let _ = paint::cached_row_syntax_spans(&mut st, 0, max_entries);
+    let _ = paint::cached_row_syntax_spans(&mut st, 150, max_entries);
     assert!(
         st.syntax_row_cache.contains_key(&150),
         "expected far-row cache entries to be populated"
     );
 
-    apply_and_record_edit(
+    input::apply_and_record_edit(
         &mut st,
         UndoGroupKind::Typing,
         Edit::Insert {
