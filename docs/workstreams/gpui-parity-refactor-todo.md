@@ -624,9 +624,12 @@ topics (if/when we implement them):
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
         - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
         - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
+        - Gate (new): `--check-vlist-visible-range-refreshes-min 1` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_min.json`).
         - Gate (new): `--check-vlist-visible-range-refreshes-max 10` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
-        - Suite default: `fretboard diag suite ui-gallery-vlist-window-boundary` now applies `--check-wheel-scroll ui-gallery-virtual-list-root`,
-          `--check-stale-paint ui-gallery-virtual-list-root`, `--check-view-cache-reuse-min 1`, and `--check-vlist-visible-range-refreshes-max 10` unless explicitly overridden.
+        - Suite default: `fretboard diag suite ui-gallery-vlist-window-boundary` applies:
+          `--check-stale-paint ui-gallery-virtual-list-root`, `--check-view-cache-reuse-min 1`,
+          `--check-vlist-visible-range-refreshes-min 1`, and `--check-vlist-visible-range-refreshes-max 10` unless explicitly overridden.
+          - Note: this suite intentionally does *not* default to `--check-wheel-scroll`, since VirtualList scroll can keep hit-test results within the root container.
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
      row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
      (tracked in ADR 0192).
@@ -636,7 +639,7 @@ topics (if/when we implement them):
     - Anchors:
       - `crates/fret-ui/src/tree/prepaint.rs` (non-retained prefetch; `window_shift_kind=prefetch`)
       - `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate`)
-      - `apps/fretboard/src/diag.rs` (new gates: `--check-vlist-window-prefetch-min`, `--check-vlist-prefetch-window-dirty-max`)
+      - `apps/fretboard/src/diag/stats.rs` (vlist visible-range refresh gates: `--check-vlist-visible-range-refreshes-min`, `--check-vlist-visible-range-refreshes-max`)
       - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (tuned to trigger prefetch reliably)
     - Evidence (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
       - `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
@@ -854,22 +857,17 @@ topics (if/when we implement them):
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
       - `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json --warmup-frames 5 --check-vlist-scroll-window-dirty-max 2 ...`
       - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to:
-        - `--warmup-frames 5`
-        - `--check-view-cache-reuse-min 5`
-        - `--check-vlist-policy-key-stable`
-        - `--check-vlist-scroll-window-dirty-max 2`
-        - `--check-vlist-window-prefetch-min 1`
-        - `--check-vlist-prefetch-window-dirty-max 30`
-        - `--check-wheel-scroll ui-gallery-virtual-list-row-0-label`
-        - `--check-stale-paint ui-gallery-virtual-list-row-0-label`
-        - plus launch env: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
-          `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0` (legacy path).
+        - `--check-stale-paint ui-gallery-virtual-list-root`
+        - `--check-view-cache-reuse-min 1`
+        - `--check-vlist-visible-range-refreshes-min 1`
+        - `--check-vlist-visible-range-refreshes-max 10`
+        - Recommended launch env: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
         `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Gate tightening ladder (post-warmup):
-        - Current: `--check-vlist-scroll-window-dirty-max 2` (catches “too many boundary ticks” regressions).
-        - Next: aim for `1` as we keep shifting window work earlier (prefetch) and reduce escape-only rerenders.
-        - Target: `0` once the non-retained path grows a cache-hit attach/detach boundary (virt-001 v2) rather than relying on cache-root rerenders.
+        - Current: `--check-vlist-visible-range-refreshes-max 10` (catches “too much window churn” regressions after wheel events).
+        - Next: aim for `5` once v2 window derivation reduces boundary work in a single tick.
+        - Target: split budgets by cause once “window shift reasons” are exported (e.g. `prefetch` vs `escape`) and can be gated independently.
 
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.

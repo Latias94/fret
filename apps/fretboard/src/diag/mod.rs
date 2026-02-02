@@ -31,9 +31,10 @@ use stats::{
     check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
     check_bundle_for_viewport_input_min, check_bundle_for_vlist_visible_range_refreshes_max,
-    check_bundle_for_wheel_scroll, check_report_for_hover_layout_invalidations,
-    clear_script_result_files, report_pick_result_and_exit, report_result_and_exit,
-    run_pick_and_wait, run_script_and_wait, wait_for_failure_dump_bundle, write_pick_script,
+    check_bundle_for_vlist_visible_range_refreshes_min, check_bundle_for_wheel_scroll,
+    check_report_for_hover_layout_invalidations, clear_script_result_files,
+    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
+    wait_for_failure_dump_bundle, write_pick_script,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
@@ -100,6 +101,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
+    let mut check_vlist_visible_range_refreshes_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
@@ -519,6 +521,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 };
                 check_vlist_visible_range_refreshes_max = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --check-vlist-visible-range-refreshes-max".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-vlist-visible-range-refreshes-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-vlist-visible-range-refreshes-min".to_string(),
+                    );
+                };
+                check_vlist_visible_range_refreshes_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-vlist-visible-range-refreshes-min".to_string()
                 })?);
                 i += 1;
             }
@@ -1177,6 +1191,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_pixels_changed_test_id.is_some()
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
+                    || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -1214,6 +1229,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -1498,6 +1514,7 @@ See: `docs/tracy.md`.\n";
                         || check_pixels_changed_test_id.is_some()
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
+                        || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
@@ -1533,6 +1550,7 @@ See: `docs/tracy.md`.\n";
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
+                            check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
@@ -2467,6 +2485,7 @@ See: `docs/tracy.md`.\n";
                     || check_pixels_changed_test_id.is_some()
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
+                    || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -2482,7 +2501,8 @@ See: `docs/tracy.md`.\n";
                     || retained_vlist_keep_alive_reuse_min_for_script.is_some();
 
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
-                    || builtin_suite == Some(BuiltinSuite::DockingArbitration);
+                    || builtin_suite == Some(BuiltinSuite::DockingArbitration)
+                    || is_ui_gallery_vlist_window_boundary_suite;
 
                 if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
                     let bundle_path = wait_for_bundle_json_from_script_result(
@@ -2505,15 +2525,15 @@ See: `docs/tracy.md`.\n";
                             (None, None, None)
                         };
                     let vlist_window_boundary_suite = is_ui_gallery_vlist_window_boundary_suite;
-                    let suite_wheel_scroll_test_id = vlist_window_boundary_suite
-                        .then_some("ui-gallery-virtual-list-root")
-                        .filter(|_| check_wheel_scroll_test_id.is_none());
                     let suite_stale_paint_test_id = vlist_window_boundary_suite
                         .then_some("ui-gallery-virtual-list-root")
                         .filter(|_| check_stale_paint_test_id.is_none());
                     let suite_view_cache_reuse_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_view_cache_reuse_min.is_none());
+                    let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
+                        .then_some(1u64)
+                        .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
                     let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
                         .then_some(10u64)
                         .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
@@ -2530,9 +2550,9 @@ See: `docs/tracy.md`.\n";
                         check_pixels_changed_test_id.as_deref(),
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id
-                            .as_deref()
-                            .or(suite_wheel_scroll_test_id),
+                        check_wheel_scroll_test_id.as_deref(),
+                        check_vlist_visible_range_refreshes_min
+                            .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
                             .or(suite_vlist_visible_range_refreshes_max),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
@@ -5127,6 +5147,7 @@ fn apply_post_run_checks(
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
+    check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -5163,6 +5184,14 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
+    }
+    if let Some(min_total_refreshes) = check_vlist_visible_range_refreshes_min {
+        check_bundle_for_vlist_visible_range_refreshes_min(
+            bundle_path,
+            out_dir,
+            min_total_refreshes,
+            warmup_frames,
+        )?;
     }
     if let Some(max_total_refreshes) = check_vlist_visible_range_refreshes_max {
         check_bundle_for_vlist_visible_range_refreshes_max(
