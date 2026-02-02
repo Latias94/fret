@@ -4417,6 +4417,8 @@ pub struct UiVirtualListWindowV1 {
     pub window_shift_reason: Option<UiVirtualListWindowShiftReasonV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub window_shift_apply_mode: Option<UiVirtualListWindowShiftApplyModeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_shift_invalidation_detail: Option<String>,
 }
 
 impl UiVirtualListWindowV1 {
@@ -4451,6 +4453,10 @@ impl UiVirtualListWindowV1 {
             window_shift_apply_mode: window
                 .window_shift_apply_mode
                 .map(UiVirtualListWindowShiftApplyModeV1::from_mode),
+            window_shift_invalidation_detail: window
+                .window_shift_invalidation_detail
+                .and_then(|d| d.as_str())
+                .map(|s| s.to_string()),
         }
     }
 }
