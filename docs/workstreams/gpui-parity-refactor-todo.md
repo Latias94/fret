@@ -637,9 +637,11 @@ topics (if/when we implement them):
         - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
         - Gate (new): `--check-vlist-visible-range-refreshes-min 1` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_min.json`).
         - Gate (new): `--check-vlist-visible-range-refreshes-max 10` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
+        - Gate (new): `--check-vlist-window-shifts-explainable` (requires `debug.virtual_list_windows` to include `window_shift_kind` + `window_shift_reason` + `window_shift_apply_mode`; emits `check.vlist_window_shifts_explainable.json`).
         - Suite default: `fretboard diag suite ui-gallery-vlist-window-boundary` applies:
           `--check-stale-paint ui-gallery-virtual-list-root`, `--check-view-cache-reuse-min 1`,
-          `--check-vlist-visible-range-refreshes-min 1`, and `--check-vlist-visible-range-refreshes-max 10` unless explicitly overridden.
+          `--check-vlist-visible-range-refreshes-min 1`, `--check-vlist-visible-range-refreshes-max 10`,
+          and `--check-vlist-window-shifts-explainable` unless explicitly overridden.
           - Note: this suite intentionally does *not* default to `--check-wheel-scroll`, since VirtualList scroll can keep hit-test results within the root container.
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
      row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
