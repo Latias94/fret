@@ -3585,6 +3585,56 @@ fn preview_web_ime_harness(
                             lines.push(cx.text("window_input_context_snapshot: <unavailable>"));
                         }
 
+                        if let Some(key) = cx.app.global::<fret_runtime::TextFontStackKey>() {
+                            lines.push(cx.text(format!("text_font_stack_key={}", key.0)));
+                        } else {
+                            lines.push(cx.text("text_font_stack_key: <unavailable>"));
+                        }
+
+                        if let Some(cfg) = cx.app.global::<fret_core::TextFontFamilyConfig>().cloned()
+                        {
+                            let fmt = |v: &[String]| -> String {
+                                let head = v.iter().take(4).cloned().collect::<Vec<_>>().join(", ");
+                                if v.len() > 4 {
+                                    format!("[{head}, …] (len={})", v.len())
+                                } else {
+                                    format!("[{head}] (len={})", v.len())
+                                }
+                            };
+                            lines.push(cx.text("text_font_families:"));
+                            lines.push(cx.text(format!("  ui_sans={}", fmt(&cfg.ui_sans))));
+                            lines.push(cx.text(format!("  ui_serif={}", fmt(&cfg.ui_serif))));
+                            lines.push(cx.text(format!("  ui_mono={}", fmt(&cfg.ui_mono))));
+                            lines.push(cx.text(format!(
+                                "  common_fallback={}",
+                                fmt(&cfg.common_fallback)
+                            )));
+                        } else {
+                            lines.push(cx.text("text_font_families: <unavailable>"));
+                        }
+
+                        if let Some(catalog) = cx.app.global::<fret_runtime::FontCatalog>().cloned()
+                        {
+                            let head = catalog
+                                .families
+                                .iter()
+                                .take(6)
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            lines.push(cx.text("font_catalog:"));
+                            lines.push(cx.text(format!(
+                                "  revision={} families_len={}",
+                                catalog.revision,
+                                catalog.families.len()
+                            )));
+                            if !catalog.families.is_empty() {
+                                lines.push(cx.text(format!("  head=[{head}]")));
+                            }
+                        } else {
+                            lines.push(cx.text("font_catalog: <unavailable>"));
+                        }
+
                         let snapshot = cx
                             .app
                             .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
