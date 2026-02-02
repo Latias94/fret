@@ -2715,13 +2715,68 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
 
                 let reason = win.get("window_shift_reason").and_then(|v| v.as_str());
                 let mode = win.get("window_shift_apply_mode").and_then(|v| v.as_str());
+                let invalidation_detail = win
+                    .get("window_shift_invalidation_detail")
+                    .and_then(|v| v.as_str());
                 if reason.is_some() && mode.is_some() {
+                    if mode == Some("non_retained_rerender") {
+                        let expected_detail = match kind {
+                            "escape" => Some("scroll_handle_window_update"),
+                            "prefetch" => Some("scroll_handle_prefetch_window_update"),
+                            _ => None,
+                        };
+                        if invalidation_detail.is_none() {
+                            offenders = offenders.saturating_add(1);
+                            failures.push(format!(
+                                "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_invalidation_detail kind={kind} apply_mode={mode:?}"
+                            ));
+                            if samples.len() < 64 {
+                                samples.push(serde_json::json!({
+                                    "window": window_id,
+                                    "tick_id": tick_id,
+                                    "frame_id": frame_id,
+                                    "kind": kind,
+                                    "reason": reason,
+                                    "apply_mode": mode,
+                                    "invalidation_detail": invalidation_detail,
+                                    "expected_invalidation_detail": expected_detail,
+                                    "node": win.get("node").and_then(|v| v.as_u64()),
+                                    "element": win.get("element").and_then(|v| v.as_u64()),
+                                    "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
+                                    "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
+                                }));
+                            }
+                        } else if expected_detail.is_some()
+                            && invalidation_detail != expected_detail
+                        {
+                            offenders = offenders.saturating_add(1);
+                            failures.push(format!(
+                                "window={window_id} tick_id={tick_id} frame_id={frame_id} error=unexpected_shift_invalidation_detail kind={kind} got={invalidation_detail:?} expected={expected_detail:?}"
+                            ));
+                            if samples.len() < 64 {
+                                samples.push(serde_json::json!({
+                                    "window": window_id,
+                                    "tick_id": tick_id,
+                                    "frame_id": frame_id,
+                                    "kind": kind,
+                                    "reason": reason,
+                                    "apply_mode": mode,
+                                    "invalidation_detail": invalidation_detail,
+                                    "expected_invalidation_detail": expected_detail,
+                                    "node": win.get("node").and_then(|v| v.as_u64()),
+                                    "element": win.get("element").and_then(|v| v.as_u64()),
+                                    "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
+                                    "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
+                                }));
+                            }
+                        }
+                    }
                     continue;
                 }
 
                 offenders = offenders.saturating_add(1);
                 failures.push(format!(
-                    "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_explainability kind={kind} reason={reason:?} apply_mode={mode:?}"
+                    "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_explainability kind={kind} reason={reason:?} apply_mode={mode:?} invalidation_detail={invalidation_detail:?}"
                 ));
 
                 if samples.len() < 64 {
@@ -2732,6 +2787,7 @@ pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
                         "kind": kind,
                         "reason": reason,
                         "apply_mode": mode,
+                        "invalidation_detail": invalidation_detail,
                         "node": win.get("node").and_then(|v| v.as_u64()),
                         "element": win.get("element").and_then(|v| v.as_u64()),
                         "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
