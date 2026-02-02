@@ -719,7 +719,11 @@ impl ElementHostWidget {
             },
         );
 
-        let max_child = if defer_this_frame {
+        let max_child = if let Some(cached) = cached_max_child {
+            cached
+        } else if let Some(cached) = cached {
+            cached
+        } else if defer_this_frame {
             // Use the previous measured size as a best-effort estimate and avoid a deep measure
             // walk on this frame.
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -730,10 +734,6 @@ impl ElementHostWidget {
                 }
             }
             max_child
-        } else if let Some(cached) = cached_max_child {
-            cached
-        } else if let Some(cached) = cached {
-            cached
         } else {
             let measure_started = profile_cfg.is_some().then(Instant::now);
             let mut max_child = Size::new(Px(0.0), Px(0.0));
@@ -763,7 +763,24 @@ impl ElementHostWidget {
             max_child
         };
 
-        let desired = clamp_to_constraints(max_child, props.layout, available);
+        // In unbounded probe flows, scroll surfaces frequently sit under auto-sized containers
+        // (e.g. `max-height` shells). During intrinsic sizing, parents may pass
+        // `available.{width,height} = 0` as a placeholder for "unknown".
+        //
+        // `clamp_to_constraints()` treats `available` as a hard upper bound even for `Auto`, so we
+        // must avoid feeding a zero "unknown" available size into it. Use the measured content
+        // size as an upper bound in that case so the scroll node can participate in intrinsic
+        // sizing (similar to how percentage heights behave under `auto` in CSS).
+        let mut clamp_available = available;
+        if props.probe_unbounded {
+            if clamp_available.width.0 <= 0.0 {
+                clamp_available.width = Px(max_child.width.0.max(0.0));
+            }
+            if clamp_available.height.0 <= 0.0 {
+                clamp_available.height = Px(max_child.height.0.max(0.0));
+            }
+        }
+        let desired = clamp_to_constraints(max_child, props.layout, clamp_available);
         // Scroll containers should not under-report their scrollable extent due to fractional
         // layout rounding. Match DOM behavior by rounding the scrollable axis up to the next
         // whole pixel (tolerating tiny floating point noise).

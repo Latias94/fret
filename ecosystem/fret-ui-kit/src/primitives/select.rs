@@ -629,7 +629,13 @@ pub fn select_content_placement_popper(
     placement: popper::PopperContentPlacement,
     arrow_size: Option<Px>,
 ) -> SelectContentPlacement {
-    let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
+    // Radix Select (position="popper") relies on Popper for *placement* but uses CSS max-height
+    // (via `--radix-select-content-available-height`) to constrain the listbox. Floating UI does
+    // not clamp the floating rect size as part of collision shifting, so the content can overflow
+    // the collision boundary when it is taller than the available space.
+    //
+    // Keep the desired size intact and let collision logic affect only the origin.
+    let layout = popper::popper_content_layout_unclamped(outer, anchor, desired, placement);
     let wrapper_insets = popper_arrow::wrapper_insets(&layout, placement.arrow_protrusion);
     let transform_origin = popper::popper_content_transform_origin(&layout, anchor, arrow_size);
 

@@ -1380,7 +1380,18 @@ fn select_impl<H: UiHost>(
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
                         .unwrap_or(Px(0.0));
-                    let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    let outer_with_margin =
+                        overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+                    // Radix Select uses `collisionPadding` (10px) on the popper substrate, but the
+                    // listbox can still overflow when it is larger than the available space.
+                    //
+                    // Model this by using full window bounds for popper placement while keeping
+                    // the window-margin inset available as a sizing hint.
+                    let outer = if position == SelectPosition::Popper {
+                        cx.bounds
+                    } else {
+                        outer_with_margin
+                    };
 
                     let item_h = theme
                         .metric_by_key("component.select.item_height")
@@ -2518,9 +2529,19 @@ fn select_impl<H: UiHost>(
                                         let inner = cx.container(
                                             ContainerProps {
                                                 layout: {
+                                                    // Keep the painted surface chrome pinned to the panel rect.
+                                                    //
+                                                    // Some layout engines treat "fill" sizing inside absolutely
+                                                    // positioned nodes as min-content, which can cause the surface
+                                                    // quad to shrink below the Radix/shadcn min-width expectations.
                                                     let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout.size.height = Length::Fill;
+                                                    layout.position = PositionStyle::Absolute;
+                                                    layout.inset = InsetStyle {
+                                                        left: Some(Px(0.0)),
+                                                        right: Some(Px(0.0)),
+                                                        top: Some(Px(0.0)),
+                                                        bottom: Some(Px(0.0)),
+                                                    };
                                                     layout.overflow = Overflow::Clip;
                                                     layout
                                                 },

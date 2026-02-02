@@ -25,6 +25,7 @@ use stats::{
     apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_retained_vlist_attach_detach_max,
+    check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
     check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
@@ -109,6 +110,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_viewport_capture_min: Option<u64> = None;
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
+    let mut check_retained_vlist_keep_alive_reuse_min: Option<u64> = None;
     let mut compare_eps_px: f32 = 0.5;
     let mut compare_ignore_bounds: bool = false;
     let mut compare_ignore_scene_fingerprint: bool = false;
@@ -633,6 +635,19 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_retained_vlist_attach_detach_max = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --check-retained-vlist-attach-detach-max".to_string()
                 })?);
+                i += 1;
+            }
+            "--check-retained-vlist-keep-alive-reuse-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-retained-vlist-keep-alive-reuse-min".to_string(),
+                    );
+                };
+                check_retained_vlist_keep_alive_reuse_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-retained-vlist-keep-alive-reuse-min".to_string()
+                    })?);
                 i += 1;
             }
             "--compare-eps-px" => {
@@ -1160,6 +1175,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_viewport_capture_min.is_some()
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
+                    || check_retained_vlist_keep_alive_reuse_min.is_some()
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -1195,6 +1211,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_viewport_capture_min,
                         check_retained_vlist_reconcile_no_notify_min,
                         check_retained_vlist_attach_detach_max,
+                        check_retained_vlist_keep_alive_reuse_min,
                         warmup_frames,
                     )?;
                 }
@@ -1476,7 +1493,8 @@ See: `docs/tracy.md`.\n";
                         || check_dock_drag_min.is_some()
                         || check_viewport_capture_min.is_some()
                         || check_retained_vlist_reconcile_no_notify_min.is_some()
-                        || check_retained_vlist_attach_detach_max.is_some();
+                        || check_retained_vlist_attach_detach_max.is_some()
+                        || check_retained_vlist_keep_alive_reuse_min.is_some();
 
                     if wants_post_run_checks_for_script {
                         let Some(bundle_path) = bundle_path.as_ref() else {
@@ -1510,6 +1528,7 @@ See: `docs/tracy.md`.\n";
                             check_viewport_capture_min,
                             check_retained_vlist_reconcile_no_notify_min,
                             check_retained_vlist_attach_detach_max,
+                            check_retained_vlist_keep_alive_reuse_min,
                             warmup_frames,
                         ) {
                             overall_error = Some(err);
@@ -1942,45 +1961,389 @@ See: `docs/tracy.md`.\n";
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             enum BuiltinSuite {
                 UiGallery,
+                UiGalleryLayout,
                 DockingArbitration,
             }
 
-            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if rest.len() == 1
-                && rest[0] == "ui-gallery"
-            {
-                (
-                    ui_gallery_suite_scripts()
-                        .into_iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect(),
-                    Some(BuiltinSuite::UiGallery),
-                )
-            } else if rest.len() == 1 && rest[0] == "ui-gallery-virt-retained" {
-                (
-                    vec![resolve_path(
-                        &workspace_root,
-                        PathBuf::from(
-                            "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
-                        ),
-                    )],
-                    Some(BuiltinSuite::UiGallery),
-                )
-            } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
-                (
-                    docking_arbitration_suite_scripts()
-                        .into_iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect(),
-                    Some(BuiltinSuite::DockingArbitration),
-                )
-            } else {
-                (
-                    rest.into_iter()
-                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                        .collect(),
-                    None,
-                )
-            };
+            let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
+            let is_ui_gallery_layout_suite = rest.len() == 1 && rest[0] == "ui-gallery-layout";
+            let is_ui_gallery_virt_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
+            let is_ui_gallery_virt_retained_measured_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-virt-retained-measured";
+            let is_ui_gallery_tree_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-tree-retained";
+            let is_ui_gallery_tree_retained_measured_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-tree-retained-measured";
+            let is_ui_gallery_data_table_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained";
+            let is_ui_gallery_data_table_retained_measured_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained-measured";
+            let is_ui_gallery_data_table_retained_keep_alive_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-data-table-retained-keep-alive";
+            let is_ui_gallery_table_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-table-retained";
+            let is_ui_gallery_table_retained_measured_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-table-retained-measured";
+            let is_ui_gallery_retained_measured_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-retained-measured";
+            let is_ui_gallery_ai_transcript_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
+            let is_ui_gallery_vlist_window_boundary_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
+            let is_ui_gallery_ui_kit_list_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
+            let is_ui_gallery_inspector_torture_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture";
+            let is_ui_gallery_inspector_torture_keep_alive_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-inspector-torture-keep-alive";
+            let is_ui_gallery_file_tree_torture_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture";
+            let is_ui_gallery_file_tree_torture_interactive_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-file-tree-torture-interactive";
+            let is_components_gallery_file_tree_suite =
+                rest.len() == 1 && rest[0] == "components-gallery-file-tree";
+            let is_components_gallery_table_suite =
+                rest.len() == 1 && rest[0] == "components-gallery-table";
+            let is_components_gallery_table_keep_alive_suite =
+                rest.len() == 1 && rest[0] == "components-gallery-table-keep-alive";
+            let is_workspace_shell_demo_suite =
+                rest.len() == 1 && rest[0] == "workspace-shell-demo";
+            let is_workspace_shell_demo_file_tree_keep_alive_suite =
+                rest.len() == 1 && rest[0] == "workspace-shell-demo-file-tree-keep-alive";
+            let is_docking_arbitration_suite = rest.len() == 1 && rest[0] == "docking-arbitration";
+
+            let (scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
+                if is_ui_gallery_suite {
+                    (
+                        ui_gallery_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_layout_suite {
+                    (
+                        ui_gallery_layout_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGalleryLayout),
+                    )
+                } else if is_ui_gallery_virt_retained_suite
+                    || is_ui_gallery_virt_retained_measured_suite
+                {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_tree_retained_suite
+                    || is_ui_gallery_tree_retained_measured_suite
+                {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_data_table_retained_suite
+                    || is_ui_gallery_data_table_retained_measured_suite
+                {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_data_table_retained_keep_alive_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-data-table-window-boundary-bounce-keep-alive.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_table_retained_suite
+                    || is_ui_gallery_table_retained_measured_suite
+                {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-sort-desc.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_retained_measured_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_ai_transcript_retained_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_vlist_window_boundary_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_ui_kit_list_retained_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_inspector_torture_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-inspector-torture-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_inspector_torture_keep_alive_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-inspector-torture-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/ui-gallery-inspector-torture-bounce-keep-alive.json",
+                                ),
+                            ),
+                        ],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_file_tree_torture_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-file-tree-torture-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_file_tree_torture_interactive_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-file-tree-torture-toggle.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_components_gallery_file_tree_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json",
+                                ),
+                            ),
+                        ],
+                        None,
+                    )
+                } else if is_components_gallery_table_suite {
+                    (
+                        vec![
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-table-window-boundary-scroll.json",
+                                ),
+                            ),
+                            resolve_path(
+                                &workspace_root,
+                                PathBuf::from(
+                                    "tools/diag-scripts/components-gallery-table-sort-and-scroll.json",
+                                ),
+                            ),
+                        ],
+                        None,
+                    )
+                } else if is_components_gallery_table_keep_alive_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/components-gallery-table-window-boundary-bounce.json",
+                            ),
+                        )],
+                        None,
+                    )
+                } else if is_workspace_shell_demo_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json",
+                            ),
+                        )],
+                        None,
+                    )
+                } else if is_workspace_shell_demo_file_tree_keep_alive_suite {
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/workspace-shell-demo-file-tree-bounce-keep-alive.json",
+                            ),
+                        )],
+                        None,
+                    )
+                } else if is_docking_arbitration_suite {
+                    (
+                        docking_arbitration_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::DockingArbitration),
+                    )
+                } else {
+                    (
+                        rest.into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        None,
+                    )
+                };
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -2077,6 +2440,10 @@ See: `docs/tracy.md`.\n";
                 let retained_vlist_attach_detach_max_for_script =
                     check_retained_vlist_attach_detach_max
                         .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
+                let retained_vlist_keep_alive_reuse_min_for_script =
+                    check_retained_vlist_keep_alive_reuse_min.filter(|_| {
+                        ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
+                    });
                 let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
@@ -2093,7 +2460,8 @@ See: `docs/tracy.md`.\n";
                     || check_dock_drag_min.is_some()
                     || check_viewport_capture_min.is_some()
                     || retained_vlist_gate_for_script.is_some()
-                    || retained_vlist_attach_detach_max_for_script.is_some();
+                    || retained_vlist_attach_detach_max_for_script.is_some()
+                    || retained_vlist_keep_alive_reuse_min_for_script.is_some();
 
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration);
@@ -2141,6 +2509,7 @@ See: `docs/tracy.md`.\n";
                         check_viewport_capture_min.or(suite_viewport_capture_min),
                         retained_vlist_gate_for_script,
                         retained_vlist_attach_detach_max_for_script,
+                        retained_vlist_keep_alive_reuse_min_for_script,
                         warmup_frames,
                     )?;
                 }
@@ -3106,6 +3475,15 @@ See: `docs/tracy.md`.\n";
                 check_bundle_for_retained_vlist_attach_detach_max(
                     bundle_path.as_path(),
                     max_delta,
+                    warmup_frames,
+                )?;
+            }
+            if let Some(min) = check_retained_vlist_keep_alive_reuse_min
+                && min > 0
+            {
+                check_bundle_for_retained_vlist_keep_alive_reuse_min(
+                    bundle_path.as_path(),
+                    min,
                     warmup_frames,
                 )?;
             }
@@ -4425,6 +4803,17 @@ fn ui_gallery_suite_scripts() -> [&'static str; 16] {
     ]
 }
 
+fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {
+    [
+        "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
+        "tools/diag-scripts/ui-gallery-layout-sweep-extended.json",
+        "tools/diag-scripts/ui-gallery-layout-sweep-extended-chrome.json",
+        "tools/diag-scripts/ui-gallery-layout-sweep-torture.json",
+        "tools/diag-scripts/ui-gallery-chrome-torture-layout.json",
+        "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
+    ]
+}
+
 fn docking_arbitration_suite_scripts() -> [&'static str; 2] {
     [
         "tools/diag-scripts/docking-arbitration-demo-split-viewports.json",
@@ -4456,6 +4845,26 @@ fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bo
     matches!(
         name,
         "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+            | "ui-gallery-tree-window-boundary-scroll-retained.json"
+            | "ui-gallery-data-table-window-boundary-scroll-retained.json"
+            | "ui-gallery-table-retained-window-boundary-scroll.json"
+            | "components-gallery-file-tree-window-boundary-scroll.json"
+            | "components-gallery-table-window-boundary-scroll.json"
+    )
+}
+
+fn ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "components-gallery-file-tree-window-boundary-bounce.json"
+            | "components-gallery-table-window-boundary-bounce.json"
+            | "ui-gallery-data-table-window-boundary-bounce-keep-alive.json"
+            | "ui-gallery-inspector-torture-bounce-keep-alive.json"
+            | "workspace-shell-demo-file-tree-bounce-keep-alive.json"
     )
 }
 
@@ -4692,6 +5101,7 @@ fn apply_post_run_checks(
     check_viewport_capture_min: Option<u64>,
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
+    check_retained_vlist_keep_alive_reuse_min: Option<u64>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -4765,6 +5175,11 @@ fn apply_post_run_checks(
     }
     if let Some(max_delta) = check_retained_vlist_attach_detach_max {
         check_bundle_for_retained_vlist_attach_detach_max(bundle_path, max_delta, warmup_frames)?;
+    }
+    if let Some(min) = check_retained_vlist_keep_alive_reuse_min
+        && min > 0
+    {
+        check_bundle_for_retained_vlist_keep_alive_reuse_min(bundle_path, min, warmup_frames)?;
     }
     if check_gc_sweep_liveness {
         check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;

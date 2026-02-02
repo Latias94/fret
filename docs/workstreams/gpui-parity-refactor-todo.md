@@ -610,9 +610,6 @@ topics (if/when we implement them):
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
-  - Ecosystem adoption note (recommended path): prefer retained-host helpers (ADR 0192) for new surfaces.
-    - `ecosystem/fret-ui-kit/src/declarative/list.rs` now provides `list_virtualized_retained_v0` /
-      `list_virtualized_copyable_retained_v0`, and `list_from_strings` has been migrated to use them.
     - Current (v1): `VirtualList`’s `visible_items` are computed during declarative render (`crates/fret-ui/src/elements/cx.rs`), so changing the
       visible window requires a cache-root rerender to rebuild the item subtree. The v2 goal is to move “window derivation + ephemeral items”
       into prepaint (ADR 0190), so scroll-driven window updates do not necessarily imply a cache-root rerender.
