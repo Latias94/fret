@@ -9769,6 +9769,14 @@ fn web_vs_fret_dropdown_menu_demo_mobile_tiny_viewport_scroll_state_matches() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_demo_mobile_tiny_viewport_wheel_scroll_matches_web_scrolled_80() {
+    assert_dropdown_menu_demo_wheel_scroll_matches_web_scrolled(
+        "dropdown-menu-demo.vp375x240-scrolled-80",
+        -80.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_demo_menu_content_insets_match() {
     assert_dropdown_menu_demo_constrained_menu_content_insets_match("dropdown-menu-demo");
 }
@@ -10053,6 +10061,195 @@ fn assert_dropdown_menu_demo_constrained_scroll_state_matches(web_name: &str) {
     assert_eq!(
         first_visible, expected_first_visible_label,
         "{web_name}: first visible menu item label mismatch"
+    );
+}
+
+fn assert_dropdown_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, wheel_dy_px: f32) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let labels = [
+        "Profile",
+        "Billing",
+        "Settings",
+        "Keyboard shortcuts",
+        "Team",
+        "Invite users",
+        "New Team",
+        "GitHub",
+        "Support",
+        "API",
+        "Log out",
+    ];
+    let expected_first_visible_label = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(&theme, "dropdown-menu-content"),
+        &labels,
+    )
+    .unwrap_or_else(|| panic!("missing web first visible menu item for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            Button, ButtonVariant, DropdownMenu, DropdownMenuEntry, DropdownMenuItem,
+            DropdownMenuLabel, DropdownMenuShortcut,
+        };
+
+        let el = DropdownMenu::new(open.clone())
+            .min_width(Px(224.0))
+            .into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    vec![
+                        DropdownMenuEntry::Label(DropdownMenuLabel::new("My Account")),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Profile")
+                                .trailing(DropdownMenuShortcut::new("??P").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Billing")
+                                .trailing(DropdownMenuShortcut::new("?B").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Settings")
+                                .trailing(DropdownMenuShortcut::new("?S").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Keyboard shortcuts")
+                                .trailing(DropdownMenuShortcut::new("?K").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Team")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Invite users").submenu(
+                            vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Email")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Message")),
+                                DropdownMenuEntry::Separator,
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("More...")),
+                            ],
+                        )),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("New Team")
+                                .trailing(DropdownMenuShortcut::new("?+T").into_element(cx)),
+                        ),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Support")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("API").disabled(true)),
+                        DropdownMenuEntry::Separator,
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Log out")
+                                .trailing(DropdownMenuShortcut::new("??Q").into_element(cx)),
+                        ),
+                    ]
+                },
+            );
+        vec![pad_root(cx, Px(0.0), el)]
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        render.clone(),
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    // Keep consistent with the existing scroll-state gate: compare against the same mid-transition
+    // point the web golden captures (after `wait=50ms`).
+    let hover_settle_frames =
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 / 2 + 1;
+    for tick in 0..hover_settle_frames {
+        let request_semantics = tick + 1 == hover_settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            render.clone(),
+        );
+    }
+
+    let snap_before = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu_before = snap_before
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Menu)
+        .expect("fret root menu semantics");
+
+    let menu_center = Point::new(
+        Px(root_menu_before.bounds.origin.x.0 + root_menu_before.bounds.size.width.0 * 0.5),
+        Px(root_menu_before.bounds.origin.y.0 + root_menu_before.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
+            position: menu_center,
+            delta: Point::new(Px(0.0), Px(wheel_dy_px)),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2 + hover_settle_frames),
+        true,
+        render,
+    );
+
+    let snap_after = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu_after = snap_after
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Menu)
+        .expect("fret root menu semantics (after scroll)");
+
+    assert_close(
+        "menu overlay x stable under internal scroll",
+        root_menu_after.bounds.origin.x.0,
+        root_menu_before.bounds.origin.x.0,
+        1.0,
+    );
+    assert_close(
+        "menu overlay y stable under internal scroll",
+        root_menu_after.bounds.origin.y.0,
+        root_menu_before.bounds.origin.y.0,
+        1.0,
+    );
+
+    let after_first_visible =
+        fret_first_visible_menu_item_label(&snap_after, root_menu_after.bounds, &labels)
+            .unwrap_or("<missing>");
+    assert_eq!(
+        after_first_visible, expected_first_visible_label,
+        "{web_name}: first visible menu item label mismatch after wheel scroll"
     );
 }
 
