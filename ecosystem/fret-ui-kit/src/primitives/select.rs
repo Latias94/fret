@@ -20,8 +20,8 @@ use std::time::Duration;
 use fret_core::{AppWindowId, Edges, KeyCode, Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
-    ActionCx, OnDismissRequest, OnPointerUp, PointerDownCx, PointerMoveCx, PointerUpCx,
-    UiActionHost, UiPointerActionHost,
+    ActionCx, DismissReason, DismissRequestCx, OnDismissRequest, OnPointerUp, PointerDownCx,
+    PointerMoveCx, PointerUpCx, PressablePointerUpResult, UiActionHost, UiPointerActionHost,
 };
 use fret_ui::element::{
     AnyElement, Elements, LayoutStyle, PointerRegionProps, PressableA11y, PressableProps,
@@ -478,11 +478,23 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
 ) -> Option<SelectItemAlignedLayout> {
     let value_node = overlay::anchor_bounds_for_element(cx, inputs.value_node)?;
     let viewport = overlay::anchor_bounds_for_element(cx, inputs.viewport)?;
-    let listbox = overlay::anchor_bounds_for_element(cx, inputs.listbox)?;
-    let mut content = overlay::anchor_bounds_for_element(cx, inputs.content_panel)?;
+    // Item-aligned select positioning uses `offsetTop`-like measurements that must remain stable
+    // as the viewport scrolls. Prefer layout bounds for scrolled descendants (they do not include
+    // the scroll render transform) so wheel scrolling cannot cause the overlay to "chase" the
+    // selected item and drift off-screen.
+    let listbox = cx
+        .last_bounds_for_element(inputs.listbox)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.listbox))?;
+    let mut content = cx
+        .last_bounds_for_element(inputs.content_panel)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.content_panel))?;
     content.size.width = Px(content.size.width.0.max(inputs.content_min_width.0));
-    let selected_item = overlay::anchor_bounds_for_element(cx, inputs.selected_item)?;
-    let selected_item_text = overlay::anchor_bounds_for_element(cx, inputs.selected_item_text)?;
+    let selected_item = cx
+        .last_bounds_for_element(inputs.selected_item)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.selected_item))?;
+    let selected_item_text = cx
+        .last_bounds_for_element(inputs.selected_item_text)
+        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.selected_item_text))?;
     // The headless solver expects `items_height` to match Radix `viewport.scrollHeight`.
     //
     // In our shadcn ports `inputs.listbox` typically points at the element that lays out the full
@@ -623,7 +635,7 @@ pub fn select_content_placement_popper(
     // the collision boundary when it is taller than the available space.
     //
     // Keep the desired size intact and let collision logic affect only the origin.
-    let layout = popper::popper_content_layout_size_unclamped(outer, anchor, desired, placement);
+    let layout = popper::popper_content_layout_unclamped(outer, anchor, desired, placement);
     let wrapper_insets = popper_arrow::wrapper_insets(&layout, placement.arrow_protrusion);
     let transform_origin = popper::popper_content_transform_origin(&layout, anchor, arrow_size);
 
@@ -1010,6 +1022,7 @@ impl SelectTriggerPointerState {
 ///
 /// This mirrors Radix outcomes inside `SelectContent`:
 /// - `Escape` closes.
+/// - `Tab` is suppressed (select should not be navigated using Tab).
 /// - `Home/End/ArrowUp/ArrowDown` move the active option (skipping disabled).
 /// - `Enter/Space` commits the active option and closes.
 /// - Typeahead search moves the active option (with repeated-search normalization).
@@ -1073,6 +1086,7 @@ impl SelectContentKeyState {
             .or_else(|| roving_focus::first_enabled(disabled_by_row));
 
         match key {
+            KeyCode::Tab => true,
             KeyCode::Escape => {
                 let _ = host.models_mut().update(open, |v| *v = false);
                 host.request_redraw(window);
@@ -1222,36 +1236,54 @@ pub fn select_modal_layer_elements_with_dismiss_handler<H: UiHost>(
 
 /// Builds a pointer region that guards the next mouse `pointerup` after opening on `pointerdown`.
 ///
-/// This element should be installed inside the modal barrier so it can swallow the click-release
-/// that opened the select, matching Radix's one-shot pointer-up guard.
+/// This element should be installed as a top-most sibling in the overlay (i.e. after the content)
+/// so it can swallow the click-release that opened the select, matching Radix's one-shot
+/// pointer-up guard even when the release lands over the content.
 pub fn select_modal_barrier_pointer_up_guard<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    open: Model<bool>,
+    _open: Model<bool>,
     guard: SelectMouseOpenGuard,
 ) -> AnyElement {
-    cx.pointer_region(
-        PointerRegionProps {
-            layout: select_modal_barrier_layout(),
-            enabled: true,
-        },
-        move |cx| {
-            let open_for_guard = open.clone();
-            let guard_for_pointer_up = guard.clone();
-            cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up: PointerUpCx| {
-                match select_mouse_open_guard_pointer_up_decision_shared(&guard_for_pointer_up, up)
-                {
-                    SelectMouseOpenGuardPointerUpDecision::NoGuard => false,
-                    SelectMouseOpenGuardPointerUpDecision::Suppress => true,
-                    SelectMouseOpenGuardPointerUpDecision::Allow => {
-                        let _ = host.models_mut().update(&open_for_guard, |v| *v = false);
-                        host.request_redraw(action_cx.window);
-                        true
-                    }
-                }
-            }));
-            Vec::new()
-        },
-    )
+    let down = guard
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .mouse_open_down_pos;
+    let enabled = down.is_some();
+    let layout = if let Some(down) = down {
+        // Only cover the click-slop rect around the trigger down position. If the pointer-up lands
+        // outside this rect, we should not intercept it (drag-to-select / outside-dismiss).
+        let slop = SELECT_TRIGGER_CLICK_SLOP_PX;
+        let size = Px(slop * 2.0);
+        let left = Px((down.x.0 - slop).max(0.0));
+        let top = Px((down.y.0 - slop).max(0.0));
+
+        let mut layout = LayoutStyle::default();
+        layout.position = fret_ui::element::PositionStyle::Absolute;
+        layout.inset = fret_ui::element::InsetStyle {
+            left: Some(left),
+            right: None,
+            top: Some(top),
+            bottom: None,
+        };
+        layout.size.width = fret_ui::element::Length::Px(size);
+        layout.size.height = fret_ui::element::Length::Px(size);
+        layout
+    } else {
+        select_modal_barrier_layout()
+    };
+    cx.pointer_region(PointerRegionProps { layout, enabled }, move |cx| {
+        let guard_for_pointer_up = guard.clone();
+        cx.pointer_region_on_pointer_up(Arc::new(move |_host, _action_cx, up: PointerUpCx| {
+            match select_mouse_open_guard_pointer_up_decision_shared(&guard_for_pointer_up, up) {
+                SelectMouseOpenGuardPointerUpDecision::NoGuard => false,
+                SelectMouseOpenGuardPointerUpDecision::Suppress => true,
+                // Outside the click slop this element should not be hit, but keep the behavior
+                // conservative in case the host routing changes.
+                SelectMouseOpenGuardPointerUpDecision::Allow => false,
+            }
+        }));
+        Vec::new()
+    })
 }
 
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
@@ -1265,13 +1297,11 @@ pub fn select_modal_layer_elements_with_pointer_up_guard<H: UiHost>(
     content: AnyElement,
 ) -> Elements {
     let guard_el = select_modal_barrier_pointer_up_guard(cx, open.clone(), guard);
-    select_modal_layer_elements(
-        cx,
-        open,
-        dismiss_on_press,
-        std::iter::once(guard_el).chain(barrier_children),
+    Elements::from([
+        select_modal_barrier(cx, open, dismiss_on_press, barrier_children),
         content,
-    )
+        guard_el,
+    ])
 }
 
 /// Convenience helper to assemble select modal overlay children with a pointer-up guard installed
@@ -1286,15 +1316,74 @@ pub fn select_modal_layer_elements_with_pointer_up_guard_and_dismiss_handler<H: 
     barrier_children: impl IntoIterator<Item = AnyElement>,
     content: AnyElement,
 ) -> Elements {
-    let guard_el = select_modal_barrier_pointer_up_guard(cx, open.clone(), guard);
-    select_modal_layer_elements_with_dismiss_handler(
-        cx,
-        open,
-        dismiss_on_press,
-        on_dismiss_request,
-        std::iter::once(guard_el).chain(barrier_children),
-        content,
-    )
+    let guard_el = select_modal_barrier_pointer_up_guard(cx, open.clone(), guard.clone());
+    let barrier_children: Vec<AnyElement> = barrier_children.into_iter().collect();
+    let barrier = if dismiss_on_press {
+        let open_for_pressable = open.clone();
+        let guard_for_pressable = guard;
+        let on_dismiss_request_for_pressable = on_dismiss_request.clone();
+        cx.pressable(
+            PressableProps {
+                layout: select_modal_barrier_layout(),
+                enabled: true,
+                focusable: false,
+                ..Default::default()
+            },
+            move |cx, _st| {
+                let open_for_pointer_up = open_for_pressable.clone();
+                let guard_for_pointer_up = guard_for_pressable.clone();
+                let on_dismiss_request_for_pointer_up = on_dismiss_request_for_pressable.clone();
+                cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                    match select_mouse_open_guard_pointer_up_decision_shared(
+                        &guard_for_pointer_up,
+                        up,
+                    ) {
+                        SelectMouseOpenGuardPointerUpDecision::Suppress => {
+                            host.request_redraw(action_cx.window);
+                            return PressablePointerUpResult::SkipActivate;
+                        }
+                        SelectMouseOpenGuardPointerUpDecision::Allow
+                        | SelectMouseOpenGuardPointerUpDecision::NoGuard => {}
+                    }
+
+                    if let Some(on_dismiss_request) = on_dismiss_request_for_pointer_up.as_ref() {
+                        let mut req = DismissRequestCx::new(DismissReason::OutsidePress {
+                            pointer: Some(fret_ui::action::OutsidePressCx {
+                                pointer_id: up.pointer_id,
+                                pointer_type: up.pointer_type,
+                                button: up.button,
+                                modifiers: up.modifiers,
+                                click_count: up.click_count,
+                            }),
+                        });
+                        on_dismiss_request(host, action_cx, &mut req);
+                        if !req.default_prevented() {
+                            let _ = host
+                                .models_mut()
+                                .update(&open_for_pointer_up, |v| *v = false);
+                        }
+                    } else {
+                        let _ = host
+                            .models_mut()
+                            .update(&open_for_pointer_up, |v| *v = false);
+                    }
+
+                    PressablePointerUpResult::SkipActivate
+                }));
+
+                barrier_children
+            },
+        )
+    } else {
+        cx.container(
+            fret_ui::element::ContainerProps {
+                layout: select_modal_barrier_layout(),
+                ..Default::default()
+            },
+            move |_cx| barrier_children,
+        )
+    };
+    Elements::from([barrier, content, guard_el])
 }
 
 /// Returns an item-level pointer-up handler that respects the "open via mouse pointerdown" guard.
@@ -1959,6 +2048,37 @@ mod tests {
         ));
         // Skips disabled row 1, so we land on row 2.
         assert_eq!(state.active_row(), Some(2));
+    }
+
+    #[test]
+    fn content_tab_is_suppressed() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let values_by_row: Vec<Option<Arc<str>>> = vec![Some(Arc::from("beta"))];
+        let labels_by_row: Vec<Arc<str>> = vec![Arc::from("Beta")];
+        let disabled_by_row = vec![false];
+
+        let mut state = SelectContentKeyState::default();
+        let mut host = UiActionHostAdapter { app: &mut app };
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            window,
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            KeyCode::Tab,
+            false,
+            true,
+        ));
+
+        assert!(app.models().get_copied(&open).unwrap_or(false));
+        assert_eq!(state.active_row(), None);
+        assert_eq!(app.models().get_cloned(&value).flatten().as_deref(), None);
     }
 
     #[test]

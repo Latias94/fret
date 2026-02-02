@@ -25,6 +25,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
 use crate::tokens::checkbox as checkbox_tokens;
 
@@ -293,14 +294,11 @@ fn interaction_state(
     hovered: bool,
     focused: bool,
 ) -> checkbox_tokens::CheckboxInteraction {
-    if pressed {
-        checkbox_tokens::CheckboxInteraction::Pressed
-    } else if focused {
-        checkbox_tokens::CheckboxInteraction::Focused
-    } else if hovered {
-        checkbox_tokens::CheckboxInteraction::Hovered
-    } else {
-        checkbox_tokens::CheckboxInteraction::None
+    match pressable_interaction(pressed, hovered, focused) {
+        Some(PressableInteraction::Pressed) => checkbox_tokens::CheckboxInteraction::Pressed,
+        Some(PressableInteraction::Focused) => checkbox_tokens::CheckboxInteraction::Focused,
+        Some(PressableInteraction::Hovered) => checkbox_tokens::CheckboxInteraction::Hovered,
+        None => checkbox_tokens::CheckboxInteraction::None,
     }
 }
 
@@ -359,6 +357,7 @@ fn checkbox_box<H: UiHost>(
     props.background = chrome.container_bg;
     props.border = Edges::all(chrome.outline_width);
     props.border_color = chrome.outline_color;
+    props.snap_to_device_pixels = true;
 
     cx.container(props, move |cx| {
         if chrome.container_bg.is_some() {

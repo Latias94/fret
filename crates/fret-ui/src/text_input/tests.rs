@@ -93,6 +93,30 @@ fn event_cx<'a>(
     }
 }
 
+fn command_cx<'a>(
+    app: &'a mut TestHost,
+    services: &'a mut FakeTextService,
+    tree: &'a mut UiTree<TestHost>,
+    node: fret_core::NodeId,
+    window: fret_core::AppWindowId,
+) -> crate::widget::CommandCx<'a, TestHost> {
+    crate::widget::CommandCx {
+        app,
+        services,
+        tree,
+        node,
+        window: Some(window),
+        input_ctx: fret_runtime::InputContext {
+            caps: PlatformCapabilities::default(),
+            ..Default::default()
+        },
+        focus: Some(node),
+        invalidations: Vec::new(),
+        requested_focus: None,
+        stop_propagation: false,
+    }
+}
+
 #[test]
 fn text_input_hover_sets_text_cursor_effect() {
     let window = AppWindowId::default();
@@ -212,6 +236,39 @@ fn text_input_double_click_selection_respects_text_boundary_mode() {
 }
 
 #[test]
+fn text_input_copy_clamps_out_of_range_selection_indices() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.selection_anchor = 0;
+    input.caret = 999;
+
+    let mut cx = command_cx(&mut app, &mut services, &mut ui, node, window);
+    assert!(
+        input.command(&mut cx, &fret_runtime::CommandId::from("edit.copy")),
+        "expected edit.copy to be handled"
+    );
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| matches!(e, Effect::ClipboardSetText { text } if text == "hello")),
+        "expected edit.copy to clamp indices and copy the selected text"
+    );
+    assert_eq!(input.selection_anchor, 0);
+    assert_eq!(input.caret, 5);
+}
+
+#[test]
 fn text_input_renders_placeholder_when_empty() {
     let window = AppWindowId::default();
 
@@ -290,6 +347,48 @@ fn ime_commit_replaces_original_selection_after_preedit_starts() {
     assert_eq!(input.text, "yo world");
     assert!(input.ime_replace_range.is_none());
     assert!(!input.is_ime_composing());
+}
+
+#[test]
+fn ime_delete_surrounding_deletes_base_text_without_clearing_preedit() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut input = TextInput::new();
+    input.text = "hello".to_string();
+    input.caret = 2;
+    input.selection_anchor = 2;
+    input.preedit = "X".to_string();
+    input.preedit_cursor = Some((0, 1));
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    input.event(
+        &mut cx,
+        &Event::Ime(ImeEvent::DeleteSurrounding {
+            before_bytes: 1,
+            after_bytes: 2,
+        }),
+    );
+
+    assert_eq!(input.text, "ho");
+    assert_eq!(input.caret, 1);
+    assert_eq!(input.selection_anchor, 1);
+    assert_eq!(input.preedit, "X");
+    assert_eq!(input.preedit_cursor, Some((0, 1)));
 }
 
 #[derive(Default)]

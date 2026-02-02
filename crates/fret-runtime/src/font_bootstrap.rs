@@ -34,13 +34,6 @@ pub fn apply_font_catalog_update(
     families: Vec<String>,
     policy: FontFamilyDefaultsPolicy,
 ) -> FontCatalogUpdate {
-    fn push_if_missing(list: &mut Vec<String>, name: &str) {
-        if list.iter().any(|v| v.eq_ignore_ascii_case(name)) {
-            return;
-        }
-        list.push(name.to_string());
-    }
-
     let prev_rev = app.global::<FontCatalog>().map(|c| c.revision).unwrap_or(0);
     let revision = prev_rev.saturating_add(1);
 
@@ -96,9 +89,6 @@ pub fn apply_font_catalog_update(
                     "Noto Sans".to_string(),
                     "DejaVu Sans".to_string(),
                 ];
-                for emoji in ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"] {
-                    push_if_missing(&mut config.ui_sans, emoji);
-                }
             }
             if config.ui_serif.is_empty() {
                 config.ui_serif = vec![
@@ -107,9 +97,6 @@ pub fn apply_font_catalog_update(
                     "Georgia".to_string(),
                     "DejaVu Serif".to_string(),
                 ];
-                for emoji in ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"] {
-                    push_if_missing(&mut config.ui_serif, emoji);
-                }
             }
             if config.ui_mono.is_empty() {
                 config.ui_mono = vec![
@@ -120,9 +107,23 @@ pub fn apply_font_catalog_update(
                     "DejaVu Sans Mono".to_string(),
                     "Noto Sans Mono".to_string(),
                 ];
-                for emoji in ["Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"] {
-                    push_if_missing(&mut config.ui_mono, emoji);
-                }
+            }
+            if config.common_fallback.is_empty() {
+                config.common_fallback = vec![
+                    // CJK
+                    "Noto Sans CJK SC".to_string(),
+                    "Noto Sans CJK JP".to_string(),
+                    "Noto Sans CJK TC".to_string(),
+                    "Microsoft YaHei UI".to_string(),
+                    "Microsoft YaHei".to_string(),
+                    "PingFang SC".to_string(),
+                    "Hiragino Sans".to_string(),
+                    // Emoji
+                    "Apple Color Emoji".to_string(),
+                    "Segoe UI Emoji".to_string(),
+                    "Segoe UI Symbol".to_string(),
+                    "Noto Color Emoji".to_string(),
+                ];
             }
         }
     }
@@ -192,14 +193,26 @@ mod tests {
             FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
 
-        for list in [
-            &update.config.ui_sans,
-            &update.config.ui_serif,
-            &update.config.ui_mono,
-        ] {
-            assert!(list.iter().any(|v| v == "Apple Color Emoji"));
-            assert!(list.iter().any(|v| v == "Segoe UI Emoji"));
-            assert!(list.iter().any(|v| v == "Noto Color Emoji"));
-        }
+        assert!(
+            update
+                .config
+                .common_fallback
+                .iter()
+                .any(|v| v == "Apple Color Emoji")
+        );
+        assert!(
+            update
+                .config
+                .common_fallback
+                .iter()
+                .any(|v| v == "Segoe UI Emoji")
+        );
+        assert!(
+            update
+                .config
+                .common_fallback
+                .iter()
+                .any(|v| v == "Noto Color Emoji")
+        );
     }
 }

@@ -21,6 +21,7 @@ pub mod layout_pass;
 pub mod overlay_placement;
 pub mod paint;
 pub mod pending_shortcut;
+pub mod pixel_snap;
 #[cfg(feature = "unstable-retained-bridge")]
 pub mod retained_bridge;
 pub type ItemKey = u64;
@@ -40,6 +41,7 @@ mod text_edit;
 #[allow(dead_code)]
 pub(crate) mod text_input;
 mod text_input_style;
+mod text_props;
 mod text_surface;
 pub mod theme;
 pub mod theme_keys;

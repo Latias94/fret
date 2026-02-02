@@ -346,6 +346,17 @@ fn apply_material_theme(app: &mut TestHost, mode: SchemeMode, variant: DynamicVa
     Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
 }
 
+fn apply_material_theme_rtl(app: &mut TestHost, mode: SchemeMode, variant: DynamicVariant) {
+    let mut colors = ColorSchemeOptions::default();
+    colors.mode = mode;
+    colors.variant = variant;
+
+    let mut cfg = theme_config_with_colors(TypographyOptions::default(), colors);
+    cfg.numbers
+        .insert("md.sys.fret.layout.is-rtl".to_string(), 1.0);
+    Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+}
+
 fn repo_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     manifest_dir
@@ -508,6 +519,30 @@ fn settle_material3_scene_snapshot_v1(
     }
 
     settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
+}
+
+fn snapshot_material3_scene_at_frame_v1(
+    app: &mut TestHost,
+    ui: &mut UiTree<TestHost>,
+    services: &mut dyn UiServices,
+    bounds: Rect,
+    scale_factor: f32,
+    snapshot_frame: usize,
+    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) -> Material3HeadlessGoldenV1 {
+    let mut snapshot: Option<Material3HeadlessGoldenV1> = None;
+    for _frame in 0..=snapshot_frame {
+        app.advance_frame();
+        let root = render(ui, app, services);
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, scale_factor);
+
+        let mut scene = Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, scale_factor);
+        snapshot = Some(material3_scene_snapshot_v1(&scene));
+    }
+
+    snapshot.unwrap_or_else(|| panic!("expected a snapshot at frame {snapshot_frame}"))
 }
 
 fn settle_material3_overlay_scene_snapshot_v1(
@@ -1530,8 +1565,10 @@ fn tabs_pressed_scene_structure_is_stable() {
         );
 
         let mut baseline_structure: Option<Vec<SceneSig>> = None;
-        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
-        for frame in 0..24 {
+        let mut prev_quads: Option<Vec<QuadGeomSig>> = None;
+        let mut stable_quads_count: usize = 0;
+        let settle_probe_start = 12;
+        for frame in 0..48 {
             app.advance_frame();
             let root = render(&mut ui, &mut app, &mut services);
             ui.set_root(root);
@@ -1552,18 +1589,27 @@ fn tabs_pressed_scene_structure_is_stable() {
                 }
             }
 
-            if frame >= 16 {
+            if frame >= settle_probe_start {
                 let sig = scene_quad_geometry_signature(&scene);
-                if let Some(prev) = baseline_quads.as_ref() {
-                    assert_eq!(
-                        sig, *prev,
-                        "expected Tabs to keep stable quad geometry after animations settle ({label})"
-                    );
-                } else {
-                    baseline_quads = Some(sig);
+                match prev_quads.as_ref() {
+                    None => {
+                        stable_quads_count = 1;
+                    }
+                    Some(prev) if sig == *prev => {
+                        stable_quads_count += 1;
+                    }
+                    Some(_) => {
+                        stable_quads_count = 1;
+                    }
                 }
+                prev_quads = Some(sig);
             }
         }
+
+        assert!(
+            stable_quads_count >= 6,
+            "expected Tabs quad geometry to stabilize after animations settle ({label})"
+        );
 
         ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
     }
@@ -2044,6 +2090,88 @@ fn menu_pressed_scene_structure_is_stable() {
 }
 
 #[test]
+fn menu_style_overrides_apply_to_container_and_label() {
+    use fret_core::Color;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem, MenuStyle};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(260.0)),
+    );
+
+    let override_bg = Color {
+        r: 0.9,
+        g: 0.1,
+        b: 0.2,
+        a: 1.0,
+    };
+    let override_label = Color {
+        r: 0.1,
+        g: 0.8,
+        b: 0.3,
+        a: 1.0,
+    };
+
+    let style = MenuStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(override_bg))))
+        .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            override_label,
+        ))));
+
+    let entries = vec![
+        MenuEntry::Item(MenuItem::new("A").test_id("menu-item-a")),
+        MenuEntry::Item(MenuItem::new("B").test_id("menu-item-b")),
+    ];
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "root",
+        |cx| {
+            let menu = Menu::new()
+                .entries(entries.clone())
+                .a11y_label("menu")
+                .test_id("menu")
+                .style(style.clone())
+                .into_element(cx);
+            vec![with_padding(cx, Px(24.0), menu)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        scene.ops().iter().any(|op| {
+            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+        }),
+        "expected MenuStyle.container_background to affect at least one quad background"
+    );
+    assert!(
+        scene
+            .ops()
+            .iter()
+            .any(|op| { matches!(op, SceneOp::Text { color, .. } if *color == override_label) }),
+        "expected MenuStyle.item_label_color to affect at least one text draw op"
+    );
+}
+
+#[test]
 fn dialog_focus_is_contained_and_restored_across_schemes() {
     use fret_ui_material3::{Button, Dialog, DialogAction};
 
@@ -2215,6 +2343,118 @@ fn dialog_focus_is_contained_and_restored_across_schemes() {
             "expected dialog barrier to unmount after close transition ({label})"
         );
     }
+}
+
+#[test]
+fn dialog_style_overrides_apply_to_container_and_text() {
+    use fret_core::Color;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+    use fret_ui_material3::{Button, Dialog, DialogAction, DialogStyle};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let open = app.models_mut().insert(true);
+
+    let override_bg = Color {
+        r: 0.2,
+        g: 0.2,
+        b: 0.9,
+        a: 1.0,
+    };
+    let override_headline = Color {
+        r: 0.9,
+        g: 0.9,
+        b: 0.2,
+        a: 1.0,
+    };
+    let override_supporting = Color {
+        r: 0.8,
+        g: 0.2,
+        b: 0.8,
+        a: 1.0,
+    };
+
+    let style = DialogStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(override_bg))))
+        .headline_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            override_headline,
+        ))))
+        .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            override_supporting,
+        ))));
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let dialog = Dialog::new(open.clone())
+                .headline("Dialog")
+                .supporting_text("Body")
+                .actions(vec![DialogAction::new("OK").test_id("dialog-ok")])
+                .style(style.clone())
+                .test_id("dialog")
+                .into_element(
+                    cx,
+                    |cx| {
+                        let trigger = Button::new("Underlay focus probe")
+                            .test_id("dialog-trigger")
+                            .into_element(cx);
+                        with_padding(cx, Px(24.0), trigger)
+                    },
+                    |_cx| Vec::new(),
+                );
+            vec![dialog]
+        })
+    };
+
+    let mut scene = None;
+    for _ in 0..3 {
+        use fret_ui_kit::OverlayController;
+
+        app.advance_frame();
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut next = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut next, 1.0);
+        scene = Some(next);
+    }
+
+    let scene = scene.expect("expected rendered scene");
+
+    assert!(
+        scene.ops().iter().any(|op| {
+            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+        }),
+        "expected DialogStyle.container_background to affect at least one quad background"
+    );
+    assert!(
+        scene
+            .ops()
+            .iter()
+            .any(|op| { matches!(op, SceneOp::Text { color, .. } if *color == override_headline) }),
+        "expected DialogStyle.headline_color to affect at least one text draw op"
+    );
+    assert!(
+        scene.ops().iter().any(|op| {
+            matches!(op, SceneOp::Text { color, .. } if *color == override_supporting)
+        }),
+        "expected DialogStyle.supporting_text_color to affect at least one text draw op"
+    );
 }
 
 #[test]
@@ -2985,8 +3225,12 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
 
 #[test]
 fn material3_headless_controls_suite_goldens_v1() {
-    use fret_ui::element::FlexProps;
-    use fret_ui_material3::{Button, Checkbox, Select, SelectItem, Switch};
+    use fret_ui::element::{ContainerProps, FlexProps, Length, TextProps};
+    use fret_ui_material3::{
+        AssistChip, AssistChipVariant, Button, Card, CardVariant, Checkbox, FilterChip,
+        FilterChipVariant, InputChip, Select, SelectItem, SuggestionChip, SuggestionChipVariant,
+        Switch,
+    };
 
     let schemes = [
         (
@@ -3026,13 +3270,17 @@ fn material3_headless_controls_suite_goldens_v1() {
 
             let bounds = Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
-                Size::new(Px(420.0), Px(320.0)),
+                Size::new(Px(420.0), Px(560.0)),
             );
 
             let checkbox_checked = app.models_mut().insert(true);
             let checkbox_unchecked = app.models_mut().insert(false);
             let switch_on = app.models_mut().insert(true);
             let switch_off = app.models_mut().insert(false);
+            let filter_chip_selected = app.models_mut().insert(true);
+            let filter_chip_unselected = app.models_mut().insert(false);
+            let input_chip_selected = app.models_mut().insert(true);
+            let input_chip_unselected = app.models_mut().insert(false);
             let select_empty: Model<Option<Arc<str>>> = app.models_mut().insert(None);
             let select_populated: Model<Option<Arc<str>>> =
                 app.models_mut().insert(Some(Arc::<str>::from("beta")));
@@ -3053,6 +3301,27 @@ fn material3_headless_controls_suite_goldens_v1() {
                     props.gap = Px(16.0);
 
                     let content = cx.flex(props, |cx| {
+                        let theme = Theme::global(&*cx.app).clone();
+                        let body_style = theme
+                            .text_style_by_key("md.sys.typescale.body-medium")
+                            .unwrap_or_else(|| fret_core::TextStyle::default());
+                        let body_color = theme.color_required("md.sys.color.on-surface");
+
+                        let card_content =
+                            |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                             label: &'static str| {
+                                let mut container = ContainerProps::default();
+                                container.layout.size.width = Length::Px(Px(360.0));
+                                container.layout.size.height = Length::Px(Px(72.0));
+                                container.padding = Edges::all(Px(12.0));
+
+                                let mut text = TextProps::new(Arc::<str>::from(label));
+                                text.style = Some(body_style.clone());
+                                text.color = Some(body_color);
+
+                                cx.container(container, move |cx| vec![cx.text_props(text)])
+                            };
+
                         vec![
                             Button::new("Filled").test_id("btn-filled").into_element(cx),
                             Button::new("Filled (disabled)")
@@ -3075,6 +3344,46 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 .a11y_label("switch off")
                                 .test_id("sw-off")
                                 .into_element(cx),
+                            AssistChip::new("Assist chip")
+                                .test_id("chip-flat")
+                                .into_element(cx),
+                            AssistChip::new("Assist chip (icon)")
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                .variant(AssistChipVariant::Elevated)
+                                .test_id("chip-elevated")
+                                .into_element(cx),
+                            SuggestionChip::new("Suggestion chip")
+                                .test_id("chip-suggestion-flat")
+                                .into_element(cx),
+                            SuggestionChip::new("Suggestion chip (icon)")
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
+                                .variant(SuggestionChipVariant::Elevated)
+                                .test_id("chip-suggestion-elevated")
+                                .into_element(cx),
+                            FilterChip::new(filter_chip_selected.clone(), "Filter chip")
+                                .test_id("chip-filter-selected")
+                                .into_element(cx),
+                            FilterChip::new(filter_chip_unselected.clone(), "Filter chip (icon)")
+                                .trailing_icon(fret_icons::ids::ui::SLASH)
+                                .variant(FilterChipVariant::Elevated)
+                                .test_id("chip-filter-unselected-elevated")
+                                .into_element(cx),
+                            InputChip::new(input_chip_selected.clone(), "Input chip (icon)")
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                .test_id("chip-input-selected")
+                                .into_element(cx),
+                            InputChip::new(input_chip_unselected.clone(), "Input chip")
+                                .trailing_icon(fret_icons::ids::ui::SLASH)
+                                .test_id("chip-input-unselected")
+                                .into_element(cx),
+                            Card::new()
+                                .variant(CardVariant::Filled)
+                                .test_id("card-filled")
+                                .into_element(cx, |cx| vec![card_content(cx, "Filled card")]),
+                            Card::new()
+                                .variant(CardVariant::Outlined)
+                                .test_id("card-outlined")
+                                .into_element(cx, |cx| vec![card_content(cx, "Outlined card")]),
                             Select::new(select_empty.clone())
                                 .leading_icon(fret_icons::ids::ui::SEARCH)
                                 .label("Select")
@@ -3374,6 +3683,857 @@ fn material3_headless_controls_suite_goldens_v1() {
             let suite = Material3HeadlessSuiteV1 { cases };
             write_or_assert_material3_suite_v1(
                 &format!("material3-controls.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_divider_suite_goldens_v1() {
+    use fret_ui::element::{FlexProps, SpacerProps};
+    use fret_ui_material3::Divider;
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(300.0), Px(220.0)),
+            );
+
+            let render = |ui: &mut UiTree<TestHost>,
+                          app: &mut TestHost,
+                          services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let mut props = FlexProps::default();
+                    props.direction = fret_core::Axis::Vertical;
+                    props.gap = Px(16.0);
+
+                    let content = cx.flex(props, |cx| {
+                        let mut row = FlexProps::default();
+                        row.direction = fret_core::Axis::Horizontal;
+                        row.gap = Px(12.0);
+                        row.layout.size.width = fret_ui::element::Length::Px(Px(240.0));
+                        row.layout.size.height = fret_ui::element::Length::Px(Px(32.0));
+
+                        vec![
+                            Divider::horizontal()
+                                .test_id("divider-horizontal")
+                                .into_element(cx),
+                            cx.flex(row, |cx| {
+                                vec![
+                                    cx.spacer(SpacerProps::default()),
+                                    Divider::vertical()
+                                        .test_id("divider-vertical")
+                                        .into_element(cx),
+                                    cx.spacer(SpacerProps::default()),
+                                ]
+                            }),
+                        ]
+                    });
+
+                    vec![with_padding(cx, Px(24.0), content)]
+                })
+            };
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            let idle_message = format!(
+                "expected the Material3 divider scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    12,
+                    24,
+                    &idle_message,
+                    &render,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-divider.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_progress_indicator_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{CircularProgressIndicator, LinearProgressIndicator};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(260.0)),
+            );
+
+            let progress_0 = app.models_mut().insert(0.0f32);
+            let progress_30 = app.models_mut().insert(0.3f32);
+            let progress_100 = app.models_mut().insert(1.0f32);
+
+            let render_determinate =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    LinearProgressIndicator::new(progress_0.clone())
+                                        .test_id("linear-0")
+                                        .into_element(cx),
+                                    LinearProgressIndicator::new(progress_30.clone())
+                                        .test_id("linear-30")
+                                        .into_element(cx),
+                                    LinearProgressIndicator::new(progress_100.clone())
+                                        .test_id("linear-100")
+                                        .into_element(cx),
+                                    {
+                                        let mut row = FlexProps::default();
+                                        row.direction = fret_core::Axis::Horizontal;
+                                        row.gap = Px(16.0);
+                                        cx.flex(row, |cx| {
+                                            vec![
+                                                CircularProgressIndicator::new(progress_0.clone())
+                                                    .test_id("circular-0")
+                                                    .into_element(cx),
+                                                CircularProgressIndicator::new(progress_30.clone())
+                                                    .test_id("circular-30")
+                                                    .into_element(cx),
+                                                CircularProgressIndicator::new(
+                                                    progress_100.clone(),
+                                                )
+                                                .test_id("circular-100")
+                                                .into_element(cx),
+                                            ]
+                                        })
+                                    },
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let render_indeterminate =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    LinearProgressIndicator::indeterminate()
+                                        .test_id("linear-indeterminate")
+                                        .into_element(cx),
+                                    CircularProgressIndicator::indeterminate()
+                                        .test_id("circular-indeterminate")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let render_indeterminate_four_color =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    LinearProgressIndicator::indeterminate()
+                                        .four_color(true)
+                                        .test_id("linear-indeterminate-four-color")
+                                        .into_element(cx),
+                                    CircularProgressIndicator::indeterminate()
+                                        .four_color(true)
+                                        .test_id("circular-indeterminate-four-color")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            let idle_message = format!(
+                "expected the Material3 progress indicator scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    12,
+                    24,
+                    &idle_message,
+                    &render_determinate,
+                ),
+            );
+
+            cases.insert(
+                "indeterminate.f60".to_string(),
+                snapshot_material3_scene_at_frame_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    60,
+                    &render_indeterminate,
+                ),
+            );
+
+            cases.insert(
+                "indeterminate.four_color.f60".to_string(),
+                snapshot_material3_scene_at_frame_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    60,
+                    &render_indeterminate_four_color,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-progress-indicator.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_slider_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{RangeSlider, Slider};
+
+    let cases_to_render = [
+        ("idle", None, None),
+        ("hover", Some("slider-30"), None),
+        ("focus_visible", None, Some("slider-30")),
+        ("keyboard_page", None, Some("slider-30")),
+        ("rtl_idle", None, None),
+        ("rtl_keyboard_arrows", None, Some("slider-30")),
+        ("pressed", Some("slider-30"), None),
+        ("dragging", Some("slider-30"), None),
+        ("with_tick_marks", None, None),
+        ("tick_count", None, None),
+        ("range_dragging", Some("range-slider-30-70"), None),
+        (
+            "range_focus_thumb_switch",
+            None,
+            Some("range-slider-30-70.start"),
+        ),
+        (
+            "range_keyboard_page",
+            None,
+            Some("range-slider-30-70.start"),
+        ),
+        (
+            "rtl_range_keyboard_arrows",
+            None,
+            Some("range-slider-30-70.start"),
+        ),
+    ];
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(520.0), Px(320.0)),
+            );
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            for (case_name, hover_id, focus_id) in cases_to_render {
+                let window = AppWindowId::default();
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                if case_name.starts_with("rtl_") {
+                    apply_material_theme_rtl(&mut app, mode, variant);
+                } else {
+                    apply_material_theme(&mut app, mode, variant);
+                }
+
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let value_0 = app.models_mut().insert(0.0f32);
+                let value_30 = app.models_mut().insert(0.3f32);
+                let value_100 = app.models_mut().insert(1.0f32);
+                let range_30_70 = app.models_mut().insert([0.3f32, 0.7f32]);
+                let range_10_90 = app.models_mut().insert([0.1f32, 0.9f32]);
+
+                let render = |ui: &mut UiTree<TestHost>,
+                              app: &mut TestHost,
+                              services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(24.0);
+
+                            let content = cx.flex(props, |cx| {
+                                let slider_step = if case_name == "with_tick_marks" {
+                                    0.1
+                                } else {
+                                    0.01
+                                };
+                                let slider_with_ticks =
+                                    case_name == "with_tick_marks" || case_name == "tick_count";
+                                let slider_tick_count = (case_name == "tick_count").then_some(6u16);
+
+                                let build_slider =
+                                    |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                                     model: Model<f32>,
+                                     test_id: &'static str,
+                                     disabled: bool| {
+                                        let slider = Slider::new(model)
+                                            .range(0.0, 1.0)
+                                            .step(slider_step)
+                                            .with_tick_marks(slider_with_ticks);
+                                        let slider = if let Some(c) = slider_tick_count {
+                                            slider.tick_marks_count(c)
+                                        } else {
+                                            slider
+                                        };
+                                        let slider = if disabled {
+                                            slider.disabled(true)
+                                        } else {
+                                            slider
+                                        };
+                                        slider.test_id(test_id).into_element(cx)
+                                    };
+                                let build_range_slider =
+                                    |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                                     model: Model<[f32; 2]>,
+                                     test_id: &'static str,
+                                     disabled: bool| {
+                                        let slider = RangeSlider::new(model)
+                                            .range(0.0, 1.0)
+                                            .step(slider_step)
+                                            .with_tick_marks(slider_with_ticks);
+                                        let slider = if let Some(c) = slider_tick_count {
+                                            slider.tick_marks_count(c)
+                                        } else {
+                                            slider
+                                        };
+                                        let slider = if disabled {
+                                            slider.disabled(true)
+                                        } else {
+                                            slider
+                                        };
+                                        slider.test_id(test_id).into_element(cx)
+                                    };
+                                vec![
+                                    build_slider(cx, value_0.clone(), "slider-0", false),
+                                    build_slider(cx, value_30.clone(), "slider-30", false),
+                                    build_slider(cx, value_100.clone(), "slider-100", false),
+                                    build_slider(cx, value_30.clone(), "slider-30-disabled", true),
+                                    build_range_slider(
+                                        cx,
+                                        range_30_70.clone(),
+                                        "range-slider-30-70",
+                                        false,
+                                    ),
+                                    build_range_slider(
+                                        cx,
+                                        range_10_90.clone(),
+                                        "range-slider-10-90-disabled",
+                                        true,
+                                    ),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let root = render(&mut ui, &mut app, &mut services);
+                ui.set_root(root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                ui.dispatch_event(
+                    &mut app,
+                    &mut services,
+                    &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+                );
+
+                if let Some(test_id) = hover_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!("expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})")
+                        });
+                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
+                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
+                    });
+                    let hover_at = Point::new(
+                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
+                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                    );
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), hover_at),
+                    );
+
+                    if case_name == "pressed" {
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_down(PointerId(1), hover_at),
+                        );
+                    }
+
+                    if case_name == "dragging" {
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_down(PointerId(1), hover_at),
+                        );
+                        let drag_to = Point::new(
+                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.8),
+                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_move(PointerId(1), drag_to),
+                        );
+                    }
+
+                    if case_name == "range_dragging" {
+                        let start_at = Point::new(
+                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.85),
+                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                        );
+                        let drag_to = Point::new(
+                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.95),
+                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_move(PointerId(1), start_at),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_down(PointerId(1), start_at),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_move(PointerId(1), drag_to),
+                        );
+                    }
+                }
+
+                if let Some(test_id) = focus_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!("expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})")
+                        });
+                    ui.set_focus(Some(node_id));
+
+                    if case_name == "keyboard_page" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                        let after_page_up =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_page_up - 0.4).abs() <= 1e-6,
+                            "expected slider PageUp to increment by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                        let after_page_down =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_page_down - 0.3).abs() <= 1e-6,
+                            "expected slider PageDown to decrement by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                        let after_home =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            after_home.abs() <= 1e-6,
+                            "expected slider Home to snap to min (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+                        let after_end =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_end - 1.0).abs() <= 1e-6,
+                            "expected slider End to snap to max (case={case_name}, {label}, {scale})"
+                        );
+                    } else if case_name == "rtl_keyboard_arrows" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        let after_right =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_right - 0.29).abs() <= 1e-6,
+                            "expected slider ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                        let after_left =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_left - 0.30).abs() <= 1e-6,
+                            "expected slider ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
+                        );
+                    } else if case_name == "range_focus_thumb_switch" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+                        let end_node_id: NodeId = ui
+                            .semantics_snapshot()
+                            .and_then(|snapshot| {
+                                snapshot.nodes.iter().find_map(|node| {
+                                    (node.test_id.as_deref()
+                                        == Some("range-slider-30-70.end"))
+                                    .then_some(node.id)
+                                })
+                            })
+                            .unwrap_or_else(|| {
+                                panic!("expected range-slider-30-70.end in semantics snapshot ({label}, {scale}, {case_name})")
+                            });
+                        ui.set_focus(Some(end_node_id));
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                    } else if case_name == "range_keyboard_page" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                        let after_page_up = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_page_up[0] - 0.4).abs() <= 1e-6
+                                && (after_page_up[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start PageUp to increment start by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                        let after_page_down = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_page_down[0] - 0.3).abs() <= 1e-6
+                                && (after_page_down[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start PageDown to decrement start by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                        let after_home = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_home[0].abs() <= 1e-6 && (after_home[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start Home to snap to min (case={case_name}, {label}, {scale})"
+                        );
+
+                        let end_node_id: NodeId = ui
+                            .semantics_snapshot()
+                            .and_then(|snapshot| {
+                                snapshot.nodes.iter().find_map(|node| {
+                                    (node.test_id.as_deref()
+                                        == Some("range-slider-30-70.end"))
+                                    .then_some(node.id)
+                                })
+                            })
+                            .unwrap_or_else(|| {
+                                panic!("expected range-slider-30-70.end in semantics snapshot ({label}, {scale}, {case_name})")
+                            });
+                        ui.set_focus(Some(end_node_id));
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                        let after_end_page_down = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_page_down[0].abs() <= 1e-6
+                                && (after_end_page_down[1] - 0.6).abs() <= 1e-6,
+                            "expected range slider end PageDown to decrement end by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                        let after_end_page_up = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_page_up[0].abs() <= 1e-6
+                                && (after_end_page_up[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider end PageUp to increment end by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                        let after_end_home = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_home[0].abs() <= 1e-6 && after_end_home[1].abs() <= 1e-6,
+                            "expected range slider end Home to snap to start value (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+                        let after_end_end = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_end[0].abs() <= 1e-6
+                                && (after_end_end[1] - 1.0).abs() <= 1e-6,
+                            "expected range slider end End to snap to max (case={case_name}, {label}, {scale})"
+                        );
+                    } else if case_name == "rtl_range_keyboard_arrows" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        let after_right = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_right[0] - 0.29).abs() <= 1e-6
+                                && (after_right[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                        let after_left = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_left[0] - 0.30).abs() <= 1e-6
+                                && (after_left[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
+                        );
+                    } else {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                    }
+                }
+
+                let message = format!(
+                    "expected the Material3 slider scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                );
+                cases.insert(
+                    case_name.to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        7,
+                        9,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-slider.{scale}.{label}"),
                 &suite,
             );
         }

@@ -2050,6 +2050,13 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -2141,6 +2148,36 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
   return select(hi, lo, rgb <= vec3<f32>(0.0031308));
 }
 
+// Contrast and gamma correction adapted from the Microsoft Terminal alpha correction work
+// (via Zed/GPUI). See ADR 0029/0109/0157.
+fn color_brightness(color: vec3<f32>) -> f32 {
+  // REC. 601 luminance coefficients for perceived brightness.
+  return dot(color, vec3<f32>(0.30, 0.59, 0.11));
+}
+
+fn light_on_dark_contrast(enhanced_contrast: f32, color: vec3<f32>) -> f32 {
+  let brightness = color_brightness(color);
+  let multiplier = clamp(4.0 * (0.75 - brightness), 0.0, 1.0);
+  return enhanced_contrast * multiplier;
+}
+
+fn enhance_contrast(alpha: f32, k: f32) -> f32 {
+  return alpha * (k + 1.0) / (alpha * k + 1.0);
+}
+
+fn apply_alpha_correction(alpha: f32, brightness: f32, g: vec4<f32>) -> f32 {
+  let brightness_adjustment = g.x * brightness + g.y;
+  let correction = brightness_adjustment * alpha + (g.z * brightness + g.w);
+  return alpha + alpha * (1.0 - alpha) * correction;
+}
+
+fn apply_contrast_and_gamma_correction(sample: f32, color: vec3<f32>) -> f32 {
+  let k = light_on_dark_contrast(viewport.text_grayscale_enhanced_contrast, color);
+  let contrasted = enhance_contrast(sample, k);
+  let b = color_brightness(color);
+  return apply_alpha_correction(contrasted, b, viewport.text_gamma_ratios);
+}
+
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
   if (viewport.output_is_srgb != 0u) {
     return c;
@@ -2168,7 +2205,7 @@ fn vs_main(input: VsIn) -> VsOut {
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
-  let coverage = tex.r;
+  let coverage = apply_contrast_and_gamma_correction(tex.r, input.color.rgb);
   let out = vec4<f32>(input.color.rgb * coverage, input.color.a * coverage) * clip;
   return encode_output_premul(out);
 }
@@ -2190,6 +2227,13 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -2330,6 +2374,13 @@ struct Viewport {
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,
+  mask_viewport_origin: vec2<f32>,
+  mask_viewport_size: vec2<f32>,
+  text_gamma_ratios: vec4<f32>,
+  text_grayscale_enhanced_contrast: f32,
+  text_subpixel_enhanced_contrast: f32,
+  _pad_text_quality0: u32,
+  _pad_text_quality1: u32,
 };
 
 @group(0) @binding(0) var<uniform> viewport: Viewport;
@@ -2421,6 +2472,32 @@ fn linear_to_srgb(rgb: vec3<f32>) -> vec3<f32> {
   return select(hi, lo, rgb <= vec3<f32>(0.0031308));
 }
 
+fn color_brightness(color: vec3<f32>) -> f32 {
+  return dot(color, vec3<f32>(0.30, 0.59, 0.11));
+}
+
+fn light_on_dark_contrast(enhanced_contrast: f32, color: vec3<f32>) -> f32 {
+  let brightness = color_brightness(color);
+  let multiplier = clamp(4.0 * (0.75 - brightness), 0.0, 1.0);
+  return enhanced_contrast * multiplier;
+}
+
+fn enhance_contrast3(alpha: vec3<f32>, k: f32) -> vec3<f32> {
+  return alpha * (k + 1.0) / (alpha * k + 1.0);
+}
+
+fn apply_alpha_correction3(alpha: vec3<f32>, brightness: vec3<f32>, g: vec4<f32>) -> vec3<f32> {
+  let brightness_adjustment = g.x * brightness + g.y;
+  let correction = brightness_adjustment * alpha + (g.z * brightness + g.w);
+  return alpha + alpha * (vec3<f32>(1.0) - alpha) * correction;
+}
+
+fn apply_contrast_and_gamma_correction3(sample: vec3<f32>, color: vec3<f32>) -> vec3<f32> {
+  let k = light_on_dark_contrast(viewport.text_subpixel_enhanced_contrast, color);
+  let contrasted = enhance_contrast3(sample, k);
+  return apply_alpha_correction3(contrasted, color, viewport.text_gamma_ratios);
+}
+
 fn encode_output_premul(c: vec4<f32>) -> vec4<f32> {
   if (viewport.output_is_srgb != 0u) {
     return c;
@@ -2448,9 +2525,9 @@ fn vs_main(input: VsIn) -> VsOut {
 fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
-  let coverage = tex.rgb;
-  let a = max(max(coverage.r, coverage.g), coverage.b) * input.color.a;
-  let out = vec4<f32>(input.color.rgb * coverage, a) * clip;
+  let coverage = apply_contrast_and_gamma_correction3(tex.rgb, input.color.rgb);
+  let a = max(max(coverage.r, coverage.g), coverage.b);
+  let out = vec4<f32>(input.color.rgb * coverage, input.color.a * a) * clip;
   return encode_output_premul(out);
 }
 "#;

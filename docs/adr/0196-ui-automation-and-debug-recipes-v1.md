@@ -42,7 +42,9 @@ contracts needed to unify those into a scalable workflow.
 2. Make interaction automation robust across DPI/window sizes by selecting targets via semantics, not coordinates.
 3. Make “missing repaint” bugs diagnosable via structured checks and artifacts.
 4. Standardize a minimal performance query surface for automated triage and regression gating.
-5. Preserve crate boundaries and keep `fret-ui` policy-free.
+5. Enable measuring user-facing resource concerns (CPU utilization, memory footprint, redraw efficiency) via portable,
+   structured artifacts (tooling-first; keep runtime hooks minimal).
+6. Preserve crate boundaries and keep `fret-ui` policy-free.
 
 ## Non-goals
 
@@ -96,7 +98,8 @@ Required new runtime hook:
 
 Optional check (gated, best-effort):
 
-- screenshot-backed region hash changes for a given target bounds.
+- screenshot-backed region hash changes for a given target bounds (tooling: `--check-pixels-changed <test_id>`; evidence:
+  `FRET_DIAG_DIR/check.pixels_changed.json`).
 
 ### 4) Semantics value for range controls (enables slider automation)
 
@@ -127,3 +130,45 @@ Tooling MAY provide regression gates based on these fields.
 - `apps/fretboard`:
   - orchestration, packaging, triage, compare/matrix, gating thresholds.
 
+## Implementation notes (as of 2026-01-31)
+
+This ADR is partially implemented in a way that preserves the intended crate boundaries:
+
+- **Repro orchestration + packaging (`fretboard`)**
+  - `fretboard diag repro` runs a script or a suite, applies post-run checks, writes a machine summary, and packs a zip.
+  - It also writes an `evidence.index.json` file that lists the key artifacts/checks/resources to simplify AI/CI discovery.
+  - Suite repros are packed as multi-bundle zips with stable prefixes and script sources included under `_root/scripts/`.
+  - Best-effort capture wiring is available via `--with renderdoc` and `--with tracy`:
+    - RenderDoc: requests autocapture and attempts a post-run `fret-renderdoc dump` export into `FRET_DIAG_DIR/renderdoc/inspect/`.
+    - Tracy: enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy` for `cargo run` launches.
+    - See `repro.summary.json` `captures` and `renderdoc.captures.json`.
+  - Process-level footprint is recorded (best-effort) as `resource.footprint.json` and referenced from `repro.summary.json`
+    (`resources.process_footprint_file`). On Windows this uses native APIs; on non-Windows platforms it uses lightweight
+    sampling while waiting for the demo to exit.
+  - Tooling can optionally gate on process footprint thresholds (CPU/memory) and writes `check.resource_footprint.json` as
+    evidence (fails `diag repro` on threshold violations).
+  - Evidence: `apps/fretboard/src/diag.rs` (`diag repro`, `pack_repro_zip_multi`).
+- **Missing repaint checks (`fretboard`)**
+  - Tooling provides multiple “missing repaint” gates, including a coarse check that fails when `semantics_fingerprint`
+    changes but `scene_fingerprint` does not (`--check-semantics-changed-repainted`), and includes a small semantics diff
+    summary to aid triage. When `--dump-semantics-changed-repainted-json` is set, it also writes a structured
+    `check.semantics_changed_repainted.json` next to `bundle.json` for machine consumption.
+  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_semantics_changed_repainted*`).
+- **Redraw-efficiency gates (`fretboard`)**
+  - Tooling provides an “idle should not paint” gate (`--check-idle-no-paint-min <n>`) that asserts a trailing streak of
+    snapshots with no paint work, and writes `check.idle_no_paint.json` as evidence.
+  - Tooling provides a “view cache reuse should be stable” gate (`--check-view-cache-reuse-stable-min <n>`) that asserts a
+    trailing streak of snapshots with view-cache reuse signals, and writes `check.view_cache_reuse_stable.json` as evidence.
+  - Evidence: `apps/fretboard/src/diag.rs` (`check_bundle_for_idle_no_paint_min`, `check_bundle_for_view_cache_reuse_stable_min`).
+- **Semantics fingerprint export (`fret-bootstrap`)**
+  - Diagnostics snapshots export `semantics_fingerprint` as a best-effort hash derived from the semantics snapshot.
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`semantics_fingerprint` field and computation).
+
+Known gaps:
+
+- `diag repro` can request RenderDoc autocapture and record Tracy enablement intent, but it does not yet run post-capture
+  exports as strict regression gates, nor auto-record Tracy captures to a `.tracy` file.
+- Process footprint sampling is best-effort and can be sensitive to sampling cadence (CPU usage is diff-based).
+- High-level intent actions (Script schema v2 steps) exist, but are still early and will evolve (selectors/predicates and
+  range-control semantics are still being refined).
+- Range control semantics value (to enable robust `set_slider_value`) is still an open contract item.

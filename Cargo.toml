@@ -32,7 +32,7 @@ smallvec = "1"
 stacksafe = "1"
 taffy = "0.9.2"
 thiserror = "2"
-time = "0.3"
+time = { version = "0.3", features = ["wasm-bindgen"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-tracy = { version = "0.11.4", default-features = false, features = ["enable", "callstack-inlines"] }
@@ -57,7 +57,7 @@ etagere = "0.2.15"
 resvg = { version = "0.46.0", default-features = false, features = ["text", "system-fonts", "memmap-fonts"] }
 usvg = { version = "0.46.0", default-features = false }
 rust-embed = { version = "8.9.0", features = ["include-exclude"] }
-windows-sys = { version = "0.61.0", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Input_Ime", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "0.61.0", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_ProcessStatus", "Win32_UI_Input_Ime", "Win32_UI_WindowsAndMessaging"] }
 virtualizer = "0.4.0"
 keyboard-types = { version = "0.8.3", features = ["serde"] }
 rstar = "0.12"
@@ -103,9 +103,13 @@ tree-sitter-yaml = "0.7.1"
 tree-sitter-zig = "1.1.2"
 material-colors = "0.4.2"
 zip = { version = "0.6.6", default-features = false, features = ["deflate"] }
+sysinfo = "0.33"
 
 # Speed up debug builds: Taffy is layout-hot and also expensive to compile unoptimized.
 # GPUI applies a similar per-package opt-level override for Taffy.
+[profile.dev]
+opt-level = 1
+
 [profile.dev.package.taffy]
 opt-level = 3
 

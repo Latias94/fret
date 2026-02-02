@@ -31,6 +31,7 @@ type OpenStep =
   | { action: "keys"; selector: string; keys: KeyChord[] }
   | { action: "type"; selector: string; text: string }
   | { action: "scroll"; selector: string; dx: number; dy: number }
+  | { action: "scrollTo"; selector: string; left: number; top: number }
 
 type GoldenOptions = {
   baseUrl: string
@@ -503,6 +504,39 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "scrollTo") {
+      const at = valueRaw.indexOf("@")
+      if (at === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const selector = valueRaw.slice(0, at).trim()
+      const posRaw = valueRaw.slice(at + 1).trim()
+      if (!selector || !posRaw) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const comma = posRaw.indexOf(",")
+      if (comma === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const leftRaw = posRaw.slice(0, comma).trim()
+      const topRaw = posRaw.slice(comma + 1).trim()
+      const left = Number(leftRaw)
+      const top = Number(topRaw)
+      if (!Number.isFinite(left) || !Number.isFinite(top)) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected finite left,top numbers)`
+        )
+      }
+      out.push({ action: "scrollTo", selector, left, top })
+      continue
+    }
+
     if (actionRaw === "type") {
       const at = valueRaw.indexOf("@")
       if (at === -1) {
@@ -574,7 +608,7 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|attr|mouseDown|mouseUp|wait|waitFor|move)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|scrollTo|attr|mouseDown|mouseUp|wait|waitFor|move)`
       )
     }
 
@@ -842,9 +876,20 @@ async function extractOne(page: puppeteer.Page) {
       // them separate from rect (getBoundingClientRect() can be fractional) so non-web runtimes
       // can gate scroll range behavior 1:1.
       const slot = attrs["data-slot"];
+      const role = attrs["role"];
+      const isSelectViewport =
+        el.hasAttribute("data-radix-select-viewport") || slot === "select-viewport";
+      const isListbox =
+        role === "listbox" &&
+        (out.computedStyle.overflowX === "auto" ||
+          out.computedStyle.overflowX === "scroll" ||
+          out.computedStyle.overflowY === "auto" ||
+          out.computedStyle.overflowY === "scroll");
       const isScrollViewport =
         el.hasAttribute("data-radix-scroll-area-viewport") ||
         slot === "scroll-area-viewport" ||
+        isSelectViewport ||
+        isListbox ||
         out.computedStyle.overflowX === "scroll" ||
         out.computedStyle.overflowY === "scroll";
       if (isScrollViewport) {
@@ -1240,18 +1285,184 @@ async function applySteps(
       continue
     }
     if (step.action === "scroll") {
-      const expr = `(() => {
-        const sel = ${JSON.stringify(step.selector)};
-        const dx = ${JSON.stringify(step.dx)};
-        const dy = ${JSON.stringify(step.dy)};
-        const el = document.querySelector(sel);
-        if (!el || !(el instanceof Element)) return false;
-        if (typeof (el).scrollBy !== "function") return false;
-        (el).scrollBy(dx, dy);
-        return true;
-      })()`
+      const ok = await page.evaluate(
+        async ({ selector, dx, dy }) => {
+          const raf2 = () =>
+            new Promise<void>((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r()))
+            )
 
-      const ok = (await page.evaluate(expr)) as boolean
+          const els = Array.from(document.querySelectorAll(selector)).filter(
+            (e): e is Element => e instanceof Element
+          )
+          if (els.length === 0) return false
+
+          const scrollables = els.filter((e) => typeof (e as any).scrollBy === "function")
+          if (scrollables.length === 0) return false
+
+          const clamp = (v: number, min: number, max: number) =>
+            Math.max(min, Math.min(max, v))
+
+          // Prefer the most "meaningfully scrollable" match (helps when a selector matches both
+          // the intended viewport and a wrapper that doesn't actually scroll).
+          let best: Element = scrollables[0]
+          let bestScore = -1
+          for (const el of scrollables) {
+            const anyEl = el as any
+            const scrollableX = Math.max(0, (anyEl.scrollWidth ?? 0) - (anyEl.clientWidth ?? 0))
+            const scrollableY = Math.max(0, (anyEl.scrollHeight ?? 0) - (anyEl.clientHeight ?? 0))
+            const score = scrollableX + scrollableY
+            if (score > bestScore) {
+              bestScore = score
+              best = el
+            }
+          }
+
+          const el = best as any
+
+          // Radix Select (and a few other portals) can update the scroll range after open via
+          // layout effects. Wait for the scroll range to stabilize before applying deltas so the
+          // desired scroll doesn't get clamped to an early, smaller maxTop/maxLeft.
+          let lastMaxLeft = -1
+          let lastMaxTop = -1
+          let stableFrames = 0
+          for (let i = 0; i < 24; i++) {
+            const maxLeft = Math.max(
+              0,
+              (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+            )
+            const maxTop = Math.max(
+              0,
+              (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+            )
+            if (maxLeft === lastMaxLeft && maxTop === lastMaxTop) {
+              stableFrames++
+              if (stableFrames >= 2) break
+            } else {
+              stableFrames = 0
+              lastMaxLeft = maxLeft
+              lastMaxTop = maxTop
+            }
+            await raf2()
+          }
+
+          const beforeLeft = Number(el.scrollLeft ?? 0) || 0
+          const beforeTop = Number(el.scrollTop ?? 0) || 0
+          const maxLeft = Math.max(
+            0,
+            (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+          )
+          const maxTop = Math.max(
+            0,
+            (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+          )
+          const desiredLeft = clamp(beforeLeft + dx, 0, maxLeft)
+          const desiredTop = clamp(beforeTop + dy, 0, maxTop)
+
+          el.scrollBy(dx, dy)
+
+          // Let any post-scroll effects run, then re-assert the desired scroll position to avoid
+          // capturing an intermediate state (Radix Select can re-sync scroll on open).
+          await raf2()
+
+          if (dx !== 0 && Math.abs(Number(el.scrollLeft ?? 0) - desiredLeft) > 1) {
+            el.scrollLeft = desiredLeft
+          }
+          if (dy !== 0 && Math.abs(Number(el.scrollTop ?? 0) - desiredTop) > 1) {
+            el.scrollTop = desiredTop
+          }
+
+          await raf2()
+          return true
+        },
+        { selector: step.selector, dx: step.dx, dy: step.dy }
+      )
+      if (!ok) {
+        throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "scrollTo") {
+      const ok = await page.evaluate(
+        async ({ selector, left, top }) => {
+          const raf2 = () =>
+            new Promise<void>((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r()))
+            )
+
+          const els = Array.from(document.querySelectorAll(selector)).filter(
+            (e): e is Element => e instanceof Element
+          )
+          if (els.length === 0) return false
+
+          const scrollables = els.filter((e) => typeof (e as any).scrollTo === "function")
+          if (scrollables.length === 0) return false
+
+          const clamp = (v: number, min: number, max: number) =>
+            Math.max(min, Math.min(max, v))
+
+          let best: Element = scrollables[0]
+          let bestScore = -1
+          for (const el of scrollables) {
+            const anyEl = el as any
+            const scrollableX = Math.max(0, (anyEl.scrollWidth ?? 0) - (anyEl.clientWidth ?? 0))
+            const scrollableY = Math.max(0, (anyEl.scrollHeight ?? 0) - (anyEl.clientHeight ?? 0))
+            const score = scrollableX + scrollableY
+            if (score > bestScore) {
+              bestScore = score
+              best = el
+            }
+          }
+
+          const el = best as any
+
+          // Wait for the scroll range to reach (or stabilize below) the requested position.
+          let lastMaxTop = -1
+          let stableFrames = 0
+          for (let i = 0; i < 32; i++) {
+            const maxTop = Math.max(
+              0,
+              (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+            )
+            if (maxTop >= top) break
+            if (maxTop === lastMaxTop) {
+              stableFrames++
+              if (stableFrames >= 2) break
+            } else {
+              stableFrames = 0
+              lastMaxTop = maxTop
+            }
+            await raf2()
+          }
+
+          const maxLeft = Math.max(
+            0,
+            (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+          )
+          const maxTop = Math.max(
+            0,
+            (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+          )
+          const desiredLeft = clamp(left, 0, maxLeft)
+          const desiredTop = clamp(top, 0, maxTop)
+
+          el.scrollTo(desiredLeft, desiredTop)
+          await raf2()
+
+          if (Math.abs(Number(el.scrollLeft ?? 0) - desiredLeft) > 1) {
+            el.scrollLeft = desiredLeft
+          }
+          if (Math.abs(Number(el.scrollTop ?? 0) - desiredTop) > 1) {
+            el.scrollTop = desiredTop
+          }
+
+          await raf2()
+          return true
+        },
+        { selector: step.selector, left: step.left, top: step.top }
+      )
       if (!ok) {
         throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
       }

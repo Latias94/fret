@@ -1541,6 +1541,7 @@ pub fn render<H: UiHost + 'static>(
                                                 corner_radii: fret_core::Corners::all(
                                                     button_radius,
                                                 ),
+                                                snap_to_device_pixels: false,
                                             },
                                             move |cx| {
                                                 vec![cx.text_props(fret_ui::element::TextProps {
@@ -1615,6 +1616,7 @@ pub fn render<H: UiHost + 'static>(
                                                 corner_radii: fret_core::Corners::all(
                                                     button_radius,
                                                 ),
+                                                snap_to_device_pixels: false,
                                             },
                                             move |cx| {
                                                 vec![cx.text_props(fret_ui::element::TextProps {
@@ -1689,6 +1691,7 @@ pub fn render<H: UiHost + 'static>(
                                                 corner_radii: fret_core::Corners::all(
                                                     button_radius,
                                                 ),
+                                                snap_to_device_pixels: false,
                                             },
                                             move |cx| {
                                                 vec![cx.text_props(fret_ui::element::TextProps {
@@ -1814,6 +1817,7 @@ pub fn render<H: UiHost + 'static>(
                                                 focus_border_color: None,
                                                 focus_within: false,
                                                 corner_radii: fret_core::Corners::all(Px(0.0)),
+                                                snap_to_device_pixels: false,
                                             },
                                             move |_cx| vec![icon.clone()],
                                         ));
@@ -1919,13 +1923,17 @@ pub fn render<H: UiHost + 'static>(
                                         focus_border_color: None,
                                         focus_within: false,
                                         corner_radii: fret_core::Corners::all(radius),
+                                        snap_to_device_pixels: false,
                                     },
                                     move |_cx| toast_children,
                                 );
                                 let toast_el = cx.semantics(
                                     SemanticsProps {
                                         role: SemanticsRole::Alert,
-                                        test_id: Some(Arc::from("toast.item")),
+                                        test_id: Some(Arc::<str>::from(format!(
+                                            "toast-entry-{}",
+                                            toast_id.0
+                                        ))),
                                         ..Default::default()
                                     },
                                     move |_cx| vec![toast_el],

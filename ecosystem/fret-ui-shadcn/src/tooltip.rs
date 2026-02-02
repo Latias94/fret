@@ -20,8 +20,8 @@ use std::sync::Arc;
 use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, Elements, HoverRegionProps, Overflow, PointerRegionProps,
-    SemanticsProps, SpinnerProps, SvgIconProps,
+    AnyElement, ElementKind, Elements, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PointerRegionProps, PositionStyle, SemanticsProps, SizeStyle, SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -235,6 +235,8 @@ pub struct Tooltip {
     side_offset: Px,
     window_margin_override: Option<Px>,
     arrow: bool,
+    arrow_test_id: Option<Arc<str>>,
+    panel_test_id: Option<Arc<str>>,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
     hide_when_detached: bool,
@@ -255,6 +257,8 @@ impl Tooltip {
             side_offset: Px(0.0),
             window_margin_override: None,
             arrow: true,
+            arrow_test_id: None,
+            panel_test_id: None,
             arrow_size_override: None,
             arrow_padding_override: None,
             hide_when_detached: false,
@@ -312,6 +316,24 @@ impl Tooltip {
         self
     }
 
+    /// Optional debug/test-only identifier for the rendered arrow element.
+    ///
+    /// This is intended for UI diagnostics and regression tests; it must not be mapped into
+    /// platform accessibility labels by default.
+    pub fn arrow_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.arrow_test_id = Some(id.into());
+        self
+    }
+
+    /// Optional debug/test-only identifier for the placed popper panel bounds.
+    ///
+    /// This exposes the "panel rect" used by the popper solver (the rect that the arrow is
+    /// expected to overlap). It is intended for UI diagnostics and regression tests.
+    pub fn panel_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.panel_test_id = Some(id.into());
+        self
+    }
+
     pub fn arrow_size(mut self, size: Px) -> Self {
         self.arrow_size_override = Some(size);
         self
@@ -363,6 +385,8 @@ impl Tooltip {
                 .unwrap_or(Px(0.0))
         });
         let arrow = self.arrow;
+        let arrow_test_id = self.arrow_test_id.clone();
+        let panel_test_id = self.panel_test_id.clone();
         let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.tooltip.arrow_size")
@@ -734,6 +758,31 @@ impl Tooltip {
                 wrapper_insets.bottom.0 += slide_insets.bottom.0;
                 wrapper_insets.left.0 += slide_insets.left.0;
 
+                let debug_panel = panel_test_id.as_ref().map(|test_id| {
+                    cx.semantics(
+                        SemanticsProps {
+                            role: fret_core::SemanticsRole::Generic,
+                            test_id: Some(test_id.clone()),
+                            layout: LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(placed.origin.x),
+                                    top: Some(placed.origin.y),
+                                    ..Default::default()
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(placed.size.width),
+                                    height: Length::Px(placed.size.height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::new(),
+                    )
+                });
+
                 let wrapper = popper_content::popper_wrapper_at_with_panel(
                     cx,
                     placed,
@@ -755,6 +804,7 @@ impl Tooltip {
                             },
                             Px(2.0),
                             Px(2.0),
+                            arrow_test_id.clone(),
                         );
 
                         if let Some(arrow_el) = arrow_el {
@@ -779,12 +829,18 @@ impl Tooltip {
                     opening,
                 );
 
+                let mut children = Vec::new();
+                if let Some(debug_panel) = debug_panel {
+                    children.push(debug_panel);
+                }
+                children.push(wrapper);
+
                 vec![overlay_motion::wrap_opacity_and_render_transform_gated(
                     cx,
                     opacity,
                     transform,
                     !reference_hidden,
-                    vec![wrapper],
+                    children,
                 )]
             });
 
@@ -1431,6 +1487,228 @@ mod tests {
             tooltip_layer.is_none_or(|layer| !layer.visible),
             "expected tooltip layer to be hidden after close delay + fade-out elapses"
         );
+    }
+
+    fn rects_overlap(a: Rect, b: Rect, eps: Px) -> bool {
+        let a_left = a.origin.x.0;
+        let a_right = a.origin.x.0 + a.size.width.0;
+        let a_top = a.origin.y.0;
+        let a_bottom = a.origin.y.0 + a.size.height.0;
+
+        let b_left = b.origin.x.0;
+        let b_right = b.origin.x.0 + b.size.width.0;
+        let b_top = b.origin.y.0;
+        let b_bottom = b.origin.y.0 + b.size.height.0;
+
+        a_left < b_right - eps.0
+            && a_right > b_left + eps.0
+            && a_top < b_bottom - eps.0
+            && a_bottom > b_top + eps.0
+    }
+
+    #[test]
+    fn tooltip_arrow_does_not_drift_after_repeated_hover_cycles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let arrow_test_id: Arc<str> = Arc::from("tooltip-arrow");
+        let panel_test_id: Arc<str> = Arc::from("tooltip-panel");
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            arrow_test_id: Arc<str>,
+            panel_test_id: Arc<str>,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                move |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout.inset.left = Some(Px(200.0));
+                                layout.inset.top = Some(Px(200.0));
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            a11y: PressableA11y {
+                                role: Some(SemanticsRole::Button),
+                                label: Some(Arc::from("trigger")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            trigger_id_out.set(Some(id));
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let content =
+                        TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                            .into_element(cx);
+                    content_id_out.set(Some(content.id));
+
+                    vec![
+                        Tooltip::new(trigger, content)
+                            .open_delay_frames(0)
+                            .close_delay_frames(0)
+                            .arrow(true)
+                            .arrow_test_id(arrow_test_id)
+                            .panel_test_id(panel_test_id)
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: establish element->node mappings.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            arrow_test_id.clone(),
+            panel_test_id.clone(),
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Ensure pointer starts outside.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: Point::new(Px(200.0), Px(200.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let mut next_frame: u64 = 2;
+        for cycle in 0..25 {
+            // Hover trigger.
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                    pointer_id: fret_core::PointerId(0),
+                    position: Point::new(Px(210.0), Px(210.0)),
+                    buttons: fret_core::MouseButtons::default(),
+                    modifiers: fret_core::Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+
+            app.set_frame_id(FrameId(next_frame));
+            next_frame += 1;
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                arrow_test_id.clone(),
+                panel_test_id.clone(),
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let content_element = content_id.get().expect("content element id");
+            let tooltip_node_id =
+                fret_ui::elements::node_for_element(&mut app, window, content_element)
+                    .expect("expected tooltip content to be mounted");
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+            let _tooltip_node = snap
+                .nodes
+                .iter()
+                .find(|n| n.id == tooltip_node_id)
+                .expect("tooltip semantics node");
+            let arrow_node = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("tooltip-arrow"))
+                .expect("tooltip arrow semantics node");
+            let panel_node = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("tooltip-panel"))
+                .expect("tooltip panel semantics node");
+
+            assert!(
+                rects_overlap(arrow_node.bounds, panel_node.bounds, Px(0.5)),
+                "expected tooltip arrow to overlap tooltip panel bounds (cycle={cycle}). arrow={:?} panel={:?}",
+                arrow_node.bounds,
+                panel_node.bounds
+            );
+
+            // Leave hover before the next cycle.
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                    pointer_id: fret_core::PointerId(0),
+                    position: Point::new(Px(200.0), Px(200.0)),
+                    buttons: fret_core::MouseButtons::default(),
+                    modifiers: fret_core::Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+
+            app.set_frame_id(FrameId(next_frame));
+            next_frame += 1;
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                arrow_test_id.clone(),
+                panel_test_id.clone(),
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
     }
 
     #[test]
@@ -2643,6 +2921,8 @@ mod tests {
                                     },
                                     axis: fret_ui::element::ScrollAxis::Y,
                                     scroll_handle: Some(scroll_handle.clone()),
+                                    intrinsic_measure_mode:
+                                        fret_ui::element::ScrollIntrinsicMeasureMode::Content,
                                     probe_unbounded: true,
                                 },
                                 |cx| {
@@ -2885,6 +3165,8 @@ mod tests {
                                             },
                                             axis: fret_ui::element::ScrollAxis::Y,
                                             scroll_handle: Some(scroll_with_trigger_handle.clone()),
+                                            intrinsic_measure_mode:
+                                                fret_ui::element::ScrollIntrinsicMeasureMode::Content,
                                             probe_unbounded: true,
                                         },
                                         |cx| {
@@ -2953,6 +3235,8 @@ mod tests {
                                             },
                                             axis: fret_ui::element::ScrollAxis::Y,
                                             scroll_handle: Some(other_scroll_handle.clone()),
+                                            intrinsic_measure_mode:
+                                                fret_ui::element::ScrollIntrinsicMeasureMode::Content,
                                             probe_unbounded: true,
                                         },
                                         |cx| {

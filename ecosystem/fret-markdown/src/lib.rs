@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    AttributedText, Axis, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow,
-    TextPaintStyle, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap,
+    AttributedText, Axis, Edges, FontId, FontWeight, Px, SemanticsRole, StrikethroughStyle,
+    TextOverflow, TextPaintStyle, TextShapingStyle, TextSlant, TextSpan, TextStyle, TextWrap,
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -1272,63 +1272,11 @@ fn render_rich_text_inline<H: UiHost>(
 ) -> Option<AnyElement> {
     let allow_link_color_only = components.link.is_none() && components.on_link_activate.is_none();
 
-    if pieces.iter().any(|p| match &p.kind {
-        InlinePieceKind::Text(_) => p.style.code || p.style.strikethrough,
-        InlinePieceKind::Image(_) | InlinePieceKind::InlineMath(_) => true,
-    }) {
-        return None;
-    }
-
     if !allow_link_color_only && pieces.iter().any(|p| p.style.link.is_some()) {
         return None;
     }
 
-    let mut text = String::new();
-    let mut spans: Vec<TextSpan> = Vec::new();
-    for p in pieces {
-        let InlinePieceKind::Text(t) = &p.kind else {
-            continue;
-        };
-        if t.is_empty() {
-            continue;
-        }
-        text.push_str(t);
-
-        let run_weight = if p.style.strong {
-            Some(FontWeight::SEMIBOLD)
-        } else {
-            None
-        };
-        let run_slant = if p.style.emphasis {
-            Some(TextSlant::Italic)
-        } else {
-            None
-        };
-        let run_color = if p.style.link.is_some() {
-            Some(markdown_theme.link)
-        } else {
-            None
-        };
-
-        spans.push(TextSpan {
-            len: t.len(),
-            shaping: TextShapingStyle {
-                weight: run_weight,
-                slant: run_slant,
-                ..Default::default()
-            },
-            paint: TextPaintStyle {
-                fg: run_color,
-                ..Default::default()
-            },
-        });
-    }
-
-    if text.is_empty() {
-        return None;
-    }
-
-    let rich = AttributedText::new(Arc::<str>::from(text), spans);
+    let rich = build_rich_attributed_text(markdown_theme, pieces)?;
 
     let mut props = SelectableTextProps::new(rich);
     props.layout.size.width = Length::Fill;
@@ -1345,6 +1293,66 @@ fn render_rich_text_inline<H: UiHost>(
     props.overflow = TextOverflow::Clip;
 
     Some(cx.selectable_text_props(props))
+}
+
+fn build_rich_attributed_text(
+    markdown_theme: MarkdownTheme,
+    pieces: &[InlinePiece],
+) -> Option<AttributedText> {
+    let mut text = String::new();
+    let mut spans: Vec<TextSpan> = Vec::new();
+
+    for p in pieces {
+        let InlinePieceKind::Text(t) = &p.kind else {
+            return None;
+        };
+        if t.is_empty() {
+            continue;
+        }
+
+        text.push_str(t);
+
+        let run_weight = p.style.strong.then_some(FontWeight::SEMIBOLD);
+        let run_slant = p.style.emphasis.then_some(TextSlant::Italic);
+        let run_font = p.style.code.then_some(FontId::monospace());
+
+        let run_color = if p.style.code {
+            Some(markdown_theme.inline_code_fg)
+        } else if p.style.link.is_some() {
+            Some(markdown_theme.link)
+        } else {
+            None
+        };
+
+        let run_bg = p.style.code.then_some(markdown_theme.inline_code_bg);
+
+        let run_strikethrough = p.style.strikethrough.then_some(StrikethroughStyle {
+            color: None,
+            style: fret_core::DecorationLineStyle::Solid,
+        });
+
+        spans.push(TextSpan {
+            len: t.len(),
+            shaping: TextShapingStyle {
+                font: run_font,
+                weight: run_weight,
+                slant: run_slant,
+                ..Default::default()
+            },
+            paint: TextPaintStyle {
+                fg: run_color,
+                bg: run_bg,
+                underline: None,
+                strikethrough: run_strikethrough,
+            },
+        });
+    }
+
+    if text.is_empty() {
+        return None;
+    }
+
+    Some(AttributedText::new(Arc::<str>::from(text), spans))
 }
 
 fn inline_pieces_maybe_unwrapped(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {

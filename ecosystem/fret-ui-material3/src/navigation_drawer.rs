@@ -26,6 +26,7 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::surface::material_surface_style;
 use crate::tokens::navigation_drawer as drawer_tokens;
@@ -478,14 +479,17 @@ fn interaction_state(
     hovered: bool,
     focused: bool,
 ) -> drawer_tokens::NavigationDrawerItemInteraction {
-    if pressed {
-        drawer_tokens::NavigationDrawerItemInteraction::Pressed
-    } else if focused {
-        drawer_tokens::NavigationDrawerItemInteraction::Focused
-    } else if hovered {
-        drawer_tokens::NavigationDrawerItemInteraction::Hovered
-    } else {
-        drawer_tokens::NavigationDrawerItemInteraction::Default
+    match pressable_interaction(pressed, hovered, focused) {
+        Some(PressableInteraction::Pressed) => {
+            drawer_tokens::NavigationDrawerItemInteraction::Pressed
+        }
+        Some(PressableInteraction::Focused) => {
+            drawer_tokens::NavigationDrawerItemInteraction::Focused
+        }
+        Some(PressableInteraction::Hovered) => {
+            drawer_tokens::NavigationDrawerItemInteraction::Hovered
+        }
+        None => drawer_tokens::NavigationDrawerItemInteraction::Default,
     }
 }
 

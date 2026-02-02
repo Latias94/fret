@@ -23,7 +23,8 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
-use crate::menu::{Menu, MenuEntry};
+use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::menu::{Menu, MenuEntry, MenuStyle};
 use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
 use crate::tokens::menu as menu_tokens;
@@ -58,6 +59,7 @@ pub struct DropdownMenu {
     on_dismiss_request: Option<OnDismissRequest>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    menu_style: MenuStyle,
 }
 
 impl std::fmt::Debug for DropdownMenu {
@@ -89,6 +91,7 @@ impl DropdownMenu {
             on_dismiss_request: None,
             a11y_label: None,
             test_id: None,
+            menu_style: MenuStyle::default(),
         }
     }
 
@@ -119,6 +122,11 @@ impl DropdownMenu {
 
     pub fn min_width(mut self, min_width: Px) -> Self {
         self.min_width = min_width;
+        self
+    }
+
+    pub fn menu_style(mut self, style: MenuStyle) -> Self {
+        self.menu_style = self.menu_style.merged(style);
         self
     }
 
@@ -155,20 +163,9 @@ impl DropdownMenu {
                 .get_model_copied(&self.open, Invalidation::Layout)
                 .unwrap_or(false);
 
-            let open_ticks = ms_to_frames(
-                dropdown_menu_tokens::open_duration_ms(&theme),
-            );
-            let close_ticks = ms_to_frames(
-                dropdown_menu_tokens::close_duration_ms(&theme),
-            );
-            let easing = dropdown_menu_tokens::easing(&theme);
-            let motion = OverlayController::transition_with_durations_and_cubic_bezier(
-                cx,
-                is_open,
-                open_ticks,
-                close_ticks,
-                easing,
-            );
+            let close_grace_frames =
+                Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(&theme)));
+            let motion = drive_overlay_open_close_motion(cx, &theme, is_open, close_grace_frames);
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
@@ -231,6 +228,7 @@ impl DropdownMenu {
                 let test_id = self.test_id.clone().unwrap_or_else(|| {
                     Arc::<str>::from(format!("material3-menu-{}", trigger_id.0))
                 });
+                let menu_style = self.menu_style.clone();
 
                 let overlay_root = popper_content::popper_wrapper_panel_at(
                     cx,
@@ -243,13 +241,14 @@ impl DropdownMenu {
                                 .a11y_label(a11y_label)
                                 .test_id(test_id)
                                 .entries(menu_entries)
+                                .style(menu_style)
                                 .into_element_with_initial_focus_id(cx, initial_focus_id_for_menu),
                         ]
                     },
                 );
 
-                let opacity = motion.progress;
-                let scale = 0.95 + 0.05 * motion.progress;
+                let opacity = motion.alpha;
+                let scale = motion.scale;
                 let origin = popper::popper_content_transform_origin(&layout, anchor, None);
                 let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
                 let transform = fret_core::Transform2D::translation(origin)

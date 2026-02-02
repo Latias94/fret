@@ -7,7 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, LayoutStyle, Length, MainAlign, MarginEdge,
-    MarginEdges, Overflow, PointerRegionProps, PositionStyle, RowProps,
+    MarginEdges, Overflow, PointerRegionProps, PositionStyle, RowProps, SemanticsProps,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -411,6 +411,7 @@ pub fn slider<H: UiHost>(
             radix_slider::slider_root_semantics(a11y_label.clone(), active_value, disabled);
         semantics.layout = semantics_layout;
         semantics.test_id = test_id.clone();
+        let test_id_prefix = test_id.clone();
 
         let min_value = min;
         let max_value = max;
@@ -653,13 +654,40 @@ pub fn slider<H: UiHost>(
                         };
 
                         vec![cx.row(range_row, |cx| {
+                            let range_el = cx.container(range, |_| Vec::new());
+                            let range_el = if let Some(test_id) = test_id_prefix.as_ref() {
+                                cx.semantics(
+                                    SemanticsProps {
+                                        layout: range.layout,
+                                        test_id: Some(Arc::<str>::from(format!("{test_id}-range"))),
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![range_el],
+                                )
+                            } else {
+                                range_el
+                            };
+
                             vec![
                                 cx.container(left, |_| Vec::new()),
-                                cx.container(range, |_| Vec::new()),
+                                range_el,
                                 cx.container(right, |_| Vec::new()),
                             ]
                         })]
                     });
+
+                    let track_el = if let Some(test_id) = test_id_prefix.as_ref() {
+                        cx.semantics(
+                            SemanticsProps {
+                                layout: track.layout,
+                                test_id: Some(Arc::<str>::from(format!("{test_id}-track"))),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![track_el],
+                        )
+                    } else {
+                        track_el
+                    };
 
                     let mut out = vec![track_el];
 
@@ -722,6 +750,11 @@ pub fn slider<H: UiHost>(
                                 disabled,
                             );
                             thumb_semantics.layout = thumb_layout;
+                            if let Some(test_id) = test_id_prefix.as_ref() {
+                                thumb_semantics.test_id = Some(Arc::<str>::from(format!(
+                                    "{test_id}-thumb-{thumb_index}"
+                                )));
+                            }
                             vec![
                                 cx.container(left, |_| Vec::new()),
                                 cx.semantics_with_id(thumb_semantics, |cx, thumb_semantics_id| {

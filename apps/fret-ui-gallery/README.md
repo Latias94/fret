@@ -2,6 +2,11 @@
 
 Native + web gallery app for validating `fret-ui-shadcn` component behavior.
 
+## Authoring Notes
+
+- Prefer ecosystem helpers for app/UI text: `fret_ui_kit::ui::{label, text, text_block}`.
+- Reserve `cx.text(...)` / `TextProps::new(...)` for mechanism-level harnesses and debugging surfaces.
+
 ## Run (native)
 
 - `cargo run -p fret-ui-gallery`
@@ -19,4 +24,3 @@ Use the dedicated web harness:
 - `trunk serve`
 
 Then open the URL printed by Trunk.
-

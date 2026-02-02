@@ -43,6 +43,7 @@ impl TextInput {
             last_bounds: Rect::default(),
             last_sent_cursor: None,
             pending_clipboard_token: None,
+            pending_primary_selection_token: None,
 
             chrome_style: TextInputStyle::default(),
             chrome_override: false,

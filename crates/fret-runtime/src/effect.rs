@@ -69,6 +69,18 @@ pub enum Effect {
         window: AppWindowId,
         token: ClipboardToken,
     },
+    /// Set Linux primary selection text (copy-on-select).
+    ///
+    /// This is intentionally separate from `ClipboardSetText` so selecting text does not
+    /// overwrite the explicit clipboard used by `Ctrl+C` / `edit.copy`.
+    PrimarySelectionSetText {
+        text: String,
+    },
+    /// Read Linux primary selection text (middle-click paste).
+    PrimarySelectionGetText {
+        window: AppWindowId,
+        token: ClipboardToken,
+    },
     ExternalDropReadAll {
         window: AppWindowId,
         token: ExternalDropToken,
@@ -206,6 +218,10 @@ pub enum Effect {
 pub enum WindowRequest {
     Create(CreateWindowRequest),
     Close(AppWindowId),
+    SetInnerSize {
+        window: AppWindowId,
+        size: fret_core::Size,
+    },
     Raise {
         window: AppWindowId,
         sender: Option<AppWindowId>,

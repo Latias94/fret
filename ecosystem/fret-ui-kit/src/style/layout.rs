@@ -553,6 +553,10 @@ impl LayoutRefinement {
         self.min_h(MetricRef::space(height))
     }
 
+    /// Shorthand for `min-width: 0px`.
+    ///
+    /// This is especially important for text-heavy children in a horizontal flex row: without it,
+    /// the flex item may refuse to shrink (web-like `min-width: auto` behavior), causing overflow.
     pub fn min_w_0(self) -> Self {
         self.min_w(Px(0.0))
     }
@@ -583,10 +587,15 @@ impl LayoutRefinement {
         self.h_px(MetricRef::space(height))
     }
 
+    /// Shorthand for `width: 100%` of the containing block (percent sizing).
+    ///
+    /// This is **not** the same as Tailwind `flex-1`. For "take the remaining space as a flex
+    /// item", use [`Self::flex_1`] (and typically [`Self::min_w_0`] for text).
     pub fn w_full(self) -> Self {
         self.w(LengthRefinement::Fill)
     }
 
+    /// Shorthand for `height: 100%` of the containing block (percent sizing).
     pub fn h_full(self) -> Self {
         self.h(LengthRefinement::Fill)
     }
@@ -641,6 +650,9 @@ impl LayoutRefinement {
     }
 
     /// Tailwind-like `flex-1` shorthand: `grow=1`, `shrink=1`, `basis=0`.
+    ///
+    /// Tip: combine with [`Self::min_w_0`] when the child contains text that should be allowed to
+    /// shrink/wrap instead of overflowing.
     pub fn flex_1(mut self) -> Self {
         {
             let f = self.ensure_flex_item_mut();

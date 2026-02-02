@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret_core::{Color, Px};
 use fret_ui::element::AnyElement;
 use fret_ui::element::ContainerProps;
@@ -8,10 +10,12 @@ use fret_ui::element::Length;
 use fret_ui::element::Overflow;
 use fret_ui::element::PositionStyle;
 use fret_ui::element::ScrollAxis;
+use fret_ui::element::ScrollIntrinsicMeasureMode;
 use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
 use fret_ui::element::ScrollbarStyle;
+use fret_ui::element::SemanticsProps;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
@@ -48,6 +52,8 @@ pub struct ScrollAreaViewport {
     children: Vec<AnyElement>,
     axis: ScrollAxis,
     probe_unbounded: bool,
+    viewport_test_id: Option<Arc<str>>,
+    intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
 }
 
 impl ScrollAreaViewport {
@@ -57,6 +63,8 @@ impl ScrollAreaViewport {
             children,
             axis: ScrollAxis::Y,
             probe_unbounded: true,
+            viewport_test_id: None,
+            intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
         }
     }
 
@@ -67,6 +75,16 @@ impl ScrollAreaViewport {
 
     pub fn probe_unbounded(mut self, probe_unbounded: bool) -> Self {
         self.probe_unbounded = probe_unbounded;
+        self
+    }
+
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
+        self.intrinsic_measure_mode = mode;
         self
     }
 }
@@ -164,7 +182,12 @@ impl ScrollAreaRoot {
             corner: false,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
-            layout: LayoutRefinement::default(),
+            // Allow scroll areas to shrink inside flex containers (Tailwind's `min-w-0 min-h-0`).
+            //
+            // This avoids the classic "flex + scroll" failure mode where the scroll viewport
+            // refuses to shrink below its content size (causing overflow or clipped-to-zero
+            // behavior depending on parent constraints).
+            layout: LayoutRefinement::default().min_w_0().min_h_0(),
             scroll_handle: None,
             show_scrollbar: true,
         }
@@ -222,6 +245,15 @@ impl ScrollAreaRoot {
         let show_scrollbar = self.show_scrollbar;
 
         cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+            let ScrollAreaViewport {
+                children: viewport_children,
+                axis: viewport_axis,
+                probe_unbounded: viewport_probe_unbounded,
+                viewport_test_id,
+                intrinsic_measure_mode,
+                ..
+            } = viewport;
+
             let handle = scroll_handle
                 .unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
 
@@ -247,7 +279,7 @@ impl ScrollAreaRoot {
                 (true, true) => ScrollAxis::Both,
                 (true, false) => ScrollAxis::X,
                 (false, true) => ScrollAxis::Y,
-                (false, false) => viewport.axis,
+                (false, false) => viewport_axis,
             };
 
             let overflow_x = wants_x && max_offset.x.0 > 0.01;
@@ -260,10 +292,30 @@ impl ScrollAreaRoot {
             if matches!(layout.size.width, Length::Auto) {
                 layout.size.width = Length::Fill;
             }
+            // Radix/shadcn ScrollArea roots typically behave like `size: 100%` containers. When the
+            // author provides a `max-height` (cmdk-style lists), we keep `height: auto` so the root
+            // can shrink-wrap the content up to the cap.
+            if matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_none() {
+                layout.size.height = Length::Fill;
+            }
+            layout.size.min_width.get_or_insert(Px(0.0));
+            layout.size.min_height.get_or_insert(Px(0.0));
+            let shrinkwrap_height_via_max_h =
+                matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_some();
             vec![cx.stack_props(StackProps { layout }, move |cx| {
                 let mut scroll_layout = LayoutStyle::default();
                 scroll_layout.size.width = Length::Fill;
-                scroll_layout.size.height = Length::Fill;
+                // When the root is shrink-wrapped via `max-height` (cmdk-style
+                // `max-h-[...] overflow-y-auto`), avoid `Fill` (percent sizing) on the viewport.
+                // Percent heights under an auto-height containing block resolve to 0 in layout
+                // engines like Taffy, which breaks hit-testing and hover-driven selection.
+                scroll_layout.size.height = if shrinkwrap_height_via_max_h {
+                    Length::Auto
+                } else {
+                    Length::Fill
+                };
+                scroll_layout.size.min_width = Some(Px(0.0));
+                scroll_layout.size.min_height = Some(Px(0.0));
                 scroll_layout.overflow = Overflow::Clip;
 
                 let scroll = cx.scroll(
@@ -271,9 +323,23 @@ impl ScrollAreaRoot {
                         layout: scroll_layout,
                         axis,
                         scroll_handle: Some(handle.clone()),
-                        probe_unbounded: viewport.probe_unbounded,
+                        probe_unbounded: viewport_probe_unbounded,
+                        intrinsic_measure_mode,
                     },
-                    move |_cx| viewport.children,
+                    move |cx| match viewport_test_id {
+                        Some(test_id) => {
+                            let wrapped = cx.semantics(
+                                SemanticsProps {
+                                    role: fret_core::SemanticsRole::Group,
+                                    test_id: Some(test_id),
+                                    ..Default::default()
+                                },
+                                move |_cx| viewport_children,
+                            );
+                            vec![wrapped]
+                        }
+                        None => viewport_children,
+                    },
                 );
 
                 let scroll_id = scroll.id;
@@ -506,6 +572,8 @@ pub struct ScrollArea {
     scroll_hide_delay_ticks: u64,
     layout: LayoutRefinement,
     scroll_handle: Option<ScrollHandle>,
+    viewport_test_id: Option<Arc<str>>,
+    viewport_intrinsic_measure_mode: Option<ScrollIntrinsicMeasureMode>,
 }
 
 impl ScrollArea {
@@ -517,8 +585,12 @@ impl ScrollArea {
             show_scrollbar: true,
             scrollbar_type: ScrollAreaType::default(),
             scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
-            layout: LayoutRefinement::default(),
+            // Same rationale as `ScrollAreaRoot`: make the common case "safe by default" in
+            // editor-like shells where scroll areas routinely live inside flex stacks.
+            layout: LayoutRefinement::default().min_w_0().min_h_0(),
             scroll_handle: None,
+            viewport_test_id: None,
+            viewport_intrinsic_measure_mode: None,
         }
     }
 
@@ -556,8 +628,26 @@ impl ScrollArea {
         self
     }
 
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn viewport_intrinsic_measure_mode(mut self, mode: ScrollIntrinsicMeasureMode) -> Self {
+        self.viewport_intrinsic_measure_mode = Some(mode);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut root = ScrollAreaRoot::new(ScrollAreaViewport::new(self.children).axis(self.axis))
+        let mut viewport = ScrollAreaViewport::new(self.children).axis(self.axis);
+        if let Some(test_id) = self.viewport_test_id {
+            viewport = viewport.viewport_test_id(test_id);
+        }
+        if let Some(mode) = self.viewport_intrinsic_measure_mode {
+            viewport = viewport.intrinsic_measure_mode(mode);
+        }
+
+        let mut root = ScrollAreaRoot::new(viewport)
             .show_scrollbar(self.show_scrollbar)
             .type_(self.scrollbar_type)
             .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)

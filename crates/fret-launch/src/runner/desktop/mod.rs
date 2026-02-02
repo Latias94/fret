@@ -2864,13 +2864,28 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         };
 
         let size = window.surface_size();
+        let surface_usage = {
+            let base = self.diag_bundle_screenshots.surface_usage();
+            #[cfg(feature = "diag-screenshots")]
+            {
+                if self.diag_screenshots.is_some() {
+                    base | wgpu::TextureUsages::COPY_SRC
+                } else {
+                    base
+                }
+            }
+            #[cfg(not(feature = "diag-screenshots"))]
+            {
+                base
+            }
+        };
         let surface = SurfaceState::new_with_usage(
             &context.adapter,
             &context.device,
             surface,
             size.width,
             size.height,
-            self.diag_bundle_screenshots.surface_usage(),
+            surface_usage,
         )?;
 
         let id = self.windows.insert_with_key(|id| {
@@ -3054,6 +3069,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
         self.app.with_global_mut(
             fret_runtime::WindowCommandGatingService::default,
+            |svc, _app| {
+                svc.remove_window(window);
+            },
+        );
+        self.app.with_global_mut(
+            fret_runtime::WindowTextInputSnapshotService::default,
             |svc, _app| {
                 svc.remove_window(window);
             },
@@ -3650,6 +3671,44 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                             &Event::ClipboardTextUnavailable { token },
                         ),
                     },
+                    Effect::PrimarySelectionSetText { text } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.clipboard.primary_text {
+                            continue;
+                        }
+                        if let Err(err) = self.clipboard.set_primary_text(&text) {
+                            tracing::debug!(?err, "failed to set primary selection text");
+                        }
+                    }
+                    Effect::PrimarySelectionGetText { window, token } => {
+                        let caps = self
+                            .app
+                            .global::<PlatformCapabilities>()
+                            .cloned()
+                            .unwrap_or_default();
+                        if !caps.clipboard.primary_text {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::PrimarySelectionTextUnavailable { token },
+                            );
+                            continue;
+                        }
+
+                        match self.clipboard.get_primary_text() {
+                            Ok(Some(text)) => self.deliver_window_event_now(
+                                window,
+                                &Event::PrimarySelectionText { token, text },
+                            ),
+                            Ok(None) | Err(_) => self.deliver_window_event_now(
+                                window,
+                                &Event::PrimarySelectionTextUnavailable { token },
+                            ),
+                        }
+                    }
                     Effect::ExternalDropReadAll { window, token } => {
                         let limits = fret_platform::external_drop::ExternalDropReadLimits {
                             max_total_bytes: self.config.external_drop_max_total_bytes,
@@ -4301,6 +4360,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                                 .window_created(&mut self.app, &create, new_window);
 
                             self.app.request_redraw(new_window);
+                        }
+                        WindowRequest::SetInnerSize { window, size } => {
+                            if let Some(state) = self.windows.get(window) {
+                                let _ = state.window.request_surface_size(
+                                    winit::dpi::LogicalSize::new(
+                                        size.width.0 as f64,
+                                        size.height.0 as f64,
+                                    )
+                                    .into(),
+                                );
+                                state.window.request_redraw();
+                            }
                         }
                         WindowRequest::Raise {
                             window,

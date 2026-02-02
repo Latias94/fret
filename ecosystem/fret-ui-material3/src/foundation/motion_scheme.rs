@@ -8,7 +8,9 @@
 
 use fret_ui::Theme;
 
-use crate::foundation::context::{MaterialMotionScheme, resolved_motion_scheme};
+use crate::foundation::context::{
+    MaterialMotionScheme, resolved_motion_scheme, theme_default_motion_scheme,
+};
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::motion::SpringSpec;
 
@@ -23,38 +25,74 @@ pub enum MotionSchemeKey {
     SlowEffects,
 }
 
-pub fn sys_spring(theme: &Theme, key: MotionSchemeKey) -> SpringSpec {
+fn sys_spring_for_scheme(
+    theme: &Theme,
+    scheme: MaterialMotionScheme,
+    key: MotionSchemeKey,
+) -> SpringSpec {
     let tokens = MaterialTokenResolver::new(theme);
 
-    let (damping_key, stiffness_key, fallback) = match key {
-        MotionSchemeKey::DefaultSpatial => (
+    let (damping_key, stiffness_key, fallback) = match (scheme, key) {
+        (MaterialMotionScheme::Standard, MotionSchemeKey::DefaultSpatial) => (
             "md.sys.motion.spring.default.spatial.damping",
             "md.sys.motion.spring.default.spatial.stiffness",
             SpringSpec::new(0.9, 700.0),
         ),
-        MotionSchemeKey::FastSpatial => (
+        (MaterialMotionScheme::Standard, MotionSchemeKey::FastSpatial) => (
             "md.sys.motion.spring.fast.spatial.damping",
             "md.sys.motion.spring.fast.spatial.stiffness",
             SpringSpec::new(0.9, 1400.0),
         ),
-        MotionSchemeKey::SlowSpatial => (
+        (MaterialMotionScheme::Standard, MotionSchemeKey::SlowSpatial) => (
             "md.sys.motion.spring.slow.spatial.damping",
             "md.sys.motion.spring.slow.spatial.stiffness",
             SpringSpec::new(0.9, 300.0),
         ),
-        MotionSchemeKey::DefaultEffects => (
+        (MaterialMotionScheme::Standard, MotionSchemeKey::DefaultEffects) => (
             "md.sys.motion.spring.default.effects.damping",
             "md.sys.motion.spring.default.effects.stiffness",
             SpringSpec::new(1.0, 1600.0),
         ),
-        MotionSchemeKey::FastEffects => (
+        (MaterialMotionScheme::Standard, MotionSchemeKey::FastEffects) => (
             "md.sys.motion.spring.fast.effects.damping",
             "md.sys.motion.spring.fast.effects.stiffness",
             SpringSpec::new(1.0, 3800.0),
         ),
-        MotionSchemeKey::SlowEffects => (
+        (MaterialMotionScheme::Standard, MotionSchemeKey::SlowEffects) => (
             "md.sys.motion.spring.slow.effects.damping",
             "md.sys.motion.spring.slow.effects.stiffness",
+            SpringSpec::new(1.0, 800.0),
+        ),
+        // Compose baseline (ExpressiveMotionTokens) differs only for spatial springs today; keep
+        // effects aligned with the standard scheme.
+        (MaterialMotionScheme::Expressive, MotionSchemeKey::DefaultSpatial) => (
+            "md.sys.fret.material.motion.spring.default.spatial.damping",
+            "md.sys.fret.material.motion.spring.default.spatial.stiffness",
+            SpringSpec::new(0.8, 380.0),
+        ),
+        (MaterialMotionScheme::Expressive, MotionSchemeKey::FastSpatial) => (
+            "md.sys.fret.material.motion.spring.fast.spatial.damping",
+            "md.sys.fret.material.motion.spring.fast.spatial.stiffness",
+            SpringSpec::new(0.6, 800.0),
+        ),
+        (MaterialMotionScheme::Expressive, MotionSchemeKey::SlowSpatial) => (
+            "md.sys.fret.material.motion.spring.slow.spatial.damping",
+            "md.sys.fret.material.motion.spring.slow.spatial.stiffness",
+            SpringSpec::new(0.8, 200.0),
+        ),
+        (MaterialMotionScheme::Expressive, MotionSchemeKey::DefaultEffects) => (
+            "md.sys.fret.material.motion.spring.default.effects.damping",
+            "md.sys.fret.material.motion.spring.default.effects.stiffness",
+            SpringSpec::new(1.0, 1600.0),
+        ),
+        (MaterialMotionScheme::Expressive, MotionSchemeKey::FastEffects) => (
+            "md.sys.fret.material.motion.spring.fast.effects.damping",
+            "md.sys.fret.material.motion.spring.fast.effects.stiffness",
+            SpringSpec::new(1.0, 3800.0),
+        ),
+        (MaterialMotionScheme::Expressive, MotionSchemeKey::SlowEffects) => (
+            "md.sys.fret.material.motion.spring.slow.effects.damping",
+            "md.sys.fret.material.motion.spring.slow.effects.stiffness",
             SpringSpec::new(1.0, 800.0),
         ),
     };
@@ -70,16 +108,15 @@ pub fn sys_spring_in_scope<H: fret_ui::UiHost>(
     theme: &Theme,
     key: MotionSchemeKey,
 ) -> SpringSpec {
-    // Material Web v30 currently ships a single `md.sys.motion.spring.*` set. We still surface the
-    // scheme concept so the component layer can converge on a stable API, and we can swap in
-    // expressive tokens later without per-component refactors.
-    let _scheme = resolved_motion_scheme(cx, MaterialMotionScheme::Standard);
-    sys_spring(theme, key)
+    let default_scheme = theme_default_motion_scheme(theme);
+    let scheme = resolved_motion_scheme(cx, default_scheme);
+    sys_spring_for_scheme(theme, scheme, key)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{MotionSchemeKey, sys_spring};
+    use super::{MotionSchemeKey, sys_spring_for_scheme};
+    use crate::foundation::context::MaterialMotionScheme;
     use crate::tokens::v30::{TypographyOptions, theme_config};
     use fret_app::App;
     use fret_ui::Theme;
@@ -93,12 +130,44 @@ mod tests {
         });
         let theme = Theme::global(&app);
 
-        let spatial = sys_spring(&theme, MotionSchemeKey::DefaultSpatial);
+        let spatial = sys_spring_for_scheme(
+            &theme,
+            MaterialMotionScheme::Standard,
+            MotionSchemeKey::DefaultSpatial,
+        );
         assert!(spatial.damping > 0.0);
         assert!(spatial.stiffness > 0.0);
 
-        let effects = sys_spring(&theme, MotionSchemeKey::FastEffects);
+        let effects = sys_spring_for_scheme(
+            &theme,
+            MaterialMotionScheme::Standard,
+            MotionSchemeKey::FastEffects,
+        );
         assert!(effects.damping > 0.0);
         assert!(effects.stiffness > 0.0);
+    }
+
+    #[test]
+    fn expressive_motion_spatial_springs_match_compose_baseline() {
+        let cfg = theme_config(TypographyOptions::default());
+        let mut app = App::new();
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&cfg);
+        });
+        let theme = Theme::global(&app);
+
+        let default_spatial = sys_spring_for_scheme(
+            &theme,
+            MaterialMotionScheme::Expressive,
+            MotionSchemeKey::DefaultSpatial,
+        );
+        assert!(
+            (default_spatial.damping - 0.8).abs() < 0.0001,
+            "expected Expressive default spatial damping to match Compose ExpressiveMotionTokens"
+        );
+        assert!(
+            (default_spatial.stiffness - 380.0).abs() < 0.0001,
+            "expected Expressive default spatial stiffness to match Compose ExpressiveMotionTokens"
+        );
     }
 }

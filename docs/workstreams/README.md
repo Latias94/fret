@@ -12,6 +12,8 @@ Active workstreams:
 
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
+- `docs/workstreams/ui-gallery-visual-parity.md`
+- `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
@@ -20,6 +22,10 @@ Active workstreams:
 - `docs/workstreams/state-driven-style-resolution-v1.md`
 - `docs/workstreams/control-rack-v1.md`
 - `docs/workstreams/control-rack-v1-todo.md`
+- `docs/workstreams/ui-gallery-layout-correctness.md`
+- `docs/workstreams/ui-gallery-perf-scroll-measure.md`
+- `docs/workstreams/scroll-extents-dom-parity.md` (draft)
+- `docs/workstreams/scroll-extents-dom-parity-todo.md` (draft)
 - `docs/workstreams/gpui-parity-refactor.md`
 - `docs/workstreams/gpui-parity-refactor-todo.md`
 - `docs/workstreams/foundation-closure-p0.md`

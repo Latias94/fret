@@ -166,6 +166,7 @@ pub struct TextArea {
     last_sent_cursor: Option<Rect>,
     ime_deduper: crate::text_edit::ime::Deduper,
     pending_clipboard_token: Option<fret_runtime::ClipboardToken>,
+    pending_primary_selection_token: Option<fret_runtime::ClipboardToken>,
 }
 
 impl Default for TextArea {
@@ -213,6 +214,7 @@ impl Default for TextArea {
             last_sent_cursor: None,
             ime_deduper: crate::text_edit::ime::Deduper::default(),
             pending_clipboard_token: None,
+            pending_primary_selection_token: None,
         }
     }
 }
@@ -425,6 +427,17 @@ impl TextArea {
         self.pending_clipboard_token = Some(token);
         cx.app
             .push_effect(Effect::ClipboardGetText { window, token });
+        true
+    }
+
+    fn request_primary_selection_paste<H: UiHost>(&mut self, cx: &mut CommandCx<'_, H>) -> bool {
+        let Some(window) = cx.window else {
+            return true;
+        };
+        let token = cx.app.next_clipboard_token();
+        self.pending_primary_selection_token = Some(token);
+        cx.app
+            .push_effect(Effect::PrimarySelectionGetText { window, token });
         true
     }
 

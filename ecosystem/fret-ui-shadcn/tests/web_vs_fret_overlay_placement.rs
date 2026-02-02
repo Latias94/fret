@@ -4623,6 +4623,18 @@ fn assert_overlay_placement_matches(
         })
         .unwrap_or_else(|| panic!("missing fret portal role={fret_portal_role:?}"));
 
+    let trigger = if fret_portal_role == SemanticsRole::ListBox
+        && fret_trigger_role == SemanticsRole::ComboBox
+    {
+        snap_open
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.controls.contains(&portal.id))
+            .unwrap_or(trigger)
+    } else {
+        trigger
+    };
+
     let fret_trigger = WebRect {
         x: trigger.bounds.origin.x.0,
         y: trigger.bounds.origin.y.0,
@@ -4654,6 +4666,25 @@ fn assert_overlay_placement_matches(
                 "  [{idx}] bounds={:?} label={:?} flags={:?}",
                 n.bounds, n.label, n.flags
             );
+        }
+        if fret_portal_role == SemanticsRole::ListBox {
+            let comboboxes: Vec<_> = snap_open
+                .nodes
+                .iter()
+                .filter(|n| n.role == SemanticsRole::ComboBox)
+                .collect();
+            eprintln!("{web_name} fret combobox candidates: {}", comboboxes.len());
+            for (idx, n) in comboboxes.iter().enumerate().take(10) {
+                let controls_listbox = n.controls.contains(&portal.id);
+                eprintln!(
+                    "  [{idx}] id={:?} bounds={:?} test_id={:?} label={:?} controls.len={} controls_listbox={controls_listbox}",
+                    n.id,
+                    n.bounds,
+                    n.test_id,
+                    n.label,
+                    n.controls.len(),
+                );
+            }
         }
         eprintln!(
             "{web_name} web side={web_side:?} align={web_align:?}\n  web trigger={:?}\n  web portal={:?}\n  fret trigger={:?}\n  fret portal={:?}",
@@ -20843,7 +20874,11 @@ fn fret_first_toast_item_rect(snap: &SemanticsSnapshot) -> Rect {
         .nodes
         .iter()
         .filter(|n| n.role == SemanticsRole::Alert)
-        .filter(|n| n.test_id.as_deref() == Some("toast.item"))
+        .filter(|n| {
+            n.test_id
+                .as_deref()
+                .is_some_and(|id| id.starts_with("toast-entry-"))
+        })
         .collect();
 
     candidates.sort_by(|a, b| {
@@ -20858,7 +20893,7 @@ fn fret_first_toast_item_rect(snap: &SemanticsSnapshot) -> Rect {
     candidates
         .first()
         .map(|n| n.bounds)
-        .expect("missing fret toast semantics node (role=Alert, test_id=toast.item)")
+        .expect("missing fret toast semantics node (role=Alert, test_id=toast-entry-*)")
 }
 
 fn assert_sonner_toast_rect_matches_web(

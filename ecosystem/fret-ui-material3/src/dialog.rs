@@ -20,7 +20,10 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::overlay_controller;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
-use fret_ui_kit::{OverlayController, OverlayPresence};
+use fret_ui_kit::{
+    ColorRef, OverlayController, OverlayPresence, OverrideSlot, WidgetStateProperty, WidgetStates,
+    merge_override_slot, resolve_override_slot_with,
+};
 
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
@@ -28,6 +31,71 @@ use crate::foundation::indication::{
 use crate::foundation::surface::material_surface_style;
 use crate::motion;
 use crate::tokens::dialog as dialog_tokens;
+
+#[derive(Debug, Clone, Default)]
+pub struct DialogStyle {
+    pub scrim_color: OverrideSlot<ColorRef>,
+    pub container_background: OverrideSlot<ColorRef>,
+    pub container_corner_radii: OverrideSlot<Corners>,
+    pub container_elevation: OverrideSlot<Px>,
+    pub headline_color: OverrideSlot<ColorRef>,
+    pub supporting_text_color: OverrideSlot<ColorRef>,
+}
+
+impl DialogStyle {
+    pub fn scrim_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.scrim_color = Some(color);
+        self
+    }
+
+    pub fn container_background(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.container_background = Some(color);
+        self
+    }
+
+    pub fn container_corner_radii(mut self, corners: WidgetStateProperty<Option<Corners>>) -> Self {
+        self.container_corner_radii = Some(corners);
+        self
+    }
+
+    pub fn container_elevation(mut self, elevation: WidgetStateProperty<Option<Px>>) -> Self {
+        self.container_elevation = Some(elevation);
+        self
+    }
+
+    pub fn headline_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.headline_color = Some(color);
+        self
+    }
+
+    pub fn supporting_text_color(mut self, color: WidgetStateProperty<Option<ColorRef>>) -> Self {
+        self.supporting_text_color = Some(color);
+        self
+    }
+
+    pub fn merged(self, other: Self) -> Self {
+        Self {
+            scrim_color: merge_override_slot(self.scrim_color, other.scrim_color),
+            container_background: merge_override_slot(
+                self.container_background,
+                other.container_background,
+            ),
+            container_corner_radii: merge_override_slot(
+                self.container_corner_radii,
+                other.container_corner_radii,
+            ),
+            container_elevation: merge_override_slot(
+                self.container_elevation,
+                other.container_elevation,
+            ),
+            headline_color: merge_override_slot(self.headline_color, other.headline_color),
+            supporting_text_color: merge_override_slot(
+                self.supporting_text_color,
+                other.supporting_text_color,
+            ),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct DialogAction {
@@ -230,6 +298,7 @@ pub struct Dialog {
     easing_key: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
     test_id: Option<Arc<str>>,
+    style: DialogStyle,
 }
 
 impl std::fmt::Debug for Dialog {
@@ -264,7 +333,13 @@ impl Dialog {
             easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
             on_dismiss_request: None,
             test_id: None,
+            style: DialogStyle::default(),
         }
+    }
+
+    pub fn style(mut self, style: DialogStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
     }
 
     pub fn headline(mut self, text: impl Into<Arc<str>>) -> Self {
@@ -367,14 +442,34 @@ impl Dialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                let scrim_color = dialog_tokens::scrim_color(&theme);
+                let scrim_color = resolve_override_slot_with(
+                    self.style.scrim_color.as_ref(),
+                    WidgetStates::empty(),
+                    |color| color.resolve(&theme),
+                    || dialog_tokens::scrim_color(&theme),
+                );
                 let scrim_alpha =
                     (scrim_color.a * self.scrim_opacity * transition.progress).clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_color, scrim_alpha);
 
-                let container_bg = dialog_tokens::container_background(&theme);
-                let container_shape = dialog_tokens::container_shape(&theme);
-                let elevation = dialog_tokens::container_elevation(&theme);
+                let container_bg = resolve_override_slot_with(
+                    self.style.container_background.as_ref(),
+                    WidgetStates::empty(),
+                    |color| color.resolve(&theme),
+                    || dialog_tokens::container_background(&theme),
+                );
+                let container_shape = resolve_override_slot_with(
+                    self.style.container_corner_radii.as_ref(),
+                    WidgetStates::empty(),
+                    |v| *v,
+                    || dialog_tokens::container_shape(&theme),
+                );
+                let elevation = resolve_override_slot_with(
+                    self.style.container_elevation.as_ref(),
+                    WidgetStates::empty(),
+                    |v| *v,
+                    || dialog_tokens::container_elevation(&theme),
+                );
                 let shadow_color = dialog_tokens::container_shadow_color(&theme);
                 let surface = material_surface_style(
                     &theme,
@@ -386,8 +481,18 @@ impl Dialog {
                 let container_bg = surface.background;
                 let shadow = surface.shadow;
 
-                let headline_color = dialog_tokens::headline_color(&theme);
-                let supporting_color = dialog_tokens::supporting_text_color(&theme);
+                let headline_color = resolve_override_slot_with(
+                    self.style.headline_color.as_ref(),
+                    WidgetStates::empty(),
+                    |color| color.resolve(&theme),
+                    || dialog_tokens::headline_color(&theme),
+                );
+                let supporting_color = resolve_override_slot_with(
+                    self.style.supporting_text_color.as_ref(),
+                    WidgetStates::empty(),
+                    |color| color.resolve(&theme),
+                    || dialog_tokens::supporting_text_color(&theme),
+                );
 
                 let overlay_root = cx.named("material3_dialog_root", |cx| {
                     let mut layout = LayoutStyle::default();

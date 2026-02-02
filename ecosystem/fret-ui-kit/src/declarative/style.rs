@@ -235,6 +235,7 @@ pub fn container_props(
         focus_border_color: None,
         focus_within: false,
         corner_radii,
+        snap_to_device_pixels: false,
     }
 }
 

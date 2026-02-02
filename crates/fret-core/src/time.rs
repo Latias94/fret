@@ -5,7 +5,7 @@
 pub use std::time::Duration;
 
 #[cfg(target_arch = "wasm32")]
-pub use web_time::Instant;
+pub use web_time::{Instant, SystemTime, UNIX_EPOCH};
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use std::time::Instant;
+pub use std::time::{Instant, SystemTime, UNIX_EPOCH};

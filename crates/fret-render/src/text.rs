@@ -15,10 +15,27 @@ use std::{
 
 use parley::fontique::GenericFamily as ParleyGenericFamily;
 
+pub(crate) mod parley_shaper;
+pub(crate) mod wrapper;
+
 struct FretFallback;
 
 impl cosmic_text::Fallback for FretFallback {
     fn common_fallback(&self) -> &[&'static str] {
+        // For Web/WASM, there are no system fonts. If the app bundles fonts (e.g. via `fret-fonts`
+        // feature flags), include those families in the fallback chain so mixed-script text works
+        // without explicit per-span font selection.
+        #[cfg(target_arch = "wasm32")]
+        {
+            &[
+                // UI (bundled in `fret-fonts` bootstrap)
+                "Inter",
+                // CJK (bundled via `fret-fonts/cjk-lite`)
+                "Noto Sans CJK SC",
+                // Emoji (bundled via `fret-fonts/emoji`)
+                "Noto Color Emoji",
+            ]
+        }
         #[cfg(target_os = "windows")]
         {
             &[
@@ -32,9 +49,12 @@ impl cosmic_text::Fallback for FretFallback {
                 "Meiryo UI",
                 "Meiryo",
                 "Nirmala UI",
+                // Bundled/portable fallbacks (if available)
+                "Noto Sans CJK SC",
                 // Emoji
                 "Segoe UI Emoji",
                 "Segoe UI Symbol",
+                "Noto Color Emoji",
             ]
         }
         #[cfg(target_os = "macos")]
@@ -68,6 +88,7 @@ impl cosmic_text::Fallback for FretFallback {
             ]
         }
         #[cfg(not(any(
+            target_arch = "wasm32",
             target_os = "windows",
             target_os = "macos",
             all(unix, not(any(target_os = "macos", target_os = "android")))
@@ -181,7 +202,12 @@ fn default_serif_candidates() -> &'static [&'static str] {
     }
 }
 
-fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database, db_revision: u64) -> u64 {
+fn font_stack_cache_key(
+    locale: &str,
+    db: &cosmic_text::fontdb::Database,
+    db_revision: u64,
+    common_fallback_config: &[String],
+) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     locale.hash(&mut hasher);
 
@@ -191,6 +217,7 @@ fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database, db_rev
 
     // Include the framework-level fallback policy so changing it can't reuse stale blobs.
     <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback).hash(&mut hasher);
+    common_fallback_config.hash(&mut hasher);
     <cosmic_text::PlatformFallback as cosmic_text::Fallback>::forbidden_fallback(
         &cosmic_text::PlatformFallback,
     )
@@ -228,7 +255,25 @@ pub enum GlyphQuadKind {
 pub struct TextBlob {
     pub shape: Arc<TextShape>,
     pub paint_palette: Option<Arc<[Option<fret_core::Color>]>>,
+    pub decorations: Arc<[TextDecoration]>,
     ref_count: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextDecorationKind {
+    Underline,
+    Strikethrough,
+}
+
+#[derive(Debug, Clone)]
+pub struct TextDecoration {
+    pub kind: TextDecorationKind,
+    /// Rect in the same coordinate space as `TextService::selection_rects` (y=0 at top of text box).
+    pub rect: Rect,
+    /// When present, uses `TextBlob.paint_palette[paint_span]` as the base color if no explicit override exists.
+    pub paint_span: Option<u16>,
+    /// Optional explicit decoration color override.
+    pub color: Option<fret_core::Color>,
 }
 
 #[derive(Debug, Clone)]
@@ -245,6 +290,8 @@ pub struct TextLine {
     pub end: usize,
     pub width: Px,
     pub y_top: Px,
+    /// Baseline Y for this line (y=0 at top of text box).
+    pub y_baseline: Px,
     pub height: Px,
     pub caret_stops: Vec<(usize, Px)>,
 }
@@ -429,6 +476,95 @@ fn subpixel_bin_as_float(bin: u8) -> f32 {
         3 => 0.75,
         _ => 0.0,
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TextQualitySettings {
+    /// Gamma parameter for shader-side alpha correction.
+    ///
+    /// This is used to derive the `gamma_ratios` uniform (GPUI-aligned). Values are clamped to
+    /// `[1.0, 2.2]`.
+    pub gamma: f32,
+    /// Enhanced contrast factor for grayscale (mask) glyph sampling.
+    pub grayscale_enhanced_contrast: f32,
+    /// Enhanced contrast factor for subpixel (RGB coverage) glyph sampling.
+    pub subpixel_enhanced_contrast: f32,
+}
+
+impl Default for TextQualitySettings {
+    fn default() -> Self {
+        // Windows-first defaults, aligned with the Zed/GPUI baseline (see ADR 0109/0157).
+        Self {
+            gamma: 1.8,
+            grayscale_enhanced_contrast: 1.0,
+            subpixel_enhanced_contrast: 0.5,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct TextQualityState {
+    gamma: f32,
+    gamma_ratios: [f32; 4],
+    grayscale_enhanced_contrast: f32,
+    subpixel_enhanced_contrast: f32,
+    key: u64,
+}
+
+impl TextQualityState {
+    fn new(settings: TextQualitySettings) -> Self {
+        let gamma = settings.gamma.clamp(1.0, 2.2);
+        let grayscale_enhanced_contrast = settings.grayscale_enhanced_contrast.max(0.0);
+        let subpixel_enhanced_contrast = settings.subpixel_enhanced_contrast.max(0.0);
+
+        let gamma_ratios = gamma_correction_ratios(gamma);
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        gamma.to_bits().hash(&mut hasher);
+        grayscale_enhanced_contrast.to_bits().hash(&mut hasher);
+        subpixel_enhanced_contrast.to_bits().hash(&mut hasher);
+        let key = hasher.finish();
+
+        Self {
+            gamma,
+            gamma_ratios,
+            grayscale_enhanced_contrast,
+            subpixel_enhanced_contrast,
+            key,
+        }
+    }
+}
+
+// Adapted from the Microsoft Terminal alpha correction tables (via Zed/GPUI).
+// See ADR 0029 / ADR 0109 for the rationale and references.
+fn gamma_correction_ratios(gamma: f32) -> [f32; 4] {
+    const GAMMA_INCORRECT_TARGET_RATIOS: [[f32; 4]; 13] = [
+        [0.0000 / 4.0, 0.0000 / 4.0, 0.0000 / 4.0, 0.0000 / 4.0], // gamma = 1.0
+        [0.0166 / 4.0, -0.0807 / 4.0, 0.2227 / 4.0, -0.0751 / 4.0], // gamma = 1.1
+        [0.0350 / 4.0, -0.1760 / 4.0, 0.4325 / 4.0, -0.1370 / 4.0], // gamma = 1.2
+        [0.0543 / 4.0, -0.2821 / 4.0, 0.6302 / 4.0, -0.1876 / 4.0], // gamma = 1.3
+        [0.0739 / 4.0, -0.3963 / 4.0, 0.8167 / 4.0, -0.2287 / 4.0], // gamma = 1.4
+        [0.0933 / 4.0, -0.5161 / 4.0, 0.9926 / 4.0, -0.2616 / 4.0], // gamma = 1.5
+        [0.1121 / 4.0, -0.6395 / 4.0, 1.1588 / 4.0, -0.2877 / 4.0], // gamma = 1.6
+        [0.1300 / 4.0, -0.7649 / 4.0, 1.3159 / 4.0, -0.3080 / 4.0], // gamma = 1.7
+        [0.1469 / 4.0, -0.8911 / 4.0, 1.4644 / 4.0, -0.3234 / 4.0], // gamma = 1.8
+        [0.1627 / 4.0, -1.0170 / 4.0, 1.6051 / 4.0, -0.3347 / 4.0], // gamma = 1.9
+        [0.1773 / 4.0, -1.1420 / 4.0, 1.7385 / 4.0, -0.3426 / 4.0], // gamma = 2.0
+        [0.1908 / 4.0, -1.2652 / 4.0, 1.8650 / 4.0, -0.3476 / 4.0], // gamma = 2.1
+        [0.2031 / 4.0, -1.3864 / 4.0, 1.9851 / 4.0, -0.3501 / 4.0], // gamma = 2.2
+    ];
+
+    const NORM13: f32 = ((0x10000 as f64) / (255.0 * 255.0) * 4.0) as f32;
+    const NORM24: f32 = ((0x100 as f64) / (255.0) * 4.0) as f32;
+
+    let index = ((gamma * 10.0).round() as usize).clamp(10, 22) - 10;
+    let ratios = GAMMA_INCORRECT_TARGET_RATIOS[index];
+    [
+        ratios[0] * NORM13,
+        ratios[1] * NORM24,
+        ratios[2] * NORM13,
+        ratios[3] * NORM24,
+    ]
 }
 
 const SUBPIXEL_VARIANTS_X: u8 = 4;
@@ -967,26 +1103,54 @@ fn spans_paint_fingerprint(spans: &[TextSpan]) -> u64 {
     "fret.text.spans.paint.v0".hash(&mut hasher);
     for s in spans {
         s.len.hash(&mut hasher);
-        match s.paint.fg {
+        paint_fingerprint_color(&mut hasher, s.paint.fg);
+        paint_fingerprint_color(&mut hasher, s.paint.bg);
+
+        match s.paint.underline.as_ref() {
             None => 0u8.hash(&mut hasher),
-            Some(c) => {
+            Some(u) => {
                 1u8.hash(&mut hasher);
-                c.r.to_bits().hash(&mut hasher);
-                c.g.to_bits().hash(&mut hasher);
-                c.b.to_bits().hash(&mut hasher);
-                c.a.to_bits().hash(&mut hasher);
+                paint_fingerprint_color(&mut hasher, u.color);
+                std::mem::discriminant(&u.style).hash(&mut hasher);
+            }
+        }
+
+        match s.paint.strikethrough.as_ref() {
+            None => 0u8.hash(&mut hasher),
+            Some(st) => {
+                1u8.hash(&mut hasher);
+                paint_fingerprint_color(&mut hasher, st.color);
+                std::mem::discriminant(&st.style).hash(&mut hasher);
             }
         }
     }
     hasher.finish()
 }
 
+fn paint_fingerprint_color(
+    hasher: &mut std::collections::hash_map::DefaultHasher,
+    color: Option<fret_core::Color>,
+) {
+    match color {
+        None => 0u8.hash(hasher),
+        Some(c) => {
+            1u8.hash(hasher);
+            c.r.to_bits().hash(hasher);
+            c.g.to_bits().hash(hasher);
+            c.b.to_bits().hash(hasher);
+            c.a.to_bits().hash(hasher);
+        }
+    }
+}
+
 pub struct TextSystem {
     font_system: FontSystem,
-    parley_shaper: crate::text_v2::parley_shaper::ParleyShaper,
+    parley_shaper: crate::text::parley_shaper::ParleyShaper,
     parley_scale: parley::swash::scale::ScaleContext,
     font_stack_key: u64,
     font_db_revision: u64,
+    quality: TextQualityState,
+    common_fallback_config: Vec<String>,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -1009,16 +1173,36 @@ pub struct TextSystem {
 pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
 
 fn metrics_from_wrapped_lines(
-    lines: &[crate::text_v2::parley_shaper::ShapedLineLayout],
+    lines: &[crate::text::parley_shaper::ShapedLineLayout],
     scale: f32,
 ) -> TextMetrics {
-    let first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+    let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+
+    let mut first_baseline_px = lines.first().map(|l| l.baseline.max(0.0)).unwrap_or(0.0);
+    if snap_vertical && let Some(first) = lines.first() {
+        let top_px = 0.0_f32;
+        let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+        let height_px = (bottom_px - top_px).max(0.0);
+        first_baseline_px = (top_px + first.baseline.max(0.0))
+            .round()
+            .clamp(top_px, top_px + height_px);
+    }
 
     let mut max_w_px = 0.0_f32;
     let mut total_h_px = 0.0_f32;
-    for line in lines {
-        max_w_px = max_w_px.max(line.width.max(0.0));
-        total_h_px += line.line_height.max(0.0);
+    if snap_vertical {
+        let mut top_px = 0.0_f32;
+        for line in lines {
+            max_w_px = max_w_px.max(line.width.max(0.0));
+            let bottom_px = (top_px + line.line_height.max(0.0)).round().max(top_px);
+            top_px = bottom_px;
+        }
+        total_h_px = top_px;
+    } else {
+        for line in lines {
+            max_w_px = max_w_px.max(line.width.max(0.0));
+            total_h_px += line.line_height.max(0.0);
+        }
     }
 
     TextMetrics {
@@ -1042,6 +1226,27 @@ impl TextSystem {
         self.font_stack_key
     }
 
+    pub fn text_quality_key(&self) -> u64 {
+        self.quality.key
+    }
+
+    pub fn text_quality_uniforms(&self) -> ([f32; 4], f32, f32) {
+        (
+            self.quality.gamma_ratios,
+            self.quality.grayscale_enhanced_contrast,
+            self.quality.subpixel_enhanced_contrast,
+        )
+    }
+
+    pub fn set_text_quality_settings(&mut self, settings: TextQualitySettings) -> bool {
+        let next = TextQualityState::new(settings);
+        if next == self.quality {
+            return false;
+        }
+        self.quality = next;
+        true
+    }
+
     /// Adds font bytes (TTF/OTF/TTC) to the font database.
     ///
     /// Returns the number of newly loaded faces. When this returns non-zero, all cached text blobs
@@ -1063,6 +1268,7 @@ impl TextSystem {
                 self.font_system.locale(),
                 self.font_system.db(),
                 self.font_db_revision,
+                &self.common_fallback_config,
             );
             self.blobs.clear();
             self.blob_cache.clear();
@@ -1167,10 +1373,12 @@ impl TextSystem {
         }
 
         let font_db_revision = 0u64;
-        let font_stack_key = font_stack_cache_key(&locale, &db, font_db_revision);
+        let common_fallback_config = Vec::new();
+        let font_stack_key =
+            font_stack_cache_key(&locale, &db, font_db_revision, &common_fallback_config);
         let font_system = FontSystem::new_with_locale_and_db_and_fallback(locale, db, FretFallback);
 
-        let mut parley_shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let mut parley_shaper = crate::text::parley_shaper::ParleyShaper::new();
         if let Some(sans) = sans {
             let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SansSerif, sans);
             let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::SystemUi, sans);
@@ -1185,12 +1393,31 @@ impl TextSystem {
             let _ = parley_shaper.set_generic_family_name(ParleyGenericFamily::UiMonospace, mono);
         }
 
+        // Align Parley generic fallback ordering with the framework fallback chain so that Web/WASM
+        // (no system fonts) can resolve mixed-script text without per-span font selection.
+        let generics = [
+            ParleyGenericFamily::SansSerif,
+            ParleyGenericFamily::Serif,
+            ParleyGenericFamily::Monospace,
+            ParleyGenericFamily::SystemUi,
+            ParleyGenericFamily::UiSansSerif,
+            ParleyGenericFamily::UiSerif,
+            ParleyGenericFamily::UiMonospace,
+        ];
+        for &family in <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback) {
+            for &generic in &generics {
+                let _ = parley_shaper.append_generic_family_name(generic, family);
+            }
+        }
+
         Self {
             font_system,
             parley_shaper,
             parley_scale: parley::swash::scale::ScaleContext::new(),
             font_stack_key,
             font_db_revision,
+            quality: TextQualityState::new(TextQualitySettings::default()),
+            common_fallback_config,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -1215,6 +1442,11 @@ impl TextSystem {
         let installed = build_installed_family_set(self.font_system.db());
         let old_key = self.font_stack_key;
         let mut parley_changed = false;
+        let common_fallback =
+            <FretFallback as cosmic_text::Fallback>::common_fallback(&FretFallback);
+        let config_fallback_changed = self.common_fallback_config != config.common_fallback;
+        self.common_fallback_config
+            .clone_from(&config.common_fallback);
 
         let pick =
             |overrides: &[String], defaults: &'static [&'static str]| -> Option<Cow<'_, str>> {
@@ -1266,12 +1498,37 @@ impl TextSystem {
             }
         }
 
+        let generics = [
+            ParleyGenericFamily::SansSerif,
+            ParleyGenericFamily::Serif,
+            ParleyGenericFamily::Monospace,
+            ParleyGenericFamily::SystemUi,
+            ParleyGenericFamily::UiSansSerif,
+            ParleyGenericFamily::UiSerif,
+            ParleyGenericFamily::UiMonospace,
+        ];
+        for family in &self.common_fallback_config {
+            for &generic in &generics {
+                parley_changed |= self
+                    .parley_shaper
+                    .append_generic_family_name(generic, family);
+            }
+        }
+        for &family in common_fallback {
+            for &generic in &generics {
+                parley_changed |= self
+                    .parley_shaper
+                    .append_generic_family_name(generic, family);
+            }
+        }
+
         let mut new_key = font_stack_cache_key(
             self.font_system.locale(),
             self.font_system.db(),
             self.font_db_revision,
+            &self.common_fallback_config,
         );
-        if new_key == old_key && parley_changed {
+        if new_key == old_key && (parley_changed || config_fallback_changed) {
             // Fontique generic family changes do not participate in the cosmic-text key, so we
             // bump the revision to ensure caches cannot reuse stale Parley shaping results.
             self.font_db_revision = self.font_db_revision.saturating_add(1);
@@ -1279,6 +1536,7 @@ impl TextSystem {
                 self.font_system.locale(),
                 self.font_system.db(),
                 self.font_db_revision,
+                &self.common_fallback_config,
             );
         }
         if new_key == old_key {
@@ -1539,8 +1797,14 @@ impl TextSystem {
         match input {
             TextInputRef::Plain { text, style } => self.prepare(text, style, constraints),
             TextInputRef::Attributed { text, base, spans } => {
-                let rich =
-                    AttributedText::new(Arc::<str>::from(text), Arc::<[TextSpan]>::from(spans));
+                let spans = sanitize_spans_for_text(text, spans);
+                if spans.is_none() {
+                    return self.prepare(text, base, constraints);
+                }
+                let rich = AttributedText {
+                    text: Arc::<str>::from(text),
+                    spans: spans.expect("non-empty spans"),
+                };
                 self.prepare_attributed(&rich, base, constraints)
             }
         }
@@ -1562,7 +1826,15 @@ impl TextSystem {
         base_style: &TextStyle,
         constraints: TextConstraints,
     ) -> (TextBlobId, TextMetrics) {
-        let key = TextBlobKey::new_attributed(rich, base_style, constraints, self.font_stack_key);
+        let spans = sanitize_spans_for_text(rich.text.as_ref(), rich.spans.as_ref());
+        if spans.is_none() {
+            return self.prepare(rich.text.as_ref(), base_style, constraints);
+        }
+        let rich = AttributedText {
+            text: rich.text.clone(),
+            spans: spans.expect("non-empty spans"),
+        };
+        let key = TextBlobKey::new_attributed(&rich, base_style, constraints, self.font_stack_key);
         self.prepare_with_key(key, base_style, Some(rich.spans.as_ref()), constraints)
     }
 
@@ -1575,6 +1847,9 @@ impl TextSystem {
     ) -> (TextBlobId, TextMetrics) {
         let text = key.text.clone();
         key.backend = 1;
+
+        let scale = constraints.scale_factor.max(1.0);
+        let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
 
         if let Some(id) = self.blob_cache.get(&key).copied() {
             if let Some(blob) = self.blobs.get_mut(id) {
@@ -1597,7 +1872,6 @@ impl TextSystem {
         let shape = if let Some(shape) = self.shape_cache.get(&shape_key) {
             shape.clone()
         } else {
-            let scale = constraints.scale_factor.max(1.0);
             let shape = {
                 let input = match spans {
                     Some(spans) => TextInputRef::Attributed {
@@ -1610,7 +1884,7 @@ impl TextSystem {
                         style,
                     },
                 };
-                let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+                let wrapped = crate::text::wrapper::wrap_with_constraints(
                     &mut self.parley_shaper,
                     input,
                     constraints,
@@ -1622,6 +1896,17 @@ impl TextSystem {
                     .first()
                     .map(|l| l.baseline.max(0.0))
                     .unwrap_or(0.0);
+                let first_baseline_px = if snap_vertical && let Some(first) = wrapped.lines.first()
+                {
+                    let top_px = 0.0_f32;
+                    let bottom_px = (top_px + first.line_height.max(0.0)).round().max(top_px);
+                    let height_px = (bottom_px - top_px).max(0.0);
+                    (top_px + first.baseline.max(0.0))
+                        .round()
+                        .clamp(top_px, top_px + height_px)
+                } else {
+                    first_baseline_px
+                };
 
                 let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
 
@@ -1638,9 +1923,25 @@ impl TextSystem {
                     .zip(wrapped.lines.into_iter())
                     .enumerate()
                 {
-                    let line_height_px = line.line_height.max(0.0);
-                    let line_baseline_px = line.baseline.max(0.0);
-                    let line_offset_px = (line_top_px + line_baseline_px) - first_baseline_px;
+                    if snap_vertical {
+                        line_top_px = line_top_px.round();
+                    }
+
+                    let line_height_px_raw = line.line_height.max(0.0);
+                    let line_baseline_px_raw = line.baseline.max(0.0);
+
+                    let (line_height_px, baseline_pos_px) = if snap_vertical {
+                        let bottom_px = (line_top_px + line_height_px_raw).round().max(line_top_px);
+                        let height_px = (bottom_px - line_top_px).max(0.0);
+                        let baseline_pos_px = (line_top_px + line_baseline_px_raw)
+                            .round()
+                            .clamp(line_top_px, line_top_px + height_px);
+                        (height_px, baseline_pos_px)
+                    } else {
+                        (line_height_px_raw, line_top_px + line_baseline_px_raw)
+                    };
+
+                    let line_offset_px = baseline_pos_px - first_baseline_px;
 
                     let slice = &text[range.clone()];
                     let caret_stops = caret_stops_for_slice(
@@ -1660,6 +1961,7 @@ impl TextSystem {
                         end: range.end.min(kept_end),
                         width: Px((line.width / scale).max(0.0)),
                         y_top: Px((line_top_px / scale).max(0.0)),
+                        y_baseline: Px((baseline_pos_px / scale).max(0.0)),
                         height: Px((line_height_px / scale).max(0.0)),
                         caret_stops,
                     });
@@ -1753,9 +2055,9 @@ impl TextSystem {
 
                         let text_range =
                             (range.start + g.text_range.start)..(range.start + g.text_range.end);
-                        let paint_span = resolved_spans
-                            .as_deref()
-                            .and_then(|spans| paint_span_for_text_range(spans, &text_range));
+                        let paint_span = resolved_spans.as_deref().and_then(|spans| {
+                            paint_span_for_text_range(spans, &text_range, g.is_rtl)
+                        });
 
                         glyphs.push(GlyphInstance {
                             rect: [x0_px / scale, y0_px / scale, w_px / scale, h_px / scale],
@@ -1778,10 +2080,16 @@ impl TextSystem {
             shape
         };
 
+        let decorations: Vec<TextDecoration> = resolved_spans
+            .as_deref()
+            .map(|spans| decorations_for_lines(shape.lines.as_ref(), spans, scale, snap_vertical))
+            .unwrap_or_default();
+
         let metrics = shape.metrics;
         let id = self.blobs.insert(TextBlob {
             shape,
             paint_palette,
+            decorations: Arc::from(decorations),
             ref_count: 1,
         });
         self.blob_cache.insert(key.clone(), id);
@@ -1808,7 +2116,7 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
             &mut self.parley_shaper,
             TextInputRef::plain(text, style),
             constraints,
@@ -1856,7 +2164,7 @@ impl TextSystem {
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
             &mut self.parley_shaper,
             TextInputRef::Attributed {
                 text: rich.text.as_ref(),
@@ -1961,6 +2269,18 @@ impl TextSystem {
         Some(())
     }
 
+    pub fn selection_rects_clipped(
+        &self,
+        blob: TextBlobId,
+        range: (usize, usize),
+        clip: Rect,
+        out: &mut Vec<Rect>,
+    ) -> Option<()> {
+        let blob = self.blobs.get(blob)?;
+        selection_rects_from_lines_clipped(blob.shape.lines.as_ref(), range, clip, out);
+        Some(())
+    }
+
     pub fn release(&mut self, blob: TextBlobId) {
         let (should_remove, remove_shape) = match self.blobs.get_mut(blob) {
             Some(b) => {
@@ -2007,6 +2327,13 @@ struct ResolvedSpan {
     end: usize,
     slot: u16,
     fg: Option<fret_core::Color>,
+    underline: Option<ResolvedDecoration>,
+    strikethrough: Option<ResolvedDecoration>,
+}
+
+#[derive(Clone, Debug)]
+struct ResolvedDecoration {
+    color: Option<fret_core::Color>,
 }
 
 fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<ResolvedSpan>> {
@@ -2031,6 +2358,16 @@ fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Resolved
                 end,
                 slot,
                 fg: span.paint.fg,
+                underline: span
+                    .paint
+                    .underline
+                    .as_ref()
+                    .map(|u| ResolvedDecoration { color: u.color }),
+                strikethrough: span
+                    .paint
+                    .strikethrough
+                    .as_ref()
+                    .map(|s| ResolvedDecoration { color: s.color }),
             });
         }
         offset = end;
@@ -2040,6 +2377,91 @@ fn resolve_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Vec<Resolved
     }
 
     Some(out)
+}
+
+fn span_has_any_overrides(span: &TextSpan) -> bool {
+    span.shaping.font.is_some()
+        || span.shaping.weight.is_some()
+        || span.shaping.slant.is_some()
+        || span.shaping.letter_spacing_em.is_some()
+        || span.paint.fg.is_some()
+        || span.paint.bg.is_some()
+        || span.paint.underline.is_some()
+        || span.paint.strikethrough.is_some()
+}
+
+fn clamp_down_to_char_boundary(text: &str, idx: usize) -> usize {
+    let mut i = idx.min(text.len());
+    while i > 0 && !text.is_char_boundary(i) {
+        i = i.saturating_sub(1);
+    }
+    i
+}
+
+fn next_char_boundary(text: &str, idx: usize) -> usize {
+    if idx >= text.len() {
+        return text.len();
+    }
+    let idx = clamp_down_to_char_boundary(text, idx);
+    if idx >= text.len() {
+        return text.len();
+    }
+    let ch = text[idx..].chars().next().unwrap();
+    idx + ch.len_utf8()
+}
+
+fn clamp_span_end_to_char_boundary(text: &str, start: usize, desired_end: usize) -> usize {
+    let raw_end = desired_end.min(text.len());
+    if text.is_char_boundary(raw_end) {
+        return raw_end;
+    }
+
+    let down = clamp_down_to_char_boundary(text, raw_end);
+    if down > start {
+        return down;
+    }
+
+    let up = next_char_boundary(text, raw_end);
+    up.max(start).min(text.len())
+}
+
+fn sanitize_spans_for_text(text: &str, spans: &[TextSpan]) -> Option<Arc<[TextSpan]>> {
+    if spans.is_empty() || text.is_empty() {
+        return None;
+    }
+
+    let text_len = text.len();
+    let mut out: Vec<TextSpan> = Vec::with_capacity(spans.len().saturating_add(1));
+
+    let mut offset: usize = 0;
+    for span in spans {
+        if offset >= text_len {
+            break;
+        }
+
+        let desired_end = offset.saturating_add(span.len);
+        let mut end = clamp_span_end_to_char_boundary(text, offset, desired_end);
+
+        if end == offset && desired_end > offset {
+            end = next_char_boundary(text, offset);
+        }
+
+        let mut s = span.clone();
+        s.len = end.saturating_sub(offset);
+        out.push(s);
+        offset = end;
+    }
+
+    if offset < text_len {
+        out.push(TextSpan::new(text_len - offset));
+    }
+
+    // Avoid forcing "attributed" shaping when spans carry no effective overrides.
+    if out.len() == 1 && out[0].len == text_len && !span_has_any_overrides(&out[0]) {
+        return None;
+    }
+
+    Some(Arc::<[TextSpan]>::from(out))
 }
 
 #[cfg(any())]
@@ -2061,11 +2483,15 @@ fn paint_span_for_glyph(
 fn paint_span_for_text_range(
     spans: &[ResolvedSpan],
     range: &std::ops::Range<usize>,
+    is_rtl: bool,
 ) -> Option<u16> {
-    let mut idx = range.start;
-    if range.start == range.end && idx > 0 {
-        idx = idx.saturating_sub(1);
-    }
+    let idx = if range.start == range.end {
+        range.start.saturating_sub(1)
+    } else if is_rtl {
+        range.end.saturating_sub(1)
+    } else {
+        range.start
+    };
     spans
         .iter()
         .find(|s| idx >= s.start && idx < s.end)
@@ -2340,7 +2766,7 @@ fn utf8_char_boundaries(text: &str) -> Vec<usize> {
 fn caret_stops_for_slice(
     slice: &str,
     base_offset: usize,
-    clusters: &[crate::text_v2::parley_shaper::ShapedCluster],
+    clusters: &[crate::text::parley_shaper::ShapedCluster],
     line_width_px: f32,
     scale: f32,
     kept_end: usize,
@@ -2370,6 +2796,17 @@ fn caret_stops_for_slice(
         return out;
     }
 
+    let last_cluster_end = clusters
+        .iter()
+        .map(|c| c.text_range.end)
+        .max()
+        .unwrap_or(0)
+        .min(slice.len());
+    let effective_line_width_px = clusters
+        .iter()
+        .flat_map(|c| [c.x0, c.x1])
+        .fold(line_width_px, |acc, x| acc.max(x.max(0.0)));
+
     let mut cluster_i = 0usize;
     for &b in &boundaries {
         let idx = base_offset + b;
@@ -2382,9 +2819,26 @@ fn caret_stops_for_slice(
         }
 
         let x = if b <= clusters[0].text_range.start {
-            0.0
+            let first = &clusters[0];
+            if first.is_rtl {
+                first.x1.max(0.0)
+            } else {
+                first.x0.max(0.0)
+            }
+        } else if b > last_cluster_end {
+            let last = clusters.last().unwrap_or(&clusters[0]);
+            if last.is_rtl {
+                0.0
+            } else {
+                effective_line_width_px
+            }
         } else if cluster_i >= clusters.len() {
-            line_width_px.max(0.0)
+            let last = clusters.last().unwrap_or(&clusters[0]);
+            if last.is_rtl {
+                0.0
+            } else {
+                line_width_px.max(0.0)
+            }
         } else {
             let c = &clusters[cluster_i];
             let start = c.text_range.start.min(slice.len());
@@ -2393,9 +2847,17 @@ fn caret_stops_for_slice(
             if start == end {
                 c.x0.max(0.0)
             } else if b <= start {
-                c.x0.max(0.0)
+                if c.is_rtl {
+                    c.x1.max(0.0)
+                } else {
+                    c.x0.max(0.0)
+                }
             } else if b >= end {
-                c.x1.max(0.0)
+                if c.is_rtl {
+                    c.x0.max(0.0)
+                } else {
+                    c.x1.max(0.0)
+                }
             } else {
                 let denom = (end - start) as f32;
                 let mut t = ((b - start) as f32 / denom).clamp(0.0, 1.0);
@@ -2565,34 +3027,209 @@ fn selection_rects_from_lines(lines: &[TextLine], range: (usize, usize), out: &m
             continue;
         }
 
-        let x0 = if start <= line.start {
-            Px(0.0)
-        } else {
-            caret_x_from_stops(&line.caret_stops, start)
-        };
-        let x1 = if end >= line.end {
-            line.width
-        } else {
-            caret_x_from_stops(&line.caret_stops, end)
-        };
+        let x0 = caret_x_from_stops(&line.caret_stops, start);
+        let x1 = caret_x_from_stops(&line.caret_stops, end);
+        let left = Px(x0.0.min(x1.0));
+        let right = Px(x0.0.max(x1.0));
 
         out.push(Rect::new(
-            Point::new(x0, line.y_top),
-            Size::new(Px((x1.0 - x0.0).max(0.0)), line.height),
+            Point::new(left, line.y_top),
+            Size::new(Px((right.0 - left.0).max(0.0)), line.height),
         ));
     }
+
+    coalesce_selection_rects_in_place(out);
+}
+
+fn selection_rects_from_lines_clipped(
+    lines: &[TextLine],
+    range: (usize, usize),
+    clip: Rect,
+    out: &mut Vec<Rect>,
+) {
+    out.clear();
+    if lines.is_empty() {
+        return;
+    }
+
+    let clip_x0 = clip.origin.x.0;
+    let clip_y0 = clip.origin.y.0;
+    let clip_x1 = clip_x0 + clip.size.width.0;
+    let clip_y1 = clip_y0 + clip.size.height.0;
+    if clip_x1 <= clip_x0 || clip_y1 <= clip_y0 {
+        return;
+    }
+
+    let (a, b) = (range.0.min(range.1), range.0.max(range.1));
+    if a == b {
+        return;
+    }
+
+    let start_idx = lines.partition_point(|line| {
+        let y0 = line.y_top.0;
+        let y1 = (line.y_top.0 + line.height.0).max(y0);
+        y1 <= clip_y0
+    });
+    let end_idx = lines.partition_point(|line| line.y_top.0 < clip_y1);
+    let start_idx = start_idx.min(end_idx);
+    if start_idx >= end_idx {
+        return;
+    }
+
+    for line in &lines[start_idx..end_idx] {
+        let start = a.max(line.start);
+        let end = b.min(line.end);
+        if start >= end {
+            continue;
+        }
+
+        let x0 = caret_x_from_stops(&line.caret_stops, start).0;
+        let x1 = caret_x_from_stops(&line.caret_stops, end).0;
+        let left = x0.min(x1);
+        let right = x0.max(x1);
+
+        let y0 = line.y_top.0;
+        let y1 = (line.y_top.0 + line.height.0).max(y0);
+
+        let ix0 = left.max(clip_x0);
+        let iy0 = y0.max(clip_y0);
+        let ix1 = right.min(clip_x1);
+        let iy1 = y1.min(clip_y1);
+
+        if ix1 <= ix0 || iy1 <= iy0 {
+            continue;
+        }
+
+        out.push(Rect::new(
+            Point::new(Px(ix0), Px(iy0)),
+            Size::new(Px((ix1 - ix0).max(0.0)), Px((iy1 - iy0).max(0.0))),
+        ));
+    }
+
+    coalesce_selection_rects_in_place(out);
+}
+
+fn coalesce_selection_rects_in_place(rects: &mut Vec<Rect>) {
+    if rects.len() <= 1 {
+        return;
+    }
+
+    let mut out: Vec<Rect> = Vec::with_capacity(rects.len());
+    for r in rects.drain(..) {
+        match out.last_mut() {
+            Some(prev)
+                if prev.origin.y == r.origin.y
+                    && prev.size.height == r.size.height
+                    && r.origin.x.0 <= prev.origin.x.0 + prev.size.width.0 =>
+            {
+                let x0 = prev.origin.x.0.min(r.origin.x.0);
+                let x1 = (prev.origin.x.0 + prev.size.width.0).max(r.origin.x.0 + r.size.width.0);
+                prev.origin.x = Px(x0);
+                prev.size.width = Px((x1 - x0).max(0.0));
+            }
+            _ => out.push(r),
+        }
+    }
+    *rects = out;
+}
+
+fn decorations_for_lines(
+    lines: &[TextLine],
+    spans: &[ResolvedSpan],
+    scale: f32,
+    snap_vertical: bool,
+) -> Vec<TextDecoration> {
+    let thickness_px = 1.0_f32;
+    let thickness = Px(thickness_px / scale.max(1.0));
+
+    let mut out: Vec<TextDecoration> = Vec::new();
+    if lines.is_empty() || spans.is_empty() {
+        return out;
+    }
+
+    for line in lines {
+        let line_top_px = line.y_top.0 * scale;
+        let line_bottom_px = (line.y_top.0 + line.height.0).max(line.y_top.0) * scale;
+        let baseline_px = line.y_baseline.0 * scale;
+
+        // Underline: anchor to the baseline and snap in device px under fractional scaling.
+        let underline_bottom_px_raw = baseline_px + 1.0;
+        let underline_bottom_px = if snap_vertical {
+            underline_bottom_px_raw.round()
+        } else {
+            underline_bottom_px_raw
+        }
+        .clamp(line_top_px, line_bottom_px);
+        let underline_top_px =
+            (underline_bottom_px - thickness_px).clamp(line_top_px, line_bottom_px - thickness_px);
+        let underline_y = Px((underline_top_px / scale).max(0.0));
+
+        // Strikethrough: approximate as a fraction of the line height above the baseline.
+        let line_height_px = (line.height.0.max(0.0) * scale).max(0.0);
+        let strike_offset_px_raw = (line_height_px * 0.30).clamp(1.0, line_height_px);
+        let strike_bottom_px_raw = baseline_px - strike_offset_px_raw;
+        let strike_bottom_px = if snap_vertical {
+            strike_bottom_px_raw.round()
+        } else {
+            strike_bottom_px_raw
+        }
+        .clamp(line_top_px, line_bottom_px);
+        let strike_top_px =
+            (strike_bottom_px - thickness_px).clamp(line_top_px, line_bottom_px - thickness_px);
+        let strike_y = Px((strike_top_px / scale).max(0.0));
+
+        for span in spans {
+            if span.underline.is_none() && span.strikethrough.is_none() {
+                continue;
+            }
+
+            let start = span.start.max(line.start);
+            let end = span.end.min(line.end);
+            if start >= end {
+                continue;
+            }
+
+            let x0 = caret_x_from_stops(&line.caret_stops, start);
+            let x1 = caret_x_from_stops(&line.caret_stops, end);
+            let left = Px(x0.0.min(x1.0));
+            let right = Px(x0.0.max(x1.0));
+            let width = Px((right.0 - left.0).max(thickness.0));
+
+            if let Some(underline) = span.underline.as_ref() {
+                out.push(TextDecoration {
+                    kind: TextDecorationKind::Underline,
+                    rect: Rect::new(Point::new(left, underline_y), Size::new(width, thickness)),
+                    paint_span: Some(span.slot),
+                    color: underline.color,
+                });
+            }
+
+            if let Some(strikethrough) = span.strikethrough.as_ref() {
+                out.push(TextDecoration {
+                    kind: TextDecorationKind::Strikethrough,
+                    rect: Rect::new(Point::new(left, strike_y), Size::new(width, thickness)),
+                    paint_span: Some(span.slot),
+                    color: strikethrough.color,
+                });
+            }
+        }
+    }
+
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        TextBlobKey, TextShapeKey, collect_font_names, spans_paint_fingerprint,
-        spans_shaping_fingerprint, subpixel_mask_to_alpha,
+        ResolvedSpan, TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names,
+        paint_span_for_text_range, spans_paint_fingerprint, spans_shaping_fingerprint,
+        subpixel_mask_to_alpha,
     };
     use cosmic_text::Family;
     use fret_core::{
-        Color, FontWeight, Px, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
-        TextWrap,
+        AttributedText, CaretAffinity, Color, DecorationLineStyle, FontWeight, Point, Px, Rect,
+        Size, StrikethroughStyle, TextConstraints, TextInputRef, TextOverflow, TextSpan, TextStyle,
+        TextWrap, UnderlineStyle,
     };
     use std::sync::Arc;
 
@@ -2606,8 +3243,39 @@ mod tests {
     }
 
     #[test]
+    fn paint_span_for_text_range_is_directional_across_span_boundary() {
+        let spans = vec![
+            ResolvedSpan {
+                start: 0,
+                end: 3,
+                slot: 0,
+                fg: None,
+                underline: None,
+                strikethrough: None,
+            },
+            ResolvedSpan {
+                start: 3,
+                end: 6,
+                slot: 1,
+                fg: None,
+                underline: None,
+                strikethrough: None,
+            },
+        ];
+
+        // Cluster spans the boundary (2..4). We cannot split the glyph, so we pick a deterministic
+        // representative index based on direction.
+        assert_eq!(paint_span_for_text_range(&spans, &(2..4), false), Some(0));
+        assert_eq!(paint_span_for_text_range(&spans, &(2..4), true), Some(1));
+
+        // Synthetic 0-length ranges (e.g. ellipsis mapping) should inherit the preceding style.
+        assert_eq!(paint_span_for_text_range(&spans, &(3..3), false), Some(0));
+        assert_eq!(paint_span_for_text_range(&spans, &(3..3), true), Some(0));
+    }
+
+    #[test]
     fn caret_stops_for_slice_interpolates_within_cluster_ltr() {
-        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
             text_range: 0..4,
             x0: 0.0,
             x1: 40.0,
@@ -2626,7 +3294,7 @@ mod tests {
 
     #[test]
     fn caret_stops_for_slice_interpolates_within_cluster_rtl() {
-        let clusters = vec![crate::text_v2::parley_shaper::ShapedCluster {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
             text_range: 0..4,
             x0: 0.0,
             x1: 40.0,
@@ -2636,11 +3304,186 @@ mod tests {
         let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
         let x_at = |i: usize| stops.iter().find(|(idx, _)| *idx == i).unwrap().1.0;
 
-        assert_eq!(x_at(0), 0.0);
+        assert_eq!(x_at(0), 40.0);
         assert_eq!(x_at(1), 30.0);
         assert_eq!(x_at(2), 20.0);
         assert_eq!(x_at(3), 10.0);
-        assert_eq!(x_at(4), 40.0);
+        assert_eq!(x_at(4), 0.0);
+    }
+
+    fn is_synthetic_rtl_char(ch: char) -> bool {
+        // A minimal heuristic for test inputs; the production shaper determines RTL runs via
+        // Unicode properties.
+        matches!(
+            ch,
+            '\u{0590}'..='\u{05FF}' // Hebrew
+                | '\u{0600}'..='\u{06FF}' // Arabic
+                | '\u{0750}'..='\u{077F}' // Arabic Supplement
+                | '\u{08A0}'..='\u{08FF}' // Arabic Extended-A
+        )
+    }
+
+    fn synthetic_clusters_for_text(
+        text: &str,
+        advance: f32,
+    ) -> Vec<crate::text::parley_shaper::ShapedCluster> {
+        let mut out = Vec::new();
+        let mut x = 0.0_f32;
+        for (start, ch) in text.char_indices() {
+            let end = start + ch.len_utf8();
+            out.push(crate::text::parley_shaper::ShapedCluster {
+                text_range: start..end,
+                x0: x,
+                x1: x + advance,
+                is_rtl: is_synthetic_rtl_char(ch),
+            });
+            x += advance;
+        }
+        out
+    }
+
+    #[test]
+    fn selection_rects_for_rtl_line_has_positive_width() {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let line = super::TextLine {
+            start: 0,
+            end: 4,
+            width: Px(40.0),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            caret_stops: stops,
+        };
+
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines(&[line], (0, 4), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!((rects[0].origin.x.0 - 0.0).abs() < 0.001);
+        assert!((rects[0].size.width.0 - 40.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn hit_test_point_for_rtl_line_maps_left_edge_to_logical_end() {
+        let clusters = vec![crate::text::parley_shaper::ShapedCluster {
+            text_range: 0..4,
+            x0: 0.0,
+            x1: 40.0,
+            is_rtl: true,
+        }];
+        let stops = super::caret_stops_for_slice("abcd", 0, &clusters, 40.0, 1.0, 4);
+        let line = super::TextLine {
+            start: 0,
+            end: 4,
+            width: Px(40.0),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            caret_stops: stops,
+        };
+
+        let left = super::hit_test_point_from_lines(
+            &[line.clone()],
+            fret_core::Point::new(Px(0.0), Px(5.0)),
+        )
+        .expect("hit test");
+        assert_eq!(left.index, 4);
+
+        let right =
+            super::hit_test_point_from_lines(&[line], fret_core::Point::new(Px(40.0), Px(5.0)))
+                .expect("hit test");
+        assert_eq!(right.index, 0);
+    }
+
+    #[test]
+    fn mixed_direction_selection_rects_are_nonempty() {
+        // Mixed LTR + RTL + numbers + punctuation.
+        let text = "abc אבג (123)";
+        let clusters = synthetic_clusters_for_text(text, 10.0);
+        let stops = super::caret_stops_for_slice(
+            text,
+            0,
+            &clusters,
+            10.0 * clusters.len() as f32,
+            1.0,
+            text.len(),
+        );
+        let line = super::TextLine {
+            start: 0,
+            end: text.len(),
+            width: Px(10.0 * clusters.len() as f32),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            caret_stops: stops,
+        };
+
+        let rtl_start = text.find('א').expect("hebrew start");
+        let rtl_end = text.find('ג').expect("hebrew end") + 'ג'.len_utf8();
+
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines(&[line], (rtl_start, rtl_end), &mut rects);
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect"
+        );
+    }
+
+    #[test]
+    fn selection_rects_clipped_culls_offscreen_lines() {
+        let mut lines = Vec::new();
+        for i in 0..1000usize {
+            let start = i * 4;
+            let end = start + 4;
+            lines.push(super::TextLine {
+                start,
+                end,
+                width: Px(100.0),
+                y_top: Px((i as f32) * 10.0),
+                y_baseline: Px(0.0),
+                height: Px(10.0),
+                caret_stops: vec![(start, Px(0.0)), (end, Px(100.0))],
+            });
+        }
+
+        let clip = Rect::new(
+            Point::new(Px(0.0), Px(1000.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        );
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines_clipped(&lines, (0, 4000), clip, &mut rects);
+
+        assert_eq!(rects.len(), 10);
+        for r in &rects {
+            assert!(r.origin.y.0 >= 1000.0 && r.origin.y.0 < 1100.0);
+            assert!(r.size.height.0 > 0.0);
+        }
+    }
+
+    #[test]
+    fn selection_rects_clipped_trims_partially_visible_line() {
+        let line = super::TextLine {
+            start: 0,
+            end: 4,
+            width: Px(100.0),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            caret_stops: vec![(0, Px(0.0)), (4, Px(100.0))],
+        };
+        let clip = Rect::new(Point::new(Px(0.0), Px(5.0)), Size::new(Px(100.0), Px(10.0)));
+        let mut rects = Vec::new();
+        super::selection_rects_from_lines_clipped(&[line], (0, 4), clip, &mut rects);
+
+        assert_eq!(rects.len(), 1);
+        assert!((rects[0].origin.y.0 - 5.0).abs() < 0.001);
+        assert!((rects[0].size.height.0 - 5.0).abs() < 0.001);
     }
 
     #[test]
@@ -2728,6 +3571,374 @@ mod tests {
     }
 
     #[test]
+    fn sanitize_spans_extends_missing_tail() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: 2,
+            paint: fret_core::TextPaintStyle {
+                fg: Some(fret_core::Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 2);
+        assert_eq!(sanitized[0].len, 2);
+        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+        assert_eq!(sanitized[1].len, 3);
+        assert_eq!(sanitized[1].paint.fg, None);
+    }
+
+    #[test]
+    fn sanitize_spans_truncates_overflowing_last_span() {
+        let text = "hello";
+        let spans = vec![TextSpan {
+            len: 999,
+            paint: fret_core::TextPaintStyle {
+                fg: Some(fret_core::Color {
+                    r: 0.0,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 1.0,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 1);
+        assert_eq!(sanitized[0].len, text.len());
+        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+    }
+
+    #[test]
+    fn sanitize_spans_snaps_to_char_boundaries() {
+        let text = "aé";
+        assert_eq!(text.len(), 3);
+
+        let spans = vec![
+            TextSpan {
+                len: 2,
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 1.0,
+                        g: 0.0,
+                        b: 0.0,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            TextSpan {
+                len: 1,
+                paint: fret_core::TextPaintStyle {
+                    fg: Some(fret_core::Color {
+                        r: 0.0,
+                        g: 0.0,
+                        b: 1.0,
+                        a: 1.0,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        ];
+
+        let sanitized = super::sanitize_spans_for_text(text, &spans).expect("sanitized spans");
+        let rich = fret_core::AttributedText {
+            text: Arc::<str>::from(text),
+            spans: sanitized.clone(),
+        };
+
+        assert!(rich.is_valid());
+        assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
+        assert_eq!(sanitized.len(), 2);
+        assert_eq!(sanitized[0].len, 1);
+        assert_eq!(sanitized[1].len, 2);
+        assert_eq!(sanitized[0].paint.fg, spans[0].paint.fg);
+        assert_eq!(sanitized[1].paint.fg, spans[1].paint.fg);
+    }
+
+    #[test]
+    fn sanitize_spans_returns_none_for_noop_full_span() {
+        let text = "hello";
+        let spans = vec![TextSpan::new(text.len())];
+        assert!(super::sanitize_spans_for_text(text, &spans).is_none());
+    }
+
+    #[test]
+    fn multiline_metrics_are_pixel_snapped_under_non_integer_scale_factor() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = {
+            let mut out = String::new();
+            for _ in 0..200 {
+                out.push_str("The quick brown fox jumps over the lazy dog. ");
+            }
+            out
+        };
+
+        let scale_factor = 1.25_f32;
+        let constraints = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(13.0),
+            ..Default::default()
+        };
+
+        let (blob_id, metrics) = text.prepare(&content, &style, constraints);
+        let blob = text.blob(blob_id).expect("prepared blob");
+        let lines = blob.shape.lines.as_ref();
+        assert!(lines.len() > 10, "expected multi-line layout");
+
+        let is_pixel_aligned = |logical: Px| {
+            let px = logical.0 * scale_factor;
+            (px - px.round()).abs() < 1e-3
+        };
+
+        assert!(
+            is_pixel_aligned(metrics.baseline),
+            "expected baseline to align to device pixels under fractional scale"
+        );
+
+        let mut prev_y_px = -1.0_f32;
+        for line in lines {
+            let y_px = line.y_top.0 * scale_factor;
+            let h_px = line.height.0 * scale_factor;
+            let baseline_px = line.y_baseline.0 * scale_factor;
+            assert!(
+                (y_px - y_px.round()).abs() < 1e-3,
+                "expected y_top to be pixel-aligned, got {y_px}"
+            );
+            assert!(
+                (h_px - h_px.round()).abs() < 1e-3 && h_px > 0.0,
+                "expected line height to be positive and pixel-aligned, got {h_px}"
+            );
+            assert!(
+                y_px + 0.5 >= prev_y_px,
+                "expected non-decreasing y_top across lines"
+            );
+            prev_y_px = y_px;
+            assert!(
+                (baseline_px - baseline_px.round()).abs() < 1e-3,
+                "expected per-line baseline to be pixel-aligned, got {baseline_px}"
+            );
+        }
+    }
+
+    #[test]
+    fn decorations_are_pixel_snapped_under_non_integer_scale_factor() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = {
+            let mut out = String::new();
+            for _ in 0..60 {
+                out.push_str("The quick brown fox jumps over the lazy dog. ");
+            }
+            out
+        };
+
+        let scale_factor = 1.25_f32;
+        let constraints = TextConstraints {
+            max_width: Some(Px(180.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(13.0),
+            ..Default::default()
+        };
+
+        let mut span = TextSpan::new(content.len());
+        span.paint.underline = Some(UnderlineStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+        span.paint.strikethrough = Some(StrikethroughStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+        let rich = AttributedText::new(Arc::<str>::from(content.as_str()), Arc::from([span]));
+
+        let (blob_id, metrics) = text.prepare_attributed(&rich, &style, constraints);
+        let blob = text.blob(blob_id).expect("prepared blob");
+
+        let underlines: Vec<_> = blob
+            .decorations
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Underline)
+            .collect();
+        let strikes: Vec<_> = blob
+            .decorations
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
+            .collect();
+        assert!(
+            !underlines.is_empty(),
+            "expected underline decorations to be generated"
+        );
+        assert!(
+            !strikes.is_empty(),
+            "expected strikethrough decorations to be generated"
+        );
+
+        let is_pixel_aligned = |logical: Px| {
+            let px = logical.0 * scale_factor;
+            (px - px.round()).abs() < 1e-3
+        };
+
+        for d in underlines.iter().chain(strikes.iter()) {
+            assert!(
+                is_pixel_aligned(d.rect.origin.y),
+                "expected decoration y to be pixel-aligned"
+            );
+            assert!(
+                is_pixel_aligned(d.rect.size.height),
+                "expected decoration height to be pixel-aligned"
+            );
+
+            let h_px = d.rect.size.height.0 * scale_factor;
+            assert!(
+                (h_px - 1.0).abs() < 1e-3,
+                "expected a 1px hairline decoration thickness, got {h_px}"
+            );
+
+            assert!(
+                d.rect.origin.y.0 >= -1e-3,
+                "expected decoration to stay within the text box (top)"
+            );
+            assert!(
+                d.rect.origin.y.0 + d.rect.size.height.0 <= metrics.size.height.0 + 1e-3,
+                "expected decoration to stay within the text box (bottom)"
+            );
+        }
+    }
+
+    #[test]
+    fn trailing_space_at_soft_wrap_is_selectable() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let content = "hello world";
+        let style = TextStyle {
+            font: fret_core::FontId::monospace(),
+            size: Px(16.0),
+            ..Default::default()
+        };
+
+        let single_line_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let (single_blob, _metrics) = text.prepare(content, &style, single_line_constraints);
+        let x_space_end = text
+            .caret_x(single_blob, 6)
+            .expect("caret_x at end of space");
+        let x_w_end = text.caret_x(single_blob, 7).expect("caret_x after 'w'");
+        assert!(
+            x_w_end.0 > x_space_end.0 + 0.1,
+            "expected the 'w' to advance beyond the trailing space"
+        );
+
+        // Force a soft wrap at the boundary between the space and the next word. This keeps the
+        // space as a trailing character at the visual end of the first line.
+        let max_width = Px((x_space_end.0 + x_w_end.0) * 0.5);
+        let wrapped_constraints = TextConstraints {
+            max_width: Some(max_width),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let (blob, _metrics) = text.prepare(content, &style, wrapped_constraints);
+        let blob_ref = text.blob(blob).expect("wrapped blob");
+        assert!(blob_ref.shape.lines.len() >= 2, "expected the text to wrap");
+
+        let first = &blob_ref.shape.lines[0];
+        assert!(
+            first.end >= 6,
+            "expected the first visual line to include the trailing space (end={})",
+            first.end
+        );
+
+        let caret_after_o = text
+            .caret_rect(blob, 5, CaretAffinity::Downstream)
+            .expect("caret rect after 'o'");
+        let caret_after_space = text
+            .caret_rect(blob, 6, CaretAffinity::Upstream)
+            .expect("caret rect after space (upstream)");
+        assert!(
+            caret_after_space.origin.x.0 > caret_after_o.origin.x.0 + 0.1,
+            "expected the trailing space to have positive width in caret geometry"
+        );
+
+        let mut rects = Vec::new();
+        text.selection_rects(blob, (5, 6), &mut rects)
+            .expect("selection rects");
+        assert_eq!(rects.len(), 1);
+        assert!(
+            rects[0].size.width.0 > 0.1,
+            "expected a non-empty selection rect for the trailing space"
+        );
+
+        text.release(single_blob);
+        text.release(blob);
+    }
+
+    #[test]
     fn ellipsis_overflow_truncates_single_line_layout() {
         let text = "This is a long line that should truncate";
         let constraints = TextConstraints {
@@ -2737,9 +3948,9 @@ mod tests {
             scale_factor: 1.0,
         };
 
-        let mut shaper = crate::text_v2::parley_shaper::ParleyShaper::new();
+        let mut shaper = crate::text::parley_shaper::ParleyShaper::new();
         let base = TextStyle::default();
-        let wrapped = crate::text_v2::wrapper::wrap_with_constraints(
+        let wrapped = crate::text::wrapper::wrap_with_constraints(
             &mut shaper,
             TextInputRef::plain(text, &base),
             constraints,
@@ -2748,6 +3959,62 @@ mod tests {
         assert_eq!(wrapped.lines.len(), 1);
         assert!(wrapped.kept_end < text.len());
         assert!(wrapped.lines[0].width <= 80.0 + 0.5);
+    }
+
+    #[test]
+    fn ellipsis_truncation_hit_test_maps_ellipsis_region_to_kept_end() {
+        let text = "This is a long line that should truncate";
+        let constraints = TextConstraints {
+            max_width: Some(Px(80.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            scale_factor: 1.0,
+        };
+
+        let mut shaper = crate::text::parley_shaper::ParleyShaper::new();
+        let base = TextStyle::default();
+        let wrapped = crate::text::wrapper::wrap_with_constraints(
+            &mut shaper,
+            TextInputRef::plain(text, &base),
+            constraints,
+        );
+
+        assert_eq!(wrapped.lines.len(), 1);
+        let kept_end = wrapped.kept_end;
+        assert!(kept_end < text.len());
+
+        let line_layout = &wrapped.lines[0];
+        assert!(
+            line_layout
+                .clusters
+                .iter()
+                .any(|c| c.text_range == (kept_end..kept_end)),
+            "expected a synthetic zero-length cluster at kept_end for ellipsis mapping"
+        );
+
+        let slice = &text[..kept_end];
+        let caret_stops = super::caret_stops_for_slice(
+            slice,
+            0,
+            &line_layout.clusters,
+            line_layout.width,
+            1.0,
+            kept_end,
+        );
+        let line = super::TextLine {
+            start: 0,
+            end: kept_end,
+            width: Px(line_layout.width),
+            y_top: Px(0.0),
+            y_baseline: Px(0.0),
+            height: Px(10.0),
+            caret_stops,
+        };
+
+        let x = Px((line_layout.width - 1.0).max(0.0));
+        let hit =
+            super::hit_test_point_from_lines(&[line], Point::new(x, Px(5.0))).expect("hit test");
+        assert_eq!(hit.index, kept_end);
     }
 
     #[test]
@@ -2818,6 +4085,302 @@ mod tests {
     }
 
     #[test]
+    fn cjk_glyphs_populate_mask_or_subpixel_atlas_when_cjk_lite_font_is_available() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::cjk_lite_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family = "Noto Sans CJK SC";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family)),
+            "expected {family} to be present after loading cjk-lite fonts"
+        );
+
+        let style = TextStyle {
+            font: fret_core::FontId::family(family),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: Some(Px(360.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let cases = [
+            ("你好，世界！", "basic"),
+            ("这是一段用于验证换行与标点处理的文本。", "wrapping"),
+            ("数字 12345 与符号（）《》“”……", "punctuation"),
+        ];
+
+        for (text_str, label) in cases {
+            let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
+            let blob = text.blob(blob_id).expect("text blob");
+
+            let glyphs = blob.shape.glyphs.as_ref();
+            assert!(
+                !glyphs.is_empty(),
+                "expected shaped glyphs for CJK case {label}"
+            );
+
+            let mut non_color: Vec<super::GlyphKey> = Vec::new();
+            for g in glyphs {
+                match g.kind() {
+                    super::GlyphQuadKind::Mask | super::GlyphQuadKind::Subpixel => {
+                        non_color.push(g.key);
+                    }
+                    super::GlyphQuadKind::Color => {}
+                }
+            }
+
+            assert!(
+                !non_color.is_empty(),
+                "expected at least one mask/subpixel glyph for CJK case {label}"
+            );
+
+            let epoch = 1;
+            for key in non_color {
+                text.ensure_glyph_in_atlas(key, epoch);
+                match key.kind {
+                    super::GlyphQuadKind::Mask => assert!(
+                        text.mask_atlas.get(key, epoch).is_some(),
+                        "expected mask glyph to be present in mask atlas after ensure ({label})"
+                    ),
+                    super::GlyphQuadKind::Subpixel => assert!(
+                        text.subpixel_atlas.get(key, epoch).is_some(),
+                        "expected subpixel glyph to be present in subpixel atlas after ensure ({label})"
+                    ),
+                    super::GlyphQuadKind::Color => {}
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn cjk_fallback_uses_cjk_lite_font_without_explicit_family_when_system_fonts_are_absent() {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
+        text.font_system = cosmic_text::FontSystem::new_with_locale_and_db_and_fallback(
+            "en-US".to_string(),
+            cosmic_text::fontdb::Database::new(),
+            super::FretFallback,
+        );
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.font_db_revision = 0;
+        text.font_stack_key = super::font_stack_cache_key(
+            text.font_system.locale(),
+            text.font_system.db(),
+            text.font_db_revision,
+            &text.common_fallback_config,
+        );
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::cjk_lite_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family_inter = "Inter";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_inter)),
+            "expected {family_inter} to be present after loading bootstrap fonts"
+        );
+
+        let family_cjk = "Noto Sans CJK SC";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_cjk)),
+            "expected {family_cjk} to be present after loading cjk-lite fonts"
+        );
+
+        let mut config = fret_core::TextFontFamilyConfig::default();
+        config.ui_sans = vec![family_inter.to_string()];
+        let _ = text.set_font_families(&config);
+
+        let noto_blob_id = super::stable_font_blob_id(fret_fonts::cjk_lite_fonts()[0]);
+
+        let style = TextStyle {
+            font: fret_core::FontId::ui(),
+            size: Px(24.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let (blob_id, _metrics) = text.prepare("你", &style, constraints);
+        let glyph_keys: Vec<super::GlyphKey> = {
+            let blob = text.blob(blob_id).expect("text blob");
+            blob.shape.glyphs.iter().map(|g| g.key).collect()
+        };
+
+        assert!(!glyph_keys.is_empty(), "expected shaped glyphs for CJK");
+
+        let used_cjk_lite = glyph_keys.iter().any(|k| k.font.blob_id == noto_blob_id);
+        assert!(
+            used_cjk_lite,
+            "expected cjk-lite font to be selected for CJK glyphs under the UI sans stack when system fonts are absent"
+        );
+
+        let epoch = 1;
+        for key in glyph_keys {
+            if key.font.blob_id != noto_blob_id {
+                continue;
+            }
+
+            text.ensure_glyph_in_atlas(key, epoch);
+            match key.kind {
+                super::GlyphQuadKind::Mask => assert!(
+                    text.mask_atlas.get(key, epoch).is_some(),
+                    "expected ensured CJK glyph to be present in the mask atlas"
+                ),
+                super::GlyphQuadKind::Subpixel => assert!(
+                    text.subpixel_atlas.get(key, epoch).is_some(),
+                    "expected ensured CJK glyph to be present in the subpixel atlas"
+                ),
+                super::GlyphQuadKind::Color => {}
+            }
+        }
+    }
+
+    #[test]
+    fn emoji_fallback_uses_bundled_color_font_without_explicit_family_when_system_fonts_are_absent()
+    {
+        let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+        let mut text = super::TextSystem::new(&ctx.device);
+
+        // Simulate a Web/WASM-like environment: no system font discovery and only bundled fonts.
+        text.font_system = cosmic_text::FontSystem::new_with_locale_and_db_and_fallback(
+            "en-US".to_string(),
+            cosmic_text::fontdb::Database::new(),
+            super::FretFallback,
+        );
+        text.parley_shaper = crate::text::parley_shaper::ParleyShaper::new_without_system_fonts();
+        text.font_db_revision = 0;
+        text.font_stack_key = super::font_stack_cache_key(
+            text.font_system.locale(),
+            text.font_system.db(),
+            text.font_db_revision,
+            &text.common_fallback_config,
+        );
+
+        let fonts: Vec<Vec<u8>> = fret_fonts::bootstrap_fonts()
+            .iter()
+            .chain(fret_fonts::emoji_fonts().iter())
+            .map(|b| b.to_vec())
+            .collect();
+        let added = text.add_fonts(fonts);
+        assert!(added > 0, "expected bundled fonts to load");
+
+        let family_inter = "Inter";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_inter)),
+            "expected {family_inter} to be present after loading bootstrap fonts"
+        );
+
+        let family_emoji = "Noto Color Emoji";
+        assert!(
+            text.all_font_names()
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(family_emoji)),
+            "expected {family_emoji} to be present after loading emoji fonts"
+        );
+
+        let mut config = fret_core::TextFontFamilyConfig::default();
+        config.ui_sans = vec![family_inter.to_string()];
+        let _ = text.set_font_families(&config);
+
+        let emoji_blob_id = super::stable_font_blob_id(fret_fonts::emoji_fonts()[0]);
+
+        let style = TextStyle {
+            font: fret_core::FontId::ui(),
+            size: Px(32.0),
+            ..Default::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        let cases = [
+            ("\u{1F600}", "single emoji"),
+            ("\u{2708}\u{FE0F}", "vs16 emoji presentation"),
+            ("1\u{FE0F}\u{20E3}", "keycap sequence"),
+            ("\u{1F1FA}\u{1F1F8}", "flag sequence"),
+            (
+                "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}",
+                "zwj family sequence",
+            ),
+        ];
+
+        for (text_str, label) in cases {
+            let (blob_id, _metrics) = text.prepare(text_str, &style, constraints);
+
+            let glyph_keys: Vec<super::GlyphKey> = {
+                let blob = text.blob(blob_id).expect("text blob");
+                blob.shape.glyphs.iter().map(|g| g.key).collect()
+            };
+            assert!(
+                !glyph_keys.is_empty(),
+                "expected shaped glyphs for emoji case {label}"
+            );
+
+            let emoji_keys: Vec<super::GlyphKey> = glyph_keys
+                .iter()
+                .copied()
+                .filter(|k| k.font.blob_id == emoji_blob_id)
+                .collect();
+            assert!(
+                !emoji_keys.is_empty(),
+                "expected bundled emoji font to be selected for {label} under the UI sans stack when system fonts are absent"
+            );
+
+            let color_keys: Vec<super::GlyphKey> = emoji_keys
+                .iter()
+                .copied()
+                .filter(|k| k.kind == super::GlyphQuadKind::Color)
+                .collect();
+            assert!(
+                !color_keys.is_empty(),
+                "expected at least one color emoji glyph quad for {label}"
+            );
+
+            let epoch = 1;
+            for key in color_keys {
+                text.ensure_glyph_in_atlas(key, epoch);
+                assert!(
+                    text.color_atlas.get(key, epoch).is_some(),
+                    "expected ensured emoji glyph to be present in the color atlas ({label})"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn span_fingerprints_split_shaping_and_paint() {
         let constraints = TextConstraints {
             max_width: Some(Px(200.0)),
@@ -2854,6 +4417,16 @@ mod tests {
         assert_ne!(
             spans_paint_fingerprint(&spans_a),
             spans_paint_fingerprint(&spans_b)
+        );
+
+        let mut spans_c = spans_a.clone();
+        spans_c[0].paint.underline = Some(UnderlineStyle {
+            color: None,
+            style: DecorationLineStyle::Solid,
+        });
+        assert_ne!(
+            spans_paint_fingerprint(&spans_a),
+            spans_paint_fingerprint(&spans_c)
         );
 
         let rich_a = fret_core::AttributedText::new(

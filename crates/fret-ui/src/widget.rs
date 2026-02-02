@@ -614,7 +614,7 @@ pub struct PaintCx<'a, H: UiHost> {
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
     pub fn theme(&mut self) -> &Theme {
-        self.observe_global::<Theme>(Invalidation::Layout);
+        self.observe_global::<Theme>(Invalidation::Paint);
         Theme::global(&*self.app)
     }
 
@@ -883,6 +883,10 @@ pub trait Widget<H: UiHost> {
     /// (ADR 0069).
     fn event_observer(&mut self, _cx: &mut ObserverCx<'_, H>, _event: &Event) {}
 
+    fn debug_type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
+
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
@@ -1016,6 +1020,69 @@ pub trait Widget<H: UiHost> {
     fn is_text_input(&self) -> bool {
         false
     }
+
+    /// Optional platform-facing text input snapshot for the focused widget.
+    ///
+    /// This exists to support editor-grade IME and accessibility bridges that need UTF-16 ranges
+    /// and an IME cursor anchor, without depending on widget internals.
+    ///
+    /// Coordinate model: UTF-16 code units over the widget's "composed view" (base text with the
+    /// active preedit spliced at the caret).
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        None
+    }
+
+    /// Returns the focused selection range (UTF-16 code units over the composed view).
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        None
+    }
+
+    /// Returns the marked (preedit) range (UTF-16 code units over the composed view).
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        None
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        _range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        None
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        None
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _point: Point,
+    ) -> Option<u32> {
+        None
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _range: fret_runtime::Utf16Range,
+        _text: &str,
+    ) -> bool {
+        false
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _range: fret_runtime::Utf16Range,
+        _text: &str,
+        _marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        false
+    }
     /// Whether this node can scroll a focused descendant into view.
     ///
     /// This is a mechanism-only capability used by `UiTree` to implement a minimal
@@ -1057,4 +1124,19 @@ pub struct ScrollIntoViewCx<'a, H: UiHost> {
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub bounds: Rect,
+}
+
+pub struct PlatformTextInputCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub services: &'a mut dyn UiServices,
+    pub window: Option<AppWindowId>,
+    pub node: NodeId,
+    pub bounds: Rect,
+    pub scale_factor: f32,
+}
+
+impl<'a, H: UiHost> PlatformTextInputCx<'a, H> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
 }

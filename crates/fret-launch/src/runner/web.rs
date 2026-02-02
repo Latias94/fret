@@ -236,7 +236,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.dnd.external_payload = fret_runtime::ExternalDragPayloadKind::None;
         available.dnd.external_position = fret_runtime::ExternalDragPositionQuality::None;
         available.ime.enabled = true;
-        available.ime.set_cursor_area = false;
+        available.ime.set_cursor_area = true;
         available.fs.real_paths = false;
         available.fs.file_dialogs = true;
         available.shell.open_url = true;
@@ -829,7 +829,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        let t0 = std::time::Instant::now();
+        let t0 = fret_core::time::Instant::now();
         let Ok(uploaded_bytes) = super::yuv_gpu::write_nv12_rect(
             &gfx.ctx.queue,
             planes,
@@ -1017,30 +1017,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     };
                     window.set_cursor(Cursor::Icon(cursor));
                 }
-                Effect::ImeAllow {
-                    window: target,
-                    enabled,
-                } => {
-                    if target != self.app_window {
-                        continue;
-                    }
-                    let dirty = self.platform.set_ime_allowed(enabled);
-                    if dirty {
-                        self.platform.prepare_frame(window);
-                    }
-                }
-                Effect::ImeSetCursorArea {
-                    window: target,
-                    rect,
-                } => {
-                    if target != self.app_window {
-                        continue;
-                    }
-                    let dirty = self.platform.set_ime_cursor_area(rect);
-                    if dirty {
-                        self.platform.prepare_frame(window);
-                    }
-                }
                 Effect::ImageRegisterRgba8 {
                     window: target_window,
                     token,
@@ -1184,7 +1160,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     ) {
                         continue;
                     }
-                    let t0 = std::time::Instant::now();
+                    let t0 = fret_core::time::Instant::now();
                     match super::yuv::nv12_to_rgba8_rect(super::yuv::Nv12ToRgba8RectInput {
                         width,
                         height,
@@ -1253,7 +1229,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 } => {
                     stats.yuv_conversions_attempted =
                         stats.yuv_conversions_attempted.saturating_add(1);
-                    let t0 = std::time::Instant::now();
+                    let t0 = fret_core::time::Instant::now();
                     match super::yuv::i420_to_rgba8_rect(super::yuv::I420ToRgba8RectInput {
                         width,
                         height,
@@ -1328,7 +1304,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         event_loop.exit();
                         return true;
                     }
-                    WindowRequest::Create(_) | WindowRequest::Raise { .. } => {}
+                    WindowRequest::Create(_)
+                    | WindowRequest::Raise { .. }
+                    | WindowRequest::SetInnerSize { .. } => {}
                 },
                 Effect::QuitApp => {
                     self.exiting = true;
