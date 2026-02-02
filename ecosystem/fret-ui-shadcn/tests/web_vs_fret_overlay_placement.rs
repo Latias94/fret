@@ -20022,6 +20022,201 @@ fn assert_menubar_demo_constrained_scroll_state_matches(web_name: &str) {
     );
 }
 
+fn assert_menubar_demo_wheel_does_not_move_overlay(web_name: &str, wheel_dy_px: f32) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_first_visible_label = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(&theme, "menubar-content"),
+        &[
+            "New Tab",
+            "New Window",
+            "New Incognito Window",
+            "Share",
+            "Print...",
+        ],
+    )
+    .unwrap_or_else(|| panic!("missing web first visible menu item for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+    let view_bookmarks_bar: Model<bool> = app.models_mut().insert(false);
+    let view_full_urls: Model<bool> = app.models_mut().insert(true);
+    let profile_value: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("benoit")));
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let labels = [
+        "New Tab",
+        "New Window",
+        "New Incognito Window",
+        "Share",
+        "Print...",
+    ];
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        let menubar = build_menubar_demo(
+            cx,
+            view_bookmarks_bar.clone(),
+            view_full_urls.clone(),
+            profile_value.clone(),
+        );
+        vec![pad_root(cx, Px(0.0), menubar)]
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        render.clone(),
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let file_trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("fret menubar trigger semantics (File)");
+    let click_point = Point::new(
+        Px(file_trigger.bounds.origin.x.0 + file_trigger.bounds.size.width.0 * 0.5),
+        Px(file_trigger.bounds.origin.y.0 + file_trigger.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: click_point,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            render.clone(),
+        );
+    }
+
+    let snap_before = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu_before = snap_before
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| {
+            let aa = a.bounds.size.width.0 * a.bounds.size.height.0;
+            let bb = b.bounds.size.width.0 * b.bounds.size.height.0;
+            aa.total_cmp(&bb)
+        })
+        .expect("fret root menu semantics");
+
+    let before_first_visible = fret_first_visible_menu_item_label(
+        &snap_before,
+        root_menu_before.bounds,
+        &labels,
+    )
+    .unwrap_or("<missing>");
+    assert_eq!(
+        before_first_visible, expected_first_visible_label,
+        "{web_name}: first visible menu item label mismatch (before wheel)"
+    );
+
+    let menu_center = Point::new(
+        Px(root_menu_before.bounds.origin.x.0 + root_menu_before.bounds.size.width.0 * 0.5),
+        Px(root_menu_before.bounds.origin.y.0 + root_menu_before.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
+            position: menu_center,
+            delta: Point::new(Px(0.0), Px(wheel_dy_px)),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2 + settle_frames),
+        true,
+        render,
+    );
+
+    let snap_after = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu_after = snap_after
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| {
+            let aa = a.bounds.size.width.0 * a.bounds.size.height.0;
+            let bb = b.bounds.size.width.0 * b.bounds.size.height.0;
+            aa.total_cmp(&bb)
+        })
+        .expect("fret root menu semantics (after wheel)");
+
+    assert_close(
+        "menu overlay x stable under no-op wheel",
+        root_menu_after.bounds.origin.x.0,
+        root_menu_before.bounds.origin.x.0,
+        1.0,
+    );
+    assert_close(
+        "menu overlay y stable under no-op wheel",
+        root_menu_after.bounds.origin.y.0,
+        root_menu_before.bounds.origin.y.0,
+        1.0,
+    );
+
+    let after_first_visible = fret_first_visible_menu_item_label(
+        &snap_after,
+        root_menu_after.bounds,
+        &labels,
+    )
+    .unwrap_or("<missing>");
+    assert_eq!(
+        after_first_visible, expected_first_visible_label,
+        "{web_name}: first visible menu item label mismatch after wheel"
+    );
+}
+
 #[test]
 fn web_vs_fret_menubar_demo_small_viewport_menu_content_insets_match() {
     assert_menubar_demo_constrained_menu_content_insets_match("menubar-demo.vp1440x320");
@@ -20050,6 +20245,11 @@ fn web_vs_fret_menubar_demo_tiny_viewport_scroll_state_matches() {
 #[test]
 fn web_vs_fret_menubar_demo_mobile_tiny_viewport_scroll_state_matches() {
     assert_menubar_demo_constrained_scroll_state_matches("menubar-demo.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_mobile_tiny_viewport_wheel_does_not_move_overlay() {
+    assert_menubar_demo_wheel_does_not_move_overlay("menubar-demo.vp375x240", -80.0);
 }
 
 #[test]
