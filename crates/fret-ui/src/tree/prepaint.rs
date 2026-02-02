@@ -406,6 +406,19 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     (None, None, None)
                 };
+
+            if update.window_shift_kind != crate::tree::UiDebugVirtualListWindowShiftKind::None {
+                self.debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                    node: record.node,
+                    target: None,
+                    kind: crate::tree::UiDebugPrepaintActionKind::VirtualListWindowShift,
+                    invalidation: None,
+                    element: Some(inputs.element),
+                    virtual_list_window_shift_kind: Some(update.window_shift_kind),
+                    virtual_list_window_shift_reason: window_shift_reason,
+                    frame_id: app.frame_id(),
+                });
+            }
             self.debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
                 source: crate::tree::UiDebugVirtualListWindowSource::Prepaint,
                 node: record.node,

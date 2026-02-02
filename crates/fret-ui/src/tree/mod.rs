@@ -650,6 +650,7 @@ pub enum UiDebugPrepaintActionKind {
     Invalidate,
     RequestRedraw,
     RequestAnimationFrame,
+    VirtualListWindowShift,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -658,6 +659,9 @@ pub struct UiDebugPrepaintAction {
     pub target: Option<NodeId>,
     pub kind: UiDebugPrepaintActionKind,
     pub invalidation: Option<Invalidation>,
+    pub element: Option<GlobalElementId>,
+    pub virtual_list_window_shift_kind: Option<UiDebugVirtualListWindowShiftKind>,
+    pub virtual_list_window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
     pub frame_id: FrameId,
 }
 

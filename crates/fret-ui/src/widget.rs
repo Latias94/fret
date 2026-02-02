@@ -547,6 +547,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: Some(node),
                 kind: crate::tree::UiDebugPrepaintActionKind::Invalidate,
                 invalidation: Some(kind),
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         self.tree.invalidate_with_detail(
@@ -571,6 +574,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: None,
                 kind: crate::tree::UiDebugPrepaintActionKind::RequestRedraw,
                 invalidation: None,
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         let Some(window) = self.window else {
@@ -591,6 +597,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: Some(self.node),
                 kind: crate::tree::UiDebugPrepaintActionKind::RequestAnimationFrame,
                 invalidation: Some(Invalidation::Paint),
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
