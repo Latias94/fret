@@ -232,12 +232,18 @@ and best-aligned choice for long-term extensibility.
 
 - **The view graph is the liveness root set.** A cached view remains part of the window's view graph,
   so it is still "owned" even when its output is reused.
-- **Cache hit still "touches" what matters.** GPUI-style reuse tracks accessed dependencies
-  (`accessed_entities`) and reuses prepaint/paint ranges while keeping dependency/state tracking
-  consistent.
-- **Implication for Fret**: our `view_cache_subtree_element_lists` are the local equivalent of the
-  "accessed set" needed to keep element runtime entries alive under reuse. The membership list must
-  be complete and deterministically touchable on cache-hit frames.
+- **Cache hit still "touches" what matters.** On a cache hit, GPUI consults per-view element state
+  (`Window::with_element_state`) and reuses `prepaint`/`paint` ranges (`reuse_prepaint`/`reuse_paint`)
+  while also extending dependency tracking (`accessed_entities`). The reuse gate is driven by
+  `dirty_views` (and ancestor propagation via `mark_view_dirty`), not by incidental "was this view
+  visited this frame?" heuristics.
+- **Why Fret needs an explicit GC contract**: GPUI does not maintain a retained declarative node tree
+  that can be swept independently of the view graph; the reused output is range-based. In Fret, we
+  intentionally skip mounting/execution on cache-hit frames *while still retaining node identity and
+  element runtime bookkeeping*, which makes a reachability-based "liveness roots" contract necessary.
+- **Implication for Fret**: our `view_cache_subtree_element_lists` + explicit liveness roots are the
+  local equivalent of "touch the right dependencies on cache-hit frames". The membership list must
+  be complete (including nested cache roots) and deterministically refreshable on cache-hit frames.
 
 ### Flutter lifecycle / ownership
 
