@@ -625,7 +625,11 @@ topics (if/when we implement them):
       - Scope note: for *fully composable* row subtrees, “apply a window shift without rerendering the parent cache root” effectively requires a retained host boundary (ADR 0192 / `GPUI-MVP5-virt-003`).
         This track therefore focuses on: (1) prepaint deriving the *next desired window* (explainable), and (2) making escape ticks cheap and predictable (one-shot rerender, no extra current-frame churn).
       - [ ] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
+        - Specify the allowed "ephemeral prepaint updates" for the non-retained VirtualList path (e.g. window prediction, scroll-offset bookkeeping, one-shot escape scheduling), and explicitly forbid any attach/detach that would require remounting children without a rerender boundary.
+        - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
       - [ ] Make window-shift reasons explainable from one bundle (`prefetch`/`escape`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
+        - Add a per-frame debug counter + samples for non-retained window shifts (kind + old/new range + triggering invalidation detail), similar to retained-host reconcile samples.
+        - Ensure `debug.prepaint_actions` includes the window-shift action (kind + reason) so `--check-prepaint-actions-min` can be extended to assert the right behavior.
       - [ ] Add a stable regression gate for the window-boundary harness:
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
         - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
