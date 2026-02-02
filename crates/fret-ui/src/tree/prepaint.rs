@@ -379,19 +379,25 @@ impl<H: UiHost> UiTree<H> {
                         crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
                     };
                     let invalidation_detail = if self.view_cache_active() && !retained_host {
-                        if reason == crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem
-                        {
-                            Some(crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate)
-                        } else {
-                            match update.window_shift_kind {
-                            crate::tree::UiDebugVirtualListWindowShiftKind::None => None,
-                            crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch => Some(
-                                crate::tree::UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate,
+                        match reason {
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem => Some(
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate,
                             ),
-                            crate::tree::UiDebugVirtualListWindowShiftKind::Escape => Some(
-                                crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize => Some(
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate,
                             ),
-                        }
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision => Some(
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate,
+                            ),
+                            _ => match update.window_shift_kind {
+                                crate::tree::UiDebugVirtualListWindowShiftKind::None => None,
+                                crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch => Some(
+                                    crate::tree::UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate,
+                                ),
+                                crate::tree::UiDebugVirtualListWindowShiftKind::Escape => Some(
+                                    crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                                ),
+                            },
                         }
                     } else {
                         None

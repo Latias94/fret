@@ -506,10 +506,17 @@ impl ElementHostWidget {
                         crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
                     };
                     let invalidation_detail = if cx.tree.view_cache_enabled() && !retained_host {
-                        Some(if deferred_scroll_to_item {
-                            crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
-                        } else {
-                            crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                        Some(match reason {
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem => {
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                            }
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize => {
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+                            }
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision => {
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+                            }
+                            _ => crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
                         })
                     } else {
                         None
@@ -575,6 +582,21 @@ impl ElementHostWidget {
                 });
 
             if !retained_host {
+                let prev_viewport_state = match axis {
+                    fret_core::Axis::Vertical => prev_viewport_h,
+                    fret_core::Axis::Horizontal => prev_viewport_w,
+                };
+
+                let detail = if deferred_scroll_to_item {
+                    UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                } else if props.items_revision != prev_items_revision {
+                    UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+                } else if (viewport.0 - prev_viewport_state.0).abs() > 0.01 {
+                    UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+                } else {
+                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                };
+
                 // Virtual list visible-item sets are computed during the declarative render pass.
                 // If the current visible window is outside the previously rendered overscan
                 // window, ensure the nearest view-cache root re-renders on the next frame so it
@@ -587,11 +609,7 @@ impl ElementHostWidget {
                 cx.tree.mark_nearest_view_cache_root_needs_rerender(
                     cx.node,
                     UiDebugInvalidationSource::Other,
-                    if deferred_scroll_to_item {
-                        UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
-                    } else {
-                        UiDebugInvalidationDetail::ScrollHandleWindowUpdate
-                    },
+                    detail,
                 );
             }
             needs_redraw = true;

@@ -414,6 +414,8 @@ pub enum UiDebugInvalidationDetail {
     ScrollHandleLayout,
     ScrollHandleWindowUpdate,
     ScrollHandleScrollToItemWindowUpdate,
+    ScrollHandleViewportResizeWindowUpdate,
+    ScrollHandleItemsRevisionWindowUpdate,
     ScrollHandlePrefetchWindowUpdate,
     FocusVisiblePolicy,
     InputModalityPolicy,
@@ -445,6 +447,12 @@ impl UiDebugInvalidationDetail {
             Self::ScrollHandleWindowUpdate => Some("scroll_handle_window_update"),
             Self::ScrollHandleScrollToItemWindowUpdate => {
                 Some("scroll_handle_scroll_to_item_window_update")
+            }
+            Self::ScrollHandleViewportResizeWindowUpdate => {
+                Some("scroll_handle_viewport_resize_window_update")
+            }
+            Self::ScrollHandleItemsRevisionWindowUpdate => {
+                Some("scroll_handle_items_revision_window_update")
             }
             Self::ScrollHandlePrefetchWindowUpdate => Some("scroll_handle_prefetch_window_update"),
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),
@@ -1716,6 +1724,8 @@ impl<H: UiHost> UiTree<H> {
                 UiDebugInvalidationDetail::ScrollHandleLayout
                     | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
                     | UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                    | UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+                    | UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
                     | UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
             ))
     }

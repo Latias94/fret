@@ -411,6 +411,137 @@ fn virtual_list_window_jump_rerender_uses_latest_handle_offset() {
 }
 
 #[test]
+fn virtual_list_window_shift_detail_classifies_viewport_resize() {
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let mut services = FakeUiServices;
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let mut scene = Scene::default();
+
+    let bounds_small = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let bounds_large = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(480.0)),
+    );
+
+    let render_frame = |ui: &mut UiTree<crate::test_host::TestHost>,
+                        app: &mut crate::test_host::TestHost,
+                        services: &mut FakeUiServices,
+                        bounds: Rect,
+                        items_revision: u64|
+     -> NodeId {
+        let handle = scroll_handle.clone();
+        declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "vlist-viewport-resize",
+            |cx| {
+                let mut cache = crate::element::ViewCacheProps::default();
+                cache.layout.size.width = crate::element::Length::Fill;
+                cache.layout.size.height = crate::element::Length::Fill;
+                cache.cache_key = 1;
+
+                vec![cx.view_cache(cache, move |cx| {
+                    let mut layout = crate::element::LayoutStyle::default();
+                    layout.size.width = crate::element::Length::Fill;
+                    layout.size.height = crate::element::Length::Fill;
+                    layout.overflow = crate::element::Overflow::Clip;
+
+                    let mut options = crate::element::VirtualListOptions::fixed(Px(28.0), 10);
+                    options.items_revision = items_revision;
+                    vec![cx.virtual_list_keyed_with_layout(
+                        layout,
+                        10_000,
+                        options,
+                        &handle,
+                        |i| i as crate::ItemKey,
+                        |cx, _i| cx.spacer(crate::element::SpacerProps::default()),
+                    )]
+                })]
+            },
+        )
+    };
+
+    // Frame 0: establish viewport.
+    let root = render_frame(&mut ui, &mut app, &mut services, bounds_small, 1);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds_small, 1.0);
+    ui.paint_all(&mut app, &mut services, bounds_small, &mut scene, 1.0);
+    app.advance_frame();
+
+    // Frame 1: rerender so `render_window_range` is populated for mismatch checks.
+    let root = render_frame(&mut ui, &mut app, &mut services, bounds_small, 1);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds_small, 1.0);
+    scene.clear();
+    ui.paint_all(&mut app, &mut services, bounds_small, &mut scene, 1.0);
+    app.advance_frame();
+
+    // Frame 2: enlarge viewport so the current visible range escapes the previously rendered
+    // overscan window.
+    let root = render_frame(&mut ui, &mut app, &mut services, bounds_large, 1);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds_large, 1.0);
+
+    let record = ui
+        .debug_virtual_list_windows()
+        .iter()
+        .rev()
+        .find(|r| {
+            r.window_shift_reason
+                == Some(crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize)
+                && r.window_shift_apply_mode
+                    == Some(
+                        crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender,
+                    )
+        })
+        .expect("expected a viewport-resize window shift record");
+    assert_eq!(
+        record.window_shift_invalidation_detail,
+        Some(crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate)
+    );
+}
+
+#[test]
+fn virtual_list_window_shift_detail_classifies_items_revision() {
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let cache_root = ui.create_node(TestStack::default());
+    let child = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![cache_root]);
+    ui.set_children(cache_root, vec![child]);
+    ui.set_node_view_cache_flags(cache_root, true, false, false);
+
+    ui.mark_nearest_view_cache_root_needs_rerender(
+        child,
+        UiDebugInvalidationSource::Other,
+        crate::tree::UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate,
+    );
+
+    assert!(
+        ui.nodes[cache_root].view_cache_needs_rerender,
+        "expected items revision window update detail to mark the nearest cache root dirty"
+    );
+}
+
+#[test]
 fn scroll_offset_changes_do_not_replay_paint_cache() {
     let mut app = crate::test_host::TestHost::new();
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
