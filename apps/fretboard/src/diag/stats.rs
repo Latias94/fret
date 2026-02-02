@@ -2560,6 +2560,25 @@ pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max(
     )
 }
 
+pub(super) fn check_bundle_for_vlist_window_shifts_kind_max(
+    bundle_path: &Path,
+    out_dir: &Path,
+    kind: &str,
+    max_total_kind_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_kind_max_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        kind,
+        max_total_kind_shifts,
+        warmup_frames,
+    )
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
     bundle_path: &Path,
     out_dir: &Path,
@@ -3055,6 +3074,128 @@ pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
     if total_non_retained_shifts > max_total_non_retained_shifts {
         return Err(format!(
             "vlist non-retained window-shift gate failed: total_non_retained_shifts={total_non_retained_shifts} exceeded max_total_non_retained_shifts={max_total_non_retained_shifts} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    kind: &str,
+    max_total_kind_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let kind = match kind {
+        "prefetch" | "escape" => kind,
+        _ => {
+            return Err(format!(
+                "vlist window-shift kind must be one of: prefetch|escape (got: {kind})"
+            ));
+        }
+    };
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut snapshots_examined: u64 = 0;
+    let mut total_kind_shifts: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| "invalid bundle.json: missing snapshots".to_string())?;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            snapshots_examined = snapshots_examined.saturating_add(1);
+
+            let shift_entries = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter(|w| {
+                            w.get("source")
+                                .and_then(|v| v.as_str())
+                                .is_some_and(|s| s == "prepaint")
+                                && w.get("window_shift_kind")
+                                    .and_then(|v| v.as_str())
+                                    .is_some_and(|k| k == kind)
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+
+            if shift_entries.is_empty() {
+                continue;
+            }
+
+            total_kind_shifts = total_kind_shifts.saturating_add(shift_entries.len() as u64);
+
+            if samples.len() < 64 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let entries = shift_entries
+                    .iter()
+                    .take(4)
+                    .map(|w| {
+                        serde_json::json!({
+                            "node": w.get("node").cloned().unwrap_or(serde_json::Value::Null),
+                            "element": w.get("element").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_shift_kind": w.get("window_shift_kind").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_shift_reason": w.get("window_shift_reason").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_shift_apply_mode": w.get("window_shift_apply_mode").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_mismatch": w.get("window_mismatch").cloned().unwrap_or(serde_json::Value::Null),
+                        })
+                    })
+                    .collect::<Vec<_>>();
+
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "kind": kind,
+                    "shifts_in_frame": shift_entries.len(),
+                    "entries": entries,
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join(format!("check.vlist_window_shifts_{kind}_max.json"));
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": format!("vlist_window_shifts_{kind}_max"),
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "max_total_kind_shifts": max_total_kind_shifts,
+        "snapshots_examined": snapshots_examined,
+        "total_kind_shifts": total_kind_shifts,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if total_kind_shifts > max_total_kind_shifts {
+        return Err(format!(
+            "vlist window-shift kind gate failed: total_{kind}_shifts={total_kind_shifts} exceeded max_total_kind_shifts={max_total_kind_shifts} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
             bundle_path.display(),
             out_path.display()
         ));

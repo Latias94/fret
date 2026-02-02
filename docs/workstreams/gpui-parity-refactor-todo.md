@@ -911,6 +911,7 @@ topics (if/when we implement them):
             - `--check-stale-paint ui-gallery-virtual-list-root` still passes,
             - and the bundle shows at least one cache-hit tail streak (`--check-view-cache-reuse-min 1` stays meaningful).
         - Target: split budgets by cause once “window shift reasons” are exported (e.g. `prefetch` vs `escape`) and can be gated independently.
+          - Gates: `--check-vlist-window-shifts-prefetch-max <n>`, `--check-vlist-window-shifts-escape-max <n>` (counts prepaint-sourced shifts after warmup).
 
 - [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
