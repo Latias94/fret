@@ -14663,6 +14663,243 @@ fn assert_context_menu_demo_constrained_scroll_state_matches(web_name: &str) {
     );
 }
 
+fn assert_context_menu_demo_wheel_scroll_matches_web_scrolled(web_name: &str, wheel_dy_px: f32) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let open_point = theme
+        .open
+        .as_ref()
+        .map(|m| m.point)
+        .unwrap_or_else(|| panic!("missing web open point for {web_name}"));
+
+    let labels = [
+        "Back",
+        "Forward",
+        "Reload",
+        "More Tools",
+        "Show Bookmarks",
+        "Show Full URLs",
+        "Pedro Duarte",
+        "Colm Tuite",
+    ];
+    let expected_first_visible_label = web_first_visible_menu_item_label(
+        web_portal_node_by_data_slot(&theme, "context-menu-content"),
+        &labels,
+    )
+    .unwrap_or_else(|| panic!("missing web first visible menu item for {web_name}"));
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(true);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(false);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::{
+            ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuItem,
+            ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItemSpec, ContextMenuShortcut,
+        };
+
+        let el = ContextMenu::new(open.clone())
+            .min_width(Px(208.0))
+            .submenu_min_width(Px(176.0))
+            .into_element(
+                cx,
+                |cx| {
+                    cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(300.0));
+                                layout.size.height = Length::Px(Px(150.0));
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("Right click here")],
+                    )
+                },
+                |cx| {
+                    vec![
+                        ContextMenuEntry::Item(
+                            ContextMenuItem::new("Back")
+                                .inset(true)
+                                .trailing(ContextMenuShortcut::new("⌘[").into_element(cx)),
+                        ),
+                        ContextMenuEntry::Item(
+                            ContextMenuItem::new("Forward")
+                                .inset(true)
+                                .disabled(true)
+                                .trailing(ContextMenuShortcut::new("⌘]").into_element(cx)),
+                        ),
+                        ContextMenuEntry::Item(
+                            ContextMenuItem::new("Reload")
+                                .inset(true)
+                                .trailing(ContextMenuShortcut::new("⌘R").into_element(cx)),
+                        ),
+                        ContextMenuEntry::Item(ContextMenuItem::new("More Tools").inset(true).submenu(
+                            vec![
+                                ContextMenuEntry::Item(ContextMenuItem::new("Save Page...")),
+                                ContextMenuEntry::Item(ContextMenuItem::new("Create Shortcut...")),
+                                ContextMenuEntry::Item(ContextMenuItem::new("Name Window...")),
+                                ContextMenuEntry::Separator,
+                                ContextMenuEntry::Item(ContextMenuItem::new("Developer Tools")),
+                                ContextMenuEntry::Separator,
+                                ContextMenuEntry::Item(ContextMenuItem::new("Delete").variant(
+                                    fret_ui_shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                )),
+                            ],
+                        )),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                            checked_bookmarks.clone(),
+                            "Show Bookmarks",
+                        )),
+                        ContextMenuEntry::CheckboxItem(ContextMenuCheckboxItem::new(
+                            checked_full_urls.clone(),
+                            "Show Full URLs",
+                        )),
+                        ContextMenuEntry::Separator,
+                        ContextMenuEntry::Label(ContextMenuLabel::new("People").inset(true)),
+                        ContextMenuEntry::RadioGroup(
+                            ContextMenuRadioGroup::new(radio_person.clone())
+                                .item(ContextMenuRadioItemSpec::new("pedro", "Pedro Duarte"))
+                                .item(ContextMenuRadioItemSpec::new("colm", "Colm Tuite")),
+                        ),
+                    ]
+                },
+            );
+
+        vec![pad_root(cx, Px(0.0), el)]
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        render.clone(),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(open_point.x), Px(open_point.y)),
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(open_point.x), Px(open_point.y)),
+            button: MouseButton::Right,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            pointer_type: PointerType::Mouse,
+            click_count: 1,
+        }),
+    );
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            request_semantics,
+            render.clone(),
+        );
+    }
+
+    let snap_before = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu_before = snap_before
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| a.bounds.size.height.0.total_cmp(&b.bounds.size.height.0))
+        .expect("fret root menu semantics");
+
+    let menu_center = Point::new(
+        Px(root_menu_before.bounds.origin.x.0 + root_menu_before.bounds.size.width.0 * 0.5),
+        Px(root_menu_before.bounds.origin.y.0 + root_menu_before.bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId::default(),
+            position: menu_center,
+            delta: Point::new(Px(0.0), Px(wheel_dy_px)),
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    // Frame N: apply scroll and snapshot.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(2 + settle_frames),
+        true,
+        render,
+    );
+
+    let snap_after = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let root_menu_after = snap_after
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Menu)
+        .max_by(|a, b| a.bounds.size.height.0.total_cmp(&b.bounds.size.height.0))
+        .expect("fret root menu semantics (after scroll)");
+
+    assert_close(
+        "menu overlay x stable under internal scroll",
+        root_menu_after.bounds.origin.x.0,
+        root_menu_before.bounds.origin.x.0,
+        1.0,
+    );
+    assert_close(
+        "menu overlay y stable under internal scroll",
+        root_menu_after.bounds.origin.y.0,
+        root_menu_before.bounds.origin.y.0,
+        1.0,
+    );
+
+    let after_first_visible =
+        fret_first_visible_menu_item_label(&snap_after, root_menu_after.bounds, &labels)
+            .unwrap_or("<missing>");
+    assert_eq!(
+        after_first_visible, expected_first_visible_label,
+        "{web_name}: first visible menu item label mismatch after wheel scroll"
+    );
+}
+
 #[test]
 fn web_vs_fret_context_menu_demo_small_viewport_menu_content_insets_match() {
     assert_context_menu_demo_constrained_menu_content_insets_match("context-menu-demo.vp1440x320");
@@ -14691,6 +14928,14 @@ fn web_vs_fret_context_menu_demo_tiny_viewport_scroll_state_matches() {
 #[test]
 fn web_vs_fret_context_menu_demo_mobile_tiny_viewport_scroll_state_matches() {
     assert_context_menu_demo_constrained_scroll_state_matches("context-menu-demo.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_mobile_tiny_viewport_wheel_scroll_matches_web_scrolled_80() {
+    assert_context_menu_demo_wheel_scroll_matches_web_scrolled(
+        "context-menu-demo.vp375x240-scrolled-80",
+        -80.0,
+    );
 }
 
 #[test]
