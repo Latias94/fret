@@ -22,6 +22,7 @@ Conventions:
 ### M0: Baseline + suite gates (make perf a contract)
 
 - [ ] Decide Tier A / Tier B thresholds per script (initially “best-effort”, then tighten).
+- [ ] Decide what `--launch` represents (cold-start gate vs steady-state gate) and codify it.
 - [ ] Finalize the acceptance suite list (see `ui-perf-zed-smoothness-v1.md`) and keep it small.
 - [ ] Record initial baselines (one per machine profile) using `fretboard diag perf --perf-baseline-out`.
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
@@ -98,6 +99,8 @@ Perf acceptance:
 
 - [ ] Document stable cache keys for measure/shaping (wrap width, font stack, style).
 - [ ] Reduce redundant text measurements under intrinsic probes (layout engine + `TextWrap::None` paths).
+- [ ] Add a fast path for “min-content probes” (e.g. `wrap=Word` + `max_width=0`) to avoid O(n²) text wrapping.
+- [ ] Reduce repeated shaping work when taffy calls `measure()` under multiple intrinsic modes (min/max/definite).
 - [ ] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
 - [ ] Ensure atlas eviction and re-upload events are observable in perf snapshots.
 
