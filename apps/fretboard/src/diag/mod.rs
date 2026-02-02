@@ -31,7 +31,8 @@ use stats::{
     check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
     check_bundle_for_viewport_input_min, check_bundle_for_vlist_visible_range_refreshes_max,
-    check_bundle_for_vlist_visible_range_refreshes_min, check_bundle_for_wheel_scroll,
+    check_bundle_for_vlist_visible_range_refreshes_min,
+    check_bundle_for_vlist_window_shifts_explainable, check_bundle_for_wheel_scroll,
     check_report_for_hover_layout_invalidations, clear_script_result_files,
     report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
     wait_for_failure_dump_bundle, write_pick_script,
@@ -103,6 +104,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_vlist_visible_range_refreshes_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
+    let mut check_vlist_window_shifts_explainable: bool = false;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_view_cache_reuse_stable_min: Option<u64> = None;
@@ -534,6 +536,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_vlist_visible_range_refreshes_min = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --check-vlist-visible-range-refreshes-min".to_string()
                 })?);
+                i += 1;
+            }
+            "--check-vlist-window-shifts-explainable" => {
+                check_vlist_window_shifts_explainable = true;
                 i += 1;
             }
             "--check-drag-cache-root-paint-only" => {
@@ -1193,6 +1199,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_wheel_scroll_test_id.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
+                    || check_vlist_window_shifts_explainable
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -1231,6 +1238,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_wheel_scroll_test_id.as_deref(),
                         check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
+                        check_vlist_window_shifts_explainable,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
@@ -1516,6 +1524,7 @@ See: `docs/tracy.md`.\n";
                         || check_wheel_scroll_test_id.is_some()
                         || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
+                        || check_vlist_window_shifts_explainable
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
                         || check_gc_sweep_liveness
@@ -1552,6 +1561,7 @@ See: `docs/tracy.md`.\n";
                             check_wheel_scroll_test_id.as_deref(),
                             check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
+                            check_vlist_window_shifts_explainable,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
                             check_gc_sweep_liveness,
@@ -2504,6 +2514,7 @@ See: `docs/tracy.md`.\n";
                     || check_wheel_scroll_test_id.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
+                    || check_vlist_window_shifts_explainable
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -2561,6 +2572,8 @@ See: `docs/tracy.md`.\n";
                     let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
                         .then_some(10u64)
                         .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
+                    let suite_vlist_window_shifts_explainable =
+                        vlist_window_boundary_suite && !check_vlist_window_shifts_explainable;
                     let suite_gc_sweep_liveness =
                         builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
                     apply_post_run_checks(
@@ -2581,6 +2594,8 @@ See: `docs/tracy.md`.\n";
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
                             .or(suite_vlist_visible_range_refreshes_max),
+                        check_vlist_window_shifts_explainable
+                            || suite_vlist_window_shifts_explainable,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
@@ -5175,6 +5190,7 @@ fn apply_post_run_checks(
     check_wheel_scroll_test_id: Option<&str>,
     check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
+    check_vlist_window_shifts_explainable: bool,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     check_gc_sweep_liveness: bool,
@@ -5226,6 +5242,9 @@ fn apply_post_run_checks(
             max_total_refreshes,
             warmup_frames,
         )?;
+    }
+    if check_vlist_window_shifts_explainable {
+        check_bundle_for_vlist_window_shifts_explainable(bundle_path, out_dir, warmup_frames)?;
     }
     if let Some(test_id) = check_drag_cache_root_paint_only_test_id {
         check_bundle_for_drag_cache_root_paint_only(bundle_path, test_id, warmup_frames)?;
@@ -5838,8 +5857,8 @@ mod tests {
         check_bundle_for_retained_vlist_reconcile_no_notify_min_json,
         check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
         check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
-        check_bundle_for_viewport_input_min_json, json_pointer_set,
-        scan_semantics_changed_repainted_json,
+        check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
+        json_pointer_set, scan_semantics_changed_repainted_json,
     };
     use serde_json::json;
     use std::path::Path;
@@ -6943,6 +6962,62 @@ mod tests {
                 .and_then(|v| v.as_array())
                 .is_some_and(|a| !a.is_empty()),
             "expected offender_samples to be populated"
+        );
+    }
+
+    #[test]
+    fn vlist_window_shifts_explainable_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("vlist_window_shifts_explainable_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "virtual_list_windows": [{
+                            "node": 10,
+                            "element": 1,
+                            "window_mismatch": true,
+                            "window_shift_kind": "escape"
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_vlist_window_shifts_explainable(&bundle_path, &bundle_dir, 0)
+            .unwrap_err();
+        assert!(err.contains("vlist window-shift explainability gate failed"));
+
+        let evidence_path = bundle_dir.join("check.vlist_window_shifts_explainable.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected vlist window-shift evidence JSON to be written"
+        );
+
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("vlist_window_shifts_explainable")
+        );
+        assert_eq!(evidence.get("offenders").and_then(|v| v.as_u64()), Some(1));
+        assert!(
+            evidence
+                .get("samples")
+                .and_then(|v| v.as_array())
+                .is_some_and(|a| !a.is_empty()),
+            "expected samples to be populated"
         );
     }
 

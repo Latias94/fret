@@ -2528,6 +2528,21 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
     )
 }
 
+pub(super) fn check_bundle_for_vlist_window_shifts_explainable(
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_explainable_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
     bundle_path: &Path,
     out_dir: &Path,
@@ -2636,6 +2651,138 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
     }
 
     Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_signal = false;
+    let mut total_shifts: u64 = 0;
+    let mut offenders: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let wheel_frame = first_wheel_frame_id_for_window(w);
+        let after_frame = wheel_frame.unwrap_or(warmup_frames).max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let list = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if list.is_empty() {
+                continue;
+            }
+            any_signal = true;
+
+            for win in list {
+                let mismatch = win
+                    .get("window_mismatch")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let kind = win
+                    .get("window_shift_kind")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(if mismatch { "escape" } else { "none" });
+                if kind == "none" {
+                    continue;
+                }
+                total_shifts = total_shifts.saturating_add(1);
+
+                let reason = win.get("window_shift_reason").and_then(|v| v.as_str());
+                let mode = win.get("window_shift_apply_mode").and_then(|v| v.as_str());
+                if reason.is_some() && mode.is_some() {
+                    continue;
+                }
+
+                offenders = offenders.saturating_add(1);
+                failures.push(format!(
+                    "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_explainability kind={kind} reason={reason:?} apply_mode={mode:?}"
+                ));
+
+                if samples.len() < 64 {
+                    samples.push(serde_json::json!({
+                        "window": window_id,
+                        "tick_id": tick_id,
+                        "frame_id": frame_id,
+                        "kind": kind,
+                        "reason": reason,
+                        "apply_mode": mode,
+                        "node": win.get("node").and_then(|v| v.as_u64()),
+                        "element": win.get("element").and_then(|v| v.as_u64()),
+                        "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
+                        "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
+                        "window_range": win.get("window_range"),
+                        "prev_window_range": win.get("prev_window_range"),
+                        "render_window_range": win.get("render_window_range"),
+                        "deferred_scroll_to_item": win.get("deferred_scroll_to_item").and_then(|v| v.as_bool()),
+                        "deferred_scroll_consumed": win.get("deferred_scroll_consumed").and_then(|v| v.as_bool()),
+                    }));
+                }
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_window_shifts_explainable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_window_shifts_explainable",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "total_shifts": total_shifts,
+        "offenders": offenders,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_signal {
+        return Err(format!(
+            "vlist window-shift explainability gate requires debug.virtual_list_windows after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if offenders == 0 {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("vlist window-shift explainability gate failed (expected every window shift to have reason + apply_mode)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    msg.push_str(&format!("evidence: {}\n", out_path.display()));
+    for line in failures.into_iter().take(12) {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
 }
 
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
