@@ -72,9 +72,10 @@ Perf acceptance:
 
 - [ ] `ui-gallery-overlay-torture.json`: p95 total improves; invalidation nodes/calls do not regress.
 - [ ] `ui-gallery-virtual-list-torture.json`: tail latency improves or stays flat.
-- [ ] Investigate post-`a540829e` suite deltas (noise vs real regression) and decide next step:
+- [x] Investigate post-`a540829e` suite deltas (noise vs real regression) and decide next step:
   - If real: profile invalidation propagation micro-costs and consider alternative dense map strategy (or env gating).
   - If noise: standardize suite runs on explicit `--dir` and pin a baseline via `--perf-baseline-out`.
+  - Result: A/B rerun at `448c34ad` is within noise vs the current baseline (see perf log).
 
 ### M2: Allocation model (per-frame scratch arena)
 

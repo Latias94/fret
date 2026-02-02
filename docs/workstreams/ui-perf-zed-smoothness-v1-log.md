@@ -477,3 +477,77 @@ Notes:
     until we pin baselines and rerun under tighter noise control.
   - `ui-gallery-virtual-list-bottom-steady` invalidation counts are identical (sum calls/nodes `760/2521`),
     but layout/paint totals are higher (sum `24414us -> 26642us`).
+
+## 2026-02-03 06:33:07 (commit `fd7ed84b`)
+
+Notes:
+- v2 baseline threshold check passed with repeat=3:
+  - evidence: `target/fret-diag-perf/ui-gallery-steady.macos-m4.v2.check/check.perf_thresholds.json`
+
+## 2026-02-03 06:41:07 (commit `fd7ed84b`)
+
+Change:
+- Record macOS (Apple M4) ui-gallery-steady baseline v2 (headroom 30%)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.macos-m4.v2 --reuse-launch --repeat 7 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v2.json --perf-baseline-headroom-pct 30 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3189 | 3435 | 3435 | 3000 | 90 | 17 | 418 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3814 | 3907 | 3907 | 3134 | 206 | 21 | 800 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3585 | 4092 | 4092 | 3301 | 185 | 17 | 774 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2840 | 3089 | 3089 | 2472 | 42 | 17 | 637 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1787 | 2137 | 2137 | 1598 | 51 | 13 | 543 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3870 | 6903 | 6903 | 3991 | 329 | 21 | 2891 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10898 | 11271 | 11271 | 9916 | 393 | 50 | 1335 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6542 | 7476 | 7476 | 6120 | 831 | 29 | 1360 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13769 | 14022 | 14022 | 11308 | 1930 | 58 | 2684 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `14022`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.macos-m4.v2/1770071470742-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-03 06:45:59 (commit `448c34ad`)
+
+Change:
+- Re-run ui-gallery-steady at 448c34ad (A/B vs a540+ baselines; same machine)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+(in detached worktree @448c34ad) cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.448c34ad.rerun --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3193 | 3321 | 3321 | 2964 | 81 | 17 | 340 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3847 | 3888 | 3888 | 3139 | 202 | 20 | 769 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3596 | 4166 | 4166 | 3378 | 184 | 17 | 771 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2939 | 3181 | 3181 | 2557 | 46 | 20 | 654 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1811 | 2150 | 2150 | 1623 | 51 | 13 | 515 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3935 | 6928 | 6928 | 4041 | 332 | 20 | 2867 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10923 | 11260 | 11260 | 9935 | 393 | 51 | 1284 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6608 | 7515 | 7515 | 6201 | 807 | 31 | 1408 |
+| /Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13707 | 13762 | 13762 | 11160 | 1888 | 55 | 2597 |
+
+Worst overall:
+- script: `/Users/frankorz/codes/rust/fret-perf-448c34ad/tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `13762`
+- bundle: `/Users/frankorz/codes/rust/fret-perf-448c34ad/target/fret-diag-perf/ui-gallery-steady.448c34ad.rerun/1770072315614-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- This rerun suggests the earlier “`a540829e` regressed vs `448c34ad`” signal was mostly noise. On the same machine:
+  - `ui-gallery-window-resize-stress-steady` p95 total is within ~2% (`13762us @448c34ad` vs `14022us @fd7ed84b baseline v2`).
+  - `ui-gallery-virtual-list-torture-steady` is essentially flat (`7515us @448c34ad` vs `7476us @fd7ed84b baseline v2`).
+- Script paths are absolute here because the run was performed from a detached worktree (`fret-perf-448c34ad`).
