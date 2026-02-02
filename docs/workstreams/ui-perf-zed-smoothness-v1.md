@@ -83,10 +83,14 @@ We track **two** perf gates:
 1) **Cold-start gate**: measures “first mount + first interaction” (relaunch per run).
 2) **Steady-state gate**: measures interaction costs after mount (reuse process + reset diagnostics in-script).
 
+To keep runs reproducible and to avoid stale-trigger timeouts, prefer passing an explicit `--dir` for every run.
+Treat the directory as part of the benchmark identity (it also makes bundle paths stable per run).
+
 Run a single script and get the worst frame (**cold-start gate**):
 
 ```powershell
 cargo run -p fretboard -- diag perf tools/diag-scripts/<script>.json ^
+  --dir target/fret-diag-perf/<tag> ^
   --warmup-frames 5 --repeat 7 --sort time --top 15 --json ^
   --launch -- cargo run -p fret-ui-gallery --release
 ```
@@ -95,6 +99,7 @@ Run the steady-state suite (**steady-state gate**):
 
 ```powershell
 cargo run -p fretboard -- diag perf ui-gallery-steady ^
+  --dir target/fret-diag-perf/ui-gallery-steady ^
   --reuse-launch --repeat 7 --sort time --top 15 --json ^
   --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
   --launch -- cargo run -p fret-ui-gallery --release

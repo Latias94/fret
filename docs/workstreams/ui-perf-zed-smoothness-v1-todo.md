@@ -58,14 +58,19 @@ Primary targets (highest leverage):
   - Landed as `slotmap::SecondaryMap<NodeId, ...>` (commit `448c34ad`).
 - [ ] Replace `Arc<[NodeId]>` for `WindowFrame.children` with a reuse-friendly representation.
   - Candidate: store `Vec<NodeId>` in a slab/arena and reference by index + generation.
-- [ ] Replace invalidation “visited”/scratch `HashMap<NodeId, u8>` with generation-stamped tables:
+- [x] Replace invalidation “visited”/scratch `HashMap<NodeId, u8>` with generation-stamped tables:
   - `crates/fret-ui/src/tree/mod.rs` invalidation propagation caches.
+  - Implemented by `perf(fret-ui): generation-stamp invalidation propagation` (commit `a540829e`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries for commit `a540829e`.
 - [ ] Ensure deterministic ordering is preserved where diagnostics rely on it (bundle stability).
 
 Perf acceptance:
 
 - [ ] `ui-gallery-overlay-torture.json`: p95 total improves; invalidation nodes/calls do not regress.
 - [ ] `ui-gallery-virtual-list-torture.json`: tail latency improves or stays flat.
+- [ ] Investigate post-`a540829e` suite deltas (noise vs real regression) and decide next step:
+  - If real: profile invalidation propagation micro-costs and consider alternative dense map strategy (or env gating).
+  - If noise: standardize suite runs on explicit `--dir` and pin a baseline via `--perf-baseline-out`.
 
 ### M2: Allocation model (per-frame scratch arena)
 

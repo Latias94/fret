@@ -362,3 +362,74 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
 - top_total_time_us: `12587`
 - bundle: `target/fret-diag/1770050763291-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-03 01:11:08 (commit `a540829e`)
+
+Change:
+- Generation-stamp invalidation visited tables (propagate_observation_masks) to reduce per-frame hashing
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-inv-stamp --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3152 | 3249 | 3249 | 2891 | 77 | 18 | 341 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3787 | 3822 | 3822 | 3059 | 198 | 22 | 750 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3587 | 4053 | 4053 | 3279 | 179 | 17 | 757 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2918 | 8293 | 8293 | 8058 | 43 | 17 | 642 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1801 | 2101 | 2101 | 1571 | 50 | 14 | 518 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3889 | 6708 | 6708 | 3889 | 316 | 21 | 2800 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10792 | 11261 | 11261 | 9845 | 388 | 51 | 1365 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6445 | 7406 | 7406 | 6086 | 826 | 31 | 1380 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13559 | 15094 | 15094 | 12174 | 2118 | 59 | 2861 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `15094`
+- bundle: `target/fret-diag-inv-stamp/1770052220451-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-03 01:13:26 (commit `a540829e`)
+
+Change:
+- Re-run ui-gallery-steady after generation-stamped invalidation tables (noise check)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-inv-stamp.v2 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3183 | 3276 | 3276 | 2884 | 76 | 17 | 378 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3819 | 3871 | 3871 | 3083 | 203 | 21 | 783 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3560 | 4042 | 4042 | 3256 | 179 | 17 | 769 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2900 | 3089 | 3089 | 2462 | 43 | 17 | 661 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1775 | 2089 | 2089 | 1566 | 48 | 13 | 511 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3889 | 6817 | 6817 | 3927 | 328 | 21 | 2870 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10797 | 10942 | 10942 | 9638 | 375 | 50 | 1322 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6484 | 8164 | 8164 | 6708 | 871 | 32 | 1484 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13554 | 13575 | 13575 | 11006 | 1885 | 58 | 2644 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `13575`
+- bundle: `target/fret-diag-inv-stamp.v2/1770052373457-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- The first run at `01:11:08` shows a large outlier on `ui-gallery-material3-tabs-switch-perf-steady` (p95=8293us).
+  The rerun at `01:13:26` drops to p95=3089us, which suggests that spike is noise (e.g. one-off warmup / background work).
+- Compared to the most recent recorded `ui-gallery-steady` baseline (commit `448c34ad`), some heavy scripts remain higher:
+  `ui-gallery-window-resize-stress-steady` p95 total `12587 -> 13575` and `ui-gallery-virtual-list-torture-steady`
+  p95 total `6974 -> 8164` (see the two entries above).
+- Bundle stats snapshots used for local comparison (not versioned): `target/fret-diag/stats.ui-gallery-window-resize-stress-steady.448c34ad.txt`,
+  `target/fret-diag/stats.ui-gallery-window-resize-stress-steady.a540829e.txt`.
