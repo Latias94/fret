@@ -2500,9 +2500,16 @@ See: `docs/tracy.md`.\n";
                     || retained_vlist_attach_detach_max_for_script.is_some()
                     || retained_vlist_keep_alive_reuse_min_for_script.is_some();
 
+                let is_gc_liveness_script =
+                    src.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
+                        n == "ui-gallery-overlay-torture.json"
+                            || n == "ui-gallery-sidebar-scroll-refresh.json"
+                    });
+
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration)
-                    || is_ui_gallery_vlist_window_boundary_suite;
+                    || is_ui_gallery_vlist_window_boundary_suite
+                    || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script);
 
                 if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
                     let bundle_path = wait_for_bundle_json_from_script_result(
@@ -2537,6 +2544,8 @@ See: `docs/tracy.md`.\n";
                     let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
                         .then_some(10u64)
                         .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
+                    let suite_gc_sweep_liveness =
+                        builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
                     apply_post_run_checks(
                         &bundle_path,
                         &resolved_out_dir,
@@ -2557,7 +2566,7 @@ See: `docs/tracy.md`.\n";
                             .or(suite_vlist_visible_range_refreshes_max),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
-                        check_gc_sweep_liveness,
+                        check_gc_sweep_liveness || suite_gc_sweep_liveness,
                         check_view_cache_reuse_stable_min,
                         check_view_cache_reuse_min.or(suite_view_cache_reuse_min),
                         check_overlay_synthesis_min,
@@ -4839,9 +4848,10 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 16] {
+fn ui_gallery_suite_scripts() -> [&'static str; 17] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
+        "tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
         "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
         "tools/diag-scripts/ui-gallery-portal-geometry-scroll-clamp.json",
