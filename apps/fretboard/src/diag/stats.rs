@@ -2913,7 +2913,10 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
     }
 
     let mut offenders: Vec<String> = Vec::new();
+    let mut offender_samples: Vec<serde_json::Value> = Vec::new();
     let mut examined_snapshots: u64 = 0;
+    let mut removed_subtrees_total: u64 = 0;
+    let mut removed_subtrees_offenders: u64 = 0;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -2938,6 +2941,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
             };
 
             for r in removed {
+                removed_subtrees_total = removed_subtrees_total.saturating_add(1);
                 let unreachable = r
                     .get("unreachable_from_liveness_roots")
                     .and_then(|v| v.as_bool())
@@ -2956,6 +2960,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                     || reachable_from_view_cache_roots == Some(true)
                     || root_layer_visible == Some(true)
                 {
+                    removed_subtrees_offenders = removed_subtrees_offenders.saturating_add(1);
                     let root = r.get("root").and_then(|v| v.as_u64()).unwrap_or(0);
                     let root_element_path = r
                         .get("root_element_path")
@@ -2965,13 +2970,73 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                         .get("trigger_element_path")
                         .and_then(|v| v.as_str())
                         .unwrap_or("<none>");
+                    let mut violations: Vec<&'static str> = Vec::new();
+                    if !unreachable {
+                        violations.push("reachable_from_liveness_roots");
+                    }
+                    if reachable_from_layer_roots {
+                        violations.push("reachable_from_layer_roots");
+                    }
+                    if reachable_from_view_cache_roots == Some(true) {
+                        violations.push("reachable_from_view_cache_roots");
+                    }
+                    if root_layer_visible == Some(true) {
+                        violations.push("root_layer_visible");
+                    }
                     offenders.push(format!(
                         "window={window_id} frame_id={frame_id} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} root_element_path={root_element_path} trigger_element_path={trigger_path}"
                     ));
+
+                    const MAX_SAMPLES: usize = 128;
+                    if offender_samples.len() < MAX_SAMPLES {
+                        offender_samples.push(serde_json::json!({
+                            "window": window_id,
+                            "frame_id": frame_id,
+                            "tick_id": s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                            "root": r.get("root").and_then(|v| v.as_u64()).unwrap_or(0),
+                            "root_root": r.get("root_root").and_then(|v| v.as_u64()),
+                            "root_layer": r.get("root_layer").and_then(|v| v.as_u64()),
+                            "root_layer_visible": root_layer_visible,
+                            "reachable_from_layer_roots": reachable_from_layer_roots,
+                            "reachable_from_view_cache_roots": reachable_from_view_cache_roots,
+                            "unreachable_from_liveness_roots": unreachable,
+                            "violations": violations,
+                            "liveness_layer_roots_len": r.get("liveness_layer_roots_len").and_then(|v| v.as_u64()),
+                            "view_cache_reuse_roots_len": r.get("view_cache_reuse_roots_len").and_then(|v| v.as_u64()),
+                            "view_cache_reuse_root_nodes_len": r.get("view_cache_reuse_root_nodes_len").and_then(|v| v.as_u64()),
+                            "root_element": r.get("root_element").and_then(|v| v.as_u64()),
+                            "root_element_path": r.get("root_element_path").and_then(|v| v.as_str()),
+                            "trigger_element": r.get("trigger_element").and_then(|v| v.as_u64()),
+                            "trigger_element_path": r.get("trigger_element_path").and_then(|v| v.as_str()),
+                            "trigger_element_in_view_cache_keep_alive": r.get("trigger_element_in_view_cache_keep_alive").and_then(|v| v.as_bool()),
+                            "trigger_element_listed_under_reuse_root": r.get("trigger_element_listed_under_reuse_root").and_then(|v| v.as_u64()),
+                            "root_root_parent_sever_parent": r.get("root_root_parent_sever_parent").and_then(|v| v.as_u64()),
+                            "root_root_parent_sever_location": r.get("root_root_parent_sever_location").and_then(|v| v.as_str()),
+                            "root_root_parent_sever_frame_id": r.get("root_root_parent_sever_frame_id").and_then(|v| v.as_u64()),
+                        }));
+                    }
                 }
             }
         }
     }
+
+    // Always write evidence so debugging doesn't require re-running the harness.
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.gc_sweep_liveness.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "gc_sweep_liveness",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "removed_subtrees_total": removed_subtrees_total,
+        "removed_subtrees_offenders": removed_subtrees_offenders,
+        "offender_samples": offender_samples,
+    });
+    write_json_value(&evidence_path, &payload)?;
 
     if offenders.is_empty() {
         return Ok(());
@@ -2983,6 +3048,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
     msg.push_str(&format!(
         "warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
     ));
+    msg.push_str(&format!("evidence: {}\n", evidence_path.display()));
     for line in offenders.into_iter().take(10) {
         msg.push_str("  ");
         msg.push_str(&line);

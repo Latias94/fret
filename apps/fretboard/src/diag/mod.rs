@@ -5833,7 +5833,7 @@ mod tests {
     use crate::diag::compare::compare_bundles_json;
     use crate::diag::stats::{
         bundle_stats_from_json_with_options, check_bundle_for_dock_drag_min_json,
-        check_bundle_for_overlay_synthesis_min_json,
+        check_bundle_for_gc_sweep_liveness, check_bundle_for_overlay_synthesis_min_json,
         check_bundle_for_retained_vlist_attach_detach_max_json,
         check_bundle_for_retained_vlist_reconcile_no_notify_min_json,
         check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
@@ -6878,6 +6878,72 @@ mod tests {
 
         std::fs::write(&path, serde_json::to_vec_pretty(&bundle).unwrap())
             .expect("bundle.json write should succeed");
+    }
+
+    #[test]
+    fn gc_sweep_liveness_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("gc_sweep_liveness_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "removed_subtrees": [{
+                            "root": 10,
+                            "unreachable_from_liveness_roots": false,
+                            "reachable_from_layer_roots": true,
+                            "reachable_from_view_cache_roots": true,
+                            "root_layer_visible": true,
+                            "liveness_layer_roots_len": 2,
+                            "view_cache_reuse_roots_len": 1,
+                            "view_cache_reuse_root_nodes_len": 1,
+                            "root_element_path": "root[demo].overlay",
+                            "trigger_element_path": "root[demo].trigger"
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_gc_sweep_liveness(&bundle_path, 0).unwrap_err();
+        assert!(err.contains("GC sweep liveness violation"));
+
+        let evidence_path = bundle_dir.join("check.gc_sweep_liveness.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected gc sweep liveness evidence JSON to be written"
+        );
+
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("gc_sweep_liveness")
+        );
+        assert_eq!(
+            evidence
+                .get("removed_subtrees_offenders")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert!(
+            evidence
+                .get("offender_samples")
+                .and_then(|v| v.as_array())
+                .is_some_and(|a| !a.is_empty()),
+            "expected offender_samples to be populated"
+        );
     }
 
     #[test]
