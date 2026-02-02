@@ -628,7 +628,7 @@ topics (if/when we implement them):
         - Specify the allowed "ephemeral prepaint updates" for the non-retained VirtualList path (e.g. window prediction, scroll-offset bookkeeping, one-shot escape scheduling), and explicitly forbid any attach/detach that would require remounting children without a rerender boundary.
         - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
         - References: ADR 0190 §3A + §4 (v2 explainability) and ADR 0193 §2A (“window plans” vs structural mutation).
-      - [ ] Make window-shift reasons explainable from one bundle (`prefetch`/`escape`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
+      - [ ] Make window shifts explainable from one bundle (kinds: `prefetch`/`escape`; reasons: `scroll_offset`/`viewport_resize`/`items_revision`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
         - Add a per-frame debug counter + samples for non-retained window shifts (kind + old/new range + triggering invalidation detail), similar to retained-host reconcile samples.
         - Ensure `debug.prepaint_actions` includes the window-shift action (kind + reason) so `--check-prepaint-actions-min` can be extended to assert the right behavior.
       - [ ] Add a stable regression gate for the window-boundary harness:
@@ -637,7 +637,7 @@ topics (if/when we implement them):
         - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
         - Gate (new): `--check-vlist-visible-range-refreshes-min 1` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_min.json`).
         - Gate (new): `--check-vlist-visible-range-refreshes-max 10` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
-        - Gate (new): `--check-vlist-window-shifts-explainable` (requires `debug.virtual_list_windows` to include `window_shift_kind` + `window_shift_reason` + `window_shift_apply_mode`; and for non-retained shifts, requires `window_shift_invalidation_detail` to match the shift kind; emits `check.vlist_window_shifts_explainable.json`).
+        - Gate (new): `--check-vlist-window-shifts-explainable` (requires `debug.virtual_list_windows` to include `window_shift_kind` + `window_shift_reason` + `window_shift_apply_mode`; and for non-retained shifts, requires `window_shift_invalidation_detail` to match the shift reason when it is specific (`scroll_to_item`/`viewport_resize`/`items_revision`) or fall back to the shift kind (`prefetch`/`escape`); emits `check.vlist_window_shifts_explainable.json`).
         - Suite default: `fretboard diag suite ui-gallery-vlist-window-boundary` applies:
           `--check-stale-paint ui-gallery-virtual-list-root`, `--check-view-cache-reuse-min 1`,
           `--check-vlist-visible-range-refreshes-min 1`, `--check-vlist-visible-range-refreshes-max 10`,
