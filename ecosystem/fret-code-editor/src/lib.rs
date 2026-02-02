@@ -833,10 +833,20 @@ impl CodeEditor {
                             return;
                         }
 
-                        let (stats, delta) = {
-                            let stats = editor_state.borrow().cache_stats;
-                            let prev = prev_stats.get();
-                            prev_stats.set(stats);
+                        let (stats, delta, caret_row, caret_preferred_x, caret_stops, geom_cached) =
+                            {
+                                let st = editor_state.borrow();
+                                let stats = st.cache_stats;
+                                let caret = st.selection.caret().min(st.buffer.len_bytes());
+                                let caret_row =
+                                    st.display_map.byte_to_display_point(&st.buffer, caret).row;
+                                let caret_preferred_x = st.caret_preferred_x;
+                                let caret_stops =
+                                    st.row_geom_cache.get(&caret_row).map(|(g, _)| g.caret_stops.len());
+                                let geom_cached = st.row_geom_cache.len();
+
+                                let prev = prev_stats.get();
+                                prev_stats.set(stats);
                             let delta = CodeEditorCacheStats {
                                 row_text_get_calls: stats
                                     .row_text_get_calls
@@ -861,7 +871,14 @@ impl CodeEditor {
                                     .saturating_sub(prev.syntax_evictions),
                                 syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
                             };
-                            (stats, delta)
+                                (
+                                    stats,
+                                    delta,
+                                    caret_row,
+                                    caret_preferred_x,
+                                    caret_stops,
+                                    geom_cached,
+                                )
                         };
 
                         let origin = fret_core::Point::new(Px(8.0), Px(offset.y.0 + 8.0));
@@ -875,7 +892,7 @@ impl CodeEditor {
                         });
 
                         let label = format!(
-                            "rows={}-{} y={:.0}/{:.0} max={} text {}/{}/{} (+{}/{}/{}) syn {}/{}/{} (+{}/{}/{})",
+                            "rows={}-{} y={:.0}/{:.0} max={} text {}/{}/{} (+{}/{}/{}) syn {}/{}/{} (+{}/{}/{}) geom row={} pref_x={:?} stops={:?} cache={}",
                             frame.visible_start,
                             frame.visible_end,
                             offset.y.0,
@@ -892,7 +909,11 @@ impl CodeEditor {
                             stats.syntax_misses,
                             delta.syntax_get_calls,
                             delta.syntax_hits,
-                            delta.syntax_misses
+                            delta.syntax_misses,
+                            caret_row,
+                            caret_preferred_x.map(|v| v.0.round() as i32),
+                            caret_stops,
+                            geom_cached,
                         );
                         let key = painter.key(&("fret-code-editor-torture-overlay", 0u8));
                         let _ = painter.text(
