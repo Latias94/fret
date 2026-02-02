@@ -94,6 +94,10 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
       - https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/framework.dart
       - https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/overlay.dart
 
+- **Pinned references in this repo** (preferred for audits; URLs/line numbers drift):
+  - `repo-ref/zed/crates/gpui/src/{window.rs,view.rs}`
+  - `repo-ref/flutter/packages/flutter/lib/src/{widgets/framework.dart,rendering/sliver_multi_box_adaptor.dart,widgets/overlay.dart}`
+
 In all cases, "not rebuilt this frame" is not a signal for disposal. Liveness comes from explicit roots (composition/window roots) and ownership bookkeeping.
 
 ### Failure mode we are preventing (workstream MVP2-cache-005)
