@@ -1,7 +1,8 @@
 //! Code editor surface (UI integration) for Fret.
 //!
-//! This is a v1 MVP: fixed row height and a monospace "cell width" heuristic for caret/selection
-//! geometry. Optional soft-wrap is supported via the view-layer `DisplayMap`.
+//! This is a v1 MVP: fixed row height and a monospace "cell width" fallback for caret/selection
+//! geometry while the surface migrates to pixel-accurate text geometry queries. Optional soft-wrap
+//! is supported via the view-layer `DisplayMap`.
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, VecDeque};
@@ -139,6 +140,24 @@ pub struct CodeEditorCacheStats {
     pub syntax_resets: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RowPreeditMapping {
+    /// Byte offset within the row slice where preedit is injected.
+    insert_at: usize,
+    /// UTF-8 byte length of the injected preedit text.
+    preedit_len: usize,
+}
+
+#[derive(Debug, Clone)]
+struct RowGeom {
+    /// Display-row range within the buffer (UTF-8 byte indices).
+    row_range: Range<usize>,
+    /// Caret stop table for the displayed row text (byte index -> x offset).
+    caret_stops: Vec<(usize, Px)>,
+    /// Mapping needed when the displayed row includes an injected preedit string.
+    preedit: Option<RowPreeditMapping>,
+}
+
 #[derive(Debug, Clone)]
 struct CodeEditorState {
     buffer: TextBuffer,
@@ -158,6 +177,11 @@ struct CodeEditorState {
     row_text_cache_tick: u64,
     row_text_cache: HashMap<usize, (Arc<str>, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
+    row_geom_cache_rev: fret_code_editor_buffer::Revision,
+    row_geom_cache_wrap_cols: Option<usize>,
+    row_geom_cache_tick: u64,
+    row_geom_cache: HashMap<usize, (RowGeom, u64)>,
+    row_geom_cache_queue: VecDeque<(usize, u64)>,
     #[cfg(feature = "syntax")]
     language: Option<Arc<str>>,
     #[cfg(feature = "syntax")]
@@ -209,6 +233,11 @@ impl CodeEditorHandle {
                 row_text_cache_tick: 0,
                 row_text_cache: HashMap::new(),
                 row_text_cache_queue: VecDeque::new(),
+                row_geom_cache_rev: fret_code_editor_buffer::Revision(0),
+                row_geom_cache_wrap_cols: None,
+                row_geom_cache_tick: 0,
+                row_geom_cache: HashMap::new(),
+                row_geom_cache_queue: VecDeque::new(),
                 #[cfg(feature = "syntax")]
                 language: None,
                 #[cfg(feature = "syntax")]
@@ -303,6 +332,11 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.row_geom_cache_rev = st.buffer.revision();
+        st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
         #[cfg(feature = "syntax")]
         {
             st.syntax_row_cache_rev = st.buffer.revision();
@@ -339,6 +373,11 @@ impl CodeEditorHandle {
         }
         st.display_wrap_cols = cols;
         st.refresh_display_map();
+        st.row_geom_cache_rev = st.buffer.revision();
+        st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
     }
 }
 
@@ -492,14 +531,7 @@ impl CodeEditor {
                     st.undo_group = None;
                     st.preedit = None;
 
-                    let caret = caret_for_pointer(
-                        &st.buffer,
-                        &st.display_map,
-                        row,
-                        bounds,
-                        down.position,
-                        cell_w,
-                    );
+                    let caret = caret_for_pointer(&st, row, bounds, down.position, cell_w);
                     match down.click_count {
                         2 => {
                             let (start, end) =
@@ -533,16 +565,8 @@ impl CodeEditor {
                         }
                     }
 
-                    let caret_rect = caret_rect_for_selection(
-                        &st.buffer,
-                        &st.display_map,
-                        st.selection,
-                        st.preedit.as_ref(),
-                        row_h,
-                        cell_w,
-                        bounds,
-                        &on_pointer_down_scroll,
-                    );
+                    let caret_rect =
+                        caret_rect_for_selection(&st, row_h, cell_w, bounds, &on_pointer_down_scroll);
                     if let Some(rect) = caret_rect {
                         host.push_effect(Effect::ImeSetCursorArea {
                             window: action_cx.window,
@@ -578,26 +602,11 @@ impl CodeEditor {
 
                     let cell_w = on_pointer_move_cell_w.get();
                     let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                    let caret = caret_for_pointer(
-                        &st.buffer,
-                        &st.display_map,
-                        row,
-                        bounds,
-                        mv.position,
-                        cell_w,
-                    );
+                    let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
                     st.selection.focus = caret;
 
-                    let caret_rect = caret_rect_for_selection(
-                        &st.buffer,
-                        &st.display_map,
-                        st.selection,
-                        st.preedit.as_ref(),
-                        row_h,
-                        cell_w,
-                        bounds,
-                        &on_pointer_move_scroll,
-                    );
+                    let caret_rect =
+                        caret_rect_for_selection(&st, row_h, cell_w, bounds, &on_pointer_move_scroll);
                     if let Some(rect) = caret_rect {
                         host.push_effect(Effect::ImeSetCursorArea {
                             window: action_cx.window,
@@ -1205,50 +1214,159 @@ fn map_a11y_offset_to_buffer(
     buf.clamp_to_char_boundary_left(byte).min(buf.len_bytes())
 }
 
-fn line_len_cols(line: &str) -> usize {
-    line.chars().count()
+fn caret_x_for_index(stops: &[(usize, Px)], index: usize) -> Px {
+    if stops.is_empty() {
+        return Px(0.0);
+    }
+    // Prefer an exact index match, otherwise clamp to the nearest representable caret stop.
+    let mut lo = 0usize;
+    let mut hi = stops.len();
+    while lo < hi {
+        let mid = (lo + hi) / 2;
+        if stops[mid].0 < index {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    if lo < stops.len() && stops[lo].0 == index {
+        return stops[lo].1;
+    }
+    if lo == 0 {
+        return stops[0].1;
+    }
+    stops[lo.saturating_sub(1)].1
+}
+
+fn hit_test_index_from_caret_stops(stops: &[(usize, Px)], x: Px) -> usize {
+    if stops.is_empty() {
+        return 0;
+    }
+    if stops.len() == 1 {
+        return stops[0].0;
+    }
+    // Caret stops are expected to be monotonically increasing in X for a single-line blob.
+    let x = x.0;
+    if x <= stops[0].1.0 {
+        return stops[0].0;
+    }
+    if x >= stops[stops.len() - 1].1.0 {
+        return stops[stops.len() - 1].0;
+    }
+    let mut lo = 0usize;
+    let mut hi = stops.len();
+    while lo < hi {
+        let mid = (lo + hi) / 2;
+        if stops[mid].1.0 < x {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    let right = lo.min(stops.len() - 1);
+    let left = right.saturating_sub(1);
+    let (li, lx) = stops[left];
+    let (ri, rx) = stops[right];
+    if (x - lx.0).abs() <= (rx.0 - x).abs() {
+        li
+    } else {
+        ri
+    }
+}
+
+fn map_row_local_to_buffer_byte(buf: &TextBuffer, geom: &RowGeom, local: usize) -> usize {
+    let row_start = geom.row_range.start.min(buf.len_bytes());
+    let row_end = geom.row_range.end.min(buf.len_bytes()).max(row_start);
+    let max_local = row_end.saturating_sub(row_start);
+
+    let mut local = local;
+    if let Some(preedit) = geom.preedit {
+        let insert_at = preedit.insert_at.min(max_local);
+        let preedit_len = preedit.preedit_len;
+        if local <= insert_at {
+            local = local.min(insert_at);
+            return row_start.saturating_add(local).min(row_end);
+        }
+        let after_insert = insert_at.saturating_add(preedit_len);
+        if local >= after_insert {
+            let base_local = local.saturating_sub(preedit_len);
+            return row_start
+                .saturating_add(base_local.min(max_local))
+                .min(row_end);
+        }
+        // Inside the injected preedit: snap to the injection point in the base buffer.
+        return row_start.saturating_add(insert_at).min(row_end);
+    }
+
+    row_start.saturating_add(local.min(max_local)).min(row_end)
 }
 
 fn caret_for_pointer(
-    buf: &TextBuffer,
-    map: &DisplayMap,
+    st: &CodeEditorState,
     row: usize,
     bounds: Rect,
     position: fret_core::Point,
     cell_w: Px,
 ) -> usize {
     let local_x = Px(position.x.0 - bounds.origin.x.0);
+    if let Some((geom, _)) = st.row_geom_cache.get(&row)
+        && !geom.caret_stops.is_empty()
+    {
+        let local = hit_test_index_from_caret_stops(&geom.caret_stops, local_x);
+        let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
+        return st
+            .buffer
+            .clamp_to_char_boundary_left(byte.min(st.buffer.len_bytes()));
+    }
+
+    // Fallback to the MVP monospace heuristic when geometry hasn't been cached yet.
     let col = if cell_w.0 > 0.0 {
         (local_x.0 / cell_w.0).floor().max(0.0) as usize
     } else {
         0
     };
-    map.display_point_to_byte(buf, DisplayPoint::new(row, col))
+    st.display_map
+        .display_point_to_byte(&st.buffer, DisplayPoint::new(row, col))
 }
 
 fn caret_rect_for_selection(
-    buf: &TextBuffer,
-    map: &DisplayMap,
-    sel: Selection,
-    preedit: Option<&PreeditState>,
+    st: &CodeEditorState,
     row_h: Px,
     cell_w: Px,
     bounds: Rect,
     scroll_handle: &fret_ui::scroll::ScrollHandle,
 ) -> Option<Rect> {
-    if !sel.is_caret() {
+    if !st.selection.is_caret() {
         return None;
     }
 
-    let caret = sel.caret().min(buf.len_bytes());
-    let pt = map.byte_to_display_point(buf, caret);
+    let caret = st
+        .buffer
+        .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
+    let pt = st.display_map.byte_to_display_point(&st.buffer, caret);
     let offset = scroll_handle.offset();
     let y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
-    let mut col = pt.col;
-    if let Some(preedit) = preedit {
-        col = col.saturating_add(preedit_cursor_offset_cols(preedit));
-    }
-    let x = Px(bounds.origin.x.0 + col as f32 * cell_w.0);
+
+    let x = if let Some((geom, _)) = st.row_geom_cache.get(&pt.row)
+        && !geom.caret_stops.is_empty()
+        && caret >= geom.row_range.start
+    {
+        let mut local = caret.saturating_sub(geom.row_range.start);
+        if let Some(preedit) = st.preedit.as_ref()
+            && geom.preedit.is_some()
+        {
+            local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+        }
+        let cx = caret_x_for_index(&geom.caret_stops, local);
+        Px(bounds.origin.x.0 + cx.0)
+    } else {
+        let mut col = pt.col;
+        if let Some(preedit) = st.preedit.as_ref() {
+            col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+        }
+        Px(bounds.origin.x.0 + col as f32 * cell_w.0)
+    };
+
     Some(Rect::new(
         fret_core::Point::new(x, y),
         Size::new(Px(1.0), row_h),
@@ -1267,16 +1385,7 @@ fn push_caret_rect_effect(
         return;
     };
     let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-    if let Some(rect) = caret_rect_for_selection(
-        &st.buffer,
-        &st.display_map,
-        st.selection,
-        st.preedit.as_ref(),
-        row_h,
-        cell_w,
-        bounds,
-        scroll_handle,
-    ) {
+    if let Some(rect) = caret_rect_for_selection(st, row_h, cell_w, bounds, scroll_handle) {
         host.push_effect(Effect::ImeSetCursorArea {
             window: action_cx.window,
             rect,
@@ -1291,6 +1400,15 @@ fn preedit_cursor_offset_cols(preedit: &PreeditState) -> usize {
         .unwrap_or_else(|| preedit.text.len());
     end = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, end).min(preedit.text.len());
     preedit.text[..end].chars().count()
+}
+
+fn preedit_cursor_offset_bytes(preedit: &PreeditState) -> usize {
+    let mut end = preedit
+        .cursor
+        .map(|(_, end)| end)
+        .unwrap_or_else(|| preedit.text.len());
+    end = fret_code_editor_view::clamp_to_char_boundary(&preedit.text, end).min(preedit.text.len());
+    end
 }
 
 fn insert_text(st: &mut CodeEditorState, text: &str) -> Option<()> {
@@ -1750,6 +1868,11 @@ fn apply_and_record_edit(
     #[cfg(not(feature = "syntax"))]
     let _ = delta;
     st.selection = next_selection;
+    st.row_geom_cache_rev = st.buffer.revision();
+    st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+    st.row_geom_cache_tick = 0;
+    st.row_geom_cache.clear();
+    st.row_geom_cache_queue.clear();
 
     let (buffer_tx, inverse_selection, coalesce_key) = {
         let group = st.undo_group.as_ref().expect("undo group must exist");
@@ -1788,6 +1911,11 @@ fn undo(st: &mut CodeEditorState) -> bool {
     });
     if applied {
         st.refresh_display_map();
+        st.row_geom_cache_rev = st.buffer.revision();
+        st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
     }
     #[cfg(feature = "syntax")]
     {
@@ -1820,6 +1948,11 @@ fn redo(st: &mut CodeEditorState) -> bool {
     });
     if applied {
         st.refresh_display_map();
+        st.row_geom_cache_rev = st.buffer.revision();
+        st.row_geom_cache_wrap_cols = st.display_wrap_cols;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
     }
     #[cfg(feature = "syntax")]
     {
@@ -1912,37 +2045,6 @@ fn paint_row(
         corner_radii: Corners::all(Px(0.0)),
     });
 
-    let sel = st.selection.normalized();
-    if !sel.is_empty() {
-        let start_pt = st.display_map.byte_to_display_point(&st.buffer, sel.start);
-        let end_pt = st.display_map.byte_to_display_point(&st.buffer, sel.end);
-        if row >= start_pt.row && row <= end_pt.row {
-            let line_cols = line_len_cols(&line);
-            let start_col = if row == start_pt.row { start_pt.col } else { 0 };
-            let end_col = if row == end_pt.row {
-                end_pt.col
-            } else {
-                line_cols
-            };
-            if start_col != end_col {
-                let x0 = Px(rect.origin.x.0 + start_col as f32 * cell_w.0);
-                let x1 = Px(rect.origin.x.0 + end_col as f32 * cell_w.0);
-                let sel_rect = Rect::new(
-                    fret_core::Point::new(x0, rect.origin.y),
-                    Size::new(Px((x1.0 - x0.0).max(0.0)), row_h),
-                );
-                painter.scene().push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect: sel_rect,
-                    background: selection_bg,
-                    border: Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: Corners::all(Px(0.0)),
-                });
-            }
-        }
-    }
-
     let origin = fret_core::Point::new(rect.origin.x, rect.origin.y);
     let scope = painter.key_scope(&"fret-code-editor-row-text");
     let key: u64 = painter.child_key(scope, &(row, 0u8)).into();
@@ -1952,6 +2054,8 @@ fn paint_row(
         overflow: TextOverflow::Clip,
     };
     let mut drew_rich = false;
+    let mut row_preedit = None::<RowPreeditMapping>;
+    let mut row_blob = None::<fret_core::TextBlobId>;
 
     if let Some(preedit) = &st.preedit {
         let caret = st.selection.caret().min(st.buffer.len_bytes());
@@ -1969,7 +2073,7 @@ fn paint_row(
                 selection_bg,
             );
             let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
-            let _ = painter.rich_text(
+            let (blob, _) = painter.rich_text_with_blob(
                 key,
                 DrawOrder(2),
                 origin,
@@ -1979,6 +2083,11 @@ fn paint_row(
                 constraints,
                 painter.scale_factor(),
             );
+            row_preedit = Some(RowPreeditMapping {
+                insert_at: caret_in_line,
+                preedit_len: preedit.text.len(),
+            });
+            row_blob = Some(blob);
             drew_rich = true;
         }
     }
@@ -2024,7 +2133,7 @@ fn paint_row(
                     let theme = painter.theme().clone();
                     let rich =
                         materialize_row_rich_text(&theme, Arc::clone(&line), merged.as_ref());
-                    let _ = painter.rich_text(
+                    let (blob, _) = painter.rich_text_with_blob(
                         key,
                         DrawOrder(2),
                         origin,
@@ -2034,6 +2143,7 @@ fn paint_row(
                         constraints,
                         painter.scale_factor(),
                     );
+                    row_blob = Some(blob);
                     drew_rich = true;
                 }
             }
@@ -2041,7 +2151,7 @@ fn paint_row(
     }
 
     if !drew_rich {
-        let _ = painter.text(
+        let (blob, _) = painter.text_with_blob(
             key,
             DrawOrder(2),
             origin,
@@ -2051,30 +2161,184 @@ fn paint_row(
             constraints,
             painter.scale_factor(),
         );
+        row_blob = Some(blob);
     }
 
-    if st.selection.is_caret() {
-        let caret_pt = st
-            .display_map
-            .byte_to_display_point(&st.buffer, st.selection.caret());
-        if caret_pt.row == row {
-            let mut col = caret_pt.col;
-            if let Some(preedit) = &st.preedit {
-                col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+    let mut caret_stops: Vec<(usize, Px)> = Vec::new();
+    if let Some(blob) = row_blob {
+        let (services, _) = painter.services_and_scene();
+        services.text().caret_stops(blob, &mut caret_stops);
+    }
+
+    let row_geom = RowGeom {
+        row_range: row_range.clone(),
+        caret_stops,
+        preedit: row_preedit,
+    };
+
+    if !row_geom.caret_stops.is_empty() {
+        // Draw selection using caret stops so that selection geometry matches hit-testing.
+        let sel = st.selection.normalized();
+        if !sel.is_empty() {
+            let global_start = sel.start.max(row_range.start).min(row_range.end);
+            let global_end = sel.end.max(row_range.start).min(row_range.end);
+            if global_start < global_end {
+                let local_start = global_start.saturating_sub(row_range.start);
+                let local_end = global_end.saturating_sub(row_range.start);
+                let mut ranges: Vec<(usize, usize)> = Vec::new();
+                if let Some(preedit) = row_geom.preedit {
+                    if local_end <= preedit.insert_at {
+                        ranges.push((local_start, local_end));
+                    } else if local_start >= preedit.insert_at {
+                        ranges.push((
+                            local_start.saturating_add(preedit.preedit_len),
+                            local_end.saturating_add(preedit.preedit_len),
+                        ));
+                    } else {
+                        ranges.push((local_start, preedit.insert_at));
+                        ranges.push((
+                            preedit.insert_at.saturating_add(preedit.preedit_len),
+                            local_end.saturating_add(preedit.preedit_len),
+                        ));
+                    }
+                } else {
+                    ranges.push((local_start, local_end));
+                }
+
+                for (a, b) in ranges {
+                    if a >= b {
+                        continue;
+                    }
+                    let x0 = caret_x_for_index(&row_geom.caret_stops, a);
+                    let x1 = caret_x_for_index(&row_geom.caret_stops, b);
+                    if x0.0 == x1.0 {
+                        continue;
+                    }
+                    let x = Px(rect.origin.x.0 + x0.0.min(x1.0));
+                    let w = Px((x1.0 - x0.0).abs());
+                    let sel_rect =
+                        Rect::new(fret_core::Point::new(x, rect.origin.y), Size::new(w, row_h));
+                    painter.scene().push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: sel_rect,
+                        background: selection_bg,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
             }
-            let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
-            let caret_rect = Rect::new(
-                fret_core::Point::new(x, rect.origin.y),
-                Size::new(Px(1.0), row_h),
-            );
-            painter.scene().push(SceneOp::Quad {
-                order: DrawOrder(3),
-                rect: caret_rect,
-                background: caret_color,
-                border: Edges::all(Px(0.0)),
-                border_color: Color::TRANSPARENT,
-                corner_radii: Corners::all(Px(0.0)),
-            });
+        }
+
+        // Draw caret using caret stops so that caret geometry matches hit-testing and IME anchoring.
+        if st.selection.is_caret() {
+            let caret = st.selection.caret().min(st.buffer.len_bytes());
+            let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
+            if caret_pt.row == row {
+                let mut local = caret.saturating_sub(row_range.start);
+                if let Some(preedit) = &st.preedit
+                    && row_geom.preedit.is_some()
+                {
+                    local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+                }
+                let x0 = caret_x_for_index(&row_geom.caret_stops, local);
+                let caret_rect = Rect::new(
+                    fret_core::Point::new(Px(rect.origin.x.0 + x0.0), rect.origin.y),
+                    Size::new(Px(1.0), row_h),
+                );
+                painter.scene().push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: caret_rect,
+                    background: caret_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
+    } else {
+        // Fallback to the MVP monospace heuristic if caret stops are unavailable.
+        let sel = st.selection.normalized();
+        if !sel.is_empty() {
+            let start_pt = st.display_map.byte_to_display_point(&st.buffer, sel.start);
+            let end_pt = st.display_map.byte_to_display_point(&st.buffer, sel.end);
+            if row >= start_pt.row && row <= end_pt.row {
+                let line_cols = line.chars().count();
+                let start_col = if row == start_pt.row { start_pt.col } else { 0 };
+                let end_col = if row == end_pt.row {
+                    end_pt.col
+                } else {
+                    line_cols
+                };
+                if start_col != end_col {
+                    let x0 = Px(rect.origin.x.0 + start_col as f32 * cell_w.0);
+                    let x1 = Px(rect.origin.x.0 + end_col as f32 * cell_w.0);
+                    let x = Px(x0.0.min(x1.0));
+                    let w = Px((x1.0 - x0.0).abs());
+                    let sel_rect =
+                        Rect::new(fret_core::Point::new(x, rect.origin.y), Size::new(w, row_h));
+                    painter.scene().push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: sel_rect,
+                        background: selection_bg,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                }
+            }
+        }
+
+        if st.selection.is_caret() {
+            let caret = st.selection.caret().min(st.buffer.len_bytes());
+            let caret_pt = st.display_map.byte_to_display_point(&st.buffer, caret);
+            if caret_pt.row == row {
+                let mut col = caret_pt.col;
+                if let Some(preedit) = &st.preedit {
+                    col = col.saturating_add(preedit_cursor_offset_cols(preedit));
+                }
+                let x = Px(rect.origin.x.0 + col as f32 * cell_w.0);
+                let caret_rect = Rect::new(
+                    fret_core::Point::new(x, rect.origin.y),
+                    Size::new(Px(1.0), row_h),
+                );
+                painter.scene().push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: caret_rect,
+                    background: caret_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
+    }
+
+    // Cache row geometry for pointer hit-testing / IME cursor-area anchoring in event handlers.
+    let rev = st.buffer.revision();
+    let wrap_cols = st.display_wrap_cols;
+    if st.row_geom_cache_rev != rev || st.row_geom_cache_wrap_cols != wrap_cols {
+        st.row_geom_cache_rev = rev;
+        st.row_geom_cache_wrap_cols = wrap_cols;
+        st.row_geom_cache_tick = 0;
+        st.row_geom_cache.clear();
+        st.row_geom_cache_queue.clear();
+    }
+
+    st.row_geom_cache_tick = st.row_geom_cache_tick.saturating_add(1);
+    let tick = st.row_geom_cache_tick;
+    st.row_geom_cache.insert(row, (row_geom, tick));
+    st.row_geom_cache_queue.push_back((row, tick));
+    while st.row_geom_cache.len() > text_cache_max_entries {
+        let Some((victim, victim_tick)) = st.row_geom_cache_queue.pop_front() else {
+            break;
+        };
+        let remove = st
+            .row_geom_cache
+            .get(&victim)
+            .is_some_and(|(_, last_used)| *last_used == victim_tick);
+        if remove {
+            st.row_geom_cache.remove(&victim);
         }
     }
 }
@@ -2570,6 +2834,18 @@ mod tests {
             st.drag_pointer = Some(fret_core::PointerId(1));
             st.row_text_cache.insert(0, ("hello".into(), 1));
             st.row_text_cache_queue.push_back((0, 1));
+            st.row_geom_cache.insert(
+                0,
+                (
+                    RowGeom {
+                        row_range: 0..5,
+                        caret_stops: vec![(0, Px(0.0))],
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+            st.row_geom_cache_queue.push_back((0, 1));
         }
 
         let doc = DocId::new();
@@ -2585,6 +2861,8 @@ mod tests {
         assert_eq!(st.drag_pointer, None);
         assert_eq!(st.row_text_cache.len(), 0);
         assert_eq!(st.row_text_cache_queue.len(), 0);
+        assert_eq!(st.row_geom_cache.len(), 0);
+        assert_eq!(st.row_geom_cache_queue.len(), 0);
     }
 
     #[test]
@@ -2597,6 +2875,43 @@ mod tests {
         handle.replace_buffer(buffer);
 
         assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
+    }
+
+    #[test]
+    fn caret_stops_hit_test_picks_nearest_stop() {
+        let stops = vec![(0, Px(0.0)), (1, Px(10.0)), (2, Px(20.0)), (3, Px(30.0))];
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(-5.0)), 0);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(0.0)), 0);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(4.9)), 0);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(5.1)), 1);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(14.9)), 1);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(15.1)), 2);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(999.0)), 3);
+    }
+
+    #[test]
+    fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
+        let doc = DocId::new();
+        let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
+        let geom = RowGeom {
+            row_range: 0..buffer.len_bytes(),
+            caret_stops: Vec::new(),
+            preedit: Some(RowPreeditMapping {
+                insert_at: 2,
+                preedit_len: 2,
+            }),
+        };
+
+        // Before the injection point maps 1:1.
+        assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 0), 0);
+        assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 2), 2);
+
+        // Inside the injected preedit snaps to the injection point.
+        assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 3), 2);
+
+        // After the injected preedit shifts by `preedit_len`.
+        assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 4), 2);
+        assert_eq!(map_row_local_to_buffer_byte(&buffer, &geom, 5), 3);
     }
 
     #[test]
@@ -2673,16 +2988,19 @@ mod tests {
 
     #[test]
     fn caret_rect_offsets_for_preedit_cursor() {
-        let doc = DocId::new();
-        let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
-        let sel = Selection {
-            anchor: 0,
-            focus: 0,
-        };
+        let handle = CodeEditorHandle::new("hello");
         let preedit = PreeditState {
             text: "ab".to_string(),
             cursor: Some((0, 2)),
         };
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 0,
+                focus: 0,
+            };
+            st.preedit = Some(preedit.clone());
+        }
 
         let scroll = fret_ui::scroll::ScrollHandle::default();
         let bounds = Rect::new(
@@ -2690,18 +3008,9 @@ mod tests {
             Size::new(Px(500.0), Px(500.0)),
         );
 
-        let map = DisplayMap::new(&buffer, None);
-        let rect = caret_rect_for_selection(
-            &buffer,
-            &map,
-            sel,
-            Some(&preedit),
-            Px(20.0),
-            Px(10.0),
-            bounds,
-            &scroll,
-        )
-        .expect("caret rect");
+        let st = handle.state.borrow();
+        let rect =
+            caret_rect_for_selection(&st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
 
         assert_eq!(rect.origin.x, Px(20.0), "2 cols * 10px");
         assert_eq!(rect.origin.y, Px(0.0));
