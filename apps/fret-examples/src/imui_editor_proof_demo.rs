@@ -115,6 +115,16 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let last_input: Arc<str> = embedded::models(&*cx.app, window)
         .and_then(|models| cx.watch_model(&models.last_input).paint().cloned())
         .unwrap_or_else(|| Arc::from("<embedded viewport models missing>"));
+
+    let caps = cx
+        .app
+        .global::<PlatformCapabilities>()
+        .cloned()
+        .unwrap_or_default();
+    let window_size = cx
+        .app
+        .global::<fret_core::WindowMetricsService>()
+        .and_then(|svc| svc.inner_size(window));
     let single = single_window_mode_enabled();
 
     fret_imui::imui(cx, |ui| {
@@ -127,6 +137,20 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                     "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
                 ));
             }
+
+            ui.text(format!(
+                "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
+                caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
+            ));
+            ui.row(|ui| {
+                if ui.button("Reset layout").clicked() {
+                    reset_dock_graph(ui.cx_mut().app, window);
+                    dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
+                }
+                if ui.button("Center floatings").clicked() {
+                    dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
+                }
+            });
             ui.text(format!("last viewport input: {last_input}"));
             ui.separator();
 
@@ -214,6 +238,18 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
 }
 
 fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
+    ensure_dock_graph_inner(app, window, false);
+}
+
+fn reset_dock_graph(app: &mut App, window: AppWindowId) {
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.graph.remove_window_root(window);
+        dock.graph.floating_windows_mut(window).clear();
+    });
+    ensure_dock_graph_inner(app, window, true);
+}
+
+fn ensure_dock_graph_inner(app: &mut App, window: AppWindowId, force: bool) {
     app.with_global_mut(DockManager::default, |dock, app| {
         let logical_window_id = app
             .global::<WindowBootstrapService>()
@@ -252,7 +288,7 @@ fn ensure_dock_graph(app: &mut App, window: AppWindowId) {
             };
         }
 
-        if dock.graph.window_root(window).is_some() {
+        if !force && dock.graph.window_root(window).is_some() {
             return;
         }
 

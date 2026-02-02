@@ -68,13 +68,18 @@ pub struct DockSpace {
     tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_overflow_glyph: Option<PreparedTabTitle>,
+    float_zone_glyph: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
     empty_state_style: TextStyle,
+    float_zone_style: TextStyle,
     last_empty_state_scale_factor: Option<f32>,
     last_empty_state_theme_revision: Option<u64>,
+    last_float_zone_scale_factor: Option<f32>,
+    last_float_zone_theme_revision: Option<u64>,
     last_tab_text_scale_factor: Option<f32>,
     last_theme_revision: Option<u64>,
+    last_active_tabs: Option<DockNodeId>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -145,6 +150,7 @@ impl DockSpace {
             tab_widths: HashMap::new(),
             tab_close_glyph: None,
             tab_overflow_glyph: None,
+            float_zone_glyph: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
@@ -160,10 +166,18 @@ impl DockSpace {
                 size: Px(13.0),
                 ..Default::default()
             },
+            float_zone_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(11.0),
+                ..Default::default()
+            },
             last_empty_state_scale_factor: None,
             last_empty_state_theme_revision: None,
+            last_float_zone_scale_factor: None,
+            last_float_zone_theme_revision: None,
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
+            last_active_tabs: None,
         }
     }
 
@@ -588,6 +602,172 @@ impl DockSpace {
             metrics,
             title_hash: 0,
         });
+    }
+
+    fn rebuild_float_zone_glyph(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        theme: fret_ui::ThemeSnapshot,
+        scale_factor: f32,
+    ) {
+        self.float_zone_style.size = theme.metric_required("font.size");
+        if self.last_float_zone_theme_revision == Some(theme.revision)
+            && self.last_float_zone_scale_factor == Some(scale_factor)
+        {
+            return;
+        }
+        self.last_float_zone_theme_revision = Some(theme.revision);
+        self.last_float_zone_scale_factor = Some(scale_factor);
+
+        if let Some(prev) = self.float_zone_glyph.take() {
+            services.text().release(prev.blob);
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(64.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let (blob, metrics) = services
+            .text()
+            .prepare_str("F", &self.float_zone_style, constraints);
+        self.float_zone_glyph = Some(PreparedTabTitle {
+            blob,
+            metrics,
+            title_hash: 0,
+        });
+    }
+
+    fn paint_float_zone_hint(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        theme: fret_ui::ThemeSnapshot,
+        scale_factor: f32,
+        dock_bounds: Rect,
+        scene: &mut fret_core::Scene,
+    ) {
+        let rect = float_zone(dock_bounds);
+        self.rebuild_float_zone_glyph(services, theme, scale_factor);
+
+        let border = theme.color_required("border");
+        let card = theme.color_required("card");
+        let fg = theme.color_required("muted-foreground");
+
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(20),
+            rect,
+            background: card,
+            border: Edges::all(Px(1.0)),
+            border_color: border,
+            corner_radii: fret_core::Corners::all(Px(6.0)),
+        });
+
+        let Some(glyph) = self.float_zone_glyph else {
+            return;
+        };
+
+        let x = rect.origin.x.0 + (rect.size.width.0 - glyph.metrics.size.width.0) * 0.5;
+        let y = rect.origin.y.0
+            + (rect.size.height.0 - glyph.metrics.size.height.0) * 0.5
+            + glyph.metrics.baseline.0;
+
+        scene.push(SceneOp::Text {
+            order: fret_core::DrawOrder(21),
+            origin: Point::new(Px(x), Px(y)),
+            text: glyph.blob,
+            color: fg,
+        });
+    }
+
+    fn find_first_tabs(graph: &DockGraph, node: DockNodeId) -> Option<DockNodeId> {
+        let Some(n) = graph.node(node) else {
+            return None;
+        };
+        match n {
+            DockNode::Tabs { tabs, .. } => (!tabs.is_empty()).then_some(node),
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .find_map(|child| Self::find_first_tabs(graph, child)),
+            DockNode::Floating { child } => Self::find_first_tabs(graph, *child),
+        }
+    }
+
+    fn graph_contains_node(graph: &DockGraph, root: DockNodeId, needle: DockNodeId) -> bool {
+        if root == needle {
+            return true;
+        }
+        let Some(n) = graph.node(root) else {
+            return false;
+        };
+        match n {
+            DockNode::Tabs { .. } => false,
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .any(|child| Self::graph_contains_node(graph, child, needle)),
+            DockNode::Floating { child } => Self::graph_contains_node(graph, *child, needle),
+        }
+    }
+
+    fn find_floating_container_for_tabs(
+        &self,
+        graph: &DockGraph,
+        tabs: DockNodeId,
+    ) -> Option<DockNodeId> {
+        graph
+            .floating_windows(self.window)
+            .iter()
+            .find_map(|w| Self::graph_contains_node(graph, w.floating, tabs).then_some(w.floating))
+    }
+
+    fn float_zone_click_op(
+        &mut self,
+        graph: &DockGraph,
+        root: DockNodeId,
+        dock_bounds: Rect,
+        window_bounds: Rect,
+    ) -> Option<DockOp> {
+        let tabs = self
+            .last_active_tabs
+            .filter(|tabs_node| {
+                graph.node(*tabs_node).is_some_and(|n| match n {
+                    DockNode::Tabs { tabs, .. } => !tabs.is_empty(),
+                    _ => false,
+                })
+            })
+            .or_else(|| Self::find_first_tabs(graph, root))?;
+
+        if let Some(floating) = self.find_floating_container_for_tabs(graph, tabs) {
+            return Some(DockOp::RaiseFloating {
+                window: self.window,
+                floating,
+            });
+        }
+
+        let panel = graph.node(tabs).and_then(|n| match n {
+            DockNode::Tabs { tabs, active } => tabs.get(*active).cloned(),
+            _ => None,
+        })?;
+
+        let cursor = Point::new(
+            Px(dock_bounds.origin.x.0 + dock_bounds.size.width.0 * 0.5),
+            Px(dock_bounds.origin.y.0 + dock_bounds.size.height.0 * 0.25),
+        );
+        let rect = self.default_floating_rect_for_panel(
+            &panel,
+            cursor,
+            Point::new(Px(0.0), Px(0.0)),
+            window_bounds,
+        );
+
+        Some(DockOp::FloatTabsInWindow {
+            source_window: self.window,
+            source_tabs: tabs,
+            target_window: self.window,
+            rect,
+        })
     }
 
     fn paint_empty_state<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -1575,9 +1755,27 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                             let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                             let mut handled = false;
+                            let float_zone_rect = float_zone(dock_bounds);
 
                             if *button == fret_core::MouseButton::Left && dock_bounds.contains(*position)
                             {
+                                if float_zone_rect.contains(*position) {
+                                    if let Some(op) = self.float_zone_click_op(
+                                        &dock.graph,
+                                        root,
+                                        dock_bounds,
+                                        self.last_bounds,
+                                    ) {
+                                        pending_effects.push(Effect::Dock(op));
+                                        invalidate_layout = true;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                        dock.hover = None;
+                                        stop_propagation = true;
+                                        handled = true;
+                                    }
+                                }
+
                                 let mut layout_all = compute_layout_map(
                                     &dock.graph,
                                     root,
@@ -1621,6 +1819,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 *position,
                                             );
                                             if let Some(ix) = row {
+                                                self.last_active_tabs = Some(menu.tabs);
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::SetActiveTab {
                                                         tabs: menu.tabs,
@@ -1822,6 +2021,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         pending_redraws.push(self.window);
                                         handled = true;
                                     } else {
+                                        self.last_active_tabs = Some(tabs_node);
                                         pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
                                             tabs: tabs_node,
                                             active: tab_index,
@@ -1942,6 +2142,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         *position,
                                     )
                             {
+                                self.last_active_tabs = Some(tabs_node);
                                 pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
                                     tabs: tabs_node,
                                     active: tab_index,
@@ -3925,6 +4126,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 scale_factor,
                 scene,
             );
+
+            self.paint_float_zone_hint(services, theme, scale_factor, dock_bounds, scene);
 
             let drag_source_tabs_for_preview = dock_drag_source_tabs.or_else(|| {
                 dock_drag_panel
