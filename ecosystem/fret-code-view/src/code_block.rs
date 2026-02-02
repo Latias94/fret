@@ -318,7 +318,7 @@ impl CodeBlock {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         code_block_with(
             cx,
             &self.code,
@@ -345,7 +345,7 @@ impl CodeBlock {
     }
 }
 
-pub fn code_block<H: UiHost + 'static>(
+pub fn code_block<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -401,7 +401,7 @@ impl Default for CodeBlockUiOptions {
     }
 }
 
-pub fn code_block_with<H: UiHost + 'static>(
+pub fn code_block_with<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -418,7 +418,7 @@ pub fn code_block_with<H: UiHost + 'static>(
     )
 }
 
-pub fn code_block_with_header_slots<H: UiHost + 'static>(
+pub fn code_block_with_header_slots<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -621,7 +621,7 @@ fn render_code_block_header<H: UiHost>(
     })
 }
 
-fn render_code_block_body<H: UiHost + 'static>(
+fn render_code_block_body<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
@@ -947,7 +947,7 @@ fn render_code_block_line_row<H: UiHost>(
     )
 }
 
-fn render_code_block_windowed_lines<H: UiHost + 'static>(
+fn render_code_block_windowed_lines<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
@@ -981,7 +981,7 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
         layout
     };
 
-    let list = cx.virtual_list_keyed_retained_with_layout_fn(
+    let list = cx.virtual_list_keyed_with_layout(
         list_layout,
         len,
         list_options,
