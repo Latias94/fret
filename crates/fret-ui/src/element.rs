@@ -88,6 +88,9 @@ pub enum ElementKind {
     Image(ImageProps),
     /// A declarative, leaf canvas element for custom scene emission (ADR 0156).
     Canvas(CanvasProps),
+    /// Unstable bridge element for hosting a retained subtree under declarative mount.
+    #[cfg(feature = "unstable-retained-bridge")]
+    RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
     /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0125).
     ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),

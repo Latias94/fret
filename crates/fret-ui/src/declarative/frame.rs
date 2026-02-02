@@ -65,6 +65,8 @@ pub(crate) enum ElementInstance {
     Grid(crate::element::GridProps),
     Image(crate::element::ImageProps),
     Canvas(crate::element::CanvasProps),
+    #[cfg(feature = "unstable-retained-bridge")]
+    RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
     ViewportSurface(crate::element::ViewportSurfaceProps),
     SvgIcon(crate::element::SvgIconProps),
     Spinner(SpinnerProps),
@@ -108,6 +110,8 @@ impl ElementInstance {
             Self::Grid(_) => "Grid",
             Self::Image(_) => "Image",
             Self::Canvas(_) => "Canvas",
+            #[cfg(feature = "unstable-retained-bridge")]
+            Self::RetainedSubtree(_) => "RetainedSubtree",
             Self::ViewportSurface(_) => "ViewportSurface",
             Self::SvgIcon(_) => "SvgIcon",
             Self::Spinner(_) => "Spinner",
@@ -422,6 +426,8 @@ pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutSty
         ElementInstance::Grid(p) => p.layout,
         ElementInstance::Image(p) => p.layout,
         ElementInstance::Canvas(p) => p.layout,
+        #[cfg(feature = "unstable-retained-bridge")]
+        ElementInstance::RetainedSubtree(p) => p.layout,
         ElementInstance::ViewportSurface(p) => p.layout,
         ElementInstance::SvgIcon(p) => p.layout,
         ElementInstance::Spinner(p) => p.layout,

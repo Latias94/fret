@@ -1055,6 +1055,7 @@ name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-imui",
  "fret-runtime",
  "fret-syntax",
  "fret-ui",
@@ -1114,6 +1115,7 @@ version = "0.1.0"
 dependencies = [
  "fret-core",
  "fret-dnd",
+ "fret-imui",
  "fret-runtime",
  "fret-ui",
  "slotmap",
@@ -1149,6 +1151,7 @@ dependencies = [
  "fret-executor",
  "fret-gizmo",
  "fret-icons",
+ "fret-imui",
  "fret-kit",
  "fret-launch",
  "fret-markdown",
@@ -1223,6 +1226,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-imui"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+]
+
+[[package]]
 name = "fret-kit"
 version = "0.1.0"
 dependencies = [
@@ -1283,6 +1295,7 @@ dependencies = [
  "fret-code-view",
  "fret-core",
  "fret-executor",
+ "fret-imui",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
@@ -1299,6 +1312,7 @@ dependencies = [
  "fret-app",
  "fret-canvas",
  "fret-core",
+ "fret-imui",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",

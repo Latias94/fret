@@ -12,6 +12,9 @@ documentation.workspace = true
 [features]
 default = []
 
+ui = []
+imui = ["ui", "dep:fret-imui"]
+
 syntax-rust = ["fret-code-view/syntax-rust"]
 syntax-all = ["fret-code-view/syntax-all"]
 mathjax-svg = ["dep:mathjax_svg"]
@@ -20,6 +23,7 @@ mathjax-svg = ["dep:mathjax_svg"]
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-runtime = { path = "../../crates/fret-runtime" }
+fret-imui = { path = "../fret-imui", optional = true }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-code-view = { path = "../fret-code-view", default-features = false }
 fret-executor = { path = "../fret-executor" }
