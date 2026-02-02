@@ -111,13 +111,9 @@ fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: Fram
     }
 }
 
-fn set_window_frame_children(
-    window_frame: &mut WindowFrame,
-    parent: NodeId,
-    children: Vec<NodeId>,
-) {
+fn sync_window_frame_children(window_frame: &mut WindowFrame, parent: NodeId, children: &[NodeId]) {
     if let Some(prev) = window_frame.children.get(parent)
-        && prev.as_ref() == children.as_slice()
+        && prev.as_ref() == children
     {
         return;
     }
@@ -267,8 +263,8 @@ where
                     &mut pending_invalidations,
                 ));
             }
-            ui.set_children(root_node, mounted_children.clone());
-            set_window_frame_children(window_frame, root_node, mounted_children);
+            ui.set_children(root_node, mounted_children);
+            sync_window_frame_children(window_frame, root_node, ui.children_ref(root_node));
             if inserted {
                 window_frame.revision = window_frame.revision.saturating_add(1);
             }
@@ -1213,9 +1209,7 @@ fn mount_element<H: UiHost>(
         let _reuse_guard = reuse_span.enter();
 
         if window_frame.children.get(node).is_none() {
-            window_frame
-                .children
-                .insert(node, Arc::<[NodeId]>::from(ui.children(node)));
+            sync_window_frame_children(window_frame, node, ui.children_ref(node));
         }
 
         let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
@@ -1304,13 +1298,13 @@ fn mount_element<H: UiHost>(
             ));
         }
         if use_barrier_set_children {
-            ui.set_children_barrier(node, child_nodes.clone());
+            ui.set_children_barrier(node, child_nodes);
         } else if had_existing_node {
-            ui.set_children(node, child_nodes.clone());
+            ui.set_children(node, child_nodes);
         } else {
-            ui.set_children_in_mount(node, child_nodes.clone());
+            ui.set_children_in_mount(node, child_nodes);
         }
-        set_window_frame_children(window_frame, node, child_nodes);
+        sync_window_frame_children(window_frame, node, ui.children_ref(node));
 
         // Keep a complete retained-subtree element list for this cache root so cache-hit frames
         // can refresh liveness without re-running the render closure.
@@ -1334,13 +1328,13 @@ fn mount_element<H: UiHost>(
             ));
         }
         if use_barrier_set_children {
-            ui.set_children_barrier(node, child_nodes.clone());
+            ui.set_children_barrier(node, child_nodes);
         } else if had_existing_node {
-            ui.set_children(node, child_nodes.clone());
+            ui.set_children(node, child_nodes);
         } else {
-            ui.set_children_in_mount(node, child_nodes.clone());
+            ui.set_children_in_mount(node, child_nodes);
         }
-        set_window_frame_children(window_frame, node, child_nodes);
+        sync_window_frame_children(window_frame, node, ui.children_ref(node));
     }
 
     node
@@ -1513,8 +1507,8 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             },
         );
 
-        ui.set_children_barrier(node, next_children.clone());
-        set_window_frame_children(window_frame, node, next_children);
+        ui.set_children_barrier(node, next_children);
+        sync_window_frame_children(window_frame, node, ui.children_ref(node));
 
         if let Some(record) = window_frame.instances.get_mut(node) {
             if let ElementInstance::VirtualList(props) = &mut record.instance {

@@ -3789,6 +3789,13 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or_default()
     }
 
+    pub(crate) fn children_ref(&self, parent: NodeId) -> &[NodeId] {
+        self.nodes
+            .get(parent)
+            .map(|n| n.children.as_slice())
+            .unwrap_or(&[])
+    }
+
     /// Best-effort repair pass for parent pointers based on child edges from layer roots.
     ///
     /// Parent pointers are used for cache-root discovery (`nearest_view_cache_root`) and for
