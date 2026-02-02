@@ -16,7 +16,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
-- shadcn-web `v4/new-york-v4`: `527/527` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-02-02
+- shadcn-web `v4/new-york-v4`: `529/529` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-02-02
 
 Heuristic “where we already have gates” (top key families by prefix):
 
