@@ -259,3 +259,52 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
 - top_total_time_us: `15613`
 - bundle: `target/fret-diag-steady/1770043506957-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-02 23:24:09 (commit `b6f1b5803a89ecbdad47fbccd85fef4208e3e515`)
+
+Change:
+- perf(fret-ui): stabilize view-cache key
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+# Preferred:
+cargo run -p fretboard -- diag perf ui-gallery-steady ^
+  --reuse-launch --repeat 7 --sort time --top 15 --json ^
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
+  --launch -- cargo run -p fret-ui-gallery --release
+
+# Fallback:
+set FRET_DIAG=1
+set FRET_DIAG_DIR=target/fret-diag-steady2
+set FRET_UI_GALLERY_VIEW_CACHE=1
+set FRET_UI_GALLERY_VIEW_CACHE_SHELL=1
+cargo run -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-steady2 ^
+  --repeat 7 --sort time --top 15 --json
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3136 | 3367 | 3367 | 3019 | 62 | 17 | 331 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3731 | 3863 | 3863 | 3138 | 185 | 19 | 706 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3533 | 4075 | 4075 | 3320 | 161 | 16 | 739 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2970 | 3106 | 3106 | 2503 | 42 | 16 | 629 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1752 | 2018 | 2018 | 1537 | 42 | 12 | 469 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3903 | 6641 | 6641 | 3937 | 291 | 20 | 2684 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 11368 | 11592 | 11592 | 10287 | 334 | 48 | 1302 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6571 | 7478 | 7478 | 6215 | 760 | 28 | 1277 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13576 | 14894 | 14894 | 12389 | 1876 | 59 | 2446 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `14894`
+- bundle: `target/fret-diag-steady2/1770045822918-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- View-cache keys no longer include the parent context bounds. Responsive branching that depends on
+  window size should incorporate that into `ViewCacheProps.cache_key`.

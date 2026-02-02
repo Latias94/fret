@@ -40,6 +40,8 @@ Conventions:
   - `fretboard diag perf ui-gallery-steady --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
 - [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
   - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
+- [x] Stabilize view-cache key to avoid resize-driven `cache_key_mismatch`.
+  - Implemented by `perf(fret-ui): stabilize view-cache key` (commit `b6f1b580`).
 
 ### M1: Frame data structures (hashing → dense)
 
