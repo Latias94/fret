@@ -183,6 +183,7 @@ struct CodeEditorState {
     row_geom_cache_tick: u64,
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
+    selection_rect_scratch: Vec<Rect>,
     #[cfg(feature = "syntax")]
     language: Option<Arc<str>>,
     #[cfg(feature = "syntax")]
@@ -240,6 +241,7 @@ impl CodeEditorHandle {
                 row_geom_cache_tick: 0,
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
+                selection_rect_scratch: Vec::new(),
                 #[cfg(feature = "syntax")]
                 language: None,
                 #[cfg(feature = "syntax")]
@@ -2241,10 +2243,55 @@ fn paint_row(
         preedit: row_preedit,
     };
 
+    let sel = st.selection.normalized();
+    let mut drew_selection = false;
+    if !sel.is_empty() {
+        let global_start = sel.start.max(row_range.start).min(row_range.end);
+        let global_end = sel.end.max(row_range.start).min(row_range.end);
+        if global_start < global_end
+            && let Some(blob) = row_blob
+        {
+            let local_start = global_start.saturating_sub(row_range.start).min(line.len());
+            let local_end = global_end.saturating_sub(row_range.start).min(line.len());
+            if local_start < local_end {
+                let (services, _) = painter.services_and_scene();
+                st.selection_rect_scratch.clear();
+                services.text().selection_rects(
+                    blob,
+                    (local_start, local_end),
+                    &mut st.selection_rect_scratch,
+                );
+
+                for local_rect in st.selection_rect_scratch.iter().copied() {
+                    let x0 = local_rect.origin.x.0;
+                    let x1 = x0 + local_rect.size.width.0;
+                    let x0 = x0.clamp(0.0, rect.size.width.0);
+                    let x1 = x1.clamp(0.0, rect.size.width.0);
+                    let w = (x1 - x0).max(0.0);
+                    if w <= 0.0 {
+                        continue;
+                    }
+                    let sel_rect = Rect::new(
+                        fret_core::Point::new(Px(rect.origin.x.0 + x0), rect.origin.y),
+                        Size::new(Px(w), row_h),
+                    );
+                    painter.scene().push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: sel_rect,
+                        background: selection_bg,
+                        border: Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: Corners::all(Px(0.0)),
+                    });
+                    drew_selection = true;
+                }
+            }
+        }
+    }
+
     if !row_geom.caret_stops.is_empty() {
         // Draw selection using caret stops so that selection geometry matches hit-testing.
-        let sel = st.selection.normalized();
-        if !sel.is_empty() {
+        if !drew_selection && !sel.is_empty() {
             let global_start = sel.start.max(row_range.start).min(row_range.end);
             let global_end = sel.end.max(row_range.start).min(row_range.end);
             if global_start < global_end {
@@ -2323,8 +2370,7 @@ fn paint_row(
         }
     } else {
         // Fallback to the MVP monospace heuristic if caret stops are unavailable.
-        let sel = st.selection.normalized();
-        if !sel.is_empty() {
+        if !drew_selection && !sel.is_empty() {
             let start_pt = st.display_map.byte_to_display_point(&st.buffer, sel.start);
             let end_pt = st.display_map.byte_to_display_point(&st.buffer, sel.end);
             if row >= start_pt.row && row <= end_pt.row {
