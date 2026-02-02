@@ -34,6 +34,7 @@ Tracking format:
 - 2026-02-02: added `context-menu-demo.vp375x240` + `menubar-demo.vp375x240` panel-size gates (light/dark) to treat constrained viewport menu height as a styling outcome.
 - 2026-02-02: added `context-menu-demo.submenu-kbd-vp375x240` + `menubar-demo.submenu-kbd-vp375x240` submenu panel-size + surface-color + shadow-insets gates (light/dark) to lock in constrained viewport clamping behavior for nested menus.
 - 2026-02-02: added `context-menu-demo.submenu-highlight-first-vp375x240` + `menubar-demo.submenu-highlight-first-vp375x240` highlighted-item chrome gates (background + text color) for nested menus.
+- 2026-02-02: added `context-menu-demo.vp375x240-scrolled-80.open` + a wheel-scroll parity gate (overlay x/y stable + first-visible label matches web) to catch scroll-induced anchor drift.
 - [ ] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
 - [ ] SWG-ovl-030 Add “constrained height” variants for remaining overlay pages that currently only gate default viewport.
