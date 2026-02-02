@@ -1292,9 +1292,10 @@ topics (if/when we implement them):
       - Env (recommended): `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`.
       - Builtin suite:
         - `cargo run -p fretboard -- diag suite components-gallery-table --launch -- cargo run -p fret-demo --bin components_gallery --release`
+        - Note: the builtin suite sets `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` automatically (override with `--env`).
       - Keep-alive suite:
-        - Env: `FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE=256`
         - `cargo run -p fretboard -- diag suite components-gallery-table-keep-alive --launch -- cargo run -p fret-demo --bin components_gallery --release`
+        - Default env: `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` and `FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE=256` (override with `--env`).
       - Evidence bundles (suite, view-cache, release):
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833380478-components-gallery-table-window-boundary-scroll/bundle.json`
         - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
@@ -1302,6 +1303,10 @@ topics (if/when we implement them):
         - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862668739-components-gallery-table-sort-and-scroll/bundle.json`
         - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json`
         - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-table-nonretained0/1770032466340-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-table-nonretained0/1770032494240-components-gallery-table-sort-and-scroll/bundle.json`
+      - Gate evidence (suite-level, retained-vlist):
+        - `target/fret-diag-suite-components-gallery-table-nonretained0/check.vlist_window_shifts_non_retained_max.json`
       - Evidence (keep-alive bounce; cache+shell, release; keep-alive gate enabled):
         - `target/fret-diag/1769958870151-components-gallery-table-window-boundary-bounce/bundle.json`
       - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to `components-gallery-table-window-boundary-scroll.json`
