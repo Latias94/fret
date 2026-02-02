@@ -831,12 +831,17 @@ topics (if/when we implement them):
         `target/fret-diag-perf-vlist-window-boundary-sticky2/1769177002575-script-step-0027-wheel/bundle.json`.
     - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell/1769174146628-script-step-0027-wheel/bundle.json`
       - Takeaway: the boundary tick remains layout-dominated even without measurement, so the dominant cost is rebuilding/layouting the row subtree, not measuring it.
+    - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`, prepaint-driven scheduling): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell-v2/1770040368919-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - Takeaway: Track B window-boundary scheduling is now fully prepaint-driven (including the “no render-derived window yet” case), avoiding the failure mode where a cached root never schedules the one-shot rerender and mounts zero rows.
     - Progress (v1.2): avoid triggering an extra contained relayout pass on window-mismatch frames.
       - Change: VirtualList now marks the nearest view-cache root as "needs rerender" (dirty view) and requests redraw, instead of issuing an `Invalidation::Layout` during layout.
       - Anchors: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`, `crates/fret-ui/src/tree/mod.rs` (`mark_nearest_view_cache_root_needs_rerender`).
       - Evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-optin/1769349359414-script-step-0027-wheel/bundle.json`
       - Takeaway: the dominant cost is still the rerender frame that rebuilds new rows; this change removes avoidable current-frame work and keeps the contract GPUI-like ("mark dirty, rebuild next frame").
     - Progress (v1.3): keep scroll-handle invalidation HitTestOnly even when the visible range leaves the rendered overscan window; mark the nearest view-cache root dirty and request redraw instead of forcing a layout invalidation walk.
+    - Progress (v1.4): make window-boundary scheduling prepaint-driven (Track B), and treat missing render-derived windows as an "escape" that schedules a one-shot rerender.
+      - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (window mismatch baseline uses `render_window_range` and schedules rerender when absent),
+        `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (layout no longer duplicates rerender scheduling for `window_mismatch` under view-cache).
     - Progress (v2.0 retained host): reconcile now uses `render_window_range` as a baseline and shifts the window minimally only when the visible range leaves the overscanned window (aligns retained-host reconcile with prepaint window logic).
       - Anchors: `crates/fret-ui/src/declarative/mount.rs` (retained host reconcile window selection), `crates/fret-ui/src/virtual_list.rs` (`shift_virtual_range_minimally`), `crates/fret-ui/src/tree/prepaint.rs` (shared helper usage).
       - Evidence bundle (suite, cache+shell, release): `target/fret-diag-virt-retained-suite-local1/1769751016873-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
