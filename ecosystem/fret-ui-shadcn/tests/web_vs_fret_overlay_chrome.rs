@@ -10606,6 +10606,34 @@ fn web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web_dark() {
 }
 
 #[test]
+fn web_vs_fret_context_menu_demo_vp375x240_panel_size_matches_web_light() {
+    assert_context_menu_panel_size_matches_by_portal_slot_theme(
+        "context-menu-demo.vp375x240",
+        "context-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        "Right click here",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_context_menu_demo_stateful,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_vp375x240_panel_size_matches_web_dark() {
+    assert_context_menu_panel_size_matches_by_portal_slot_theme(
+        "context-menu-demo.vp375x240",
+        "context-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        "Right click here",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_context_menu_demo_stateful,
+    );
+}
+
+#[test]
 fn web_vs_fret_context_menu_demo_shadow_matches_web() {
     assert_context_menu_shadow_insets_match(
         "context-menu-demo",
@@ -10719,6 +10747,34 @@ fn web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web() {
 fn web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web_dark() {
     assert_click_overlay_panel_size_matches_by_portal_slot_theme(
         "menubar-demo.vp1440x240",
+        "menubar-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::MenuItem,
+        "File",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_vp375x240_panel_size_matches_web_light() {
+    assert_click_overlay_panel_size_matches_by_portal_slot_theme(
+        "menubar-demo.vp375x240",
+        "menubar-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::MenuItem,
+        "File",
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_menubar_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_vp375x240_panel_size_matches_web_dark() {
+    assert_click_overlay_panel_size_matches_by_portal_slot_theme(
+        "menubar-demo.vp375x240",
         "menubar-content",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
