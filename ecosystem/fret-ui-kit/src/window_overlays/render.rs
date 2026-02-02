@@ -1902,7 +1902,20 @@ pub fn render<H: UiHost + 'static>(
                                         corner_radii: fret_core::Corners::all(radius),
                                         snap_to_device_pixels: false,
                                     },
-                                    move |_cx| toast_children,
+                                    move |cx| {
+                                        vec![cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                direction: fret_core::Axis::Vertical,
+                                                gap: fret_core::Px(4.0),
+                                                padding: fret_core::Edges::all(fret_core::Px(0.0)),
+                                                justify: fret_ui::element::MainAlign::Start,
+                                                align: fret_ui::element::CrossAlign::Stretch,
+                                                wrap: false,
+                                            },
+                                            move |_cx| toast_children,
+                                        )]
+                                    },
                                 );
                                 let toast_el = cx.semantics(
                                     SemanticsProps {
