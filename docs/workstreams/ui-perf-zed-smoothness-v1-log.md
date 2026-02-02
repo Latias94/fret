@@ -331,3 +331,34 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
 - top_total_time_us: `10527`
 - bundle: `target/fret-diag/1770049134799-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-03 00:46:46 (commit `448c34ad`)
+
+Change:
+- Replace WindowFrame HashMaps with slotmap::SecondaryMap (reduce per-frame hashing)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 2872 | 2984 | 2984 | 2656 | 61 | 17 | 317 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3434 | 3500 | 3500 | 2814 | 181 | 19 | 683 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3195 | 3745 | 3745 | 3002 | 166 | 15 | 728 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2712 | 2799 | 2799 | 2200 | 41 | 15 | 587 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1576 | 1879 | 1879 | 1401 | 41 | 12 | 469 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3650 | 6460 | 6460 | 3724 | 316 | 20 | 2716 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10100 | 10443 | 10443 | 9197 | 346 | 47 | 1210 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6061 | 6974 | 6974 | 5717 | 761 | 27 | 1264 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 12436 | 12587 | 12587 | 10261 | 1701 | 52 | 2357 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `12587`
+- bundle: `target/fret-diag/1770050763291-ui-gallery-window-resize-stress-steady/bundle.json`

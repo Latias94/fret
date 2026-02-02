@@ -53,9 +53,9 @@ Conventions:
 
 Primary targets (highest leverage):
 
-- [ ] Refactor `WindowFrame` stores to avoid per-frame `HashMap` churn:
+- [x] Refactor `WindowFrame` stores to avoid per-frame `HashMap` churn:
   - `crates/fret-ui/src/declarative/frame.rs` (`WindowFrame.instances`, `WindowFrame.children`)
-  - Candidate: `slotmap::SecondaryMap<NodeId, ...>` or a dense `Vec` store keyed by `NodeId`.
+  - Landed as `slotmap::SecondaryMap<NodeId, ...>` (commit `448c34ad`).
 - [ ] Replace `Arc<[NodeId]>` for `WindowFrame.children` with a reuse-friendly representation.
   - Candidate: store `Vec<NodeId>` in a slab/arena and reference by index + generation.
 - [ ] Replace invalidation “visited”/scratch `HashMap<NodeId, u8>` with generation-stamped tables:
