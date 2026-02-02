@@ -4621,6 +4621,7 @@ pub enum UiPrepaintActionKindV1 {
     Invalidate,
     RequestRedraw,
     RequestAnimationFrame,
+    VirtualListWindowShift,
 }
 
 impl UiPrepaintActionKindV1 {
@@ -4630,6 +4631,9 @@ impl UiPrepaintActionKindV1 {
             fret_ui::tree::UiDebugPrepaintActionKind::RequestRedraw => Self::RequestRedraw,
             fret_ui::tree::UiDebugPrepaintActionKind::RequestAnimationFrame => {
                 Self::RequestAnimationFrame
+            }
+            fret_ui::tree::UiDebugPrepaintActionKind::VirtualListWindowShift => {
+                Self::VirtualListWindowShift
             }
         }
     }
@@ -4643,6 +4647,12 @@ pub struct UiPrepaintActionV1 {
     pub kind: UiPrepaintActionKindV1,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub invalidation: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub virtual_list_window_shift_kind: Option<UiVirtualListWindowShiftKindV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub virtual_list_window_shift_reason: Option<UiVirtualListWindowShiftReasonV1>,
     #[serde(default)]
     pub frame_id: u64,
 }
@@ -4661,6 +4671,13 @@ impl UiPrepaintActionV1 {
             target_node: action.target.map(key_to_u64),
             kind: UiPrepaintActionKindV1::from_kind(action.kind),
             invalidation: invalidation.map(|s| s.to_string()),
+            element: action.element.map(|id| id.0),
+            virtual_list_window_shift_kind: action
+                .virtual_list_window_shift_kind
+                .map(UiVirtualListWindowShiftKindV1::from_kind),
+            virtual_list_window_shift_reason: action
+                .virtual_list_window_shift_reason
+                .map(UiVirtualListWindowShiftReasonV1::from_reason),
             frame_id: action.frame_id.0,
         }
     }
