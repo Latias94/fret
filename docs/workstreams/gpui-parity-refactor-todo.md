@@ -639,6 +639,7 @@ topics (if/when we implement them):
         - [x] Ensure `debug.prepaint_actions` includes a `virtual_list_window_shift` action (kind + reason).
           - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (records window shift action), `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::VirtualListWindowShift`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
           - Gate: `--check-vlist-window-shifts-have-prepaint-actions` (emits `check.vlist_window_shifts_have_prepaint_actions.json`).
+        - Gate (retained-host safety): `--check-vlist-window-shifts-non-retained-max 0` (fails if a retained-host window shift falls back to `non_retained_rerender`; emits `check.vlist_window_shifts_non_retained_max.json`).
       - [ ] Add a stable regression gate for the window-boundary harness:
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
         - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`

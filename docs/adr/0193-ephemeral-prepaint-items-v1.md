@@ -118,6 +118,13 @@ Rules:
 - A non-retained virtual surface MUST NOT attempt to "apply" a window plan by attaching/detaching children during prepaint.
   If the plan implies different mounted children, it MUST schedule a dirty-view rerender for the next frame.
 
+Explainability note:
+
+- When a window plan is applied via `apply_mode=non_retained_rerender`, the runtime SHOULD export bounded samples that
+  connect the rerender to a specific `window_shift_kind`/reason and invalidation detail (see ADR 0190 diagnostics).
+- For surfaces that are expected to be retained-host windowed (ADR 0192), suites SHOULD gate on the absence of
+  non-retained rerender shifts (`--check-vlist-window-shifts-non-retained-max 0`).
+
 ### 3) Liveness/GC does not depend on ephemeral items
 
 - Ephemeral items are **not** part of the declarative liveness graph.

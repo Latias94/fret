@@ -125,6 +125,12 @@ Virtual-surface explainability requirement (v2; normative for windowed surfaces)
   - `apply_mode=non_retained_rerender` (Track B).
   This avoids ambiguous “window changed but nothing rerendered” failure modes.
 
+Post-run gate (v2; normative for retained-host suites):
+
+- If a surface is expected to be Track A (retained-host windowing), scripted diagnostics SHOULD gate on:
+  - `fretboard diag stats <bundle> --check-vlist-window-shifts-non-retained-max 0`
+  so regressions where a retained-host window shift falls back to `non_retained_rerender` are caught automatically.
+
 ### 5) Addendum (v2): staged prefetch and window-shift budgets
 
 This section extends the v1 contract with a GPUI/Flutter-aligned best practice for reducing scroll-time
