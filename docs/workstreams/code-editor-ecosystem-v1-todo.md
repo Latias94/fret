@@ -130,6 +130,7 @@ Evidence anchors:
 - [x] Prepare text per visible display row only (no monolithic document blob).
 - [~] Define row cache keys and budgets (viewport-bounded, LRU-ish) (row text + syntax spans are bounded; text system cache/telemetry alignment pending).
 - [~] Replace the code editor monospace "cell width" heuristic with cached renderer caret stops for pointer hit-testing, caret, and selection geometry (keep the heuristic as a fallback until every backend implements caret stops).
+- [~] Make vertical caret movement preserve a pixel `preferred_x` (per-row caret stops), not the last display column.
 - [x] Ensure theme-only changes remain paint-only (no reshaping).
 
 ### Input/IME integration

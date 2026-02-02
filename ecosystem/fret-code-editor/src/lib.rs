@@ -166,6 +166,7 @@ struct CodeEditorState {
     text_boundary_mode: TextBoundaryMode,
     display_wrap_cols: Option<usize>,
     display_map: DisplayMap,
+    caret_preferred_x: Option<Px>,
     undo: UndoHistory<CodeEditorTx>,
     undo_group: Option<UndoGroup>,
     dragging: bool,
@@ -222,6 +223,7 @@ impl CodeEditorHandle {
                 text_boundary_mode: TextBoundaryMode::Identifier,
                 display_wrap_cols: None,
                 display_map,
+                caret_preferred_x: None,
                 undo: UndoHistory::with_limit(512),
                 undo_group: None,
                 dragging: false,
@@ -282,6 +284,7 @@ impl CodeEditorHandle {
         let focus = selection.focus.min(max);
         st.selection = Selection { anchor, focus };
         st.preedit = None;
+        st.caret_preferred_x = None;
         st.undo_group = None;
         st.dragging = false;
         st.drag_pointer = None;
@@ -321,6 +324,7 @@ impl CodeEditorHandle {
         st.buffer = buffer;
         st.selection = Selection::default();
         st.preedit = None;
+        st.caret_preferred_x = None;
         st.undo = UndoHistory::with_limit(512);
         st.undo_group = None;
         st.dragging = false;
@@ -373,6 +377,7 @@ impl CodeEditorHandle {
         }
         st.display_wrap_cols = cols;
         st.refresh_display_map();
+        st.caret_preferred_x = None;
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
         st.row_geom_cache_tick = 0;
@@ -540,6 +545,7 @@ impl CodeEditor {
                                 anchor: start,
                                 focus: end,
                             };
+                            st.caret_preferred_x = None;
                         }
                         3 => {
                             let start = st
@@ -552,6 +558,7 @@ impl CodeEditor {
                                     focus: range.end,
                                 };
                             }
+                            st.caret_preferred_x = None;
                         }
                         _ => {
                             if down.modifiers.shift {
@@ -562,6 +569,7 @@ impl CodeEditor {
                                     focus: caret,
                                 };
                             }
+                            st.caret_preferred_x = None;
                         }
                     }
 
@@ -604,6 +612,7 @@ impl CodeEditor {
                     let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
                     let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
                     st.selection.focus = caret;
+                    st.caret_preferred_x = None;
 
                     let caret_rect =
                         caret_rect_for_selection(&st, row_h, cell_w, bounds, &on_pointer_move_scroll);
@@ -1435,6 +1444,7 @@ fn insert_text_with_kind(st: &mut CodeEditorState, text: &str, kind: UndoGroupKi
             focus: caret,
         },
     )?;
+    st.caret_preferred_x = None;
     Some(())
 }
 
@@ -1507,7 +1517,7 @@ fn handle_key_down(
             if meta {
                 move_caret_home_end(&mut st, true, true, shift);
             } else {
-                move_caret_vertical(&mut st, -1, shift);
+                move_caret_vertical(&mut st, -1, shift, cell_w_px);
             }
             st.undo_group = None;
         }
@@ -1515,7 +1525,7 @@ fn handle_key_down(
             if meta {
                 move_caret_home_end(&mut st, false, true, shift);
             } else {
-                move_caret_vertical(&mut st, 1, shift);
+                move_caret_vertical(&mut st, 1, shift, cell_w_px);
             }
             st.undo_group = None;
         }
@@ -1528,11 +1538,11 @@ fn handle_key_down(
             st.undo_group = None;
         }
         KeyCode::PageUp => {
-            move_caret_page(&mut st, -1, shift, row_h, scroll_handle);
+            move_caret_page(&mut st, -1, shift, row_h, scroll_handle, cell_w_px);
             st.undo_group = None;
         }
         KeyCode::PageDown => {
-            move_caret_page(&mut st, 1, shift, row_h, scroll_handle);
+            move_caret_page(&mut st, 1, shift, row_h, scroll_handle, cell_w_px);
             st.undo_group = None;
         }
         KeyCode::Backspace => {
@@ -1581,11 +1591,12 @@ fn move_caret_page(
     extend: bool,
     row_h: Px,
     scroll_handle: &fret_ui::scroll::ScrollHandle,
+    cell_w: Px,
 ) {
     let rows = page_rows(row_h, scroll_handle);
     let delta = pages.saturating_mul(rows as i32);
     if delta != 0 {
-        move_caret_vertical(st, delta, extend);
+        move_caret_vertical(st, delta, extend, cell_w);
     }
 
     // Keep the viewport moving with the caret for page navigation.
@@ -1614,6 +1625,7 @@ fn move_caret_home_end(st: &mut CodeEditorState, home: bool, ctrl_or_meta: bool,
         if home { row_range.start } else { row_range.end }
     };
 
+    st.caret_preferred_x = None;
     if extend {
         if st.selection.is_caret() {
             st.selection.anchor = caret;
@@ -1662,6 +1674,7 @@ fn delete_word_backward(st: &mut CodeEditorState) {
                 focus: start,
             },
         );
+        st.caret_preferred_x = None;
         return;
     }
 
@@ -1684,6 +1697,7 @@ fn delete_word_backward(st: &mut CodeEditorState) {
             focus: prev,
         },
     );
+    st.caret_preferred_x = None;
 }
 
 fn delete_word_forward(st: &mut CodeEditorState) {
@@ -1700,6 +1714,7 @@ fn delete_word_forward(st: &mut CodeEditorState) {
                 focus: start,
             },
         );
+        st.caret_preferred_x = None;
         return;
     }
 
@@ -1720,6 +1735,7 @@ fn delete_word_forward(st: &mut CodeEditorState) {
             focus: caret,
         },
     );
+    st.caret_preferred_x = None;
 }
 
 fn delete_backward(st: &mut CodeEditorState) {
@@ -1736,6 +1752,7 @@ fn delete_backward(st: &mut CodeEditorState) {
                 focus: start,
             },
         );
+        st.caret_preferred_x = None;
         return;
     }
 
@@ -1753,6 +1770,7 @@ fn delete_backward(st: &mut CodeEditorState) {
             focus: prev,
         },
     );
+    st.caret_preferred_x = None;
 }
 
 fn delete_forward(st: &mut CodeEditorState) {
@@ -1769,6 +1787,7 @@ fn delete_forward(st: &mut CodeEditorState) {
                 focus: start,
             },
         );
+        st.caret_preferred_x = None;
         return;
     }
 
@@ -1786,11 +1805,13 @@ fn delete_forward(st: &mut CodeEditorState) {
             focus: caret,
         },
     );
+    st.caret_preferred_x = None;
 }
 
 fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
     let new = st.buffer.prev_char_boundary(caret);
+    st.caret_preferred_x = None;
     if extend {
         st.selection.focus = new;
     } else {
@@ -1804,6 +1825,7 @@ fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
 fn move_caret_right(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
     let new = st.buffer.next_char_boundary(caret);
+    st.caret_preferred_x = None;
     if extend {
         st.selection.focus = new;
     } else {
@@ -1814,9 +1836,36 @@ fn move_caret_right(st: &mut CodeEditorState, extend: bool) {
     }
 }
 
-fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool) {
+fn caret_x_for_buffer_byte_in_row(st: &CodeEditorState, row: usize, caret: usize) -> Option<Px> {
+    let Some((geom, _)) = st.row_geom_cache.get(&row) else {
+        return None;
+    };
+    if geom.caret_stops.is_empty() {
+        return None;
+    }
+    let row_start = geom.row_range.start.min(st.buffer.len_bytes());
+    if caret < row_start {
+        return None;
+    }
+    let mut local = caret.saturating_sub(row_start);
+    if let Some(preedit) = st.preedit.as_ref()
+        && geom.preedit.is_some()
+    {
+        local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+    }
+    Some(caret_x_for_index(&geom.caret_stops, local))
+}
+
+fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool, cell_w: Px) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
     let pt = st.display_map.byte_to_display_point(&st.buffer, caret);
+
+    let desired_x = st
+        .caret_preferred_x
+        .or_else(|| caret_x_for_buffer_byte_in_row(st, pt.row, caret))
+        .unwrap_or_else(|| Px(pt.col as f32 * cell_w.0));
+    st.caret_preferred_x = Some(desired_x);
+
     let next_row = if delta < 0 {
         pt.row.saturating_sub(delta.unsigned_abs() as usize)
     } else {
@@ -1824,9 +1873,17 @@ fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: bool) {
     };
     let max_row = st.display_map.row_count().saturating_sub(1);
     let next_row = next_row.min(max_row);
-    let next = st
-        .display_map
-        .display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col));
+    let next = if let Some((geom, _)) = st.row_geom_cache.get(&next_row)
+        && !geom.caret_stops.is_empty()
+    {
+        let local = hit_test_index_from_caret_stops(&geom.caret_stops, desired_x);
+        let byte = map_row_local_to_buffer_byte(&st.buffer, geom, local);
+        st.buffer
+            .clamp_to_char_boundary_left(byte.min(st.buffer.len_bytes()))
+    } else {
+        st.display_map
+            .display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col))
+    };
     if extend {
         st.selection.focus = next;
     } else {
@@ -1969,6 +2026,7 @@ fn redo(st: &mut CodeEditorState) -> bool {
 fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
     let mode = st.text_boundary_mode;
     st.undo_group = None;
+    st.caret_preferred_x = None;
 
     let (sel_start, sel_end) = {
         let r = st.selection.normalized();
@@ -2008,7 +2066,7 @@ fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool 
     copy_selection(host, st);
     let start = range.start.min(st.buffer.len_bytes());
     let end = range.end.min(st.buffer.len_bytes());
-    apply_and_record_edit(
+    let out = apply_and_record_edit(
         st,
         UndoGroupKind::Cut,
         Edit::Delete { range: start..end },
@@ -2017,7 +2075,11 @@ fn cut_selection(host: &mut dyn UiActionHost, st: &mut CodeEditorState) -> bool 
             focus: start,
         },
     )
-    .is_some()
+    .is_some();
+    if out {
+        st.caret_preferred_x = None;
+    }
+    out
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2915,6 +2977,79 @@ mod tests {
     }
 
     #[test]
+    fn caret_preferred_x_is_preserved_across_vertical_moves() {
+        let handle = CodeEditorHandle::new("aaaa\nbbbb\ncccc");
+        {
+            let mut st = handle.state.borrow_mut();
+            st.selection = Selection {
+                anchor: 2,
+                focus: 2,
+            };
+
+            // Synthetic caret stops: 10px per byte.
+            st.row_geom_cache.insert(
+                0,
+                (
+                    RowGeom {
+                        row_range: 0..4,
+                        caret_stops: vec![
+                            (0, Px(0.0)),
+                            (1, Px(10.0)),
+                            (2, Px(20.0)),
+                            (3, Px(30.0)),
+                            (4, Px(40.0)),
+                        ],
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+            st.row_geom_cache.insert(
+                1,
+                (
+                    RowGeom {
+                        row_range: 5..9,
+                        caret_stops: vec![
+                            (0, Px(0.0)),
+                            (1, Px(10.0)),
+                            (2, Px(20.0)),
+                            (3, Px(30.0)),
+                            (4, Px(40.0)),
+                        ],
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+            st.row_geom_cache.insert(
+                2,
+                (
+                    RowGeom {
+                        row_range: 10..14,
+                        caret_stops: vec![
+                            (0, Px(0.0)),
+                            (1, Px(10.0)),
+                            (2, Px(20.0)),
+                            (3, Px(30.0)),
+                            (4, Px(40.0)),
+                        ],
+                        preedit: None,
+                    },
+                    1,
+                ),
+            );
+
+            move_caret_vertical(&mut st, 1, false, Px(8.0));
+            assert_eq!(st.selection.caret(), 7, "row 1, local index 2");
+            assert_eq!(st.caret_preferred_x, Some(Px(20.0)));
+
+            move_caret_vertical(&mut st, 1, false, Px(8.0));
+            assert_eq!(st.selection.caret(), 12, "row 2, local index 2");
+            assert_eq!(st.caret_preferred_x, Some(Px(20.0)));
+        }
+    }
+
+    #[test]
     fn row_text_cache_stats_tracks_hits_and_misses() {
         let handle = CodeEditorHandle::new("hello\nworld");
         handle.reset_cache_stats();
@@ -3097,15 +3232,15 @@ mod tests {
         };
 
         // Row 0 col 0 -> Down => row 1 col 0 (within the wrapped "abcd").
-        move_caret_vertical(&mut st, 1, false);
+        move_caret_vertical(&mut st, 1, false, Px(10.0));
         assert_eq!(st.selection.caret(), 2);
 
         // Row 1 col 0 -> Down => row 2 col 0 (next logical line "ef").
-        move_caret_vertical(&mut st, 1, false);
+        move_caret_vertical(&mut st, 1, false, Px(10.0));
         assert_eq!(st.selection.caret(), 5);
 
         // Row 2 is the last display row; another Down should clamp.
-        move_caret_vertical(&mut st, 1, false);
+        move_caret_vertical(&mut st, 1, false, Px(10.0));
         assert_eq!(st.selection.caret(), 5);
     }
 
@@ -3232,7 +3367,7 @@ mod tests {
             focus: 0,
         };
 
-        move_caret_page(&mut st, 1, false, row_h, &scroll);
+        move_caret_page(&mut st, 1, false, row_h, &scroll, Px(10.0));
 
         let expected = st
             .display_map
