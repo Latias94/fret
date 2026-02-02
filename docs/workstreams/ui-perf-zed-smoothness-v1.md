@@ -131,6 +131,13 @@ Implication:
 - Longer-term wins likely require splitting “shaping” from “wrapping/line breaking” so width changes do not force
   full re-shape work.
 
+Update (2026-02-02):
+
+- `perf(fret-render): fast-path wrapped text measure` (commit `9440648a`) implements “shape once, wrap by cluster stats”
+  for `measure()` under `TextWrap::Word | TextWrap::Grapheme` when `max_width` is set.
+- On `ui-gallery-window-resize-stress`, p95 total drops from ~30.9ms to ~15.5ms, and p95 `layout.solve_us` drops from
+  ~17.6ms to ~1.7ms. The remaining dominant cost is now `paint_us` (see the latest log entry for exact numbers).
+
 2) **Some scripts currently look “cold-start dominated” due to per-script process launches**
 
 Scripts like `ui-gallery-dropdown-open-select` and `ui-gallery-dialog-escape-focus-restore` show their worst frames

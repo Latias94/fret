@@ -158,3 +158,26 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-stress.json`
 - top_total_time_us: `30916`
 - bundle: `target/fret-diag/1770032393251-ui-gallery-window-resize-stress/bundle.json`
+
+## 2026-02-02 20:57:10 (commit `9440648ae76f5fdc31dc17e930de90e9bb569029`)
+
+Change:
+- Fast-path wrapped text measure via shaping cache
+
+Suite:
+- `ui-gallery-window-resize-stress`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --repeat 7 --sort time --json --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress.json | 15006 | 15511 | 15511 | 11580 | 1724 | 57 | 4708 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress.json`
+- top_total_time_us: `15511`
+- bundle: `target/fret-diag/1770036974294-ui-gallery-window-resize-stress/bundle.json`

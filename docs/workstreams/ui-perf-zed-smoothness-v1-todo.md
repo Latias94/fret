@@ -99,8 +99,10 @@ Perf acceptance:
 
 - [ ] Document stable cache keys for measure/shaping (wrap width, font stack, style).
 - [ ] Reduce redundant text measurements under intrinsic probes (layout engine + `TextWrap::None` paths).
-- [ ] Add a fast path for “min-content probes” (e.g. `wrap=Word` + `max_width=0`) to avoid O(n²) text wrapping.
-- [ ] Reduce repeated shaping work when taffy calls `measure()` under multiple intrinsic modes (min/max/definite).
+- [x] Add a fast path for “min-content probes” (e.g. `wrap=Word` + `max_width=0`) to avoid O(n²) text wrapping.
+  - Implemented by `perf(fret-render): fast-path wrapped text measure` (see perf log entry for commit `9440648a`).
+- [x] Reduce repeated shaping work when taffy calls `measure()` under multiple intrinsic modes (min/max/definite).
+  - Implemented by caching single-line shaping + cluster-based wrap stats (see `ui-perf-zed-smoothness-v1-log.md`).
 - [ ] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
 - [ ] Ensure atlas eviction and re-upload events are observable in perf snapshots.
 
