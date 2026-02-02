@@ -80,6 +80,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
     let mut perf_repeat: u64 = 1;
+    let mut reuse_launch: bool = false;
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
@@ -737,6 +738,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("invalid value for --env (empty KEY)".to_string());
                 }
                 launch_env.push((key.to_string(), value.to_string()));
+                i += 1;
+            }
+            "--reuse-launch" => {
+                reuse_launch = true;
                 i += 1;
             }
             "--launch" => {
@@ -2548,6 +2553,21 @@ See: `docs/tracy.md`.\n";
                 .into_iter()
                 .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                 .collect()
+            } else if rest.len() == 1 && rest[0] == "ui-gallery-steady" {
+                [
+                    "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                    "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+                    "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+                    "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+                    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                ]
+                .into_iter()
+                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                .collect()
             } else {
                 rest.into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -2556,7 +2576,7 @@ See: `docs/tracy.md`.\n";
 
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
-            let reuse_process = launch.is_none();
+            let reuse_process = launch.is_none() || reuse_launch;
             let cli_thresholds = PerfThresholds {
                 max_top_total_us,
                 max_top_layout_us,
@@ -2571,21 +2591,8 @@ See: `docs/tracy.md`.\n";
                 .clone()
                 .map(|p| resolve_path(&workspace_root, p));
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
-            let mut child = if reuse_process {
-                maybe_launch_demo(
-                    &launch,
-                    &launch_env,
-                    &workspace_root,
-                    &resolved_out_dir,
-                    &resolved_ready_path,
-                    &resolved_exit_path,
-                    false,
-                    timeout_ms,
-                    poll_ms,
-                )?
-            } else {
-                None
-            };
+            let mut child: Option<LaunchedDemo> = None;
+            let launched_by_fretboard = reuse_launch && launch.is_some();
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
@@ -2604,6 +2611,20 @@ See: `docs/tracy.md`.\n";
                         ));
                     }
                 }
+            }
+
+            if launched_by_fretboard {
+                child = maybe_launch_demo(
+                    &launch,
+                    &launch_env,
+                    &workspace_root,
+                    &resolved_out_dir,
+                    &resolved_ready_path,
+                    &resolved_exit_path,
+                    false,
+                    timeout_ms,
+                    poll_ms,
+                )?;
             }
 
             for src in scripts {
@@ -3315,6 +3336,9 @@ See: `docs/tracy.md`.\n";
                 });
                 let _ = write_json_value(&out_path, &payload);
                 if !perf_threshold_failures.is_empty() {
+                    if launched_by_fretboard {
+                        stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
+                    }
                     eprintln!(
                         "PERF threshold gate failed (failures={}, evidence={})",
                         perf_threshold_failures.len(),
@@ -3322,6 +3346,10 @@ See: `docs/tracy.md`.\n";
                     );
                     std::process::exit(1);
                 }
+            }
+
+            if launched_by_fretboard {
+                stop_launched_demo(&mut child, &resolved_exit_path, poll_ms);
             }
 
             if stats_json {
