@@ -209,6 +209,8 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - If overlay torture still fails under stopgap disabled, prioritize proving whether the missing semantics targets live under a nested `CachedSubtree` (inner ViewCache root) that is not being kept alive when an outer cache root hits:
       - confirm whether the inner cache root appears in the outer root's recorded subtree-element list (and is therefore part of the keep-alive recursion),
       - and whether the subtree becomes an island due to missing ownership/attachment bookkeeping rather than pure parent-pointer drift.
+    - Diagnostics follow-up: `--check-gc-sweep-liveness` writes `check.gc_sweep_liveness.json` next to `bundle.json` (even on failure), with bounded offender samples and the key root-set counters.
+      Use this file as the first stop when classifying “island vs. broken parent chain”, without re-running the harness.
     - Diagnostics follow-up: some failing bundles still cannot resolve `root_element_path` / `root_parent_element_path` (paths are `null`).
       Prefer capturing debug paths at removal time (or extending the debug-path retention window) so cache-005 regressions stay explainable from a single bundle.
     - Verify we are not accidentally overwriting element-root ownership during “touch existing subtree” paths:
