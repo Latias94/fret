@@ -282,7 +282,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       so we can remove the global `view_cache_has_reuse_roots` stopgap.
     - Observation (2026-01-25): in the `stopgap-disabled-vc-reachability` bundle, the max-`removed_nodes` record reports:
       - `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false`, which indicates the swept subtree is *not* reachable from any current layer root or any view-cache reuse root node.
-      - This shifts the likely root cause from “missing liveness roots” to “attachment/identity bookkeeping breaks under cache-hit + shell reuse”, producing a detached island that GC can legally collect.
+      - This points to a **true island** per ADR 0191’s taxonomy: liveness-root selection, ownership drift, or subtree membership bookkeeping under reuse (not just “a parent pointer broke”).
     - Observation (2026-01-25): in the `stopgap-disabled-trigger-element-path` bundle, the sweep is attributed to:
       - `trigger_element_root_path = root[fret-ui-gallery]`, i.e. the window root pass, not an overlay-only root.
     - Observation (2026-01-24): in the failing bundles above, `ui-gallery-dialog-trigger` is last present at `frame_id=33` and is removed as part of the max-`removed_nodes` subtree at `frame_id=34`
@@ -293,11 +293,12 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - Regression triage checklist (only relevant if a new failing bundle appears):
         - Confirm whether the removed subtree was still reachable from any liveness root:
           - `debug.removed_subtrees[*].reachable_from_layer_roots` / `reachable_from_view_cache_roots`.
-        - If the subtree is still reachable from a layer root, treat it as an attachment/classification bug:
+        - If the subtree is still reachable from a layer root, treat it as a reachability/classification bug:
           - Audit `debug.layers_in_paint_order[*].visible`, `debug.layer_visible_writes[*]`, and `debug.overlay_policy_decisions[*]`.
           - Audit parent edge consistency via `root_parent_children_contains_root` / `root_parent_frame_children_contains_root`.
         - If the subtree is an island (both reachability flags are `false`), treat it as bookkeeping drift:
           - Audit `element_runtime.view_cache_reuse_root_element_samples` and `element_runtime.node_entry_root_overwrites`.
+          - If present, use `root_root_parent_sever_*` / `root_parent_children_last_set_*` attribution fields to find the first structural detach that created the island.
           - Audit cache-root `set_children` attribution via `debug.cache_roots[*].children_last_set_*`.
         - If the subtree is a true structural detach, attribute it to a callsite:
           - Use `root_root_parent_sever_*` and parent element debug-path fields.
