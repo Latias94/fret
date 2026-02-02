@@ -3492,9 +3492,15 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
 
     let mut offenders: Vec<String> = Vec::new();
     let mut offender_samples: Vec<serde_json::Value> = Vec::new();
+    let mut offender_taxonomy_counts: std::collections::BTreeMap<String, u64> =
+        std::collections::BTreeMap::new();
     let mut examined_snapshots: u64 = 0;
     let mut removed_subtrees_total: u64 = 0;
     let mut removed_subtrees_offenders: u64 = 0;
+
+    let mut element_runtime_node_entry_root_overwrites_total: u64 = 0;
+    let mut element_runtime_view_cache_reuse_root_element_samples_total: u64 = 0;
+    let mut element_runtime_retained_keep_alive_roots_total: u64 = 0;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -3509,6 +3515,37 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                 continue;
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let element_runtime = s
+                .get("debug")
+                .and_then(|v| v.get("element_runtime"))
+                .and_then(|v| v.as_object());
+            if let Some(element_runtime) = element_runtime {
+                element_runtime_node_entry_root_overwrites_total =
+                    element_runtime_node_entry_root_overwrites_total.saturating_add(
+                        element_runtime
+                            .get("node_entry_root_overwrites")
+                            .and_then(|v| v.as_array())
+                            .map(|v| v.len() as u64)
+                            .unwrap_or(0),
+                    );
+                element_runtime_view_cache_reuse_root_element_samples_total =
+                    element_runtime_view_cache_reuse_root_element_samples_total.saturating_add(
+                        element_runtime
+                            .get("view_cache_reuse_root_element_samples")
+                            .and_then(|v| v.as_array())
+                            .map(|v| v.len() as u64)
+                            .unwrap_or(0),
+                    );
+                element_runtime_retained_keep_alive_roots_total =
+                    element_runtime_retained_keep_alive_roots_total.saturating_add(
+                        element_runtime
+                            .get("retained_keep_alive_roots")
+                            .and_then(|v| v.as_array())
+                            .map(|v| v.len() as u64)
+                            .unwrap_or(0),
+                    );
+            }
 
             let Some(removed) = s
                 .get("debug")
@@ -3532,13 +3569,49 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                     .get("reachable_from_view_cache_roots")
                     .and_then(|v| v.as_bool());
                 let root_layer_visible = r.get("root_layer_visible").and_then(|v| v.as_bool());
+                let reuse_roots_len = r
+                    .get("view_cache_reuse_roots_len")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let under_reuse = reuse_roots_len > 0;
+                let trigger_in_keep_alive = r
+                    .get("trigger_element_in_view_cache_keep_alive")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let trigger_listed_under_reuse_root = r
+                    .get("trigger_element_listed_under_reuse_root")
+                    .and_then(|v| v.as_u64())
+                    .is_some();
 
-                if !unreachable
+                let taxonomy = if !unreachable
                     || reachable_from_layer_roots
                     || reachable_from_view_cache_roots == Some(true)
                     || root_layer_visible == Some(true)
                 {
+                    Some("swept_while_reachable")
+                } else if under_reuse && reachable_from_view_cache_roots.is_none() {
+                    // Under reuse we expect reachability from reuse roots to be recorded; otherwise
+                    // the cache-005 harness won't be actionable from a single bundle.
+                    Some("missing_view_cache_reachability_evidence")
+                } else if trigger_in_keep_alive {
+                    // Keep-alive roots are part of the liveness root set. If the record still
+                    // indicates a trigger element is in a keep-alive bucket while being swept as
+                    // unreachable, that's almost certainly bookkeeping drift.
+                    Some("keep_alive_liveness_mismatch")
+                } else if under_reuse && trigger_listed_under_reuse_root {
+                    // If the trigger element is recorded as being listed under some reuse root,
+                    // but the removal happens as unreachable from reuse roots, the membership/touch
+                    // logic is likely stale or incomplete.
+                    Some("reuse_membership_mismatch")
+                } else {
+                    None
+                };
+
+                if let Some(taxonomy) = taxonomy {
                     removed_subtrees_offenders = removed_subtrees_offenders.saturating_add(1);
+                    *offender_taxonomy_counts
+                        .entry(taxonomy.to_string())
+                        .or_insert(0) += 1;
                     let root = r.get("root").and_then(|v| v.as_u64()).unwrap_or(0);
                     let root_element_path = r
                         .get("root_element_path")
@@ -3549,20 +3622,22 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                         .and_then(|v| v.as_str())
                         .unwrap_or("<none>");
                     let mut violations: Vec<&'static str> = Vec::new();
-                    if !unreachable {
+                    if taxonomy == "swept_while_reachable" && !unreachable {
                         violations.push("reachable_from_liveness_roots");
                     }
-                    if reachable_from_layer_roots {
+                    if taxonomy == "swept_while_reachable" && reachable_from_layer_roots {
                         violations.push("reachable_from_layer_roots");
                     }
-                    if reachable_from_view_cache_roots == Some(true) {
+                    if taxonomy == "swept_while_reachable"
+                        && reachable_from_view_cache_roots == Some(true)
+                    {
                         violations.push("reachable_from_view_cache_roots");
                     }
-                    if root_layer_visible == Some(true) {
+                    if taxonomy == "swept_while_reachable" && root_layer_visible == Some(true) {
                         violations.push("root_layer_visible");
                     }
                     offenders.push(format!(
-                        "window={window_id} frame_id={frame_id} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} root_element_path={root_element_path} trigger_element_path={trigger_path}"
+                        "window={window_id} frame_id={frame_id} taxonomy={taxonomy} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} reuse_roots_len={reuse_roots_len} trigger_in_keep_alive={trigger_in_keep_alive} trigger_listed_under_reuse_root={trigger_listed_under_reuse_root} root_element_path={root_element_path} trigger_element_path={trigger_path}"
                     ));
 
                     const MAX_SAMPLES: usize = 128;
@@ -3571,6 +3646,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                             "window": window_id,
                             "frame_id": frame_id,
                             "tick_id": s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                            "taxonomy": taxonomy,
                             "root": r.get("root").and_then(|v| v.as_u64()).unwrap_or(0),
                             "root_root": r.get("root_root").and_then(|v| v.as_u64()),
                             "root_layer": r.get("root_layer").and_then(|v| v.as_u64()),
@@ -3579,6 +3655,9 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                             "reachable_from_view_cache_roots": reachable_from_view_cache_roots,
                             "unreachable_from_liveness_roots": unreachable,
                             "violations": violations,
+                            "reuse_roots_len": reuse_roots_len,
+                            "trigger_in_keep_alive": trigger_in_keep_alive,
+                            "trigger_listed_under_reuse_root": trigger_listed_under_reuse_root,
                             "liveness_layer_roots_len": r.get("liveness_layer_roots_len").and_then(|v| v.as_u64()),
                             "view_cache_reuse_roots_len": r.get("view_cache_reuse_roots_len").and_then(|v| v.as_u64()),
                             "view_cache_reuse_root_nodes_len": r.get("view_cache_reuse_root_nodes_len").and_then(|v| v.as_u64()),
@@ -3612,7 +3691,13 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
         "examined_snapshots": examined_snapshots,
         "removed_subtrees_total": removed_subtrees_total,
         "removed_subtrees_offenders": removed_subtrees_offenders,
+        "offender_taxonomy_counts": offender_taxonomy_counts,
         "offender_samples": offender_samples,
+        "debug_summary": {
+            "element_runtime_node_entry_root_overwrites_total": element_runtime_node_entry_root_overwrites_total,
+            "element_runtime_view_cache_reuse_root_element_samples_total": element_runtime_view_cache_reuse_root_element_samples_total,
+            "element_runtime_retained_keep_alive_roots_total": element_runtime_retained_keep_alive_roots_total,
+        },
     });
     write_json_value(&evidence_path, &payload)?;
 
@@ -3621,7 +3706,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
     }
 
     let mut msg = String::new();
-    msg.push_str("GC sweep liveness violation: removed_subtrees contains entries that appear live (reachable/visible)\n");
+    msg.push_str("GC sweep liveness violation: removed_subtrees contains entries that appear live or inconsistent with keep-alive/reuse bookkeeping\n");
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     msg.push_str(&format!(
         "warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
