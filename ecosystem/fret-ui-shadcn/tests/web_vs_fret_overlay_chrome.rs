@@ -6269,6 +6269,32 @@ fn web_vs_fret_dropdown_menu_demo_shadow_matches_web_dark() {
     );
 }
 
+#[test]
+fn web_vs_fret_dropdown_menu_demo_vp375x240_panel_size_matches_web_light() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "dropdown-menu-demo.vp375x240",
+        "dropdown-menu-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_vp375x240_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme(
+        "dropdown-menu-demo.vp375x240",
+        "dropdown-menu-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Menu,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        build_shadcn_dropdown_menu_demo,
+    );
+}
+
 fn build_shadcn_dropdown_menu_demo(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
