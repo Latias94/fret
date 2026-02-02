@@ -589,3 +589,38 @@ Notes:
   `target/fret-diag-perf/ui-gallery-steady.after-windowframe-children-skip/check.perf_thresholds.json`.
   A standalone baseline-gated rerun for just the menubar script passed:
   `target/fret-diag-perf/menubar-nav.after-windowframe-children-skip/check.perf_thresholds.json`.
+
+## 2026-02-03 07:16:05 (commit `089bac9b`)
+
+Change:
+- Avoid cloning child lists for UiTree set_children during declarative mount (1x copy instead of 2x)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-mount-avoid-children-clone.r7 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3175 | 3310 | 3310 | 2950 | 80 | 19 | 346 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3810 | 3862 | 3862 | 3096 | 204 | 24 | 779 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3645 | 4050 | 4050 | 3248 | 178 | 17 | 785 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2939 | 3091 | 3091 | 2452 | 50 | 17 | 652 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1755 | 2132 | 2132 | 1592 | 52 | 14 | 527 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3924 | 6905 | 6905 | 3911 | 335 | 21 | 2973 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10773 | 11247 | 11247 | 9903 | 441 | 52 | 1333 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6430 | 7565 | 7565 | 6150 | 826 | 30 | 1387 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13611 | 13643 | 13643 | 10969 | 1924 | 60 | 2636 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `13643`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.after-mount-avoid-children-clone.r7/1770074129791-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- Baseline gate check passed (repeat=3):
+  - evidence: `target/fret-diag-perf/ui-gallery-steady.after-mount-avoid-children-clone.check/check.perf_thresholds.json`

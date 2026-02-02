@@ -62,6 +62,8 @@ Primary targets (highest leverage):
   - Landed as `slotmap::SecondaryMap<NodeId, ...>` (commit `448c34ad`).
 - [x] Avoid rewriting `WindowFrame.children` when the child list is unchanged (reduce per-frame `Arc<[NodeId]>` allocations).
   - Implemented by `perf(fret-ui): skip unchanged window frame children` (commit `cce827ad`).
+- [x] Avoid cloning child lists when calling `UiTree::set_children*` from declarative mount (reduce per-frame heap churn).
+  - Implemented by `perf(fret-ui): avoid cloning child lists in mount` (commit `089bac9b`).
 - [ ] Replace `Arc<[NodeId]>` for `WindowFrame.children` with a reuse-friendly representation.
   - Candidate: store `Vec<NodeId>` in a slab/arena and reference by index + generation.
 - [x] Replace invalidation “visited”/scratch `HashMap<NodeId, u8>` with generation-stamped tables:
