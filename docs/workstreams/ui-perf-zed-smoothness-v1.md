@@ -25,6 +25,7 @@ Related workstreams / anchors:
 Tracking:
 
 - TODO tracker: `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md`
+- Perf log (commit-addressable results): `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 
 ---
 
@@ -278,4 +279,3 @@ Deliverables:
 - **Multiple viewports**: culling and surface embedding must remain cheap under pointer move and resizing.
 - **WebGPU / wasm**: avoid designs that depend on OS threads or per-frame large allocations; favor reusable buffers.
 - **GPU profiling**: extend `bundle.json` schema with optional GPU timings (behind feature flags) once CPU is stable.
-
