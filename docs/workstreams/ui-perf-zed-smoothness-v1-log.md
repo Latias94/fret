@@ -551,3 +551,41 @@ Notes:
   - `ui-gallery-window-resize-stress-steady` p95 total is within ~2% (`13762us @448c34ad` vs `14022us @fd7ed84b baseline v2`).
   - `ui-gallery-virtual-list-torture-steady` is essentially flat (`7515us @448c34ad` vs `7476us @fd7ed84b baseline v2`).
 - Script paths are absolute here because the run was performed from a detached worktree (`fret-perf-448c34ad`).
+
+## 2026-02-03 07:05:31 (commit `cce827ad`)
+
+Change:
+- Skip rewriting WindowFrame.children when unchanged (reduce per-frame Arc allocations)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-windowframe-children-skip.r7 --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3157 | 3320 | 3320 | 2969 | 78 | 18 | 342 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3809 | 3878 | 3878 | 3126 | 214 | 20 | 757 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3589 | 4129 | 4129 | 3323 | 194 | 17 | 789 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2914 | 3082 | 3082 | 2442 | 42 | 19 | 641 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1786 | 2155 | 2155 | 1597 | 54 | 13 | 545 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3948 | 6943 | 6943 | 3970 | 349 | 29 | 2950 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10789 | 11237 | 11237 | 9904 | 418 | 52 | 1345 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6604 | 7504 | 7504 | 6157 | 876 | 30 | 1441 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 13763 | 13825 | 13825 | 11165 | 2051 | 65 | 2783 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `13825`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.after-windowframe-children-skip.r7/1770073483221-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- `--perf-baseline` gating is currently sensitive to rare outliers on small scripts (e.g. menubar nav).
+  During one baseline-gated run for this change, a single run hit `~8ms` on the menubar script and failed the gate:
+  `target/fret-diag-perf/ui-gallery-steady.after-windowframe-children-skip/check.perf_thresholds.json`.
+  A standalone baseline-gated rerun for just the menubar script passed:
+  `target/fret-diag-perf/menubar-nav.after-windowframe-children-skip/check.perf_thresholds.json`.
