@@ -413,6 +413,7 @@ pub enum UiDebugInvalidationDetail {
     ScrollHandleHitTestOnly,
     ScrollHandleLayout,
     ScrollHandleWindowUpdate,
+    ScrollHandleScrollToItemWindowUpdate,
     ScrollHandlePrefetchWindowUpdate,
     FocusVisiblePolicy,
     InputModalityPolicy,
@@ -442,6 +443,9 @@ impl UiDebugInvalidationDetail {
             Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
             Self::ScrollHandleLayout => Some("scroll_handle_layout"),
             Self::ScrollHandleWindowUpdate => Some("scroll_handle_window_update"),
+            Self::ScrollHandleScrollToItemWindowUpdate => {
+                Some("scroll_handle_scroll_to_item_window_update")
+            }
             Self::ScrollHandlePrefetchWindowUpdate => Some("scroll_handle_prefetch_window_update"),
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),
             Self::InputModalityPolicy => Some("input_modality_policy"),
@@ -1711,6 +1715,7 @@ impl<H: UiHost> UiTree<H> {
                 detail,
                 UiDebugInvalidationDetail::ScrollHandleLayout
                     | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                    | UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
                     | UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
             ))
     }

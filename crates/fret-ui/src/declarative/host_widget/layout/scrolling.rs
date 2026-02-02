@@ -506,7 +506,11 @@ impl ElementHostWidget {
                         crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
                     };
                     let invalidation_detail = if cx.tree.view_cache_enabled() && !retained_host {
-                        Some(crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate)
+                        Some(if deferred_scroll_to_item {
+                            crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                        } else {
+                            crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                        })
                     } else {
                         None
                     };
@@ -583,7 +587,11 @@ impl ElementHostWidget {
                 cx.tree.mark_nearest_view_cache_root_needs_rerender(
                     cx.node,
                     UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                    if deferred_scroll_to_item {
+                        UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                    } else {
+                        UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                    },
                 );
             }
             needs_redraw = true;
