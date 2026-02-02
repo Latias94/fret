@@ -272,24 +272,18 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       The record reports `root_layer=None` and `reachable_from_layer_roots=false`, so the subtree is treated as detached at sweep time (not just missing a `last_seen_frame` touch).
     - Note (2026-01-24): `debug.layer_visible_writes` attributes the `visible=false` toggle for the `4294967718` layer root to `ecosystem/fret-ui-kit/src/window_overlays/state.rs:159`.
     - Note (2026-01-24): `debug.overlay_policy_decisions` attributes overlay-manager policy (kind/present/interactive/reason) with an explicit callsite.
-    - Unblock checklist (to move from `[!]` -> `[~]`):
-      - Export enough layer visibility state in `bundle.json` to explain *why* a layer root flips `visible=false` on the failing frame.
-        - `debug.layers_in_paint_order[*].visible` reports the per-frame visibility state.
-        - `debug.layer_visible_writes[*]` reports the callsite(s) that toggled layer visibility in that frame.
-        - `debug.overlay_policy_decisions[*]` reports the overlay policy decision (kind/present/interactive/reason) with callsite.
-      - Add a debug-only GC classification in `removed_subtrees` that tells us whether we removed a subtree that was still reachable from a registered layer root.
-        - `debug.removed_subtrees[*].reachable_from_layer_roots=true` indicates a likely broken parent-chain / `node_layer(..)` attachment classification.
-      - If `reachable_from_layer_roots` remains `false` for the subtree that contains the missing semantics target, prioritize explaining *why it became detached*:
-        - export whether the parent still referenced the removed root via `ui.children(parent)` and/or `WindowFrame.children[parent]` on the failing frame.
-          - `debug.removed_subtrees[*].root_parent_children_contains_root` / `root_parent_frame_children_contains_root` + corresponding `*_len` fields.
-        - Note: GC reachability already unions `UiTree` + `WindowFrame` child edges (and is covered by a unit test in `crates/fret-ui/src/declarative/mount.rs`).
-          If both parent-edge checks are `true` but `reachable_from_layer_roots=false`, suspect the subtree became detached higher in the chain (missing root in the liveness root set)
-          or identity/ownership bookkeeping drift that caused an "island root".
-        - Export cache-root `set_children` samples (child element id + best-effort debug path) so accidental subtree swaps are explainable from a single failing bundle:
-          - `debug.cache_roots[*].children_last_set_{old,new}_elements_head`
-          - `debug.cache_roots[*].children_last_set_{old,new}_elements_head_paths`
-      - Confirm whether liveness-root selection is missing a root source (e.g. overlay/popup layer roots created outside the main tree) and extend the liveness root set if needed.
-    - If `root_element_path` stays `None`, extend the diagnostics lag window or capture the root element debug path at removal time so we can map swept subtrees back to authoring callsites.
+      - Regression triage checklist (only relevant if a new failing bundle appears):
+        - Confirm whether the removed subtree was still reachable from any liveness root:
+          - `debug.removed_subtrees[*].reachable_from_layer_roots` / `reachable_from_view_cache_roots`.
+        - If the subtree is still reachable from a layer root, treat it as an attachment/classification bug:
+          - Audit `debug.layers_in_paint_order[*].visible`, `debug.layer_visible_writes[*]`, and `debug.overlay_policy_decisions[*]`.
+          - Audit parent edge consistency via `root_parent_children_contains_root` / `root_parent_frame_children_contains_root`.
+        - If the subtree is an island (both reachability flags are `false`), treat it as bookkeeping drift:
+          - Audit `element_runtime.view_cache_reuse_root_element_samples` and `element_runtime.node_entry_root_overwrites`.
+          - Audit cache-root `set_children` attribution via `debug.cache_roots[*].children_last_set_*`.
+        - If the subtree is a true structural detach, attribute it to a callsite:
+          - Use `root_root_parent_sever_*` and parent element debug-path fields.
+      - If `root_element_path` stays `None`, extend the diagnostics lag window or capture debug paths at removal time so we can map swept subtrees back to authoring callsites.
   - Evidence (unit): `crates/fret-ui/src/declarative/tests/core.rs` (`stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse`)
 
 - [x] GPUI-MVP2-cache-008 Repair cache-root bounds when the runtime skips placement (view-cache + shell).
@@ -581,13 +575,21 @@ topics (if/when we implement them):
     - Paint-cache replay now keeps descendant bounds in sync when a cached subtree translates (required for correct hit-testing + semantics under caching).
       - Anchors: `crates/fret-ui/src/tree/paint.rs` (paint-cache replay translates descendant bounds),
         `crates/fret-ui/src/tree/tests/paint_cache.rs` (`paint_cache_replay_translates_descendant_bounds_for_descendants`).
-- [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
+  - [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
-  - Current (v1): `VirtualList`’s `visible_items` are computed during declarative render (`crates/fret-ui/src/elements/cx.rs`), so changing the
-    visible window requires a cache-root rerender to rebuild the item subtree. The v2 goal is to move “window derivation + ephemeral items”
-    into prepaint (ADR 0190), so scroll-driven window updates do not necessarily imply a cache-root rerender.
+    - Current (v1): `VirtualList`’s `visible_items` are computed during declarative render (`crates/fret-ui/src/elements/cx.rs`), so changing the
+      visible window requires a cache-root rerender to rebuild the item subtree. The v2 goal is to move “window derivation + ephemeral items”
+      into prepaint (ADR 0190), so scroll-driven window updates do not necessarily imply a cache-root rerender.
+    - Remaining work (non-retained v2; keep small and gate-driven):
+      - [ ] Introduce an explicit ephemeral/windowed boundary so a window shift does not necessarily imply a cache-root rerender.
+      - [ ] Move visible window derivation into `prepaint` (derive/commit window state without rerunning the parent cache root).
+      - [ ] Ensure liveness/ownership remains deterministic under cache-hit frames when ephemeral items are attached/detached (ADR 0191 + ADR 0193).
+      - [ ] Add a stable regression gate for the window-boundary harness:
+        - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
+        - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+        - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
     row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
     (tracked in ADR 0192).
