@@ -552,6 +552,22 @@ pub enum UiDebugVirtualListWindowShiftKind {
     Escape,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugVirtualListWindowShiftReason {
+    ScrollOffset,
+    ViewportResize,
+    ItemsRevision,
+    ScrollToItem,
+    InputsChange,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugVirtualListWindowShiftApplyMode {
+    RetainedReconcile,
+    NonRetainedRerender,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugVirtualListWindow {
     pub source: UiDebugVirtualListWindowSource,
@@ -581,6 +597,8 @@ pub struct UiDebugVirtualListWindow {
     pub deferred_scroll_consumed: bool,
     pub window_mismatch: bool,
     pub window_shift_kind: UiDebugVirtualListWindowShiftKind,
+    pub window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
+    pub window_shift_apply_mode: Option<UiDebugVirtualListWindowShiftApplyMode>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

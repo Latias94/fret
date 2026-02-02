@@ -355,6 +355,33 @@ impl<H: UiHost> UiTree<H> {
                 b.write_px(update.content_extent);
                 b.finish()
             };
+            let (window_shift_reason, window_shift_apply_mode) = if update.window_shift_kind
+                != crate::tree::UiDebugVirtualListWindowShiftKind::None
+            {
+                let reason = if update.deferred_scroll_to_item {
+                    crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem
+                } else if inputs.items_revision != update.prev_items_revision {
+                    crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision
+                } else if (update.viewport.0 - update.prev_viewport.0).abs() > 0.01 {
+                    crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize
+                } else if (update.offset.0 - update.prev_offset.0).abs() > 0.01 {
+                    crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
+                } else if update.prev_window_range.map(|r| (r.count, r.overscan))
+                    != update.window_range.map(|r| (r.count, r.overscan))
+                {
+                    crate::tree::UiDebugVirtualListWindowShiftReason::InputsChange
+                } else {
+                    crate::tree::UiDebugVirtualListWindowShiftReason::Unknown
+                };
+                let mode = if retained_host {
+                    crate::tree::UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile
+                } else {
+                    crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
+                };
+                (Some(reason), Some(mode))
+            } else {
+                (None, None)
+            };
             self.debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
                 source: crate::tree::UiDebugVirtualListWindowSource::Prepaint,
                 node: record.node,
@@ -383,6 +410,8 @@ impl<H: UiHost> UiTree<H> {
                 deferred_scroll_consumed: false,
                 window_mismatch: update.window_mismatch,
                 window_shift_kind: update.window_shift_kind,
+                window_shift_reason,
+                window_shift_apply_mode,
             });
         }
 
@@ -768,6 +797,21 @@ mod tests {
         assert!(
             last.window_mismatch,
             "expected the last prepaint window update to report a mismatch"
+        );
+        assert_eq!(
+            last.window_shift_kind,
+            crate::tree::UiDebugVirtualListWindowShiftKind::Escape,
+            "expected the last prepaint window update to record an escape shift"
+        );
+        assert_eq!(
+            last.window_shift_apply_mode,
+            Some(crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender),
+            "expected the non-retained virtual list path to apply window shifts via rerender"
+        );
+        assert_eq!(
+            last.window_shift_reason,
+            Some(crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset),
+            "expected the escape shift in this test to be attributed to scroll offset"
         );
     }
 }
