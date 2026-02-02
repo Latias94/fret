@@ -2694,7 +2694,9 @@ See: `docs/tracy.md`.\n";
                         .then_some(1u64)
                         .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
                     let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
-                        .then_some(10u64)
+                        // Default budget: allow prefetch-driven refreshes while still catching
+                        // regressions where the harness starts churning excessively.
+                        .then_some(35u64)
                         .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
                     let suite_vlist_window_shifts_explainable =
                         vlist_window_boundary_suite && !check_vlist_window_shifts_explainable;
@@ -2704,6 +2706,12 @@ See: `docs/tracy.md`.\n";
                     let suite_vlist_window_shifts_have_prepaint_actions =
                         vlist_window_boundary_suite
                             && !check_vlist_window_shifts_have_prepaint_actions;
+                    let suite_vlist_window_shifts_prefetch_max = vlist_window_boundary_suite
+                        .then_some(30u64)
+                        .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
+                    let suite_vlist_window_shifts_escape_max = vlist_window_boundary_suite
+                        .then_some(6u64)
+                        .filter(|_| check_vlist_window_shifts_escape_max.is_none());
                     let suite_vlist_window_shifts_non_retained_max =
                         ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
                             .then_some(0u64)
@@ -2735,8 +2743,10 @@ See: `docs/tracy.md`.\n";
                             || suite_vlist_window_shifts_have_prepaint_actions,
                         vlist_window_shifts_non_retained_max_for_script
                             .or(suite_vlist_window_shifts_non_retained_max),
-                        check_vlist_window_shifts_prefetch_max,
-                        check_vlist_window_shifts_escape_max,
+                        check_vlist_window_shifts_prefetch_max
+                            .or(suite_vlist_window_shifts_prefetch_max),
+                        check_vlist_window_shifts_escape_max
+                            .or(suite_vlist_window_shifts_escape_max),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,

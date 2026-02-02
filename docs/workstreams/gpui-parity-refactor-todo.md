@@ -898,13 +898,16 @@ topics (if/when we implement them):
         - `--check-stale-paint ui-gallery-virtual-list-root`
         - `--check-view-cache-reuse-min 1`
         - `--check-vlist-visible-range-refreshes-min 1`
-        - `--check-vlist-visible-range-refreshes-max 10`
+        - `--check-vlist-visible-range-refreshes-max 35`
+        - `--check-vlist-window-shifts-prefetch-max 30`
+        - `--check-vlist-window-shifts-escape-max 6`
         - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
         `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Gate tightening ladder (post-warmup):
-        - Current: `--check-vlist-visible-range-refreshes-max 10` (catches “too much window churn” regressions after wheel events).
-        - Next: aim for `5` once the boundary harness is stable under the *default suite env* (cache+shell+known heights) and we have
+        - Current: `--check-vlist-visible-range-refreshes-max 35` (catches “too much window churn” regressions after wheel events, while allowing prefetch).
+        - Next: aim for `10` once v2 window derivation reduces boundary work in a single tick and/or staged prefetch budgets are tightened.
+        - Stretch: aim for `5` once the boundary harness is stable under the *default suite env* (cache+shell+known heights) and we have
           repeatable evidence that the prepaint-driven scheduling path no longer causes “extra settle refreshes” after the first wheel event.
           - Definition of done to tighten to `5` (run locally at least 3 times):
             - `fretboard diag suite ui-gallery-vlist-window-boundary --launch -- cargo run -p fret-ui-gallery --release` passes with `--check-vlist-visible-range-refreshes-max 5`,
