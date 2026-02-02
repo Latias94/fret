@@ -46,6 +46,11 @@
     { "type": "wait_frames", "n": 2 },
 
     { "type": "capture_bundle", "label": "ui-gallery-hover-layout-torture-steady" },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
+    { "type": "wait_frames", "n": 2 },
     { "type": "wait_frames", "n": 2 }
   ]
 }
