@@ -78,12 +78,38 @@ The suite is intentionally *small*; additional pages/scripts should exist, but t
 
 ### 1.1 Canonical commands
 
-Run a single script and get the worst frame:
+We track **two** perf gates:
+
+1) **Cold-start gate**: measures “first mount + first interaction” (relaunch per run).
+2) **Steady-state gate**: measures interaction costs after mount (reuse process + reset diagnostics in-script).
+
+Run a single script and get the worst frame (**cold-start gate**):
 
 ```powershell
 cargo run -p fretboard -- diag perf tools/diag-scripts/<script>.json ^
   --warmup-frames 5 --repeat 7 --sort time --top 15 --json ^
   --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Run the steady-state suite (**steady-state gate**):
+
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady ^
+  --reuse-launch --repeat 7 --sort time --top 15 --json ^
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Notes:
+
+- `ui-gallery-steady` scripts call `reset_diagnostics` just before the measured interaction(s).
+  Prefer `--warmup-frames 0` (default) so the “first post-reset frames” are included.
+- `--reuse-launch` keeps the launched demo alive across repeats/scripts so caches are actually warm.
+- If you already have a running demo (or cannot use `--launch`), you can run the suite against it:
+
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag ^
+  --repeat 7 --sort time --top 15 --json
 ```
 
 Extract root cause from the worst bundle:

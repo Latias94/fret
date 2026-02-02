@@ -212,3 +212,50 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-dropdown-open-select.json`
 - top_total_time_us: `25507`
 - bundle: `target/fret-diag/1770038785462-script-step-0002-click/bundle.json`
+
+## 2026-02-02 22:46:39 (commit `686bebe182fc2ca94c1ee1b072680549d3426f21`)
+
+Change:
+- feat(fretboard): add ui-gallery-steady perf suite
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+# Preferred (single command; reuses a single launched process):
+cargo run -p fretboard -- diag perf ui-gallery-steady ^
+  --reuse-launch --repeat 7 --sort time --top 15 --json ^
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
+  --launch -- cargo run -p fret-ui-gallery --release
+
+# Fallback (when you already have a running demo or cannot use `--launch`):
+# 1) Terminal A:
+set FRET_DIAG=1
+set FRET_DIAG_DIR=target/fret-diag-steady
+set FRET_UI_GALLERY_VIEW_CACHE=1
+set FRET_UI_GALLERY_VIEW_CACHE_SHELL=1
+cargo run -p fret-ui-gallery --release
+
+# 2) Terminal B:
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-steady ^
+  --repeat 7 --sort time --top 15 --json
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 3006 | 3095 | 3095 | 2769 | 65 | 15 | 330 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3619 | 3740 | 3740 | 3063 | 176 | 19 | 682 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3373 | 3935 | 3935 | 3217 | 156 | 15 | 703 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2870 | 3033 | 3033 | 2450 | 41 | 18 | 599 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1692 | 2028 | 2028 | 1554 | 42 | 12 | 462 |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3714 | 6342 | 6342 | 3801 | 293 | 21 | 2523 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10737 | 11162 | 11162 | 9901 | 346 | 47 | 1221 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6315 | 7325 | 7325 | 6041 | 753 | 28 | 1260 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 15165 | 15613 | 15613 | 11736 | 1824 | 54 | 4235 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `15613`
+- bundle: `target/fret-diag-steady/1770043506957-ui-gallery-window-resize-stress-steady/bundle.json`

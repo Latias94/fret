@@ -22,7 +22,9 @@ Conventions:
 ### M0: Baseline + suite gates (make perf a contract)
 
 - [ ] Decide Tier A / Tier B thresholds per script (initially “best-effort”, then tighten).
-- [ ] Decide what `--launch` represents (cold-start gate vs steady-state gate) and codify it.
+- [x] Decide what `--launch` represents (cold-start gate vs steady-state gate) and codify it.
+  - `ui-gallery` + `--launch`: cold-start gate (mount + first interaction).
+  - `ui-gallery-steady` + `--reuse-launch` + `--launch`: steady-state gate (post-mount interactions).
 - [ ] Finalize the acceptance suite list (see `ui-perf-zed-smoothness-v1.md`) and keep it small.
 - [ ] Record initial baselines (one per machine profile) using `fretboard diag perf --perf-baseline-out`.
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
@@ -34,6 +36,10 @@ Conventions:
 - [x] Add a helper to append suite results to the log:
   - `tools/perf/perf_log.py`
 - [x] Record an initial suite run in the log (repeat=7).
+- [x] Add a steady-state suite and reuse-launched-process support:
+  - `fretboard diag perf ui-gallery-steady --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
+- [x] Record a `ui-gallery-steady` baseline in the perf log (repeat=7, `--reuse-launch`).
+  - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
 
 ### M1: Frame data structures (hashing → dense)
 
