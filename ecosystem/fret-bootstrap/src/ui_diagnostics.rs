@@ -4373,6 +4373,12 @@ pub struct UiRetainedVirtualListReconcileV1 {
     pub preserved_items: u64,
     pub attached_items: u64,
     pub detached_items: u64,
+    #[serde(default)]
+    pub reused_from_keep_alive_items: u64,
+    #[serde(default)]
+    pub kept_alive_items: u64,
+    #[serde(default)]
+    pub evicted_keep_alive_items: u64,
 }
 
 impl UiRetainedVirtualListReconcileV1 {
@@ -4385,6 +4391,9 @@ impl UiRetainedVirtualListReconcileV1 {
             preserved_items: record.preserved_items as u64,
             attached_items: record.attached_items as u64,
             detached_items: record.detached_items as u64,
+            reused_from_keep_alive_items: record.reused_from_keep_alive_items as u64,
+            kept_alive_items: record.kept_alive_items as u64,
+            evicted_keep_alive_items: record.evicted_keep_alive_items as u64,
         }
     }
 }
