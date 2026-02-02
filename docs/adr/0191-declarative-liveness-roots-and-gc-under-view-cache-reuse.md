@@ -234,7 +234,8 @@ and best-aligned choice for long-term extensibility.
   so it is still "owned" even when its output is reused.
 - **Cache hit still "touches" what matters.** On a cache hit, GPUI consults per-view element state
   (`Window::with_element_state`) and reuses `prepaint`/`paint` ranges (`reuse_prepaint`/`reuse_paint`)
-  while also extending dependency tracking (`accessed_entities`). The reuse gate is driven by
+  while also extending dependency tracking (`accessed_entities`) and carrying forward `accessed_element_states`
+  for the reused range. The reuse gate is driven by
   `dirty_views` (and ancestor propagation via `mark_view_dirty`), not by incidental "was this view
   visited this frame?" heuristics.
 - **Why Fret needs an explicit GC contract**: GPUI does not maintain a retained declarative node tree
@@ -244,6 +245,9 @@ and best-aligned choice for long-term extensibility.
 - **Implication for Fret**: our `view_cache_subtree_element_lists` + explicit liveness roots are the
   local equivalent of "touch the right dependencies on cache-hit frames". The membership list must
   be complete (including nested cache roots) and deterministically refreshable on cache-hit frames.
+- Evidence anchors:
+  - `repo-ref/zed/crates/gpui/src/window.rs` (`WindowFrame.element_states`, `WindowFrame.accessed_element_states`, `Window::with_element_state`, `Window::reuse_prepaint`, `Window::reuse_paint`)
+  - `repo-ref/zed/crates/gpui/src/view.rs` (`AnyView::cached`, `dirty_views` reuse gate, `reuse_prepaint`/`reuse_paint`)
 
 ### Flutter lifecycle / ownership
 
@@ -257,6 +261,9 @@ and best-aligned choice for long-term extensibility.
   “not currently built/laid out” orthogonal to lifetime.
 - **Implication for Fret**: our GC-lag window is analogous to "inactive limbo", but it must be
   driven by explicit detach + reachability, not by "not visited due to caching".
+- Evidence anchors:
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`class _InactiveElements`, `BuildOwner.finalizeTree`)
+  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart` (`_keepAliveBucket`)
 
 ## Diagnostics and explainability (hard requirement)
 
