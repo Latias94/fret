@@ -1282,32 +1282,91 @@ fn hit_test_index_from_caret_stops(stops: &[(usize, Px)], x: Px) -> usize {
     if stops.len() == 1 {
         return stops[0].0;
     }
-    // Caret stops are expected to be monotonically increasing in X for a single-line blob.
     let x = x.0;
-    if x <= stops[0].1.0 {
-        return stops[0].0;
-    }
-    if x >= stops[stops.len() - 1].1.0 {
-        return stops[stops.len() - 1].0;
-    }
-    let mut lo = 0usize;
-    let mut hi = stops.len();
-    while lo < hi {
-        let mid = (lo + hi) / 2;
-        if stops[mid].1.0 < x {
-            lo = mid + 1;
-        } else {
-            hi = mid;
+
+    let mut non_decreasing = true;
+    let mut non_increasing = true;
+    for pair in stops.windows(2) {
+        let a = pair[0].1.0;
+        let b = pair[1].1.0;
+        if a > b {
+            non_decreasing = false;
+        }
+        if a < b {
+            non_increasing = false;
         }
     }
-    let right = lo.min(stops.len() - 1);
-    let left = right.saturating_sub(1);
-    let (li, lx) = stops[left];
-    let (ri, rx) = stops[right];
-    if (x - lx.0).abs() <= (rx.0 - x).abs() {
-        li
+
+    if non_decreasing {
+        if x <= stops[0].1.0 {
+            return stops[0].0;
+        }
+        if x >= stops[stops.len() - 1].1.0 {
+            return stops[stops.len() - 1].0;
+        }
+        let mut lo = 0usize;
+        let mut hi = stops.len();
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if stops[mid].1.0 < x {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let right = lo.min(stops.len() - 1);
+        let left = right.saturating_sub(1);
+        let (li, lx) = stops[left];
+        let (ri, rx) = stops[right];
+        let ld = (x - lx.0).abs();
+        let rd = (rx.0 - x).abs();
+        if ld < rd || (ld == rd && li <= ri) {
+            li
+        } else {
+            ri
+        }
+    } else if non_increasing {
+        // Pure RTL runs can produce caret stops that are monotonically decreasing in X.
+        if x >= stops[0].1.0 {
+            return stops[0].0;
+        }
+        if x <= stops[stops.len() - 1].1.0 {
+            return stops[stops.len() - 1].0;
+        }
+        let mut lo = 0usize;
+        let mut hi = stops.len();
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if stops[mid].1.0 > x {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        let right = lo.min(stops.len() - 1);
+        let left = right.saturating_sub(1);
+        let (li, lx) = stops[left];
+        let (ri, rx) = stops[right];
+        let ld = (lx.0 - x).abs();
+        let rd = (x - rx.0).abs();
+        if ld < rd || (ld == rd && li <= ri) {
+            li
+        } else {
+            ri
+        }
     } else {
-        ri
+        // Mixed-direction lines can yield non-monotonic caret stops (e.g. bidi). Fall back to the
+        // nearest X distance to keep pointer hit-testing stable.
+        let mut best = stops[0];
+        let mut best_dist = (best.1.0 - x).abs();
+        for stop in &stops[1..] {
+            let dist = (stop.1.0 - x).abs();
+            if dist < best_dist || (dist == best_dist && stop.0 < best.0) {
+                best = *stop;
+                best_dist = dist;
+            }
+        }
+        best.0
     }
 }
 
@@ -3061,6 +3120,29 @@ mod tests {
         assert_eq!(hit_test_index_from_caret_stops(&stops, Px(14.9)), 1);
         assert_eq!(hit_test_index_from_caret_stops(&stops, Px(15.1)), 2);
         assert_eq!(hit_test_index_from_caret_stops(&stops, Px(999.0)), 3);
+    }
+
+    #[test]
+    fn caret_stops_hit_test_handles_decreasing_x() {
+        let stops = vec![(0, Px(30.0)), (1, Px(20.0)), (2, Px(10.0)), (3, Px(0.0))];
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(35.0)), 0);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(30.0)), 0);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(24.0)), 1);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(15.0)), 1);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(6.0)), 2);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(-5.0)), 3);
+    }
+
+    #[test]
+    fn caret_stops_hit_test_handles_non_monotonic_x() {
+        // Non-monotonic caret stops can happen on mixed-direction lines (bidi).
+        let stops = vec![(0, Px(0.0)), (1, Px(30.0)), (2, Px(10.0)), (3, Px(20.0))];
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(-100.0)), 0);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(9.0)), 2);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(11.0)), 2);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(19.0)), 3);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(21.0)), 3);
+        assert_eq!(hit_test_index_from_caret_stops(&stops, Px(999.0)), 1);
     }
 
     #[test]
