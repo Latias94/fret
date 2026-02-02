@@ -630,7 +630,11 @@ topics (if/when we implement them):
     - Remaining work (non-retained v2; keep small and gate-driven):
       - Scope note: for *fully composable* row subtrees, “apply a window shift without rerendering the parent cache root” effectively requires a retained host boundary (ADR 0192 / `GPUI-MVP5-virt-003`).
         This track therefore focuses on: (1) prepaint deriving the *next desired window* (explainable), and (2) making escape ticks cheap and predictable (one-shot rerender, no extra current-frame churn).
-      - [ ] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
+      - [~] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
+        - [x] Make Track B scheduling responsibility explicit and prepaint-driven (avoid duplicated layout side effects).
+          - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (“Scheduling responsibility” under Track B).
+          - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (non-retained schedules one-shot rerender on `window_shift_kind!=none`),
+            `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (layout no longer duplicates rerender scheduling on `window_mismatch`).
         - Specify the allowed "ephemeral prepaint updates" for the non-retained VirtualList path (e.g. window prediction, scroll-offset bookkeeping, one-shot escape scheduling), and explicitly forbid any attach/detach that would require remounting children without a rerender boundary.
         - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
         - References: ADR 0190 §3A + §4 (v2 explainability) and ADR 0193 §2A (“window plans” vs structural mutation).

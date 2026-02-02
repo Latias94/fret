@@ -92,6 +92,13 @@ different structural capabilities.
 - `prepaint` MAY compute and cache a *window plan* (desired visible/required/prefetch ranges) and MAY request a redraw.
 - `prepaint` MUST NOT attach/detach/reorder declarative children. Therefore, any window change that would alter the
   mounted child subtree MUST schedule a dirty-view rerender for the next frame.
+- Scheduling responsibility (to keep behavior explainable and avoid duplicated side effects):
+  - For view-cache enabled surfaces, window-boundary detection and rerender scheduling SHOULD be prepaint-driven,
+    based on the post-layout bounds + current scroll offset, so a single bundle can attribute “why did we rerender?”
+    to one place.
+  - Layout MAY update telemetry/state, but SHOULD NOT independently mark cache roots dirty for window shifts if prepaint
+    will schedule the same rerender. Double-scheduling makes diagnostics noisy and can produce confusing
+    “window changed twice” stories.
 - In this track, “avoid forcing rerender for small scroll deltas” is interpreted as:
   - do not rerender while the visible range stays within the currently-rendered required/prefetch window, and
   - allow a single one-shot rerender on “escape” (plus optional staged prefetch that schedules bounded rerenders).
