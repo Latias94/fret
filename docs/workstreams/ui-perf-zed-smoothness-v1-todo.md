@@ -28,6 +28,9 @@ Conventions:
 - [ ] Finalize the acceptance suite list (see `ui-perf-zed-smoothness-v1.md`) and keep it small.
 - [x] Record initial baselines (one per machine profile) using `fretboard diag perf --perf-baseline-out`.
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json` (commit `50bfcc54`).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v2.json` (see perf log entry).
+    - v1 was slightly flaky on `ui-gallery-window-resize-stress-steady` `max_top_solve_us` when checked with repeat=3.
+      v2 bumps headroom to 30% to reduce false positives.
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
 - [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.

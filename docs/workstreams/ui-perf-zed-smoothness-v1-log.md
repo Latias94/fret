@@ -468,6 +468,9 @@ Worst overall:
 Notes:
 - Baseline file written via `--perf-baseline-out`:
   - `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json`
+- A `--perf-baseline` check with repeat=3 can be slightly flaky on `ui-gallery-window-resize-stress-steady`
+  `max_top_solve_us` (evidence: `target/fret-diag-perf/ui-gallery-steady.macos-m4.v1.check/check.perf_thresholds.json`).
+  Prefer the v2 baseline (headroom 30%) for gating.
 - Quick triage comparison against the previously logged `ui-gallery-steady` run at commit `448c34ad`:
   - `ui-gallery-window-resize-stress-steady` bundle stats show higher totals (sum `338183us -> 371826us`)
     and higher invalidation counts (sum calls/nodes `321/2784 -> 357/3096`). Treat as “needs confirmation”
