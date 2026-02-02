@@ -111,6 +111,21 @@ fn prepare_window_frame_for_frame(window_frame: &mut WindowFrame, frame_id: Fram
     }
 }
 
+fn set_window_frame_children(
+    window_frame: &mut WindowFrame,
+    parent: NodeId,
+    children: Vec<NodeId>,
+) {
+    if let Some(prev) = window_frame.children.get(parent)
+        && prev.as_ref() == children.as_slice()
+    {
+        return;
+    }
+    window_frame
+        .children
+        .insert(parent, Arc::<[NodeId]>::from(children));
+}
+
 pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -253,9 +268,7 @@ where
                 ));
             }
             ui.set_children(root_node, mounted_children.clone());
-            window_frame
-                .children
-                .insert(root_node, Arc::<[NodeId]>::from(mounted_children));
+            set_window_frame_children(window_frame, root_node, mounted_children);
             if inserted {
                 window_frame.revision = window_frame.revision.saturating_add(1);
             }
@@ -1297,9 +1310,7 @@ fn mount_element<H: UiHost>(
         } else {
             ui.set_children_in_mount(node, child_nodes.clone());
         }
-        window_frame
-            .children
-            .insert(node, Arc::<[NodeId]>::from(child_nodes));
+        set_window_frame_children(window_frame, node, child_nodes);
 
         // Keep a complete retained-subtree element list for this cache root so cache-hit frames
         // can refresh liveness without re-running the render closure.
@@ -1329,9 +1340,7 @@ fn mount_element<H: UiHost>(
         } else {
             ui.set_children_in_mount(node, child_nodes.clone());
         }
-        window_frame
-            .children
-            .insert(node, Arc::<[NodeId]>::from(child_nodes));
+        set_window_frame_children(window_frame, node, child_nodes);
     }
 
     node
@@ -1505,9 +1514,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         );
 
         ui.set_children_barrier(node, next_children.clone());
-        window_frame
-            .children
-            .insert(node, Arc::<[NodeId]>::from(next_children));
+        set_window_frame_children(window_frame, node, next_children);
 
         if let Some(record) = window_frame.instances.get_mut(node) {
             if let ElementInstance::VirtualList(props) = &mut record.instance {
