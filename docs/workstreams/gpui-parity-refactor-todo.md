@@ -899,7 +899,7 @@ topics (if/when we implement them):
         - `--check-view-cache-reuse-min 1`
         - `--check-vlist-visible-range-refreshes-min 1`
         - `--check-vlist-visible-range-refreshes-max 10`
-        - Recommended launch env: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
+        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
         `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Gate tightening ladder (post-warmup):

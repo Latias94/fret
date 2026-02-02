@@ -2289,6 +2289,19 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_vlist_window_boundary_suite {
+                    // The window-boundary harness is specifically intended to exercise the
+                    // view-cache + shell reuse seam under a stable (known-heights) VirtualList
+                    // baseline. Make these env defaults implicit so the suite is reproducible
+                    // without requiring the caller to remember a pile of `--env` flags.
+                    //
+                    // Callers can still override them explicitly via `--env KEY=...`.
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
+                        "1",
+                    );
                     (
                         vec![resolve_path(
                             &workspace_root,
