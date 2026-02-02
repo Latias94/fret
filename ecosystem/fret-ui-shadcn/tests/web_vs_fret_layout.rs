@@ -17467,6 +17467,31 @@ fn web_vs_fret_layout_table_demo_row_heights_and_caption_gap() {
     .expect("fret footer row");
 
     assert_close_px(
+        "table-demo header row x",
+        header_row.bounds.origin.x,
+        body_row.bounds.origin.x.0,
+        1.0,
+    );
+    assert_close_px(
+        "table-demo header row width",
+        header_row.bounds.size.width,
+        body_row.bounds.size.width.0,
+        1.0,
+    );
+    assert_close_px(
+        "table-demo footer row x",
+        footer_row.bounds.origin.x,
+        body_row.bounds.origin.x.0,
+        1.0,
+    );
+    assert_close_px(
+        "table-demo footer row width",
+        footer_row.bounds.size.width,
+        body_row.bounds.size.width.0,
+        1.0,
+    );
+
+    assert_close_px(
         "table-demo header row height",
         header_row.bounds.size.height,
         web_header_row.rect.h,
