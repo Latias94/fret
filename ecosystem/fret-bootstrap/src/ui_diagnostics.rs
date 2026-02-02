@@ -6323,6 +6323,12 @@ pub struct ElementDiagnosticsSnapshotV1 {
     #[serde(default)]
     pub view_cache_reuse_root_element_samples: Vec<ElementViewCacheReuseRootElementsSampleV1>,
     #[serde(default)]
+    pub retained_keep_alive_roots_len: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub retained_keep_alive_roots_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub retained_keep_alive_roots_tail: Vec<u64>,
+    #[serde(default)]
     pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
 }
 
@@ -6459,6 +6465,17 @@ impl ElementDiagnosticsSnapshotV1 {
                     elements_head: s.elements_head.into_iter().map(|id| id.0).collect(),
                     elements_tail: s.elements_tail.into_iter().map(|id| id.0).collect(),
                 })
+                .collect(),
+            retained_keep_alive_roots_len: snapshot.retained_keep_alive_roots_len,
+            retained_keep_alive_roots_head: snapshot
+                .retained_keep_alive_roots_head
+                .into_iter()
+                .map(|n| n.data().as_ffi())
+                .collect(),
+            retained_keep_alive_roots_tail: snapshot
+                .retained_keep_alive_roots_tail
+                .into_iter()
+                .map(|n| n.data().as_ffi())
                 .collect(),
             node_entry_root_overwrites: snapshot
                 .node_entry_root_overwrites
