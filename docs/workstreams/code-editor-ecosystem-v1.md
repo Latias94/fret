@@ -109,6 +109,8 @@ P0 (correctness and contracts):
   - Baseline: `TextFontFamilyConfig` + `common_fallback` seeded via `FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates`.
   - Web default: ship a small `cjk-lite` subset + optional emoji bundle; accept that glyph coverage is limited and "tofu" is expected outside the subset.
   - Escape hatch: UI Gallery “Load fonts…” (`Effect::TextAddFonts`) for full CJK coverage when validating IME/editor behavior.
+  - Diagnostics: surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel to make tofu causes debuggable.
+  - Runner: load bundled default fonts during web renderer adoption (not via a delayed `TextAddFonts` effect) to reduce “first frame” tofu.
   - Evidence: `crates/fret-runtime/src/font_bootstrap.rs` (curated defaults), `crates/fret-render/src/text.rs` (`cjk_fallback_*` tests).
 
 P1 (robustness and testability):

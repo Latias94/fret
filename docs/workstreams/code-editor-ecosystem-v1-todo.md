@@ -42,6 +42,7 @@ Legend:
 - [x] Create the hidden textarea element (tracked per `AppWindowId` and mounted into a per-canvas wrapper/overlay layer).
 - [x] Define focus/blur rules and map them to `Effect::ImeAllow`.
 - [x] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
+- [x] Load bundled default fonts during web renderer adoption (avoid “first frame” tofu; keep `TextAddFonts` for user-provided fonts).
 
 ### Event translation
 
@@ -61,6 +62,7 @@ Legend:
 - [x] Counters: last caret-rect anchor and whether positioning was attempted.
 - [x] Record a small `recent_events` ring buffer for ordering diagnostics (`beforeinput`/`input`/`composition*`/cursor area updates).
 - [x] Surface `WindowTextInputSnapshotService` + `WindowInputContextService` snapshots in the UI Gallery harness panel for cross-layer debugging.
+- [x] Surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel for font/tofu debugging.
 
 ### Harness
 
