@@ -105,7 +105,11 @@ P0 (correctness and contracts):
 - Web IME: stabilize caret anchoring and reduce candidate UI jitter across browsers (textarea style + cursor-area mapping).
 - Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
 - Selection + composition range invariants: expand ADR 0071 coverage across TextInput/TextArea/CodeEditor (including a11y selection actions).
-- Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji), and make “tofu” reproducible (cjk-lite subset limitations + “Load fonts…” escape hatch).
+- Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji).
+  - Baseline: `TextFontFamilyConfig` + `common_fallback` seeded via `FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates`.
+  - Web default: ship a small `cjk-lite` subset + optional emoji bundle; accept that glyph coverage is limited and "tofu" is expected outside the subset.
+  - Escape hatch: UI Gallery “Load fonts…” (`Effect::TextAddFonts`) for full CJK coverage when validating IME/editor behavior.
+  - Evidence: `crates/fret-runtime/src/font_bootstrap.rs` (curated defaults), `crates/fret-render/src/text.rs` (`cjk_fallback_*` tests).
 
 P1 (robustness and testability):
 
