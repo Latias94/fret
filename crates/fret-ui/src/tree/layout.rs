@@ -89,6 +89,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut visited = HashMap::<NodeId, u8>::new();
+        let mut request_followup_redraw = false;
         for change in changed {
             let handle_key = change.handle_key;
             let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
@@ -96,6 +97,15 @@ impl<H: UiHost> UiTree<H> {
             );
             if bound.is_empty() {
                 continue;
+            }
+
+            // Scroll offset/viewport/content updates are classified as "HitTestOnly" by design to
+            // avoid re-solving the whole layout engine for transform-only changes. However, many
+            // higher-level behaviors (anchored overlays, poppers, etc.) rely on last-frame bounds
+            // caches. To keep these overlays in sync after a scroll, schedule exactly one
+            // follow-up redraw when scroll geometry changes.
+            if change.offset_changed || change.viewport_changed || change.content_changed {
+                request_followup_redraw = true;
             }
 
             let mut change_kind = change.kind;
@@ -404,6 +414,10 @@ impl<H: UiHost> UiTree<H> {
                 );
             }
         }
+
+        if request_followup_redraw {
+            self.request_redraw_coalesced(app);
+        }
     }
 
     pub fn layout_all(
@@ -513,6 +527,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let started_phase = profile_layout_all.then(Instant::now);
+        let roots_started = self.debug_enabled.then(Instant::now);
         for root in roots {
             let _ =
                 self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
@@ -525,11 +540,15 @@ impl<H: UiHost> UiTree<H> {
                 &mut viewport_cursor,
             );
         }
+        if let Some(roots_started) = roots_started {
+            self.debug_stats.layout_roots_time += roots_started.elapsed();
+        }
         if let Some(started) = started_phase {
             t_layout_roots = Some(started.elapsed());
         }
 
         if pass_kind == LayoutPassKind::Final {
+            let barrier_started = self.debug_enabled.then(Instant::now);
             let started_phase = profile_layout_all.then(Instant::now);
             self.layout_pending_barrier_relayouts_if_needed(
                 app,
@@ -541,17 +560,20 @@ impl<H: UiHost> UiTree<H> {
             if let Some(started) = started_phase {
                 t_pending_barriers = Some(started.elapsed());
             }
+            if let Some(barrier_started) = barrier_started {
+                self.debug_stats.layout_barrier_relayouts_time += barrier_started.elapsed();
+            }
         }
 
         if pass_kind == LayoutPassKind::Final {
+            let view_cache_started = self.debug_enabled.then(Instant::now);
+
             let started_phase = profile_layout_all.then(Instant::now);
             self.repair_view_cache_root_bounds_from_engine_if_needed(app);
             if let Some(started) = started_phase {
                 t_repair_view_cache_bounds = Some(started.elapsed());
             }
-        }
 
-        if pass_kind == LayoutPassKind::Final {
             let started_phase = profile_layout_all.then(Instant::now);
             self.layout_contained_view_cache_roots_if_needed(
                 app,
@@ -563,22 +585,28 @@ impl<H: UiHost> UiTree<H> {
             if let Some(started) = started_phase {
                 t_layout_contained_view_cache_roots = Some(started.elapsed());
             }
-        }
 
-        if pass_kind == LayoutPassKind::Final {
             let started_phase = profile_layout_all.then(Instant::now);
             self.collapse_layout_observations_to_view_cache_roots_if_needed();
             if let Some(started) = started_phase {
                 t_collapse_layout_observations = Some(started.elapsed());
             }
+
+            if let Some(view_cache_started) = view_cache_started {
+                self.debug_stats.layout_view_cache_time += view_cache_started.elapsed();
+            }
         }
 
         if self.semantics_requested {
+            let semantics_started = self.debug_enabled.then(Instant::now);
             let started_phase = profile_layout_all.then(Instant::now);
             self.semantics_requested = false;
             self.refresh_semantics_snapshot(app);
             if let Some(started) = started_phase {
                 t_refresh_semantics = Some(started.elapsed());
+            }
+            if let Some(semantics_started) = semantics_started {
+                self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
             }
         }
 
@@ -592,11 +620,19 @@ impl<H: UiHost> UiTree<H> {
 
         let started_phase = profile_layout_all.then(Instant::now);
         if pass_kind == LayoutPassKind::Final {
+            let focus_started = self.debug_enabled.then(Instant::now);
             self.repair_focus_node_from_focused_element_if_needed(app);
+            if let Some(focus_started) = focus_started {
+                self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
+            }
         }
+        let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
         self.flush_deferred_cleanup(services);
         if let Some(started) = started_phase {
             t_flush_deferred_cleanup = Some(started.elapsed());
+        }
+        if let Some(deferred_cleanup_started) = deferred_cleanup_started {
+            self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
         }
 
         if let Some(started) = started {
@@ -1985,7 +2021,17 @@ impl<H: UiHost> UiTree<H> {
         if let Some(profile) = self.layout_node_profile.as_mut() {
             profile.enter(node, pass_kind, bounds);
         }
+        let widget_started = self.debug_enabled.then(Instant::now);
+        let mut widget_type: &'static str = "<unknown>";
+        if self.debug_enabled {
+            self.debug_layout_stack.push(super::DebugLayoutStackFrame {
+                child_inclusive_time: Duration::default(),
+            });
+        }
         let size = self.with_widget_mut(node, |widget, tree| {
+            if tree.debug_enabled {
+                widget_type = widget.debug_type_name();
+            }
             let mut children_buf = SmallNodeList::<32>::default();
             if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
                 children_buf.set(children);
@@ -2009,6 +2055,36 @@ impl<H: UiHost> UiTree<H> {
         });
         if let Some(profile) = self.layout_node_profile.as_mut() {
             profile.exit(node);
+        }
+        if let Some(widget_started) = widget_started {
+            const MAX_LAYOUT_HOTSPOTS: usize = 16;
+            let inclusive_time = widget_started.elapsed();
+            let child_inclusive_time = self
+                .debug_layout_stack
+                .pop()
+                .map(|f| f.child_inclusive_time)
+                .unwrap_or_default();
+            let exclusive_time = inclusive_time.saturating_sub(child_inclusive_time);
+            if let Some(parent) = self.debug_layout_stack.last_mut() {
+                parent.child_inclusive_time += inclusive_time;
+            }
+            let element = self.nodes.get(node).and_then(|n| n.element);
+            let record = super::UiDebugLayoutHotspot {
+                node,
+                element,
+                widget_type,
+                inclusive_time,
+                exclusive_time,
+            };
+            let idx = self
+                .debug_layout_hotspots
+                .iter()
+                .position(|h| h.exclusive_time < record.exclusive_time)
+                .unwrap_or(self.debug_layout_hotspots.len());
+            self.debug_layout_hotspots.insert(idx, record);
+            if self.debug_layout_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
+                self.debug_layout_hotspots.truncate(MAX_LAYOUT_HOTSPOTS);
+            }
         }
 
         if !is_probe {
@@ -2102,7 +2178,18 @@ impl<H: UiHost> UiTree<H> {
             profile.enter(node, constraints);
         }
 
+        let measure_started = self.debug_enabled.then(Instant::now);
+        let mut widget_type: &'static str = "<unknown>";
+        if self.debug_enabled {
+            self.debug_widget_measure_stack
+                .push(super::DebugWidgetMeasureStackFrame {
+                    child_inclusive_time: Duration::default(),
+                });
+        }
         let size = self.with_widget_mut(node, |widget, tree| {
+            if tree.debug_enabled {
+                widget_type = widget.debug_type_name();
+            }
             let mut children_buf = SmallNodeList::<32>::default();
             if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
                 children_buf.set(children);
@@ -2122,6 +2209,37 @@ impl<H: UiHost> UiTree<H> {
             };
             widget.measure(&mut cx)
         });
+        if let Some(measure_started) = measure_started {
+            const MAX_MEASURE_HOTSPOTS: usize = 16;
+            let inclusive_time = measure_started.elapsed();
+            let child_inclusive_time = self
+                .debug_widget_measure_stack
+                .pop()
+                .map(|f| f.child_inclusive_time)
+                .unwrap_or_default();
+            let exclusive_time = inclusive_time.saturating_sub(child_inclusive_time);
+            if let Some(parent) = self.debug_widget_measure_stack.last_mut() {
+                parent.child_inclusive_time += inclusive_time;
+            }
+            let element = self.nodes.get(node).and_then(|n| n.element);
+            let record = super::UiDebugWidgetMeasureHotspot {
+                node,
+                element,
+                widget_type,
+                inclusive_time,
+                exclusive_time,
+            };
+            let idx = self
+                .debug_widget_measure_hotspots
+                .iter()
+                .position(|h| h.inclusive_time < record.inclusive_time)
+                .unwrap_or(self.debug_widget_measure_hotspots.len());
+            self.debug_widget_measure_hotspots.insert(idx, record);
+            if self.debug_widget_measure_hotspots.len() > MAX_MEASURE_HOTSPOTS {
+                self.debug_widget_measure_hotspots
+                    .truncate(MAX_MEASURE_HOTSPOTS);
+            }
+        }
 
         if let Some(profile) = self.measure_node_profile.as_mut() {
             profile.exit(node);

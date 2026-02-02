@@ -292,12 +292,28 @@ impl ScrollAreaRoot {
             if matches!(layout.size.width, Length::Auto) {
                 layout.size.width = Length::Fill;
             }
+            // Radix/shadcn ScrollArea roots typically behave like `size: 100%` containers. When the
+            // author provides a `max-height` (cmdk-style lists), we keep `height: auto` so the root
+            // can shrink-wrap the content up to the cap.
+            if matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_none() {
+                layout.size.height = Length::Fill;
+            }
             layout.size.min_width.get_or_insert(Px(0.0));
             layout.size.min_height.get_or_insert(Px(0.0));
+            let shrinkwrap_height_via_max_h =
+                matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_some();
             vec![cx.stack_props(StackProps { layout }, move |cx| {
                 let mut scroll_layout = LayoutStyle::default();
                 scroll_layout.size.width = Length::Fill;
-                scroll_layout.size.height = Length::Fill;
+                // When the root is shrink-wrapped via `max-height` (cmdk-style
+                // `max-h-[...] overflow-y-auto`), avoid `Fill` (percent sizing) on the viewport.
+                // Percent heights under an auto-height containing block resolve to 0 in layout
+                // engines like Taffy, which breaks hit-testing and hover-driven selection.
+                scroll_layout.size.height = if shrinkwrap_height_via_max_h {
+                    Length::Auto
+                } else {
+                    Length::Fill
+                };
                 scroll_layout.size.min_width = Some(Px(0.0));
                 scroll_layout.size.min_height = Some(Px(0.0));
                 scroll_layout.overflow = Overflow::Clip;

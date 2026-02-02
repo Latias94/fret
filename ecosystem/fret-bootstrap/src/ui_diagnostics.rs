@@ -3484,6 +3484,9 @@ pub enum UiPredicateV1 {
     Exists {
         target: UiSelectorV1,
     },
+    NotExists {
+        target: UiSelectorV1,
+    },
     FocusIs {
         target: UiSelectorV1,
     },
@@ -3543,6 +3546,33 @@ pub enum UiPredicateV1 {
     ///
     /// Use `eps_px` to tolerate tiny intersections caused by subpixel rounding (e.g. at 125% DPI).
     BoundsNonOverlapping {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when both targets exist and their semantics bounds overlap.
+    ///
+    /// Use `eps_px` to require at least `eps_px` overlap in both dimensions (helps tolerate
+    /// subpixel rounding at fractional DPI).
+    BoundsOverlapping {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when both targets exist and their semantics bounds overlap on the X axis.
+    ///
+    /// This is useful when two elements are intentionally vertically offset (e.g. a slider thumb
+    /// and track), but we still want to assert horizontal alignment.
+    BoundsOverlappingX {
+        a: UiSelectorV1,
+        b: UiSelectorV1,
+        #[serde(default)]
+        eps_px: f32,
+    },
+    /// True when both targets exist and their semantics bounds overlap on the Y axis.
+    BoundsOverlappingY {
         a: UiSelectorV1,
         b: UiSelectorV1,
         #[serde(default)]
@@ -3880,6 +3910,10 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub layout_engine_solves: Vec<UiLayoutEngineSolveV1>,
     #[serde(default)]
+    pub layout_hotspots: Vec<UiLayoutHotspotV1>,
+    #[serde(default)]
+    pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
+    #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
     ///
@@ -4120,6 +4154,16 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_layout_engine_solves()
                 .iter()
                 .map(UiLayoutEngineSolveV1::from_solve)
+                .collect(),
+            layout_hotspots: ui
+                .debug_layout_hotspots()
+                .iter()
+                .map(UiLayoutHotspotV1::from_hotspot)
+                .collect(),
+            widget_measure_hotspots: ui
+                .debug_widget_measure_hotspots()
+                .iter()
+                .map(UiWidgetMeasureHotspotV1::from_hotspot)
                 .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
@@ -4509,6 +4553,12 @@ pub struct UiRetainedVirtualListReconcileV1 {
     pub preserved_items: u64,
     pub attached_items: u64,
     pub detached_items: u64,
+    #[serde(default)]
+    pub reused_from_keep_alive_items: u64,
+    #[serde(default)]
+    pub kept_alive_items: u64,
+    #[serde(default)]
+    pub evicted_keep_alive_items: u64,
 }
 
 impl UiRetainedVirtualListReconcileV1 {
@@ -4521,6 +4571,11 @@ impl UiRetainedVirtualListReconcileV1 {
             preserved_items: record.preserved_items as u64,
             attached_items: record.attached_items as u64,
             detached_items: record.detached_items as u64,
+            // Keep-alive counters are not yet exported by `fret-ui`'s debug record, but we keep
+            // the serialized fields for forward compatibility with newer bundles.
+            reused_from_keep_alive_items: 0,
+            kept_alive_items: 0,
+            evicted_keep_alive_items: 0,
         }
     }
 }
@@ -5598,6 +5653,52 @@ impl UiLayoutEngineSolveV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiLayoutHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    pub widget_type: String,
+    pub layout_time_us: u64,
+    #[serde(default)]
+    pub inclusive_time_us: u64,
+}
+
+impl UiLayoutHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugLayoutHotspot) -> Self {
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            widget_type: h.widget_type.to_string(),
+            layout_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWidgetMeasureHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    pub widget_type: String,
+    pub measure_time_us: u64,
+    #[serde(default)]
+    pub inclusive_time_us: u64,
+}
+
+impl UiWidgetMeasureHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugWidgetMeasureHotspot) -> Self {
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            widget_type: h.widget_type.to_string(),
+            measure_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineMeasureHotspotV1 {
     pub node: u64,
     pub measure_time_us: u64,
@@ -5972,6 +6073,18 @@ impl UiSemanticsNodeV1 {
 pub struct UiFrameStatsV1 {
     pub layout_time_us: u64,
     #[serde(default)]
+    pub layout_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_barrier_relayouts_time_us: u64,
+    #[serde(default)]
+    pub layout_view_cache_time_us: u64,
+    #[serde(default)]
+    pub layout_semantics_refresh_time_us: u64,
+    #[serde(default)]
+    pub layout_focus_repair_time_us: u64,
+    #[serde(default)]
+    pub layout_deferred_cleanup_time_us: u64,
+    #[serde(default)]
     pub prepaint_time_us: u64,
     pub paint_time_us: u64,
     pub layout_nodes_visited: u32,
@@ -6076,6 +6189,14 @@ impl UiFrameStatsV1 {
     fn from_stats(stats: UiDebugFrameStats) -> Self {
         Self {
             layout_time_us: stats.layout_time.as_micros() as u64,
+            layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
+            layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()
+                as u64,
+            layout_view_cache_time_us: stats.layout_view_cache_time.as_micros() as u64,
+            layout_semantics_refresh_time_us: stats.layout_semantics_refresh_time.as_micros()
+                as u64,
+            layout_focus_repair_time_us: stats.layout_focus_repair_time.as_micros() as u64,
+            layout_deferred_cleanup_time_us: stats.layout_deferred_cleanup_time.as_micros() as u64,
             prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
@@ -7200,6 +7321,9 @@ fn eval_predicate(
         UiPredicateV1::Exists { target } => {
             select_semantics_node(snapshot, window, element_runtime, target).is_some()
         }
+        UiPredicateV1::NotExists { target } => {
+            select_semantics_node(snapshot, window, element_runtime, target).is_none()
+        }
         UiPredicateV1::FocusIs { target } => {
             let Some(focus) = snapshot.focus else {
                 return false;
@@ -7317,6 +7441,69 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
 
             !(overlap_w > eps && overlap_h > eps)
+        }
+        UiPredicateV1::BoundsOverlapping { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax0 = a.bounds.origin.x.0;
+            let ay0 = a.bounds.origin.y.0;
+            let ax1 = ax0 + a.bounds.size.width.0.max(0.0);
+            let ay1 = ay0 + a.bounds.size.height.0.max(0.0);
+
+            let bx0 = b.bounds.origin.x.0;
+            let by0 = b.bounds.origin.y.0;
+            let bx1 = bx0 + b.bounds.size.width.0.max(0.0);
+            let by1 = by0 + b.bounds.size.height.0.max(0.0);
+
+            let overlap_w = (ax1.min(bx1) - ax0.max(bx0)).max(0.0);
+            let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
+
+            overlap_w > eps && overlap_h > eps
+        }
+        UiPredicateV1::BoundsOverlappingX { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ax0 = a.bounds.origin.x.0;
+            let ax1 = ax0 + a.bounds.size.width.0.max(0.0);
+
+            let bx0 = b.bounds.origin.x.0;
+            let bx1 = bx0 + b.bounds.size.width.0.max(0.0);
+
+            let overlap_w = (ax1.min(bx1) - ax0.max(bx0)).max(0.0);
+            overlap_w > eps
+        }
+        UiPredicateV1::BoundsOverlappingY { a, b, eps_px } => {
+            let Some(a) = select_semantics_node(snapshot, window, element_runtime, a) else {
+                return false;
+            };
+            let Some(b) = select_semantics_node(snapshot, window, element_runtime, b) else {
+                return false;
+            };
+
+            let eps = eps_px.max(0.0);
+
+            let ay0 = a.bounds.origin.y.0;
+            let ay1 = ay0 + a.bounds.size.height.0.max(0.0);
+
+            let by0 = b.bounds.origin.y.0;
+            let by1 = by0 + b.bounds.size.height.0.max(0.0);
+
+            let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
+            overlap_h > eps
         }
     }
 }
@@ -8429,6 +8616,258 @@ mod tests {
         assert!(
             eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
             "expected eps_px to tolerate a small overlap"
+        );
+    }
+
+    #[test]
+    fn not_exists_predicate_matches_absence() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![semantics_node(
+                1,
+                None,
+                SemanticsRole::Panel,
+                rect(0.0, 0.0, 100.0, 100.0),
+                "root",
+            )],
+        };
+
+        let pred = UiPredicateV1::NotExists {
+            target: UiSelectorV1::TestId {
+                id: "missing".to_string(),
+            },
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected missing test id to satisfy NotExists"
+        );
+    }
+
+    #[test]
+    fn bounds_overlapping_predicate_requires_intersection() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "a",
+                    "a",
+                ),
+                semantics_node_with_test_id(
+                    3,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(25.0, 10.0, 20.0, 20.0),
+                    "b",
+                    "b",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsOverlapping {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 0.0,
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected overlap (a right edge > b left edge) to pass"
+        );
+
+        let pred = UiPredicateV1::BoundsOverlapping {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 16.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected eps_px to require more overlap than available"
+        );
+    }
+
+    #[test]
+    fn bounds_overlapping_x_predicate_ignores_y() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 200.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 200.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "a",
+                    "a",
+                ),
+                semantics_node_with_test_id(
+                    3,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(25.0, 150.0, 20.0, 20.0),
+                    "b",
+                    "b",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsOverlappingX {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 0.0,
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected x overlap to pass even when y does not overlap"
+        );
+
+        let pred = UiPredicateV1::BoundsOverlappingX {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 8.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected eps_px to require more x overlap than available"
+        );
+    }
+
+    #[test]
+    fn bounds_overlapping_y_predicate_ignores_x() {
+        let window_bounds = rect(0.0, 0.0, 200.0, 100.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 100.0),
+                    "root",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(10.0, 10.0, 20.0, 20.0),
+                    "a",
+                    "a",
+                ),
+                semantics_node_with_test_id(
+                    3,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(150.0, 25.0, 20.0, 20.0),
+                    "b",
+                    "b",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::BoundsOverlappingY {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 0.0,
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected y overlap to pass even when x does not overlap"
+        );
+
+        let pred = UiPredicateV1::BoundsOverlappingY {
+            a: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            b: UiSelectorV1::TestId {
+                id: "b".to_string(),
+            },
+            eps_px: 8.0,
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected eps_px to require more y overlap than available"
         );
     }
 

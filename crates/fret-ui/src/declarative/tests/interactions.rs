@@ -3183,6 +3183,117 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
 }
 
 #[test]
+fn pressable_on_hover_change_hook_runs_after_wheel_scroll_without_pointer_move() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let hovered = app.models_mut().insert(None::<u32>);
+    let handle = crate::scroll::ScrollHandle::default();
+    let item_h = Px(20.0);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-hover-after-wheel-scroll",
+        |cx| {
+            let scroll = cx.scroll(
+                crate::element::ScrollProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Fill;
+                        layout.size.height = crate::element::Length::Fill;
+                        layout.overflow = crate::element::Overflow::Clip;
+                        layout
+                    },
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(crate::element::ColumnProps::default(), |cx| {
+                        (0..20)
+                            .map(|idx| {
+                                let hovered = hovered.clone();
+                                cx.keyed(idx, move |cx| {
+                                    cx.pressable(
+                                        crate::element::PressableProps {
+                                            layout: {
+                                                let mut layout =
+                                                    crate::element::LayoutStyle::default();
+                                                layout.size.width = crate::element::Length::Fill;
+                                                layout.size.height =
+                                                    crate::element::Length::Px(item_h);
+                                                layout
+                                            },
+                                            ..Default::default()
+                                        },
+                                        move |cx, _state| {
+                                            cx.pressable_on_hover_change(Arc::new(
+                                                move |host, _cx, is_hovered| {
+                                                    if !is_hovered {
+                                                        return;
+                                                    }
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&hovered, |v: &mut Option<u32>| {
+                                                            *v = Some(idx as u32)
+                                                        });
+                                                },
+                                            ));
+                                            vec![cx.text(format!("Item {idx}"))]
+                                        },
+                                    )
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                    })]
+                },
+            );
+            vec![scroll]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&hovered), Some(None));
+
+    let position = Point::new(Px(10.0), Px(10.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&hovered), Some(Some(0)));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId(0),
+            position,
+            delta: Point::new(Px(0.0), Px(-20.0)),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&hovered), Some(Some(1)));
+}
+
+#[test]
 fn pressable_hover_state_ignores_touch_pointer_moves() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
