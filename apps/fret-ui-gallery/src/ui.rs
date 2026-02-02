@@ -2092,13 +2092,14 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
             }
             None => true,
         };
+
     let block = code_view::CodeBlock::new(code)
         .language("rust")
         .show_line_numbers(true)
         .windowed_lines(windowed)
         .show_scrollbar_y(true)
-        .max_height(Px(420.0))
-        .into_element(cx);
+        .max_height(Px(420.0));
+    let block = block.into_element(cx);
 
     let block = cx.semantics(
         fret_ui::element::SemanticsProps {

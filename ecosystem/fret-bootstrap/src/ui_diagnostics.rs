@@ -4391,9 +4391,11 @@ impl UiRetainedVirtualListReconcileV1 {
             preserved_items: record.preserved_items as u64,
             attached_items: record.attached_items as u64,
             detached_items: record.detached_items as u64,
-            reused_from_keep_alive_items: record.reused_from_keep_alive_items as u64,
-            kept_alive_items: record.kept_alive_items as u64,
-            evicted_keep_alive_items: record.evicted_keep_alive_items as u64,
+            // Keep-alive counters are not yet exported by `fret-ui`'s debug record, but we keep
+            // the serialized fields for forward compatibility with newer bundles.
+            reused_from_keep_alive_items: 0,
+            kept_alive_items: 0,
+            evicted_keep_alive_items: 0,
         }
     }
 }
