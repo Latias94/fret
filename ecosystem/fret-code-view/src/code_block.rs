@@ -20,7 +20,6 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
 };
-use std::collections::{HashMap, HashSet};
 
 use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button_overlay};
 use crate::prepare::CodeBlockPreparedState;
