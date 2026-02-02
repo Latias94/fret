@@ -3516,35 +3516,40 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
+            let mut snapshot_node_entry_root_overwrites_len: u64 = 0;
+            let mut snapshot_view_cache_reuse_root_element_samples_len: u64 = 0;
+            let mut snapshot_retained_keep_alive_roots_len: u64 = 0;
+
             let element_runtime = s
                 .get("debug")
                 .and_then(|v| v.get("element_runtime"))
                 .and_then(|v| v.as_object());
             if let Some(element_runtime) = element_runtime {
+                snapshot_node_entry_root_overwrites_len = element_runtime
+                    .get("node_entry_root_overwrites")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.len() as u64)
+                    .unwrap_or(0);
+                snapshot_view_cache_reuse_root_element_samples_len = element_runtime
+                    .get("view_cache_reuse_root_element_samples")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.len() as u64)
+                    .unwrap_or(0);
+                snapshot_retained_keep_alive_roots_len = element_runtime
+                    .get("retained_keep_alive_roots")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.len() as u64)
+                    .unwrap_or(0);
+
                 element_runtime_node_entry_root_overwrites_total =
-                    element_runtime_node_entry_root_overwrites_total.saturating_add(
-                        element_runtime
-                            .get("node_entry_root_overwrites")
-                            .and_then(|v| v.as_array())
-                            .map(|v| v.len() as u64)
-                            .unwrap_or(0),
-                    );
+                    element_runtime_node_entry_root_overwrites_total
+                        .saturating_add(snapshot_node_entry_root_overwrites_len);
                 element_runtime_view_cache_reuse_root_element_samples_total =
-                    element_runtime_view_cache_reuse_root_element_samples_total.saturating_add(
-                        element_runtime
-                            .get("view_cache_reuse_root_element_samples")
-                            .and_then(|v| v.as_array())
-                            .map(|v| v.len() as u64)
-                            .unwrap_or(0),
-                    );
+                    element_runtime_view_cache_reuse_root_element_samples_total
+                        .saturating_add(snapshot_view_cache_reuse_root_element_samples_len);
                 element_runtime_retained_keep_alive_roots_total =
-                    element_runtime_retained_keep_alive_roots_total.saturating_add(
-                        element_runtime
-                            .get("retained_keep_alive_roots")
-                            .and_then(|v| v.as_array())
-                            .map(|v| v.len() as u64)
-                            .unwrap_or(0),
-                    );
+                    element_runtime_retained_keep_alive_roots_total
+                        .saturating_add(snapshot_retained_keep_alive_roots_len);
             }
 
             let Some(removed) = s
@@ -3574,6 +3579,9 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                     .and_then(|v| v.as_u64())
                     .unwrap_or(0);
                 let under_reuse = reuse_roots_len > 0;
+                let reuse_root_nodes_len = r
+                    .get("view_cache_reuse_root_nodes_len")
+                    .and_then(|v| v.as_u64());
                 let trigger_in_keep_alive = r
                     .get("trigger_element_in_view_cache_keep_alive")
                     .and_then(|v| v.as_bool())
@@ -3582,6 +3590,29 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                     .get("trigger_element_listed_under_reuse_root")
                     .and_then(|v| v.as_u64())
                     .is_some();
+
+                let taxonomy_flags: Vec<&'static str> = {
+                    let mut flags: Vec<&'static str> = Vec::new();
+                    if snapshot_node_entry_root_overwrites_len > 0 {
+                        flags.push("ownership_drift_suspected");
+                    }
+                    if under_reuse && snapshot_view_cache_reuse_root_element_samples_len == 0 {
+                        flags.push("missing_reuse_root_membership_samples");
+                    }
+                    if trigger_in_keep_alive {
+                        flags.push("trigger_in_keep_alive");
+                    }
+                    if under_reuse && trigger_listed_under_reuse_root {
+                        flags.push("trigger_listed_under_reuse_root");
+                    }
+                    if under_reuse && reachable_from_view_cache_roots.is_none() {
+                        flags.push("missing_view_cache_reachability_evidence");
+                    }
+                    if under_reuse && reuse_root_nodes_len == Some(0) {
+                        flags.push("reuse_roots_unmapped");
+                    }
+                    flags
+                };
 
                 let taxonomy = if !unreachable
                     || reachable_from_layer_roots
@@ -3593,11 +3624,20 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                     // Under reuse we expect reachability from reuse roots to be recorded; otherwise
                     // the cache-005 harness won't be actionable from a single bundle.
                     Some("missing_view_cache_reachability_evidence")
+                } else if under_reuse && reuse_root_nodes_len == Some(0) {
+                    // If we know reuse roots exist but cannot map any to nodes, the window's
+                    // identity bookkeeping is inconsistent, so "reachable from reuse roots" is
+                    // meaningless for that frame.
+                    Some("reuse_roots_unmapped")
                 } else if trigger_in_keep_alive {
                     // Keep-alive roots are part of the liveness root set. If the record still
                     // indicates a trigger element is in a keep-alive bucket while being swept as
                     // unreachable, that's almost certainly bookkeeping drift.
                     Some("keep_alive_liveness_mismatch")
+                } else if under_reuse && snapshot_view_cache_reuse_root_element_samples_len == 0 {
+                    // When reuse roots exist, we expect membership list samples to be exported so
+                    // cache-005 failures remain actionable from a single bundle.
+                    Some("missing_reuse_root_membership_samples")
                 } else if under_reuse && trigger_listed_under_reuse_root {
                     // If the trigger element is recorded as being listed under some reuse root,
                     // but the removal happens as unreachable from reuse roots, the membership/touch
@@ -3637,7 +3677,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                         violations.push("root_layer_visible");
                     }
                     offenders.push(format!(
-                        "window={window_id} frame_id={frame_id} taxonomy={taxonomy} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} reuse_roots_len={reuse_roots_len} trigger_in_keep_alive={trigger_in_keep_alive} trigger_listed_under_reuse_root={trigger_listed_under_reuse_root} root_element_path={root_element_path} trigger_element_path={trigger_path}"
+                        "window={window_id} frame_id={frame_id} taxonomy={taxonomy} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} reuse_roots_len={reuse_roots_len} reuse_root_nodes_len={reuse_root_nodes_len:?} trigger_in_keep_alive={trigger_in_keep_alive} trigger_listed_under_reuse_root={trigger_listed_under_reuse_root} root_element_path={root_element_path} trigger_element_path={trigger_path}"
                     ));
 
                     const MAX_SAMPLES: usize = 128;
@@ -3647,6 +3687,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                             "frame_id": frame_id,
                             "tick_id": s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
                             "taxonomy": taxonomy,
+                            "taxonomy_flags": taxonomy_flags,
                             "root": r.get("root").and_then(|v| v.as_u64()).unwrap_or(0),
                             "root_root": r.get("root_root").and_then(|v| v.as_u64()),
                             "root_layer": r.get("root_layer").and_then(|v| v.as_u64()),
@@ -3656,11 +3697,15 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                             "unreachable_from_liveness_roots": unreachable,
                             "violations": violations,
                             "reuse_roots_len": reuse_roots_len,
+                            "reuse_root_nodes_len": reuse_root_nodes_len,
                             "trigger_in_keep_alive": trigger_in_keep_alive,
                             "trigger_listed_under_reuse_root": trigger_listed_under_reuse_root,
                             "liveness_layer_roots_len": r.get("liveness_layer_roots_len").and_then(|v| v.as_u64()),
                             "view_cache_reuse_roots_len": r.get("view_cache_reuse_roots_len").and_then(|v| v.as_u64()),
                             "view_cache_reuse_root_nodes_len": r.get("view_cache_reuse_root_nodes_len").and_then(|v| v.as_u64()),
+                            "snapshot_node_entry_root_overwrites_len": snapshot_node_entry_root_overwrites_len,
+                            "snapshot_view_cache_reuse_root_element_samples_len": snapshot_view_cache_reuse_root_element_samples_len,
+                            "snapshot_retained_keep_alive_roots_len": snapshot_retained_keep_alive_roots_len,
                             "root_element": r.get("root_element").and_then(|v| v.as_u64()),
                             "root_element_path": r.get("root_element_path").and_then(|v| v.as_str()),
                             "trigger_element": r.get("trigger_element").and_then(|v| v.as_u64()),

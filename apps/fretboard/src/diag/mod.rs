@@ -7139,6 +7139,67 @@ mod tests {
     }
 
     #[test]
+    fn gc_sweep_liveness_fails_on_unmapped_view_cache_reuse_roots() {
+        let out_dir = tmp_out_dir("gc_sweep_liveness_reuse_roots_unmapped");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "removed_subtrees": [{
+                            "root": 10,
+                            "unreachable_from_liveness_roots": true,
+                            "reachable_from_layer_roots": false,
+                            "reachable_from_view_cache_roots": false,
+                            "root_layer_visible": false,
+                            "view_cache_reuse_roots_len": 1,
+                            "view_cache_reuse_root_nodes_len": 0,
+                            "root_element_path": "root[demo].overlay",
+                            "trigger_element_path": "root[demo].trigger"
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_gc_sweep_liveness(&bundle_path, 0).unwrap_err();
+        assert!(err.contains("GC sweep liveness violation"));
+
+        let evidence_path = bundle_dir.join("check.gc_sweep_liveness.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected gc sweep liveness evidence JSON to be written"
+        );
+
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("gc_sweep_liveness")
+        );
+        assert!(
+            evidence
+                .get("offender_taxonomy_counts")
+                .and_then(|v| v.get("reuse_roots_unmapped"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                > 0,
+            "expected reuse_roots_unmapped to be counted"
+        );
+    }
+
+    #[test]
     fn vlist_window_shifts_explainable_writes_evidence_json_on_failure() {
         let out_dir = tmp_out_dir("vlist_window_shifts_explainable_evidence");
         let _ = std::fs::create_dir_all(&out_dir);
