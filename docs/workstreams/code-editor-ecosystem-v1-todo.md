@@ -138,6 +138,7 @@ Evidence anchors:
 
 - [x] Inline preedit rendering (best-effort; underline + optional range highlight for v1).
 - [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
+- [~] Use renderer text caret rect metrics (caret y/height) when computing `ImeSetCursorArea` for editor-grade surfaces (fallback to row height when unavailable).
 - [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
 
 ### Harness

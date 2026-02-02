@@ -16,9 +16,9 @@ use fret_code_editor_view::{
     select_word_range_in_buffer,
 };
 use fret_core::{
-    AttributedText, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId, KeyCode,
-    Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow, TextPaintStyle, TextSpan,
-    TextStyle, TextWrap, UnderlineStyle,
+    AttributedText, CaretAffinity, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId,
+    KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow, TextPaintStyle,
+    TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
@@ -154,6 +154,11 @@ struct RowGeom {
     row_range: Range<usize>,
     /// Caret stop table for the displayed row text (byte index -> x offset).
     caret_stops: Vec<(usize, Px)>,
+    /// Optional caret rectangle vertical metrics derived from the renderer text system.
+    ///
+    /// Coordinate space: relative to the row text origin (y=0 at the top of the row text box).
+    caret_rect_top: Option<Px>,
+    caret_rect_height: Option<Px>,
     /// Mapping needed when the displayed row includes an injected preedit string.
     preedit: Option<RowPreeditMapping>,
 }
@@ -1377,31 +1382,43 @@ fn caret_rect_for_selection(
         .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
     let pt = st.display_map.byte_to_display_point(&st.buffer, caret);
     let offset = scroll_handle.offset();
-    let y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
+    let row_y = Px(bounds.origin.y.0 + (pt.row as f32 * row_h.0) - offset.y.0);
 
-    let x = if let Some((geom, _)) = st.row_geom_cache.get(&pt.row)
-        && !geom.caret_stops.is_empty()
-        && caret >= geom.row_range.start
-    {
-        let mut local = caret.saturating_sub(geom.row_range.start);
-        if let Some(preedit) = st.preedit.as_ref()
-            && geom.preedit.is_some()
+    let mut caret_top = Px(0.0);
+    let mut caret_h = row_h;
+    let mut x = None::<Px>;
+    if let Some((geom, _)) = st.row_geom_cache.get(&pt.row) {
+        if let (Some(top), Some(h)) = (geom.caret_rect_top, geom.caret_rect_height)
+            && h.0 > 0.0
         {
-            local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+            caret_top = top;
+            caret_h = h;
         }
-        let cx = caret_x_for_index(&geom.caret_stops, local);
-        Px(bounds.origin.x.0 + cx.0)
-    } else {
+
+        if !geom.caret_stops.is_empty() && caret >= geom.row_range.start {
+            let mut local = caret.saturating_sub(geom.row_range.start);
+            if let Some(preedit) = st.preedit.as_ref()
+                && geom.preedit.is_some()
+            {
+                local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
+            }
+            let cx = caret_x_for_index(&geom.caret_stops, local);
+            x = Some(Px(bounds.origin.x.0 + cx.0));
+        }
+    }
+
+    let x = x.unwrap_or_else(|| {
         let mut col = pt.col;
         if let Some(preedit) = st.preedit.as_ref() {
             col = col.saturating_add(preedit_cursor_offset_cols(preedit));
         }
         Px(bounds.origin.x.0 + col as f32 * cell_w.0)
-    };
+    });
+    let y = Px(row_y.0 + caret_top.0);
 
     Some(Rect::new(
         fret_core::Point::new(x, y),
-        Size::new(Px(1.0), row_h),
+        Size::new(Px(1.0), caret_h),
     ))
 }
 
@@ -2253,14 +2270,26 @@ fn paint_row(
     }
 
     let mut caret_stops: Vec<(usize, Px)> = Vec::new();
+    let mut caret_rect_top = None::<Px>;
+    let mut caret_rect_height = None::<Px>;
     if let Some(blob) = row_blob {
         let (services, _) = painter.services_and_scene();
         services.text().caret_stops(blob, &mut caret_stops);
+
+        let caret_rect = services
+            .text()
+            .caret_rect(blob, 0, CaretAffinity::Downstream);
+        if caret_rect.size.height.0 > 0.0 {
+            caret_rect_top = Some(caret_rect.origin.y);
+            caret_rect_height = Some(caret_rect.size.height);
+        }
     }
 
     let row_geom = RowGeom {
         row_range: row_range.clone(),
         caret_stops,
+        caret_rect_top,
+        caret_rect_height,
         preedit: row_preedit,
     };
 
@@ -2375,9 +2404,20 @@ fn paint_row(
                     local = local.saturating_add(preedit_cursor_offset_bytes(preedit));
                 }
                 let x0 = caret_x_for_index(&row_geom.caret_stops, local);
+                let (caret_top, caret_h) = if let (Some(top), Some(h)) =
+                    (row_geom.caret_rect_top, row_geom.caret_rect_height)
+                    && h.0 > 0.0
+                {
+                    (top, Px(h.0.min(row_h.0)))
+                } else {
+                    (Px(0.0), row_h)
+                };
                 let caret_rect = Rect::new(
-                    fret_core::Point::new(Px(rect.origin.x.0 + x0.0), rect.origin.y),
-                    Size::new(Px(1.0), row_h),
+                    fret_core::Point::new(
+                        Px(rect.origin.x.0 + x0.0),
+                        Px(rect.origin.y.0 + caret_top.0),
+                    ),
+                    Size::new(Px(1.0), caret_h),
                 );
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
@@ -2972,6 +3012,8 @@ mod tests {
                     RowGeom {
                         row_range: 0..5,
                         caret_stops: vec![(0, Px(0.0))],
+                        caret_rect_top: None,
+                        caret_rect_height: None,
                         preedit: None,
                     },
                     1,
@@ -3028,6 +3070,8 @@ mod tests {
         let geom = RowGeom {
             row_range: 0..buffer.len_bytes(),
             caret_stops: Vec::new(),
+            caret_rect_top: None,
+            caret_rect_height: None,
             preedit: Some(RowPreeditMapping {
                 insert_at: 2,
                 preedit_len: 2,
@@ -3069,6 +3113,8 @@ mod tests {
                             (3, Px(30.0)),
                             (4, Px(40.0)),
                         ],
+                        caret_rect_top: None,
+                        caret_rect_height: None,
                         preedit: None,
                     },
                     1,
@@ -3086,6 +3132,8 @@ mod tests {
                             (3, Px(30.0)),
                             (4, Px(40.0)),
                         ],
+                        caret_rect_top: None,
+                        caret_rect_height: None,
                         preedit: None,
                     },
                     1,
@@ -3103,6 +3151,8 @@ mod tests {
                             (3, Px(30.0)),
                             (4, Px(40.0)),
                         ],
+                        caret_rect_top: None,
+                        caret_rect_height: None,
                         preedit: None,
                     },
                     1,
