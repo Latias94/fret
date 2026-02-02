@@ -7763,6 +7763,177 @@ fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark() {
     );
 }
 
+fn assert_context_menu_submenu_highlighted_item_chrome_matches_web(
+    web_name: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_highlighted_menu_item_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(375.0), Px(240.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_bookmarks: Model<bool> = app.models_mut().insert(false);
+    let checked_full_urls: Model<bool> = app.models_mut().insert(true);
+    let radio_person: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("pedro")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Right click here"))
+        .expect("context-menu trigger semantics node");
+
+    right_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(trigger.bounds),
+    );
+
+    let (snap2, _) = render_context_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        2,
+        &open,
+        checked_bookmarks.clone(),
+        checked_full_urls.clone(),
+        radio_person.clone(),
+    );
+
+    let more_tools = snap2
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More Tools"))
+        .expect("context-menu More Tools item semantics node");
+    ui.set_focus(Some(more_tools.id));
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+
+    let (snap3, _) = render_context_menu_demo_settled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        200,
+        &open,
+        checked_bookmarks.clone(),
+        checked_full_urls.clone(),
+        radio_person.clone(),
+    );
+    let save_page = snap3
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page..."))
+        .expect("context-menu submenu item (Save Page...) semantics node");
+
+    ui.set_focus(Some(save_page.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(350),
+        true,
+        |cx| {
+            vec![build_shadcn_context_menu_demo(
+                cx,
+                &open,
+                checked_bookmarks.clone(),
+                checked_full_urls.clone(),
+                radio_person.clone(),
+            )]
+        },
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let save_page = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Save Page..."))
+        .expect("context-menu submenu item (Save Page...) semantics node after focus");
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, save_page.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("{web_name} {web_theme_name}: highlighted submenu item background quad")
+        });
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted submenu item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        save_page.bounds,
+        leftish_text_probe_point(save_page.bounds),
+    )
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: highlighted submenu item text color"));
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted submenu item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_highlight_first_vp375x240_item_chrome_matches_web() {
+    assert_context_menu_submenu_highlighted_item_chrome_matches_web(
+        "context-menu-demo.submenu-highlight-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_submenu_highlight_first_vp375x240_item_chrome_matches_web_dark() {
+    assert_context_menu_submenu_highlighted_item_chrome_matches_web(
+        "context-menu-demo.submenu-highlight-first-vp375x240",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
 fn assert_context_menu_submenu_destructive_focused_item_chrome_matches_web(
     web_theme_name: &str,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
@@ -11677,6 +11848,117 @@ fn assert_menubar_highlighted_item_chrome_matches_web(
     );
 }
 
+fn assert_menubar_submenu_highlighted_item_chrome_matches_web(
+    web_name: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+    let expected = web_find_highlighted_menu_item_chrome(theme);
+
+    let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(375.0), Px(240.0)),
+        )
+    });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        true,
+        |cx| vec![build_shadcn_menubar_demo(cx)],
+    );
+
+    let (snap1, _) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let file_trigger = snap1
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("File"))
+        .expect("menubar File trigger semantics node");
+
+    left_click_center(
+        &mut ui,
+        &mut app,
+        &mut services,
+        bounds_center(file_trigger.bounds),
+    );
+
+    let (snap2, _) =
+        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 2);
+
+    let share = snap2
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+        .expect("menubar submenu trigger (Share) semantics node");
+    ui.set_focus(Some(share.id));
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+
+    let (snap3, _) =
+        render_shadcn_menubar_demo_settled(&mut ui, &mut app, &mut services, window, bounds, 200);
+    let email_link = snap3
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email link"))
+        .expect("menubar submenu item (Email link) semantics node");
+    ui.set_focus(Some(email_link.id));
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(350),
+        true,
+        |cx| vec![build_shadcn_menubar_demo(cx)],
+    );
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let email_link = snap
+        .nodes
+        .iter()
+        .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Email link"))
+        .expect("menubar submenu item (Email link) semantics node after focus");
+
+    let quad = find_best_solid_quad_within_matching_bg(&scene, email_link.bounds, expected.bg)
+        .unwrap_or_else(|| {
+            panic!("{web_name} {web_theme_name}: highlighted submenu item background quad")
+        });
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted submenu item background"),
+        color_to_rgba(quad.background),
+        expected.bg,
+        0.03,
+    );
+
+    let text = find_best_text_color_near(
+        &scene,
+        email_link.bounds,
+        leftish_text_probe_point(email_link.bounds),
+    )
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: highlighted submenu item text color"));
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} highlighted submenu item text color"),
+        text,
+        expected.fg,
+        0.03,
+    );
+}
+
 #[test]
 fn web_vs_fret_menubar_demo_view_shadow_matches_web() {
     assert_click_overlay_shadow_insets_match_by_portal_slot_theme(
@@ -12868,6 +13150,24 @@ fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web() {
 fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark() {
     assert_menubar_highlighted_item_chrome_matches_web(
         "menubar-demo.highlight-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_highlight_first_vp375x240_item_chrome_matches_web() {
+    assert_menubar_submenu_highlighted_item_chrome_matches_web(
+        "menubar-demo.submenu-highlight-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_submenu_highlight_first_vp375x240_item_chrome_matches_web_dark() {
+    assert_menubar_submenu_highlighted_item_chrome_matches_web(
+        "menubar-demo.submenu-highlight-first-vp375x240",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
