@@ -94,6 +94,118 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
+    fn update_hover_state_from_hit(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        hit_for_hover: Option<NodeId>,
+        hit_for_hover_region: Option<NodeId>,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
+        needs_redraw: &mut bool,
+    ) {
+        let hovered_pressable: Option<crate::elements::GlobalElementId> =
+            declarative::with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let mut node = hit_for_hover;
+                while let Some(id) = node {
+                    if let Some(record) = window_frame.instances.get(&id)
+                        && matches!(record.instance, declarative::ElementInstance::Pressable(_))
+                    {
+                        return Some(record.element);
+                    }
+                    node = self.nodes.get(id).and_then(|n| n.parent);
+                }
+                None
+            });
+
+        let (prev_element, prev_node, next_element, next_node) =
+            crate::elements::update_hovered_pressable(app, window, hovered_pressable);
+        if prev_node.is_some() || next_node.is_some() {
+            *needs_redraw = true;
+            self.debug_record_hover_edge_pressable();
+            if let Some(node) = prev_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
+
+        if let Some(window) = self.window {
+            for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
+                let (Some(element), Some(node)) = (element, node) else {
+                    continue;
+                };
+                let Some(bounds) = self.node_bounds(node) else {
+                    continue;
+                };
+                crate::elements::record_bounds_for_element(app, window, element, bounds);
+            }
+        }
+
+        if let Some(element) = prev_element
+            && prev_node.is_some()
+        {
+            Self::run_pressable_hover_hook(app, window, element, false);
+        }
+        if let Some(element) = next_element
+            && next_node.is_some()
+        {
+            Self::run_pressable_hover_hook(app, window, element, true);
+        }
+
+        let hovered_hover_region: Option<crate::elements::GlobalElementId> =
+            declarative::with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let mut node = hit_for_hover_region;
+                while let Some(id) = node {
+                    if let Some(record) = window_frame.instances.get(&id)
+                        && matches!(
+                            record.instance,
+                            declarative::ElementInstance::HoverRegion(_)
+                        )
+                    {
+                        return Some(record.element);
+                    }
+                    node = self.nodes.get(id).and_then(|n| n.parent);
+                }
+                None
+            });
+
+        let (_prev_element, prev_node, _next_element, next_node) =
+            crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
+        if prev_node.is_some() || next_node.is_some() {
+            *needs_redraw = true;
+            self.debug_record_hover_edge_hover_region();
+            if let Some(node) = prev_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
+    }
+
     fn invalidation_rank(inv: Invalidation) -> u8 {
         match inv {
             Invalidation::Paint => 1,
@@ -754,6 +866,16 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        // Keep wheel routing and hover detection in sync with out-of-band scroll handle mutations
+        // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
+        // hit-testing.
+        if matches!(event, Event::Pointer(_)) {
+            self.invalidate_scroll_handle_bindings_for_changed_handles(
+                app,
+                crate::layout_pass::LayoutPassKind::Final,
+            );
+        }
+
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
         let (active_layers, barrier_root) = self.active_input_layers();
@@ -1312,111 +1434,14 @@ impl<H: UiHost> UiTree<H> {
             };
 
             if hover_capable {
-                let hovered_pressable: Option<crate::elements::GlobalElementId> =
-                    declarative::with_window_frame(app, window, |window_frame| {
-                        let window_frame = window_frame?;
-                        let mut node = hit_for_hover;
-                        while let Some(id) = node {
-                            if let Some(record) = window_frame.instances.get(&id)
-                                && matches!(
-                                    record.instance,
-                                    declarative::ElementInstance::Pressable(_)
-                                )
-                            {
-                                return Some(record.element);
-                            }
-                            node = self.nodes.get(id).and_then(|n| n.parent);
-                        }
-                        None
-                    });
-
-                let (prev_element, prev_node, next_element, next_node) =
-                    crate::elements::update_hovered_pressable(app, window, hovered_pressable);
-                if prev_node.is_some() || next_node.is_some() {
-                    needs_redraw = true;
-                    self.debug_record_hover_edge_pressable();
-                    if let Some(node) = prev_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                    if let Some(node) = next_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                }
-
-                if let Some(window) = self.window {
-                    for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
-                        let (Some(element), Some(node)) = (element, node) else {
-                            continue;
-                        };
-                        let Some(bounds) = self.node_bounds(node) else {
-                            continue;
-                        };
-                        crate::elements::record_bounds_for_element(app, window, element, bounds);
-                    }
-                }
-
-                if let Some(element) = prev_element
-                    && prev_node.is_some()
-                {
-                    Self::run_pressable_hover_hook(app, window, element, false);
-                }
-
-                if let Some(element) = next_element
-                    && next_node.is_some()
-                {
-                    Self::run_pressable_hover_hook(app, window, element, true);
-                }
-
-                let hovered_hover_region: Option<crate::elements::GlobalElementId> =
-                    declarative::with_window_frame(app, window, |window_frame| {
-                        let window_frame = window_frame?;
-                        let mut node = hit;
-                        while let Some(id) = node {
-                            if let Some(record) = window_frame.instances.get(&id)
-                                && matches!(
-                                    record.instance,
-                                    declarative::ElementInstance::HoverRegion(_)
-                                )
-                            {
-                                return Some(record.element);
-                            }
-                            node = self.nodes.get(id).and_then(|n| n.parent);
-                        }
-                        None
-                    });
-
-                let (_prev_element, prev_node, _next_element, next_node) =
-                    crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
-                if prev_node.is_some() || next_node.is_some() {
-                    needs_redraw = true;
-                    self.debug_record_hover_edge_hover_region();
-                    if let Some(node) = prev_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                    if let Some(node) = next_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                }
+                self.update_hover_state_from_hit(
+                    app,
+                    window,
+                    hit_for_hover,
+                    hit,
+                    &mut invalidation_visited,
+                    &mut needs_redraw,
+                );
             }
         }
 
@@ -2482,6 +2507,60 @@ impl<H: UiHost> UiTree<H> {
                 &mut invalidation_visited,
             );
             needs_redraw = true;
+        }
+
+        if is_wheel
+            && wheel_stop_node.is_some()
+            && captured.is_none()
+            && let Some(window) = self.window
+            && let Event::Pointer(PointerEvent::Wheel {
+                position,
+                pointer_type,
+                ..
+            }) = event
+            && pointer_type_supports_hover(*pointer_type)
+        {
+            // Capture scroll-handle-driven invalidations triggered by this wheel event, including
+            // out-of-band handle mutations that were not routed through a `Scroll` widget.
+            self.invalidate_scroll_handle_bindings_for_changed_handles(
+                app,
+                crate::layout_pass::LayoutPassKind::Final,
+            );
+
+            self.hit_test_path_cache = None;
+            let hit = self.hit_test_layers_cached(hit_test_layer_roots, *position);
+
+            let mut hit_for_hover = hit;
+            if let Some((occlusion_layer, occlusion)) =
+                self.topmost_pointer_occlusion_layer(barrier_root)
+                && occlusion != PointerOcclusion::None
+            {
+                let occlusion_z = self
+                    .layer_order
+                    .iter()
+                    .position(|id| *id == occlusion_layer);
+                let hit_layer_z = hit
+                    .and_then(|hit| self.node_layer(hit))
+                    .and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
+                let hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
+                    (Some(oz), Some(hz), Some(_)) => hz < oz,
+                    (Some(_), None, Some(_)) => true,
+                    (Some(_), _, None) => true,
+                    _ => false,
+                };
+                if hit_is_below_occlusion {
+                    hit_for_hover = None;
+                }
+            }
+
+            self.update_hover_state_from_hit(
+                app,
+                window,
+                hit_for_hover,
+                hit,
+                &mut invalidation_visited,
+                &mut needs_redraw,
+            );
         }
 
         if input_ctx.caps.ui.cursor_icons
