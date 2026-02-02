@@ -12,4 +12,4 @@ documentation.workspace = true
 [dependencies]
 thiserror.workspace = true
 uuid.workspace = true
-
+ropey.workspace = true

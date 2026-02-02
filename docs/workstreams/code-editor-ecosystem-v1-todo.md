@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-01
+Last updated: 2026-02-02
 
 This is the checkbox tracker companion to:
 
@@ -155,7 +155,7 @@ Evidence anchors:
 
 ## M4 — Buffer Model + Undo Hooks
 
-- [~] Choose v1 buffer structure (rope / piece table / hybrid) (seed `TextBuffer` exists; internal structure decision pending).
+- [x] Choose v1 buffer structure: rope (`ropey`) while preserving the UTF-8 byte-index contract.
 - [x] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
 - [x] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
 - [~] Lock document identity (URI-like) for multi-document workflows.

@@ -1,5 +1,6 @@
 use std::ops::Range;
 
+use ropey::Rope;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -157,8 +158,7 @@ pub struct TextBuffer {
     doc: DocId,
     uri: Option<DocUri>,
     revision: Revision,
-    text: String,
-    line_starts: Vec<usize>,
+    rope: Rope,
 }
 
 impl TextBuffer {
@@ -171,14 +171,12 @@ impl TextBuffer {
             return Err(EditError::NotCharBoundary);
         }
 
-        let mut buf = Self {
+        let buf = Self {
             doc,
             uri,
             revision: Revision(0),
-            text,
-            line_starts: Vec::new(),
+            rope: Rope::from_str(&text),
         };
-        buf.rebuild_line_index();
         Ok(buf)
     }
 
@@ -198,57 +196,141 @@ impl TextBuffer {
         self.revision
     }
 
-    pub fn text(&self) -> &str {
-        &self.text
-    }
-
     pub fn len_bytes(&self) -> usize {
-        self.text.len()
+        self.rope.len_bytes()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.text.is_empty()
+        self.rope.len_bytes() == 0
+    }
+
+    /// Best-effort string snapshot for debugging/tests.
+    ///
+    /// Editor surfaces should prefer slicing APIs instead of materializing the whole document.
+    pub fn text_string(&self) -> String {
+        self.rope.to_string()
+    }
+
+    pub fn is_char_boundary(&self, idx: usize) -> bool {
+        if idx == 0 || idx == self.len_bytes() {
+            return true;
+        }
+        if idx > self.len_bytes() {
+            return false;
+        }
+        let (chunk, chunk_start, _, _) = self.rope.chunk_at_byte(idx);
+        let rel = idx.saturating_sub(chunk_start);
+        chunk.is_char_boundary(rel)
+    }
+
+    pub fn slice_to_string(&self, range: Range<usize>) -> Option<String> {
+        if range.start > range.end {
+            return None;
+        }
+        if range.end > self.len_bytes() {
+            return None;
+        }
+        if !self.is_char_boundary(range.start) || !self.is_char_boundary(range.end) {
+            return None;
+        }
+        let start_char = self.rope.byte_to_char(range.start);
+        let end_char = self.rope.byte_to_char(range.end);
+        Some(self.rope.slice(start_char..end_char).to_string())
     }
 
     pub fn line_count(&self) -> usize {
-        self.line_starts.len().max(1)
+        self.rope.len_lines().max(1)
     }
 
     pub fn line_start(&self, line: usize) -> Option<usize> {
-        self.line_starts.get(line).copied()
+        if line >= self.line_count() {
+            return None;
+        }
+        Some(self.rope.line_to_byte(line))
     }
 
     pub fn line_byte_range_including_newline(&self, line: usize) -> Option<Range<usize>> {
         let start = self.line_start(line)?;
-        let end = self
-            .line_start(line.saturating_add(1))
-            .unwrap_or(self.text.len());
-        Some(start..end.min(self.text.len()))
+        let end = if line.saturating_add(1) < self.line_count() {
+            self.rope.line_to_byte(line + 1)
+        } else {
+            self.len_bytes()
+        };
+        Some(start..end.min(self.len_bytes()))
     }
 
     pub fn line_byte_range(&self, line: usize) -> Option<Range<usize>> {
         let range = self.line_byte_range_including_newline(line)?;
-        let end = range.end;
-        let end = if end > range.start && self.text.as_bytes().get(end - 1) == Some(&b'\n') {
-            end - 1
-        } else {
-            end
-        };
-        Some(range.start..end)
+        let mut end = range.end;
+        if end > range.start && self.byte_at(end - 1) == Some(b'\n') {
+            end = end.saturating_sub(1);
+        }
+        Some(range.start..end.min(self.len_bytes()))
     }
 
-    pub fn line_text(&self, line: usize) -> Option<&str> {
+    pub fn line_text(&self, line: usize) -> Option<String> {
         let range = self.line_byte_range(line)?;
-        self.text.get(range)
+        self.slice_to_string(range)
+    }
+
+    pub fn line_char_count(&self, line: usize) -> usize {
+        let Some(range) = self.line_byte_range_including_newline(line) else {
+            return 0;
+        };
+        let mut end = range.end.min(self.len_bytes());
+        if end > range.start && self.byte_at(end - 1) == Some(b'\n') {
+            end = end.saturating_sub(1);
+        }
+        if !self.is_char_boundary(range.start) || !self.is_char_boundary(end) {
+            return 0;
+        }
+        let start_char = self.rope.byte_to_char(range.start);
+        let end_char = self.rope.byte_to_char(end);
+        end_char.saturating_sub(start_char)
     }
 
     pub fn line_index_at_byte(&self, idx: usize) -> usize {
-        let idx = idx.min(self.text.len());
-        match self.line_starts.binary_search(&idx) {
-            Ok(i) => i,
-            Err(0) => 0,
-            Err(i) => i - 1,
+        let idx = self.clamp_to_char_boundary_left(idx.min(self.len_bytes()));
+        self.rope
+            .byte_to_line(idx)
+            .min(self.line_count().saturating_sub(1))
+    }
+
+    pub fn line_col_at_byte(&self, idx: usize) -> (usize, usize) {
+        let idx = self.clamp_to_char_boundary_left(idx.min(self.len_bytes()));
+        let line = self.line_index_at_byte(idx);
+        let line_start_char = self.rope.line_to_char(line);
+        let char_idx = self.rope.byte_to_char(idx);
+        (line, char_idx.saturating_sub(line_start_char))
+    }
+
+    pub fn byte_at_line_col(&self, line: usize, col: usize) -> usize {
+        let line = line.min(self.line_count().saturating_sub(1));
+        let start_char = self.rope.line_to_char(line);
+        let line_slice = self.rope.line(line);
+        let mut len_chars = line_slice.len_chars();
+        if len_chars > 0 && line_slice.char(len_chars - 1) == '\n' {
+            len_chars = len_chars.saturating_sub(1);
         }
+        let col = col.min(len_chars);
+        self.rope.char_to_byte(start_char.saturating_add(col))
+    }
+
+    pub fn prev_char_boundary(&self, idx: usize) -> usize {
+        let idx = self.clamp_to_char_boundary_left(idx.min(self.len_bytes()));
+        let char_idx = self.rope.byte_to_char(idx);
+        if char_idx == 0 {
+            0
+        } else {
+            self.rope.char_to_byte(char_idx - 1)
+        }
+    }
+
+    pub fn next_char_boundary(&self, idx: usize) -> usize {
+        let idx = self.clamp_to_char_boundary_left(idx.min(self.len_bytes()));
+        let char_idx = self.rope.byte_to_char(idx);
+        let next = char_idx.saturating_add(1).min(self.rope.len_chars());
+        self.rope.char_to_byte(next)
     }
 
     pub fn apply(&mut self, edit: Edit) -> Result<BufferDelta, EditError> {
@@ -269,12 +351,8 @@ impl TextBuffer {
             }
         };
 
-        if !insert.is_char_boundary(insert.len()) {
-            return Err(EditError::NotCharBoundary);
-        }
-        if !self.text.is_char_boundary(start) || !self.text.is_char_boundary(end) {
-            return Err(EditError::NotCharBoundary);
-        }
+        self.validate_index(start)?;
+        self.validate_index(end)?;
 
         let old_start_line = self.line_index_at_byte(start);
         let old_end_line = self.line_index_at_byte(end);
@@ -282,11 +360,17 @@ impl TextBuffer {
             .saturating_sub(old_start_line)
             .saturating_add(1);
 
-        self.text.replace_range(start..end, &insert);
+        let start_char = self.rope.byte_to_char(start);
+        let end_char = self.rope.byte_to_char(end);
+        if start_char < end_char {
+            self.rope.remove(start_char..end_char);
+        }
+        if !insert.is_empty() {
+            self.rope.insert(start_char, &insert);
+        }
         self.revision = Revision(self.revision.0.saturating_add(1));
-        self.update_line_index_after_replace(start, end, &insert);
 
-        let new_end = start.saturating_add(insert.len()).min(self.text.len());
+        let new_end = start.saturating_add(insert.len()).min(self.len_bytes());
         let new_end_line = self.line_index_at_byte(new_end);
         let new_count = new_end_line
             .saturating_sub(old_start_line)
@@ -301,47 +385,6 @@ impl TextBuffer {
                 new_count,
             },
         })
-    }
-
-    fn update_line_index_after_replace(&mut self, start: usize, end: usize, insert: &str) {
-        // Remove line starts whose preceding '\n' is deleted by the edit.
-        // A line start at `k` corresponds to a '\n' at `k - 1`, so it is invalidated when:
-        // start <= k - 1 < end  <=>  start + 1 <= k <= end.
-        let remove_begin = lower_bound(&self.line_starts, start.saturating_add(1));
-        let remove_end = upper_bound(&self.line_starts, end);
-        if remove_begin < remove_end {
-            self.line_starts.drain(remove_begin..remove_end);
-        }
-
-        let old_len = end.saturating_sub(start) as i64;
-        let new_len = insert.len() as i64;
-        let delta = new_len - old_len;
-        if delta != 0 {
-            // Shift line starts strictly after the replaced range end.
-            // In the pure-insert case (start == end), a line start exactly at `start` must not move
-            // because the line still starts at that byte (the inserted text becomes part of it).
-            let shift_begin = upper_bound(&self.line_starts, end);
-            for v in &mut self.line_starts[shift_begin..] {
-                *v = (*v as i64 + delta) as usize;
-            }
-        }
-
-        // Insert line starts introduced by the inserted text. Each '\n' creates a new line start at
-        // the following byte.
-        let insert_at = upper_bound(&self.line_starts, start);
-        let mut new_starts: Vec<usize> = Vec::new();
-        for (i, b) in insert.as_bytes().iter().enumerate() {
-            if *b == b'\n' {
-                new_starts.push(start.saturating_add(i).saturating_add(1));
-            }
-        }
-        if !new_starts.is_empty() {
-            self.line_starts.splice(insert_at..insert_at, new_starts);
-        }
-
-        if self.line_starts.is_empty() {
-            self.line_starts.push(0);
-        }
     }
 
     pub fn apply_tx(&mut self, tx: &TextBufferTx) -> Result<(), EditError> {
@@ -379,34 +422,28 @@ impl TextBuffer {
         let inverse = match &edit {
             Edit::Insert { at, text } => {
                 self.validate_index(*at)?;
-                if !text.is_char_boundary(text.len()) {
-                    return Err(EditError::NotCharBoundary);
-                }
                 Edit::Delete {
                     range: (*at)..at.saturating_add(text.len()),
                 }
             }
             Edit::Delete { range } => {
                 self.validate_range(range)?;
-                let Some(removed) = self.text.get(range.clone()) else {
-                    return Err(EditError::RangeEndOutOfBounds);
-                };
+                let removed = self
+                    .slice_to_string(range.clone())
+                    .ok_or(EditError::RangeEndOutOfBounds)?;
                 Edit::Insert {
                     at: range.start,
-                    text: removed.to_string(),
+                    text: removed,
                 }
             }
             Edit::Replace { range, text } => {
                 self.validate_range(range)?;
-                if !text.is_char_boundary(text.len()) {
-                    return Err(EditError::NotCharBoundary);
-                }
-                let Some(removed) = self.text.get(range.clone()) else {
-                    return Err(EditError::RangeEndOutOfBounds);
-                };
+                let removed = self
+                    .slice_to_string(range.clone())
+                    .ok_or(EditError::RangeEndOutOfBounds)?;
                 Edit::Replace {
                     range: range.start..range.start.saturating_add(text.len()),
-                    text: removed.to_string(),
+                    text: removed,
                 }
             }
         };
@@ -439,10 +476,10 @@ impl TextBuffer {
     }
 
     fn validate_index(&self, idx: usize) -> Result<(), EditError> {
-        if idx > self.text.len() {
+        if idx > self.len_bytes() {
             return Err(EditError::IndexOutOfBounds);
         }
-        if !self.text.is_char_boundary(idx) {
+        if !self.is_char_boundary(idx) {
             return Err(EditError::NotCharBoundary);
         }
         Ok(())
@@ -452,36 +489,30 @@ impl TextBuffer {
         if range.start > range.end {
             return Err(EditError::RangeStartAfterEnd);
         }
-        if range.end > self.text.len() {
+        if range.end > self.len_bytes() {
             return Err(EditError::RangeEndOutOfBounds);
         }
-        if !self.text.is_char_boundary(range.start) || !self.text.is_char_boundary(range.end) {
+        if !self.is_char_boundary(range.start) || !self.is_char_boundary(range.end) {
             return Err(EditError::NotCharBoundary);
         }
         Ok(())
     }
 
-    fn rebuild_line_index(&mut self) {
-        self.line_starts.clear();
-        self.line_starts.push(0);
-        for (idx, ch) in self.text.char_indices() {
-            if ch == '\n' {
-                self.line_starts.push(idx + 1);
-            }
+    fn byte_at(&self, idx: usize) -> Option<u8> {
+        if idx >= self.len_bytes() {
+            return None;
         }
+        let (chunk, chunk_start, _, _) = self.rope.chunk_at_byte(idx);
+        let rel = idx.saturating_sub(chunk_start);
+        chunk.as_bytes().get(rel).copied()
     }
-}
 
-fn lower_bound(starts: &[usize], value: usize) -> usize {
-    match starts.binary_search(&value) {
-        Ok(i) | Err(i) => i,
-    }
-}
-
-fn upper_bound(starts: &[usize], value: usize) -> usize {
-    match starts.binary_search(&value) {
-        Ok(i) => i + 1,
-        Err(i) => i,
+    pub fn clamp_to_char_boundary_left(&self, mut idx: usize) -> usize {
+        idx = idx.min(self.len_bytes());
+        while idx > 0 && !self.is_char_boundary(idx) {
+            idx = idx.saturating_sub(1);
+        }
+        idx
     }
 }
 
@@ -502,7 +533,7 @@ mod tests {
             })
             .unwrap();
 
-        assert_eq!(buf.text(), "hello, \nworld");
+        assert_eq!(buf.text_string(), "hello, \nworld");
         assert_eq!(delta.before, Revision(0));
         assert_eq!(delta.after, Revision(1));
         assert_eq!(delta.lines.start, 0);
@@ -520,7 +551,7 @@ mod tests {
             })
             .unwrap();
 
-        assert_eq!(buf.text(), "a\nXX\nc");
+        assert_eq!(buf.text_string(), "a\nXX\nc");
         assert_eq!(delta.lines.start, 0);
         assert!(delta.lines.old_count >= 2);
         assert!(delta.lines.new_count >= 2);
@@ -536,7 +567,7 @@ mod tests {
 
         buf.apply(Edit::Delete { range: 1..2 }).unwrap();
 
-        assert_eq!(buf.text(), "ab");
+        assert_eq!(buf.text_string(), "ab");
         assert_eq!(buf.line_count(), 1);
         assert_eq!(buf.line_start(0), Some(0));
         assert_eq!(buf.line_start(1), None);
@@ -554,7 +585,7 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(buf.text(), "a\nXb");
+        assert_eq!(buf.text_string(), "a\nXb");
         assert_eq!(buf.line_start(1), Some(2));
     }
 
@@ -570,7 +601,7 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(buf.text(), "a\nb");
+        assert_eq!(buf.text_string(), "a\nb");
         assert_eq!(buf.line_count(), 2);
         assert_eq!(buf.line_start(1), Some(2));
     }
@@ -593,9 +624,9 @@ mod tests {
         let doc = DocId::new();
         let buf = TextBuffer::new(doc, "a\nb\n".to_string()).unwrap();
         assert_eq!(buf.line_count(), 3);
-        assert_eq!(buf.line_text(0), Some("a"));
-        assert_eq!(buf.line_text(1), Some("b"));
-        assert_eq!(buf.line_text(2), Some(""));
+        assert_eq!(buf.line_text(0), Some("a".to_string()));
+        assert_eq!(buf.line_text(1), Some("b".to_string()));
+        assert_eq!(buf.line_text(2), Some(String::new()));
         assert_eq!(buf.line_byte_range_including_newline(1), Some(2..4));
         assert_eq!(buf.line_byte_range(1), Some(2..3));
     }
@@ -625,7 +656,7 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(buf.text(), "abcde");
+        assert_eq!(buf.text_string(), "abcde");
 
         let tx = txn.snapshot();
         assert_eq!(tx.edits.len(), 2);
@@ -633,11 +664,11 @@ mod tests {
 
         let undo_tx = tx.invert();
         buf.apply_tx(&undo_tx).unwrap();
-        assert_eq!(buf.text(), "abc");
+        assert_eq!(buf.text_string(), "abc");
 
         let redo_tx = undo_tx.invert();
         buf.apply_tx(&redo_tx).unwrap();
-        assert_eq!(buf.text(), "abcde");
+        assert_eq!(buf.text_string(), "abcde");
     }
 
     #[test]
@@ -664,10 +695,10 @@ mod tests {
                 },
             )
             .unwrap();
-        assert_eq!(buf.text(), "hi world");
+        assert_eq!(buf.text_string(), "hi world");
 
         buf.rollback_transaction(&txn).unwrap();
-        assert_eq!(buf.text(), "hello");
+        assert_eq!(buf.text_string(), "hello");
     }
 
     #[test]
@@ -695,14 +726,14 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(buf.text(), "hi world");
+        assert_eq!(buf.text_string(), "hi world");
         let committed = buf.transaction_commit(txn.clone());
 
         buf.transaction_cancel(&txn).unwrap();
-        assert_eq!(buf.text(), "hello");
+        assert_eq!(buf.text_string(), "hello");
 
         buf.apply_tx(&committed).unwrap();
-        assert_eq!(buf.text(), "hi world");
+        assert_eq!(buf.text_string(), "hi world");
     }
 
     #[test]

@@ -1,7 +1,12 @@
 # Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
 
 Status: Active (workstream document; normative contracts live in ADRs)
-Last updated: 2026-02-01
+Last updated: 2026-02-02
+
+Recent changes (2026-02-02):
+
+- Branch sync: merge local `main` into `code-editor-ecosystem-v1` to stay aligned with the latest runner/text/diagnostics baselines.
+- Buffer: move `TextBuffer` to rope-backed storage (`ropey`) while preserving the UTF-8 byte-index contract; adapt view/editor consumers to slice-based APIs.
 
 Recent changes (2026-02-01):
 
@@ -112,6 +117,7 @@ P2 (features):
 - Improve the incremental syntax strategy (edits → visible-window invalidation) and document the tradeoffs.
 - Wrap: add a pixel-accurate wrapping mode (measure-driven) while preserving stable buffer ↔ display ↔ pixel mapping.
 - Grow the display-map surface (wrap → fold → inlay) without breaking caret/selection invariants.
+- Diagnostics: add renderer-level churn counters (text blob churn, glyph atlas pressure) to make perf regressions bundle-debuggable.
 
 ---
 

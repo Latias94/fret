@@ -71,7 +71,7 @@ impl DisplayMap {
         for line in 0..line_count {
             line_to_first_row.push(row_to_line.len());
 
-            let cols = buf.line_text(line).unwrap_or("").chars().count();
+            let cols = buf.line_char_count(line);
             let rows_for_line = match wrap_cols {
                 None => 1,
                 Some(wrap) => ((cols.max(1) + wrap - 1) / wrap).max(1),
@@ -177,56 +177,16 @@ impl DisplayMap {
         }
         pt.row = pt.row.min(self.row_to_line.len().saturating_sub(1));
         let line = self.row_to_line[pt.row];
-        let Some(range) = buf.line_byte_range(line) else {
-            return buf.len_bytes();
-        };
-        let start = range.start.min(buf.len_bytes());
-        let end = range.end.min(buf.len_bytes());
-        if start >= end {
-            return start;
-        }
-
-        let Some(line_text) = buf.text().get(start..end) else {
-            return start;
-        };
-
         let row_start_col = self.row_start_col[pt.row];
         let col_in_line = row_start_col.saturating_add(pt.col);
-
-        let mut remaining = col_in_line;
-        let mut offset = start;
-        for ch in line_text.chars() {
-            if remaining == 0 {
-                break;
-            }
-            offset = offset.saturating_add(ch.len_utf8());
-            remaining -= 1;
-        }
-
-        // Clamp to the logical line end (excluding the trailing newline).
-        offset.min(end).min(display_point_to_byte(
-            buf,
-            DisplayPoint::new(line, usize::MAX),
-        ))
+        buf.byte_at_line_col(line, col_in_line)
     }
 }
 
 /// Map a UTF-8 byte index in the buffer to a `(row, col)` display coordinate.
 pub fn byte_to_display_point(buf: &TextBuffer, mut byte: usize) -> DisplayPoint {
     byte = byte.min(buf.len_bytes());
-    while byte > 0 && !buf.text().is_char_boundary(byte) {
-        byte = byte.saturating_sub(1);
-    }
-
-    let row = buf.line_index_at_byte(byte);
-    let row_start = buf.line_start(row).unwrap_or(0).min(buf.len_bytes());
-    let byte = byte.max(row_start).min(buf.len_bytes());
-    let col = buf
-        .text()
-        .get(row_start..byte)
-        .map(|s| s.chars().count())
-        .unwrap_or(0);
-
+    let (row, col) = buf.line_col_at_byte(byte);
     DisplayPoint { row, col }
 }
 
@@ -240,30 +200,7 @@ pub fn display_point_to_byte(buf: &TextBuffer, mut pt: DisplayPoint) -> usize {
         return 0;
     }
     pt.row = pt.row.min(line_count.saturating_sub(1));
-
-    let Some(range) = buf.line_byte_range(pt.row) else {
-        return buf.len_bytes();
-    };
-    let start = range.start.min(buf.len_bytes());
-    let end = range.end.min(buf.len_bytes());
-    if start >= end {
-        return start;
-    }
-
-    let Some(line) = buf.text().get(start..end) else {
-        return start;
-    };
-
-    let mut col = pt.col;
-    let mut offset = start;
-    for ch in line.chars() {
-        if col == 0 {
-            break;
-        }
-        offset = offset.saturating_add(ch.len_utf8());
-        col -= 1;
-    }
-    offset.min(end)
+    buf.byte_at_line_col(pt.row, pt.col)
 }
 
 pub fn clamp_to_char_boundary(text: &str, idx: usize) -> usize {
@@ -486,6 +423,70 @@ pub fn move_word_right(text: &str, idx: usize, mode: TextBoundaryMode) -> usize 
     }
 }
 
+/// Select a word range in a `TextBuffer` using v1 line-local semantics.
+///
+/// v1 operates on a single logical line slice (newline excluded). Crossing line boundaries is
+/// handled by the caller (e.g. double-click on a newline maps to the nearest line).
+pub fn select_word_range_in_buffer(
+    buf: &TextBuffer,
+    idx: usize,
+    mode: TextBoundaryMode,
+) -> (usize, usize) {
+    if buf.is_empty() {
+        return (0, 0);
+    }
+    let idx = buf.clamp_to_char_boundary_left(idx.min(buf.len_bytes()));
+    let line = buf.line_index_at_byte(idx);
+    let line_start = buf.line_start(line).unwrap_or(0);
+    let line_text = buf.line_text(line).unwrap_or_default();
+    let local = idx.saturating_sub(line_start).min(line_text.len());
+    let (a, b) = select_word_range(&line_text, local, mode);
+    (line_start.saturating_add(a), line_start.saturating_add(b))
+}
+
+pub fn move_word_left_in_buffer(buf: &TextBuffer, idx: usize, mode: TextBoundaryMode) -> usize {
+    if buf.is_empty() {
+        return 0;
+    }
+    let idx = buf.clamp_to_char_boundary_left(idx.min(buf.len_bytes()));
+    let line = buf.line_index_at_byte(idx);
+    let line_start = buf.line_start(line).unwrap_or(0);
+    let line_text = buf.line_text(line).unwrap_or_default();
+    let local = idx.saturating_sub(line_start).min(line_text.len());
+
+    if local == 0 && line > 0 {
+        let prev_line = line - 1;
+        let prev_start = buf.line_start(prev_line).unwrap_or(0);
+        let prev_text = buf.line_text(prev_line).unwrap_or_default();
+        let prev_local = prev_text.len();
+        let new_local = move_word_left(&prev_text, prev_local, mode);
+        return prev_start.saturating_add(new_local);
+    }
+
+    line_start.saturating_add(move_word_left(&line_text, local, mode))
+}
+
+pub fn move_word_right_in_buffer(buf: &TextBuffer, idx: usize, mode: TextBoundaryMode) -> usize {
+    if buf.is_empty() {
+        return 0;
+    }
+    let idx = buf.clamp_to_char_boundary_left(idx.min(buf.len_bytes()));
+    let line = buf.line_index_at_byte(idx);
+    let line_start = buf.line_start(line).unwrap_or(0);
+    let line_text = buf.line_text(line).unwrap_or_default();
+    let local = idx.saturating_sub(line_start).min(line_text.len());
+
+    if local >= line_text.len() && line.saturating_add(1) < buf.line_count() {
+        let next_line = line + 1;
+        let next_start = buf.line_start(next_line).unwrap_or(buf.len_bytes());
+        let next_text = buf.line_text(next_line).unwrap_or_default();
+        let new_local = move_word_right(&next_text, 0, mode);
+        return next_start.saturating_add(new_local);
+    }
+
+    line_start.saturating_add(move_word_right(&line_text, local, mode))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -508,11 +509,11 @@ mod tests {
             DisplayPoint::new(0, 3)
         );
         assert_eq!(
-            byte_to_display_point(&buf, buf.text().find('\n').unwrap()),
+            byte_to_display_point(&buf, buf.text_string().find('\n').unwrap()),
             DisplayPoint::new(0, 3)
         );
         assert_eq!(
-            byte_to_display_point(&buf, buf.text().find('\n').unwrap() + 1),
+            byte_to_display_point(&buf, buf.text_string().find('\n').unwrap() + 1),
             DisplayPoint::new(1, 0)
         );
     }

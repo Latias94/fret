@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
-    DisplayMap, DisplayPoint, move_word_left, move_word_right, next_char_boundary,
-    prev_char_boundary, select_word_range,
+    DisplayMap, DisplayPoint, move_word_left_in_buffer, move_word_right_in_buffer,
+    select_word_range_in_buffer,
 };
 use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId, KeyCode,
@@ -503,7 +503,7 @@ impl CodeEditor {
                     match down.click_count {
                         2 => {
                             let (start, end) =
-                                select_word_range(st.buffer.text(), caret, st.text_boundary_mode);
+                                select_word_range_in_buffer(&st.buffer, caret, st.text_boundary_mode);
                             st.selection = Selection {
                                 anchor: start,
                                 focus: end,
@@ -974,8 +974,8 @@ impl CodeEditor {
                                 }
                                 .min(st.buffer.len_bytes());
 
-                                let start = prev_char_boundary(st.buffer.text(), start);
-                                let end = next_char_boundary(st.buffer.text(), end);
+                                let start = st.buffer.prev_char_boundary(start);
+                                let end = st.buffer.next_char_boundary(end);
                                 if start < end {
                                     let kind = if *before_bytes > 0 {
                                         UndoGroupKind::Backspace
@@ -1019,15 +1019,13 @@ impl CodeEditor {
                             return false;
                         }
 
-                        let text = st.buffer.text();
-                        let caret = fret_code_editor_view::clamp_to_char_boundary(
-                            text,
-                            st.selection.caret().min(text.len()),
-                        );
-                        let (start, end) = a11y_text_window_bounds(text, caret);
+                        let caret = st
+                            .buffer
+                            .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
+                        let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
 
-                        let new_anchor = map_a11y_offset_to_buffer(text, start, end, anchor);
-                        let new_focus = map_a11y_offset_to_buffer(text, start, end, focus);
+                        let new_anchor = map_a11y_offset_to_buffer(&st.buffer, start, end, anchor);
+                        let new_focus = map_a11y_offset_to_buffer(&st.buffer, start, end, focus);
 
                         st.selection = Selection {
                             anchor: new_anchor,
@@ -1129,20 +1127,20 @@ impl CodeEditor {
 fn a11y_composed_text_window(
     st: &CodeEditorState,
 ) -> (String, Option<(u32, u32)>, Option<(u32, u32)>) {
-    let text = st.buffer.text();
-    let caret =
-        fret_code_editor_view::clamp_to_char_boundary(text, st.selection.caret().min(text.len()));
+    let caret = st
+        .buffer
+        .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
 
-    let (start, end) = a11y_text_window_bounds(text, caret);
+    let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
 
-    let before = text.get(start..caret).unwrap_or("");
-    let after = text.get(caret..end).unwrap_or("");
+    let before = st.buffer.slice_to_string(start..caret).unwrap_or_default();
+    let after = st.buffer.slice_to_string(caret..end).unwrap_or_default();
 
     if let Some(preedit) = st.preedit.as_ref() {
         let mut display = String::with_capacity(before.len() + preedit.text.len() + after.len());
-        display.push_str(before);
+        display.push_str(before.as_str());
         display.push_str(preedit.text.as_str());
-        display.push_str(after);
+        display.push_str(after.as_str());
 
         let before_len: u32 = before.len().try_into().unwrap_or(u32::MAX);
         let preedit_len: u32 = preedit.text.len().try_into().unwrap_or(u32::MAX);
@@ -1167,12 +1165,12 @@ fn a11y_composed_text_window(
     }
 
     let mut display = String::with_capacity(before.len() + after.len());
-    display.push_str(before);
-    display.push_str(after);
+    display.push_str(before.as_str());
+    display.push_str(after.as_str());
 
     let map = |offset: usize| -> u32 {
         let offset = offset.min(end).max(start);
-        let offset = fret_code_editor_view::clamp_to_char_boundary(text, offset);
+        let offset = st.buffer.clamp_to_char_boundary_left(offset);
         u32::try_from(offset.saturating_sub(start)).unwrap_or(u32::MAX)
     };
     let selection = Some((map(st.selection.anchor), map(st.selection.focus)));
@@ -1180,35 +1178,31 @@ fn a11y_composed_text_window(
     (display, selection, None)
 }
 
-fn a11y_text_window_bounds(text: &str, caret: usize) -> (usize, usize) {
-    let caret = fret_code_editor_view::clamp_to_char_boundary(text, caret).min(text.len());
-    let start = fret_code_editor_view::clamp_to_char_boundary(
-        text,
-        caret.saturating_sub(A11Y_WINDOW_BYTES_BEFORE),
-    );
-    let end = fret_code_editor_view::clamp_to_char_boundary(
-        text,
+fn a11y_text_window_bounds(buf: &TextBuffer, caret: usize) -> (usize, usize) {
+    let caret = buf.clamp_to_char_boundary_left(caret.min(buf.len_bytes()));
+    let start = buf.clamp_to_char_boundary_left(caret.saturating_sub(A11Y_WINDOW_BYTES_BEFORE));
+    let end = buf.clamp_to_char_boundary_left(
         caret
             .saturating_add(A11Y_WINDOW_BYTES_AFTER)
-            .min(text.len()),
+            .min(buf.len_bytes()),
     );
     (start, end)
 }
 
 fn map_a11y_offset_to_buffer(
-    text: &str,
+    buf: &TextBuffer,
     window_start: usize,
     window_end: usize,
     offset: u32,
 ) -> usize {
-    let window_start = window_start.min(text.len());
-    let window_end = window_end.min(text.len()).max(window_start);
+    let window_start = window_start.min(buf.len_bytes());
+    let window_end = window_end.min(buf.len_bytes()).max(window_start);
     let window_len = window_end.saturating_sub(window_start);
     let offset = usize::try_from(offset)
         .unwrap_or(usize::MAX)
         .min(window_len);
-    let buf = window_start.saturating_add(offset).min(window_end);
-    fret_code_editor_view::clamp_to_char_boundary(text, buf).min(text.len())
+    let byte = window_start.saturating_add(offset).min(window_end);
+    buf.clamp_to_char_boundary_left(byte).min(buf.len_bytes())
 }
 
 fn line_len_cols(line: &str) -> usize {
@@ -1522,12 +1516,10 @@ fn copy_selection(host: &mut dyn UiActionHost, st: &CodeEditorState) {
     }
     let start = range.start.min(st.buffer.len_bytes());
     let end = range.end.min(st.buffer.len_bytes());
-    let Some(text) = st.buffer.text().get(start..end) else {
+    let Some(text) = st.buffer.slice_to_string(start..end) else {
         return;
     };
-    host.push_effect(Effect::ClipboardSetText {
-        text: text.to_string(),
-    });
+    host.push_effect(Effect::ClipboardSetText { text });
 }
 
 fn request_paste(host: &mut dyn UiActionHost, action_cx: ActionCx) {
@@ -1560,7 +1552,7 @@ fn delete_word_backward(st: &mut CodeEditorState) {
         return;
     }
 
-    let prev = move_word_left(st.buffer.text(), caret, st.text_boundary_mode).min(caret);
+    let prev = move_word_left_in_buffer(&st.buffer, caret, st.text_boundary_mode).min(caret);
     if prev == caret {
         return;
     }
@@ -1594,7 +1586,7 @@ fn delete_word_forward(st: &mut CodeEditorState) {
     }
 
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let next = move_word_right(st.buffer.text(), caret, st.text_boundary_mode)
+    let next = move_word_right_in_buffer(&st.buffer, caret, st.text_boundary_mode)
         .max(caret)
         .min(st.buffer.len_bytes());
     if next == caret {
@@ -1633,7 +1625,7 @@ fn delete_backward(st: &mut CodeEditorState) {
     if caret == 0 {
         return;
     }
-    let prev = prev_char_boundary(st.buffer.text(), caret);
+    let prev = st.buffer.prev_char_boundary(caret);
     let _ = apply_and_record_edit(
         st,
         UndoGroupKind::Backspace,
@@ -1663,7 +1655,7 @@ fn delete_forward(st: &mut CodeEditorState) {
     }
 
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let next = next_char_boundary(st.buffer.text(), caret);
+    let next = st.buffer.next_char_boundary(caret);
     if next == caret {
         return;
     }
@@ -1680,7 +1672,7 @@ fn delete_forward(st: &mut CodeEditorState) {
 
 fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let new = prev_char_boundary(st.buffer.text(), caret);
+    let new = st.buffer.prev_char_boundary(caret);
     if extend {
         st.selection.focus = new;
     } else {
@@ -1693,7 +1685,7 @@ fn move_caret_left(st: &mut CodeEditorState, extend: bool) {
 
 fn move_caret_right(st: &mut CodeEditorState, extend: bool) {
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let new = next_char_boundary(st.buffer.text(), caret);
+    let new = st.buffer.next_char_boundary(caret);
     if extend {
         st.selection.focus = new;
     } else {
@@ -1842,7 +1834,6 @@ fn redo(st: &mut CodeEditorState) -> bool {
 }
 
 fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
-    let text = st.buffer.text();
     let mode = st.text_boundary_mode;
     st.undo_group = None;
 
@@ -1856,9 +1847,9 @@ fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
     }
 
     let next = if dir < 0 {
-        move_word_left(text, caret, mode)
+        move_word_left_in_buffer(&st.buffer, caret, mode)
     } else {
-        move_word_right(text, caret, mode)
+        move_word_right_in_buffer(&st.buffer, caret, mode)
     };
 
     if extend {
@@ -2113,7 +2104,7 @@ fn cached_row_text(st: &mut CodeEditorState, row: usize, max_entries: usize) -> 
     st.cache_stats.row_text_misses = st.cache_stats.row_text_misses.saturating_add(1);
 
     let range = st.display_map.display_row_byte_range(&st.buffer, row);
-    let text = st.buffer.text().get(range).unwrap_or("").to_string().into();
+    let text: Arc<str> = st.buffer.slice_to_string(range).unwrap_or_default().into();
     st.row_text_cache.insert(row, (Arc::clone(&text), tick));
     st.row_text_cache_queue.push_back((row, tick));
 
@@ -2366,11 +2357,11 @@ fn populate_syntax_row_cache_for_chunk(
         return;
     }
 
-    let Some(slice) = st.buffer.text().get(start_byte..end_byte) else {
+    let Some(slice) = st.buffer.slice_to_string(start_byte..end_byte) else {
         return;
     };
 
-    let Ok(spans) = fret_syntax::highlight(slice, language) else {
+    let Ok(spans) = fret_syntax::highlight(slice.as_str(), language) else {
         return;
     };
 
@@ -2586,7 +2577,7 @@ mod tests {
         handle.replace_buffer(buffer);
 
         let st = handle.state.borrow();
-        assert_eq!(st.buffer.text(), "world");
+        assert_eq!(st.buffer.text_string(), "world");
         assert_eq!(st.selection, Selection::default());
         assert_eq!(st.preedit, None);
         assert!(st.undo_group.is_none());
@@ -2769,19 +2760,18 @@ mod tests {
             Some(("hello 😀 ".len() as u32, "hello 😀 ".len() as u32))
         );
 
-        let text = st.buffer.text();
-        let caret = fret_code_editor_view::clamp_to_char_boundary(
-            text,
-            st.selection.caret().min(text.len()),
-        );
-        let (start, end) = a11y_text_window_bounds(text, caret);
+        let text_len = st.buffer.len_bytes();
+        let caret = st
+            .buffer
+            .clamp_to_char_boundary_left(st.selection.caret().min(text_len));
+        let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
         assert_eq!(start, 0);
-        assert_eq!(end, text.len());
+        assert_eq!(end, text_len);
 
         let anchor = 0u32;
         let focus = u32::try_from("hello".len()).unwrap();
-        let new_anchor = map_a11y_offset_to_buffer(text, start, end, anchor);
-        let new_focus = map_a11y_offset_to_buffer(text, start, end, focus);
+        let new_anchor = map_a11y_offset_to_buffer(&st.buffer, start, end, anchor);
+        let new_focus = map_a11y_offset_to_buffer(&st.buffer, start, end, focus);
         assert_eq!(new_anchor, 0);
         assert_eq!(new_focus, "hello".len());
     }
@@ -2837,7 +2827,7 @@ mod tests {
             assert_eq!(st.display_map.row_count(), 2);
 
             // Newline => line count changes, so the map must refresh.
-            let insert_at = st.buffer.text().find('\n').unwrap_or(0);
+            let insert_at = st.buffer.text_string().find('\n').unwrap_or(0);
             apply_and_record_edit(
                 &mut st,
                 UndoGroupKind::Typing,
@@ -2955,7 +2945,7 @@ mod tests {
         };
 
         delete_word_backward(&mut st);
-        assert_eq!(st.buffer.text(), "hello ");
+        assert_eq!(st.buffer.text_string(), "hello ");
         assert_eq!(st.selection.caret(), "hello ".len());
     }
 
@@ -2971,7 +2961,7 @@ mod tests {
         };
 
         delete_word_forward(&mut st);
-        assert_eq!(st.buffer.text(), " world");
+        assert_eq!(st.buffer.text_string(), " world");
         assert_eq!(st.selection.caret(), 0);
     }
 
