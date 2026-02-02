@@ -387,11 +387,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let _ = gfx
             .renderer
             .set_text_font_families(&self.config.text_font_families);
-        let _ = fret_runtime::apply_font_catalog_update(
+
+        // Web/WASM cannot access system fonts. Load our bundled defaults as soon as the renderer
+        // becomes available, then seed `TextFontFamilyConfig` deterministically.
+        let default_fonts = fret_fonts::default_fonts()
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
+        let _ = gfx.renderer.add_fonts(default_fonts);
+
+        let update = fret_runtime::apply_font_catalog_update(
             &mut self.app,
             gfx.renderer.all_font_names(),
-            fret_runtime::FontFamilyDefaultsPolicy::None,
+            fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
+        let _ = gfx.renderer.set_text_font_families(&update.config);
         self.app
             .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
                 gfx.renderer.text_font_stack_key(),
@@ -1748,12 +1758,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
             }
         }
-
-        let fonts = fret_fonts::default_fonts()
-            .iter()
-            .map(|bytes| bytes.to_vec())
-            .collect::<Vec<_>>();
-        self.app.push_effect(Effect::TextAddFonts { fonts });
 
         if let Some(canvas) = window.canvas().map(|c| c.clone())
             && let Some(mount) = ensure_canvas_ime_mount(&canvas)
