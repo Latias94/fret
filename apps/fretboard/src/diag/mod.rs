@@ -133,6 +133,13 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut renderdoc_markers: Vec<String> = Vec::new();
     let mut renderdoc_no_outputs_png: bool = false;
 
+    fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
+        if env.iter().any(|(k, _v)| k == key) {
+            return;
+        }
+        env.push((key.to_string(), value.to_string()));
+    }
+
     // Parse global `diag` flags regardless of their position, leaving positional args intact.
     // This keeps the behavior aligned with the help text in `apps/fretboard/src/cli.rs`.
     let mut positionals: Vec<String> = Vec::new();
@@ -2390,6 +2397,13 @@ See: `docs/tracy.md`.\n";
                         None,
                     )
                 } else if is_components_gallery_table_suite {
+                    // components_gallery's "table torture" surface is behind an env gate; the
+                    // scripted harness assumes it is enabled.
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_TABLE_TORTURE",
+                        "1",
+                    );
                     (
                         vec![
                             resolve_path(
@@ -2408,6 +2422,16 @@ See: `docs/tracy.md`.\n";
                         None,
                     )
                 } else if is_components_gallery_table_keep_alive_suite {
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_TABLE_TORTURE",
+                        "1",
+                    );
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE",
+                        "256",
+                    );
                     (
                         vec![resolve_path(
                             &workspace_root,
