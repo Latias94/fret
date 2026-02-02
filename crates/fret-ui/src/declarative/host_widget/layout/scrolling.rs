@@ -565,53 +565,13 @@ impl ElementHostWidget {
                 });
         }
 
+        // Window-boundary invalidation under view-cache is prepaint-driven (ADR 0190):
+        // - retained hosts reconcile during prepaint,
+        // - non-retained lists schedule a one-shot rerender during prepaint.
+        //
+        // Layout still records window telemetry and updates `VirtualListState`, but should not
+        // duplicate the scheduling side effects.
         if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
-            let retained_host =
-                crate::elements::with_window_state(&mut *cx.app, window, |window_state| {
-                    let retained = window_state
-                        .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
-                        self.element,
-                    );
-                    if retained {
-                        window_state.mark_retained_virtual_list_needs_reconcile(
-                            self.element,
-                            crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
-                        );
-                    }
-                    retained
-                });
-
-            if !retained_host {
-                let prev_viewport_state = match axis {
-                    fret_core::Axis::Vertical => prev_viewport_h,
-                    fret_core::Axis::Horizontal => prev_viewport_w,
-                };
-
-                let detail = if deferred_scroll_to_item {
-                    UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
-                } else if props.items_revision != prev_items_revision {
-                    UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
-                } else if (viewport.0 - prev_viewport_state.0).abs() > 0.01 {
-                    UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
-                } else {
-                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate
-                };
-
-                // Virtual list visible-item sets are computed during the declarative render pass.
-                // If the current visible window is outside the previously rendered overscan
-                // window, ensure the nearest view-cache root re-renders on the next frame so it
-                // can rebuild the visible items.
-                //
-                // Important: avoid forcing an additional "contained relayout" pass in the current
-                // frame. We only need to mark the view-cache reuse gate as dirty and schedule a
-                // redraw; the rerender frame will rebuild children and propagate structural
-                // invalidations normally.
-                cx.tree.mark_nearest_view_cache_root_needs_rerender(
-                    cx.node,
-                    UiDebugInvalidationSource::Other,
-                    detail,
-                );
-            }
             needs_redraw = true;
         }
 

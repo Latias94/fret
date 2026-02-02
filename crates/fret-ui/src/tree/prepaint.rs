@@ -195,13 +195,19 @@ impl<H: UiHost> UiTree<H> {
                         .visible_range(offset_axis, viewport, inputs.overscan);
 
                 let window_mismatch = if let Some(visible) = visible_range {
-                    match render_window_range.or(ideal_window_range).filter(|r| {
+                    match render_window_range.filter(|r| {
                         r.count == inputs.len
                             && r.overscan == inputs.overscan
                             && r.start_index <= r.end_index
                             && r.end_index < r.count
                     }) {
-                        None => false,
+                        None => {
+                            // Without a render-derived window, the current declarative subtree may
+                            // not reflect the post-layout visible range. Treat this as a mismatch
+                            // so prepaint can schedule the initial one-shot rerender (Track B) or
+                            // retained-host reconcile (Track A).
+                            true
+                        }
                         Some(rendered) => {
                             let rendered_start =
                                 rendered.start_index.saturating_sub(rendered.overscan);
