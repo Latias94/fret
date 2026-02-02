@@ -256,6 +256,11 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Re-verified (2026-02-02): PASS via `fretboard diag suite ui-gallery-cache005` (warmup=5, cache+shell, `--check-gc-sweep-liveness` defaulted for cache-005 scripts):
       - `target/fret-diag-suite-cache005-local1/1770011515732-ui-gallery-overlay-torture/bundle.json`
       - `target/fret-diag-suite-cache005-local1/1770011541379-ui-gallery-sidebar-scroll-refresh/bundle.json`
+    - Re-verified (2026-02-02): PASS (cache+shell) with taxonomy evidence exported by the gate:
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035888620-script-step-0018-press_key/bundle.json`
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035916581-script-step-0007-wheel/bundle.json`
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035888620-script-step-0018-press_key/check.gc_sweep_liveness.json`
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035916581-script-step-0007-wheel/check.gc_sweep_liveness.json`
     - Re-verified (2026-01-24): PASS on this branch with the stopgap still enabled:
       - `target/fret-diag-overlay-torture-cache005-stopgap/1769240992350-ui-gallery-overlay-torture/bundle.json`
       - `target/fret-diag-sidebar-scroll-refresh-cache005-stopgap/1769241046228-ui-gallery-sidebar-scroll-refresh/bundle.json`
