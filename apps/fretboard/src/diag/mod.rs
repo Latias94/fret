@@ -7022,6 +7022,80 @@ mod tests {
     }
 
     #[test]
+    fn vlist_window_shifts_explainable_accepts_viewport_resize_detail() {
+        let out_dir = tmp_out_dir("vlist_window_shifts_explainable_viewport_resize");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "virtual_list_windows": [{
+                            "node": 10,
+                            "element": 1,
+                            "window_mismatch": true,
+                            "window_shift_kind": "escape",
+                            "window_shift_reason": "viewport_resize",
+                            "window_shift_apply_mode": "non_retained_rerender",
+                            "window_shift_invalidation_detail": "scroll_handle_viewport_resize_window_update"
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_vlist_window_shifts_explainable(&bundle_path, &bundle_dir, 0)
+            .expect("expected gate to accept viewport resize mapping");
+    }
+
+    #[test]
+    fn vlist_window_shifts_explainable_accepts_items_revision_detail() {
+        let out_dir = tmp_out_dir("vlist_window_shifts_explainable_items_revision");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "virtual_list_windows": [{
+                            "node": 10,
+                            "element": 1,
+                            "window_mismatch": true,
+                            "window_shift_kind": "escape",
+                            "window_shift_reason": "items_revision",
+                            "window_shift_apply_mode": "non_retained_rerender",
+                            "window_shift_invalidation_detail": "scroll_handle_items_revision_window_update"
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_vlist_window_shifts_explainable(&bundle_path, &bundle_dir, 0)
+            .expect("expected gate to accept items revision mapping");
+    }
+
+    #[test]
     fn idle_no_paint_check_passes_when_tail_streak_meets_min() {
         let out_dir = tmp_out_dir("idle_no_paint_pass");
         let _ = std::fs::create_dir_all(&out_dir);
