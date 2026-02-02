@@ -3853,6 +3853,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
     #[serde(default)]
+    pub virtual_list_window_shift_samples: Vec<UiVirtualListWindowShiftSampleV1>,
+    #[serde(default)]
     pub retained_virtual_list_reconciles: Vec<UiRetainedVirtualListReconcileV1>,
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
@@ -3947,6 +3949,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_virtual_list_windows()
                 .iter()
                 .map(UiVirtualListWindowV1::from_window)
+                .collect(),
+            virtual_list_window_shift_samples: ui
+                .debug_virtual_list_window_shift_samples()
+                .iter()
+                .map(UiVirtualListWindowShiftSampleV1::from_sample)
                 .collect(),
             retained_virtual_list_reconciles: ui
                 .debug_retained_virtual_list_reconciles()
@@ -4457,6 +4464,50 @@ impl UiVirtualListWindowV1 {
                 .window_shift_invalidation_detail
                 .and_then(|d| d.as_str())
                 .map(|s| s.to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiVirtualListWindowShiftSampleV1 {
+    pub frame_id: u64,
+    pub source: UiVirtualListWindowSourceV1,
+    pub node: u64,
+    pub element: u64,
+    pub window_shift_kind: UiVirtualListWindowShiftKindV1,
+    pub window_shift_reason: UiVirtualListWindowShiftReasonV1,
+    pub window_shift_apply_mode: UiVirtualListWindowShiftApplyModeV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_shift_invalidation_detail: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_window_range: Option<UiVirtualRangeV1>,
+}
+
+impl UiVirtualListWindowShiftSampleV1 {
+    fn from_sample(sample: &fret_ui::tree::UiDebugVirtualListWindowShiftSample) -> Self {
+        Self {
+            frame_id: sample.frame_id.0,
+            source: UiVirtualListWindowSourceV1::from_source(sample.source),
+            node: key_to_u64(sample.node),
+            element: sample.element.0,
+            window_shift_kind: UiVirtualListWindowShiftKindV1::from_kind(sample.window_shift_kind),
+            window_shift_reason: UiVirtualListWindowShiftReasonV1::from_reason(
+                sample.window_shift_reason,
+            ),
+            window_shift_apply_mode: UiVirtualListWindowShiftApplyModeV1::from_mode(
+                sample.window_shift_apply_mode,
+            ),
+            window_shift_invalidation_detail: sample
+                .window_shift_invalidation_detail
+                .and_then(|d| d.as_str())
+                .map(|s| s.to_string()),
+            prev_window_range: sample.prev_window_range.map(UiVirtualRangeV1::from_range),
+            window_range: sample.window_range.map(UiVirtualRangeV1::from_range),
+            render_window_range: sample.render_window_range.map(UiVirtualRangeV1::from_range),
         }
     }
 }
@@ -6110,6 +6161,10 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub virtual_list_visible_range_refreshes: u32,
     #[serde(default)]
+    pub virtual_list_window_shifts_total: u32,
+    #[serde(default)]
+    pub virtual_list_window_shifts_non_retained: u32,
+    #[serde(default)]
     pub retained_virtual_list_reconciles: u32,
     #[serde(default)]
     pub retained_virtual_list_attached_items: u32,
@@ -6183,6 +6238,8 @@ impl UiFrameStatsV1 {
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
             virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
             virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
+            virtual_list_window_shifts_total: stats.virtual_list_window_shifts_total,
+            virtual_list_window_shifts_non_retained: stats.virtual_list_window_shifts_non_retained,
             retained_virtual_list_reconciles: stats.retained_virtual_list_reconciles,
             retained_virtual_list_attached_items: stats.retained_virtual_list_attached_items,
             retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
