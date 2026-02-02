@@ -8117,11 +8117,10 @@ fn preview_select(
         .into_element(cx);
 
     let selected = cx
-        .app
-        .models()
-        .read(&value, |v| v.clone())
-        .ok()
-        .flatten()
+        .watch_model(&value)
+        .layout()
+        .cloned()
+        .unwrap_or_default()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     vec![select, cx.text(format!("Selected: {selected}"))]
