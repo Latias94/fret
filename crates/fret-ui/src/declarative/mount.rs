@@ -93,7 +93,7 @@ pub(crate) fn node_for_element_in_window_frame<H: UiHost>(
         window_frame
             .instances
             .iter()
-            .find_map(|(&node, record)| (record.element == element).then_some(node))
+            .find_map(|(node, record)| (record.element == element).then_some(node))
     })
 }
 
@@ -118,7 +118,7 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
 ) -> Vec<NodeId> {
     with_window_frame(app, window, |window_frame| {
         window_frame
-            .and_then(|w| w.children.get(&node))
+            .and_then(|w| w.children.get(node))
             .map(|children| children.as_ref().to_vec())
             .unwrap_or_default()
     })
@@ -470,7 +470,7 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
                     .as_ref()
                     .map(|reachable| reachable.contains(&node));
@@ -497,7 +497,7 @@ where
                     }
                     let contains = window_frame
                         .children
-                        .get(&parent)
+                        .get(parent)
                         .map(|children| children.contains(&child));
                     path_edge_frame_contains_child[path_edge_len as usize] = match contains {
                         Some(true) => 1,
@@ -512,10 +512,10 @@ where
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     parent_frame_children_contains_root: parent_frame_children
                         .map(|v| v.contains(&node)),
-                    root_frame_instance_present: window_frame.instances.contains_key(&node),
+                    root_frame_instance_present: window_frame.instances.contains_key(node),
                     root_frame_children_len: window_frame
                         .children
-                        .get(&node)
+                        .get(node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_view_cache_roots,
                     liveness_layer_roots_len,
@@ -545,8 +545,8 @@ where
                 let window_frame = frame.windows.entry(window).or_default();
                 let any_removed = !removed.is_empty();
                 for removed in removed {
-                    window_frame.instances.remove(&removed);
-                    window_frame.children.remove(&removed);
+                    window_frame.instances.remove(removed);
+                    window_frame.children.remove(removed);
                 }
                 if any_removed {
                     window_frame.revision = window_frame.revision.saturating_add(1);
@@ -862,7 +862,7 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
                     .as_ref()
                     .map(|reachable| reachable.contains(&node));
@@ -889,7 +889,7 @@ where
                     }
                     let contains = window_frame
                         .children
-                        .get(&parent)
+                        .get(parent)
                         .map(|children| children.contains(&child));
                     path_edge_frame_contains_child[path_edge_len as usize] = match contains {
                         Some(true) => 1,
@@ -904,10 +904,10 @@ where
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     parent_frame_children_contains_root: parent_frame_children
                         .map(|v| v.contains(&node)),
-                    root_frame_instance_present: window_frame.instances.contains_key(&node),
+                    root_frame_instance_present: window_frame.instances.contains_key(node),
                     root_frame_children_len: window_frame
                         .children
-                        .get(&node)
+                        .get(node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
                     root_reachable_from_view_cache_roots,
                     liveness_layer_roots_len,
@@ -937,8 +937,8 @@ where
                 let window_frame = frame.windows.entry(window).or_default();
                 let any_removed = !removed.is_empty();
                 for removed in removed {
-                    window_frame.instances.remove(&removed);
-                    window_frame.children.remove(&removed);
+                    window_frame.instances.remove(removed);
+                    window_frame.children.remove(removed);
                 }
                 if any_removed {
                     window_frame.revision = window_frame.revision.saturating_add(1);
@@ -1147,7 +1147,7 @@ fn mount_element<H: UiHost>(
         ElementInstance::VirtualList(props) if virtual_list_can_be_layout_barrier(props)
     );
 
-    let previous_instance = window_frame.instances.get(&node).map(|r| &r.instance);
+    let previous_instance = window_frame.instances.get(node).map(|r| &r.instance);
     if !reuse_view_cache {
         let mask = declarative_instance_change_mask(previous_instance, &instance);
         if mask != 0 {
@@ -1199,10 +1199,11 @@ fn mount_element<H: UiHost>(
         };
         let _reuse_guard = reuse_span.enter();
 
-        window_frame
-            .children
-            .entry(node)
-            .or_insert_with(|| Arc::<[NodeId]>::from(ui.children(node)));
+        if window_frame.children.get(node).is_none() {
+            window_frame
+                .children
+                .insert(node, Arc::<[NodeId]>::from(ui.children(node)));
+        }
 
         let transitioned_into_reuse = window_state.record_view_cache_reuse_frame(id, frame_id);
         let touched =
@@ -1359,7 +1360,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
-        let Some(record) = window_frame.instances.get(&node) else {
+        let Some(record) = window_frame.instances.get(node) else {
             continue;
         };
         let ElementInstance::VirtualList(props) = &record.instance else {
@@ -1508,7 +1509,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             .children
             .insert(node, Arc::<[NodeId]>::from(next_children));
 
-        if let Some(record) = window_frame.instances.get_mut(&node) {
+        if let Some(record) = window_frame.instances.get_mut(node) {
             if let ElementInstance::VirtualList(props) = &mut record.instance {
                 props.visible_items = desired_items;
             }
@@ -1672,7 +1673,7 @@ fn mark_existing_declarative_subtree_seen<H: UiHost>(
         }
         if let Some(element) = window_frame
             .instances
-            .get(&node)
+            .get(node)
             .map(|r| r.element)
             .or_else(|| ui.node_element(node))
             .or_else(|| window_state.element_for_node(node))
@@ -1712,7 +1713,7 @@ fn touch_existing_declarative_subtree_seen<H: UiHost>(
             continue;
         }
         if let Some(element) = window_frame
-            .and_then(|window_frame| window_frame.instances.get(&node).map(|r| r.element))
+            .and_then(|window_frame| window_frame.instances.get(node).map(|r| r.element))
             .or_else(|| ui.node_element(node))
             .or_else(|| window_state.element_for_node(node))
         {
@@ -1758,7 +1759,7 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
         }
         if let Some(element) = window_frame
             .instances
-            .get(&node)
+            .get(node)
             .map(|r| r.element)
             .or_else(|| ui.node_element(node))
             .or_else(|| window_state.element_for_node(node))
@@ -1910,7 +1911,7 @@ fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
 ) {
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
-        if let Some(record) = window_frame.instances.get(&node) {
+        if let Some(record) = window_frame.instances.get(node) {
             collect_scroll_handle_bindings(record.element, &record.instance, out);
         }
 
@@ -1925,7 +1926,7 @@ fn view_cache_root_needs_layout_for_deferred_scroll_requests<H: UiHost>(
 ) -> bool {
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
-        if let Some(record) = window_frame.instances.get(&node)
+        if let Some(record) = window_frame.instances.get(node)
             && let ElementInstance::VirtualList(props) = &record.instance
             && props.scroll_handle.deferred_scroll_to_item().is_some()
         {
@@ -1951,7 +1952,7 @@ fn push_existing_subtree_children<H: UiHost>(
     if !ui_children.is_empty() {
         stack.extend(ui_children.iter().copied());
     }
-    if let Some(frame_children) = window_frame.children.get(&node) {
+    if let Some(frame_children) = window_frame.children.get(node) {
         if ui_children.is_empty() {
             stack.extend(frame_children.iter().copied());
         } else {
@@ -1972,7 +1973,7 @@ fn inherit_observations_for_existing_subtree<H: UiHost>(
 ) {
     let mut stack: Vec<NodeId> = vec![root];
     while let Some(node) = stack.pop() {
-        if let Some(record) = window_frame.instances.get(&node) {
+        if let Some(record) = window_frame.instances.get(node) {
             let element = record.element;
             window_state.touch_observed_models_for_element_if_recorded(element);
             window_state.touch_observed_globals_for_element_if_recorded(element);

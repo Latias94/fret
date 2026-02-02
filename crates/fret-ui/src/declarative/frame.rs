@@ -1,4 +1,5 @@
 use super::prelude::*;
+use slotmap::SecondaryMap;
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -15,8 +16,8 @@ pub(crate) struct ElementIdMapCache {
 pub(crate) struct WindowFrame {
     pub(super) frame_id: FrameId,
     pub(super) revision: u64,
-    pub(crate) instances: HashMap<NodeId, ElementRecord>,
-    pub(crate) children: HashMap<NodeId, Arc<[NodeId]>>,
+    pub(crate) instances: SecondaryMap<NodeId, ElementRecord>,
+    pub(crate) children: SecondaryMap<NodeId, Arc<[NodeId]>>,
     pub(super) element_id_map_cache: Option<ElementIdMapCache>,
 }
 
@@ -25,8 +26,8 @@ impl Default for WindowFrame {
         Self {
             frame_id: FrameId(0),
             revision: 0,
-            instances: HashMap::new(),
-            children: HashMap::new(),
+            instances: SecondaryMap::new(),
+            children: SecondaryMap::new(),
             element_id_map_cache: None,
         }
     }
@@ -161,7 +162,7 @@ pub(crate) fn element_record_for_node<H: UiHost>(
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&node))
+            .and_then(|w| w.instances.get(node))
             .cloned()
     })
 }
@@ -378,7 +379,7 @@ pub(crate) fn element_id_map_for_window<H: UiHost>(
 
         let mut out = HashMap::with_capacity(window_frame.instances.len());
         for (node, record) in window_frame.instances.iter() {
-            out.insert(record.element.0, *node);
+            out.insert(record.element.0, node);
         }
         let map = Arc::new(out);
         window_frame.element_id_map_cache = Some(ElementIdMapCache {

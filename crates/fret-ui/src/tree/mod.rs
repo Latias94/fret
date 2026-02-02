@@ -5380,14 +5380,14 @@ impl<H: UiHost> UiTree<H> {
         // subtrees. `WindowFrame` retains the authoritative element-tree edges, so semantics
         // traversal should treat the union as the effective child list (mirrors GC reachability
         // bookkeeping). Only pay the cost when view-cache reuse can occur.
-        let window_frame_children: HashMap<NodeId, Arc<[NodeId]>> = {
+        let window_frame_children: slotmap::SecondaryMap<NodeId, Arc<[NodeId]>> = {
             let started = profile_semantics.then(Instant::now);
             let out = if self.view_cache_active() {
                 crate::declarative::with_window_frame(app, window, |window_frame| {
                     window_frame.map(|w| w.children.clone()).unwrap_or_default()
                 })
             } else {
-                HashMap::new()
+                slotmap::SecondaryMap::new()
             };
             if let Some(started) = started {
                 t_window_frame_children = Some(started.elapsed());
@@ -5488,7 +5488,7 @@ impl<H: UiHost> UiTree<H> {
                     let at_node = before.compose(node_transform);
                     let bounds = rect_aabb_transformed(node.bounds, at_node);
                     let ui_children = node.children.clone();
-                    let children = match window_frame_children.get(&id) {
+                    let children = match window_frame_children.get(id) {
                         None => ui_children,
                         Some(frame_children) if ui_children.is_empty() => {
                             frame_children.as_ref().to_vec()

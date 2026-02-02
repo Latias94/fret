@@ -90,7 +90,7 @@ fn virtual_list_computes_visible_range_after_first_layout() {
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -179,7 +179,7 @@ fn virtual_list_can_scroll_to_deep_index_then_to_end() {
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -231,7 +231,7 @@ fn virtual_list_can_scroll_to_deep_index_then_to_end() {
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -285,7 +285,7 @@ fn virtual_list_can_scroll_to_deep_index_then_to_end() {
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -403,7 +403,7 @@ fn virtual_list_computes_visible_range_after_first_layout_horizontal() {
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -817,7 +817,7 @@ fn virtual_list_triggers_visible_range_rerender_on_wheel_scroll_when_cached() {
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -1048,7 +1048,7 @@ fn retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -1257,7 +1257,7 @@ fn virtual_list_triggers_visible_range_rerender_on_scrollbar_wheel_when_cached()
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&list_node))
+            .and_then(|w| w.instances.get(list_node))
             .cloned()
     });
     let super::super::ElementInstance::VirtualList(props) =
@@ -2643,7 +2643,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
     let (visible_indices, frame_children_len, ui_children_len): (Vec<usize>, usize, usize) =
         crate::declarative::with_window_frame(&mut app, window, |window_frame| {
             let window_frame = window_frame?;
-            let record = window_frame.instances.get(&vlist_node)?;
+            let record = window_frame.instances.get(vlist_node)?;
             let crate::declarative::frame::ElementInstance::VirtualList(props) = &record.instance
             else {
                 return None;
@@ -2655,7 +2655,7 @@ fn retained_virtual_list_host_updates_window_without_rerendering_view_cache_root
                 .collect::<Vec<_>>();
             let frame_children_len = window_frame
                 .children
-                .get(&vlist_node)
+                .get(vlist_node)
                 .map(|c| c.len())
                 .unwrap_or(0);
             Some((

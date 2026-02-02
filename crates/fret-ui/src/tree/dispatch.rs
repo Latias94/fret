@@ -108,7 +108,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(record.instance, declarative::ElementInstance::Pressable(_))
                     {
                         return Some(record.element);
@@ -169,7 +169,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover_region;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(
                             record.instance,
                             declarative::ElementInstance::HoverRegion(_)
@@ -1466,7 +1466,7 @@ impl<H: UiHost> UiTree<H> {
                         let window_frame = window_frame?;
                         let mut node = hit?;
                         loop {
-                            if let Some(record) = window_frame.instances.get(&node)
+                            if let Some(record) = window_frame.instances.get(node)
                                 && matches!(
                                     record.instance,
                                     crate::declarative::ElementInstance::InternalDragRegion(p)
@@ -2275,7 +2275,7 @@ impl<H: UiHost> UiTree<H> {
         {
             let is_scroll_target = declarative::with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
-                let record = window_frame.instances.get(&scroll_target)?;
+                let record = window_frame.instances.get(scroll_target)?;
                 Some(matches!(
                     record.instance,
                     declarative::ElementInstance::Scroll(_)
