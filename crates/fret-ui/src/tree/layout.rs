@@ -588,8 +588,8 @@ impl<H: UiHost> UiTree<H> {
         let started_phase = profile_layout_all.then(Instant::now);
         let roots_started = self.debug_enabled.then(Instant::now);
         for root in roots {
-            let _ = self
-                .layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+            let _ =
+                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
 
             self.flush_viewport_roots_after_root(
                 app,
@@ -2119,6 +2119,7 @@ impl<H: UiHost> UiTree<H> {
         });
         if let Some(profile) = self.layout_node_profile.as_mut() {
             profile.exit(node);
+        }
         if let Some(widget_started) = widget_started {
             const MAX_LAYOUT_HOTSPOTS: usize = 16;
             let inclusive_time = widget_started.elapsed();
@@ -2148,9 +2149,6 @@ impl<H: UiHost> UiTree<H> {
             if self.debug_layout_hotspots.len() > MAX_LAYOUT_HOTSPOTS {
                 self.debug_layout_hotspots.truncate(MAX_LAYOUT_HOTSPOTS);
             }
-        }
-        if let Some(profile) = self.layout_node_profile.as_mut() {
-            profile.exit(node);
         }
 
         if !is_probe {
