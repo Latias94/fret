@@ -599,6 +599,7 @@ pub struct UiDebugVirtualListWindow {
     pub window_shift_kind: UiDebugVirtualListWindowShiftKind,
     pub window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
     pub window_shift_apply_mode: Option<UiDebugVirtualListWindowShiftApplyMode>,
+    pub window_shift_invalidation_detail: Option<UiDebugInvalidationDetail>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
