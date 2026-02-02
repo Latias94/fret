@@ -255,13 +255,24 @@ impl WindowElementState {
         self.observed_globals_next.clear();
 
         // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
-        // caching: seed the current-frame maps from the previous-frame maps, and overwrite entries
-        // opportunistically as bounds are recorded this frame.
-        std::mem::swap(&mut self.prev_bounds, &mut self.cur_bounds);
-        self.cur_bounds.clone_from(&self.prev_bounds);
+        // caching:
+        // - `prev_*` stores the last committed snapshot (used by cross-frame queries).
+        // - `cur_*` stores only the current frame's recorded deltas.
+        //
+        // Committing deltas at frame boundaries avoids cloning full maps on cache-hit frames.
+        if !self.cur_bounds.is_empty() {
+            self.prev_bounds.reserve(self.cur_bounds.len());
+            self.prev_bounds.extend(self.cur_bounds.drain());
+        }
+        self.cur_bounds.clear();
 
-        std::mem::swap(&mut self.prev_visual_bounds, &mut self.cur_visual_bounds);
-        self.cur_visual_bounds.clone_from(&self.prev_visual_bounds);
+        if !self.cur_visual_bounds.is_empty() {
+            self.prev_visual_bounds
+                .reserve(self.cur_visual_bounds.len());
+            self.prev_visual_bounds
+                .extend(self.cur_visual_bounds.drain());
+        }
+        self.cur_visual_bounds.clear();
 
         self.focused_element = None;
 
@@ -747,7 +758,10 @@ impl WindowElementState {
     }
 
     pub(crate) fn current_bounds(&self, element: GlobalElementId) -> Option<Rect> {
-        self.cur_bounds.get(&element).copied()
+        self.cur_bounds
+            .get(&element)
+            .copied()
+            .or_else(|| self.prev_bounds.get(&element).copied())
     }
 
     pub(crate) fn record_visual_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
@@ -759,7 +773,10 @@ impl WindowElementState {
     }
 
     pub(crate) fn current_visual_bounds(&self, element: GlobalElementId) -> Option<Rect> {
-        self.cur_visual_bounds.get(&element).copied()
+        self.cur_visual_bounds
+            .get(&element)
+            .copied()
+            .or_else(|| self.prev_visual_bounds.get(&element).copied())
     }
 
     pub(crate) fn wants_continuous_frames(&self) -> bool {
