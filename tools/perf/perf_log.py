@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import os
+import re
+import subprocess
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+
+def _repo_root() -> Path:
+    # tools/perf/perf_log.py -> tools/perf -> tools -> repo root
+    return Path(__file__).resolve().parents[2]
+
+
+def _run_git(args: List[str]) -> Optional[str]:
+    try:
+        out = subprocess.check_output(["git", *args], cwd=_repo_root(), stderr=subprocess.DEVNULL)
+        return out.decode("utf-8").strip()
+    except Exception:
+        return None
+
+
+def _extract_perf_json_from_stdout(text: str) -> Dict[str, Any]:
+    # `fretboard diag perf ... --json` prints a single JSON object at the end of stdout, but the
+    # key order is not stable (serde_json may emit maps with sorted keys). We therefore look for
+    # the last JSON object that starts at the beginning of a line and validates as a perf payload.
+    starts = [m.start() for m in re.finditer(r"(?m)^\{", text)]
+    if not starts:
+        raise RuntimeError(
+            "Failed to locate perf JSON in stdout (no '{' at beginning-of-line found). "
+            "Ensure `fretboard diag perf ... --json` output was captured."
+        )
+
+    for idx in reversed(starts):
+        candidate = text[idx:].strip()
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict) and parsed.get("schema_version") == 1 and "rows" in parsed:
+            return parsed
+
+    raise RuntimeError("Failed to parse perf JSON from stdout (no valid payload found).")
+
+
+def _rel_script_path(script: str, repo_root: Path) -> str:
+    try:
+        p = Path(script)
+        if p.is_absolute():
+            try:
+                return str(p.relative_to(repo_root))
+            except ValueError:
+                return script
+        return script
+    except Exception:
+        return script
+
+
+def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any]]:
+    rows = perf.get("rows", [])
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        script = _rel_script_path(str(row.get("script", "")), repo_root)
+        stats = row.get("stats", {}) or {}
+
+        def get_stats(name: str) -> Dict[str, int]:
+            raw = stats.get(name, {}) or {}
+            return {
+                "p50": int(raw.get("p50", 0) or 0),
+                "p95": int(raw.get("p95", 0) or 0),
+                "max": int(raw.get("max", 0) or 0),
+            }
+
+        total = get_stats("total_time_us")
+        layout = get_stats("layout_time_us")
+        solve = get_stats("layout_engine_solve_time_us")
+        paint = get_stats("paint_time_us")
+        prepaint = get_stats("prepaint_time_us")
+
+        worst_run = row.get("worst_run") or None
+        worst_bundle = None
+        worst_us = None
+        if isinstance(worst_run, dict):
+            worst_us = worst_run.get("top_total_time_us")
+            worst_bundle = worst_run.get("bundle")
+
+        out.append(
+            {
+                "script": script,
+                "total": total,
+                "layout": layout,
+                "solve": solve,
+                "prepaint": prepaint,
+                "paint": paint,
+                "worst_us": int(worst_us or 0),
+                "worst_bundle": str(worst_bundle or ""),
+            }
+        )
+
+    out.sort(key=lambda r: r["script"])
+    return out
+
+
+def _format_entry_markdown(
+    *,
+    timestamp: str,
+    commit: str,
+    subject: str,
+    change: str,
+    suite: str,
+    command: str,
+    worst_overall: Optional[Dict[str, Any]],
+    rows: List[Dict[str, Any]],
+    repo_root: Path,
+) -> str:
+    lines: List[str] = []
+    lines.append(f"## {timestamp} (commit `{commit}`)")
+    lines.append("")
+    if change:
+        lines.append("Change:")
+        lines.append(f"- {change}")
+        lines.append("")
+    elif subject:
+        lines.append("Change:")
+        lines.append(f"- {subject}")
+        lines.append("")
+
+    if suite:
+        lines.append("Suite:")
+        lines.append(f"- `{suite}`")
+        lines.append("")
+
+    if command:
+        lines.append("Command:")
+        lines.append("```powershell")
+        lines.append(command.rstrip())
+        lines.append("```")
+        lines.append("")
+
+    lines.append("Results (us):")
+    lines.append("| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |")
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for r in rows:
+        lines.append(
+            "| {script} | {p50_total} | {p95_total} | {max_total} | {p95_layout} | {p95_solve} | {p95_prepaint} | {p95_paint} |".format(
+                script=r["script"],
+                p50_total=r["total"]["p50"],
+                p95_total=r["total"]["p95"],
+                max_total=r["total"]["max"],
+                p95_layout=r["layout"]["p95"],
+                p95_solve=r["solve"]["p95"],
+                p95_prepaint=r["prepaint"]["p95"],
+                p95_paint=r["paint"]["p95"],
+            )
+        )
+    lines.append("")
+
+    if worst_overall:
+        worst_script = _rel_script_path(str(worst_overall.get("script", "")), repo_root)
+        worst_us = int(worst_overall.get("top_total_time_us", 0) or 0)
+        worst_bundle = str(worst_overall.get("bundle", "") or "")
+        if worst_bundle:
+            worst_bundle = _rel_script_path(worst_bundle, repo_root)
+
+        lines.append("Worst overall:")
+        lines.append(f"- script: `{worst_script}`")
+        lines.append(f"- top_total_time_us: `{worst_us}`")
+        if worst_bundle:
+            lines.append(f"- bundle: `{worst_bundle}`")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def append_cmd(args: argparse.Namespace) -> int:
+    repo_root = _repo_root()
+    stdout_path = Path(args.stdout)
+    log_path = Path(args.log)
+
+    stdout_text = stdout_path.read_text(encoding="utf-8", errors="replace")
+    perf = _extract_perf_json_from_stdout(stdout_text)
+
+    commit = args.commit or _run_git(["rev-parse", "HEAD"]) or "UNKNOWN"
+    subject = _run_git(["show", "-s", "--format=%s", commit]) or ""
+
+    rows = _summarize_rows(perf, repo_root)
+    worst_overall = perf.get("worst_overall") or None
+
+    timestamp = args.timestamp or dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    change = args.change or ""
+    command = args.command or ""
+    suite = args.suite or ""
+
+    entry = _format_entry_markdown(
+        timestamp=timestamp,
+        commit=commit,
+        subject=subject,
+        change=change,
+        suite=suite,
+        command=command,
+        worst_overall=worst_overall if isinstance(worst_overall, dict) else None,
+        rows=rows,
+        repo_root=repo_root,
+    )
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("a", encoding="utf-8") as f:
+        if log_path.stat().st_size > 0:
+            f.write("\n")
+        f.write(entry)
+
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Append `fretboard diag perf --json` results to a Markdown log.")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    append = sub.add_parser("append", help="Append a new perf entry by parsing a captured stdout file.")
+    append.add_argument("--stdout", required=True, help="Path to captured stdout from `fretboard diag perf ... --json`.")
+    append.add_argument("--log", required=True, help="Markdown log file to append to.")
+    append.add_argument("--suite", default="", help="Suite name (e.g. ui-gallery).")
+    append.add_argument("--command", default="", help="Exact command used to capture the stdout.")
+    append.add_argument("--commit", default="", help="Commit hash to attribute the run to (default: HEAD).")
+    append.add_argument("--change", default="", help="Short human description of the change.")
+    append.add_argument("--timestamp", default="", help="Timestamp override (default: now).")
+    append.set_defaults(fn=append_cmd)
+
+    args = parser.parse_args()
+    return int(args.fn(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
