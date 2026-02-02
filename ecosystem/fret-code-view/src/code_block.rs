@@ -945,7 +945,7 @@ fn render_code_block_line_row<H: UiHost>(
     )
 }
 
-fn render_code_block_windowed_lines<H: UiHost + 'static>(
+fn render_code_block_windowed_lines<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
@@ -979,20 +979,20 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
         layout
     };
 
-    let list = cx.virtual_list_keyed_retained_with_layout(
+    let list = cx.virtual_list_keyed_with_layout(
         list_layout,
         len,
         list_options,
         &scroll_y_handle,
-        Arc::new(|i| i as u64),
-        Arc::new(move |cx, i| {
+        |i| i as u64,
+        move |cx, i| {
             render_code_block_line_row(
                 cx,
                 row_theme_for_rows.as_ref(),
                 prepared_for_rows.as_ref(),
                 i,
             )
-        }),
+        },
     );
 
     let list_id = list.id;
