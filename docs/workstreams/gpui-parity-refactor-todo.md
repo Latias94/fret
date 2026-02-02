@@ -624,6 +624,9 @@ topics (if/when we implement them):
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
         - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
         - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
+        - Gate (new): `--check-vlist-visible-range-refreshes-max 10` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
+        - Suite default: `fretboard diag suite ui-gallery-vlist-window-boundary` now applies `--check-wheel-scroll ui-gallery-virtual-list-root`,
+          `--check-stale-paint ui-gallery-virtual-list-root`, `--check-view-cache-reuse-min 1`, and `--check-vlist-visible-range-refreshes-max 10` unless explicitly overridden.
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
      row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
      (tracked in ADR 0192).

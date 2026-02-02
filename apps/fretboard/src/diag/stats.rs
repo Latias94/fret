@@ -2511,6 +2511,116 @@ pub(super) fn check_bundle_for_wheel_scroll_json(
     Err(msg)
 }
 
+pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_refreshes: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_visible_range_refreshes_max_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        max_total_refreshes,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_refreshes: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_wheel = false;
+    let mut total_refreshes: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
+            continue;
+        };
+        any_wheel = true;
+
+        let after_frame = wheel_frame.max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let refreshes = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("virtual_list_visible_range_refreshes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if refreshes == 0 {
+                continue;
+            }
+            total_refreshes = total_refreshes.saturating_add(refreshes);
+            if samples.len() < 32 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "refreshes": refreshes,
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_visible_range_refreshes_max.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_visible_range_refreshes_max",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "max_total_refreshes": max_total_refreshes,
+        "any_wheel": any_wheel,
+        "total_refreshes": total_refreshes,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_wheel {
+        return Err(format!(
+            "vlist visible-range refresh gate requires wheel events, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if max_total_refreshes > 0 && total_refreshes > max_total_refreshes {
+        return Err(format!(
+            "expected virtual list visible-range refreshes to stay under budget after wheel events, but total_refreshes={total_refreshes} exceeded max_total_refreshes={max_total_refreshes} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
 pub(super) fn check_bundle_for_drag_cache_root_paint_only(
     bundle_path: &Path,
     test_id: &str,
