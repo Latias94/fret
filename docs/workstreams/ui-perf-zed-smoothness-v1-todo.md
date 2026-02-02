@@ -42,6 +42,12 @@ Conventions:
   - See `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `686bebe1`.
 - [x] Stabilize view-cache key to avoid resize-driven `cache_key_mismatch`.
   - Implemented by `perf(fret-ui): stabilize view-cache key` (commit `b6f1b580`).
+- [x] Add a resize-smoothness knob for scroll extents: defer unbounded probes while the viewport is resizing.
+  - Implemented by `perf(fret-ui): defer unbounded scroll probe on resize` (commit `05d2d56c`).
+  - Env: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
+  - Debounce: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES` (default: 2)
+- [ ] Decide whether scroll unbounded-probe deferral should become the default (remove env gating) and
+  update the canonical perf suite env set accordingly.
 
 ### M1: Frame data structures (hashing → dense)
 

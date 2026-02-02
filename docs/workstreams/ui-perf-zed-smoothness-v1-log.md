@@ -308,3 +308,26 @@ Worst overall:
 Notes:
 - View-cache keys no longer include the parent context bounds. Responsive branching that depends on
   window size should incorporate that into `ViewCacheProps.cache_key`.
+
+## 2026-02-03 00:22:17 (commit `05d2d56c`)
+
+Change:
+- Defer scroll unbounded probe while viewport resizes (debounced); keep view-cache reuse stable
+
+Suite:
+- `ui-gallery-window-resize-stress-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json --reuse-launch --repeat 7 --sort time --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 10370 | 10527 | 10527 | 8168 | 2109 | 50 | 2310 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `10527`
+- bundle: `target/fret-diag/1770049134799-ui-gallery-window-resize-stress-steady/bundle.json`

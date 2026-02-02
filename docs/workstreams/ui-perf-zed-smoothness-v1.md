@@ -255,6 +255,8 @@ Goal: large scroll surfaces should not trigger expensive `MaxContent` measuremen
 
 Candidate changes:
 
+- Interim: debounce `probe_unbounded` scroll extent recomputation on viewport resize (avoid “live resize”
+  `MaxContent` cascades; recompute once the viewport stabilizes).
 - Adopt DOM/GPUI-like extent models for scroll (tracked separately), so “accurate extents” come from post-layout
   geometry rather than unbounded probes.
 - Move window derivation for virtual surfaces into prepaint (ADR 0190 alignment) to avoid cache-root rerender on scroll.
