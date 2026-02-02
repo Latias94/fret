@@ -177,6 +177,8 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Made liveness explicit under reuse via layer roots + view-cache reuse roots + per-root subtree membership lists (ADR 0191).
     - Stabilized unkeyed element identity generation by using per-callsite counters (reduces accidental subtree swaps under conditional structure).
   - Progress (diagnostics): bundles now include retained keep-alive root samples (`debug.element_runtime.retained_keep_alive_roots_*`), so the full liveness root set can be audited from a single run.
+    - Anchors: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementDiagnosticsSnapshot::retained_keep_alive_roots_*`),
+      `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`ElementDiagnosticsSnapshotV1.retained_keep_alive_roots_*`).
   - Root-cause framing (keep honest):
     - When a live interactive subtree is swept while view-cache reuse exists, the GC is usually behaving correctly on the graph it sees.
       The bug is typically that ownership/liveness bookkeeping allowed the subtree to become an *island root* (unreachable from both
@@ -614,9 +616,10 @@ topics (if/when we implement them):
       visible window requires a cache-root rerender to rebuild the item subtree. The v2 goal is to move “window derivation + ephemeral items”
       into prepaint (ADR 0190), so scroll-driven window updates do not necessarily imply a cache-root rerender.
     - Remaining work (non-retained v2; keep small and gate-driven):
-      - [ ] Introduce an explicit ephemeral/windowed boundary so a window shift does not necessarily imply a cache-root rerender.
-      - [ ] Move visible window derivation into `prepaint` (derive/commit window state without rerunning the parent cache root).
-      - [ ] Ensure liveness/ownership remains deterministic under cache-hit frames when ephemeral items are attached/detached (ADR 0191 + ADR 0193).
+      - Scope note: for *fully composable* row subtrees, “apply a window shift without rerendering the parent cache root” effectively requires a retained host boundary (ADR 0192 / `GPUI-MVP5-virt-003`).
+        This track therefore focuses on: (1) prepaint deriving the *next desired window* (explainable), and (2) making escape ticks cheap and predictable (one-shot rerender, no extra current-frame churn).
+      - [ ] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
+      - [ ] Make window-shift reasons explainable from one bundle (`prefetch`/`escape`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
       - [ ] Add a stable regression gate for the window-boundary harness:
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
         - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
