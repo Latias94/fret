@@ -70,6 +70,32 @@ Windowed surfaces MUST compose with view caching:
   view boundary deterministically, without relying on unrelated input-driven `notify()` calls.
   - Examples: `scroll_to_item`, `ensure_line_visible`, `center_on_node`, `zoom_to_fit`.
 
+Conformance note (normative):
+
+- “Ephemeral prepaint update” MUST NOT imply silent structural mutation. It means: update prepaint/paint/interaction
+  outputs (and request redraw / paint invalidation) while keeping the declarative node graph shape unchanged.
+
+### 3A) Two conformance tracks: non-retained vs retained-host windowing (normative)
+
+This ADR covers two distinct implementation tracks that share the same *user-visible* goal (scroll stability) but have
+different structural capabilities.
+
+**Track A (retained host; composable)** — preferred for editor-scale surfaces:
+
+- A window shift MAY be applied during `prepaint` by reconciling retained children inside an explicit retained-host
+  boundary (ADR 0192), without forcing a dirty-view rerender of the parent cache root.
+- The structural churn (attach/detach) MUST be confined within that retained-host boundary, and MUST remain explainable
+  and budgeted (see v2 addendum below).
+
+**Track B (non-retained; plan-only)** — default `VirtualList` path until a retained boundary exists:
+
+- `prepaint` MAY compute and cache a *window plan* (desired visible/required/prefetch ranges) and MAY request a redraw.
+- `prepaint` MUST NOT attach/detach/reorder declarative children. Therefore, any window change that would alter the
+  mounted child subtree MUST schedule a dirty-view rerender for the next frame.
+- In this track, “avoid forcing rerender for small scroll deltas” is interpreted as:
+  - do not rerender while the visible range stays within the currently-rendered required/prefetch window, and
+  - allow a single one-shot rerender on “escape” (plus optional staged prefetch that schedules bounded rerenders).
+
 View-cache boundary constraint:
 
 - Nested cache roots inside barrier-driven windowed surfaces (virtual lists, scroll content, etc.) MUST remain safe under
@@ -89,6 +115,15 @@ At minimum, a perf bundle should be able to attribute:
 - dirty views (with sources like `notify_call`),
 - cache-root reuse reasons,
 - and virtual-surface window updates (best-effort).
+
+Virtual-surface explainability requirement (v2; normative for windowed surfaces):
+
+- Every window shift MUST have a stable `window_shift_kind` and `window_shift_reason` that can be extracted from a single
+  bundle (e.g. `prefetch|escape|scroll_to_item|viewport_resize|items_revision`).
+- Every window shift MUST indicate how it was applied:
+  - `apply_mode=retained_reconcile` (Track A) or
+  - `apply_mode=non_retained_rerender` (Track B).
+  This avoids ambiguous “window changed but nothing rerendered” failure modes.
 
 ### 5) Addendum (v2): staged prefetch and window-shift budgets
 

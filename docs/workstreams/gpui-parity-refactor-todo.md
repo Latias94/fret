@@ -627,6 +627,7 @@ topics (if/when we implement them):
       - [ ] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
         - Specify the allowed "ephemeral prepaint updates" for the non-retained VirtualList path (e.g. window prediction, scroll-offset bookkeeping, one-shot escape scheduling), and explicitly forbid any attach/detach that would require remounting children without a rerender boundary.
         - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
+        - References: ADR 0190 §3A + §4 (v2 explainability) and ADR 0193 §2A (“window plans” vs structural mutation).
       - [ ] Make window-shift reasons explainable from one bundle (`prefetch`/`escape`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
         - Add a per-frame debug counter + samples for non-retained window shifts (kind + old/new range + triggering invalidation detail), similar to retained-host reconcile samples.
         - Ensure `debug.prepaint_actions` includes the window-shift action (kind + reason) so `--check-prepaint-actions-min` can be extended to assert the right behavior.

@@ -103,6 +103,21 @@ inputs that make reuse correct:
 
 If the key matches and the cache root is not dirty, prepaint outputs may be reused.
 
+### 2A) Virtual surfaces: "window plans" are prepaint outputs, not structural mutations (normative)
+
+For windowed virtual surfaces (ADR 0190), `prepaint` may produce a bounded **window plan** (e.g. visible/required/prefetch
+ranges + reason) as an ephemeral prepaint output.
+
+Rules:
+
+- A window plan MUST be treated as **frame-local intent + attribution**, not as permission to mutate the declarative node
+  graph during `prepaint`.
+- Applying a window plan requires one of:
+  - a retained-host reconcile boundary (ADR 0192) (`apply_mode=retained_reconcile`), or
+  - a dirty-view rerender that rebuilds the relevant subtree (`apply_mode=non_retained_rerender`).
+- A non-retained virtual surface MUST NOT attempt to "apply" a window plan by attaching/detaching children during prepaint.
+  If the plan implies different mounted children, it MUST schedule a dirty-view rerender for the next frame.
+
 ### 3) Liveness/GC does not depend on ephemeral items
 
 - Ephemeral items are **not** part of the declarative liveness graph.
