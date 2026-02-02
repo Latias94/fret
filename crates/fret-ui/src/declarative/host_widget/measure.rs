@@ -296,12 +296,77 @@ impl ElementHostWidget {
         window: AppWindowId,
         layout: LayoutStyle,
     ) -> Size {
-        let max_child = max_non_absolute_children(
-            cx,
-            window,
-            LayoutConstraints::new(LayoutSize::new(None, None), cx.constraints.available),
-        );
-        clamp_to_constraints_in_measure(max_child, layout, cx.constraints)
+        let child_constraints =
+            LayoutConstraints::new(LayoutSize::new(None, None), cx.constraints.available);
+        let mut max_child = max_non_absolute_children(cx, window, child_constraints);
+
+        // During intrinsic sizing, parents may pass `available = 0` as a placeholder for
+        // "unknown". A passthrough box with only absolute-positioned children would otherwise
+        // collapse to zero (because absolute children are ignored for sizing), breaking hit
+        // testing for overflow-visible overlays.
+        let placeholder_width = cx.constraints.known.width.is_none()
+            && cx.constraints.available.width.definite() == Some(Px(0.0));
+        let placeholder_height = cx.constraints.known.height.is_none()
+            && cx.constraints.available.height.definite() == Some(Px(0.0));
+
+        if (placeholder_width || placeholder_height)
+            && (max_child.width.0 <= 0.0 || max_child.height.0 <= 0.0)
+        {
+            let has_absolute_child = cx.children.iter().copied().any(|child| {
+                layout_style_for_node(cx.app, window, child).position
+                    == crate::element::PositionStyle::Absolute
+            });
+            if has_absolute_child {
+                let mut abs_constraints = child_constraints;
+                if placeholder_width {
+                    abs_constraints.available.width = AvailableSpace::MaxContent;
+                }
+                if placeholder_height {
+                    abs_constraints.available.height = AvailableSpace::MaxContent;
+                }
+
+                for &child in cx.children {
+                    let style = layout_style_for_node(cx.app, window, child);
+                    if style.position != crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.measure_in(child, abs_constraints);
+                    let left = style.inset.left.map(|v| v.0);
+                    let right = style.inset.right.map(|v| v.0);
+                    let top = style.inset.top.map(|v| v.0);
+                    let bottom = style.inset.bottom.map(|v| v.0);
+
+                    let required_w = match (left, right) {
+                        (Some(l), Some(r)) => Px(l + r + child_size.width.0),
+                        (Some(l), None) => Px(l + child_size.width.0),
+                        (None, Some(r)) => Px(r + child_size.width.0),
+                        (None, None) => child_size.width,
+                    };
+                    let required_h = match (top, bottom) {
+                        (Some(t), Some(b)) => Px(t + b + child_size.height.0),
+                        (Some(t), None) => Px(t + child_size.height.0),
+                        (None, Some(b)) => Px(b + child_size.height.0),
+                        (None, None) => child_size.height,
+                    };
+
+                    if placeholder_width {
+                        max_child.width = Px(max_child.width.0.max(required_w.0));
+                    }
+                    if placeholder_height {
+                        max_child.height = Px(max_child.height.0.max(required_h.0));
+                    }
+                }
+            }
+        }
+
+        let mut clamp_constraints = cx.constraints;
+        if placeholder_width {
+            clamp_constraints.available.width = AvailableSpace::MaxContent;
+        }
+        if placeholder_height {
+            clamp_constraints.available.height = AvailableSpace::MaxContent;
+        }
+        clamp_to_constraints_in_measure(max_child, layout, clamp_constraints)
     }
 
     fn measure_container<H: UiHost>(
