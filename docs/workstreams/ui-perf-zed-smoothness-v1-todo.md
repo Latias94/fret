@@ -24,10 +24,15 @@ Conventions:
 - [ ] Decide Tier A / Tier B thresholds per script (initially “best-effort”, then tighten).
 - [ ] Finalize the acceptance suite list (see `ui-perf-zed-smoothness-v1.md`) and keep it small.
 - [ ] Record initial baselines (one per machine profile) using `fretboard diag perf --perf-baseline-out`.
-- [ ] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
+- [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
-- [ ] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
+- [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
   - Candidate: `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+- [x] Create a commit-addressable perf log:
+  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
+- [x] Add a helper to append suite results to the log:
+  - `tools/perf/perf_log.py`
+- [x] Record an initial suite run in the log (repeat=7).
 
 ### M1: Frame data structures (hashing → dense)
 
@@ -92,6 +97,7 @@ Perf acceptance:
 ### M5: Text pipeline stabilization (editor-ready)
 
 - [ ] Document stable cache keys for measure/shaping (wrap width, font stack, style).
+- [ ] Reduce redundant text measurements under intrinsic probes (layout engine + `TextWrap::None` paths).
 - [ ] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
 - [ ] Ensure atlas eviction and re-upload events are observable in perf snapshots.
 
@@ -111,4 +117,3 @@ Perf acceptance:
   `docs/adr/IMPLEMENTATION_ALIGNMENT.md` if relevant.
 - [ ] Prefer tooling-driven evidence: `bundle.json`, `check.*.json`, and reproducible scripts.
 - [ ] Keep `fret-ui` policy-light (mechanisms only; policy stays in ecosystem; see ADR 0066).
-

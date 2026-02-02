@@ -109,6 +109,44 @@ Regressions are assessed at the suite level, not from a single script. A regress
 
 Prefer `--perf-baseline` based gating for script-specific stability, rather than a single global threshold.
 
+### 1.3 Current baseline + initial findings (2026-02-02)
+
+Baseline suite results are recorded in:
+
+- `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
+
+Key observations from the current baseline run (repeat=7, `--launch`):
+
+1) **`ui-gallery-window-resize-stress` is dominated by text measurement in the layout engine**
+
+- Worst frame shows `layout.solve_us` dominating total CPU time.
+- The top layout-engine solve is almost entirely `measure_us`, and a single `Text` node dominates the measure time
+  (large label string; semantics label was redacted at len=645 in the bundle).
+- Evidence bundle is referenced in the log under “Worst overall” for the baseline entry.
+
+Implication:
+
+- For resize-heavy workloads, we should treat **text measure/shaping** as a first-class perf gate and stabilize caches.
+- Short-term wins likely come from improving cache keys / reusing computed metrics under intrinsic probes.
+- Longer-term wins likely require splitting “shaping” from “wrapping/line breaking” so width changes do not force
+  full re-shape work.
+
+2) **Some scripts currently look “cold-start dominated” due to per-script process launches**
+
+Scripts like `ui-gallery-dropdown-open-select` and `ui-gallery-dialog-escape-focus-restore` show their worst frames
+at `tick=0 frame=0` in their bundles, which suggests we are measuring “startup + first mount” cost more than
+steady-state interaction cost.
+
+This is not necessarily wrong (cold-start matters), but we should explicitly decide:
+
+- keep `--launch` as a “cold-start gate”, and add a second “steady-state gate” suite, or
+- update `fretboard diag perf` to optionally reuse a single launched process across multiple scripts/steps,
+  so interaction scripts measure the intended steady-state paths.
+
+Next action:
+
+- record the decision in this workstream and treat it as part of the performance contract (M0).
+
 ---
 
 ## 2) Hot path model (where the time goes)
