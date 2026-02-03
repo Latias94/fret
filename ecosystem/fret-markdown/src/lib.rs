@@ -16,6 +16,8 @@ use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
 
+#[cfg(feature = "imui")]
+pub mod imui;
 #[cfg(feature = "mathjax-svg")]
 mod mathjax_svg_support;
 mod mermaid;

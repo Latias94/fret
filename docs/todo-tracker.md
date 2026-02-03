@@ -12,6 +12,13 @@ It complements (but does not replace) ADRs:
 - When an item is resolved, either delete it or move it into `docs/known-issues.md` (if it becomes a long-lived limitation).
 - Deep-dive gap/backlog notes live under `docs/archive/backlog/` to keep `docs/` entrypoints small.
 
+## P1 - Authoring surfaces (imui convergence)
+
+- Track the fearless v2 consolidation of immediate-style authoring in:
+  - `docs/workstreams/imui-authoring-facade-v2.md`
+  - `docs/workstreams/imui-authoring-facade-v2-todo.md`
+- Keep official ecosystem `imui` adapters accepting `&mut impl fret_authoring::UiWriter<H>` to avoid concrete `ImUi` coupling.
+
 ## P0 - IME / Text Input
 
 - **Preedit-first key arbitration end-to-end (runner + routing)**
