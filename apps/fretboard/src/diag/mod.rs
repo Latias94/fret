@@ -2834,9 +2834,16 @@ See: `docs/tracy.md`.\n";
                         .then_some(1u64)
                         .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
                     let suite_vlist_visible_range_refreshes_max = vlist_window_boundary_suite
-                        // Default budget: allow prefetch-driven refreshes while still catching
-                        // regressions where the harness starts churning excessively.
-                        .then_some(35u64)
+                        // Default budget:
+                        // - Non-retained path: keep this relatively tight so we catch churn
+                        //   regressions early while still allowing prefetch shifts.
+                        // - Retained-host path: allow a looser cap since reconcile can legitimately
+                        //   refresh more often (and we have additional retained-only gates).
+                        .then_some(if vlist_window_boundary_retained_suite {
+                            35u64
+                        } else {
+                            20u64
+                        })
                         .filter(|_| check_vlist_visible_range_refreshes_max.is_none());
                     let suite_vlist_window_shifts_explainable =
                         vlist_window_boundary_suite && !check_vlist_window_shifts_explainable;
