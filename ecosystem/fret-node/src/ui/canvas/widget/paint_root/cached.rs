@@ -1,6 +1,6 @@
 use super::super::*;
 
-#[path = "cached_edges.rs"]
+#[path = "cached_edges/mod.rs"]
 mod cached_edges;
 #[path = "cached_groups.rs"]
 mod cached_groups;

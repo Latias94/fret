@@ -217,6 +217,8 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs` (`DerivedBaseKey`)
 - [x] Introduce explicit cache keys for geometry vs internals so profiling is actionable.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs` (`InternalsViewKey`)
+- [x] Split cached edge paint/caching paths into small modules to reduce drift (tile vs single-rect).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/`
 - [x] Ensure refactors preserve the public query surfaces of `NodeGraphInternalsStore` and
   `MeasuredGeometryStore`.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
