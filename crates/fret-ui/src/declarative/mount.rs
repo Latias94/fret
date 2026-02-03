@@ -532,11 +532,6 @@ where
             false
         });
 
-        if keep_alive_view_cache_elements_from_scratch {
-            window_state
-                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
-        }
-
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
         }
@@ -636,6 +631,12 @@ where
         ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
         ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
         ui.restore_scratch_gc_stack(gc_stack);
+
+        if keep_alive_view_cache_elements_from_scratch {
+            keep_alive_view_cache_elements.clear();
+            window_state
+                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
+        }
 
         if window_state.wants_continuous_frames() {
             app.push_effect(Effect::RequestAnimationFrame(window));
@@ -990,11 +991,6 @@ where
             false
         });
 
-        if keep_alive_view_cache_elements_from_scratch {
-            window_state
-                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
-        }
-
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
         }
@@ -1094,6 +1090,12 @@ where
         ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
         ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
         ui.restore_scratch_gc_stack(gc_stack);
+
+        if keep_alive_view_cache_elements_from_scratch {
+            keep_alive_view_cache_elements.clear();
+            window_state
+                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
+        }
 
         if window_state.wants_continuous_frames() {
             app.push_effect(Effect::RequestAnimationFrame(window));
