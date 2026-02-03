@@ -730,32 +730,32 @@ fn page_preview(
         PAGE_ASPECT_RATIO => preview_aspect_ratio(cx),
         PAGE_BREADCRUMB => preview_breadcrumb(cx, last_action.clone()),
         PAGE_BUTTON_GROUP => preview_button_group(cx),
-        PAGE_CALENDAR => preview_shadcn_placeholder(cx, "Calendar"),
+        PAGE_CALENDAR => preview_calendar(cx, date_picker_month, date_picker_selected),
         PAGE_CAROUSEL => preview_shadcn_placeholder(cx, "Carousel"),
         PAGE_CHART => preview_shadcn_placeholder(cx, "Chart"),
         PAGE_CHECKBOX => preview_checkbox(cx, checkbox),
-        PAGE_COLLAPSIBLE => preview_shadcn_placeholder(cx, "Collapsible"),
+        PAGE_COLLAPSIBLE => preview_collapsible(cx),
         PAGE_CONTEXT_MENU => {
             preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
         }
         PAGE_DIALOG => preview_dialog(cx, dialog_open),
-        PAGE_DRAWER => preview_shadcn_placeholder(cx, "Drawer"),
+        PAGE_DRAWER => preview_drawer(cx),
         PAGE_DROPDOWN_MENU => {
             preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
         }
         PAGE_EMPTY => preview_empty(cx),
-        PAGE_FORM => preview_shadcn_placeholder(cx, "Form"),
-        PAGE_HOVER_CARD => preview_shadcn_placeholder(cx, "Hover Card"),
+        PAGE_FORM => preview_forms(cx, text_input, text_area, checkbox, switch),
+        PAGE_HOVER_CARD => preview_hover_card(cx),
         PAGE_INPUT => preview_input(cx, text_input),
-        PAGE_INPUT_GROUP => preview_shadcn_placeholder(cx, "Input Group"),
-        PAGE_INPUT_OTP => preview_shadcn_placeholder(cx, "Input OTP"),
+        PAGE_INPUT_GROUP => preview_input_group(cx),
+        PAGE_INPUT_OTP => preview_input_otp(cx),
         PAGE_ITEM => preview_shadcn_placeholder(cx, "Item"),
         PAGE_KBD => preview_kbd(cx),
         PAGE_LABEL => preview_label(cx),
-        PAGE_MENUBAR => preview_shadcn_placeholder(cx, "Menubar"),
+        PAGE_MENUBAR => preview_menubar(cx),
         PAGE_NATIVE_SELECT => preview_shadcn_placeholder(cx, "Native Select"),
-        PAGE_NAVIGATION_MENU => preview_shadcn_placeholder(cx, "Navigation Menu"),
-        PAGE_PAGINATION => preview_shadcn_placeholder(cx, "Pagination"),
+        PAGE_NAVIGATION_MENU => preview_navigation_menu(cx),
+        PAGE_PAGINATION => preview_pagination(cx),
         PAGE_POPOVER => preview_popover(cx, popover_open),
         PAGE_RADIO_GROUP => preview_radio_group(cx),
         PAGE_SEPARATOR => preview_separator(cx),
@@ -4638,6 +4638,221 @@ fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     .into_element(cx);
 
     vec![group]
+}
+
+fn preview_calendar(
+    cx: &mut ElementContext<'_, App>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<Date>>,
+) -> Vec<AnyElement> {
+    let calendar = shadcn::Calendar::new(month, selected)
+        .number_of_months(1)
+        .into_element(cx);
+    vec![calendar]
+}
+
+fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let collapsible = shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
+        cx,
+        |cx, open, is_open| {
+            let label = if is_open {
+                "Hide details"
+            } else {
+                "Show details"
+            };
+            shadcn::Button::new(label)
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open)
+                .into_element(cx)
+        },
+        |cx| {
+            shadcn::CollapsibleContent::new(vec![
+                cx.text("This content is toggled by a Collapsible."),
+                cx.text("Use it for disclosure panels, advanced options, etc."),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+        },
+    );
+
+    vec![collapsible]
+}
+
+fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        shadcn::Drawer::new_controllable(cx, None, false).into_element(
+            cx,
+            |cx| shadcn::Button::new("Open drawer").into_element(cx),
+            |cx| {
+                shadcn::DrawerContent::new(vec![
+                    shadcn::DrawerHeader::new(vec![
+                        shadcn::DrawerTitle::new("Drawer").into_element(cx),
+                        shadcn::DrawerDescription::new("A bottom sheet-style overlay.")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::DrawerFooter::new(vec![shadcn::Button::new("Done").into_element(cx)])
+                        .into_element(cx),
+                ])
+                .into_element(cx)
+            },
+        ),
+    ]
+}
+
+fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let trigger = shadcn::Button::new("Hover me")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx);
+    let content = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("HoverCard").into_element(cx)])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![
+            cx.text("HoverCard content lives in a hover overlay."),
+            cx.text("Useful for previews, profile cards, etc."),
+        ])
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+    .into_element(cx);
+
+    vec![shadcn::HoverCard::new_controllable(cx, None, false, trigger, content).into_element(cx)]
+}
+
+fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct InputGroupModels {
+        value: Option<Model<String>>,
+    }
+
+    let value = cx.with_state(InputGroupModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(InputGroupModels::default, |st| {
+                st.value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let group = shadcn::InputGroup::new(value)
+        .a11y_label("Search")
+        .leading([shadcn::InputGroupText::new("Search").into_element(cx)])
+        .trailing([shadcn::InputGroupButton::new("Go")
+            .on_click(CMD_APP_OPEN)
+            .into_element(cx)])
+        .into_element(cx);
+
+    vec![group]
+}
+
+fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct InputOtpModels {
+        value: Option<Model<String>>,
+    }
+
+    let value = cx.with_state(InputOtpModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(InputOtpModels::default, |st| st.value = Some(model.clone()));
+            model
+        }
+    };
+
+    let otp = shadcn::InputOtp::new(value).length(6).into_element(cx);
+    vec![otp]
+}
+
+fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use shadcn::{MenubarEntry, MenubarItem, MenubarMenu};
+
+    let file = MenubarMenu::new("File").entries([
+        MenubarEntry::Item(MenubarItem::new("Open").on_select(CMD_APP_OPEN)),
+        MenubarEntry::Item(MenubarItem::new("Save").on_select(CMD_APP_SAVE)),
+        MenubarEntry::Separator,
+        MenubarEntry::Item(MenubarItem::new("Settings").on_select(CMD_APP_SETTINGS)),
+    ]);
+
+    let edit = MenubarMenu::new("Edit").entries([
+        MenubarEntry::Item(MenubarItem::new("Undo").on_select(fret_app::core_commands::EDIT_UNDO)),
+        MenubarEntry::Item(MenubarItem::new("Redo").on_select(fret_app::core_commands::EDIT_REDO)),
+    ]);
+
+    vec![shadcn::Menubar::new([file, edit]).into_element(cx)]
+}
+
+fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let intro = shadcn::NavigationMenuItem::new(
+        "intro",
+        "Introduction",
+        vec![
+            cx.text("A basic NavigationMenu item."),
+            cx.text("Content is shown in a popover."),
+        ],
+    );
+    let components = shadcn::NavigationMenuItem::new(
+        "components",
+        "Components",
+        vec![
+            cx.text("This demo is intentionally lightweight."),
+            cx.text("We can expand it to match shadcn/ui registry examples."),
+        ],
+    );
+
+    vec![
+        shadcn::NavigationMenu::uncontrolled(Some("intro"))
+            .indicator(true)
+            .list(shadcn::NavigationMenuList::new([intro, components]))
+            .into_element(cx),
+    ]
+}
+
+fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let content = shadcn::PaginationContent::new([
+        shadcn::PaginationItem::new(
+            shadcn::PaginationPrevious::new()
+                .on_click(CMD_APP_OPEN)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("1")])
+                .on_click(CMD_APP_OPEN)
+                .active(true)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("2")])
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(shadcn::PaginationEllipsis::new().into_element(cx))
+            .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("10")])
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationNext::new()
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let pagination = shadcn::Pagination::new([content]).into_element(cx);
+
+    vec![pagination]
 }
 
 fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
