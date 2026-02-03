@@ -3483,6 +3483,116 @@ fn assert_overlay_panel_size_matches_by_portal_slot_theme(
     );
 }
 
+fn assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
+    web_name: &str,
+    web_portal_slot: &str,
+    web_theme_name: &str,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    fret_role: SemanticsRole,
+    settle_frames: u64,
+    tol: f32,
+    build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
+) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme_named(&web, web_theme_name);
+
+    let web_portal = find_portal_by_slot(theme, web_portal_slot)
+        .unwrap_or_else(|| panic!("missing web portal slot={web_portal_slot} for {web_name}"));
+    let web_border = web_border_widths_px(web_portal).expect("web border widths px");
+    let web_w = web_portal.rect.w;
+    let web_h = web_portal.rect.h;
+
+    let bounds = web
+        .themes
+        .get(web_theme_name)
+        .and_then(|t| t.viewport)
+        .map(bounds_for_viewport)
+        .unwrap_or_else(|| {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                CoreSize::new(Px(640.0), Px(480.0)),
+            )
+        });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let build_frame1 = build.clone();
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| vec![build_frame1(cx, &open)],
+    );
+
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    for tick in 0..settle_frames.max(1) {
+        let build_frame = build.clone();
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(2 + tick),
+            tick + 1 == settle_frames.max(1),
+            |cx| vec![build_frame(cx, &open)],
+        );
+    }
+
+    let (snap, scene) = paint_frame(&mut ui, &mut app, &mut services, bounds);
+    let overlay = largest_semantics_node(&snap, fret_role)
+        .unwrap_or_else(|| panic!("missing fret semantics node: {fret_role:?}"));
+
+    let quad = find_best_chrome_quad(&scene, overlay.bounds)
+        .or_else(|| find_best_chrome_quad_by_size(&scene, web_w, web_h, web_border))
+        .unwrap_or_else(|| panic!("painted quad for overlay panel ({web_name})"));
+
+    if std::env::var("FRET_DEBUG_WEB_VS_FRET_OVERLAY_CHROME")
+        .ok()
+        .is_some_and(|v| v == "1")
+    {
+        eprintln!(
+            "overlay chrome debug: web_name={web_name} role={:?} overlay_bounds=({}, {}, {}, {}) quad=({}, {}, {}, {}) web=({}, {})",
+            fret_role,
+            overlay.bounds.origin.x.0,
+            overlay.bounds.origin.y.0,
+            overlay.bounds.size.width.0,
+            overlay.bounds.size.height.0,
+            quad.rect.origin.x.0,
+            quad.rect.origin.y.0,
+            quad.rect.size.width.0,
+            quad.rect.size.height.0,
+            web_w,
+            web_h
+        );
+    }
+
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.w"),
+        quad.rect.size.width.0,
+        web_w,
+        tol,
+    );
+    assert_close(
+        &format!("{web_name} {web_theme_name} panel.h"),
+        quad.rect.size.height.0,
+        web_h,
+        tol,
+    );
+}
+
 fn assert_overlay_panel_size_matches_by_portal_slot_theme_size_only(
     web_name: &str,
     web_portal_slot: &str,
@@ -9753,6 +9863,104 @@ fn build_shadcn_popover_demo_page(
     )
 }
 
+fn build_shadcn_calendar_22_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_headless::calendar::CalendarMonth;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use time::Month;
+
+    let trigger = Button::new("Select date")
+        .variant(ButtonVariant::Outline)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(192.0)))
+                .h_px(MetricRef::Px(Px(36.0))),
+        );
+
+    let label = fret_ui_shadcn::Label::new("Date of birth").into_element(cx);
+    let popover = fret_ui_shadcn::Popover::new(open.clone())
+        .align(PopoverAlign::Start)
+        .into_element(
+            cx,
+            |cx| trigger.into_element(cx),
+            |cx| {
+                let month: Model<CalendarMonth> = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::January));
+                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+                let calendar = fret_ui_shadcn::Calendar::new(month, selected)
+                    .week_start(time::Weekday::Sunday)
+                    .disable_outside_days(false)
+                    .into_element(cx);
+
+                fret_ui_shadcn::PopoverContent::new([calendar])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
+                    .into_element(cx)
+            },
+        );
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N3),
+        move |_cx| vec![label, popover],
+    )
+}
+
+fn build_shadcn_calendar_23_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_headless::calendar::CalendarMonth;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+    use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
+    use time::Month;
+
+    let trigger = Button::new("Select date")
+        .variant(ButtonVariant::Outline)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(Px(224.0)))
+                .h_px(MetricRef::Px(Px(36.0))),
+        );
+
+    let label = fret_ui_shadcn::Label::new("Select your stay").into_element(cx);
+    let popover = fret_ui_shadcn::Popover::new(open.clone())
+        .align(PopoverAlign::Start)
+        .into_element(
+            cx,
+            |cx| trigger.into_element(cx),
+            |cx| {
+                let month: Model<CalendarMonth> = cx
+                    .app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::January));
+                let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(None);
+                let calendar = fret_ui_shadcn::Calendar::new(month, selected)
+                    .week_start(time::Weekday::Sunday)
+                    .disable_outside_days(false)
+                    .into_element(cx);
+
+                fret_ui_shadcn::PopoverContent::new([calendar])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .refine_layout(LayoutRefinement::default().w_px(MetricRef::Px(Px(249.33334))))
+                    .into_element(cx)
+            },
+        );
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N3),
+        move |_cx| vec![label, popover],
+    )
+}
+
 #[test]
 fn web_vs_fret_popover_demo_panel_size_matches_web() {
     assert_overlay_panel_size_matches_by_portal_slot_theme(
@@ -9828,6 +10036,62 @@ fn web_vs_fret_popover_demo_mobile_tiny_viewport_panel_size_matches_web_dark() {
         SemanticsRole::Dialog,
         fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
         build_shadcn_popover_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_22_mobile_tiny_viewport_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
+        "calendar-22.vp375x240",
+        "popover-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Panel,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        2.0,
+        build_shadcn_calendar_22_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_22_mobile_tiny_viewport_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
+        "calendar-22.vp375x240",
+        "popover-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Panel,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        2.0,
+        build_shadcn_calendar_22_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_23_mobile_tiny_viewport_panel_size_matches_web() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
+        "calendar-23.vp375x240",
+        "popover-content",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        SemanticsRole::Panel,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        2.0,
+        build_shadcn_calendar_23_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_23_mobile_tiny_viewport_panel_size_matches_web_dark() {
+    assert_overlay_panel_size_matches_by_portal_slot_theme_with_tol(
+        "calendar-23.vp375x240",
+        "popover-content",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        SemanticsRole::Panel,
+        fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2,
+        2.0,
+        build_shadcn_calendar_23_page,
     );
 }
 

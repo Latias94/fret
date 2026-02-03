@@ -73,6 +73,7 @@ Tracking format:
 - 2026-02-01: added constrained-viewport (vp375x320) gates for Calendar selection/hover/focus (`calendar-14.vp375x320`, `calendar-14.hover-day-13-vp375x320`, `calendar-14.focus-kbd-selected-vp375x320`).
 - 2026-02-02: added purpose-built `web_vs_fret_calendar.rs` chrome gates for `calendar-14*` (selected/hover backgrounds + day-number centering).
   - TODO: remove the legacy duplicates that still live in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` once the new gates have baked for a bit.
+- 2026-02-02: added popover panel-size gates for `calendar-22.vp375x240` and `calendar-23.vp375x240` (light/dark) to lock in constrained-height calendar popover behavior.
 - 2026-02-01: extracted constrained-viewport calendar variants (`calendar-04/08/11.vp375x320`) and added geometry/semantics gates; added range background paint gates for `calendar-04.vp375x320`.
 - 2026-02-01: aligned disabled day styling with upstream (`opacity-50` on day label) and added paint-level gates for disabled day text opacity + disabled navigation “icon” color (fallback to text when SVG ops are not emitted by the test harness services).
 - 2026-02-01: added an outside-day disabled text opacity gate for `calendar-11` (and `calendar-11.vp375x320`) using web `computedStyle.color` + `computedStyle.opacity` as the contract.
