@@ -1,5 +1,7 @@
 use fret_core::{Color, Edges, Px};
-use fret_ui::element::{AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, Overflow,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 fn fill_layout() -> LayoutStyle {
@@ -224,9 +226,11 @@ impl WorkspaceTopBar {
                         children.extend(self.left);
 
                         if !self.center.is_empty() {
+                            let mut center_layout = flex_grow_layout();
+                            center_layout.overflow = Overflow::Clip;
                             children.push(cx.flex(
                                 FlexProps {
-                                    layout: flex_grow_layout(),
+                                    layout: center_layout,
                                     direction: fret_core::Axis::Horizontal,
                                     gap: Px(8.0),
                                     align: CrossAlign::Center,
