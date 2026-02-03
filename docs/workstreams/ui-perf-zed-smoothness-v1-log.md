@@ -1063,3 +1063,32 @@ Change:
 Why:
 - `diag perf` already exported these for top frames, but `diag stats` JSON did not, which made ad-hoc inspection
   confusing when validating whether the bounds tree path was actually exercised.
+
+## 2026-02-03 16:34:00 (commit `8788389d`)
+
+Change:
+- Run a steady hover torture baseline and enforce the “no hover layout invalidations” gate.
+
+Script:
+- `tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json --dir target/fret-diag-perf-hover/hover-layout-torture.steady.baseline.r7 --repeat 7 --timeout-ms 240000 --sort dispatch --top 10 --json --reuse-launch --check-hover-layout --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort dispatch`):
+| p95 total | p95 dispatch_time_us | p95 hit_test_time_us | p95 layout_time_us | p95 prepaint_time_us | p95 paint_time_us |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1196 | 348 | 2 | 874 | 40 | 293 |
+
+Hover gates:
+- `snapshots_with_hover_layout_invalidations`: 0 (PASS)
+- `sum.hover_layout_invalidations`: 0 (PASS)
+
+Worst bundle:
+- `target/fret-diag-perf-hover/hover-layout-torture.steady.baseline.r7/1770107613569-ui-gallery-hover-layout-torture-steady/bundle.json`
+
+Notes:
+- In this scenario, hover edges do not trigger declarative layout invalidations; pointer-move cost is dominated by
+  dispatch + the usual per-frame work (sub-2ms top frames).
