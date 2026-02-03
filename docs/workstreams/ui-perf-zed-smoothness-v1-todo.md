@@ -94,6 +94,8 @@ Perf acceptance:
 
 - [ ] Introduce a `FrameArena` (or equivalent) for UI runtime scratch allocations.
   - Reference: `repo-ref/zed/crates/gpui/src/arena.rs`.
+- [x] Reuse a small set of per-frame scratch buffers to reduce allocator churn.
+  - `perf(fret-ui): reuse frame scratch buffers` (commit `a39e79c4`).
 - [ ] Convert at least 2 hot scratch paths to arena-backed allocation:
   - Candidate A: semantics snapshot traversal scratch (stack + visited).
   - Candidate B: GC reachability scratch sets / temporary vectors in mount/GC.

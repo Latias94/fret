@@ -1202,3 +1202,37 @@ New `diag perf` JSON fields (for the top frame in each run):
 Notes:
 - The per-root `reuse_reason` string in bundle snapshots now includes `needs_rerender` and `layout_invalidated`
   (in addition to existing reasons like `cache_key_mismatch`).
+
+## 2026-02-03 19:40:00 (commit `a39e79c4`)
+
+Change:
+- Reuse a small set of per-frame scratch buffers to reduce allocator churn:
+  - mount pending invalidations (`HashMap<NodeId, u8>`) is now reused across frames,
+  - paint-cache replay translation uses a reusable `Vec<NodeId>` stack,
+  - interaction-cache replay uses a reusable `Vec<InteractionRecord>` scratch.
+
+Script:
+- `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (release; steady; repeat=5):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.framescratch.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5845 | 5949 | 5949 | 871 | 25 | 5053 |
+
+Top view-cache counters (top frame):
+- `top_view_cache_roots_total`: 2
+- `top_view_cache_roots_reused`: 1
+- `top_view_cache_roots_cache_key_mismatch`: 0
+- `top_view_cache_roots_needs_rerender`: 0
+- `top_view_cache_roots_layout_invalidated`: 0
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.framescratch.r5/1770118714777-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Notes:
+- Compared to the previous code-editor autoscroll entry (commit `81159325`), this is within expected noise.

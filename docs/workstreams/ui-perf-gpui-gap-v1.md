@@ -225,6 +225,10 @@ These are intended as “fearless refactor” milestones, each with a measurable
 ### G1: FrameArena (allocation model)
 
 - Implement and migrate 2 hot scratch paths.
+- Progress:
+  - `perf(fret-ui): reuse frame scratch buffers` (commit `a39e79c4`) reuses a small set of per-frame scratch buffers
+    without changing contracts (mount pending invalidations, paint-cache replay traversal stack, interaction-cache
+    replay scratch).
 
 ### G2: Text frame cache reuse API (GPUI-like)
 
@@ -243,4 +247,3 @@ Whenever we close a gap:
 - Add the commit hash + the exact `diag perf` command + p50/p95/max to
   `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
 - Update the corresponding TODO entry in `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md`.
-
