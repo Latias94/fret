@@ -35,29 +35,40 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiNodeGraphState) -> fret_k
     let view = st.view.clone();
 
     fret_imui::imui(cx, |ui| {
-        ui.column(|ui| {
-            ui.text("imui + retained node graph (RetainedSubtree prototype)");
-            ui.separator();
+        use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-            let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Fill;
-            layout.size.height = Length::Fill;
-            layout.flex.grow = 1.0;
+        let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {
+            fret_imui::imui_build(cx, out, |ui| {
+                let title = fret_ui_kit::ui::text(
+                    ui.cx_mut(),
+                    "imui + retained node graph (RetainedSubtree prototype)",
+                )
+                .font_semibold();
+                ui.add_ui(title);
+                ui.separator();
 
-            fret_node::imui::retained_subtree_with(
-                ui,
-                RetainedSubtreeProps::new::<App>(move |ui_tree: &mut UiTree<App>| {
-                    let canvas =
-                        NodeGraphCanvas::new(graph.clone(), view.clone()).with_fit_view_on_mount();
-                    let canvas_node = ui_tree.create_node_retained(canvas);
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Fill;
+                layout.flex.grow = 1.0;
 
-                    let root = ui_tree.create_node_retained(NodeGraphEditor::new());
-                    ui_tree.set_children(root, vec![canvas_node]);
-                    root
-                })
-                .with_layout(layout),
-            );
-        });
+                fret_node::imui::retained_subtree_with(
+                    ui,
+                    RetainedSubtreeProps::new::<App>(move |ui_tree: &mut UiTree<App>| {
+                        let canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+                            .with_fit_view_on_mount();
+                        let canvas_node = ui_tree.create_node_retained(canvas);
+
+                        let root = ui_tree.create_node_retained(NodeGraphEditor::new());
+                        ui_tree.set_children(root, vec![canvas_node]);
+                        root
+                    })
+                    .with_layout(layout),
+                );
+            });
+        })
+        .size_full();
+        ui.add_ui(root);
     })
 }
 

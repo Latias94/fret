@@ -102,7 +102,7 @@ Exit criteria:
 - The demo suite exercises the multi-window + docking + viewport seams during the refactor.
 
 - [x] IMUI2-demo-040 Migrate `imui_hello_demo` to v2 surface (smoke).
-- [ ] IMUI2-demo-041 Migrate `imui_node_graph_demo` to v2 surface (retained subtree interop).
+- [x] IMUI2-demo-041 Migrate `imui_node_graph_demo` to v2 surface (retained subtree interop).
 - [~] IMUI2-demo-042 Migrate `imui_editor_proof_demo` to v2 surface (multi-window + docking + viewport).
   - Started by rendering the root layout via `ui::v_flex_build` + `UiWriterUiKitExt::add_ui(...)`.
   - Migrated the docking-hosted controls panel root container to `ui::container_build` + `UiBuilder` chrome/layout patches.
