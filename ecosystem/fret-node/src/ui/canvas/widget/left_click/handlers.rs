@@ -1,180 +1,25 @@
-use fret_core::{Modifiers, Point, Px, Rect};
+use fret_core::{Modifiers, Point, Px};
 use fret_ui::UiHost;
 
-use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 use crate::interaction::NodeGraphDragHandleMode;
-use crate::rules::EdgeEndpoint;
 
-use super::super::state::{
-    EdgeDrag, NodeResizeHandle, PendingEdgeInsertDrag, PendingGroupDrag, PendingGroupResize,
-    PendingNodeDrag, PendingNodeResize, PendingNodeSelectAction, PendingWireDrag, ViewSnapshot,
-    WireDragKind,
+use super::super::super::state::{
+    EdgeDrag, PendingEdgeInsertDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag,
+    PendingNodeResize, PendingNodeSelectAction, PendingWireDrag, ViewSnapshot, WireDragKind,
 };
-use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::hit::Hit;
 
-fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: Point) -> bool {
-    let zoom = if zoom.is_finite() && zoom > 0.0 {
-        zoom
-    } else {
-        1.0
-    };
-    let header_h = (header_height_screen / zoom).max(0.0);
-    let x0 = rect.origin.x.0;
-    let y0 = rect.origin.y.0;
-    let x1 = rect.origin.x.0 + rect.size.width.0;
-    let y1 = rect.origin.y.0 + header_h.min(rect.size.height.0.max(0.0));
-
-    position.x.0 >= x0
-        && position.y.0 >= y0
-        && position.x.0 <= x1
-        && position.y.0 <= y1
-        && header_h > 0.0
-}
-
-pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,
     zoom: f32,
+    hit: Hit,
+    multi_selection_pressed: bool,
 ) -> bool {
-    canvas.interaction.hover_edge = None;
-
-    #[derive(Debug, Clone, Copy)]
-    enum Hit {
-        Port(PortId),
-        EdgeAnchor(EdgeId, EdgeEndpoint, PortId),
-        Resize(GraphNodeId, Rect, NodeResizeHandle),
-        Node(GraphNodeId, Rect),
-        Edge(EdgeId),
-        GroupResize(GroupId, crate::core::CanvasRect),
-        GroupHeader(GroupId, crate::core::CanvasRect),
-        Background,
-    }
-
-    let hit = {
-        let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
-        let this = &*canvas;
-        this.graph
-            .read_ref(cx.app, |graph| {
-                let mut scratch = HitTestScratch::default();
-                let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
-                if let Some(port) = this.hit_port(&mut ctx, position) {
-                    return Hit::Port(port);
-                }
-
-                if let Some((edge, endpoint, fixed)) =
-                    this.hit_edge_focus_anchor(graph, snapshot, &mut ctx, position)
-                {
-                    return Hit::EdgeAnchor(edge, endpoint, fixed);
-                }
-
-                let order = geom.order.clone();
-                let Some(node) = order.iter().rev().find_map(|id| {
-                    geom.nodes
-                        .get(id)
-                        .is_some_and(|ng| ng.rect.contains(position))
-                        .then_some(*id)
-                }) else {
-                    if let Some(edge) = this.hit_edge(graph, snapshot, &mut ctx, position) {
-                        return Hit::Edge(edge);
-                    }
-
-                    let order =
-                        super::super::geometry::group_order(graph, &snapshot.group_draw_order);
-                    for group_id in order.iter().rev() {
-                        let Some(group) = graph.groups.get(group_id) else {
-                            continue;
-                        };
-                        let rect0 = this.group_rect_with_preview(*group_id, group.rect);
-                        let rect = super::group_resize::group_rect_to_px(rect0);
-                        let handle = this.resize_handle_rect(rect, zoom);
-                        if super::group_resize::group_resize_handle_hit(handle, position, zoom, 6.0)
-                        {
-                            return Hit::GroupResize(*group_id, rect0);
-                        }
-                    }
-
-                    let header_h = this.style.node_header_height;
-                    for group_id in order.iter().rev() {
-                        let Some(group) = graph.groups.get(group_id) else {
-                            continue;
-                        };
-                        let rect0 = this.group_rect_with_preview(*group_id, group.rect);
-                        if !super::pending_group_drag::group_header_hit(
-                            rect0, header_h, zoom, position,
-                        ) {
-                            continue;
-                        }
-                        return Hit::GroupHeader(*group_id, rect0);
-                    }
-                    return Hit::Background;
-                };
-                let Some(rect) = geom.nodes.get(&node).map(|ng| ng.rect) else {
-                    return Hit::Background;
-                };
-                let is_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
-                if is_selected {
-                    let resize_handles =
-                        this.presenter.node_resize_handles(graph, node, &this.style);
-                    for handle in NodeResizeHandle::ALL {
-                        if !resize_handles.contains(handle) {
-                            continue;
-                        }
-                        let hit_rect = this.node_resize_handle_rect(rect, handle, zoom);
-                        if NodeGraphCanvasWith::<M>::rect_contains(hit_rect, position) {
-                            return Hit::Resize(node, rect, handle);
-                        }
-                    }
-                }
-
-                Hit::Node(node, rect)
-            })
-            .unwrap_or(Hit::Background)
-    };
-
-    let selection_key_pressed = snapshot.interaction.selection_key.is_pressed(modifiers);
-    canvas.interaction.multi_selection_active = snapshot
-        .interaction
-        .multi_selection_key
-        .is_pressed(modifiers);
-    let multi_selection_pressed = canvas.interaction.multi_selection_active;
-
-    if snapshot.interaction.elements_selectable
-        && selection_key_pressed
-        && !matches!(
-            hit,
-            Hit::Port(_) | Hit::EdgeAnchor(_, _, _) | Hit::Resize(_, _, _) | Hit::GroupResize(_, _)
-        )
-        && !matches!(hit, Hit::Background)
-    {
-        canvas.interaction.edge_drag = None;
-        canvas.interaction.pending_edge_insert_drag = None;
-        canvas.interaction.edge_insert_drag = None;
-        canvas.interaction.pending_group_drag = None;
-        canvas.interaction.group_drag = None;
-        canvas.interaction.pending_group_resize = None;
-        canvas.interaction.group_resize = None;
-        canvas.interaction.pending_node_drag = None;
-        canvas.interaction.node_drag = None;
-        canvas.interaction.pending_node_resize = None;
-        canvas.interaction.node_resize = None;
-        canvas.interaction.pending_wire_drag = None;
-        canvas.interaction.wire_drag = None;
-        canvas.interaction.click_connect = false;
-        canvas.interaction.pending_marquee = None;
-        canvas.interaction.marquee = None;
-        canvas.interaction.focused_edge = None;
-        canvas.interaction.hover_port = None;
-        canvas.interaction.hover_port_valid = false;
-        canvas.interaction.hover_port_convertible = false;
-        canvas.interaction.hover_port_diagnostic = None;
-
-        super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers, false);
-        return true;
-    }
-
     match hit {
         Hit::Port(port) => {
             canvas.interaction.focused_edge = None;
@@ -228,7 +73,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
                     canvas.interaction.wire_drag = Some(w);
                     canvas.interaction.click_connect = false;
                     canvas.interaction.pending_wire_drag = None;
-                    let _ = super::wire_drag::handle_wire_left_up_with_forced_target(
+                    let _ = super::super::wire_drag::handle_wire_left_up_with_forced_target(
                         canvas,
                         cx,
                         snapshot,
@@ -509,7 +354,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
             let drag_enabled = match snapshot.interaction.node_drag_handle_mode {
                 NodeGraphDragHandleMode::Any => true,
                 NodeGraphDragHandleMode::Header => {
-                    node_header_hit(rect, canvas.style.node_header_height, zoom, position)
+                    super::node_header_hit(rect, canvas.style.node_header_height, zoom, position)
                 }
             };
             let drag_enabled = drag_enabled && node_draggable;
@@ -721,11 +566,11 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
                 // We still begin a pending marquee so a click (no drag) can clear selection. Once
                 // the drag exceeds the threshold, `marquee::handle_marquee_move` will decide
                 // whether to start a selection box or switch into panning.
-                super::marquee::begin_background_marquee(
+                super::super::marquee::begin_background_marquee(
                     canvas, cx, snapshot, position, modifiers, true,
                 );
             } else if snapshot.interaction.pan_on_drag.left {
-                let _ = super::pan_zoom::begin_panning(
+                let _ = super::super::pan_zoom::begin_panning(
                     canvas,
                     cx,
                     snapshot,
