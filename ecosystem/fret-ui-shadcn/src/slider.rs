@@ -432,40 +432,83 @@ pub fn slider<H: UiHost>(
         let hovered_on_cancel = hovered_model.clone();
 
         cx.semantics_with_id(semantics, |cx, semantics_id| {
+            let track_top = 0.0;
+            let thumb_r = Px(thumb_size.0.max(0.0) * 0.5);
+
             let active_thumb_focus_target: Rc<Cell<Option<GlobalElementId>>> =
                 Rc::new(Cell::new(None));
             let active_thumb_focus_target_on_down = active_thumb_focus_target.clone();
+            let thumb_focus_targets: Rc<Vec<Cell<Option<GlobalElementId>>>> = Rc::new(
+                (0..values_sorted.len())
+                    .map(|_| Cell::new(None))
+                    .collect::<Vec<_>>(),
+            );
+            let thumb_focus_targets_on_down = thumb_focus_targets.clone();
+
+            let percentages_on_down = percentages.clone();
+            let thumb_r_on_down = thumb_r;
+            let track_height_on_down = track_height;
             let on_down = Arc::new(
                 move |host: &mut dyn UiPointerActionHost, cx: ActionCx, down: PointerDownCx| {
                     if down.button != MouseButton::Left {
                         return false;
                     }
 
-                    host.request_focus(
-                        active_thumb_focus_target_on_down
-                            .get()
-                            .unwrap_or(semantics_id),
-                    );
                     host.set_cursor_icon(CursorIcon::Pointer);
                     host.capture_pointer();
                     let _ = host.models_mut().update(&dragging_on_down, |v| *v = true);
                     let _ = host.models_mut().update(&hovered_on_down, |v| *v = true);
 
                     let bounds = host.bounds();
-                    let next_index = radix_slider::start_slider_drag_from_pointer_x(
-                        host,
-                        &model_on_down,
-                        bounds,
-                        down.position.x,
-                        min_value,
-                        max_value,
-                        step_value,
-                        thumb_size,
-                        min_steps_between_thumbs_value,
-                    );
+
+                    // Radix only updates the slider value on pointer down when clicking the track,
+                    // not when starting a drag from a thumb. This avoids a visible jump when thumbs
+                    // are kept "in bounds" at the edges.
+                    let mut hit_thumb_idx: Option<usize> = None;
+                    let mut hit_thumb_dx: f32 = f32::INFINITY;
+                    for (idx, t) in percentages_on_down.iter().copied().enumerate() {
+                        let t = t.clamp(0.0, 1.0);
+                        let thumb_in_bounds_offset = thumb_r_on_down.0 * (1.0 - 2.0 * t);
+                        let thumb_center_x =
+                            bounds.origin.x.0 + bounds.size.width.0 * t + thumb_in_bounds_offset;
+                        let thumb_center_y =
+                            bounds.origin.y.0 + track_height_on_down.0.max(0.0) * 0.5;
+                        let dx = (down.position.x.0 - thumb_center_x).abs();
+                        let dy = (down.position.y.0 - thumb_center_y).abs();
+                        if dx <= thumb_r_on_down.0 && dy <= thumb_r_on_down.0 {
+                            if dx < hit_thumb_dx {
+                                hit_thumb_dx = dx;
+                                hit_thumb_idx = Some(idx);
+                            }
+                        }
+                    }
+
+                    let next_index = if let Some(idx) = hit_thumb_idx {
+                        idx
+                    } else {
+                        radix_slider::start_slider_drag_from_pointer_x(
+                            host,
+                            &model_on_down,
+                            bounds,
+                            down.position.x,
+                            min_value,
+                            max_value,
+                            step_value,
+                            thumb_size,
+                            min_steps_between_thumbs_value,
+                        )
+                    };
+
                     let _ = host
                         .models_mut()
                         .update(&drag_index_on_down, |idx| *idx = next_index);
+                    host.request_focus(
+                        thumb_focus_targets_on_down
+                            .get(next_index)
+                            .and_then(|id| id.get())
+                            .or_else(|| active_thumb_focus_target_on_down.get())
+                            .unwrap_or(semantics_id),
+                    );
                     host.request_redraw(cx.window);
                     true
                 },
@@ -531,9 +574,6 @@ pub fn slider<H: UiHost>(
                     true
                 },
             );
-
-            let track_top = 0.0;
-            let thumb_r = Px(thumb_size.0.max(0.0) * 0.5);
 
             let mut root_container =
                 decl_style::container_props(&theme, chrome.clone(), LayoutRefinement::default());
@@ -838,6 +878,9 @@ pub fn slider<H: UiHost>(
                                     );
                                     if thumb_index == active_index {
                                         active_thumb_focus_target.set(Some(thumb_semantics_id));
+                                    }
+                                    if let Some(cell) = thumb_focus_targets.get(thumb_index) {
+                                        cell.set(Some(thumb_semantics_id));
                                     }
 
                                     let is_focused = cx.is_focused_element(thumb_semantics_id);
@@ -1189,5 +1232,80 @@ mod tests {
 
         let values = app.models().get_cloned(&model).unwrap_or_default();
         assert_eq!(values, vec![10.0, 14.0]);
+    }
+
+    fn thumb_center_x_for_value(
+        bounds: Rect,
+        value: f32,
+        min: f32,
+        max: f32,
+        thumb_size: Px,
+    ) -> Px {
+        let t = radix_slider::normalize_value(value, min, max).clamp(0.0, 1.0);
+        let track_w = bounds.size.width.0.max(0.0);
+        let left = bounds.origin.x.0;
+        let thumb_r = thumb_size.0.max(0.0) * 0.5;
+        let thumb_in_bounds_offset = thumb_r * (1.0 - 2.0 * t);
+        Px(left + track_w * t + thumb_in_bounds_offset)
+    }
+
+    #[test]
+    fn slider_does_not_jump_when_pointer_down_on_thumb() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(60.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![0.0]);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-does-not-jump-when-pointer-down-on-thumb",
+            |cx| {
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let position = Point::new(
+            thumb_center_x_for_value(slider_bounds, 0.0, 0.0, 100.0, Px(16.0)),
+            Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let v = app
+            .models()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
+            .unwrap_or(f32::NAN);
+        assert!((v - 0.0).abs() < 0.01, "expected slider=0, got {v}");
     }
 }
