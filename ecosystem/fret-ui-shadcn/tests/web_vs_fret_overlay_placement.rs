@@ -7353,6 +7353,140 @@ fn web_vs_fret_item_dropdown_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_item_dropdown_overlay_placement_matches_mobile_tiny_viewport() {
+    let web_name = "item-dropdown.vp375x240";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let is_open_trigger = |n: &WebNode| {
+        n.tag == "button"
+            && (n
+                .attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == "open")
+                || n.attrs
+                    .get("aria-expanded")
+                    .is_some_and(|v| v.as_str() == "true"))
+    };
+    let web_trigger = find_first(&web.themes["light"].root, &is_open_trigger)
+        .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+        .expect("web trigger (button)");
+    let trigger_rect = web_trigger.rect;
+
+    let expected_item_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_item_h = expected_item_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+    let item_h = expected_item_h.round();
+
+    assert_overlay_placement_matches(
+        web_name,
+        Some("menu"),
+        move |cx, open| {
+            use fret_ui::element::LayoutStyle;
+            use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+            use fret_ui_shadcn::{
+                Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, DropdownMenu,
+                DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, Item, ItemContent,
+                ItemDescription, ItemMedia, ItemSize, ItemTitle,
+            };
+
+            use fret_ui_kit::declarative::icon as decl_icon;
+
+            let button = Button::new("Select")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(trigger_rect.w)))
+                        .h_px(MetricRef::Px(Px(trigger_rect.h))),
+                )
+                .children([decl_icon::icon(cx, fret_icons::ids::ui::CHEVRON_DOWN)]);
+
+            let people = vec![
+                ("shadcn", "shadcn@vercel.com"),
+                ("maxleiter", "maxleiter@vercel.com"),
+                ("evilrabbit", "evilrabbit@vercel.com"),
+            ];
+
+            let entries: Vec<DropdownMenuEntry> = people
+                .into_iter()
+                .map(|(username, email)| {
+                    let content = Item::new(vec![
+                        ItemMedia::new(vec![
+                            Avatar::new(vec![
+                                AvatarFallback::new(
+                                    username
+                                        .chars()
+                                        .next()
+                                        .map(|ch| ch.to_string())
+                                        .unwrap_or_else(|| "?".to_owned()),
+                                )
+                                .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        ItemContent::new(vec![
+                            ItemTitle::new(username).into_element(cx),
+                            ItemDescription::new(email).into_element(cx),
+                        ])
+                        .gap(Px(2.0))
+                        .into_element(cx),
+                    ])
+                    .size(ItemSize::Sm)
+                    .refine_style(
+                        ChromeRefinement::default()
+                            .p(Space::N2)
+                            .rounded(fret_ui_kit::Radius::Md),
+                    )
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(Px(item_h))),
+                    )
+                    .into_element(cx);
+
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new(username)
+                            .padding(Edges::all(Px(0.0)))
+                            .estimated_height(Px(item_h))
+                            .content(content),
+                    )
+                })
+                .collect();
+
+            let dropdown = DropdownMenu::new(open.clone())
+                // new-york-v4 item-dropdown: `DropdownMenuContent className="w-72"`.
+                .min_width(Px(288.0))
+                .align(DropdownMenuAlign::End)
+                .into_element(cx, |cx| button.into_element(cx), |_cx| entries);
+
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    padding: Edges {
+                        left: Px(trigger_rect.x),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |_cx| vec![dropdown],
+            )
+        },
+        SemanticsRole::Button,
+        Some("Select"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
 fn web_vs_fret_item_dropdown_menu_item_height_matches() {
     let web_name = "item-dropdown";
     let web = read_web_golden_open(web_name);
@@ -7370,8 +7504,55 @@ fn web_vs_fret_item_dropdown_menu_item_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_item_dropdown_menu_item_height_matches_mobile_tiny_viewport() {
+    let web_name = "item-dropdown.vp375x240";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+
+    let snap = build_item_dropdown_open_snapshot(theme, expected_h.round());
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
 fn web_vs_fret_item_dropdown_menu_content_insets_match() {
     let web_name = "item-dropdown";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_item_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_item_h = expected_item_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let snap = build_item_dropdown_open_snapshot(theme, expected_item_h.round());
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_item_dropdown_menu_content_insets_match_mobile_tiny_viewport() {
+    let web_name = "item-dropdown.vp375x240";
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
@@ -9199,6 +9380,293 @@ fn web_vs_fret_breadcrumb_dropdown_overlay_placement_matches() {
         Some("Components"),
         SemanticsRole::Menu,
     );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "breadcrumb-dropdown.vp375x240",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::{
+                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+            bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let theme = fret_ui::Theme::global(&*cx.app).clone();
+                                    let muted = theme.color_required("muted-foreground");
+
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label = Some(Arc::from("Components"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        vec![cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: Default::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(4.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            move |cx| {
+                                                let text = cx.text_props(TextProps {
+                                                    layout: Default::default(),
+                                                    text: Arc::from("Components"),
+                                                    style: Some(shadcn_text_style(
+                                                        theme.metric_required("font.size"),
+                                                        theme.metric_required("font.line_height"),
+                                                        FontWeight::NORMAL,
+                                                    )),
+                                                    color: Some(muted),
+                                                    wrap: TextWrap::Word,
+                                                    overflow: TextOverflow::Clip,
+                                                });
+
+                                                let icon =
+                                                    fret_ui_kit::declarative::icon::icon_with(
+                                                        cx,
+                                                        fret_icons::ids::ui::CHEVRON_DOWN,
+                                                        Some(Px(14.0)),
+                                                        Some(fret_ui_kit::ColorRef::Color(muted)),
+                                                    );
+
+                                                vec![text, icon]
+                                            },
+                                        )]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new(
+                                            "Documentation",
+                                        )),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                        }),
+                    ]
+                })]
+            })
+        },
+        SemanticsRole::Button,
+        Some("Components"),
+        SemanticsRole::Menu,
+    );
+}
+
+fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::from_web_theme(theme);
+
+    let bounds = bounds_for_web_theme(theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::breadcrumb::primitives as bc;
+        use fret_ui_shadcn::{
+            DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+        };
+
+        let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+        bc::Breadcrumb::new().into_element(cx, |cx| {
+            vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                vec![
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                    }),
+                    bc::BreadcrumbSeparator::new()
+                        .kind(bc::BreadcrumbSeparatorKind::Slash)
+                        .into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![dropdown.into_element(
+                            cx,
+                            |cx| {
+                                let theme = fret_ui::Theme::global(&*cx.app).clone();
+                                let muted = theme.color_required("muted-foreground");
+
+                                let mut props = fret_ui::element::PressableProps::default();
+                                props.a11y.role = Some(SemanticsRole::Button);
+                                props.a11y.label = Some(Arc::from("Components"));
+
+                                cx.pressable(props, move |cx, _st| {
+                                    vec![cx.flex(
+                                        fret_ui::element::FlexProps {
+                                            layout: Default::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(4.0),
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
+                                            let text = cx.text_props(TextProps {
+                                                layout: Default::default(),
+                                                text: Arc::from("Components"),
+                                                style: Some(shadcn_text_style(
+                                                    theme.metric_required("font.size"),
+                                                    theme.metric_required("font.line_height"),
+                                                    FontWeight::NORMAL,
+                                                )),
+                                                color: Some(muted),
+                                                wrap: TextWrap::Word,
+                                                overflow: TextOverflow::Clip,
+                                            });
+
+                                            let icon = fret_ui_kit::declarative::icon::icon_with(
+                                                cx,
+                                                fret_icons::ids::ui::CHEVRON_DOWN,
+                                                Some(Px(14.0)),
+                                                Some(fret_ui_kit::ColorRef::Color(muted)),
+                                            );
+
+                                            vec![text, icon]
+                                        },
+                                    )]
+                                })
+                            },
+                            |_cx| {
+                                vec![
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Documentation")),
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                ]
+                            },
+                        )]
+                    }),
+                    bc::BreadcrumbSeparator::new()
+                        .kind(bc::BreadcrumbSeparatorKind::Slash)
+                        .into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                    }),
+                ]
+            })]
+        })
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    ui.semantics_snapshot().expect("semantics snapshot").clone()
+}
+
+fn assert_breadcrumb_dropdown_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+
+    let snap = build_breadcrumb_dropdown_open_snapshot(theme);
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+fn assert_breadcrumb_dropdown_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let snap = build_breadcrumb_dropdown_open_snapshot(theme);
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_item_height_matches() {
+    assert_breadcrumb_dropdown_menu_item_height_matches("breadcrumb-dropdown");
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_item_height_matches_mobile_tiny_viewport() {
+    assert_breadcrumb_dropdown_menu_item_height_matches("breadcrumb-dropdown.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_content_insets_match() {
+    assert_breadcrumb_dropdown_menu_content_insets_match("breadcrumb-dropdown");
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_content_insets_match_mobile_tiny_viewport() {
+    assert_breadcrumb_dropdown_menu_content_insets_match("breadcrumb-dropdown.vp375x240");
 }
 
 #[test]
@@ -14318,7 +14786,10 @@ fn web_portal_first_node_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> &
     panic!("missing web portal node with role={role}")
 }
 
-fn combobox_demo_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot {
+fn combobox_demo_open_snapshot(
+    theme: &WebGoldenTheme,
+    responsive: bool,
+) -> fret_core::SemanticsSnapshot {
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
@@ -14346,6 +14817,7 @@ fn combobox_demo_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSn
         Combobox::new(value.clone(), open.clone())
             .a11y_label("Select a fruit")
             .width(Px(200.0))
+            .responsive(responsive)
             .items(items)
             .into_element(cx)
     };
@@ -14392,7 +14864,8 @@ fn assert_combobox_demo_listbox_height_matches(web_name: &str) {
     let web_listbox = web_portal_first_node_by_role(theme, "listbox");
     let expected_h = web_listbox.rect.h;
 
-    let snap = combobox_demo_open_snapshot(theme);
+    let responsive = web_name.starts_with("combobox-responsive");
+    let snap = combobox_demo_open_snapshot(theme, responsive);
     let listbox = snap
         .nodes
         .iter()
@@ -14421,7 +14894,8 @@ fn assert_combobox_demo_listbox_option_height_matches(web_name: &str) {
         "{web_name} expected uniform web combobox option height; got {expected:?}"
     );
 
-    let snap = combobox_demo_open_snapshot(theme);
+    let responsive = web_name.starts_with("combobox-responsive");
+    let snap = combobox_demo_open_snapshot(theme, responsive);
     let actual: std::collections::BTreeSet<i32> = fret_listbox_option_heights_in_listbox(&snap)
         .into_iter()
         .map(round_i32)
@@ -14447,7 +14921,8 @@ fn assert_combobox_demo_listbox_option_insets_match(web_name: &str) {
     let web_listbox = web_portal_first_node_by_role(theme, "listbox");
     let expected_inset = web_select_content_option_inset(web_listbox);
 
-    let snap = combobox_demo_open_snapshot(theme);
+    let responsive = web_name.starts_with("combobox-responsive");
+    let snap = combobox_demo_open_snapshot(theme, responsive);
     let actual_inset = fret_select_content_option_inset(&snap);
     assert_select_inset_match(web_name, actual_inset, expected_inset);
 }
@@ -14551,6 +15026,44 @@ fn web_vs_fret_combobox_popover_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_combobox_popover_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "combobox-popover.vp375x240",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use fret_ui_shadcn::{
+                Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide,
+            };
+
+            Popover::new(open.clone())
+                .side(PopoverSide::Right)
+                .align(PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        PopoverContent::new(Vec::new())
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(288.0)))
+                                    .h_px(MetricRef::Px(Px(205.33334))),
+                            )
+                            .into_element(cx)
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        None,
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_combobox_responsive_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "combobox-responsive",
@@ -14570,12 +15083,41 @@ fn web_vs_fret_combobox_responsive_overlay_placement_matches() {
             Combobox::new(value, open.clone())
                 .a11y_label("Select a framework")
                 .width(Px(200.0))
+                .responsive(true)
                 .items(items)
                 .into_element(cx)
         },
         SemanticsRole::ComboBox,
         None,
         SemanticsRole::Dialog,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_viewport_anchored_overlay_placement_matches(
+        "combobox-responsive.vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            use fret_ui_shadcn::{Combobox, ComboboxItem};
+
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let items = vec![
+                ComboboxItem::new("nextjs", "Next.js"),
+                ComboboxItem::new("sveltekit", "SvelteKit"),
+                ComboboxItem::new("nuxt", "Nuxt.js"),
+                ComboboxItem::new("remix", "Remix"),
+                ComboboxItem::new("astro", "Astro"),
+            ];
+
+            Combobox::new(value, open.clone())
+                .a11y_label("Select a framework")
+                .width(Px(200.0))
+                .responsive(true)
+                .items(items)
+                .into_element(cx)
+        },
     );
 }
 
@@ -14590,6 +15132,16 @@ fn web_vs_fret_combobox_responsive_listbox_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_combobox_popover_listbox_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_height_matches("combobox-popover.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_height_matches("combobox-responsive.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_combobox_popover_listbox_option_height_matches() {
     assert_combobox_demo_listbox_option_height_matches("combobox-popover");
 }
@@ -14600,6 +15152,16 @@ fn web_vs_fret_combobox_responsive_listbox_option_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_combobox_popover_listbox_option_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-popover.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_option_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-responsive.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_combobox_popover_listbox_option_insets_match() {
     assert_combobox_demo_listbox_option_insets_match("combobox-popover");
 }
@@ -14607,6 +15169,16 @@ fn web_vs_fret_combobox_popover_listbox_option_insets_match() {
 #[test]
 fn web_vs_fret_combobox_responsive_listbox_option_insets_match() {
     assert_combobox_demo_listbox_option_insets_match("combobox-responsive");
+}
+
+#[test]
+fn web_vs_fret_combobox_popover_listbox_option_insets_match_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-popover.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_option_insets_match_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-responsive.vp375x240");
 }
 
 fn assert_point_anchored_overlay_placement_matches(
