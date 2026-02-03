@@ -249,6 +249,7 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
     ToastLayerStyle {
         palette,
         shadow,
+        show_close_button: true,
         open_ticks,
         close_ticks,
         easing,
