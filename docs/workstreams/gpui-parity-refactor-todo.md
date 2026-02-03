@@ -1402,7 +1402,7 @@ topics (if/when we implement them):
     - Gate (suite): `fretboard diag suite ui-gallery-ai-transcript-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-view-cache-reuse-min 10 --check-wheel-scroll ui-gallery-ai-transcript-row-0 --check-stale-paint ui-gallery-ai-transcript-row-0 ...`
       - Defaults: enables view-cache + shell and sets `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`.
     - Evidence bundle (cache+shell): `target/fret-diag/1769689580999-ui-gallery-ai-transcript-torture-scroll/bundle.json`.
-- [~] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
+- [x] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Instrumentation (v2): bundles now export bounded `debug.notify_requests` with `notify()` callsite attribution
     (file/line/col) so notify hotspots are gateable.
@@ -1427,6 +1427,11 @@ topics (if/when we implement them):
     - `fretboard diag stats <bundle> --check-notify-hotspot-file-max crates/fret-ui/src/declarative/host_widget/event/pressable.rs 0`
       passes for the warmup-ranked worst bundles under the chosen harness/suite.
     - On failure, the gate writes `check.notify_hotspots.json` next to the bundle (with bounded offender samples and a stable aggregation key).
+  - Evidence (2026-02-03; cache+shell; `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`):
+    - Harness: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --warmup-frames 5 --top 10 --sort time --dir target/fret-diag-perf-notify-hotspots --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --launch -- cargo run -p fret-ui-gallery --release`
+    - Worst bundle: `target/fret-diag-perf-notify-hotspots/1770107782295-script-step-0011-click/bundle.json`
+    - Gate output: `target/fret-diag-perf-notify-hotspots/1770107782295-script-step-0011-click/check.notify_hotspots.json` (`matched_notify_requests=0`, `max_count=0`)
+    - Suite default: `fretboard diag suite ui-gallery` now defaults the `pressable.rs=0` notify-hotspot budget for `ui-gallery-virtual-list-torture.json` (unless overridden via CLI).
 - [x] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
   - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
   - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).
