@@ -908,7 +908,7 @@ topics (if/when we implement them):
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
       - `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json --warmup-frames 5 --check-vlist-scroll-window-dirty-max 2 ...`
-      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to:
+      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to (non-retained path):
         - `--check-stale-paint ui-gallery-virtual-list-root`
         - `--check-view-cache-reuse-min 1`
         - `--check-vlist-visible-range-refreshes-min 1`
@@ -916,6 +916,13 @@ topics (if/when we implement them):
         - `--check-vlist-window-shifts-prefetch-max 30`
         - `--check-vlist-window-shifts-escape-max 6`
         - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
+      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary-retained` defaults to (retained-host path):
+        - Same gates as the non-retained suite, plus:
+          - `--check-retained-vlist-reconcile-no-notify 1`
+          - `--check-retained-vlist-attach-detach-max 256`
+          - `--check-vlist-window-shifts-non-retained-max 0` (no fallback)
+        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
+        - Evidence bundle (suite; cache+shell, release): `target/fret-diag-suite-ui-gallery-vlist-window-boundary-retained0/1770086113873-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
         `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch_step=overscan*8 for non-retained):
