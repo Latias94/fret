@@ -983,3 +983,50 @@ Worst bundles:
 
 Notes:
 - Under this workload, bounds tree materially reduces `hit_test_time_us` (~3.3x at p95).
+
+## 2026-02-03 16:09:00 (commit `1b3d2db3`)
+
+Change:
+- Add a smaller "mini" variant of the hit-test torture sweep script to make higher-noise scaling runs more practical.
+
+Script:
+- `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json`
+
+Run shape:
+- `FRET_DIAG_SCRIPT_AUTO_DUMP=0` so the app only writes the explicitly requested `capture_bundle` (avoids per-step bundles).
+- `FRET_DIAG_SEMANTICS=0` and `FRET_DIAG_MAX_SNAPSHOTS=120` to keep bundle sizes stable.
+- `--sort hit_test` to ensure we are sampling frames where hit testing is actually present.
+
+Commands (A/B; harness-only; mini script; bounds tree forced on by `FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0`):
+```powershell
+# noise=50k, bounds tree ON:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise50k.r5 --repeat 5 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=50000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+
+# noise=50k, bounds tree OFF:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise50k.r5 --repeat 5 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=50000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+
+# noise=100k, bounds tree ON:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise100k.r3 --repeat 3 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=100000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+
+# noise=100k, bounds tree OFF:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json --dir target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise100k.r3 --repeat 3 --timeout-ms 600000 --sort hit_test --top 5 --json --reuse-launch --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=100000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=120 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort hit_test`):
+| noise | variant | p95 total | p95 dispatch_time_us | p95 hit_test_time_us | hit-test A/B (p95) |
+| ---: | --- | ---: | ---: | ---: | ---: |
+| 50k | bounds tree ON | 81983 | 2606 | 551 | - |
+| 50k | bounds tree OFF | 77695 | 5332 | 2778 | ~5.0x slower |
+| 100k | bounds tree ON | 160612 | 7399 | 1425 | - |
+| 100k | bounds tree OFF | 148981 | 12360 | 5866 | ~4.1x slower |
+
+Worst bundles:
+- 50k ON: `target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise50k.r5/1770104974868-ui-gallery-hit-test-torture-stripes-move-sweep-mini/bundle.json`
+- 50k OFF: `target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise50k.r5/1770105356574-ui-gallery-hit-test-torture-stripes-move-sweep-mini/bundle.json`
+- 100k ON: `target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-on.noise100k.r3/1770105986938-ui-gallery-hit-test-torture-stripes-move-sweep-mini/bundle.json`
+- 100k OFF: `target/fret-diag-perf-mini/hit-test-torture.mini.harness-only.bounds-tree-off.noise100k.r3/1770106187140-ui-gallery-hit-test-torture-stripes-move-sweep-mini/bundle.json`
+
+Notes:
+- The top frames in this torture workload are still layout-dominant (tens to hundreds of milliseconds) even when sorting
+  by `hit_test`. The bounds tree improvement is real for hit test, but overall "Zed smoothness" will depend on reducing
+  layout/prepaint cost under pointer moves as well.
