@@ -1,6 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 2 },
+
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-code-view-torture" }
@@ -22,6 +28,8 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_frames", "n": 30 },
+    { "type": "reset_diagnostics" },
     { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" } },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": -240.0 },
     { "type": "wait_frames", "n": 5 },
@@ -29,6 +37,9 @@
     { "type": "wait_frames", "n": 5 },
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-view-root" }, "delta_y": 240.0 },
     { "type": "wait_frames", "n": 5 },
-    { "type": "capture_bundle", "label": "ui-gallery-code-view-scroll-refresh-baseline" }
+    { "type": "capture_bundle", "label": "ui-gallery-code-view-scroll-refresh-baseline" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 }
   ]
 }
