@@ -2921,6 +2921,22 @@ See: `docs/tracy.md`.\n";
                         .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
                     let suite_gc_sweep_liveness =
                         builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
+
+                    let mut notify_hotspot_file_max_for_script =
+                        check_notify_hotspot_file_max.clone();
+                    if notify_hotspot_file_max_for_script.is_empty()
+                        && builtin_suite == Some(BuiltinSuite::UiGallery)
+                        && src
+                            .file_name()
+                            .and_then(|v| v.to_str())
+                            .is_some_and(|v| v == "ui-gallery-virtual-list-torture.json")
+                    {
+                        notify_hotspot_file_max_for_script.push((
+                            "crates/fret-ui/src/declarative/host_widget/event/pressable.rs"
+                                .to_string(),
+                            0,
+                        ));
+                    }
                     apply_post_run_checks(
                         &bundle_path,
                         &resolved_out_dir,
@@ -2959,7 +2975,7 @@ See: `docs/tracy.md`.\n";
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
-                        &check_notify_hotspot_file_max,
+                        &notify_hotspot_file_max_for_script,
                         check_view_cache_reuse_stable_min,
                         check_view_cache_reuse_min
                             .or(suite_view_cache_reuse_min)
