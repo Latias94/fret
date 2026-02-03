@@ -45,10 +45,10 @@ Notes:
   `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
   checks” rather than “is every page referenced somewhere”.
 
-- Golden files (tracked): `587`
-- Golden keys (tracked, normalized `.open` suffix): `543`
-- Gated keys (string-literal heuristic): `543` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `543` (`100%`)
+- Golden files (tracked): `590`
+- Golden keys (tracked, normalized `.open` suffix): `546`
+- Gated keys (string-literal heuristic): `546` (`100%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `546` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 As of 2026-02-03 (tracked-only).
@@ -80,7 +80,7 @@ The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/t
 - `menubar` (16)
 - `sidebar` (16)
 - `sonner` (15)
-- `dropdown` (15)
+- `dropdown` (18)
 - `context` (14)
 - `select` (13)
 - `toggle` (13)

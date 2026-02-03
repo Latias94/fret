@@ -46,6 +46,7 @@ Tracking format:
 - [~] SWG-ovl-030 Add “constrained height” variants for remaining overlay pages that currently only gate default viewport.
   - 2026-02-03: added `vp375x240` open goldens + gates for `hover-card-demo`, `combobox-dropdown-menu`, `command-dialog`, and `select-scrollable` (treat mobile constrained viewports as first-class overlay behavior).
   - 2026-02-03: added `vp375x240` open goldens + placement/insets gates for modal overlays: `dialog-demo`, `sheet-demo`, `alert-dialog-demo`, `drawer-demo`, and `drawer-dialog`.
+  - 2026-02-03: added `vp375x240` open goldens + menu height/item chrome gates for `dropdown-menu-checkboxes`, `dropdown-menu-radio-group`, and `dropdown-menu-dialog`.
 
 ---
 
