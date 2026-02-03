@@ -1125,3 +1125,59 @@ Results (us; `--sort time`):
 
 Worst bundle:
 - `target/fret-diag-perf-editor/code-view-scroll-refresh.baseline.cached.steady.r7/1770108556310-ui-gallery-code-view-scroll-refresh-baseline/bundle.json`
+
+## 2026-02-03 17:55:00 (commit `bd709f88`)
+
+Change:
+- Establish a baseline for the code editor “autoscroll torture” scenario (syntax highlighting on).
+
+Script:
+- `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (release; steady; repeat=5):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.pre-81159325.bd709f88.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 23541 | 23856 | 23856 | 885 | 26 | 22947 |
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.pre-81159325.bd709f88.r5/1770112756836-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Notes:
+- The hot cost is overwhelmingly in `paint_time_us` for editor text rendering.
+
+## 2026-02-03 18:05:00 (commit `81159325`)
+
+Change:
+- Speed up syntax-rich line rendering in the code editor by:
+  - avoiding per-row `Theme` cloning when materializing `AttributedText`, and
+  - adding an optional per-row `AttributedText` cache (LRU-like, keyed by buffer/theme revision + language + row).
+
+Script:
+- `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (release; steady; repeat=5):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.rich-row-cache.on.r5 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 5734 | 5881 | 5881 | 856 | 24 | 5001 |
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.rich-row-cache.on.r5/1770111718534-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+A/B (same commit; cache disabled):
+- Disable rich-row cache: add `--env FRET_CODE_EDITOR_RICH_ROW_CACHE_DISABLE=1`
+- Results (us): p95 total `6009`, p95 paint `5128`
+- Delta vs cache enabled: total `-2.1%`, paint `-2.5%`
+
+Notes:
+- The majority of the win comes from removing the `Theme` clone from the per-row rich-text path; the row cache is a
+  smaller steady-state improvement in this specific probe.

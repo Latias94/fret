@@ -26,6 +26,7 @@ Conventions:
   - `ui-gallery` + `--launch`: cold-start gate (mount + first interaction).
   - `ui-gallery-steady` + `--reuse-launch` + `--launch`: steady-state gate (post-mount interactions).
 - [ ] Finalize the acceptance suite list (see `ui-perf-zed-smoothness-v1.md`) and keep it small.
+  - Ensure it includes at least one editor-grade text surface (`ui-gallery-code-editor-torture-autoscroll-steady.json`).
 - [x] Record initial baselines (one per machine profile) using `fretboard diag perf --perf-baseline-out`.
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v1.json` (commit `50bfcc54`).
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v2.json` (see perf log entry).
@@ -172,6 +173,9 @@ Perf acceptance:
   - Implemented by `perf(fret-render): fast-path wrapped text measure` (see perf log entry for commit `9440648a`).
 - [x] Reduce repeated shaping work when taffy calls `measure()` under multiple intrinsic modes (min/max/definite).
   - Implemented by caching single-line shaping + cluster-based wrap stats (see `ui-perf-zed-smoothness-v1-log.md`).
+- [x] Cut code editor syntax paint cost in the “autoscroll torture” probe (p95 paint drops from ~23ms → ~5ms).
+  - Implemented by `perf(fret-code-editor): cache syntax rich rows` (commit `81159325`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries for commit `bd709f88` (baseline) and `81159325`.
 - [ ] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
 - [ ] Ensure atlas eviction and re-upload events are observable in perf snapshots.
 

@@ -66,6 +66,8 @@ We treat a small set of scripts as “editor-relevant perf probes”. The suite 
 - scrolling + virtualization:
   - `tools/diag-scripts/ui-gallery-virtual-list-torture.json`
   - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`
+- code editor (syntax + autoscroll):
+  - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
 - resize + layout stability:
   - `tools/diag-scripts/ui-gallery-window-resize-stress.json`
 - 2D pan/zoom:
