@@ -2318,7 +2318,10 @@ impl fret_core::TextService for StyleAwareServices {
                     // to the web snapshots.
                     ' ' => match width_profile {
                         TextWidthProfile::Geist => 0.46,
-                        TextWidthProfile::UiSans => 0.28,
+                        // Tailwind's `ui-sans-serif` stack has noticeably wider space advances than
+                        // Geist at the same size. Keeping this too small underestimates max-content
+                        // probes (e.g. Select popper width under constrained viewports).
+                        TextWidthProfile::UiSans => 0.56,
                     },
                     '(' | ')' => 0.28,
                     // Narrow glyphs.
@@ -5753,7 +5756,7 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(theme);
 
     let bounds = bounds_for_web_theme(&theme);
 
@@ -7924,7 +7927,7 @@ fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(theme);
 
     let bounds = bounds_for_web_theme(&theme);
     let open: Model<bool> = app.models_mut().insert(false);
@@ -8026,7 +8029,7 @@ fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(theme);
 
     let bounds = bounds_for_web_theme(&theme);
     let open: Model<bool> = app.models_mut().insert(false);
@@ -8119,10 +8122,37 @@ fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
 
 #[test]
 fn web_vs_fret_combobox_dropdown_menu_overlay_placement_matches() {
+    assert_combobox_dropdown_menu_overlay_placement_matches("combobox-dropdown-menu");
+}
+
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_combobox_dropdown_menu_overlay_placement_matches("combobox-dropdown-menu.vp375x240");
+}
+
+fn assert_combobox_dropdown_menu_overlay_placement_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let is_open_trigger = |n: &WebNode| {
+        n.tag == "button"
+            && (n
+                .attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == "open")
+                || n.attrs
+                    .get("aria-expanded")
+                    .is_some_and(|v| v.as_str() == "true"))
+    };
+    let web_trigger = find_first(&web.themes["light"].root, &is_open_trigger)
+        .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+        .or_else(|| find_first(&web.themes["light"].root, &|n| n.tag == "button"))
+        .or_else(|| find_first(&web.themes["dark"].root, &|n| n.tag == "button"))
+        .expect("web trigger (button)");
+    let trigger = web_trigger.rect;
+
     assert_overlay_placement_matches(
-        "combobox-dropdown-menu",
+        web_name,
         Some("menu"),
-        |cx, open| {
+        move |cx, open| {
             use fret_ui_kit::declarative::icon as decl_icon;
             use fret_ui_shadcn::{
                 Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
@@ -8133,9 +8163,17 @@ fn web_vs_fret_combobox_dropdown_menu_overlay_placement_matches() {
             let button = Button::new("More")
                 .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::Sm)
+                .refine_layout(
+                    fret_ui_kit::LayoutRefinement::default()
+                        .absolute()
+                        .left_px(Px(trigger.x))
+                        .top_px(Px(trigger.y))
+                        .w_px(Px(trigger.w))
+                        .h_px(Px(trigger.h)),
+                )
                 .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-            let dropdown = DropdownMenu::new(open.clone())
+            DropdownMenu::new(open.clone())
                 .align(DropdownMenuAlign::End)
                 // new-york-v4 combobox-dropdown-menu: `DropdownMenuContent className="w-[200px]"`.
                 .min_width(Px(200.0))
@@ -8168,27 +8206,7 @@ fn web_vs_fret_combobox_dropdown_menu_overlay_placement_matches() {
                             ])),
                         ]
                     },
-                );
-
-            cx.row(
-                RowProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Fill;
-                        layout
-                    },
-                    gap: Px(0.0),
-                    padding: Edges {
-                        top: Px(12.0),   // `py-3`
-                        right: Px(16.0), // `px-4`
-                        bottom: Px(12.0),
-                        left: Px(16.0),
-                    },
-                    justify: MainAlign::End,
-                    align: CrossAlign::Start,
-                },
-                |_cx| vec![dropdown],
-            )
+                )
         },
         SemanticsRole::Button,
         Some("More"),
@@ -8201,9 +8219,32 @@ fn web_vs_fret_combobox_dropdown_menu_menu_item_height_matches() {
     assert_combobox_dropdown_menu_constrained_menu_item_height_matches("combobox-dropdown-menu");
 }
 
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_menu_item_height_matches_mobile_tiny_viewport() {
+    assert_combobox_dropdown_menu_constrained_menu_item_height_matches(
+        "combobox-dropdown-menu.vp375x240",
+    );
+}
+
 fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
+    let is_open_trigger = |n: &WebNode| {
+        n.tag == "button"
+            && (n
+                .attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == "open")
+                || n.attrs
+                    .get("aria-expanded")
+                    .is_some_and(|v| v.as_str() == "true"))
+    };
+    let web_trigger = find_first(&web.themes["light"].root, &is_open_trigger)
+        .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+        .or_else(|| find_first(&web.themes["light"].root, &|n| n.tag == "button"))
+        .or_else(|| find_first(&web.themes["dark"].root, &|n| n.tag == "button"))
+        .expect("web trigger (button)");
+    let trigger = web_trigger.rect;
     let expected_hs =
         web_portal_slot_heights(&theme, &["dropdown-menu-item", "dropdown-menu-sub-trigger"]);
     let expected_h = expected_hs
@@ -8233,9 +8274,17 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
         let button = Button::new("More")
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Sm)
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .absolute()
+                    .left_px(Px(trigger.x))
+                    .top_px(Px(trigger.y))
+                    .w_px(Px(trigger.w))
+                    .h_px(Px(trigger.h)),
+            )
             .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-        let dropdown = DropdownMenu::new(open.clone())
+        DropdownMenu::new(open.clone())
             .align(DropdownMenuAlign::End)
             .min_width(Px(200.0))
             .into_element(
@@ -8264,27 +8313,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_item_height_matches(web_name: 
                         ])),
                     ]
                 },
-            );
-
-        cx.row(
-            RowProps {
-                layout: {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
-                    layout
-                },
-                gap: Px(0.0),
-                padding: Edges {
-                    top: Px(12.0),
-                    right: Px(16.0),
-                    bottom: Px(12.0),
-                    left: Px(16.0),
-                },
-                justify: MainAlign::End,
-                align: CrossAlign::Start,
-            },
-            |_cx| vec![dropdown],
-        )
+            )
     };
 
     render_frame(
@@ -8328,9 +8357,32 @@ fn web_vs_fret_combobox_dropdown_menu_menu_content_insets_match() {
     assert_combobox_dropdown_menu_constrained_menu_content_insets_match("combobox-dropdown-menu");
 }
 
+#[test]
+fn web_vs_fret_combobox_dropdown_menu_menu_content_insets_match_mobile_tiny_viewport() {
+    assert_combobox_dropdown_menu_constrained_menu_content_insets_match(
+        "combobox-dropdown-menu.vp375x240",
+    );
+}
+
 fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
+    let is_open_trigger = |n: &WebNode| {
+        n.tag == "button"
+            && (n
+                .attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == "open")
+                || n.attrs
+                    .get("aria-expanded")
+                    .is_some_and(|v| v.as_str() == "true"))
+    };
+    let web_trigger = find_first(&web.themes["light"].root, &is_open_trigger)
+        .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+        .or_else(|| find_first(&web.themes["light"].root, &|n| n.tag == "button"))
+        .or_else(|| find_first(&web.themes["dark"].root, &|n| n.tag == "button"))
+        .expect("web trigger (button)");
+    let trigger = web_trigger.rect;
     let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
     let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
         .rect
@@ -8357,9 +8409,17 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
         let button = Button::new("More")
             .variant(ButtonVariant::Ghost)
             .size(ButtonSize::Sm)
+            .refine_layout(
+                fret_ui_kit::LayoutRefinement::default()
+                    .absolute()
+                    .left_px(Px(trigger.x))
+                    .top_px(Px(trigger.y))
+                    .w_px(Px(trigger.w))
+                    .h_px(Px(trigger.h)),
+            )
             .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
 
-        let dropdown = DropdownMenu::new(open.clone())
+        DropdownMenu::new(open.clone())
             .align(DropdownMenuAlign::End)
             .min_width(Px(200.0))
             .into_element(
@@ -8388,27 +8448,7 @@ fn assert_combobox_dropdown_menu_constrained_menu_content_insets_match(web_name:
                         ])),
                     ]
                 },
-            );
-
-        cx.row(
-            RowProps {
-                layout: {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
-                    layout
-                },
-                gap: Px(0.0),
-                padding: Edges {
-                    top: Px(12.0),
-                    right: Px(16.0),
-                    bottom: Px(12.0),
-                    left: Px(16.0),
-                },
-                justify: MainAlign::End,
-                align: CrossAlign::Start,
-            },
-            |_cx| vec![dropdown],
-        )
+            )
     };
 
     render_frame(
@@ -12520,6 +12560,11 @@ fn web_vs_fret_select_scrollable_tiny_viewport_listbox_option_insets_match() {
     assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_option_insets_match() {
+    assert_select_scrollable_listbox_option_insets_match("select-scrollable.vp375x240");
+}
+
 fn assert_select_scrollable_listbox_option_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -12678,6 +12723,11 @@ fn web_vs_fret_select_scrollable_tiny_viewport_listbox_option_height_matches() {
     assert_select_scrollable_listbox_option_height_matches("select-scrollable.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_option_height_matches() {
+    assert_select_scrollable_listbox_option_height_matches("select-scrollable.vp375x240");
+}
+
 fn assert_select_scrollable_listbox_height_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -12811,6 +12861,11 @@ fn web_vs_fret_select_scrollable_small_viewport_listbox_height_matches() {
 #[test]
 fn web_vs_fret_select_scrollable_tiny_viewport_listbox_height_matches() {
     assert_select_scrollable_listbox_height_matches("select-scrollable.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_height_matches() {
+    assert_select_scrollable_listbox_height_matches("select-scrollable.vp375x240");
 }
 
 fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
@@ -13083,6 +13138,11 @@ fn web_vs_fret_select_scrollable_tiny_viewport_scroll_button_height_matches() {
     assert_select_scrollable_scroll_button_height_matches("select-scrollable.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_select_scrollable_mobile_tiny_viewport_scroll_button_height_matches() {
+    assert_select_scrollable_scroll_button_height_matches("select-scrollable.vp375x240");
+}
+
 fn assert_select_scrollable_viewport_insets_match(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -13299,6 +13359,11 @@ fn web_vs_fret_select_scrollable_tiny_viewport_viewport_insets_match() {
     assert_select_scrollable_viewport_insets_match("select-scrollable.vp1440x240");
 }
 
+#[test]
+fn web_vs_fret_select_scrollable_mobile_tiny_viewport_viewport_insets_match() {
+    assert_select_scrollable_viewport_insets_match("select-scrollable.vp375x240");
+}
+
 fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -13313,7 +13378,7 @@ fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = StyleAwareServices::default();
+    let mut services = StyleAwareServices::from_web_theme(theme);
 
     let bounds = bounds_for_web_theme(theme);
 
@@ -13453,6 +13518,11 @@ fn web_vs_fret_select_scrollable_small_viewport_listbox_width_matches() {
 #[test]
 fn web_vs_fret_select_scrollable_tiny_viewport_listbox_width_matches() {
     assert_select_scrollable_listbox_width_matches("select-scrollable.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_mobile_tiny_viewport_listbox_width_matches() {
+    assert_select_scrollable_listbox_width_matches("select-scrollable.vp375x240");
 }
 
 fn web_portal_first_node_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> &'a WebNode {
@@ -16088,6 +16158,11 @@ fn web_vs_fret_hover_card_demo_overlay_placement_matches() {
 #[test]
 fn web_vs_fret_hover_card_demo_overlay_placement_matches_tiny_viewport() {
     assert_hover_card_demo_overlay_placement_matches("hover-card-demo.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_hover_card_demo_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_hover_card_demo_overlay_placement_matches("hover-card-demo.vp375x240");
 }
 
 fn assert_hover_card_demo_overlay_placement_matches(web_name: &str) {
@@ -21330,6 +21405,11 @@ fn web_vs_fret_command_dialog_input_height_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_command_dialog_input_height_matches_mobile_tiny_viewport() {
+    assert_command_dialog_input_height_matches("command-dialog.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_command_dialog_listbox_height_matches() {
     assert_command_dialog_listbox_height_matches("command-dialog");
 }
@@ -21337,6 +21417,11 @@ fn web_vs_fret_command_dialog_listbox_height_matches() {
 #[test]
 fn web_vs_fret_command_dialog_listbox_height_matches_tiny_viewport() {
     assert_command_dialog_listbox_height_matches("command-dialog.vp1440x240");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_listbox_height_matches_mobile_tiny_viewport() {
+    assert_command_dialog_listbox_height_matches("command-dialog.vp375x240");
 }
 
 #[test]
@@ -21350,6 +21435,11 @@ fn web_vs_fret_command_dialog_listbox_option_height_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_command_dialog_listbox_option_height_matches_mobile_tiny_viewport() {
+    assert_command_dialog_listbox_option_height_matches("command-dialog.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_command_dialog_listbox_option_insets_match() {
     assert_command_dialog_listbox_option_insets_match("command-dialog");
 }
@@ -21360,11 +21450,51 @@ fn web_vs_fret_command_dialog_listbox_option_insets_match_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_command_dialog_listbox_option_insets_match_mobile_tiny_viewport() {
+    assert_command_dialog_listbox_option_insets_match("command-dialog.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_command_dialog_overlay_center_matches_tiny_viewport() {
     use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
 
     assert_centered_overlay_placement_matches(
         "command-dialog.vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                query: Option<Model<String>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.query.clone());
+            let query = if let Some(existing) = existing {
+                existing
+            } else {
+                let model = cx.app.models_mut().insert(String::new());
+                cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+                model
+            };
+
+            let items = vec![
+                CommandItem::new("Calendar"),
+                CommandItem::new("Search Emoji"),
+                CommandItem::new("Calculator"),
+            ];
+
+            CommandDialog::new(open.clone(), query, items)
+                .into_element(cx, |cx| Button::new("Open").into_element(cx))
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_command_dialog_overlay_center_matches_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+
+    assert_centered_overlay_placement_matches(
+        "command-dialog.vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
