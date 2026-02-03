@@ -177,13 +177,45 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         position: Point,
     ) -> Option<NodeId> {
-        match self.hit_test_bounds_trees.query(root, position) {
+        let query = self.hit_test_bounds_trees.query(root, position);
+        if self.debug_enabled {
+            self.debug_stats.hit_test_bounds_tree_queries = self
+                .debug_stats
+                .hit_test_bounds_tree_queries
+                .saturating_add(1);
+            match query {
+                super::bounds_tree::HitTestBoundsTreeQuery::Disabled => {
+                    self.debug_stats.hit_test_bounds_tree_disabled = self
+                        .debug_stats
+                        .hit_test_bounds_tree_disabled
+                        .saturating_add(1);
+                }
+                super::bounds_tree::HitTestBoundsTreeQuery::Miss => {
+                    self.debug_stats.hit_test_bounds_tree_misses = self
+                        .debug_stats
+                        .hit_test_bounds_tree_misses
+                        .saturating_add(1);
+                }
+                super::bounds_tree::HitTestBoundsTreeQuery::Hit(_) => {
+                    self.debug_stats.hit_test_bounds_tree_hits =
+                        self.debug_stats.hit_test_bounds_tree_hits.saturating_add(1);
+                }
+            }
+        }
+
+        match query {
             super::bounds_tree::HitTestBoundsTreeQuery::Disabled => self.hit_test(root, position),
             super::bounds_tree::HitTestBoundsTreeQuery::Miss => None,
             super::bounds_tree::HitTestBoundsTreeQuery::Hit(candidate) => {
                 if self.hit_test_node_self_only(candidate, position) {
                     Some(candidate)
                 } else {
+                    if self.debug_enabled {
+                        self.debug_stats.hit_test_bounds_tree_candidate_rejected = self
+                            .debug_stats
+                            .hit_test_bounds_tree_candidate_rejected
+                            .saturating_add(1);
+                    }
                     self.hit_test(root, position)
                 }
             }

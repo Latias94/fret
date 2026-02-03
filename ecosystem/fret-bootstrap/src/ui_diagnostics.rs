@@ -6053,6 +6053,16 @@ pub struct UiFrameStatsV1 {
     pub dispatch_events: u32,
     #[serde(default)]
     pub hit_test_queries: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_queries: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_disabled: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_misses: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_hits: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_candidate_rejected: u32,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6169,6 +6179,11 @@ impl UiFrameStatsV1 {
             hit_test_time_us: stats.hit_test_time.as_micros() as u64,
             dispatch_events: stats.dispatch_events,
             hit_test_queries: stats.hit_test_queries,
+            hit_test_bounds_tree_queries: stats.hit_test_bounds_tree_queries,
+            hit_test_bounds_tree_disabled: stats.hit_test_bounds_tree_disabled,
+            hit_test_bounds_tree_misses: stats.hit_test_bounds_tree_misses,
+            hit_test_bounds_tree_hits: stats.hit_test_bounds_tree_hits,
+            hit_test_bounds_tree_candidate_rejected: stats.hit_test_bounds_tree_candidate_rejected,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
             prepaint_nodes_visited: stats.prepaint_nodes_visited,

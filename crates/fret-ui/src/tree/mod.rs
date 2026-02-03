@@ -193,6 +193,16 @@ pub struct UiDebugFrameStats {
     pub dispatch_events: u32,
     /// Number of hit-test queries executed during the current frame.
     pub hit_test_queries: u32,
+    /// Count of bounds-tree queries attempted during hit testing.
+    pub hit_test_bounds_tree_queries: u32,
+    /// Bounds-tree queries that were disabled (e.g. env-gated, layer not indexed, or unsupported transforms).
+    pub hit_test_bounds_tree_disabled: u32,
+    /// Bounds-tree queries that missed (no containing leaf).
+    pub hit_test_bounds_tree_misses: u32,
+    /// Bounds-tree queries that returned a candidate leaf.
+    pub hit_test_bounds_tree_hits: u32,
+    /// Bounds-tree candidates rejected by `hit_test_node_self_only`, forcing a fallback traversal.
+    pub hit_test_bounds_tree_candidate_rejected: u32,
     pub layout_time: Duration,
     pub layout_roots_time: Duration,
     pub layout_barrier_relayouts_time: Duration,
@@ -1695,6 +1705,11 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.hit_test_time = Duration::default();
         self.debug_stats.dispatch_events = 0;
         self.debug_stats.hit_test_queries = 0;
+        self.debug_stats.hit_test_bounds_tree_queries = 0;
+        self.debug_stats.hit_test_bounds_tree_disabled = 0;
+        self.debug_stats.hit_test_bounds_tree_misses = 0;
+        self.debug_stats.hit_test_bounds_tree_hits = 0;
+        self.debug_stats.hit_test_bounds_tree_candidate_rejected = 0;
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();

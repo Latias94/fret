@@ -91,6 +91,11 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) hit_test_time_us: u64,
     pub(super) dispatch_events: u32,
     pub(super) hit_test_queries: u32,
+    pub(super) hit_test_bounds_tree_queries: u32,
+    pub(super) hit_test_bounds_tree_disabled: u32,
+    pub(super) hit_test_bounds_tree_misses: u32,
+    pub(super) hit_test_bounds_tree_hits: u32,
+    pub(super) hit_test_bounds_tree_candidate_rejected: u32,
     pub(super) total_time_us: u64,
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
@@ -3812,6 +3817,32 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let hit_test_bounds_tree_queries = stats
+                .and_then(|m| m.get("hit_test_bounds_tree_queries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hit_test_bounds_tree_disabled = stats
+                .and_then(|m| m.get("hit_test_bounds_tree_disabled"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hit_test_bounds_tree_misses = stats
+                .and_then(|m| m.get("hit_test_bounds_tree_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hit_test_bounds_tree_hits = stats
+                .and_then(|m| m.get("hit_test_bounds_tree_hits"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hit_test_bounds_tree_candidate_rejected = stats
+                .and_then(|m| m.get("hit_test_bounds_tree_candidate_rejected"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let total_time_us = layout_time_us
                 .saturating_add(prepaint_time_us)
                 .saturating_add(paint_time_us);
@@ -4109,6 +4140,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 hit_test_time_us,
                 dispatch_events,
                 hit_test_queries,
+                hit_test_bounds_tree_queries,
+                hit_test_bounds_tree_disabled,
+                hit_test_bounds_tree_misses,
+                hit_test_bounds_tree_hits,
+                hit_test_bounds_tree_candidate_rejected,
                 total_time_us,
                 layout_nodes_performed,
                 paint_nodes_performed,

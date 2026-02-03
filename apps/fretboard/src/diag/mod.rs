@@ -2745,6 +2745,17 @@ See: `docs/tracy.md`.\n";
                         let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
                         let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
                         let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
+                        let top_hit_test_bounds_tree_queries =
+                            top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
+                        let top_hit_test_bounds_tree_disabled =
+                            top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
+                        let top_hit_test_bounds_tree_misses =
+                            top.map(|r| r.hit_test_bounds_tree_misses).unwrap_or(0);
+                        let top_hit_test_bounds_tree_hits =
+                            top.map(|r| r.hit_test_bounds_tree_hits).unwrap_or(0);
+                        let top_hit_test_bounds_tree_candidate_rejected = top
+                            .map(|r| r.hit_test_bounds_tree_candidate_rejected)
+                            .unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                         let top_view_cache_contained_relayouts =
@@ -2778,6 +2789,11 @@ See: `docs/tracy.md`.\n";
                                 "top_hit_test_time_us": top_hit_test,
                                 "top_dispatch_events": top_dispatch_events,
                                 "top_hit_test_queries": top_hit_test_queries,
+                                "top_hit_test_bounds_tree_queries": top_hit_test_bounds_tree_queries,
+                                "top_hit_test_bounds_tree_disabled": top_hit_test_bounds_tree_disabled,
+                                "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
+                                "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
+                                "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
@@ -3044,6 +3060,17 @@ See: `docs/tracy.md`.\n";
                     let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
                     let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
                     let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
+                    let top_hit_test_bounds_tree_queries =
+                        top.map(|r| r.hit_test_bounds_tree_queries).unwrap_or(0);
+                    let top_hit_test_bounds_tree_disabled =
+                        top.map(|r| r.hit_test_bounds_tree_disabled).unwrap_or(0);
+                    let top_hit_test_bounds_tree_misses =
+                        top.map(|r| r.hit_test_bounds_tree_misses).unwrap_or(0);
+                    let top_hit_test_bounds_tree_hits =
+                        top.map(|r| r.hit_test_bounds_tree_hits).unwrap_or(0);
+                    let top_hit_test_bounds_tree_candidate_rejected = top
+                        .map(|r| r.hit_test_bounds_tree_candidate_rejected)
+                        .unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                     let top_view_cache_contained_relayouts =
@@ -3082,6 +3109,11 @@ See: `docs/tracy.md`.\n";
                         "top_hit_test_time_us": top_hit_test,
                         "top_dispatch_events": top_dispatch_events,
                         "top_hit_test_queries": top_hit_test_queries,
+                        "top_hit_test_bounds_tree_queries": top_hit_test_bounds_tree_queries,
+                        "top_hit_test_bounds_tree_disabled": top_hit_test_bounds_tree_disabled,
+                        "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
+                        "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
+                        "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
