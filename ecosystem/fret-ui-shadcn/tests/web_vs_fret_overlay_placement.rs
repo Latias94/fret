@@ -21466,6 +21466,32 @@ fn web_vs_fret_dialog_demo_overlay_center_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_dialog_demo_overlay_center_matches_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+
+    assert_centered_overlay_placement_matches(
+        "dialog-demo.vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    DialogContent::new(vec![cx.text("Edit profile")])
+                        .refine_layout(fret_ui_kit::LayoutRefinement::default().max_w(Px(425.0)))
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sidebar_13_dialog_overlay_center_matches() {
     use fret_ui_shadcn::{Button, ButtonSize, Dialog, DialogContent};
 
@@ -21889,6 +21915,31 @@ fn web_vs_fret_alert_dialog_demo_overlay_center_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_alert_dialog_demo_overlay_center_matches_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
+
+    assert_centered_overlay_placement_matches(
+        "alert-dialog-demo.vp375x240",
+        "alertdialog",
+        SemanticsRole::AlertDialog,
+        |cx, open| {
+            AlertDialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Show Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    AlertDialogContent::new(vec![cx.text("Are you absolutely sure?")])
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sheet_demo_overlay_insets_match() {
     use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
 
@@ -21916,6 +21967,28 @@ fn web_vs_fret_sheet_demo_overlay_insets_match_tiny_viewport() {
 
     assert_viewport_anchored_overlay_placement_matches(
         "sheet-demo.vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_demo_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-demo.vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
@@ -22139,11 +22212,62 @@ fn web_vs_fret_drawer_demo_overlay_insets_match_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_drawer_demo_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "drawer-demo.vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Drawer::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Drawer")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_drawer_dialog_desktop_overlay_center_matches_tiny_viewport() {
     use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
 
     assert_centered_overlay_placement_matches(
         "drawer-dialog.vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Edit Profile")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    DialogContent::new(vec![cx.text("Edit profile")])
+                        .refine_layout(
+                            fret_ui_kit::LayoutRefinement::default()
+                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
+                        )
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_drawer_dialog_desktop_overlay_center_matches_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+
+    assert_centered_overlay_placement_matches(
+        "drawer-dialog.vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {

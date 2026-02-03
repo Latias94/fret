@@ -45,6 +45,7 @@ Tracking format:
 - 2026-02-03: added `menubar-demo.destructive-idle` + `menubar-demo.destructive-focus-first` open goldens and matched Menubar destructive idle/focused chrome (light/dark). (NavigationMenu has no destructive variant in upstream v4.)
 - [~] SWG-ovl-030 Add “constrained height” variants for remaining overlay pages that currently only gate default viewport.
   - 2026-02-03: added `vp375x240` open goldens + gates for `hover-card-demo`, `combobox-dropdown-menu`, `command-dialog`, and `select-scrollable` (treat mobile constrained viewports as first-class overlay behavior).
+  - 2026-02-03: added `vp375x240` open goldens + placement/insets gates for modal overlays: `dialog-demo`, `sheet-demo`, `alert-dialog-demo`, `drawer-demo`, and `drawer-dialog`.
 
 ---
 
