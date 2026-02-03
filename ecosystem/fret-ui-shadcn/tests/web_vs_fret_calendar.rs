@@ -135,6 +135,17 @@ fn find_first_in_theme<'a>(
     find_first(&theme.root, pred).or_else(|| theme.portals.iter().find_map(|p| find_first(p, pred)))
 }
 
+fn find_all_in_theme<'a>(
+    theme: &'a WebGoldenTheme,
+    pred: &impl Fn(&'a WebNode) -> bool,
+) -> Vec<&'a WebNode> {
+    let mut out = find_all(&theme.root, pred);
+    for portal in &theme.portals {
+        out.extend(find_all(portal, pred));
+    }
+    out
+}
+
 fn class_has_token(node: &WebNode, token: &str) -> bool {
     node.class_name
         .as_deref()
@@ -3080,4 +3091,209 @@ fn web_vs_fret_calendar_14_vp375x320_selected_day_text_centered_in_button() {
         "calendar-14.vp375x320 day number center x ~= button center x",
         "calendar-14.vp375x320 day number center y ~= button center y",
     );
+}
+
+fn render_calendar_root_background_in_popover_scope(
+    bounds: Rect,
+    scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
+    month: fret_ui_headless::calendar::CalendarMonth,
+    week_start: time::Weekday,
+    show_outside_days: bool,
+    disable_outside_days: bool,
+    cell_size: Option<Px>,
+) -> fret_core::Color {
+    use fret_ui::element::ElementKind;
+    use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, Space};
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        scheme,
+    );
+
+    let open: Model<bool> = app.models_mut().insert(true);
+    let month_model: Model<fret_ui_headless::calendar::CalendarMonth> =
+        app.models_mut().insert(month);
+    let selected: Model<Option<time::Date>> = app.models_mut().insert(None);
+
+    let calendar_bg: std::rc::Rc<std::cell::Cell<Option<fret_core::Color>>> =
+        std::rc::Rc::new(std::cell::Cell::new(None));
+    let calendar_bg_for_render = calendar_bg.clone();
+
+    let render = move |cx: &mut fret_ui::ElementContext<'_, App>| {
+        let calendar_bg = calendar_bg_for_render.clone();
+        let open = open.clone();
+        let month_model = month_model.clone();
+        let selected = selected.clone();
+
+        let content = move |cx: &mut fret_ui::ElementContext<'_, App>| {
+            let mut calendar = fret_ui_shadcn::Calendar::new(month_model.clone(), selected.clone())
+                .week_start(week_start)
+                .show_outside_days(show_outside_days)
+                .disable_outside_days(disable_outside_days);
+            if let Some(size) = cell_size {
+                calendar = calendar.cell_size(size);
+            }
+
+            let calendar = calendar.into_element(cx);
+            match &calendar.kind {
+                ElementKind::Container(props) => {
+                    let bg = props
+                        .background
+                        .expect("calendar root background (resolved)");
+                    calendar_bg.set(Some(bg));
+                }
+                other => panic!("expected calendar root container, got {other:?}"),
+            }
+
+            fret_ui_shadcn::PopoverContent::new([calendar])
+                // shadcn/ui DatePicker demo uses `PopoverContent` with `w-auto p-0`.
+                .refine_style(ChromeRefinement::default().p(Space::N0))
+                .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
+                .into_element(cx)
+        };
+
+        vec![
+            fret_ui_shadcn::Popover::new(open.clone())
+                .side(fret_ui_shadcn::PopoverSide::Bottom)
+                .align(fret_ui_shadcn::PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    move |cx| {
+                        fret_ui_shadcn::Button::new("Open")
+                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    content,
+                ),
+        ]
+    };
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    // Render twice to mirror other overlay-ish layout tests (ensures style resolution is stable).
+    for frame in 1..=2 {
+        app.set_frame_id(FrameId(frame));
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "web-vs-fret-calendar-popover-bg",
+            &render,
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    }
+
+    calendar_bg
+        .get()
+        .expect("expected calendar root background to be captured")
+}
+
+fn assert_date_picker_calendar_root_background_matches_web(web_name: &str, web_theme_name: &str) {
+    let web = read_web_golden(web_name);
+    let theme = web
+        .themes
+        .get(web_theme_name)
+        .unwrap_or_else(|| panic!("missing {web_theme_name} theme in web golden {web_name}"));
+
+    let web_rdp_root = web_find_by_class_token_in_theme(theme, "rdp-root").expect("web rdp-root");
+    let web_bg_css = web_rdp_root
+        .computed_style
+        .get("backgroundColor")
+        .expect("web calendar root backgroundColor");
+    let expected_bg =
+        parse_css_color(web_bg_css).unwrap_or_else(|| panic!("invalid css color: {web_bg_css}"));
+
+    let web_month_grid = find_first_in_theme(theme, &|n| {
+        n.tag == "table" && class_has_token(n, "rdp-month_grid")
+    })
+    .expect("web month grid");
+    let web_month_label = web_month_grid
+        .attrs
+        .get("aria-label")
+        .expect("web month grid aria-label");
+    let (month, year) =
+        parse_calendar_title_label(web_month_label).expect("web month label (Month YYYY)");
+
+    let weekday_headers = find_all_in_theme(theme, &|n| {
+        class_has_token(n, "rdp-weekday")
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_weekday_label(label).is_some())
+    });
+    let week_start = weekday_headers
+        .iter()
+        .min_by(|a, b| a.rect.x.total_cmp(&b.rect.x))
+        .and_then(|n| n.attrs.get("aria-label"))
+        .and_then(|label| parse_calendar_weekday_label(label))
+        .unwrap_or(time::Weekday::Sunday);
+
+    let web_day_buttons = find_all_in_theme(theme, &|n| {
+        n.tag == "button"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
+    });
+    assert!(!web_day_buttons.is_empty(), "expected calendar day buttons");
+
+    let show_outside_days = web_day_buttons.len() != (days_in_month(year, month) as usize);
+    let disable_outside_days = web_day_buttons.iter().any(|n| {
+        let Some(label) = n.attrs.get("aria-label") else {
+            return false;
+        };
+        let Some((date, _selected)) = parse_calendar_day_aria_label(label) else {
+            return false;
+        };
+        if date.month() == month && date.year() == year {
+            return false;
+        }
+        n.attrs.contains_key("disabled")
+            || n.attrs.get("aria-disabled").is_some_and(|v| v == "true")
+    });
+
+    let cell_size = parse_calendar_cell_size_px(theme);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let scheme = match web_theme_name {
+        "dark" => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        _ => fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    };
+
+    let actual_bg = render_calendar_root_background_in_popover_scope(
+        bounds,
+        scheme,
+        fret_ui_headless::calendar::CalendarMonth::new(year, month),
+        week_start,
+        show_outside_days,
+        disable_outside_days,
+        cell_size,
+    );
+
+    assert_rgba_close(
+        &format!("{web_name} {web_theme_name} calendar root background"),
+        color_to_rgba(actual_bg),
+        expected_bg,
+        0.02,
+    );
+}
+
+#[test]
+fn web_vs_fret_date_picker_demo_open_calendar_root_background_matches_web_light() {
+    assert_date_picker_calendar_root_background_matches_web("date-picker-demo.open", "light");
+}
+
+#[test]
+fn web_vs_fret_date_picker_demo_open_calendar_root_background_matches_web_dark() {
+    assert_date_picker_calendar_root_background_matches_web("date-picker-demo.open", "dark");
 }
