@@ -724,12 +724,20 @@ impl DockSpace {
 
         let border = theme.color_required("border");
         let card = theme.color_required("card");
+        let hover_bg = theme.color_required("accent");
         let fg = theme.color_required("muted-foreground");
 
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(20),
             rect,
-            background: card,
+            background: if self.hovered_float_zone {
+                Color {
+                    a: 0.20,
+                    ..hover_bg
+                }
+            } else {
+                card
+            },
             border: Edges::all(Px(1.0)),
             border_color: border,
             corner_radii: fret_core::Corners::all(Px(6.0)),
@@ -2438,7 +2446,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 return;
                             }
 
-                            let float_zone_hovered_now = *pointer_type == fret_core::PointerType::Mouse
+                            let float_zone_hovered_now = matches!(
+                                *pointer_type,
+                                fret_core::PointerType::Mouse | fret_core::PointerType::Unknown
+                            )
                                 && !buttons.left
                                 && !buttons.right
                                 && !buttons.middle
@@ -2448,6 +2459,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 self.hovered_float_zone = float_zone_hovered_now;
                                 invalidate_paint = true;
                                 pending_redraws.push(self.window);
+                            }
+                            if self.hovered_float_zone && request_cursor.is_none() {
+                                request_cursor = Some(fret_core::CursorIcon::Pointer);
                             }
                             if !buttons.left
                                 && self

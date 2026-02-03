@@ -198,7 +198,11 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
             return None;
         }
 
-        let root_name = format!("imui_editor_proof.controls.{window:?}");
+        let root_name = match panel.instance.as_deref() {
+            Some(instance) => format!("imui_editor_proof.panel.{}:{}", panel.kind.0, instance),
+            None => format!("imui_editor_proof.panel.{}", panel.kind.0),
+        };
+        let panel_key = panel.clone();
         Some(fret_docking::render_cached_panel_root(
             ui,
             app,
@@ -206,7 +210,7 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
             window,
             bounds,
             &root_name,
-            |cx| {
+            move |cx| {
                 let target = embedded::models(&*cx.app, window)
                     .and_then(|m| cx.watch_model(&m.target).paint().copied())
                     .unwrap_or_default();
@@ -223,11 +227,15 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
                         background: Some(background),
                         ..Default::default()
                     },
-                    |cx| {
-                        fret_imui::imui_vstack(cx, |ui| {
-                            ui.text("Controls panel (declarative root inside docking)");
-                            ui.text(format!("embedded viewport target: {target:?}"));
-                            ui.text("Wasm/mobile note: multi-window should degrade to in-window floatings.");
+                    move |cx| {
+                        fret_imui::imui_vstack(cx, move |ui| {
+                            ui.id(&panel_key, |ui| {
+                                ui.text("Controls panel (declarative root inside docking)");
+                                ui.text(format!("embedded viewport target: {target:?}"));
+                                ui.text(
+                                    "Wasm/mobile note: multi-window should degrade to in-window floatings.",
+                                );
+                            });
                         })
                         .into_vec()
                     },
