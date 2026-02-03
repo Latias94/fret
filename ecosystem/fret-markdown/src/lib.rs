@@ -42,12 +42,12 @@ impl Markdown {
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         markdown(cx, &self.source)
     }
 
     #[track_caller]
-    pub fn into_element_with<H: UiHost>(
+    pub fn into_element_with<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
         components: &MarkdownComponents<H>,
@@ -57,7 +57,7 @@ impl Markdown {
 }
 
 #[track_caller]
-pub fn markdown<H: UiHost>(cx: &mut ElementContext<'_, H>, source: &str) -> AnyElement {
+pub fn markdown<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>, source: &str) -> AnyElement {
     markdown_with(cx, source, &MarkdownComponents::default())
 }
 
@@ -107,7 +107,7 @@ impl MarkdownCachedState {
 }
 
 #[track_caller]
-pub fn markdown_with<H: UiHost>(
+pub fn markdown_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     source: &str,
     components: &MarkdownComponents<H>,
@@ -424,7 +424,7 @@ fn heading_level_to_u8(level: pulldown_cmark::HeadingLevel) -> u8 {
     }
 }
 
-fn render_code_block<H: UiHost>(
+fn render_code_block<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     info: CodeBlockInfo,
     components: &MarkdownComponents<H>,
@@ -774,14 +774,14 @@ impl Default for MarkdownStreamState {
     }
 }
 
-pub fn markdown_streaming_pulldown<H: UiHost>(
+pub fn markdown_streaming_pulldown<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     state: &MarkdownPulldownState,
 ) -> AnyElement {
     markdown_streaming_pulldown_with(cx, state, &MarkdownComponents::default())
 }
 
-pub fn markdown_streaming_pulldown_with<H: UiHost>(
+pub fn markdown_streaming_pulldown_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     state: &MarkdownPulldownState,
     components: &MarkdownComponents<H>,
@@ -798,7 +798,7 @@ pub fn markdown_streaming_pulldown_with<H: UiHost>(
     )
 }
 
-fn markdown_mdstream_pulldown_with<H: UiHost>(
+fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -919,7 +919,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost>(
     )
 }
 
-fn render_mdstream_block_with_events<H: UiHost>(
+fn render_mdstream_block_with_events<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
