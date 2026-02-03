@@ -51,7 +51,9 @@ Important guardrail:
 
 - Typography gates exist; add multi-width coverage (line wrapping, margins, list markers).
   - Done (v1): add `typography-demo.vp375x900` golden + a wrap/max-width contract gate (ensures prose paragraphs wrap under narrow widths).
-  - Next: add one more width variant (e.g. `vp768x900`) and explicitly gate list marker/indent outcomes.
+  - Done (v1): add `typography-demo.vp768x900` golden + a wrap/max-width contract gate (ensures constraints stay stable at tablet widths).
+  - Done (v1): add a targeted list indent + item gap contract gate derived from the web golden (`ml-6` + `mt-2`).
+  - Next: expand list marker gates once the extractor records `list-style-*` properties (currently not in the computedStyle whitelist).
 
 ## P1 (Calendar)
 

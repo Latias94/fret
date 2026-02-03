@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D, WindowMetricsService};
+use fret_core::{
+    AppWindowId, Color, FontId, FontWeight, NodeId, Point, Px, Rect, SemanticsRole, TextStyle,
+    Transform2D, WindowMetricsService,
+};
 use fret_runtime::DRAG_KIND_DOCK_PANEL;
 use fret_ui::action::{
     ActionCx, AutoFocusRequestCx, DismissReason, DismissRequestCx, OnCloseAutoFocus, UiActionHost,
@@ -1270,6 +1273,7 @@ pub fn render<H: UiHost + 'static>(
         let store = req.store;
         let store_for_render = store.clone();
         let position = req.position;
+        let show_close_button = req.style.show_close_button;
         let margin_override = req.margin;
         let gap_override = req.gap;
         let toast_min_width_override = req.toast_min_width;
@@ -1359,7 +1363,8 @@ pub fn render<H: UiHost + 'static>(
                     margin_override.unwrap_or_else(|| theme.metric_required("metric.padding.md"));
                 let gap =
                     gap_override.unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
-                let toast_padding = theme.metric_required("metric.padding.sm");
+                // Match Sonner's default toast padding (`sonner@2.x` uses `padding: 16px`).
+                let toast_padding = Px(16.0);
                 let radius = theme.metric_required("metric.radius.md");
                 let store_for_toasts = store_for_render.clone();
 
@@ -1486,7 +1491,7 @@ pub fn render<H: UiHost + 'static>(
                             let button_pad_x = Px(8.0);
                             let button_pad_y = Px(4.0);
 
-                            let close = toast.dismissible.then(|| {
+                            let close = (toast.dismissible && show_close_button).then(|| {
                                 let close_store = store.clone();
                                 cx.pressable(
                                     fret_ui::element::PressableProps {
@@ -1722,13 +1727,69 @@ pub fn render<H: UiHost + 'static>(
                                 }),
                             };
 
+                            // Sonner toast typography (`sonner@2.x`):
+                            // - toast box: `font-size: 13px`
+                            // - title: `font-weight: 500`, `line-height: 1.5`
+                            // - description: `font-weight: 400`, `line-height: 1.4`
+                            let title_style = TextStyle {
+                                font: FontId::default(),
+                                size: Px(13.0),
+                                weight: FontWeight(500),
+                                slant: Default::default(),
+                                line_height: Some(Px(13.0 * 1.5)),
+                                letter_spacing_em: None,
+                            };
+                            let desc_style = TextStyle {
+                                font: FontId::default(),
+                                size: Px(13.0),
+                                weight: FontWeight(400),
+                                slant: Default::default(),
+                                line_height: Some(Px(13.0 * 1.4)),
+                                letter_spacing_em: None,
+                            };
+
+                            let title = cx.text_props(fret_ui::element::TextProps {
+                                layout: fret_ui::element::LayoutStyle::default(),
+                                text: toast.title.clone(),
+                                style: Some(title_style),
+                                color: Some(fg),
+                                wrap: fret_core::TextWrap::None,
+                                overflow: fret_core::TextOverflow::Clip,
+                            });
+
+                            let mut content_children: Vec<AnyElement> = vec![title];
+                            if let Some(desc) = toast.description.clone() {
+                                content_children.push(cx.text_props(fret_ui::element::TextProps {
+                                    layout: fret_ui::element::LayoutStyle::default(),
+                                    text: desc,
+                                    style: Some(desc_style),
+                                    color: Some(fg_muted),
+                                    wrap: fret_core::TextWrap::Word,
+                                    overflow: fret_core::TextOverflow::Clip,
+                                }));
+                            }
+
+                            let content = cx.column(
+                                fret_ui::element::ColumnProps {
+                                    layout: fret_ui::element::LayoutStyle::default(),
+                                    gap: Px(2.0),
+                                    padding: fret_core::Edges::all(Px(0.0)),
+                                    justify: fret_ui::element::MainAlign::Start,
+                                    align: fret_ui::element::CrossAlign::Start,
+                                },
+                                move |_cx| content_children,
+                            );
+
                             let icon = icon.clone();
-                            let header_row = cx.flex(
+                            let cancel = cancel.clone();
+                            let action = action.clone();
+                            let close = close.clone();
+                            let toast_inner = cx.flex(
                                 fret_ui::element::FlexProps {
                                     layout: fret_ui::element::LayoutStyle::default(),
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: toast_padding,
-                                    padding: fret_core::Edges::all(fret_core::Px(0.0)),
+                                    gap: Px(6.0),
+                                    padding: fret_core::Edges::all(Px(0.0)),
                                     justify: fret_ui::element::MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Center,
                                     wrap: false,
@@ -1761,67 +1822,29 @@ pub fn render<H: UiHost + 'static>(
                                             move |_cx| vec![icon.clone()],
                                         ));
                                     }
-                                    row.push(cx.text_props(fret_ui::element::TextProps {
-                                        layout: fret_ui::element::LayoutStyle::default(),
-                                        text: toast.title.clone(),
-                                        style: None,
-                                        color: Some(fg),
-                                        wrap: fret_core::TextWrap::None,
-                                        overflow: fret_core::TextOverflow::Clip,
-                                    }));
+
+                                    row.push(content.clone());
+
                                     row.push(cx.spacer(fret_ui::element::SpacerProps {
-                                        min: fret_core::Px(0.0),
+                                        min: Px(0.0),
                                         ..Default::default()
                                     }));
 
-                                    let trailing_cancel = cancel.clone();
-                                    let trailing_action = action.clone();
-                                    let trailing_close = close.clone();
-                                    if trailing_cancel.is_some()
-                                        || trailing_action.is_some()
-                                        || trailing_close.is_some()
-                                    {
-                                        row.push(cx.flex(
-                                            fret_ui::element::FlexProps {
-                                                layout: fret_ui::element::LayoutStyle::default(),
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: toast_padding,
-                                                padding: fret_core::Edges::all(Px(0.0)),
-                                                justify: fret_ui::element::MainAlign::End,
-                                                align: fret_ui::element::CrossAlign::Center,
-                                                wrap: false,
-                                                ..Default::default()
-                                            },
-                                            move |_cx| {
-                                                let mut out = Vec::new();
-                                                if let Some(el) = trailing_cancel.clone() {
-                                                    out.push(el);
-                                                }
-                                                if let Some(el) = trailing_action.clone() {
-                                                    out.push(el);
-                                                }
-                                                if let Some(el) = trailing_close.clone() {
-                                                    out.push(el);
-                                                }
-                                                out
-                                            },
-                                        ));
+                                    if let Some(el) = cancel.clone() {
+                                        row.push(el);
                                     }
+                                    if let Some(el) = action.clone() {
+                                        row.push(el);
+                                    }
+                                    if let Some(el) = close.clone() {
+                                        row.push(el);
+                                    }
+
                                     row
                                 },
                             );
 
-                            let mut toast_children: Vec<AnyElement> = vec![header_row];
-                            if let Some(desc) = toast.description.clone() {
-                                toast_children.push(cx.text_props(fret_ui::element::TextProps {
-                                    layout: fret_ui::element::LayoutStyle::default(),
-                                    text: desc,
-                                    style: None,
-                                    color: Some(fg_muted),
-                                    wrap: fret_core::TextWrap::Word,
-                                    overflow: fret_core::TextOverflow::Clip,
-                                }));
-                            }
+                            let toast_children: Vec<AnyElement> = vec![toast_inner];
 
                             out.push(cx.keyed(toast_id, move |cx| {
                                 let settle = crate::declarative::transition::drive_transition_with_durations_and_easing(
@@ -1919,6 +1942,7 @@ pub fn render<H: UiHost + 'static>(
                                 );
                                 let toast_el = cx.semantics(
                                     SemanticsProps {
+                                        role: SemanticsRole::Alert,
                                         test_id: Some(Arc::<str>::from(format!(
                                             "toast-entry-{}",
                                             toast_id.0

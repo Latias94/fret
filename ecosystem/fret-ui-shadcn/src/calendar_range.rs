@@ -1384,7 +1384,8 @@ fn calendar_range_hidden_day_cell<H: UiHost>(
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
-        chrome_props.layout = layout;
+        // Keep margins on the pressable node so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1529,7 +1530,8 @@ fn calendar_range_day_cell<H: UiHost>(
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
-        chrome_props.layout = layout;
+        // Keep margins on the pressable node so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1548,15 +1550,40 @@ fn calendar_range_day_cell<H: UiHost>(
         };
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![
-                ui::label(cx, day_text.clone())
-                    .text_size_px(text_sm_px)
-                    .line_height_px(text_sm_line_height)
-                    .font_medium()
-                    .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
-                    .nowrap()
-                    .into_element(cx),
-            ]
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: fret_ui::element::CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    let label = ui::label(cx, day_text.clone())
+                        .text_size_px(text_sm_px)
+                        .line_height_px(text_sm_line_height)
+                        .font_medium()
+                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .nowrap();
+
+                    let label = if disabled {
+                        cx.opacity(0.5, |cx| vec![label.into_element(cx)])
+                    } else {
+                        label.into_element(cx)
+                    };
+
+                    vec![label]
+                },
+            )]
         };
 
         (pressable, chrome_props, children)

@@ -6,7 +6,7 @@
 use fret_core::{Edges, Point, Px, Rect, Size};
 use fret_ui::overlay_placement::{
     AnchoredPanelLayout, AnchoredPanelOptions, CollisionOptions, anchored_panel_layout_ex,
-    anchored_panel_layout_sized_ex,
+    anchored_panel_layout_sized_ex, inset_rect, intersect_rect,
 };
 
 pub use fret_ui::overlay_placement::{
@@ -183,6 +183,29 @@ pub fn popper_content_layout_sized(
     )
 }
 
+/// Computes a Radix-style `PopperContent` layout without clamping the panel `Size` to available
+/// space.
+///
+/// This matches primitives where the floating rect can overflow the collision boundary on the
+/// main axis while preserving its intrinsic size, but still wants collision shifting/clamping to
+/// run for the final origin.
+pub fn popper_content_layout_size_unclamped(
+    outer: Rect,
+    anchor: Rect,
+    desired: Size,
+    placement: PopperContentPlacement,
+) -> AnchoredPanelLayout {
+    anchored_panel_layout_ex(
+        outer,
+        anchor,
+        desired,
+        placement.side_offset,
+        placement.side,
+        placement.align,
+        placement.options(),
+    )
+}
+
 /// Computes a Radix-style `PopperContent` layout without clamping the panel size to available space.
 ///
 /// This matches Radix/Floating UI behavior for primitives that allow the floating rect to overflow
@@ -348,7 +371,16 @@ pub fn popper_available_metrics_for_placement(
     let desired_w = popper_desired_width(outer, anchor, min_width);
     let probe_desired = Size::new(desired_w, outer.size.height);
     let layout = popper_content_layout_sized(outer, anchor, probe_desired, placement);
-    popper_available_metrics(outer, anchor, &layout, placement.direction)
+    // `size()` middleware metrics are computed against the *collision boundary*, i.e. after Radix
+    // applies collision padding + boundary overrides. Match that by using the effective boundary
+    // here (the placement solver already applies the same collision options when producing
+    // `layout`).
+    let mut boundary = outer;
+    if let Some(extra_boundary) = placement.collision_boundary {
+        boundary = intersect_rect(boundary, extra_boundary);
+    }
+    boundary = inset_rect(boundary, placement.collision_padding);
+    popper_available_metrics(boundary, anchor, &layout, placement.direction)
 }
 
 /// Computes an anchored popper layout (rect + optional arrow) with deterministic flip/clamp rules.

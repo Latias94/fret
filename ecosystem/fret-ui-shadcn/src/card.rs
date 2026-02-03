@@ -258,6 +258,7 @@ impl CardDescription {
             .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         ui::text(cx, self.text)
+            .w_full()
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()

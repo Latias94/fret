@@ -45,13 +45,13 @@ Notes:
   `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
   checks” rather than “is every page referenced somewhere”.
 
-- Golden files (tracked): `518`
-- Golden keys (tracked, normalized `.open` suffix): `476`
-- Gated keys (string-literal heuristic): `476` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `476` (`100%`)
+- Golden files (tracked): `582`
+- Golden keys (tracked, normalized `.open` suffix): `538`
+- Gated keys (string-literal heuristic): `538` (`100%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `538` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
-As of 2026-01-31 (tracked-only).
+As of 2026-02-03 (tracked-only).
 
 Note on “targeted” gates:
 
@@ -70,31 +70,47 @@ At the time of writing, there are no missing groups (all keys are gated by tests
 The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/tests`) were
 (heuristic grouping by key prefix):
 
-- `chart` (84)
-- `calendar` (34)
-- `button` (29)
+- `chart` (92)
+- `calendar` (44)
+- `button` (30)
 - `input` (27)
+- `navigation` (20)
 - `form` (19)
-- `navigation` (17)
+- `typography` (16)
+- `menubar` (16)
 - `sidebar` (16)
-- `typography` (15)
+- `sonner` (15)
+- `dropdown` (15)
+- `context` (14)
 - `toggle` (13)
 - `field` (12)
-- `dropdown` (12)
-- `select` (11)
-- `menubar` (11)
-- `spinner` (10)
-- `sheet` (10)
-- `scroll` (10)
-- `context` (10)
+- `date` (12)
+- `select` (13)
 - `item` (10)
-- `combobox` (9)
+- `sheet` (10)
+- `spinner` (10)
+- `scroll` (10)
 - `breadcrumb` (9)
+- `combobox` (10)
 - `textarea` (8)
 - `empty` (7)
 - `carousel` (6)
 - `otp` (5)
+- `signup` (5)
 - `login` (5)
+- `kbd` (5)
+- `command` (5)
+- `badge` (4)
+- `drawer` (4)
+- `alert` (4)
+- `native` (4)
+- `checkbox` (4)
+- `resizable` (4)
+- `dialog` (3)
+- `hover` (3)
+- `popover` (3)
+- `tooltip` (3)
+- `skeleton` (2)
 
 Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
 

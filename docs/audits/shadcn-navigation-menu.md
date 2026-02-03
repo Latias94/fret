@@ -127,6 +127,12 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
       These gates assume shadcn/ui behavior where the viewport panel is placed relative to the
       root (not the active trigger) when `viewport=true`.
 
+  - Underlay scroll anchor stability gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+    (`fret_navigation_menu_tracks_trigger_when_underlay_scrolls`).
+    - This exercises `viewport=false` anchoring when the trigger lives in a scrolling underlay.
+    - Depends on last-frame visual-bounds tracking scroll-driven render transforms under paint-cache
+      replay (see `crates/fret-ui/src/tree/paint.rs`).
+
 ## Follow-ups (recommended)
 
 - Consider exposing an opt-in custom indicator renderer if parity-sensitive recipes need it (today
