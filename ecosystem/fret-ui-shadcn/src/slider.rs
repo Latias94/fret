@@ -995,11 +995,12 @@ mod tests {
     use fret_ui::tree::UiTree;
 
     fn pointer_x_for_value(bounds: Rect, value: f32, min: f32, max: f32, thumb_size: Px) -> Px {
-        let t = radix_slider::normalize_value(value, min, max);
-        let _ = thumb_size;
+        let t = radix_slider::normalize_value(value, min, max).clamp(0.0, 1.0);
         let track_w = bounds.size.width.0.max(0.0);
         let left = bounds.origin.x.0;
-        Px(left + track_w * t)
+        let thumb_r = thumb_size.0.max(0.0) * 0.5;
+        let usable_w = (track_w - 2.0 * thumb_r).max(0.0);
+        Px(left + thumb_r + usable_w * t)
     }
 
     struct FakeServices;

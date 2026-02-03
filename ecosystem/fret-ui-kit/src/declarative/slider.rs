@@ -17,7 +17,7 @@ fn value_from_pointer_x(
     pointer_x: Px,
     min: f32,
     max: f32,
-    _thumb_size: Px,
+    thumb_size: Px,
 ) -> Option<f32> {
     let track_w = bounds.size.width.0.max(0.0);
     if track_w <= 0.0 {
@@ -25,7 +25,21 @@ fn value_from_pointer_x(
     }
 
     let left = bounds.origin.x.0;
-    let t = ((pointer_x.0 - left) / track_w).clamp(0.0, 1.0);
+    let thumb_r = (thumb_size.0.max(0.0) * 0.5).max(0.0);
+    let usable_w = (track_w - 2.0 * thumb_r).max(0.0);
+
+    // Radix keeps thumbs inside the slider bounds at the edges. Model the same behavior by mapping
+    // pointer positions into the usable thumb-center span:
+    //   [left + thumb_r, left + track_w - thumb_r]
+    //
+    // When the track is too small for the thumb, fall back to clamping to the ends.
+    let t = if usable_w > 0.0 {
+        ((pointer_x.0 - left - thumb_r) / usable_w).clamp(0.0, 1.0)
+    } else if pointer_x.0 < (left + track_w * 0.5) {
+        0.0
+    } else {
+        1.0
+    };
     Some(min + (max - min) * t)
 }
 

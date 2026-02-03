@@ -747,6 +747,49 @@ fn page_preview(
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
+        PAGE_SONNER => preview_toast(cx, last_action.clone()),
+        PAGE_ALERT => preview_alert(cx),
+        PAGE_ALERT_DIALOG => preview_alert_dialog(cx, alert_dialog_open),
+        PAGE_ASPECT_RATIO => preview_aspect_ratio(cx),
+        PAGE_BREADCRUMB => preview_breadcrumb(cx, last_action.clone()),
+        PAGE_BUTTON_GROUP => preview_button_group(cx),
+        PAGE_CALENDAR => preview_calendar(cx, date_picker_month, date_picker_selected),
+        PAGE_CAROUSEL => preview_carousel(cx),
+        PAGE_CHART => preview_chart(cx),
+        PAGE_CHECKBOX => preview_checkbox(cx, checkbox),
+        PAGE_COLLAPSIBLE => preview_collapsible(cx),
+        PAGE_CONTEXT_MENU => {
+            preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
+        }
+        PAGE_DIALOG => preview_dialog(cx, dialog_open),
+        PAGE_DRAWER => preview_drawer(cx),
+        PAGE_DROPDOWN_MENU => {
+            preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
+        }
+        PAGE_EMPTY => preview_empty(cx),
+        PAGE_FORM => preview_forms(cx, text_input, text_area, checkbox, switch),
+        PAGE_HOVER_CARD => preview_hover_card(cx),
+        PAGE_INPUT => preview_input(cx, text_input),
+        PAGE_INPUT_GROUP => preview_input_group(cx),
+        PAGE_INPUT_OTP => preview_input_otp(cx),
+        PAGE_ITEM => preview_item(cx),
+        PAGE_KBD => preview_kbd(cx),
+        PAGE_LABEL => preview_label(cx),
+        PAGE_MENUBAR => preview_menubar(cx),
+        PAGE_NATIVE_SELECT => preview_native_select(cx),
+        PAGE_NAVIGATION_MENU => preview_navigation_menu(cx),
+        PAGE_PAGINATION => preview_pagination(cx),
+        PAGE_POPOVER => preview_popover(cx, popover_open),
+        PAGE_RADIO_GROUP => preview_radio_group(cx),
+        PAGE_SEPARATOR => preview_separator(cx),
+        PAGE_SHEET => preview_sheet(cx, sheet_open),
+        PAGE_SIDEBAR => preview_sidebar(cx),
+        PAGE_SPINNER => preview_spinner(cx),
+        PAGE_SWITCH => preview_switch(cx, switch),
+        PAGE_TEXTAREA => preview_textarea(cx, text_area),
+        PAGE_TOGGLE => preview_toggle(cx),
+        PAGE_TOGGLE_GROUP => preview_toggle_group(cx),
+        PAGE_TYPOGRAPHY => preview_typography(cx),
         PAGE_MATERIAL3_GALLERY => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_gallery(
                 cx,
@@ -4574,6 +4617,894 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     );
 
     vec![variants, sizes]
+}
+
+fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        shadcn::Alert::new([
+            shadcn::AlertTitle::new("Heads up!").into_element(cx),
+            shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::Alert::new([
+            shadcn::AlertTitle::new("Error").into_element(cx),
+            shadcn::AlertDescription::new("Something went wrong.").into_element(cx),
+        ])
+        .variant(shadcn::AlertVariant::Destructive)
+        .into_element(cx),
+    ]
+}
+
+fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+    let checked = cx
+        .get_model_copied(&model, Invalidation::Layout)
+        .unwrap_or(false);
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Checkbox::new(model)
+                    .a11y_label("Accept terms")
+                    .into_element(cx),
+                ui::label(cx, "Accept terms").into_element(cx),
+                cx.text(format!("checked={}", checked as u8)),
+            ]
+        },
+    )]
+}
+
+fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+    let on = cx
+        .get_model_copied(&model, Invalidation::Layout)
+        .unwrap_or(false);
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Switch::new(model)
+                    .a11y_label("Enable feature")
+                    .into_element(cx),
+                ui::label(cx, "Enable feature").into_element(cx),
+                cx.text(format!("on={}", on as u8)),
+            ]
+        },
+    )]
+}
+
+fn preview_input(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        move |cx| {
+            vec![
+                shadcn::Label::new("Email").into_element(cx),
+                shadcn::Input::new(value)
+                    .a11y_label("Email")
+                    .placeholder("name@example.com")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+                    .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        move |cx| {
+            vec![
+                shadcn::Label::new("Message").into_element(cx),
+                shadcn::Textarea::new(value)
+                    .a11y_label("Message")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)).h_px(Px(120.0)))
+                    .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        move |cx| {
+            vec![
+                shadcn::Label::new("Label").into_element(cx),
+                shadcn::Label::new("Required label").into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Kbd::new("Ctrl").into_element(cx),
+                shadcn::Kbd::new("K").into_element(cx),
+                shadcn::KbdGroup::new([
+                    shadcn::Kbd::new("⌘").into_element(cx),
+                    shadcn::Kbd::new("P").into_element(cx),
+                ])
+                .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    cx.text("Left"),
+                    shadcn::Separator::new()
+                        .orientation(shadcn::SeparatorOrientation::Vertical)
+                        .flex_stretch_cross_axis(true)
+                        .into_element(cx),
+                    cx.text("Right"),
+                ]
+            },
+        ),
+        shadcn::Separator::new().into_element(cx),
+    ]
+}
+
+fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Spinner::new().into_element(cx),
+                shadcn::Spinner::new()
+                    .refine_layout(LayoutRefinement::default().w_px(Px(24.0)).h_px(Px(24.0)))
+                    .into_element(cx),
+                shadcn::Spinner::new().speed(0.0).into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let theme = Theme::global(&*cx.app).clone();
+    let muted = theme.color_required("muted");
+    let child = cx.container(
+        fret_ui::element::ContainerProps {
+            background: Some(muted),
+            ..Default::default()
+        },
+        |cx| vec![cx.text("16:9")],
+    );
+
+    vec![
+        shadcn::AspectRatio::new(16.0 / 9.0, child)
+            .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+            .into_element(cx),
+    ]
+}
+
+fn preview_breadcrumb(
+    cx: &mut ElementContext<'_, App>,
+    _last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    vec![
+        shadcn::Breadcrumb::new()
+            .items([
+                shadcn::BreadcrumbItem::new("Home"),
+                shadcn::BreadcrumbItem::new("Components"),
+                shadcn::BreadcrumbItem::new("Breadcrumb"),
+            ])
+            .into_element(cx),
+        shadcn::Breadcrumb::new()
+            .items([
+                shadcn::BreadcrumbItem::new("Home"),
+                shadcn::BreadcrumbItem::ellipsis(),
+                shadcn::BreadcrumbItem::new("Examples"),
+                shadcn::BreadcrumbItem::new("Data Fetching"),
+            ])
+            .into_element(cx),
+    ]
+}
+
+fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let group = shadcn::ButtonGroup::new([
+        shadcn::Button::new("Left").into(),
+        shadcn::Button::new("Middle").into(),
+        shadcn::Button::new("Right").into(),
+    ])
+    .a11y_label("Button group")
+    .into_element(cx);
+
+    vec![group]
+}
+
+fn preview_calendar(
+    cx: &mut ElementContext<'_, App>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<Date>>,
+) -> Vec<AnyElement> {
+    let calendar = shadcn::Calendar::new(month, selected)
+        .number_of_months(1)
+        .into_element(cx);
+    vec![calendar]
+}
+
+fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let collapsible = shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
+        cx,
+        |cx, open, is_open| {
+            let label = if is_open {
+                "Hide details"
+            } else {
+                "Show details"
+            };
+            shadcn::Button::new(label)
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open)
+                .into_element(cx)
+        },
+        |cx| {
+            shadcn::CollapsibleContent::new(vec![
+                cx.text("This content is toggled by a Collapsible."),
+                cx.text("Use it for disclosure panels, advanced options, etc."),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+        },
+    );
+
+    vec![collapsible]
+}
+
+fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        shadcn::Drawer::new_controllable(cx, None, false).into_element(
+            cx,
+            |cx| shadcn::Button::new("Open drawer").into_element(cx),
+            |cx| {
+                shadcn::DrawerContent::new(vec![
+                    shadcn::DrawerHeader::new(vec![
+                        shadcn::DrawerTitle::new("Drawer").into_element(cx),
+                        shadcn::DrawerDescription::new("A bottom sheet-style overlay.")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::DrawerFooter::new(vec![shadcn::Button::new("Done").into_element(cx)])
+                        .into_element(cx),
+                ])
+                .into_element(cx)
+            },
+        ),
+    ]
+}
+
+fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let trigger = shadcn::Button::new("Hover me")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx);
+    let content = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("HoverCard").into_element(cx)])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![
+            cx.text("HoverCard content lives in a hover overlay."),
+            cx.text("Useful for previews, profile cards, etc."),
+        ])
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+    .into_element(cx);
+
+    vec![shadcn::HoverCard::new_controllable(cx, None, false, trigger, content).into_element(cx)]
+}
+
+fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct InputGroupModels {
+        value: Option<Model<String>>,
+    }
+
+    let value = cx.with_state(InputGroupModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(InputGroupModels::default, |st| {
+                st.value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let group = shadcn::InputGroup::new(value)
+        .a11y_label("Search")
+        .leading([shadcn::InputGroupText::new("Search").into_element(cx)])
+        .trailing([shadcn::InputGroupButton::new("Go")
+            .on_click(CMD_APP_OPEN)
+            .into_element(cx)])
+        .into_element(cx);
+
+    vec![group]
+}
+
+fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct InputOtpModels {
+        value: Option<Model<String>>,
+    }
+
+    let value = cx.with_state(InputOtpModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(InputOtpModels::default, |st| st.value = Some(model.clone()));
+            model
+        }
+    };
+
+    let otp = shadcn::InputOtp::new(value).length(6).into_element(cx);
+    vec![otp]
+}
+
+fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use shadcn::{MenubarEntry, MenubarItem, MenubarMenu};
+
+    let file = MenubarMenu::new("File").entries([
+        MenubarEntry::Item(MenubarItem::new("Open").on_select(CMD_APP_OPEN)),
+        MenubarEntry::Item(MenubarItem::new("Save").on_select(CMD_APP_SAVE)),
+        MenubarEntry::Separator,
+        MenubarEntry::Item(MenubarItem::new("Settings").on_select(CMD_APP_SETTINGS)),
+    ]);
+
+    let edit = MenubarMenu::new("Edit").entries([
+        MenubarEntry::Item(MenubarItem::new("Undo").on_select(fret_app::core_commands::EDIT_UNDO)),
+        MenubarEntry::Item(MenubarItem::new("Redo").on_select(fret_app::core_commands::EDIT_REDO)),
+    ]);
+
+    vec![shadcn::Menubar::new([file, edit]).into_element(cx)]
+}
+
+fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let intro = shadcn::NavigationMenuItem::new(
+        "intro",
+        "Introduction",
+        vec![
+            cx.text("A basic NavigationMenu item."),
+            cx.text("Content is shown in a popover."),
+        ],
+    );
+    let components = shadcn::NavigationMenuItem::new(
+        "components",
+        "Components",
+        vec![
+            cx.text("This demo is intentionally lightweight."),
+            cx.text("We can expand it to match shadcn/ui registry examples."),
+        ],
+    );
+
+    vec![
+        shadcn::NavigationMenu::uncontrolled(Some("intro"))
+            .indicator(true)
+            .list(shadcn::NavigationMenuList::new([intro, components]))
+            .into_element(cx),
+    ]
+}
+
+fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let content = shadcn::PaginationContent::new([
+        shadcn::PaginationItem::new(
+            shadcn::PaginationPrevious::new()
+                .on_click(CMD_APP_OPEN)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("1")])
+                .on_click(CMD_APP_OPEN)
+                .active(true)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("2")])
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(shadcn::PaginationEllipsis::new().into_element(cx))
+            .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("10")])
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationNext::new()
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let pagination = shadcn::Pagination::new([content]).into_element(cx);
+
+    vec![pagination]
+}
+
+fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let theme = Theme::global(&*cx.app).clone();
+    let muted = theme.color_required("muted");
+
+    let item = |cx: &mut ElementContext<'_, App>, label: &'static str| {
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![shadcn::CardTitle::new(label).into_element(cx)])
+                .into_element(cx),
+            shadcn::CardContent::new(vec![
+                cx.text("Carousel currently demonstrates layout only."),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+        .into_element(cx)
+    };
+
+    let carousel = shadcn::Carousel::new([
+        item(cx, "Slide 1"),
+        item(cx, "Slide 2"),
+        item(cx, "Slide 3"),
+    ])
+    .item_basis_main_px(Px(260.0))
+    .refine_layout(LayoutRefinement::default().w_px(Px(360.0)))
+    .into_element(cx);
+
+    let wrapper = cx.container(
+        fret_ui::element::ContainerProps {
+            background: Some(muted),
+            ..Default::default()
+        },
+        |_cx| vec![carousel],
+    );
+
+    vec![wrapper]
+}
+
+fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let theme = Theme::global(&*cx.app).clone();
+    let chart_1 = theme.color_required("chart-1");
+    let chart_2 = theme.color_required("chart-2");
+
+    let tooltip = shadcn::ChartTooltipContent::new()
+        .label("January")
+        .items([
+            shadcn::ChartTooltipItem::new("Desktop", "186").color(ColorRef::Color(chart_1)),
+            shadcn::ChartTooltipItem::new("Mobile", "80").color(ColorRef::Color(chart_2)),
+        ])
+        .into_element(cx);
+
+    let legend = shadcn::ChartLegendContent::new()
+        .items([
+            shadcn::ChartLegendItem::new("Desktop").color(ColorRef::Color(chart_1)),
+            shadcn::ChartLegendItem::new("Mobile").color(ColorRef::Color(chart_2)),
+        ])
+        .wrap(true)
+        .into_element(cx);
+
+    vec![
+        cx.text("Chart in shadcn/ui is Recharts composition; here we demo tooltip/legend skins."),
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_px(Px(360.0)))
+                .gap(Space::N3),
+            |_cx| vec![tooltip, legend],
+        ),
+    ]
+}
+
+fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let icon = |name: &'static str| fret_icons::IconId::new_static(name);
+
+    let row = |cx: &mut ElementContext<'_, App>, title: &'static str, desc: &'static str| {
+        shadcn::Item::new([
+            shadcn::ItemMedia::new([shadcn::icon::icon(cx, icon("lucide.file-text"))])
+                .variant(shadcn::ItemMediaVariant::Icon)
+                .into_element(cx),
+            shadcn::ItemContent::new([
+                shadcn::ItemTitle::new(title).into_element(cx),
+                shadcn::ItemDescription::new(desc).into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::ItemActions::new([shadcn::Button::new("Open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_APP_OPEN)
+                .into_element(cx)])
+            .into_element(cx),
+        ])
+        .on_click(CMD_APP_OPEN)
+        .into_element(cx)
+    };
+
+    let group = shadcn::ItemGroup::new([
+        row(cx, "Invoice.pdf", "Updated 2 days ago"),
+        shadcn::ItemSeparator::new().into_element(cx),
+        row(cx, "Report.md", "Draft"),
+        shadcn::ItemSeparator::new().into_element(cx),
+        row(cx, "Notes.txt", "Personal"),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+    .into_element(cx);
+
+    vec![group]
+}
+
+fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let row = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_px(Px(320.0)))
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                shadcn::NativeSelect::new("Select a fruit").into_element(cx),
+                shadcn::NativeSelect::new("Small select")
+                    .size(shadcn::NativeSelectSize::Sm)
+                    .into_element(cx),
+                shadcn::NativeSelect::new("Invalid")
+                    .aria_invalid(true)
+                    .into_element(cx),
+                shadcn::NativeSelect::new("Disabled")
+                    .disabled(true)
+                    .into_element(cx),
+            ]
+        },
+    );
+    vec![row]
+}
+
+fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct SidebarModels {
+        collapsed: Option<Model<bool>>,
+    }
+
+    let collapsed = cx.with_state(SidebarModels::default, |st| st.collapsed.clone());
+    let collapsed = match collapsed {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(SidebarModels::default, |st| {
+                st.collapsed = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let is_collapsed = cx
+        .watch_model(&collapsed)
+        .layout()
+        .copied()
+        .unwrap_or(false);
+
+    let header = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Button::new("Toggle")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .toggle_model(collapsed.clone())
+                    .into_element(cx),
+                cx.text(if is_collapsed {
+                    "collapsed"
+                } else {
+                    "expanded"
+                }),
+            ]
+        },
+    );
+
+    let sidebar = shadcn::Sidebar::new([
+        shadcn::SidebarHeader::new([cx.text("Workspace")]).into_element(cx),
+        shadcn::SidebarContent::new([shadcn::SidebarGroup::new([
+            shadcn::SidebarGroupLabel::new("General").into_element(cx),
+            shadcn::SidebarMenu::new([
+                shadcn::SidebarMenuItem::new(
+                    shadcn::SidebarMenuButton::new("Home")
+                        .icon(fret_icons::IconId::new_static("lucide.home"))
+                        .active(true)
+                        .collapsed(is_collapsed)
+                        .on_click(CMD_APP_OPEN)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(
+                    shadcn::SidebarMenuButton::new("Settings")
+                        .icon(fret_icons::IconId::new_static("lucide.settings"))
+                        .collapsed(is_collapsed)
+                        .on_click(CMD_APP_SETTINGS)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx)])
+        .collapsed(is_collapsed)
+        .into_element(cx),
+        shadcn::SidebarFooter::new([cx.text("Footer")]).into_element(cx),
+    ])
+    .collapsed(is_collapsed)
+    .into_element(cx);
+
+    let content = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Content").into_element(cx)])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![cx.text("Sidebar is a composable surface.")])
+            .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().h_full())
+    .into_element(cx);
+
+    vec![
+        header,
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_start(),
+            |_cx| vec![sidebar, content],
+        ),
+    ]
+}
+
+fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct RadioGroupModels {
+        value: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let model = cx.with_state(RadioGroupModels::default, |st| st.value.clone());
+    let model = match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(RadioGroupModels::default, |st| {
+                st.value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let group = shadcn::RadioGroup::new(model.clone())
+        .a11y_label("Options")
+        .item(shadcn::RadioGroupItem::new("default", "Default"))
+        .item(shadcn::RadioGroupItem::new("comfortable", "Comfortable"))
+        .item(shadcn::RadioGroupItem::new("compact", "Compact"))
+        .into_element(cx);
+
+    let value = cx
+        .get_model_cloned(&model, Invalidation::Layout)
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    vec![group, cx.text(format!("value={}", value.as_ref()))]
+}
+
+fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct ToggleModels {
+        pressed: Option<Model<bool>>,
+    }
+
+    let pressed = cx.with_state(ToggleModels::default, |st| st.pressed.clone());
+    let pressed = match pressed {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ToggleModels::default, |st| st.pressed = Some(model.clone()));
+            model
+        }
+    };
+
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Toggle::new(pressed.clone())
+                    .label("Bold")
+                    .a11y_label("Bold")
+                    .into_element(cx),
+                shadcn::Toggle::new(pressed.clone())
+                    .label("Outline")
+                    .variant(shadcn::ToggleVariant::Outline)
+                    .a11y_label("Bold (outline)")
+                    .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct ToggleGroupModels {
+        value: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let value = cx.with_state(ToggleGroupModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(ToggleGroupModels::default, |st| {
+                st.value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let group = shadcn::ToggleGroup::single(value.clone())
+        .item(shadcn::ToggleGroupItem::new(
+            "bold",
+            [ui::label(cx, "B").into_element(cx)],
+        ))
+        .item(shadcn::ToggleGroupItem::new(
+            "italic",
+            [ui::label(cx, "I").into_element(cx)],
+        ))
+        .item(shadcn::ToggleGroupItem::new(
+            "underline",
+            [ui::label(cx, "U").into_element(cx)],
+        ))
+        .into_element(cx);
+
+    let selected = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    vec![group, cx.text(format!("selected={}", selected.as_ref()))]
+}
+
+fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N3).items_start(),
+        move |cx| {
+            vec![
+                shadcn::typography::h1(cx, "The Joke Tax Chronicles"),
+                shadcn::typography::lead(cx, "Once upon a time, in a far-off land..."),
+                shadcn::typography::p(
+                    cx,
+                    "The king, seeing how much happier his subjects were, realized the error of his ways and repealed the joke tax.",
+                ),
+                shadcn::typography::blockquote(
+                    cx,
+                    "After all, everyone enjoys a good joke, so it's only fair that they should pay for the privilege.",
+                ),
+                shadcn::typography::inline_code(cx, "cargo run -p fret-ui-gallery"),
+            ]
+        },
+    )]
+}
+
+fn preview_alert_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    let open_for_children = open.clone();
+    let dialog = shadcn::AlertDialog::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open alert dialog").into_element(cx),
+        |cx| {
+            shadcn::AlertDialogContent::new(vec![
+                shadcn::AlertDialogHeader::new(vec![
+                    shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+                    shadcn::AlertDialogDescription::new(
+                        "This action cannot be undone. This will permanently delete your data.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::AlertDialogFooter::new(vec![
+                    shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
+                        .into_element(cx),
+                    shadcn::AlertDialogAction::new("Continue", open_for_children.clone())
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    );
+
+    vec![dialog]
+}
+
+fn preview_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    let open_for_close = open.clone();
+    let dialog = shadcn::Dialog::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open dialog").into_element(cx),
+        |cx| {
+            shadcn::DialogContent::new(vec![
+                shadcn::DialogHeader::new(vec![
+                    shadcn::DialogTitle::new("Edit profile").into_element(cx),
+                    shadcn::DialogDescription::new(
+                        "Make changes to your profile here. Click save when you're done.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::DialogFooter::new(vec![
+                    shadcn::Button::new("Save changes").into_element(cx),
+                    shadcn::DialogClose::new(open_for_close.clone()).into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    );
+
+    vec![dialog]
+}
+
+fn preview_popover(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    vec![shadcn::Popover::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open popover").into_element(cx),
+        |cx| {
+            shadcn::PopoverContent::new(vec![
+                shadcn::PopoverTitle::new("Popover").into_element(cx),
+                shadcn::PopoverDescription::new("Non-modal overlay content.").into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    )]
+}
+
+fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    vec![shadcn::Sheet::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open sheet").into_element(cx),
+        |cx| {
+            shadcn::SheetContent::new(vec![
+                shadcn::SheetHeader::new(vec![
+                    shadcn::SheetTitle::new("Sheet").into_element(cx),
+                    shadcn::SheetDescription::new("A side panel overlay.").into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::SheetFooter::new(vec![shadcn::Button::new("Done").into_element(cx)])
+                    .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    )]
+}
+
+fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        shadcn::Empty::new([
+            shadcn::empty::EmptyHeader::new([
+                shadcn::empty::EmptyTitle::new("No results.").into_element(cx),
+                shadcn::empty::EmptyDescription::new("Try adjusting your filters.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::empty::EmptyContent::new([
+                shadcn::Button::new("Clear filters").into_element(cx)
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx),
+    ]
 }
 
 fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -9048,30 +9979,27 @@ fn preview_tabs(
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     let tabs = shadcn::Tabs::new(value)
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(LayoutRefinement::default().w_px(Px(400.0)))
         .list_full_width(false)
         .items([
             shadcn::TabsItem::new(
-                "overview",
-                "Overview",
-                vec![cx.text("Tabs are stateful and roving-focus friendly.")],
+                "account",
+                "Account",
+                vec![cx.text("Make changes to your account here.")],
             ),
             shadcn::TabsItem::new(
-                "details",
-                "Details",
-                vec![cx.text("Use Tabs for sections within a single page.")],
-            ),
-            shadcn::TabsItem::new(
-                "notes",
-                "Notes",
-                vec![cx.text(
-                    "In this gallery, the outer shell also uses Tabs (Preview/Usage/Notes).",
-                )],
+                "password",
+                "Password",
+                vec![cx.text("Change your password here.")],
             ),
         ])
         .into_element(cx);
 
-    vec![tabs, cx.text(format!("Selected: {selected}"))]
+    vec![
+        tabs,
+        cx.text("Note: this gallery uses Tabs for the Preview/Usage/Docs shell."),
+        cx.text(format!("Selected: {selected}")),
+    ]
 }
 
 fn preview_accordion(
