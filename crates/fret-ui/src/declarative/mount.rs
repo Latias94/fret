@@ -429,10 +429,18 @@ where
         // liveness.
         let liveness_roots = ui.all_layer_roots();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
-        let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
+        let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
+        reachable_from_layers.clear();
+        let mut reachable_from_layers_computed = false;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
-        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if view_cache_has_reuse_roots
-        {
+        let mut reachable_from_view_cache_roots =
+            ui.take_scratch_gc_reachable_from_view_cache_roots();
+        reachable_from_view_cache_roots.clear();
+        let mut reachable_from_view_cache_roots_active = false;
+        let mut gc_stack = ui.take_scratch_gc_stack();
+        gc_stack.clear();
+
+        if view_cache_has_reuse_roots {
             let view_cache_reuse_roots: Vec<GlobalElementId> =
                 window_state.view_cache_reuse_roots().collect();
             let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
@@ -440,16 +448,16 @@ where
                 .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
                 .collect();
 
-            let mut reachable: HashSet<NodeId> = HashSet::new();
-
             if !view_cache_reuse_root_nodes.is_empty() {
-                reachable.extend(with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc(
+                with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc_in_place(
                         ui,
                         window_frame,
                         view_cache_reuse_root_nodes.iter().copied(),
-                    )
-                }));
+                        &mut reachable_from_view_cache_roots,
+                        &mut gc_stack,
+                    );
+                });
             }
 
             // Also treat recorded view-cache subtree memberships as authoritative reachability,
@@ -459,16 +467,13 @@ where
                 if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                     for &element in elements {
                         if let Some(entry) = window_state.node_entry(element) {
-                            reachable.insert(entry.node);
+                            reachable_from_view_cache_roots.insert(entry.node);
                         }
                     }
                 }
             }
-
-            Some(reachable)
-        } else {
-            None
-        };
+            reachable_from_view_cache_roots_active = true;
+        }
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -488,24 +493,33 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable = reachable_from_layers.get_or_insert_with(|| {
+            if !reachable_from_layers_computed {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc(ui, window_frame, std::iter::once(root_node))
+                        collect_reachable_nodes_for_gc_in_place(
+                            ui,
+                            window_frame,
+                            std::iter::once(root_node),
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
+                        );
                     } else {
-                        collect_reachable_nodes_for_gc(
+                        collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
                             liveness_roots.iter().copied(),
-                        )
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
+                        );
                     }
-                })
-            });
-            if reachable.contains(&entry.node) {
+                });
+                reachable_from_layers_computed = true;
+            }
+            if reachable_from_layers.contains(&entry.node) {
                 return true;
             }
-            if let Some(reachable) = reachable_from_view_cache_roots.as_ref()
-                && reachable.contains(&entry.node)
+            if reachable_from_view_cache_roots_active
+                && reachable_from_view_cache_roots.contains(&entry.node)
             {
                 return true;
             }
@@ -534,9 +548,8 @@ where
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
-                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
-                    .as_ref()
-                    .map(|reachable| reachable.contains(&node));
+                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
+                    .then(|| reachable_from_view_cache_roots.contains(&node));
                 let view_cache_reuse_roots: Vec<GlobalElementId> =
                     window_state.view_cache_reuse_roots().collect();
                 let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
@@ -616,6 +629,13 @@ where
                 }
             });
         }
+
+        reachable_from_layers.clear();
+        reachable_from_view_cache_roots.clear();
+        gc_stack.clear();
+        ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
+        ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
+        ui.restore_scratch_gc_stack(gc_stack);
 
         if window_state.wants_continuous_frames() {
             app.push_effect(Effect::RequestAnimationFrame(window));
@@ -867,10 +887,18 @@ where
         // only detached nodes that have been stale beyond the configured lag window.
         let liveness_roots = ui.all_layer_roots();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
-        let mut reachable_from_layers: Option<HashSet<NodeId>> = None;
+        let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
+        reachable_from_layers.clear();
+        let mut reachable_from_layers_computed = false;
         let view_cache_has_reuse_roots = window_state.view_cache_reuse_roots().next().is_some();
-        let reachable_from_view_cache_roots: Option<HashSet<NodeId>> = if view_cache_has_reuse_roots
-        {
+        let mut reachable_from_view_cache_roots =
+            ui.take_scratch_gc_reachable_from_view_cache_roots();
+        reachable_from_view_cache_roots.clear();
+        let mut reachable_from_view_cache_roots_active = false;
+        let mut gc_stack = ui.take_scratch_gc_stack();
+        gc_stack.clear();
+
+        if view_cache_has_reuse_roots {
             let view_cache_reuse_roots: Vec<GlobalElementId> =
                 window_state.view_cache_reuse_roots().collect();
             let view_cache_reuse_root_nodes: Vec<NodeId> = view_cache_reuse_roots
@@ -878,32 +906,30 @@ where
                 .filter_map(|root| window_state.node_entry(*root).map(|e| e.node))
                 .collect();
 
-            let mut reachable: HashSet<NodeId> = HashSet::new();
-
             if !view_cache_reuse_root_nodes.is_empty() {
-                reachable.extend(with_window_frame(app, window, |window_frame| {
-                    collect_reachable_nodes_for_gc(
+                with_window_frame(app, window, |window_frame| {
+                    collect_reachable_nodes_for_gc_in_place(
                         ui,
                         window_frame,
                         view_cache_reuse_root_nodes.iter().copied(),
-                    )
-                }));
+                        &mut reachable_from_view_cache_roots,
+                        &mut gc_stack,
+                    );
+                });
             }
 
             for root in view_cache_reuse_roots {
                 if let Some(elements) = window_state.view_cache_elements_for_root(root) {
                     for &element in elements {
                         if let Some(entry) = window_state.node_entry(element) {
-                            reachable.insert(entry.node);
+                            reachable_from_view_cache_roots.insert(entry.node);
                         }
                     }
                 }
             }
 
-            Some(reachable)
-        } else {
-            None
-        };
+            reachable_from_view_cache_roots_active = true;
+        }
         window_state.retain_nodes(|id, entry| {
             if *id == root_id {
                 return true;
@@ -925,24 +951,33 @@ where
             if ui.node_layer(entry.node).is_some() {
                 return true;
             }
-            let reachable = reachable_from_layers.get_or_insert_with(|| {
+            if !reachable_from_layers_computed {
                 with_window_frame(app, window, |window_frame| {
                     if liveness_roots.is_empty() {
-                        collect_reachable_nodes_for_gc(ui, window_frame, std::iter::once(root_node))
+                        collect_reachable_nodes_for_gc_in_place(
+                            ui,
+                            window_frame,
+                            std::iter::once(root_node),
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
+                        );
                     } else {
-                        collect_reachable_nodes_for_gc(
+                        collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
                             liveness_roots.iter().copied(),
-                        )
+                            &mut reachable_from_layers,
+                            &mut gc_stack,
+                        );
                     }
-                })
-            });
-            if reachable.contains(&entry.node) {
+                });
+                reachable_from_layers_computed = true;
+            }
+            if reachable_from_layers.contains(&entry.node) {
                 return true;
             }
-            if let Some(reachable) = reachable_from_view_cache_roots.as_ref()
-                && reachable.contains(&entry.node)
+            if reachable_from_view_cache_roots_active
+                && reachable_from_view_cache_roots.contains(&entry.node)
             {
                 return true;
             }
@@ -971,9 +1006,8 @@ where
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
                 let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
-                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots
-                    .as_ref()
-                    .map(|reachable| reachable.contains(&node));
+                let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
+                    .then(|| reachable_from_view_cache_roots.contains(&node));
                 let view_cache_reuse_roots: Vec<GlobalElementId> =
                     window_state.view_cache_reuse_roots().collect();
                 let liveness_layer_roots_len = liveness_roots.len().min(u32::MAX as usize) as u32;
@@ -1053,6 +1087,13 @@ where
                 }
             });
         }
+
+        reachable_from_layers.clear();
+        reachable_from_view_cache_roots.clear();
+        gc_stack.clear();
+        ui.restore_scratch_gc_reachable_from_layers(reachable_from_layers);
+        ui.restore_scratch_gc_reachable_from_view_cache_roots(reachable_from_view_cache_roots);
+        ui.restore_scratch_gc_stack(gc_stack);
 
         if window_state.wants_continuous_frames() {
             app.push_effect(Effect::RequestAnimationFrame(window));
@@ -1878,24 +1919,38 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
     out
 }
 
+#[cfg(test)]
 fn collect_reachable_nodes_for_gc<H: UiHost>(
     ui: &UiTree<H>,
     window_frame: Option<&WindowFrame>,
     roots: impl IntoIterator<Item = NodeId>,
 ) -> HashSet<NodeId> {
     let mut out: HashSet<NodeId> = HashSet::new();
-    let mut stack: Vec<NodeId> = roots.into_iter().collect();
+    let mut stack: Vec<NodeId> = Vec::new();
+    collect_reachable_nodes_for_gc_in_place(ui, window_frame, roots, &mut out, &mut stack);
+    out
+}
+
+fn collect_reachable_nodes_for_gc_in_place<H: UiHost>(
+    ui: &UiTree<H>,
+    window_frame: Option<&WindowFrame>,
+    roots: impl IntoIterator<Item = NodeId>,
+    out: &mut HashSet<NodeId>,
+    stack: &mut Vec<NodeId>,
+) {
+    out.clear();
+    stack.clear();
+    stack.extend(roots);
     while let Some(node) = stack.pop() {
         if !out.insert(node) {
             continue;
         }
         if let Some(window_frame) = window_frame {
-            push_existing_subtree_children(ui, window_frame, node, &mut stack);
+            push_existing_subtree_children(ui, window_frame, node, stack);
         } else {
             stack.extend(ui.children(node));
         }
     }
-    out
 }
 
 #[cfg(test)]

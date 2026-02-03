@@ -182,6 +182,16 @@ impl<H: UiHost> Node<H> {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
+    /// Approximate capacity retained by per-frame scratch (“frame arena”) containers.
+    ///
+    /// This is a coarse signal intended for diagnostics/triage: it tracks reserved capacity
+    /// (not current length) and intentionally underestimates hash table overhead.
+    pub frame_arena_capacity_estimate_bytes: u64,
+    /// Number of scratch containers that grew their capacity during the current frame.
+    ///
+    /// This is a proxy for allocator churn in hot paths that should ideally stabilize after
+    /// warmup.
+    pub frame_arena_grow_events: u32,
     /// Total time spent in event dispatch during the current frame.
     ///
     /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
@@ -1181,6 +1191,7 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
     measure_cache_this_frame: HashMap<MeasureStackKey, Size>,
+    frame_arena: FrameArenaScratch,
     scratch_pending_invalidations: HashMap<NodeId, u8>,
     scratch_node_stack: Vec<NodeId>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
@@ -1529,6 +1540,50 @@ struct TouchPointerDownOutsideCandidate {
     moved: bool,
 }
 
+#[derive(Default)]
+struct FrameArenaScratch {
+    gc_reachable_from_layers: HashSet<NodeId>,
+    gc_reachable_from_view_cache_roots: HashSet<NodeId>,
+    gc_stack: Vec<NodeId>,
+    semantics_visited: HashSet<NodeId>,
+    semantics_stack: Vec<(NodeId, Transform2D)>,
+
+    gc_reachable_from_layers_cap_on_take: usize,
+    gc_reachable_from_view_cache_roots_cap_on_take: usize,
+    gc_stack_cap_on_take: usize,
+    semantics_visited_cap_on_take: usize,
+    semantics_stack_cap_on_take: usize,
+}
+
+impl FrameArenaScratch {
+    fn capacity_estimate_bytes(&self) -> u64 {
+        let mut bytes: u128 = 0;
+        bytes = bytes.saturating_add(
+            (self.gc_stack.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes = bytes.saturating_add(
+            (self.semantics_stack.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<(NodeId, Transform2D)>() as u128),
+        );
+        // HashSet capacity is the number of elements it can hold without reallocating. We treat
+        // it as `capacity * size_of::<NodeId>` as a lower bound.
+        bytes = bytes.saturating_add(
+            (self.gc_reachable_from_layers.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes = bytes.saturating_add(
+            (self.gc_reachable_from_view_cache_roots.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes = bytes.saturating_add(
+            (self.semantics_visited.capacity() as u128)
+                .saturating_mul(std::mem::size_of::<NodeId>() as u128),
+        );
+        bytes.min(u64::MAX as u128) as u64
+    }
+}
+
 impl<H: UiHost> Default for UiTree<H> {
     fn default() -> Self {
         Self {
@@ -1556,6 +1611,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
             measure_cache_this_frame: HashMap::new(),
+            frame_arena: FrameArenaScratch::default(),
             scratch_pending_invalidations: HashMap::new(),
             scratch_node_stack: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
@@ -1730,6 +1786,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.debug_stats.frame_id = frame_id;
+        self.debug_stats.frame_arena_capacity_estimate_bytes =
+            self.frame_arena.capacity_estimate_bytes();
+        self.debug_stats.frame_arena_grow_events = 0;
         self.debug_stats.dispatch_time = Duration::default();
         self.debug_stats.hit_test_time = Duration::default();
         self.debug_stats.dispatch_events = 0;
@@ -2524,6 +2583,84 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn restore_scratch_pending_invalidations(&mut self, scratch: HashMap<NodeId, u8>) {
         self.scratch_pending_invalidations = scratch;
+    }
+
+    pub(crate) fn take_scratch_gc_reachable_from_layers(&mut self) -> HashSet<NodeId> {
+        self.frame_arena.gc_reachable_from_layers_cap_on_take =
+            self.frame_arena.gc_reachable_from_layers.capacity();
+        std::mem::take(&mut self.frame_arena.gc_reachable_from_layers)
+    }
+
+    pub(crate) fn restore_scratch_gc_reachable_from_layers(&mut self, scratch: HashSet<NodeId>) {
+        if scratch.capacity() > self.frame_arena.gc_reachable_from_layers_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.gc_reachable_from_layers = scratch;
+    }
+
+    pub(crate) fn take_scratch_gc_reachable_from_view_cache_roots(&mut self) -> HashSet<NodeId> {
+        self.frame_arena
+            .gc_reachable_from_view_cache_roots_cap_on_take = self
+            .frame_arena
+            .gc_reachable_from_view_cache_roots
+            .capacity();
+        std::mem::take(&mut self.frame_arena.gc_reachable_from_view_cache_roots)
+    }
+
+    pub(crate) fn restore_scratch_gc_reachable_from_view_cache_roots(
+        &mut self,
+        scratch: HashSet<NodeId>,
+    ) {
+        if scratch.capacity()
+            > self
+                .frame_arena
+                .gc_reachable_from_view_cache_roots_cap_on_take
+        {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.gc_reachable_from_view_cache_roots = scratch;
+    }
+
+    pub(crate) fn take_scratch_gc_stack(&mut self) -> Vec<NodeId> {
+        self.frame_arena.gc_stack_cap_on_take = self.frame_arena.gc_stack.capacity();
+        std::mem::take(&mut self.frame_arena.gc_stack)
+    }
+
+    pub(crate) fn restore_scratch_gc_stack(&mut self, scratch: Vec<NodeId>) {
+        if scratch.capacity() > self.frame_arena.gc_stack_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.gc_stack = scratch;
+    }
+
+    pub(crate) fn take_scratch_semantics_visited(&mut self) -> HashSet<NodeId> {
+        self.frame_arena.semantics_visited_cap_on_take =
+            self.frame_arena.semantics_visited.capacity();
+        std::mem::take(&mut self.frame_arena.semantics_visited)
+    }
+
+    pub(crate) fn restore_scratch_semantics_visited(&mut self, scratch: HashSet<NodeId>) {
+        if scratch.capacity() > self.frame_arena.semantics_visited_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.semantics_visited = scratch;
+    }
+
+    pub(crate) fn take_scratch_semantics_stack(&mut self) -> Vec<(NodeId, Transform2D)> {
+        self.frame_arena.semantics_stack_cap_on_take = self.frame_arena.semantics_stack.capacity();
+        std::mem::take(&mut self.frame_arena.semantics_stack)
+    }
+
+    pub(crate) fn restore_scratch_semantics_stack(&mut self, scratch: Vec<(NodeId, Transform2D)>) {
+        if scratch.capacity() > self.frame_arena.semantics_stack_cap_on_take {
+            self.debug_stats.frame_arena_grow_events =
+                self.debug_stats.frame_arena_grow_events.saturating_add(1);
+        }
+        self.frame_arena.semantics_stack = scratch;
     }
 
     pub(crate) fn take_scratch_node_stack(&mut self) -> Vec<NodeId> {
@@ -5670,10 +5807,13 @@ impl<H: UiHost> UiTree<H> {
 
         let traversal_started = profile_semantics.then(Instant::now);
         for root in roots.iter().map(|r| r.root) {
-            let mut visited: HashSet<NodeId> = HashSet::new();
+            let mut visited = self.take_scratch_semantics_visited();
+            visited.clear();
             // Stack entries carry the transform that maps this node's local bounds into
             // screen-space (excluding this node's own `render_transform`).
-            let mut stack: Vec<(NodeId, Transform2D)> = vec![(root, Transform2D::IDENTITY)];
+            let mut stack = self.take_scratch_semantics_stack();
+            stack.clear();
+            stack.push((root, Transform2D::IDENTITY));
             while let Some((id, before)) = stack.pop() {
                 if !visited.insert(id) {
                     if cfg!(debug_assertions) {
@@ -5866,6 +6006,11 @@ impl<H: UiHost> UiTree<H> {
                     }
                 }
             }
+
+            visited.clear();
+            stack.clear();
+            self.restore_scratch_semantics_visited(visited);
+            self.restore_scratch_semantics_stack(stack);
         }
         if let Some(started) = traversal_started {
             t_traversal = Some(started.elapsed());
