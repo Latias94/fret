@@ -4539,11 +4539,9 @@ impl UiRetainedVirtualListReconcileV1 {
             preserved_items: record.preserved_items as u64,
             attached_items: record.attached_items as u64,
             detached_items: record.detached_items as u64,
-            // Keep-alive counters are not yet exported by `fret-ui`'s debug record, but we keep
-            // the serialized fields for forward compatibility with newer bundles.
-            reused_from_keep_alive_items: 0,
-            kept_alive_items: 0,
-            evicted_keep_alive_items: 0,
+            reused_from_keep_alive_items: record.reused_from_keep_alive_items as u64,
+            kept_alive_items: record.kept_alive_items as u64,
+            evicted_keep_alive_items: record.evicted_keep_alive_items as u64,
         }
     }
 }
@@ -6093,6 +6091,10 @@ pub struct UiFrameStatsV1 {
     pub layout_engine_solve_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
     #[serde(default)]
+    pub layout_fast_path_taken: bool,
+    #[serde(default)]
+    pub layout_invalidations_count: u32,
+    #[serde(default)]
     pub model_change_invalidation_roots: u32,
     #[serde(default)]
     pub model_change_models: u32,
@@ -6203,6 +6205,8 @@ impl UiFrameStatsV1 {
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
+            layout_fast_path_taken: stats.layout_fast_path_taken,
+            layout_invalidations_count: stats.layout_invalidations_count,
             model_change_invalidation_roots: stats.model_change_invalidation_roots,
             model_change_models: stats.model_change_models,
             model_change_observation_edges: stats.model_change_observation_edges,
