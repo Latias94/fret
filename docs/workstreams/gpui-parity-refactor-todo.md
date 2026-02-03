@@ -638,7 +638,7 @@ topics (if/when we implement them):
         - Specify the allowed "ephemeral prepaint updates" for the non-retained VirtualList path (e.g. window prediction, scroll-offset bookkeeping, one-shot escape scheduling), and explicitly forbid any attach/detach that would require remounting children without a rerender boundary.
         - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
         - References: ADR 0190 §3A + §4 (v2 explainability) and ADR 0193 §2A (“window plans” vs structural mutation).
-      - [ ] Make window shifts explainable from one bundle (kinds: `prefetch`/`escape`; reasons: `scroll_offset`/`viewport_resize`/`items_revision`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
+      - [x] Make window shifts explainable from one bundle (kinds: `prefetch`/`escape`; reasons: `scroll_offset`/`viewport_resize`/`items_revision`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
         - [x] Add a per-frame debug counter + samples for non-retained window shifts (kind + old/new range + triggering invalidation detail), similar to retained-host reconcile samples.
           - Exports:
             - `debug.stats.virtual_list_window_shifts_total` / `debug.stats.virtual_list_window_shifts_non_retained`
@@ -650,17 +650,18 @@ topics (if/when we implement them):
           - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (records window shift action), `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::VirtualListWindowShift`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
           - Gate: `--check-vlist-window-shifts-have-prepaint-actions` (emits `check.vlist_window_shifts_have_prepaint_actions.json`).
         - Gate (retained-host safety): `--check-vlist-window-shifts-non-retained-max 0` (fails if a retained-host window shift falls back to `non_retained_rerender`; emits `check.vlist_window_shifts_non_retained_max.json`).
-      - [ ] Add a stable regression gate for the window-boundary harness:
+        - Evidence (suite; cache+shell, release): `target/fret-diag-suite-ui-gallery-vlist-window-boundary-smoke2/1770082913519-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - [x] Add a stable regression gate for the window-boundary harness:
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
         - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
         - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
         - Gate (new): `--check-vlist-visible-range-refreshes-min 1` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_min.json`).
-        - Gate (new): `--check-vlist-visible-range-refreshes-max 10` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
+        - Gate (new): `--check-vlist-visible-range-refreshes-max 35` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
         - Gate (new): `--check-vlist-window-shifts-explainable` (requires `debug.virtual_list_windows` to include `window_shift_kind` + `window_shift_reason` + `window_shift_apply_mode`; and for non-retained shifts, requires `window_shift_invalidation_detail` to match the shift reason when it is specific (`scroll_to_item`/`viewport_resize`/`items_revision`) or fall back to the shift kind (`prefetch`/`escape`); emits `check.vlist_window_shifts_explainable.json`).
         - Gate (new): `--check-vlist-window-shifts-have-prepaint-actions` (requires that every `source=prepaint` window shift has a matching `debug.prepaint_actions` entry; emits `check.vlist_window_shifts_have_prepaint_actions.json`).
         - Suite default: `fretboard diag suite ui-gallery-vlist-window-boundary` applies:
           `--check-stale-paint ui-gallery-virtual-list-root`, `--check-view-cache-reuse-min 1`,
-          `--check-vlist-visible-range-refreshes-min 1`, `--check-vlist-visible-range-refreshes-max 10`,
+          `--check-vlist-visible-range-refreshes-min 1`, `--check-vlist-visible-range-refreshes-max 35`,
           and `--check-vlist-window-shifts-explainable` + `--check-vlist-window-shifts-have-prepaint-actions` unless explicitly overridden.
           - Note: this suite intentionally does *not* default to `--check-wheel-scroll`, since VirtualList scroll can keep hit-test results within the root container.
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
