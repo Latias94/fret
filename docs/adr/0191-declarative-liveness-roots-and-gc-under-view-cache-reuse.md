@@ -168,6 +168,21 @@ These keys are designed to align with the categories above and speed up triage:
 4. **Keep multi-root ownership stable and diagnosable.** Cross-root identity reuse is either forbidden (bug) or must be modeled explicitly; "touch" paths must not silently reassign ownership.
 5. **Treat structural detaches as explicit lifecycle events.** Detach should be attributable (callsite/root), and there should be a clear policy for "inactive limbo" vs immediate disposal (Flutter's `_InactiveElements` is a proven pattern).
 
+## Prior art (GPUI / Flutter; non-normative)
+
+This ADR is intentionally aligned with patterns proven in production UI frameworks:
+
+- **Zed/GPUI**: element-local state is retained across frames via an *explicit accessed set*.
+  - `Window::with_element_state` records `(GlobalElementId, TypeId)` into `next_frame.accessed_element_states` and moves state from `rendered_frame` → `next_frame` when accessed. (`repo-ref/zed/crates/gpui/src/window.rs`)
+  - View cache hits still call `with_element_state`, reuse prepaint/paint ranges, and re-touch dependencies (`extend_accessed`) so cache hits do not change lifetime/ownership semantics. (`repo-ref/zed/crates/gpui/src/view.rs`)
+  - “Dirty views” are tracked per view/entity and propagated to ancestors (`mark_view_dirty`), keeping correctness aligned with range reuse. (`repo-ref/zed/crates/gpui/src/window.rs`)
+
+- **Flutter**: “keep alive” is implemented as *owner-managed retention* rather than “recently visited” heuristics.
+  - `RenderSliverMultiBoxAdaptor` maintains a `_keepAliveBucket` holding offscreen children, and explicitly wires them into lifecycle hooks (`adoptChild`, `attach/detach`, `visitChildren`) so they remain live even when not in the active child list. (`repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`)
+  - Semantics visitation is intentionally different for kept-alive children (`visitChildrenForSemantics` excludes the bucket), making visibility/semantics a policy decision rather than an accidental lifetime artifact.
+
+Fret’s “liveness roots + reachability sweep + lag” model is the equivalent of GPUI’s accessed-set retention combined with Flutter’s keep-alive bucket ownership, adapted for a hybrid (declarative rebuild + retained UiTree) architecture.
+
 ## Decision
 
 ### 1) Definitions
