@@ -130,5 +130,7 @@ Exit criteria:
 - v2 surface is the only supported `imui` authoring API in-tree.
 - Docs and workstreams reflect the new reality.
 
-- [ ] IMUI2-api-050 Remove v1 `imui` APIs (or keep only a thin compatibility shim if it reduces churn).
-- [ ] IMUI2-docs-051 Update all workstream links and demo instructions to point to v2.
+- [x] IMUI2-api-050 Remove v1 `imui` widget methods from `ImUi` (use `UiWriterImUiExt` instead).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`UiWriterImUiExt` is the widget surface; `ImUi` no longer defines `button/text/separator/checkbox_model`).
+- [x] IMUI2-docs-051 Update workstream docs and demos to point to v2.
+  - Evidence: `docs/workstreams/imui-authoring-facade-v2.md`, `docs/workstreams/imui-authoring-facade-v1.md`, `apps/fret-examples/src/imui_hello_demo.rs`.

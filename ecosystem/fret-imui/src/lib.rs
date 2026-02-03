@@ -259,14 +259,6 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
         });
     }
 
-    pub fn text(&mut self, text: impl Into<Arc<str>>) {
-        <Self as UiWriterImUiExt<H>>::text(self, text);
-    }
-
-    pub fn separator(&mut self) {
-        <Self as UiWriterImUiExt<H>>::separator(self);
-    }
-
     pub fn row(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {
         let element = self.cx.row(RowProps::default(), |cx| imui(cx, f));
         self.out.push(element);
@@ -275,14 +267,6 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
     pub fn column(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {
         let element = self.cx.column(ColumnProps::default(), |cx| imui(cx, f));
         self.out.push(element);
-    }
-
-    pub fn button(&mut self, label: impl Into<Arc<str>>) -> Response {
-        <Self as UiWriterImUiExt<H>>::button(self, label)
-    }
-
-    pub fn checkbox_model(&mut self, label: impl Into<Arc<str>>, model: &Model<bool>) -> Response {
-        <Self as UiWriterImUiExt<H>>::checkbox_model(self, label, model)
     }
 }
 
@@ -305,6 +289,7 @@ mod tests {
         rc::Rc,
     };
 
+    use crate::UiWriterImUiExt as _;
     use fret_core::{
         AppWindowId, CaretAffinity, Event, Modifiers, MouseButton, Point, PointerId, PointerType,
         Px, Rect, Size, TextConstraints, TextMetrics, TextService,

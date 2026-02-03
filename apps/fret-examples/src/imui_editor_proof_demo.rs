@@ -127,6 +127,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let single = single_window_mode_enabled();
 
     fret_imui::imui(cx, |ui| {
+        use fret_imui::UiWriterImUiExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
         let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {
@@ -242,6 +243,8 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
                     fret_ui_kit::ui::container_build(cx, move |cx, out| {
                         out.extend(
                             fret_imui::imui_vstack(cx, move |ui| {
+                                use fret_imui::UiWriterImUiExt as _;
+
                                 ui.id(&panel_key, |ui| {
                                     ui.text("Controls panel (declarative root inside docking)");
                                     ui.text(format!("embedded viewport target: {target:?}"));
