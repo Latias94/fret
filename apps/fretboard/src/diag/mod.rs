@@ -2164,6 +2164,8 @@ See: `docs/tracy.md`.\n";
                 rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
             let is_ui_gallery_vlist_window_boundary_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
+            let is_ui_gallery_vlist_window_boundary_retained_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary-retained";
             let is_ui_gallery_ui_kit_list_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
             let is_ui_gallery_inspector_torture_suite =
@@ -2380,6 +2382,29 @@ See: `docs/tracy.md`.\n";
                     // highest-risk, most common implementation track (ADR 0190 Track B). The
                     // retained-host track (ADR 0192) has dedicated suites/scripts.
                     push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_vlist_window_boundary_retained_suite {
+                    // Retained-host counterpart of the window-boundary harness. This suite is used
+                    // to validate the ADR 0192 track (retained reconcile) with the same script and
+                    // baseline env, while keeping the non-retained suite as the default.
+                    //
+                    // Callers can still override them explicitly via `--env KEY=...`.
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
+                        "1",
+                    );
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "1");
                     (
                         vec![resolve_path(
                             &workspace_root,
@@ -2742,6 +2767,7 @@ See: `docs/tracy.md`.\n";
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration)
                     || is_ui_gallery_vlist_window_boundary_suite
+                    || is_ui_gallery_vlist_window_boundary_retained_suite
                     || is_components_gallery_file_tree_suite
                     || is_components_gallery_table_suite
                     || is_components_gallery_table_keep_alive_suite
@@ -2767,7 +2793,10 @@ See: `docs/tracy.md`.\n";
                         } else {
                             (None, None, None)
                         };
-                    let vlist_window_boundary_suite = is_ui_gallery_vlist_window_boundary_suite;
+                    let vlist_window_boundary_suite = is_ui_gallery_vlist_window_boundary_suite
+                        || is_ui_gallery_vlist_window_boundary_retained_suite;
+                    let vlist_window_boundary_retained_suite =
+                        is_ui_gallery_vlist_window_boundary_retained_suite;
                     let components_gallery_suite = is_components_gallery_file_tree_suite
                         || is_components_gallery_table_suite
                         || is_components_gallery_table_keep_alive_suite;
@@ -2823,24 +2852,27 @@ See: `docs/tracy.md`.\n";
                     let suite_vlist_window_shifts_escape_max = vlist_window_boundary_suite
                         .then_some(6u64)
                         .filter(|_| check_vlist_window_shifts_escape_max.is_none());
-                    let suite_vlist_window_shifts_non_retained_max =
+                    let script_requires_retained_vlist_reconcile_gate =
                         ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
+                            || vlist_window_boundary_retained_suite;
+                    let suite_vlist_window_shifts_non_retained_max =
+                        script_requires_retained_vlist_reconcile_gate
                             .then_some(0u64)
                             .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
-                    let script_requires_retained_vlist_reconcile_gate =
-                        ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
                     let suite_vlist_policy_key_stable = components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate
                         && !check_vlist_policy_key_stable;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
-                    let suite_retained_vlist_reconcile_no_notify_min = (components_gallery_suite
+                    let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate)
+                        || vlist_window_boundary_retained_suite)
                         .then_some(1u64)
                         .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
-                    let suite_retained_vlist_attach_detach_max = (components_gallery_suite
+                    let suite_retained_vlist_attach_detach_max = ((components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate)
-                        .then_some(64u64)
+                        || vlist_window_boundary_retained_suite)
+                        .then_some(256u64)
                         .filter(|_| check_retained_vlist_attach_detach_max.is_none());
                     let suite_retained_vlist_keep_alive_reuse_min = (components_gallery_suite
                         && script_requires_retained_vlist_keep_alive_reuse_gate)
