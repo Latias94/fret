@@ -2854,10 +2854,18 @@ See: `docs/tracy.md`.\n";
                         vlist_window_boundary_suite
                             && !check_vlist_window_shifts_have_prepaint_actions;
                     let suite_vlist_window_shifts_prefetch_max = vlist_window_boundary_suite
-                        .then_some(30u64)
+                        .then_some(if vlist_window_boundary_retained_suite {
+                            30u64
+                        } else {
+                            12u64
+                        })
                         .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
                     let suite_vlist_window_shifts_escape_max = vlist_window_boundary_suite
-                        .then_some(6u64)
+                        .then_some(if vlist_window_boundary_retained_suite {
+                            6u64
+                        } else {
+                            4u64
+                        })
                         .filter(|_| check_vlist_window_shifts_escape_max.is_none());
                     let script_requires_retained_vlist_reconcile_gate =
                         ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
