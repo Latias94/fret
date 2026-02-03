@@ -104,12 +104,22 @@ Correctness acceptance:
 
 ### M3: Hit testing (bounds tree / spatial index)
 
-- [ ] Implement a bounds tree (R-tree variant) built during prepaint per layer root.
-  - Reference: `repo-ref/zed/crates/gpui/src/bounds_tree.rs`.
-- [ ] Route pointer move/down hit-testing through the bounds tree for large trees.
-- [ ] Define “fallback” conditions clearly (transforms, clips, non-axis-aligned bounds).
+- [x] Implement a bounds tree built during prepaint per hit-testable layer root.
+  - Implemented by `perf(fret-ui): add bounds tree hit-test index` (commit `75a9fde3`).
+  - Note: current implementation supports axis-aligned transforms only (no rotation/shear).
+- [x] Route pointer move/down hit-testing through the bounds tree for large trees.
+  - Implemented by `75a9fde3` (hooked via `UiTree::hit_test_layers_cached`).
+- [x] Define “fallback” conditions clearly (transforms, clips, non-axis-aligned bounds).
+  - Disabled for a layer if any node has `clips_hit_test=false` (overflow-visible hit testing).
+  - Disabled for a layer if any transform is non-axis-aligned (`b!=0` or `c!=0`).
+  - Env toggles:
+    - `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` disables the index.
+    - `FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS` (default: 256) gates building for small trees.
 - [ ] Add a stress script gate that correlates pointer-move frequency with stable frame time.
   - Candidate: extend `tools/diag-scripts/ui-gallery-hover-layout-torture.json`.
+  - Follow-up: current `diag perf` totals do not include dispatch/hit-test time directly; see next item.
+- [ ] Add a dispatch/hit-test time metric to diagnostics so we can gate pointer-move cost explicitly.
+  - Candidate: extend `UiDebugFrameStats` with `dispatch_time` and/or `hit_test_time` and surface it in `fretboard diag perf`.
 
 Perf acceptance:
 

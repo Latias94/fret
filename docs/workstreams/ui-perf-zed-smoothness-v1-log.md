@@ -721,6 +721,13 @@ Worst overall:
 - top_total_time_us: `13211`
 - bundle: `target/fret-diag-perf/ui-gallery-steady.after-layout-engine-solved-stamp.autodump-off/1770078589779-ui-gallery-window-resize-stress-steady/bundle.json`
 
+Notes:
+- Delta vs `ui-gallery-steady.macos-m4.v4` (commit `d7e2c1db`, repeat=7):
+  - `ui-gallery-window-resize-stress-steady`: p95 total `16051us -> 13211us` (-2840us, ~-17.7%)
+  - `ui-gallery-hover-layout-torture-steady`: p95 total `1807us -> 1623us` (-184us, ~-10.2%)
+  - `ui-gallery-overlay-torture-steady`: p95 total `6858us -> 6576us` (-282us, ~-4.1%)
+  - Most other scripts improved by ~2–9% on p95 total (see table above).
+
 ## 2026-02-03 08:33:43 (commit `05cd5691`)
 
 Change:
@@ -807,3 +814,40 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
 - top_total_time_us: `12942`
 - bundle: `target/fret-diag-perf/resize-steady.after-layout-measure-scratch/1770079809090-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-03 01:44:57 (commit `75a9fde3`)
+
+Change:
+- perf(fret-ui): add bounds tree hit-test index (prepaint-built per layer; axis-aligned transforms only)
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf/ui-gallery-steady.after-bounds-tree.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort time --top 15 --json --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-overlay-torture-steady.json | 3666 | 6777 | 6777 | 3882 | 300 | 19 | 2876 |
+| tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json | 3368 | 3834 | 3834 | 3060 | 157 | 16 | 758 |
+| tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json | 2945 | 3060 | 3060 | 2719 | 64 | 16 | 329 |
+| tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json | 3577 | 3635 | 3635 | 2888 | 184 | 21 | 739 |
+| tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json | 1576 | 1599 | 1599 | 1089 | 8 | 11 | 500 |
+| tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json | 1608 | 1933 | 1933 | 1419 | 42 | 12 | 502 |
+| tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json | 6149 | 7105 | 7105 | 5803 | 787 | 28 | 1336 |
+| tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json | 2639 | 2834 | 2834 | 2223 | 33 | 16 | 619 |
+| tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json | 10337 | 10686 | 10686 | 9380 | 359 | 49 | 1283 |
+| tools/diag-scripts/ui-gallery-window-resize-stress-steady.json | 12982 | 13033 | 13033 | 10494 | 1734 | 61 | 2548 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `13033`
+- bundle: `target/fret-diag-perf/ui-gallery-steady.after-bounds-tree.r7/1770083128949-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- Gate check passed (no failures): `target/fret-diag-perf/ui-gallery-steady.after-bounds-tree.r7/check.perf_thresholds.json`.
+- Compared to the last logged suite run at commit `b038cbf7`, `ui-gallery-hover-layout-torture-steady` is slightly lower
+  (`p95 total 1602us -> 1599us`), while `ui-gallery-overlay-torture-steady` shows a higher outlier in this run.
