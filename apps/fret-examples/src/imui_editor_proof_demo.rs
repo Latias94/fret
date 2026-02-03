@@ -128,30 +128,59 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
     let single = single_window_mode_enabled();
 
     fret_imui::imui(cx, |ui| {
+        use fret_ui_kit::imui::UiWriterUiKitExt as _;
+
         ui.column(|ui| {
-            ui.text(format!(
-                "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
-            ));
+            let headline = fret_ui_kit::ui::text(
+                ui.cx_mut(),
+                format!(
+                    "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
+                ),
+            )
+            .font_semibold();
+            ui.add_ui(headline);
+
             if single {
-                ui.text(format!(
-                    "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
-                ));
+                let hint = fret_ui_kit::ui::text(
+                    ui.cx_mut(),
+                    format!(
+                        "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
+                    ),
+                )
+                .text_xs();
+                ui.add_ui(hint);
             }
 
-            ui.text(format!(
-                "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
-                caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
-            ));
-            ui.row(|ui| {
-                if ui.button("Reset layout").clicked() {
-                    reset_dock_graph(ui.cx_mut().app, window);
-                    dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
-                }
-                if ui.button("Center floatings").clicked() {
-                    dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
-                }
-            });
-            ui.text(format!("last viewport input: {last_input}"));
+            let caps_line = fret_ui_kit::ui::text(
+                ui.cx_mut(),
+                format!(
+                    "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
+                    caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
+                ),
+            )
+            .text_xs();
+            ui.add_ui(caps_line);
+
+            let controls = fret_ui_kit::ui::h_flex_build(ui.cx_mut(), move |cx, out| {
+                fret_imui::imui_build(cx, out, |ui| {
+                    if ui.button("Reset layout").clicked() {
+                        reset_dock_graph(ui.cx_mut().app, window);
+                        dock_runtime::request_dock_invalidation(ui.cx_mut().app, [window]);
+                    }
+                    if ui.button("Center floatings").clicked() {
+                        dock_runtime::recenter_in_window_floatings(ui.cx_mut().app, window);
+                    }
+                });
+            })
+            .gap(fret_ui_kit::Space::N2);
+            ui.add_ui(controls);
+
+            let last_input_line = fret_ui_kit::ui::text(
+                ui.cx_mut(),
+                format!("last viewport input: {last_input}"),
+            )
+            .text_xs();
+            ui.add_ui(last_input_line);
             ui.separator();
 
             let mut layout = LayoutStyle::default();
