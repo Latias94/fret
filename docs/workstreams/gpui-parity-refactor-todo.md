@@ -877,6 +877,8 @@ topics (if/when we implement them):
       - Anchors: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender`), `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_out_of_band_scroll_avoids_layout_after_overscan_window`).
     - Progress (v2.1 retained host): add a bounded keep-alive bucket for detached item subtrees (Flutter sliver-style).
       - Mechanism: when items detach due to a window shift, keep up to `VirtualListOptions::keep_alive` item roots keyed by `ItemKey` for later reuse (no remount).
+      - Performance: keep-alive bookkeeping stays hot-path friendly during boundary scroll. The keep-alive eviction order is maintained without per-frame O(n) scans,
+        and is periodically compacted to preserve an LRU-like “least recent detached” order for evictions.
       - Liveness: keep-alive roots are included in the window's GC liveness roots (ADR 0191) so cache-hit frames cannot sweep kept-alive subtrees as “islands”.
       - State persistence: the keep-alive bucket is stored in element-local state; retained hosts must touch that state key during normal render so it survives between reconcile frames (and on view-cache hits).
       - Diagnostics: bundles report `reused_from_keep_alive_items` / `kept_alive_items` / `evicted_keep_alive_items` and the keep-alive bucket size (`keep_alive_pool_len_before` / `keep_alive_pool_len_after`).
