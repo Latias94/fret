@@ -712,16 +712,12 @@ topics (if/when we implement them):
           - Worst layout frame: `frame_id=24` (`tick_id=25`) `layout_time_us=2560` with `retained_virtual_list_attached_items=9`, `detached_items=3` (delta=12) and `barrier_relayouts_performed=1`.
           - Worst attach/detach frame: `frame_id=28` (`tick_id=29`) `attached_items=10`, `detached_items=10` (delta=20) with `layout_time_us=1557`.
         - Takeaway: to reduce worst-tick layout time further, we either need to (a) reduce per-frame attach/detach delta (more frequent smaller shifts / staged prefetch), or (b) reduce the cost of attaching new rows (row recycling, cheaper row layout, or more effective keep-alive reuse).
-    - [~] (Non-retained `VirtualList`) Introduce an ephemeral/windowed boundary so a window shift does not necessarily imply a cache-root rerender.
-      - Target behavior: on `window_mismatch`, avoid rerendering the parent cache root solely to rebuild `visible_items`.
-      - Minimum viable slice (recommendation):
-        - Keep the public `VirtualList` API stable.
-        - Internally add a host/boundary that can attach/detach row subtrees on cache-hit frames (similar to ADR 0192 retained hosts), while leaving the parent cache root clean.
-        - Prefer leveraging existing `PrepaintOutputs` (ADR 0193) for “derived window” and “ephemeral item list” so the change remains explainable from one bundle.
-      - Closure harness: `apps/fret-ui-gallery` VirtualList window-boundary script(s), gated by:
-        - `--check-wheel-scroll` (prove scroll actually happened),
-        - `--check-stale-paint` (prove correctness under caching),
-        - a new “no rerender on window shift” gate for the chosen harness once implementable (see MVP5-perf-002 style gate design).
+    - [!] GPUI-MVP5-virt-004 (Optional; deferred) Non-retained window shifts without rerender.
+      - Rationale: fully composable “window shifts without dirtying the parent cache root” require an explicit retained-host
+        boundary (ADR 0192). Track B remains “plan-only”: it may derive a window plan in prepaint, but it must schedule a
+        one-shot rerender to rebuild `visible_items` when the window actually changes.
+      - If revisited, prefer implementing this as an explicit boundary/host (not structural mutation in prepaint) so the
+        result remains diagnosable and compatible with view-cache reuse + GC invariants (ADR 0191/0193).
     - [x] Add staged prefetch (ADR 0190 v2 addendum): shift retained-host windows *before* `window_mismatch` and reconcile incrementally.
       - Idea: when the visible range approaches the prefetch boundary (but is still covered), shift the window by a small bounded step and request redraw.
       - Goal: turn “one big boundary tick” into a bounded stream of small reconciles, reducing worst-tick spikes.
