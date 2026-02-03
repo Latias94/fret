@@ -27,6 +27,7 @@ type OpenStep =
   | { action: "attr"; selector: string; name: string; value: string }
   | { action: "mouseDown"; selector: string }
   | { action: "mouseUp"; selector: string }
+  | { action: "hoverNoWait"; selector: string }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
   | { action: "type"; selector: string; text: string }
@@ -602,13 +603,21 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "hoverNoWait") {
+      if (!valueRaw) {
+        throw new Error(`invalid --openSteps entry "${part}" (empty selector for hoverNoWait)`)
+      }
+      out.push({ action: "hoverNoWait", selector: valueRaw })
+      continue
+    }
+
     if (
       actionRaw !== "click" &&
       actionRaw !== "hover" &&
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|scrollTo|attr|mouseDown|mouseUp|wait|waitFor|move)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|hoverNoWait|contextmenu|keys|type|scroll|scrollTo|attr|mouseDown|mouseUp|wait|waitFor|move)`
       )
     }
 
@@ -1692,6 +1701,39 @@ async function applyOpenSteps(
       if (!ok) {
         throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
       }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "hoverNoWait") {
+      if (debug) {
+        console.log(`- openSteps: ${name} step[${idx}] hoverNoWait ${step.selector}`)
+      }
+
+      const point = await (async () => {
+        const expr = `(() => {
+          const rootSel = ${JSON.stringify(rootSel)};
+          const sel = ${JSON.stringify(step.selector)};
+
+          const root = document.querySelector(rootSel) || document.body;
+          const el = document.querySelector(sel);
+          if (!el || !(el instanceof Element)) return null;
+
+          el.scrollIntoView({ block: "center", inline: "center" });
+          const r = el.getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        })()`
+        return (await page.evaluate(expr)) as { x: number; y: number } | null
+      })()
+
+      if (!point) {
+        throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+      }
+
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+
+      // Hover styles may not create a new portal surface; yield a couple RAFs for style/layout to settle.
+      await page.evaluate(`new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))`)
       await waitForFonts(page, Math.min(2000, timeoutMs))
       continue
     }

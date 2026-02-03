@@ -85,6 +85,13 @@ Example (pick “Tomorrow” with a fixed baseline date):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 --freezeDate=2026-01-15 --style=new-york-v4 --modes=open --variants=preset-tomorrow --openAction=click --openSelector=\"[data-fret-golden-target] button[aria-controls]\" --openSteps=\"click=[data-slot=select-trigger];waitFor=[data-slot=select-content]\" --steps=\"click=[data-radix-select-viewport] [data-slot=select-item]:nth-of-type(2);wait=50\" date-picker-with-presets --update`
 
+Hover-only scripted steps:
+
+Some variants (e.g. “highlight-first”) only require a hover/focus change and do not open a new portal surface.
+Use `hoverNoWait=...` to avoid deadlocking on the default “wait for new portal” heuristic:
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 --style=new-york-v4 --modes=open --variants=highlight-first-vp375x240 --viewportW=375 --viewportH=240 --openSteps=\"hoverNoWait=[data-slot='dropdown-menu-item']\" dropdown-menu-demo --update`
+
 Extract open overlay states that require non-click input (the script infers the right open action per page):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts context-menu-demo tooltip-demo hover-card-demo command-dialog --modes=open --update --baseUrl=http://localhost:4020`
