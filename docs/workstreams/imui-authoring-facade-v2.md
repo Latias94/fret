@@ -162,6 +162,10 @@ Recommendation:
   This keeps the writer contract shareable without pulling `fret-ui-kit` into `fret-imui` and avoids dependency
   cycles when adding optional bridges.
 
+Decision (2026-02-03):
+
+- Landed the initial `UiWriter` contract in `ecosystem/fret-authoring`.
+
 2) How far should `Response` expand in v2?
 
 - keep v1 minimal (`clicked/changed/hovered/pressed/focused/rect`), or

@@ -1,6 +1,6 @@
 # Immediate-Mode Authoring Facade ("imui") v2 — TODO Tracker
 
-Status: Planned (fearless refactor tracker)
+Status: In progress (fearless refactor tracker)
 Last updated: 2026-02-03
 
 This tracker covers the fearless v2 consolidation work described in:
@@ -43,7 +43,7 @@ Exit criteria:
 - Ownership of the “writer” contract is decided (where it lives; what it depends on).
 - The “single authoritative widget implementation” rule is written down for official crates.
 
-- [ ] IMUI2-scope-001 Decide where the writer trait lives:
+- [x] IMUI2-scope-001 Decide where the writer trait lives:
   - candidates: `fret-imui`, `fret-ui-kit`, or a new tiny ecosystem crate.
   - recommendation: a new tiny ecosystem crate (e.g. `ecosystem/fret-authoring`) to avoid policy coupling and cycles.
 - [ ] IMUI2-scope-002 Define the canonical widget rule for official crates:
@@ -61,8 +61,9 @@ Exit criteria:
 - A minimal writer contract exists and `ImUi` implements it.
 - Third-party widgets can accept a single surface without knowing the concrete frontend.
 
-- [ ] IMUI2-api-010 Introduce the writer contract (bikesheddable name; minimal methods only).
-- [ ] IMUI2-api-011 Update `ImUi` to implement the writer contract.
+- [x] IMUI2-api-010 Introduce the writer contract (bikesheddable name; minimal methods only).
+- [x] IMUI2-api-011 Update `ImUi` to implement the writer contract.
+- [x] IMUI2-eco-013 Update official ecosystem `imui` adapters to accept `UiWriter` (no concrete `ImUi` coupling).
 - [ ] IMUI2-test-012 Add compile-level smoke tests ensuring the writer trait remains object-safe and usable across crates.
 
 ---
