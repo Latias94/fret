@@ -50,7 +50,12 @@ Each TODO is labeled:
 - **P1 — MVP5-virt-001 contract + explainability hardening**
   - Deliverable: tighten ADR 0190/0193 wording for non-retained v2 (“what can change in prepaint” vs “must rerender”), and keep the `ui-gallery-vlist-window-boundary` suite green with `--check-vlist-window-shifts-explainable`.
 - **P2 — MVP5-perf-002 notify hotspots**
-  - Deliverable: pick one stable harness (VirtualList boundary or overlay torture), record `notify_call` top hotspots per-frame, and add one budget gate that fails fast with evidence JSON.
+  - Deliverable: pick one stable harness (VirtualList boundary or overlay torture), record `notify_call` hotspots with *callsite attribution*, and add one budget gate that fails fast with evidence JSON.
+  - Checklist:
+    - Add `#[track_caller]` capture for `EventCx::notify()` / `ObserverCx::notify()` and propagate a single callsite per dispatch.
+    - Export bounded per-frame `debug.notify_requests` (file/line/col + caller node + target dirty view/cache root).
+    - Add a `fretboard diag stats` gate that can fail on a specific hotspot file (e.g. `pressable.rs`) and writes `check.notify_hotspots.json`.
+    - Wire the gate into at least one perf suite (warmup-ranked) so it is exercised in CI-style runs.
 - **P3 — MVP5-eco-003 code/text window pilot**
   - Deliverable: migrate one concrete surface (code-view lines or markdown) onto the prepaint-windowed pattern and add a diag script + stale-paint gate.
 
@@ -1399,7 +1404,13 @@ topics (if/when we implement them):
     - Evidence bundle (cache+shell): `target/fret-diag/1769689580999-ui-gallery-ai-transcript-torture-scroll/bundle.json`.
 - [~] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
-  - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
+  - Instrumentation (v2): bundles now export bounded `debug.notify_requests` with `notify()` callsite attribution
+    (file/line/col) so notify hotspots are gateable.
+    - Anchors: `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/mod.rs` (`UiDebugNotifyRequest`),
+      `crates/fret-ui/src/tree/dispatch.rs` (recording), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
+    - Gate: `fretboard diag stats <bundle> --check-notify-hotspot-file-max <file> <max>` writes `check.notify_hotspots.json`
+      next to the bundle (even on failure).
+      - Anchors: `apps/fretboard/src/diag/stats.rs`, `apps/fretboard/src/diag/mod.rs`.
   - Baseline note (pre-v1): worst-tick bundles were layout-dominated and frequently attributed dirty views to
     `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:*`.
   - Progress (v1):
@@ -1412,8 +1423,10 @@ topics (if/when we implement them):
         - Note: the worst “steady-state” tick in this bundle is layout-dominated, but `diag stats --sort time` no longer reports a dirty-view source
           attributed to `UiDebugInvalidationDetail::notify_call` from `pressable.rs:*`.
   - Done when:
-    - VirtualList torture no longer lists `pressable.rs:*` as a top `notify_call` dirtiness source in warmup-ranked top bundles,
-      and the remaining `notify_call` sources are either required (explicit hooks) or attributable to a smaller cache boundary.
+    - Diagnostics bundles export bounded `debug.notify_requests` with file/line/col attribution for `notify()`.
+    - `fretboard diag stats <bundle> --check-notify-hotspot-file-max crates/fret-ui/src/declarative/host_widget/event/pressable.rs 0`
+      passes for the warmup-ranked worst bundles under the chosen harness/suite.
+    - On failure, the gate writes `check.notify_hotspots.json` next to the bundle (with bounded offender samples and a stable aggregation key).
 - [x] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
   - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
   - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).
