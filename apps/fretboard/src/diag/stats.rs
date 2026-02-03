@@ -910,6 +910,26 @@ impl BundleStatsReport {
                     "hit_test_queries".to_string(),
                     Value::from(row.hit_test_queries),
                 );
+                obj.insert(
+                    "hit_test_bounds_tree_queries".to_string(),
+                    Value::from(row.hit_test_bounds_tree_queries),
+                );
+                obj.insert(
+                    "hit_test_bounds_tree_disabled".to_string(),
+                    Value::from(row.hit_test_bounds_tree_disabled),
+                );
+                obj.insert(
+                    "hit_test_bounds_tree_misses".to_string(),
+                    Value::from(row.hit_test_bounds_tree_misses),
+                );
+                obj.insert(
+                    "hit_test_bounds_tree_hits".to_string(),
+                    Value::from(row.hit_test_bounds_tree_hits),
+                );
+                obj.insert(
+                    "hit_test_bounds_tree_candidate_rejected".to_string(),
+                    Value::from(row.hit_test_bounds_tree_candidate_rejected),
+                );
                 obj.insert("total_time_us".to_string(), Value::from(row.total_time_us));
                 obj.insert(
                     "layout_nodes_performed".to_string(),
