@@ -90,9 +90,14 @@ pub struct DockSpace {
 
 #[derive(Debug, Clone, Copy)]
 struct FloatingDragState {
+    pointer_id: fret_core::PointerId,
     floating: DockNodeId,
     grab_offset: Point,
     start_rect: Rect,
+    start: Point,
+    start_tick: fret_runtime::TickId,
+    activated: bool,
+    last_debug_frame: Option<fret_runtime::FrameId>,
 }
 
 #[derive(Debug, Clone)]
@@ -2054,13 +2059,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             .iter()
                                             .find(|w| w.floating == floating)
                                         {
+                                            if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    pointer_id = ?pointer_id,
+                                                    floating = ?floating,
+                                                    start_rect = ?entry.rect,
+                                                    start = ?position,
+                                                    "floating drag start (title bar)"
+                                                );
+                                            }
                                             self.floating_drag = Some(FloatingDragState {
+                                                pointer_id,
                                                 floating,
                                                 grab_offset: Point::new(
                                                     Px(position.x.0 - entry.rect.origin.x.0),
                                                     Px(position.y.0 - entry.rect.origin.y.0),
                                                 ),
                                                 start_rect: entry.rect,
+                                                start: *position,
+                                                start_tick: now_tick,
+                                                activated: true,
+                                                last_debug_frame: None,
                                             });
                                             request_pointer_capture = Some(Some(dock_space_node));
                                             request_cursor = Some(fret_core::CursorIcon::Default);
@@ -2183,19 +2205,63 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             Px((position.x.0 - tab_rect.origin.x.0).max(0.0)),
                                             Px((position.y.0 - tab_rect.origin.y.0).max(0.0)),
                                         );
-                                        self.pending_dock_drags.insert(
-                                            pointer_id,
-                                            PendingDockDrag {
+                                        // If this tab is already in an in-window floating container, prefer moving
+                                        // the floating window itself by dragging the tab (imgui/egui parity).
+                                        // Hold Alt to force the dock drag behavior (tear-off / docking previews).
+                                        if layout_root != root
+                                            && !modifiers.alt
+                                            && let Some(entry) = dock
+                                                .graph
+                                                .floating_windows(self.window)
+                                                .iter()
+                                                .find(|w| w.floating == layout_root)
+                                        {
+                                            if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    pointer_id = ?pointer_id,
+                                                    floating = ?layout_root,
+                                                    start_rect = ?entry.rect,
+                                                    start = ?position,
+                                                    "floating drag start (tab)"
+                                                );
+                                            }
+                                            self.floating_drag = Some(FloatingDragState {
+                                                pointer_id,
+                                                floating: layout_root,
+                                                grab_offset: Point::new(
+                                                    Px(position.x.0 - entry.rect.origin.x.0),
+                                                    Px(position.y.0 - entry.rect.origin.y.0),
+                                                ),
+                                                start_rect: entry.rect,
                                                 start: *position,
-                                                panel: panel_key,
-                                                grab_offset: tab_local,
                                                 start_tick: now_tick,
-                                            },
-                                        );
-                                        request_pointer_capture = Some(Some(dock_space_node));
-                                        dock.hover = None;
-                                        invalidate_paint = true;
-                                        handled = true;
+                                                activated: false,
+                                                last_debug_frame: None,
+                                            });
+                                            request_pointer_capture = Some(Some(dock_space_node));
+                                            request_cursor =
+                                                Some(fret_core::CursorIcon::Default);
+                                            dock.hover = None;
+                                            invalidate_paint = true;
+                                            handled = true;
+                                        } else {
+                                            self.pending_dock_drags.insert(
+                                                pointer_id,
+                                                PendingDockDrag {
+                                                    start: *position,
+                                                    panel: panel_key,
+                                                    grab_offset: tab_local,
+                                                    start_tick: now_tick,
+                                                },
+                                            );
+                                            request_pointer_capture = Some(Some(dock_space_node));
+                                            dock.hover = None;
+                                            invalidate_paint = true;
+                                            handled = true;
+                                        }
                                     }
                                 }
                             }
@@ -2240,13 +2306,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             .iter()
                                             .find(|w| w.floating == floating)
                                     {
+                                        if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                            .is_some_and(|v| !v.is_empty())
+                                        {
+                                            tracing::info!(
+                                                window = ?self.window,
+                                                pointer_id = ?pointer_id,
+                                                floating = ?floating,
+                                                start_rect = ?entry.rect,
+                                                start = ?position,
+                                                "floating drag start (tab bar)"
+                                            );
+                                        }
                                         self.floating_drag = Some(FloatingDragState {
+                                            pointer_id,
                                             floating,
                                             grab_offset: Point::new(
                                                 Px(position.x.0 - entry.rect.origin.x.0),
                                                 Px(position.y.0 - entry.rect.origin.y.0),
                                             ),
                                             start_rect: entry.rect,
+                                            start: *position,
+                                            start_tick: now_tick,
+                                            activated: false,
+                                            last_debug_frame: None,
                                         });
                                         request_pointer_capture = Some(Some(dock_space_node));
                                         dock.hover = None;
@@ -2366,25 +2449,83 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 invalidate_paint = true;
                                 pending_redraws.push(self.window);
                             }
-                            if let Some(drag) = self.floating_drag {
-                                let desired = Rect::new(
-                                    Point::new(
-                                        Px(position.x.0 - drag.grab_offset.x.0),
-                                        Px(position.y.0 - drag.grab_offset.y.0),
-                                    ),
-                                    drag.start_rect.size,
-                                );
-                                let rect = Self::clamp_rect_to_bounds(desired, window_bounds);
-                                pending_effects.push(Effect::Dock(DockOp::SetFloatingRect {
-                                    window: self.window,
-                                    floating: drag.floating,
-                                    rect,
-                                }));
-                                request_cursor = Some(fret_core::CursorIcon::Default);
-                                invalidate_layout = true;
-                                invalidate_paint = true;
-                                pending_redraws.push(self.window);
-                                stop_propagation = true;
+                            if !buttons.left
+                                && self
+                                    .floating_drag
+                                    .as_ref()
+                                    .is_some_and(|d| d.pointer_id == pointer_id)
+                            {
+                                // Defensive: if we missed the corresponding `Up`, don't keep
+                                // holding the drag session forever.
+                                self.floating_drag = None;
+                            }
+                            if let Some(drag) = self.floating_drag.as_mut() {
+                                if drag.pointer_id == pointer_id && buttons.left {
+                                    if !drag.activated {
+                                        let activation =
+                                            fret_dnd::ActivationConstraint::Distance {
+                                                px: docking_interaction_settings
+                                                    .tab_drag_threshold
+                                                    .0,
+                                            };
+                                        let should_activate = activation.is_satisfied(
+                                            drag.start_tick.0,
+                                            now_tick.0,
+                                            drag.start,
+                                            *position,
+                                        );
+                                        if should_activate {
+                                            drag.activated = true;
+                                            if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    pointer_id = ?pointer_id,
+                                                    floating = ?drag.floating,
+                                                    "floating drag activated"
+                                                );
+                                            }
+                                        }
+                                    }
+                                    if drag.activated {
+                                        let desired = Rect::new(
+                                            Point::new(
+                                                Px(position.x.0 - drag.grab_offset.x.0),
+                                                Px(position.y.0 - drag.grab_offset.y.0),
+                                            ),
+                                            drag.start_rect.size,
+                                        );
+                                        let rect =
+                                            Self::clamp_rect_to_bounds(desired, window_bounds);
+                                        pending_effects
+                                            .push(Effect::Dock(DockOp::SetFloatingRect {
+                                                window: self.window,
+                                                floating: drag.floating,
+                                                rect,
+                                            }));
+                                        if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                            .is_some_and(|v| !v.is_empty())
+                                            && drag.last_debug_frame != Some(now_frame)
+                                        {
+                                            drag.last_debug_frame = Some(now_frame);
+                                            tracing::info!(
+                                                window = ?self.window,
+                                                pointer_id = ?pointer_id,
+                                                floating = ?drag.floating,
+                                                desired = ?desired,
+                                                rect = ?rect,
+                                                bounds = ?window_bounds,
+                                                "floating drag move"
+                                            );
+                                        }
+                                        invalidate_layout = true;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                    }
+                                    request_cursor = Some(fret_core::CursorIcon::Default);
+                                    stop_propagation = true;
+                                }
                             } else if has_pending_dock_drag {
                                 if !buttons.left {
                                     self.pending_dock_drags.remove(&pointer_id);
