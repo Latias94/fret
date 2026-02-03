@@ -749,6 +749,41 @@ mod tests {
     }
 
     #[test]
+    fn ui_kit_builder_can_be_rendered_from_imui() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-ui-kit-bridge",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    use fret_ui_kit::imui::UiWriterUiKitExt as _;
+
+                    let builder = fret_ui_kit::ui::text(ui.cx_mut(), "Hello").text_sm();
+                    ui.add_ui(builder);
+                })
+            },
+        );
+
+        assert_eq!(ui.children(root).len(), 1);
+    }
+
+    #[test]
     fn holding_press_does_not_repeat_clicked() {
         let window = AppWindowId::default();
         let bounds = Rect::new(

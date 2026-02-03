@@ -75,8 +75,8 @@ Exit criteria:
 - App code can write immediate-mode control flow while using `UiBuilder<T>` for patch vocabulary.
 - `fret-imui` remains policy-light (no hard dependency on `fret-ui-kit`).
 
-- [ ] IMUI2-bridge-020 Add an ecosystem-owned bridge module (likely in `fret-ui-kit` behind an `imui` feature):
-  - extension traits on `ImUi` to render `UiBuilder<T>` into the current output list.
+- [x] IMUI2-bridge-020 Add an ecosystem-owned bridge module (in `fret-ui-kit` behind an `imui` feature):
+  - extension trait on `UiWriter` to render `UiBuilder<T>` into the current output list.
 - [ ] IMUI2-bridge-021 Decide and document where token/preset helpers live (kit vs shadcn vs app).
 
 ---
