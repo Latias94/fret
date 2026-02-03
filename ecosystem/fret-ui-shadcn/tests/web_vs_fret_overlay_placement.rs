@@ -8062,153 +8062,167 @@ fn web_vs_fret_button_group_demo_dropdown_menu_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "button-group-demo",
         Some("menu"),
-        |cx, open| {
-            use fret_ui_shadcn::{
-                Button, ButtonGroup, ButtonGroupOrientation, ButtonSize, ButtonVariant,
-                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuGroup,
-                DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
-            };
+        |cx, open| render_button_group_demo_dropdown_menu(cx, open.clone()),
+        SemanticsRole::Button,
+        Some("More Options"),
+        SemanticsRole::Menu,
+    );
+}
 
-            fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-                cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(16.0));
-                            layout.size.height = Length::Px(Px(16.0));
-                            layout
-                        },
-                        ..Default::default()
-                    },
-                    |_cx| Vec::new(),
-                )
-            }
+fn render_button_group_demo_dropdown_menu<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Button, ButtonGroup, ButtonGroupOrientation, ButtonSize, ButtonVariant, DropdownMenu,
+        DropdownMenuAlign, DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem,
+        DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
 
-            let radius = fret_ui::Theme::global(&*cx.app).metric_required("metric.radius.md");
+    fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(16.0));
+                    layout.size.height = Length::Px(Px(16.0));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
+    }
 
-            let left_button = Button::new("Snooze")
-                .variant(ButtonVariant::Outline)
-                .corner_radii_override(fret_core::Corners {
-                    top_left: radius,
-                    bottom_left: radius,
-                    top_right: Px(0.0),
-                    bottom_right: Px(0.0),
-                });
+    let radius = fret_ui::Theme::global(&*cx.app).metric_required("metric.radius.md");
 
-            let right_button = Button::new("More Options")
+    let left_button = Button::new("Snooze")
+        .variant(ButtonVariant::Outline)
+        .corner_radii_override(fret_core::Corners {
+            top_left: radius,
+            bottom_left: radius,
+            top_right: Px(0.0),
+            bottom_right: Px(0.0),
+        });
+
+    let right_button = Button::new("More Options")
+        .variant(ButtonVariant::Outline)
+        .size(ButtonSize::Icon)
+        .border_left_width_override(Px(0.0))
+        .corner_radii_override(fret_core::Corners {
+            top_left: Px(0.0),
+            bottom_left: Px(0.0),
+            top_right: radius,
+            bottom_right: radius,
+        })
+        .children([icon_stub(cx)]);
+
+    let label: Model<Option<Arc<str>>> = cx.app.models_mut().insert(Some(Arc::from("personal")));
+
+    let dropdown = DropdownMenu::new(open.clone())
+        .align(DropdownMenuAlign::End)
+        // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
+        .min_width(Px(208.0))
+        .into_element(
+            cx,
+            |cx| right_button.clone().into_element(cx),
+            |cx| {
+                vec![
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
+                        ),
+                    ])),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Label As...")
+                                .leading(icon_stub(cx))
+                                .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                    DropdownMenuRadioGroup::new(label.clone())
+                                        .item(DropdownMenuRadioItemSpec::new(
+                                            "personal", "Personal",
+                                        ))
+                                        .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                        .item(DropdownMenuRadioItemSpec::new("other", "Other")),
+                                )]),
+                        ),
+                    ])),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Trash")
+                                .leading(icon_stub(cx))
+                                .variant(
+                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            ),
+                        ),
+                    ])),
+                ]
+            },
+        );
+
+    let group3 = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: SemanticsRole::Group,
+            ..Default::default()
+        },
+        move |cx| {
+            vec![cx.flex(
+                fret_ui::element::FlexProps {
+                    layout: LayoutStyle::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    wrap: false,
+                },
+                move |cx| vec![left_button.clone().into_element(cx), dropdown.clone()],
+            )]
+        },
+    );
+
+    ButtonGroup::new(vec![
+        ButtonGroup::new(vec![
+            Button::new("Go Back")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::Icon)
-                .border_left_width_override(Px(0.0))
-                .corner_radii_override(fret_core::Corners {
-                    top_left: Px(0.0),
-                    bottom_left: Px(0.0),
-                    top_right: radius,
-                    bottom_right: radius,
-                })
-                .children([icon_stub(cx)]);
-
-            let label: Model<Option<Arc<str>>> =
-                cx.app.models_mut().insert(Some(Arc::from("personal")));
-
-            let dropdown = DropdownMenu::new(open.clone())
-                .align(DropdownMenuAlign::End)
-                // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
-                .min_width(Px(208.0))
-                .into_element(
-                    cx,
-                    |cx| right_button.clone().into_element(cx),
-                    |cx| {
-                        vec![
-                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
-                                ),
-                            ])),
-                            DropdownMenuEntry::Separator,
-                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Label As...")
-                                        .leading(icon_stub(cx))
-                                        .submenu(vec![DropdownMenuEntry::RadioGroup(
-                                            DropdownMenuRadioGroup::new(label.clone())
-                                                .item(DropdownMenuRadioItemSpec::new(
-                                                    "personal", "Personal",
-                                                ))
-                                                .item(DropdownMenuRadioItemSpec::new("work", "Work"))
-                                                .item(DropdownMenuRadioItemSpec::new(
-                                                    "other", "Other",
-                                                )),
-                                        )]),
-                                ),
-                            ])),
-                            DropdownMenuEntry::Separator,
-                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Trash")
-                                        .leading(icon_stub(cx))
-                                        .variant(
-                                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                                        ),
-                                ),
-                            ])),
-                        ]
-                    },
-                );
-
-            let group3 = cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: SemanticsRole::Group,
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.flex(
-                        fret_ui::element::FlexProps {
-                            layout: LayoutStyle::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        move |cx| vec![left_button.clone().into_element(cx), dropdown.clone()],
-                    )]
-                },
-            );
-
-            ButtonGroup::new(vec![
-                ButtonGroup::new(vec![
-                    Button::new("Go Back")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Icon)
-                        .children([icon_stub(cx)])
-                        .into(),
-                ])
+                .children([icon_stub(cx)])
                 .into(),
-                ButtonGroup::new(vec![
-                    Button::new("Archive")
-                        .variant(ButtonVariant::Outline)
-                        .into(),
-                    Button::new("Report").variant(ButtonVariant::Outline).into(),
-                ])
+        ])
+        .into(),
+        ButtonGroup::new(vec![
+            Button::new("Archive")
+                .variant(ButtonVariant::Outline)
                 .into(),
-                group3.into(),
-            ])
-            .orientation(ButtonGroupOrientation::Horizontal)
-            .into_element(cx)
-        },
+            Button::new("Report").variant(ButtonVariant::Outline).into(),
+        ])
+        .into(),
+        group3.into(),
+    ])
+    .orientation(ButtonGroupOrientation::Horizontal)
+    .into_element(cx)
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_dropdown_menu_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "button-group-demo.vp375x240",
+        Some("menu"),
+        |cx, open| render_button_group_demo_dropdown_menu(cx, open.clone()),
         SemanticsRole::Button,
         Some("More Options"),
         SemanticsRole::Menu,
@@ -8322,6 +8336,7 @@ fn web_vs_fret_mode_toggle_dropdown_menu_overlay_placement_matches_mobile_tiny_v
 #[test]
 fn web_vs_fret_button_group_demo_menu_item_height_matches() {
     assert_button_group_demo_constrained_menu_item_height_matches("button-group-demo");
+    assert_button_group_demo_constrained_menu_item_height_matches("button-group-demo.vp375x240");
 }
 
 fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str) {
@@ -8469,6 +8484,7 @@ fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str)
 #[test]
 fn web_vs_fret_button_group_demo_menu_content_insets_match() {
     assert_button_group_demo_constrained_menu_content_insets_match("button-group-demo");
+    assert_button_group_demo_constrained_menu_content_insets_match("button-group-demo.vp375x240");
 }
 
 fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str) {
