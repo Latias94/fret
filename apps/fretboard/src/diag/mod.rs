@@ -2717,9 +2717,16 @@ See: `docs/tracy.md`.\n";
 
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
 
-                    if let Some(bundle_dir) = bundle_dir {
-                        let bundle_path =
-                            resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir));
+                    let bundle_path: Option<PathBuf> = match bundle_dir {
+                        Some(bundle_dir) => {
+                            Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
+                        }
+                        None => read_latest_pointer(&resolved_out_dir)
+                            .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                            .map(|path| resolve_bundle_json_path(path.as_path())),
+                    };
+
+                    if let Some(bundle_path) = bundle_path {
                         let mut report = bundle_stats_from_path(
                             &bundle_path,
                             stats_top.max(1),
@@ -3015,7 +3022,16 @@ See: `docs/tracy.md`.\n";
                         .filter(|s| !s.trim().is_empty())
                         .map(PathBuf::from);
 
-                    let Some(bundle_dir) = bundle_dir else {
+                    let bundle_path: Option<PathBuf> = match bundle_dir {
+                        Some(bundle_dir) => {
+                            Some(resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir)))
+                        }
+                        None => read_latest_pointer(&resolved_out_dir)
+                            .or_else(|| find_latest_export_dir(&resolved_out_dir))
+                            .map(|path| resolve_bundle_json_path(path.as_path())),
+                    };
+
+                    let Some(bundle_path) = bundle_path else {
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
                                 "script": src.display().to_string(),
@@ -3037,8 +3053,6 @@ See: `docs/tracy.md`.\n";
                         break;
                     };
 
-                    let bundle_path =
-                        resolve_bundle_json_path(&resolved_out_dir.join(bundle_dir.clone()));
                     let mut report =
                         bundle_stats_from_path(&bundle_path, stats_top.max(1), sort, stats_opts)?;
                     if warmup_frames > 0 && report.top.is_empty() {
