@@ -60,7 +60,7 @@ impl AlertDialog {
         Self {
             open,
             overlay_color: None,
-            window_padding: Space::N6,
+            window_padding: Space::N4,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
         }

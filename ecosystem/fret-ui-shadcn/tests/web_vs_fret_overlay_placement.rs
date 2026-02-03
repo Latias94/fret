@@ -22263,15 +22263,17 @@ fn web_vs_fret_drawer_dialog_desktop_overlay_center_matches_tiny_viewport() {
 }
 
 #[test]
-fn web_vs_fret_drawer_dialog_desktop_overlay_center_matches_mobile_tiny_viewport() {
-    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+fn web_vs_fret_drawer_dialog_mobile_overlay_insets_match() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle,
+    };
 
-    assert_centered_overlay_placement_matches(
+    assert_viewport_anchored_overlay_placement_matches(
         "drawer-dialog.vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
-            Dialog::new(open.clone()).into_element(
+            Drawer::new(open.clone()).into_element(
                 cx,
                 |cx| {
                     Button::new("Edit Profile")
@@ -22279,12 +22281,17 @@ fn web_vs_fret_drawer_dialog_desktop_overlay_center_matches_mobile_tiny_viewport
                         .into_element(cx)
                 },
                 |cx| {
-                    DialogContent::new(vec![cx.text("Edit profile")])
-                        .refine_layout(
-                            fret_ui_kit::LayoutRefinement::default()
-                                .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
-                        )
-                        .into_element(cx)
+                    DrawerContent::new(vec![
+                        DrawerHeader::new(vec![
+                            DrawerTitle::new("Edit profile").into_element(cx),
+                            DrawerDescription::new(
+                                "Make changes to your profile here. Click save when you're done.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
                 },
             )
         },
