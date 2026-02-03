@@ -98,7 +98,13 @@ Perf acceptance:
   - `perf(fret-ui): reuse frame scratch buffers` (commit `a39e79c4`).
 - [x] Reuse view-cache GC “keep-alive” scratch collections (HashSet/Vec) to reduce per-frame allocations.
   - `perf(fret-ui): reuse view-cache keepalive scratch` (commit `cb3ff2d9`).
-  - Status: needs re-measurement; current code-editor autoscroll probe regressed (see perf log entry for `cb3ff2d9`).
+  - A/B gate: `perf(fret-ui): gate view-cache keepalive scratch` (commit `968305b9`)
+    - `FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1` disables scratch reuse.
+  - Status: A/B is within noise on:
+    - code editor autoscroll (`tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`)
+    - view-cache toggle perf steady (`tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json`)
+    - overlay torture steady (`tools/diag-scripts/ui-gallery-overlay-torture-steady.json`)
+    (see perf log entries for `968305b9`).
 - [ ] Convert at least 2 hot scratch paths to arena-backed allocation:
   - Candidate A: semantics snapshot traversal scratch (stack + visited).
   - Candidate B: GC reachability scratch sets / temporary vectors in mount/GC.

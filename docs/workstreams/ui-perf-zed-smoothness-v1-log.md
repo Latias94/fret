@@ -1273,3 +1273,124 @@ Notes:
 - This scenario has only 2 cache roots and is paint-dominated; the keep-alive scratch reuse is expected to matter
   mostly for cases with many reused roots/elements. Re-run with more repeats and additional probes before deciding
   whether this change should be kept or reverted.
+
+## 2026-02-03 20:45:00 (commit `968305b9`)
+
+Change:
+- Add an A/B gate for the view-cache GC keep-alive scratch reuse:
+  - `FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1` forces the pre-`cb3ff2d9` allocation behavior.
+
+Script:
+- `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (release; steady; repeat=9; scratch enabled):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-default.r8 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| scratch enabled (default) | 6282 | 6336 | 6336 | 925 | 26 | 5385 |
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-default.r8/1770122017768-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Command (release; steady; repeat=9; scratch disabled):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-disabled.r8 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| scratch disabled | 6294 | 6322 | 6322 | 921 | 29 | 5398 |
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.ab-disabled.r8/1770122258799-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Notes:
+- In this paint-dominated probe (only 2 cache roots), the scratch reuse has no meaningful impact (A/B deltas are
+  within noise). The earlier perceived regression in the `cb3ff2d9` entry should be treated as noise until
+  confirmed by a broader suite or a cache-root-heavy script.
+
+## 2026-02-03 21:05:00 (commit `968305b9`)
+
+Change:
+- A/B validation: verify the keep-alive scratch gate across cache-root-heavy scripts.
+
+### Script: `tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json`
+
+Command (release; steady; repeat=7; scratch enabled):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-default.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| scratch enabled (default) | 10539 | 10654 | 10654 | 9327 | 79 | 1259 |
+
+Top view-cache counters (top frame):
+- `top_view_cache_roots_total`: 3
+- `top_view_cache_roots_reused`: 1
+- `top_view_cache_roots_cache_key_mismatch`: 0
+- `top_view_cache_roots_needs_rerender`: 0
+- `top_view_cache_roots_layout_invalidated`: 2
+
+Worst bundle:
+- `target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-default.r8/1770122617532-ui-gallery-view-cache-toggle-perf-steady/bundle.json`
+
+Command (release; steady; repeat=7; scratch disabled):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json --dir target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-disabled.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| scratch disabled | 10533 | 10674 | 10674 | 9333 | 80 | 1271 |
+
+Worst bundle:
+- `target/fret-diag-perf-view-cache/view-cache-toggle-perf.steady.keepalive-scratch.ab-disabled.r8/1770122688732-ui-gallery-view-cache-toggle-perf-steady/bundle.json`
+
+Notes:
+- A/B deltas are within expected noise for this script.
+
+### Script: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json`
+
+Command (release; steady; repeat=7; scratch enabled):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-default.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| scratch enabled (default) | 6613 | 6828 | 6828 | 3880 | 42 | 2906 |
+
+Top view-cache counters (top frame):
+- `top_view_cache_roots_total`: 3
+- `top_view_cache_roots_reused`: 1
+- `top_view_cache_roots_cache_key_mismatch`: 0
+- `top_view_cache_roots_needs_rerender`: 0
+- `top_view_cache_roots_layout_invalidated`: 2
+
+Worst bundle:
+- `target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-default.r8/1770122908340-ui-gallery-overlay-torture-steady/bundle.json`
+
+Command (release; steady; repeat=7; scratch disabled):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-disabled.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| scratch disabled | 6657 | 6759 | 6759 | 3788 | 40 | 2947 |
+
+Worst bundle:
+- `target/fret-diag-perf-overlay/overlay-torture.steady.keepalive-scratch.ab-disabled.r8/1770122979000-ui-gallery-overlay-torture-steady/bundle.json`
+
+Notes:
+- A/B deltas are within expected noise for this script.
