@@ -1414,6 +1414,34 @@ Worst bundle:
 Delta note (vs `1b0364e9` relaunch-per-repeat run above):
 - `p95 total 6737us -> 6373us` (-364us, ~-5.4%)
 
+### Element build: pool `Vec<AnyElement>` children buffers (arena-adjacent, v0)
+
+Commits:
+- `perf(fret-ui): pool element children vectors` (`07a4c252`)
+- `feat(diag): export element build pool counters` (`cbcd81ed`)
+- `perf(fret-ui): make element children vec pool LIFO` (`693a55b0`)
+
+Command (release; steady; repeat=7; relaunch-per-repeat):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.children-vec-pool.pop.r8 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| children vec pool (v0) | 6663 | 6803 | 6803 | 3817 | 41 | 2957 |
+
+Element build pool counters (top frame):
+- `top_element_children_vec_pool_reuses`: p50 `293`, p95 `293`
+- `top_element_children_vec_pool_misses`: p50 `0`, p95 `0`
+
+Worst bundle:
+- `target/fret-diag-perf-overlay/overlay-torture.steady.children-vec-pool.pop.r8/1770132990787-ui-gallery-overlay-torture-steady/bundle.json`
+
+Notes:
+- The pool reaches a stable “0 misses” steady state for the sampled top frame.
+- This script's `p95 total` did not improve in this run; the primary win is allocator-churn reduction + a measurable signal we can correlate on heavier pages.
+
 ### Script: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json`
 
 Command (release; steady; repeat=7; scratch enabled):

@@ -116,6 +116,11 @@ Perf acceptance:
 - [x] Remove per-scope `HashMap` churn during element ID derivation (callsite counters).
   - Implemented by `perf(fret-ui): remove callsite counter HashMap churn` (commit `2dd36fde`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for `2dd36fde`.
+- [x] Pool declarative element child buffers (`Vec<AnyElement>`) across frames (arena-adjacent, v0).
+  - Implemented by `perf(fret-ui): pool element children vectors` (commit `07a4c252`).
+  - Perf-visible counters exported by `feat(diag): export element build pool counters` (commit `cbcd81ed`).
+  - Follow-up: `perf(fret-ui): make element children vec pool LIFO` (commit `693a55b0`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for `693a55b0`.
 - [ ] Add an optional allocation counter hook for local profiling (feature-gated).
   - Keep it portable; do not require a global allocator swap for normal builds.
 

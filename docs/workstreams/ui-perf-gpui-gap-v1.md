@@ -121,6 +121,9 @@ Fret:
   - `top_frame_arena_grow_events`
   - Evidence: `feat(diag): export frame arena scratch stats` (commit `fe0ad7c3`) + perf log entry for `1b0364e9`.
 - Still missing: a true “allocate elements in an arena, bulk-clear after draw” model akin to GPUI’s `Arena`.
+- Still missing: a true “allocate elements in an arena, bulk-clear after draw” model akin to GPUI’s `Arena`.
+  - Partial progress: pooled `Vec<AnyElement>` child buffers across frames (arena-adjacent; reduces allocation churn but is not a bump arena).
+    - `perf(fret-ui): pool element children vectors` (commit `07a4c252`)
 
 Impact:
 
