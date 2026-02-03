@@ -1092,3 +1092,36 @@ Worst bundle:
 Notes:
 - In this scenario, hover edges do not trigger declarative layout invalidations; pointer-move cost is dominated by
   dispatch + the usual per-frame work (sub-2ms top frames).
+
+## 2026-02-03 16:44:00 (commit `c579fce4`)
+
+Change:
+- `fretboard diag perf` now falls back to `latest.txt` (or scanning export dirs) when a script run completes without
+  a `last_bundle_dir` in `script.result.json`.
+
+Why:
+- Some older scripts end immediately after `capture_bundle`, which requests a dump and may finish before the dump
+  completes. In those cases, `last_bundle_dir` is missing even though a bundle is eventually written to disk.
+- This fallback makes perf tooling more resilient while scripts are migrated to the steadier “reset + wait” protocol.
+
+## 2026-02-03 16:48:00 (commit `2549d976`)
+
+Change:
+- Make the code-view scroll baseline script “steady” by resetting diagnostics after warmup, and giving the bundle dump
+  enough frames to complete before the script exits.
+
+Script:
+- `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`
+
+Command (cached; steady; repeat=7):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json --dir target/fret-diag-perf-editor/code-view-scroll-refresh.baseline.cached.steady.r7 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --reuse-launch --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| p95 total | p95 dispatch_time_us | p95 layout_time_us | p95 prepaint_time_us | p95 paint_time_us |
+| ---: | ---: | ---: | ---: | ---: |
+| 1289 | 129 | 764 | 25 | 510 |
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-view-scroll-refresh.baseline.cached.steady.r7/1770108556310-ui-gallery-code-view-scroll-refresh-baseline/bundle.json`
