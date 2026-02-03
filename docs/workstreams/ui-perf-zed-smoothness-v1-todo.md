@@ -105,9 +105,14 @@ Perf acceptance:
     - view-cache toggle perf steady (`tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json`)
     - overlay torture steady (`tools/diag-scripts/ui-gallery-overlay-torture-steady.json`)
     (see perf log entries for `968305b9`).
-- [ ] Convert at least 2 hot scratch paths to arena-backed allocation:
-  - Candidate A: semantics snapshot traversal scratch (stack + visited).
-  - Candidate B: GC reachability scratch sets / temporary vectors in mount/GC.
+- [x] Convert at least 2 hot scratch paths to arena-backed allocation (scratch reuse, v0):
+  - Semantics snapshot traversal scratch (stack + visited).
+  - GC reachability scratch sets / traversal stack in mount/GC.
+  - Implemented by `perf(fret-ui): reuse GC/semantics scratch via frame arena` (commit `3d6e2431`).
+  - Evidence: perf log entry for `1b0364e9` (exports `top_frame_arena_*` counters).
+- [x] Export “frame arena scratch” counters into perf-visible diagnostics:
+  - Implemented by `feat(diag): export frame arena scratch stats` (commit `fe0ad7c3`).
+  - Fix: `fix(fret-ui): restore keepalive scratch after diagnostics` (commit `1b0364e9`).
 - [ ] Add an optional allocation counter hook for local profiling (feature-gated).
   - Keep it portable; do not require a global allocator swap for normal builds.
 

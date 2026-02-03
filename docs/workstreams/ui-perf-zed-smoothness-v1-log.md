@@ -1357,6 +1357,42 @@ Worst bundle:
 Notes:
 - A/B deltas are within expected noise for this script.
 
+### FrameArenaScratch v0: GC + semantics scratch reuse (exports `top_frame_arena_*`)
+
+Commits:
+- `perf(fret-ui): reuse GC/semantics scratch via frame arena` (`3d6e2431`)
+- `feat(diag): export frame arena scratch stats` (`fe0ad7c3`)
+- `fix(fret-ui): restore keepalive scratch after diagnostics` (`1b0364e9`)
+
+Command (release; steady; repeat=7; relaunch-per-repeat):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.frame-arena.r5.match-log.no-reuse-launch --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| frame arena scratch (v0) | 6624 | 6737 | 6737 | 3806 | 39 | 2904 |
+
+Frame arena counters (top frame; proxy signals):
+- `top_frame_arena_capacity_estimate_bytes`: p50 `24064`, p95 `24480`
+- `top_frame_arena_grow_events`: p50 `1`, p95 `1` (expected with relaunch-per-repeat)
+
+Worst bundle:
+- `target/fret-diag-perf-overlay/overlay-torture.steady.frame-arena.r5.match-log.no-reuse-launch/1770128903097-ui-gallery-overlay-torture-steady/bundle.json`
+
+Delta note (vs the earlier “keepalive scratch enabled (default)” entry above):
+- `p95 total 6828us -> 6737us` (-91us, ~-1.3%); likely within noise. Primary benefit is allocator churn reduction + observability.
+
+Command (release; steady; repeat=7; `--reuse-launch` warm process):
+```powershell
+cargo run -q -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.frame-arena.r4-reuse-launch.match-log --repeat 7 --reuse-launch --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Warm-process highlights:
+- `top_frame_arena_grow_events`: p50 `0`, p95 `1` (growth only shows up in the first run; subsequent repeats stay stable)
+- `p95 total`: `6487us` (this is not directly comparable to relaunch-per-repeat baselines)
+
 ### Script: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json`
 
 Command (release; steady; repeat=7; scratch enabled):

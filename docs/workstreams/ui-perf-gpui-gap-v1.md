@@ -109,7 +109,15 @@ GPUI:
 
 Fret:
 
-- Still uses regular heap allocations for many per-frame intermediates (mount scratch, per-frame vectors, etc.).
+- Partial progress: Fret now reuses a small set of retained scratch collections for hot per-frame traversals:
+  - GC reachability scratch (`HashSet<NodeId>` + `Vec<NodeId>`) in declarative mount/GC
+  - Semantics snapshot traversal scratch (`HashSet<NodeId>` + `Vec<(NodeId, Transform2D)>`)
+  - Evidence: `perf(fret-ui): reuse GC/semantics scratch via frame arena` (commit `3d6e2431`).
+- Diagnostics now export “frame arena scratch” proxies into perf bundles:
+  - `top_frame_arena_capacity_estimate_bytes`
+  - `top_frame_arena_grow_events`
+  - Evidence: `feat(diag): export frame arena scratch stats` (commit `fe0ad7c3`) + perf log entry for `1b0364e9`.
+- Still missing: a true “allocate elements in an arena, bulk-clear after draw” model akin to GPUI’s `Arena`.
 
 Impact:
 
