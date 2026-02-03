@@ -1,6 +1,6 @@
 # Immediate-Mode Authoring Facade ("imui") v2 - TODO Tracker
 
-Status: In progress (fearless refactor tracker)
+Status: Complete (M0–M5 implemented; keep for history)
 Last updated: 2026-02-03
 
 This tracker covers the fearless v2 consolidation work described in:

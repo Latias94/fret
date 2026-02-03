@@ -1,9 +1,12 @@
 # Immediate-Mode Authoring Facade ("imui") v2 - Fearless Refactor Plan
 
-Status: Draft (workstream note; not an ADR)
+Status: Implemented (in-tree; workstream note; not an ADR)
 Last updated: 2026-02-03
 
-This document proposes a fearless refactor of the `imui` authoring surface after v1.
+This document describes a fearless refactor of the `imui` authoring surface after v1.
+
+As of 2026-02-03, the tracked v2 consolidation milestones (M0–M5) are implemented in-tree. This
+document remains as the design narrative and rationale for the current shape.
 
 The motivating idea: **imui should remain an authoring frontend**, not a second runtime, and it should not grow into a
 parallel ecosystem surface that competes with the unified patch chain (`ui()` / `UiBuilder<T>`) introduced by ADR 0175.

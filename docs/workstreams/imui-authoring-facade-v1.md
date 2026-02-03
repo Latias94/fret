@@ -1,6 +1,6 @@
 # Immediate-Mode Authoring Facade ("imui") v1
 
-Status: Draft (workstream note; not an ADR)
+Status: Baseline (historical reference; superseded by v2)
 Last updated: 2026-02-03
 
 This document proposes an **immediate-mode authoring facade** for Fret that feels closer to `egui` / Dear ImGui (and

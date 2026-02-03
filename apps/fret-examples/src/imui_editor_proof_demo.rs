@@ -60,6 +60,7 @@ pub fn run() -> anyhow::Result<()> {
             .dock_op(on_dock_op)
             .window_create_spec(window_create_spec)
             .window_created(window_created)
+            .before_close_window(before_close_window)
     })?
     .with_main_window("imui_editor_proof_demo", (1120.0, 720.0))
     .init_app(|app| {
@@ -439,4 +440,13 @@ fn window_created(app: &mut App, request: &fret_app::CreateWindowRequest, new_wi
         });
     }
     let _ = dock_runtime::handle_dock_window_created(app, request, new_window);
+}
+
+fn before_close_window(app: &mut App, closing_window: AppWindowId) -> bool {
+    let target_window = app
+        .global::<WindowBootstrapService>()
+        .and_then(|svc| svc.main_window)
+        .unwrap_or(closing_window);
+    let _ = dock_runtime::handle_dock_before_close_window(app, closing_window, target_window);
+    true
 }
