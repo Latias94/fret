@@ -1392,6 +1392,11 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_VLIST_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(0);
+
     let header_editing_row = (!minimal_harness)
         .then(|| {
             cx.get_model_copied(&virtual_list_torture_edit_row, Invalidation::Layout)
@@ -1516,6 +1521,11 @@ fn preview_virtual_list_torture(
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
+                cx.text(if keep_alive > 0 {
+                    format!("Mode: keep-alive enabled (budget={keep_alive}).")
+                } else {
+                    "Mode: keep-alive disabled (budget=0).".to_string()
+                }),
             ];
 
             if minimal_harness {
@@ -1549,6 +1559,12 @@ fn preview_virtual_list_torture(
         })
     } else {
         fret_ui::element::VirtualListOptions::new(Px(28.0), 10)
+    };
+
+    let options = if retained_host && keep_alive > 0 {
+        options.keep_alive(keep_alive)
+    } else {
+        options
     };
 
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
