@@ -61,7 +61,8 @@ deterministic, and run it before/after large moves.
 Recommended commands:
 
 - Full crate (baseline): `cargo nextest run -p fret-node`
-- Focused (when touching internals/geometry): `cargo nextest run -p fret-node internals invalidation hit_testing`
+- Focused (when touching internals/geometry): `cargo nextest run -p fret-node internals invalidation hit_testing perf_cache spatial_index_equivalence threshold_zoom_conformance`
+- Focused (when touching spatial indexing): `cargo nextest run -p fret-node spatial_index_equivalence`
 
 Core suites (code pointers):
 
@@ -69,10 +70,12 @@ Core suites (code pointers):
 - Invalidation ordering discipline: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
 - Hit-testing determinism: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
 - Interaction semantics (drag/connect thresholds, reconnect flows): `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+- Spatial index equivalence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs`
+- Zoom-safe thresholds: `ecosystem/fret-node/src/ui/canvas/widget/tests/threshold_zoom_conformance.rs`
 - Viewport helpers + setViewport semantics: `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs`
 - Fit-view invariants: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
 - Portal safety (pointer/keyboard passthrough): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_keyboard_conformance.rs`
-- Paint cache/perf guardrails: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+- Paint cache/perf guardrails: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`
 
 ## Scope (what “parity” means here)
 
@@ -123,7 +126,7 @@ fret-node (target):
   - lookups: `ecosystem/fret-node/src/runtime/lookups.rs`
 - UI integration (default `fret-ui` feature):
   - canvas widget: `ecosystem/fret-node/src/ui/canvas/*` and `ecosystem/fret-node/src/ui/canvas/widget.rs`
-  - derived internals: `ecosystem/fret-node/src/ui/internals.rs`, `ecosystem/fret-node/src/ui/measured.rs`
+  - derived internals: `ecosystem/fret-node/src/ui/internals.rs` and `ecosystem/fret-node/src/ui/internals/*`, `ecosystem/fret-node/src/ui/measured.rs`
   - overlays/add-ons: `ecosystem/fret-node/src/ui/overlays.rs`, `ecosystem/fret-node/src/ui/panel.rs`
 
 ## Current gap summary (top items)
@@ -147,6 +150,15 @@ Each milestone should be considered “done” only when:
 ### M0 — Refactor harness + baseline invariants (P0)
 
 Goal: ensure we can refactor fearlessly without “semantic drift” or unbounded churn.
+
+Detailed M0 contract checklist:
+
+- `docs/workstreams/fret-node-internals-m0.md`
+
+Recommended split (to keep PRs reviewable and rollback-friendly):
+
+- **M0A: Lock invariants** (docs + conformance tests + counters where available).
+- **M0B: Refactor implementation** (move code aggressively while keeping M0A gates green).
 
 Scope:
 
@@ -188,12 +200,24 @@ Evidence anchors (expected):
 
 Work items (initial):
 
-- [ ] Add “derived geometry invalidation” conformance tests that explicitly assert:
-  - pan-only does not rebuild geometry (or only rebuilds the strictly necessary cache),
+- [x] Add “derived geometry invalidation” conformance tests that explicitly assert:
+  - pan-only updates internals without rebuilding geometry caches,
   - zoom-only rebuilds the necessary geometry (semantic zoom discipline),
-  - graph edit commits bump the correct derived revisions.
-- [ ] Add a short “refactor guide” section to `docs/node-graph-xyflow-parity.md` explaining which
+  - measured geometry updates are observed in paint without requiring layout.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+- [x] Extend conformance coverage to assert “graph edit commits bump the correct derived revisions”:
+  - a graph edit commit must rebuild the affected derived geometry and update internals deterministically,
+  - pan-only must not accidentally force the same rebuild path.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+- [x] Add a short “refactor guide” section to `docs/node-graph-xyflow-parity.md` explaining which
   invariants are locked and where to find the tests.
+- [x] Add spatial-index equivalence conformance tests (fast path vs slow scan) so refactors cannot
+  introduce observable drift.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs`
+- [x] Add zoom-safe threshold conformance tests (screen px stability under zoom) for core drag gates.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/threshold_zoom_conformance.rs`
 
 ### M1 — Headless substrate ergonomics (A-layer + runtime)
 
@@ -268,15 +292,15 @@ Work items:
     - `NodeGraphEdgeTypes::register_path(...)` + `EdgeCustomPath` (`ecosystem/fret-node/src/ui/edge_types.rs`)
     - Paint + hit-test + AABB alignment:
       - painting: `ecosystem/fret-node/src/ui/canvas/widget/paint_edges.rs`, `ecosystem/fret-node/src/ui/canvas/paint.rs`
-      - hit-test: `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_math.rs`
-      - spatial index patch: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry.rs`
+      - hit-test: `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`, `ecosystem/fret-node/src/ui/canvas/widget/wire_math.rs`
+      - spatial index patch: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/spatial_index.rs`
       - internals edge centers (EdgeToolbar): `ecosystem/fret-node/src/ui/canvas/widget/stores.rs`
     - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
 - [~] Ensure hit-testing semantics remain deterministic (especially under semantic zoom).
-- [~] Add conformance tests for:
-  - path generation determinism,
-  - hit-test width semantics,
-  - selection + elevate-on-select interactions across custom edges.
+- [x] Add conformance tests for:
+  - path generation determinism (`ecosystem/fret-node/src/ui/canvas/widget/tests/custom_edge_path_conformance.rs`),
+  - hit-test width semantics (`ecosystem/fret-node/src/ui/canvas/widget/tests/edge_hit_width_conformance.rs`),
+  - selection + elevate-on-select interactions across custom edges (`ecosystem/fret-node/src/ui/canvas/widget/tests/elevate_on_select_conformance.rs`).
 
 ### M4 — Docs, demos, and stabilization gates
 
@@ -304,8 +328,14 @@ Work items:
 - [x] Extract “screen px threshold under render_transform” helper:
   - `ecosystem/fret-canvas/src/drag/threshold.rs` (`exceeds_drag_threshold_in_canvas_space`)
   - consumed by `ecosystem/fret-node/src/ui/canvas/widget/*`
-- [ ] Extract auto-pan delta computation (XyFlow `calcAutoPan`-style) with tests.
-- [ ] Consolidate viewport transform helpers (screen↔canvas mapping) where it reduces duplication.
+- [x] Extract auto-pan delta computation (XyFlow `calcAutoPan`-style) with tests:
+  - `ecosystem/fret-canvas/src/view/auto_pan.rs` (`auto_pan_delta_per_tick`)
+  - consumed by `ecosystem/fret-node/src/ui/canvas/widget/viewport_timers.rs`
+- [x] Consolidate viewport transform helpers (screen↔canvas mapping) where it reduces duplication.
+  - `ecosystem/fret-canvas/src/view/pan_zoom.rs` (`PanZoom2D::zoom_about_canvas_point`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/view_math.rs` (`viewport_from_pan_zoom`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs` (panning + zoom about pointer)
+  - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag.rs` (canvas→window mapping for DnD)
 
 Perf/scale targets (placeholders; make these measurable as we add instrumentation):
 
