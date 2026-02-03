@@ -181,6 +181,12 @@ pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
 pub(crate) const PAGE_MATERIAL3_CHECKBOX: &str = "material3_checkbox";
 pub(crate) const PAGE_MATERIAL3_SWITCH: &str = "material3_switch";
 pub(crate) const PAGE_MATERIAL3_RADIO: &str = "material3_radio";
+pub(crate) const PAGE_MATERIAL3_BADGE: &str = "material3_badge";
+pub(crate) const PAGE_MATERIAL3_SEGMENTED_BUTTON: &str = "material3_segmented_button";
+pub(crate) const PAGE_MATERIAL3_TOP_APP_BAR: &str = "material3_top_app_bar";
+pub(crate) const PAGE_MATERIAL3_BOTTOM_SHEET: &str = "material3_bottom_sheet";
+pub(crate) const PAGE_MATERIAL3_DATE_PICKER: &str = "material3_date_picker";
+pub(crate) const PAGE_MATERIAL3_TIME_PICKER: &str = "material3_time_picker";
 pub(crate) const PAGE_MATERIAL3_SELECT: &str = "material3_select";
 pub(crate) const PAGE_MATERIAL3_TEXT_FIELD: &str = "material3_text_field";
 pub(crate) const PAGE_MATERIAL3_TABS: &str = "material3_tabs";
@@ -288,6 +294,17 @@ pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
 pub(crate) const CMD_NAV_MATERIAL3_CHECKBOX: &str = "ui_gallery.nav.select.material3_checkbox";
 pub(crate) const CMD_NAV_MATERIAL3_SWITCH: &str = "ui_gallery.nav.select.material3_switch";
 pub(crate) const CMD_NAV_MATERIAL3_RADIO: &str = "ui_gallery.nav.select.material3_radio";
+pub(crate) const CMD_NAV_MATERIAL3_BADGE: &str = "ui_gallery.nav.select.material3_badge";
+pub(crate) const CMD_NAV_MATERIAL3_SEGMENTED_BUTTON: &str =
+    "ui_gallery.nav.select.material3_segmented_button";
+pub(crate) const CMD_NAV_MATERIAL3_TOP_APP_BAR: &str =
+    "ui_gallery.nav.select.material3_top_app_bar";
+pub(crate) const CMD_NAV_MATERIAL3_BOTTOM_SHEET: &str =
+    "ui_gallery.nav.select.material3_bottom_sheet";
+pub(crate) const CMD_NAV_MATERIAL3_DATE_PICKER: &str =
+    "ui_gallery.nav.select.material3_date_picker";
+pub(crate) const CMD_NAV_MATERIAL3_TIME_PICKER: &str =
+    "ui_gallery.nav.select.material3_time_picker";
 pub(crate) const CMD_NAV_MATERIAL3_SELECT: &str = "ui_gallery.nav.select.material3_select";
 pub(crate) const CMD_NAV_MATERIAL3_TEXT_FIELD: &str = "ui_gallery.nav.select.material3_text_field";
 pub(crate) const CMD_NAV_MATERIAL3_TABS: &str = "ui_gallery.nav.select.material3_tabs";
@@ -1290,6 +1307,46 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 docs::USAGE_MATERIAL3_GALLERY,
             ),
             PageSpec::new(
+                PAGE_MATERIAL3_TOP_APP_BAR,
+                "Top App Bar",
+                "Material 3 Top App Bar (primitives)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TOP_APP_BAR,
+                &["material3", "top-app-bar", "toolbar", "app-bar"],
+                docs::DOC_MATERIAL3_TOP_APP_BAR,
+                docs::USAGE_MATERIAL3_TOP_APP_BAR,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_BOTTOM_SHEET,
+                "Bottom Sheet",
+                "Material 3 Bottom Sheet (modal + standard)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_BOTTOM_SHEET,
+                &["material3", "bottom-sheet", "sheet", "overlay"],
+                docs::DOC_MATERIAL3_BOTTOM_SHEET,
+                docs::USAGE_MATERIAL3_BOTTOM_SHEET,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_DATE_PICKER,
+                "Date Picker",
+                "Material 3 Date Picker (modal + docked)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_DATE_PICKER,
+                &["material3", "date-picker", "calendar", "overlay"],
+                docs::DOC_MATERIAL3_DATE_PICKER,
+                docs::USAGE_MATERIAL3_DATE_PICKER,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_TIME_PICKER,
+                "Time Picker",
+                "Material 3 Time Picker (modal + docked)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_TIME_PICKER,
+                &["material3", "time-picker", "clock", "overlay"],
+                docs::DOC_MATERIAL3_TIME_PICKER,
+                docs::USAGE_MATERIAL3_TIME_PICKER,
+            ),
+            PageSpec::new(
                 PAGE_MATERIAL3_STATE_MATRIX,
                 "State Matrix",
                 "Material 3 State Matrix (manual regression harness)",
@@ -1369,6 +1426,26 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["material3", "radio", "state-layer", "ripple", "forms"],
                 docs::DOC_MATERIAL3_RADIO,
                 docs::USAGE_MATERIAL3_RADIO,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_BADGE,
+                "Badge",
+                "Material 3 Badge (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_BADGE,
+                &["material3", "badge", "status", "navigation"],
+                docs::DOC_MATERIAL3_BADGE,
+                docs::USAGE_MATERIAL3_BADGE,
+            ),
+            PageSpec::new(
+                PAGE_MATERIAL3_SEGMENTED_BUTTON,
+                "Segmented Button",
+                "Material 3 Segmented Button (MVP)",
+                "fret-ui-material3",
+                CMD_NAV_MATERIAL3_SEGMENTED_BUTTON,
+                &["material3", "segmented-button", "roving-focus", "selection"],
+                docs::DOC_MATERIAL3_SEGMENTED_BUTTON,
+                docs::USAGE_MATERIAL3_SEGMENTED_BUTTON,
             ),
             PageSpec::new(
                 PAGE_MATERIAL3_SELECT,

@@ -494,10 +494,16 @@ pub fn render<H: UiHost + 'static>(
             }
         }
 
-        let focus_in_layer = layer.is_some_and(|layer| {
-            ui.focus()
-                .is_some_and(|n| ui.node_layer(n).is_some_and(|lid| lid == layer))
+        let focus_layer = ui.focus().and_then(|n| ui.node_layer(n));
+        let focus_in_modal_layer = layer.is_some_and(|layer| focus_layer == Some(layer));
+        let focus_in_popover_layer = focus_layer.is_some_and(|focus_layer| {
+            app.with_global_mut_untracked(WindowOverlays::default, |overlays, _app| {
+                overlays.popovers.iter().any(|((w, _id), entry)| {
+                    *w == window && entry.open && entry.layer == focus_layer
+                })
+            })
         });
+        let focus_in_layer = focus_in_modal_layer || focus_in_popover_layer;
         let enforce_focus_containment = open_now && !focus_in_layer;
 
         let pending_initial_focus =

@@ -614,6 +614,185 @@ let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_BADGE: &str = r#"
+## Material 3 Badge (MVP)
+
+This page validates a Material 3 badge surface:
+
+- token-driven sizing + colors via `md.comp.badge.*`
+- dot and large (value) variants
+- navigation icon placement (Material Web labs placement parity)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_BADGE: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_core::Px;
+use fret_ui::element::{ContainerProps, Length};
+
+let mut anchor = ContainerProps::default();
+anchor.layout.size.width = Length::Px(Px(24.0));
+anchor.layout.size.height = Length::Px(Px(24.0));
+
+let badged = m3::Badge::text("9")
+    .navigation_anchor_size(Px(24.0))
+    .into_element(cx, |cx| [cx.container(anchor, |_cx| [])]);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_TOP_APP_BAR: &str = r#"
+## Material 3 Top App Bar (Primitives)
+
+This page validates top app bar primitives driven by Material Web v30 tokens:
+
+- variants: small / small-centered / medium / large
+- token-driven sizing + colors via `md.comp.top-app-bar.*`
+- minimal "scrolled" surface (switches to `on-scroll` container tokens)
+
+Note: Fret currently models top app bar semantics as `Group` (core does not yet expose a dedicated
+toolbar semantics role). This is tracked in the Material 3 next wave workstream.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TOP_APP_BAR: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_icons::ids;
+
+let bar = m3::TopAppBar::new("Title")
+    .variant(m3::TopAppBarVariant::Small)
+    .navigation_icon(m3::TopAppBarAction::new(ids::ui::CHEVRON_RIGHT).a11y_label("Navigate"))
+    .actions(vec![
+        m3::TopAppBarAction::new(ids::ui::SEARCH).a11y_label("Search"),
+        m3::TopAppBarAction::new(ids::ui::MORE_HORIZONTAL).a11y_label("More"),
+    ])
+    .scrolled(false)
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_BOTTOM_SHEET: &str = r#"
+## Material 3 Bottom Sheet (Primitives)
+
+This page validates bottom sheet primitives driven by Material Web v30 tokens:
+
+- token-driven container outcomes via `md.comp.sheet.bottom.*`
+- drag handle sizing + opacity
+- modal variant: `OverlayRequest::modal` with a scrim and focus trap/restore
+- dismissal: outside press on the scrim (Escape handling is tracked separately)
+
+Non-goals (for this MVP):
+
+- Compose-style `SheetState`, dragging, nested scrolling, and partial expansion.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_BOTTOM_SHEET: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_runtime::Model;
+
+let open: Model<bool> = app.models_mut().insert(false);
+
+let sheet = m3::ModalBottomSheet::new(open.clone()).into_element(
+    cx,
+    |cx| m3::Button::new("Open").into_element(cx),
+    |cx| [m3::Button::new("Close").into_element(cx)],
+);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_DATE_PICKER: &str = r#"
+## Material 3 Date Picker (Primitives)
+
+This page validates date picker primitives driven by Material Web v30 tokens:
+
+- token-driven container + day cell outcomes via `md.comp.date-picker.{docked,modal}.*`
+- docked variant: a non-overlay surface suitable for scaffold-like layouts
+- modal variant: `OverlayRequest::modal` with a scrim and focus trap/restore
+- selection is staged while open and applied on confirm
+
+Non-goals (for this MVP):
+
+- range selection, year selection, and input mode.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_DATE_PICKER: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_ui_headless::calendar::CalendarMonth;
+use time::{Date, Month};
+
+let open = app.models_mut().insert(false);
+let month = app.models_mut().insert(CalendarMonth::new(2026, Month::January));
+let selected = app.models_mut().insert(None::<Date>);
+
+let dialog = m3::DatePickerDialog::new(open, month.clone(), selected.clone())
+    .into_element(cx, |cx| m3::Button::new("Open").into_element(cx));
+
+let docked = m3::DockedDatePicker::new(month, selected).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_TIME_PICKER: &str = r#"
+## Material 3 Time Picker (Primitives)
+
+This page validates time picker primitives driven by Material Web v30 tokens:
+
+- token-driven outcomes via `md.comp.time-picker.*`
+- docked variant: a non-overlay surface suitable for scaffold-like layouts
+- modal variant: `OverlayRequest::modal` with a scrim and focus trap/restore
+- selection is staged while open and applied on confirm
+
+Non-goals (for this MVP):
+
+- drag/gesture dial selection and input mode toggle.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TIME_PICKER: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use time::Time;
+
+let open = app.models_mut().insert(false);
+let selected = app.models_mut().insert(Time::from_hms(9, 41, 0).unwrap());
+
+let dialog = m3::TimePickerDialog::new(open, selected.clone())
+    .into_element(cx, |cx| m3::Button::new("Open").into_element(cx));
+
+let docked = m3::DockedTimePicker::new(selected).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_SEGMENTED_BUTTON: &str = r#"
+## Material 3 Segmented Button (MVP)
+
+This page validates an outlined segmented button surface:
+
+- token-driven sizing + colors via `md.comp.outlined-segmented-button.*`
+- single-select and multi-select groups
+- roving focus (Arrow keys + Home/End; skip disabled)
+- state layer (hover / pressed / focus) and bounded ripple
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SEGMENTED_BUTTON: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::collections::BTreeSet;
+use std::sync::Arc;
+
+let single = app.models_mut().insert(Arc::<str>::from("alpha"));
+let multi: BTreeSet<Arc<str>> = [Arc::<str>::from("alpha")].into_iter().collect();
+let multi = app.models_mut().insert(multi);
+
+let set = m3::SegmentedButtonSet::single(single)
+    .items(vec![
+        m3::SegmentedButtonItem::new("alpha", "Alpha"),
+        m3::SegmentedButtonItem::new("beta", "Beta"),
+    ])
+    .a11y_label("Options")
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_SELECT: &str = r#"
 ## Material 3 Select (MVP)
 
