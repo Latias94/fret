@@ -86,7 +86,7 @@ of immediate-style UI:
 
 - access to an underlying `ElementContext`,
 - an ordered sink for `AnyElement` nodes,
-- stable identity scoping (`id(key, ...)`).
+- stable identity scoping (`keyed(key, ...)`) via the runtime’s canonical hashing rules.
 
 Then:
 
@@ -96,7 +96,7 @@ Then:
 
 This pushes third-party widget signatures toward a single, stable surface:
 
-- `fn widget(ui: &mut dyn UiWriter, ...) -> Response` (interactive widgets), or
+- `fn widget<H: UiHost>(ui: &mut impl UiWriter<H>, ...) -> Response` (interactive widgets), or
 - `fn into_element(cx: &mut ElementContext<'_, H>, ...) -> AnyElement` (render-only building blocks).
 
 ### 4.2 Bridge `ui()` / `UiBuilder<T>` into imui without coupling crates
@@ -108,11 +108,25 @@ To avoid pulling `fret-ui-kit` into `fret-imui`, keep the dependency direction:
 
 Concretely:
 
-- add a `fret-ui-kit` `imui` feature that provides extension traits on `ImUi`:
-  - “render this `UiBuilder<T>` into the current imui output list”
+- add a `fret-ui-kit` `imui` feature that provides extension traits on `UiWriter`:
+  - “render this `UiBuilder<T>` into the current output list”
   - “construct common layout nodes in a patchable way, but author children imperatively”
 
 This makes it possible to write immediate-mode control flow while still using the unified patch chain for styling.
+
+Status (2026-02-03):
+
+- Implemented in `fret_ui_kit::imui` behind the `imui` feature.
+- Entry point: `UiWriterUiKitExt::add_ui(...)`.
+
+Example (imui):
+
+```rust
+use fret_ui_kit::imui::UiWriterUiKitExt as _;
+
+let builder = fret_ui_kit::ui::text(ui.cx_mut(), "Hello").text_sm().px_2();
+ui.add_ui(builder);
+```
 
 ### 4.3 Demos remain the regression harness
 
