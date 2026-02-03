@@ -680,6 +680,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
+                | UiActionStepV2::MovePointerSweep { .. }
         );
         if !is_v2_intent_step {
             active.v2_step_state = None;
@@ -1160,6 +1161,114 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-drag_pointer"));
+                }
+            }
+            UiActionStepV2::MovePointerSweep {
+                target,
+                delta_x,
+                delta_y,
+                steps,
+                frames_per_step,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let Some(snapshot) = semantics_snapshot else {
+                    output.request_redraw = true;
+                    let label =
+                        format!("script-step-{step_index:04}-move_pointer_sweep-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
+                    return output;
+                };
+
+                let mut state = match active.v2_step_state.take() {
+                    Some(V2StepState::MovePointerSweep(state))
+                        if state.step_index == step_index =>
+                    {
+                        state
+                    }
+                    _ => {
+                        let Some(node) =
+                            select_semantics_node(snapshot, window, element_runtime, &target)
+                        else {
+                            output.request_redraw = true;
+                            let label = format!(
+                                "script-step-{step_index:04}-move_pointer_sweep-no-semantics-match"
+                            );
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("move_pointer_sweep_no_semantics_match".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        };
+
+                        let start = center_of_rect(node.bounds);
+                        let end = Point::new(
+                            fret_core::Px(start.x.0 + delta_x),
+                            fret_core::Px(start.y.0 + delta_y),
+                        );
+                        V2MovePointerSweepState {
+                            step_index,
+                            start,
+                            end,
+                            steps: steps.max(1),
+                            next_step: 0,
+                            frames_per_step: frames_per_step.max(1),
+                            wait_frames_remaining: 0,
+                        }
+                    }
+                };
+
+                if state.wait_frames_remaining > 0 {
+                    state.wait_frames_remaining = state.wait_frames_remaining.saturating_sub(1);
+                    active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
+                    output.request_redraw = true;
+                } else if state.next_step > state.steps {
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-move_pointer_sweep"));
+                    }
+                } else {
+                    let t = state.next_step as f32 / state.steps as f32;
+                    let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+                    let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+                    let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+                    output.events.push(move_pointer_event(position));
+
+                    state.next_step = state.next_step.saturating_add(1);
+                    state.wait_frames_remaining = state.frames_per_step.saturating_sub(1);
+                    active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::Wheel {
@@ -3216,6 +3325,19 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_drag_steps")]
         steps: u32,
     },
+    /// Move the pointer along a straight line over multiple frames (one move event per frame).
+    ///
+    /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
+    /// `drag_pointer` emits multiple pointer move events in a single frame.
+    MovePointerSweep {
+        target: UiSelectorV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+        #[serde(default = "default_move_frames_per_step")]
+        frames_per_step: u32,
+    },
     Wheel {
         target: UiSelectorV1,
         #[serde(default)]
@@ -3383,6 +3505,10 @@ impl From<UiActionStepV1> for UiActionStepV2 {
 
 fn default_drag_steps() -> u32 {
     8
+}
+
+fn default_move_frames_per_step() -> u32 {
+    1
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
@@ -3736,6 +3862,7 @@ enum V2StepState {
     MenuSelect(V2MenuSelectState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
+    MovePointerSweep(V2MovePointerSweepState),
 }
 
 #[derive(Debug, Clone)]
@@ -3776,6 +3903,17 @@ struct V2SetSliderValueState {
     remaining_frames: u32,
     phase: u32,
     last_drag_x: Option<f32>,
+}
+
+#[derive(Debug, Clone)]
+struct V2MovePointerSweepState {
+    step_index: usize,
+    start: Point,
+    end: Point,
+    steps: u32,
+    next_step: u32,
+    frames_per_step: u32,
+    wait_frames_remaining: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -8049,6 +8187,22 @@ mod tests {
     }
 
     #[test]
+    fn scripts_support_move_pointer_sweep_step() {
+        let parsed: UiActionScriptV2 = serde_json::from_str(
+            r#"{"schema_version":2,"steps":[{"type":"move_pointer_sweep","target":{"kind":"test_id","id":"x"},"delta_x":10.0,"delta_y":-5.0,"steps":3,"frames_per_step":2}]}"#,
+        )
+        .expect("parse move_pointer_sweep step");
+        assert_eq!(parsed.schema_version, 2);
+        assert!(
+            matches!(
+                parsed.steps.as_slice(),
+                [UiActionStepV2::MovePointerSweep { .. }]
+            ),
+            "expected move_pointer_sweep step"
+        );
+    }
+
+    #[test]
     fn pick_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
@@ -8925,7 +9079,11 @@ mod tests {
             }"#,
         )
         .expect("parse barrier_roots predicate");
-        svc.pending_script = Some(script);
+        svc.pending_script = PendingScript::from_v1(script);
+        assert!(
+            svc.pending_script.is_some(),
+            "script schema_version should be valid"
+        );
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();
