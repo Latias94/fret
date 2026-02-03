@@ -19,6 +19,8 @@ Active workstreams:
 - `docs/workstreams/ecosystem-status.md`
 - `docs/workstreams/imui-authoring-facade-v1.md`
 - `docs/workstreams/imui-authoring-facade-v1-todo.md`
+- `docs/workstreams/imui-authoring-facade-v2.md` (draft)
+- `docs/workstreams/imui-authoring-facade-v2-todo.md` (draft)
 - `docs/workstreams/shadcn-web-goldens-v4.md`
 - `docs/workstreams/shadcn-web-goldens-v4-todo.md`
 - `docs/workstreams/state-driven-style-resolution-v1.md`

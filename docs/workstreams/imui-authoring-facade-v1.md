@@ -1,7 +1,7 @@
 # Immediate-Mode Authoring Facade ("imui") v1
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-02
+Last updated: 2026-02-03
 
 This document proposes an **immediate-mode authoring facade** for Fret that feels closer to `egui` / Dear ImGui (and
 to `repo-ref/dear-imgui-rs`), while remaining aligned with Fret’s core runtime direction:
@@ -13,6 +13,8 @@ to `repo-ref/dear-imgui-rs`), while remaining aligned with Fret’s core runtime
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-authoring-facade-v1-todo.md`
+- Fearless v2 plan: `docs/workstreams/imui-authoring-facade-v2.md`
+- Fearless v2 tracker: `docs/workstreams/imui-authoring-facade-v2-todo.md`
 - Architecture baseline: `docs/architecture.md` (declarative mount + retained semantics)
 - Authoring ergonomics notes: `docs/ui-ergonomics-and-interop.md`, `docs/workstreams/authoring-ergonomics-fluent-builder.md`
 - Docking/multi-window direction: `docs/workstreams/docking-multiwindow-imgui-parity.md`, `docs/workstreams/docking-multiviewport-arbitration-v1.md`
@@ -509,3 +511,39 @@ Goal:
    - Decision: prefer model-based widgets (`Model<T>`) as the default surface (aligns with the long-term
      “externalized state across frames” direction). A local `&mut T` API may exist as a convenience layer, but it
      should be built on top of the model story, not replace it.
+
+---
+
+## 10) v1 Freeze and v2 Direction (Fearless Refactor)
+
+v1 status (2026-02-03):
+
+- v1 is considered feature-complete enough for internal editor-grade prototyping.
+- Land only correctness fixes, portability fixes, and small ergonomic adjustments that do not expand the public surface.
+
+Motivation for v2:
+
+- The ecosystem now has a separate “golden path” authoring surface for styling/layout patches:
+  `ui()` / `UiBuilder<T>` (ADR 0175 + related workstreams).
+- If we keep expanding both the immediate-mode façade (imui) and the fluent builder chain independently, we will
+  end up with duplicated widget APIs and long-term ecosystem maintenance cost.
+
+v2 direction (summary):
+
+- Keep the **same runtime substrate**: imui remains authoring-only; it must still compile down to the declarative
+  element taxonomy (no second runtime).
+- Converge authoring surfaces: treat the unified builder (`ui()` / `UiBuilder<T>`) as the primary patch vocabulary and
+  make imui a thin imperative frontend / bridge so ecosystem widgets can be authored once and consumed from both styles.
+- Keep the layering rule: policy and recipes stay in ecosystem (`fret-ui-kit`, `fret-ui-shadcn`, and friends), not in
+  `crates/fret-ui`.
+
+Migration policy:
+
+- This repository is not yet public, so we can do a flag-day migration from v1 → v2.
+- Still land changes in staged slices (feature gates, demos kept green) so the editor-grade proof points remain a
+  reliable regression harness during the refactor.
+
+See:
+
+- `docs/workstreams/imui-authoring-facade-v2.md`
+- `docs/workstreams/imui-authoring-facade-v2-todo.md`

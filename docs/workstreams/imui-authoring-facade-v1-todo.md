@@ -1,11 +1,17 @@
 # Immediate-Mode Authoring Facade ("imui") v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-02
+Last updated: 2026-02-03
 
 This is the checkbox tracker companion to:
 
 - `docs/workstreams/imui-authoring-facade-v1.md`
+
+Note (2026-02-03): v1 is treated as feature-complete enough for internal demos. We plan a fearless v2 consolidation
+refactor (authoring surface convergence with ADR 0175 / `ui()` / `UiBuilder<T>`). New work should be tracked in:
+
+- `docs/workstreams/imui-authoring-facade-v2.md`
+- `docs/workstreams/imui-authoring-facade-v2-todo.md`
 
 Legend:
 
@@ -204,8 +210,10 @@ Exit criteria:
     - `apps/fret-examples/src/imui_editor_proof_demo.rs`
     - `apps/fret-demo/src/bin/imui_editor_proof_demo.rs`
     - run: `cargo run -p fret-demo --bin imui_editor_proof_demo`
-- [ ] IMUI-id-071 Validate identity stability for docked panels:
+- [x] IMUI-id-071 Validate identity stability for docked panels:
   - panels keyed by stable `PanelKey` (or string) using `ui.id(...)`.
+  - evidence:
+    - `apps/fret-examples/src/imui_editor_proof_demo.rs`
 - [x] IMUI-test-072 Add a regression harness note for wasm/mobile fallback behavior:
   - multi-window layouts degrade into in-window floatings (no OS window requirement).
   - verify:
@@ -231,3 +239,17 @@ Exit criteria:
   - “Why keys matter”
   - “How clicked/changed works”
   - “When to drop to `cx_mut()`”
+
+---
+
+## M9 — v2 (Fearless Refactor, planned)
+
+This tracker focuses on v1 closure only. The v2 refactor work is tracked in:
+
+- `docs/workstreams/imui-authoring-facade-v2.md`
+- `docs/workstreams/imui-authoring-facade-v2-todo.md`
+
+Related consolidation workstreams / ADRs:
+
+- `docs/adr/0175-unified-authoring-builder-surface-v1.md`
+- `docs/workstreams/unified-authoring-builder-v1.md`
